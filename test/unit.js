@@ -34,3 +34,8 @@ test('.get(key) resolves to value', async t => {
 	await store.set('foo', 'bar');
 	t.is(await store.get('foo'), 'bar');
 });
+
+test('.get(key) with nonexistent key resolves to undefined', async t => {
+	const store = new Keyv();
+	t.is(await store.get('foo'), undefined);
+});
