@@ -6,15 +6,15 @@ class Keyv {
 	}
 
 	get(key) {
-		return this.store.get(key);
+		return Promise.resolve(this.store.get(key));
 	}
 
 	set(key, value) {
-		return this.store.set(key, value);
+		return Promise.resolve(this.store.set(key, value));
 	}
 
 	delete(key) {
-		return this.store.delete(key);
+		return Promise.resolve(this.store.delete(key));
 	}
 }
 
