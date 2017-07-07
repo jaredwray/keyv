@@ -50,3 +50,8 @@ test('.delete(key) resolves to true', async t => {
 	await store.set('foo', 'bar');
 	t.is(await store.delete('foo'), true);
 });
+
+test('.delete(key) with nonexistent key resolves to false', async t => {
+	const store = new Keyv();
+	t.is(await store.delete('foo'), false);
+});
