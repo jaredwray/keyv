@@ -10,7 +10,7 @@ class Keyv {
 	}
 
 	set(key, value) {
-		return Promise.resolve(this.store.set(key, value));
+		return Promise.resolve(this.store.set(key, value)).then(() => value);
 	}
 
 	delete(key) {
