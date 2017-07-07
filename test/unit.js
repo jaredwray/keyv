@@ -9,3 +9,8 @@ test('Keyv cannot be invoked without \'new\'', t => {
 	t.throws(() => Keyv()); // eslint-disable-line new-cap
 	t.notThrows(() => new Keyv());
 });
+
+test('.set(key, value) returns a Promise', t => {
+	const store = new Keyv();
+	t.true(store.set('foo', 'bar') instanceof Promise);
+});
