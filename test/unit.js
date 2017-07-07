@@ -44,3 +44,9 @@ test('.delete(key) returns a Promise', t => {
 	const store = new Keyv();
 	t.true(store.delete('foo') instanceof Promise);
 });
+
+test('.delete(key) resolves to true', async t => {
+	const store = new Keyv();
+	await store.set('foo', 'bar');
+	t.is(await store.delete('foo'), true);
+});
