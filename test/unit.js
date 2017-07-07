@@ -28,3 +28,9 @@ test('.get(key) returns a Promise', t => {
 	const store = new Keyv();
 	t.true(store.get('foo') instanceof Promise);
 });
+
+test('.get(key) resolves to value', async t => {
+	const store = new Keyv();
+	await store.set('foo', 'bar');
+	t.is(await store.get('foo'), 'bar');
+});
