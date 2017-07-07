@@ -10,6 +10,10 @@ test('Keyv cannot be invoked without \'new\'', t => {
 	t.notThrows(() => new Keyv());
 });
 
+test('Keyv is an instance of Keyv', t => {
+	t.true(new Keyv() instanceof Keyv);
+});
+
 test('.set(key, value) returns a Promise', t => {
 	const store = new Keyv();
 	t.true(store.set('foo', 'bar') instanceof Promise);
