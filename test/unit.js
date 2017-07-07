@@ -39,3 +39,8 @@ test('.get(key) with nonexistent key resolves to undefined', async t => {
 	const store = new Keyv();
 	t.is(await store.get('foo'), undefined);
 });
+
+test('.delete(key) returns a Promise', t => {
+	const store = new Keyv();
+	t.true(store.delete('foo') instanceof Promise);
+});
