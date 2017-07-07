@@ -1,6 +1,6 @@
 'use strict';
 
-class keyv {
+class Keyv {
 	constructor() {
 		this.store = new Map();
 	}
@@ -18,4 +18,4 @@ class keyv {
 	}
 }
 
-module.exports = keyv;
+module.exports = Keyv;

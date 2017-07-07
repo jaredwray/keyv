@@ -1,6 +1,6 @@
 import test from 'ava';
-import keyv from '../';
+import Keyv from '../';
 
-test('keyv is a function', t => {
-	t.is(typeof keyv, 'function');
+test('Keyv is a function', t => {
+	t.is(typeof Keyv, 'function');
 });
