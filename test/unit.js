@@ -23,3 +23,8 @@ test('.set(key, value) resolves to value', async t => {
 	const store = new Keyv();
 	t.is(await store.set('foo', 'bar'), 'bar');
 });
+
+test('.get(key) returns a Promise', t => {
+	const store = new Keyv();
+	t.true(store.get('foo') instanceof Promise);
+});
