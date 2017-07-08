@@ -6,11 +6,22 @@ class Keyv {
 	}
 
 	get(key) {
-		return Promise.resolve(this.store.get(key));
+		return Promise.resolve(this.store.get(key)).then(data => {
+			if (!data) {
+				return undefined;
+			}
+			if (Date.now() > data.expires) {
+				this.delete(key);
+				return undefined;
+			}
+			return data.value;
+		});
 	}
 
-	set(key, value) {
-		return Promise.resolve(this.store.set(key, value)).then(() => value);
+	set(key, value, ttl) {
+		const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : undefined;
+		const data = { value, expires };
+		return Promise.resolve(this.store.set(key, data)).then(() => value);
 	}
 
 	delete(key) {
