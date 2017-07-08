@@ -1,4 +1,5 @@
 import test from 'ava';
+import delay from 'delay';
 import Keyv from '../';
 
 test('Keyv is a class', t => {
@@ -19,6 +20,14 @@ test('.set(key, value) returns a Promise', t => {
 test('.set(key, value) resolves to value', async t => {
 	const store = new Keyv();
 	t.is(await store.set('foo', 'bar'), 'bar');
+});
+
+test('.set(key, value, ttl) sets a value that expires', async t => {
+	const store = new Keyv();
+	t.is(await store.set('foo', 'bar', 100), 'bar');
+	t.is(await store.get('foo'), 'bar');
+	await delay(100);
+	t.is(await store.get('foo'), undefined);
 });
 
 test('.get(key) returns a Promise', t => {
