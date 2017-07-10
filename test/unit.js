@@ -1,4 +1,5 @@
 import test from 'ava';
+import delay from 'delay';
 import Keyv from '../';
 
 test('Keyv is a class', t => {
@@ -13,4 +14,15 @@ test('Keyv accepts storage adapters', async t => {
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 	t.true(store.has('foo'));
+});
+
+test('Keyv hands tll functionality over to ttl supporting stores', async t => {
+	const store = new Map();
+	store.ttlSupport = true;
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar', 100);
+	t.is(await keyv.get('foo'), 'bar');
+	t.is(store.get('foo'), 'bar');
+	await delay(100);
+	t.is(await keyv.get('foo'), 'bar');
 });
