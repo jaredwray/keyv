@@ -22,7 +22,7 @@ class Keyv {
 	set(key, value, ttl) {
 		const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : undefined;
 		const data = { value, expires };
-		return Promise.resolve(this.store.set(key, data)).then(() => value);
+		return Promise.resolve(this.store.set(key, data, ttl)).then(() => value);
 	}
 
 	delete(key) {
