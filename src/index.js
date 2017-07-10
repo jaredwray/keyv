@@ -1,8 +1,9 @@
 'use strict';
 
 class Keyv {
-	constructor() {
-		this.store = new Map();
+	constructor(opts) {
+		opts = opts || {};
+		this.store = opts.store || new Map();
 	}
 
 	get(key) {
