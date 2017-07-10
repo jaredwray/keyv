@@ -6,7 +6,3 @@ test('Keyv is a class', t => {
 	t.throws(() => Keyv()); // eslint-disable-line new-cap
 	t.notThrows(() => new Keyv());
 });
-
-test('Keyv is an instance of Keyv', t => {
-	t.true(new Keyv() instanceof Keyv);
-});
