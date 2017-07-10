@@ -20,6 +20,7 @@ class Keyv {
 	}
 
 	set(key, value, ttl) {
+		ttl = ttl || this.opts.ttl;
 		let set;
 		if (this.opts.store.ttlSupport) {
 			set = this.opts.store.set(key, value, ttl);
