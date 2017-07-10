@@ -6,3 +6,11 @@ test('Keyv is a class', t => {
 	t.throws(() => Keyv()); // eslint-disable-line new-cap
 	t.notThrows(() => new Keyv());
 });
+
+test('Keyv accepts storage adapters', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.get('foo'), 'bar');
+	t.true(store.has('foo'));
+});
