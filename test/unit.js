@@ -1,6 +1,7 @@
 import test from 'ava';
 import delay from 'delay';
 import Keyv from '../';
+import testStore from './helpers/test-store';
 
 test('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
@@ -61,3 +62,6 @@ test('.set(key, val, ttl) overwrites default tll option', async t => {
 	await delay(50);
 	t.is(await keyv.get('ping'), undefined);
 });
+
+const store = new Map();
+testStore(store);
