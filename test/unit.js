@@ -32,3 +32,12 @@ test('Keyv hands tll functionality over to ttl supporting stores', async t => {
 	await delay(100);
 	t.is(await keyv.get('foo'), 'bar');
 });
+
+test('Keyv respects default tll option', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store, ttl: 100 });
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.get('foo'), 'bar');
+	await delay(100);
+	t.is(await keyv.get('foo'), undefined);
+});
