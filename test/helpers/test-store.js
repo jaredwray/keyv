@@ -1,8 +1,9 @@
 /* eslint-disable ava/no-ignored-test-files */
 
 const test = require('ava');
-const delay = require('delay');
 const Keyv = require('../../');
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const testStore = store => {
 	test.serial('.set(key, value) returns a Promise', t => {
