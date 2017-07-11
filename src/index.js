@@ -9,7 +9,7 @@ class Keyv {
 	get(key) {
 		const store = this.opts.store;
 		return Promise.resolve(store.get(key)).then(data => {
-			if (!data) {
+			if (data === undefined) {
 				return undefined;
 			}
 			if (!store.ttlSupport && Date.now() > data.expires) {
