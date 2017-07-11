@@ -7,10 +7,15 @@ class KeyvRedis {
 	constructor(opts) {
 		this.client = redis.createClient(opts);
 		this.ttlSupport = true;
+		this.redis = {
+			get: pify(this.client.get.bind(this.client)),
+			set: pify(this.client.set.bind(this.client)),
+			del: pify(this.client.del.bind(this.client))
+		};
 	}
 
 	get(key) {
-		return pify(this.client.get.bind(this.client))(key)
+		return this.redis.get(key)
 			.then(JSON.parse);
 	}
 
@@ -19,14 +24,14 @@ class KeyvRedis {
 			.then(() => {
 				value = JSON.stringify(value);
 				if (typeof ttl === 'number') {
-					return pify(this.client.set.bind(this.client))(key, value, 'PX', ttl);
+					return this.redis.set(key, value, 'PX', ttl);
 				}
-				return pify(this.client.set.bind(this.client))(key, value);
+				return this.redis.set(key, value);
 			});
 	}
 
 	delete(key) {
-		return pify(this.client.del.bind(this.client))(key)
+		return this.redis.del(key)
 			.then(items => items > 0);
 	}
 }
