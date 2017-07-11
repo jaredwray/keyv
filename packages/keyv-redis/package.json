@@ -28,7 +28,10 @@
     "url": "https://github.com/lukechilds/keyv-redis/issues"
   },
   "homepage": "https://github.com/lukechilds/keyv-redis",
-  "dependencies": {},
+  "dependencies": {
+    "pify": "^3.0.0",
+    "redis": "^2.7.1"
+  },
   "devDependencies": {
     "ava": "^0.19.1",
     "coveralls": "^2.13.1",
