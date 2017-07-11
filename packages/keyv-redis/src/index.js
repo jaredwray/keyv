@@ -6,6 +6,7 @@ const pify = require('pify');
 class KeyvRedis {
 	constructor(opts) {
 		this.client = redis.createClient(opts);
+		this.ttlSupport = true;
 	}
 
 	get(key) {
@@ -13,10 +14,13 @@ class KeyvRedis {
 			.then(JSON.parse);
 	}
 
-	set(key, value) {
+	set(key, value, ttl) {
 		return Promise.resolve()
 			.then(() => {
 				value = JSON.stringify(value);
+				if (typeof ttl === 'number') {
+					return pify(this.client.set.bind(this.client))(key, value, 'PX', ttl);
+				}
 				return pify(this.client.set.bind(this.client))(key, value);
 			});
 	}
