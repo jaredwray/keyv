@@ -7,11 +7,10 @@ class KeyvRedis {
 	constructor(opts) {
 		this.client = redis.createClient(opts);
 		this.ttlSupport = true;
-		this.redis = {
-			get: pify(this.client.get.bind(this.client)),
-			set: pify(this.client.set.bind(this.client)),
-			del: pify(this.client.del.bind(this.client))
-		};
+		this.redis = ['get', 'set', 'del'].reduce((obj, method) => {
+			obj[method] = pify(this.client[method].bind(this.client));
+			return obj;
+		}, {});
 	}
 
 	get(key) {
