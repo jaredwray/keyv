@@ -41,3 +41,23 @@ test('Keyv respects default tll option', async t => {
 	await delay(100);
 	t.is(await keyv.get('foo'), undefined);
 });
+
+test('.set(key, val, ttl) overwrites default tll option', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store, ttl: 100 });
+	await keyv.set('foo', 'bar');
+	await keyv.set('fizz', 'buzz', 50);
+	await keyv.set('ping', 'pong', 150);
+	t.is(await keyv.get('foo'), 'bar');
+	t.is(await keyv.get('fizz'), 'buzz');
+	t.is(await keyv.get('ping'), 'pong');
+	await delay(50);
+	t.is(await keyv.get('foo'), 'bar');
+	t.is(await keyv.get('fizz'), undefined);
+	t.is(await keyv.get('ping'), 'pong');
+	await delay(50);
+	t.is(await keyv.get('foo'), undefined);
+	t.is(await keyv.get('ping'), 'pong');
+	await delay(50);
+	t.is(await keyv.get('ping'), undefined);
+});
