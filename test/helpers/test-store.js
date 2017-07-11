@@ -41,6 +41,12 @@ const testStore = store => {
 		t.is(await keyv.get('foo'), undefined);
 	});
 
+	test.serial('.get(key) with falsey key resolves to value', async t => {
+		const keyv = new Keyv({ store });
+		await keyv.set('foo', false);
+		t.is(await keyv.get('foo'), false);
+	});
+
 	test.serial('.delete(key) returns a Promise', t => {
 		const keyv = new Keyv({ store });
 		t.true(keyv.delete('foo') instanceof Promise);
