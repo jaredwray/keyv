@@ -58,6 +58,10 @@ node_js:
 script: npm test
 ```
 
+## example
+
+Take a look at [keyv-redis](https://github.com/lukechilds/keyv-redis) for an existing example.
+
 ## License
 
 MIT © Luke Childs
