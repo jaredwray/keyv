@@ -60,7 +60,7 @@ script: npm test
 
 ## example
 
-Take a look at [keyv-redis](https://github.com/lukechilds/keyv-redis) for an existing example.
+Take a look at [keyv-redis](https://github.com/lukechilds/keyv-redis) for an example of an existing storage adapter using `keyv-api-tests`.
 
 ## License
 
