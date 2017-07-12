@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-api-tests/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-api-tests?branch=master)
 [![npm](https://img.shields.io/npm/v/keyv-api-tests.svg)](https://www.npmjs.com/package/keyv-api-tests)
 
-Complete AVA test suite to test a Keyv storage adapter for API compliancy.
+Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https://github.com/lukechilds/keyv) storage adapter for API compliancy.
 
 ## Usage
 
