@@ -12,7 +12,7 @@ Complete AVA test suite to test a Keyv storage adapter for API compliancy.
 
 ### Install
 
-Install AVA, `keyv` and `keyv-api-tests`
+Install AVA, Keyv and `keyv-api-tests`
 
 ```shell
 npm install --save-dev ava keyv keyv-api-tests
