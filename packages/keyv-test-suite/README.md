@@ -12,7 +12,7 @@ Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https:/
 
 ### Install
 
-Install AVA, Keyv and `keyv-api-tests`
+Install AVA, Keyv and `keyv-api-tests` as development dependencies.
 
 ```shell
 npm install --save-dev ava keyv keyv-api-tests
