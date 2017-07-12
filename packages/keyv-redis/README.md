@@ -12,6 +12,16 @@
 npm install --save keyv-redis
 ```
 
+## Usage
+
+```js
+const Keyv = require('keyv');
+const KeyvRedis = require('keyv-redis');
+
+const redis = new KeyvRedis('redis://user:secret@localhost:6379');
+const keyv = new Keyv({ store: redis });
+```
+
 ## License
 
 MIT © Luke Childs
