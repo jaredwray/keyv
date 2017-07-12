@@ -58,7 +58,7 @@ node_js:
 script: npm test
 ```
 
-## Example
+## Example
 
 Take a look at [keyv-redis](https://github.com/lukechilds/keyv-redis) for an example of an existing storage adapter using `keyv-api-tests`.
 
