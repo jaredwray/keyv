@@ -1,6 +1,11 @@
 import delay from 'delay';
 
 const keyvApiTests = (test, Keyv, store) => {
+	test.beforeEach(async t => {
+		const keyv = new Keyv({ store });
+		await keyv.clear();
+	});
+
 	test.serial('.set(key, value) returns a Promise', t => {
 		const keyv = new Keyv({ store });
 		t.true(keyv.set('foo', 'bar') instanceof Promise);
@@ -32,7 +37,6 @@ const keyvApiTests = (test, Keyv, store) => {
 
 	test.serial('.get(key) with nonexistent key resolves to undefined', async t => {
 		const keyv = new Keyv({ store });
-		await keyv.delete('foo');
 		t.is(await keyv.get('foo'), undefined);
 	});
 
@@ -56,6 +60,11 @@ const keyvApiTests = (test, Keyv, store) => {
 	test.serial('.delete(key) with nonexistent key resolves to false', async t => {
 		const keyv = new Keyv({ store });
 		t.is(await keyv.delete('foo'), false);
+	});
+
+	test.after.always(async t => {
+		const keyv = new Keyv({ store });
+		await keyv.clear();
 	});
 };
 
