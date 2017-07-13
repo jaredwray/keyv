@@ -71,6 +71,13 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.get('fizz'), undefined);
 	});
 
+	test.serial('.clear() resolves to undefiend', async t => {
+		const keyv = new Keyv({ store });
+		t.is(await keyv.clear(), undefined);
+		await keyv.set('foo', 'bar');
+		t.is(await keyv.clear(), undefined);
+	});
+
 	test.after.always(async t => {
 		const keyv = new Keyv({ store });
 		await keyv.clear();
