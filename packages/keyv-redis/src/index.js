@@ -7,7 +7,7 @@ class KeyvRedis {
 	constructor(opts) {
 		this.client = redis.createClient(opts);
 		this.ttlSupport = true;
-		this.redis = ['get', 'set', 'del'].reduce((obj, method) => {
+		this.redis = ['get', 'set', 'del', 'flushdb'].reduce((obj, method) => {
 			obj[method] = pify(this.client[method].bind(this.client));
 			return obj;
 		}, {});
@@ -37,6 +37,11 @@ class KeyvRedis {
 	delete(key) {
 		return this.redis.del(key)
 			.then(items => items > 0);
+	}
+
+	clear() {
+		return this.redis.flushdb()
+			.then(() => undefined);
 	}
 }
 
