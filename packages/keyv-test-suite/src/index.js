@@ -68,6 +68,13 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.delete('foo'), false);
 	});
 
+	test.serial('.delete(key) deletes a key', async t => {
+		const keyv = new Keyv({ store });
+		await keyv.set('foo', 'bar');
+		t.is(await keyv.delete('foo'), true);
+		t.is(await keyv.get('foo'), undefined);
+	});
+
 	test.serial('.clear() returns a Promise', t => {
 		const keyv = new Keyv({ store });
 		t.true(keyv.clear() instanceof Promise);
