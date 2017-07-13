@@ -1,7 +1,7 @@
 import delay from 'delay';
 
 const keyvApiTests = (test, Keyv, store) => {
-	test.beforeEach(async t => {
+	test.beforeEach(async () => {
 		const keyv = new Keyv({ store });
 		await keyv.clear();
 	});
@@ -96,7 +96,7 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.get('fizz'), undefined);
 	});
 
-	test.after.always(async t => {
+	test.after.always(async () => {
 		const keyv = new Keyv({ store });
 		await keyv.clear();
 	});
