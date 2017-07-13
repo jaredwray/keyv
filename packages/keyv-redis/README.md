@@ -22,6 +22,19 @@ const redis = new KeyvRedis('redis://user:secret@localhost:6379');
 const keyv = new Keyv({ store: redis });
 ```
 
+## API
+
+### new KeyvRedis([options])
+
+Returns a Keyv storage adapter for Redis.
+
+#### options
+
+Type: `undefined`, `string`, `object`<br>
+Default: `undefined`
+
+A Redis connection URI string or connection object. If `undefined`, default Redis settings will be used. View [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) docs for more info.
+
 ## License
 
 MIT © Luke Childs
