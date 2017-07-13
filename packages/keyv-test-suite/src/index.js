@@ -67,6 +67,13 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.true(keyv.clear() instanceof Promise);
 	});
 
+	test.serial('.clear() resolves to undefiend', async t => {
+		const keyv = new Keyv({ store });
+		t.is(await keyv.clear(), undefined);
+		await keyv.set('foo', 'bar');
+		t.is(await keyv.clear(), undefined);
+	});
+
 	test.serial('.clear() deletes all key/value pairs', async t => {
 		const keyv = new Keyv({ store });
 		await keyv.set('foo', 'bar');
@@ -74,13 +81,6 @@ const keyvApiTests = (test, Keyv, store) => {
 		await keyv.clear();
 		t.is(await keyv.get('foo'), undefined);
 		t.is(await keyv.get('fizz'), undefined);
-	});
-
-	test.serial('.clear() resolves to undefiend', async t => {
-		const keyv = new Keyv({ store });
-		t.is(await keyv.clear(), undefined);
-		await keyv.set('foo', 'bar');
-		t.is(await keyv.clear(), undefined);
 	});
 
 	test.after.always(async t => {
