@@ -16,6 +16,12 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.set('foo', 'bar'), 'bar');
 	});
 
+	test.serial('.set(key, value) sets a value', async t => {
+		const keyv = new Keyv({ store });
+		t.is(await keyv.set('foo', 'bar'), 'bar');
+		t.is(await keyv.get('foo'), 'bar');
+	});
+
 	test.serial('.set(key, value, ttl) sets a value that expires', async t => {
 		const keyv = new Keyv({ store });
 		t.is(await keyv.set('foo', 'bar', 100), 'bar');
