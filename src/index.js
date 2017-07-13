@@ -38,6 +38,11 @@ class Keyv {
 		const store = this.opts.store;
 		return Promise.resolve(store.delete(key));
 	}
+
+	clear() {
+		const store = this.opts.store;
+		return Promise.resolve(store.clear());
+	}
 }
 
 module.exports = Keyv;
