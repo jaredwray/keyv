@@ -26,7 +26,7 @@ const keyvApiTests = (test, Keyv, store) => {
 		const keyv = new Keyv({ store });
 		t.is(await keyv.set('foo', 'bar', 100), 'bar');
 		t.is(await keyv.get('foo'), 'bar');
-		await delay(100);
+		await delay(110);
 		t.is(await keyv.get('foo'), undefined);
 	});
 
