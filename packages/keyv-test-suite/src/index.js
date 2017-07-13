@@ -62,6 +62,15 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.delete('foo'), false);
 	});
 
+	test.serial('.clear() deletes all key/value pairs', async t => {
+		const keyv = new Keyv({ store });
+		await keyv.set('foo', 'bar');
+		await keyv.set('fizz', 'buzz');
+		await keyv.clear();
+		t.is(await keyv.get('foo'), undefined);
+		t.is(await keyv.get('fizz'), undefined);
+	});
+
 	test.after.always(async t => {
 		const keyv = new Keyv({ store });
 		await keyv.clear();
