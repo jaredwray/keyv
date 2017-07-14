@@ -19,6 +19,8 @@ const Keyv = require('keyv');
 const KeyvRedis = require('keyv-redis');
 
 const redis = new KeyvRedis('redis://user:secret@localhost:6379');
+redis.client.on('error', handleError);
+
 const keyv = new Keyv({ store: redis });
 ```
 
