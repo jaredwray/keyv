@@ -16,6 +16,10 @@ class KeyvMongo {
 		this.db = mongojs(this.opts.url);
 
 		const collection = this.db.collection(this.opts.collection);
+		collection.createIndex({ key: 1 }, {
+			unique: true,
+			background: true
+		});
 		this.mongo = ['update', 'findOne', 'remove'].reduce((obj, method) => {
 			obj[method] = pify(collection[method].bind(collection));
 			return obj;
