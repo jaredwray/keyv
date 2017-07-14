@@ -55,7 +55,7 @@ test('.set(key, val, ttl) overwrites default tll option', async t => {
 	t.is(await keyv.get('foo'), 'bar');
 	t.is(await keyv.get('fizz'), 'buzz');
 	t.is(await keyv.get('ping'), 'pong');
-	await delay(50);
+	await delay(60);
 	t.is(await keyv.get('foo'), 'bar');
 	t.is(await keyv.get('fizz'), undefined);
 	t.is(await keyv.get('ping'), 'pong');
