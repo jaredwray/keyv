@@ -1,6 +1,6 @@
 'use strict';
 
-const mongojs = require('mongojs')
+const mongojs = require('mongojs');
 const pify = require('pify');
 
 class KeyvMongo {
