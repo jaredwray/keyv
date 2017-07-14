@@ -1,6 +1,6 @@
 'use strict';
 
-const MongoClient = require('mongodb').MongoClient;
+const mongojs = require('mongojs')
 const pify = require('pify');
 
 class KeyvMongo {
@@ -9,18 +9,11 @@ class KeyvMongo {
 		if (typeof opts === 'string') {
 			opts = { url: opts };
 		}
-		opts = Object.assign({
+		this.opts = Object.assign({
 			url: 'mongodb://127.0.0.1:27017',
 			collection: 'keyv'
 		}, opts);
-		this.connected = new Promise((resolve, reject) => {
-			MongoClient.connect(opts.url, (err, db) => {
-				if(err) {
-					return reject(err);
-				}
-				return resolve(db.collection(opts.collection));
-			});
-		});
+		this.db = mongojs(this.opts.url);
 	}
 
 	get(key) {}
