@@ -39,7 +39,10 @@ class KeyvMongo {
 			.then(obj => obj.n > 0);
 	}
 
-	clear() {}
+	clear() {
+		return this.mongo.remove()
+			.then(() => undefined);
+	}
 }
 
 module.exports = KeyvMongo;
