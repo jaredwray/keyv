@@ -24,7 +24,12 @@ class KeyvMongo {
 
 	get(key) {
 		return this.mongo.findOne({ key })
-			.then(doc => doc.value);
+			.then(doc => {
+				if (doc === null) {
+					return undefined;
+				}
+				return doc.value;
+			});
 	}
 
 	set(key, value) {
