@@ -32,7 +32,7 @@ class KeyvMongo {
 	}
 
 	delete(key) {
-		if(typeof key !== 'string') {
+		if (typeof key !== 'string') {
 			return Promise.resolve(false);
 		}
 		return this.mongo.remove({ key })
