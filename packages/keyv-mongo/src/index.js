@@ -20,6 +20,10 @@ class KeyvMongo {
 			unique: true,
 			background: true
 		});
+		collection.createIndex({ expiresAt: 1 }, {
+			expireAfterSeconds: 0,
+			background: true
+		});
 		this.mongo = ['update', 'findOne', 'remove'].reduce((obj, method) => {
 			obj[method] = pify(collection[method].bind(collection));
 			return obj;
@@ -37,7 +41,8 @@ class KeyvMongo {
 	}
 
 	set(key, value) {
-		return this.mongo.update({ key }, { key, value }, { upsert: true });
+		const expiresAt = (typeof value.expires === 'number') ? new Date(value.expires) : null;
+		return this.mongo.update({ key }, { key, value, expiresAt }, { upsert: true });
 	}
 
 	delete(key) {
