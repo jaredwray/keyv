@@ -12,7 +12,7 @@ class Keyv {
 			if (data === undefined) {
 				return undefined;
 			}
-			if (!store.ttlSupport && Date.now() > data.expires) {
+			if (!store.ttlSupport && typeof data.expires === 'number' && Date.now() > data.expires) {
 				this.delete(key);
 				return undefined;
 			}
