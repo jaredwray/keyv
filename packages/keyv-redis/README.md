@@ -6,6 +6,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-redis/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-redis?branch=master)
 [![npm](https://img.shields.io/npm/v/keyv-redis.svg)](https://www.npmjs.com/package/keyv-redis)
 
+Redis storage adapter for [Keyv](https://github.com/lukechilds/keyv). TTL functionality is handled directly by Redis so no timestamps are stored and expired keys are cleaned up instantly.
+
 ## Install
 
 ```shell
