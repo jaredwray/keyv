@@ -16,13 +16,16 @@ class KeyvMongo {
 		this.db = mongojs(opts.url);
 
 		const collection = this.db.collection(opts.collection);
-		this.mongo = ['update'].reduce((obj, method) => {
+		this.mongo = ['update', 'findOne'].reduce((obj, method) => {
 			obj[method] = pify(collection[method].bind(collection));
 			return obj;
 		}, {});
 	}
 
-	get(key) {}
+	get(key) {
+		return this.mongo.findOne({ key })
+			.then(doc => doc.value);
+	}
 
 	set(key, value) {
 		return this.mongo.update({ key }, { key, value }, { upsert: true });
