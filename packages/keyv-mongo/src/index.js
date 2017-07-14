@@ -9,13 +9,13 @@ class KeyvMongo {
 		if (typeof opts === 'string') {
 			opts = { url: opts };
 		}
-		opts = Object.assign({
+		this.opts = Object.assign({
 			url: 'mongodb://127.0.0.1:27017',
 			collection: 'keyv'
 		}, opts);
-		this.db = mongojs(opts.url);
+		this.db = mongojs(this.opts.url);
 
-		const collection = this.db.collection(opts.collection);
+		const collection = this.db.collection(this.opts.collection);
 		this.mongo = ['update', 'findOne', 'remove'].reduce((obj, method) => {
 			obj[method] = pify(collection[method].bind(collection));
 			return obj;
