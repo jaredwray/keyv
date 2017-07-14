@@ -1,6 +1,6 @@
 # keyv-redis
 
-> Redis storage adapter for keyv
+> Redis storage adapter for Keyv
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-redis.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-redis)
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-redis/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-redis?branch=master)
