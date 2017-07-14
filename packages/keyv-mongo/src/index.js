@@ -32,6 +32,9 @@ class KeyvMongo {
 	}
 
 	delete(key) {
+		if(typeof key !== 'string') {
+			return Promise.resolve(false);
+		}
 		return this.mongo.remove({ key })
 			.then(obj => obj.n > 0);
 	}
