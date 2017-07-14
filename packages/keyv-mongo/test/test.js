@@ -18,3 +18,8 @@ test('Collection option merges into default options', t => {
 		collection: 'foo'
 	});
 });
+
+test('.delete() with no args doesn\'t empty the collection', async t => {
+	const store = new KeyvMongo('foo'); // Make sure we don't actually connect
+	t.false(await store.delete());
+});
