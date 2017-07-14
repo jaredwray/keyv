@@ -16,7 +16,7 @@ class KeyvMongo {
 		this.db = mongojs(opts.url);
 
 		const collection = this.db.collection(opts.collection);
-		this.mongo = ['update', 'findOne'].reduce((obj, method) => {
+		this.mongo = ['update', 'findOne', 'remove'].reduce((obj, method) => {
 			obj[method] = pify(collection[method].bind(collection));
 			return obj;
 		}, {});
@@ -31,7 +31,10 @@ class KeyvMongo {
 		return this.mongo.update({ key }, { key, value }, { upsert: true });
 	}
 
-	delete(key) {}
+	delete(key) {
+		return this.mongo.remove({ key })
+			.then(obj => obj.n > 0);
+	}
 
 	clear() {}
 }
