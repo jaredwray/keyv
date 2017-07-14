@@ -27,7 +27,7 @@ class Keyv {
 		if (store.ttlSupport) {
 			set = store.set(key, value, ttl);
 		} else {
-			const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : undefined;
+			const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
 			const data = { value, expires };
 			set = store.set(key, data);
 		}
