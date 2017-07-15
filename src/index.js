@@ -1,9 +1,21 @@
 'use strict';
 
+const adapters = {
+	redis: 'keyv-redis',
+	mongodb: 'keyv-mongo'
+};
+
 class Keyv {
-	constructor(opts) {
-		this.opts = opts || {};
-		this.opts.store = this.opts.store || new Map();
+	constructor(uri, opts) {
+		this.opts = Object.assign(
+			{},
+			(typeof uri === 'string') ? { uri, adapter: uri.match(/^[^:]*/)[0] } : uri,
+			opts
+		);
+
+		if (!this.opts.store) {
+			this.opts.store = this.opts.adapter ? new (require(adapters[this.opts.adapter]))(opts) : new Map();
+		}
 	}
 
 	get(key) {
