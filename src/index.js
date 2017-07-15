@@ -7,7 +7,11 @@ const loadStore = opts => {
 	};
 	if (opts.adapter || opts.uri) {
 		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
-		return new (require(adapters[adapter]))(opts);
+		try {
+			return new (require(adapters[adapter]))(opts);
+		} catch (err) {
+			throw new Error(`Can't find "${adapter}" storage adapter. Is it officially supported by Keyv?`);
+		}
 	}
 	return new Map();
 };
