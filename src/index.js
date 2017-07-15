@@ -5,8 +5,9 @@ const loadStore = opts => {
 		redis: 'keyv-redis',
 		mongodb: 'keyv-mongo'
 	};
-	if (opts.adapter) {
-		return new (require(adapters[opts.adapter]))(opts);
+	if (opts.adapter || opts.uri) {
+		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
+		return new (require(adapters[adapter]))(opts);
 	}
 	return new Map();
 };
@@ -15,7 +16,7 @@ class Keyv {
 	constructor(uri, opts) {
 		this.opts = Object.assign(
 			{},
-			(typeof uri === 'string') ? { uri, adapter: uri.match(/^[^:]*/)[0] } : uri,
+			(typeof uri === 'string') ? { uri } : uri,
 			opts
 		);
 
