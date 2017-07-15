@@ -6,6 +6,9 @@ const pify = require('pify');
 class KeyvRedis {
 	constructor(opts) {
 		this.ttlSupport = true;
+		if (opts && opts.uri) {
+			opts = Object.assign({}, { url: opts.uri }, opts);
+		}
 		this.client = redis.createClient(opts);
 		this.redis = ['get', 'set', 'del', 'flushdb'].reduce((obj, method) => {
 			obj[method] = pify(this.client[method].bind(this.client));
