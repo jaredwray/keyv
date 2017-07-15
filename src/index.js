@@ -1,8 +1,14 @@
 'use strict';
 
-const adapters = {
-	redis: 'keyv-redis',
-	mongodb: 'keyv-mongo'
+const loadStore = opts => {
+	const adapters = {
+		redis: 'keyv-redis',
+		mongodb: 'keyv-mongo'
+	};
+	if (opts.adapter) {
+		return new (require(adapters[opts.adapter]))(opts);
+	}
+	return new Map();
 };
 
 class Keyv {
@@ -14,7 +20,7 @@ class Keyv {
 		);
 
 		if (!this.opts.store) {
-			this.opts.store = this.opts.adapter ? new (require(adapters[this.opts.adapter]))(opts) : new Map();
+			this.opts.store = loadStore(this.opts);
 		}
 	}
 
