@@ -12,6 +12,18 @@
 npm install --save keyv-mongo
 ```
 
+## Usage
+
+```js
+const Keyv = require('keyv');
+const KeyvMongo = require('keyv-mongo');
+
+const mongo = new KeyvMongo('mongodb://127.0.0.1:27017');
+mongo.db.on('error', handleError);
+
+const keyv = new Keyv({ store: mongo });
+```
+
 ## License
 
 MIT © Luke Childs
