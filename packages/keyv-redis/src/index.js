@@ -12,7 +12,6 @@ class KeyvRedis extends EventEmitter {
 			opts = Object.assign({}, { url: opts.uri }, opts);
 		}
 		const client = redis.createClient(opts);
-		client.on('connect', () => this.emit('connect'));
 		client.on('error', err => this.emit('error', err));
 		this.redis = ['get', 'set', 'del', 'flushdb'].reduce((obj, method) => {
 			obj[method] = pify(client[method].bind(client));
