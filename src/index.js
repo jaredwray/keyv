@@ -1,6 +1,6 @@
 'use strict';
 
-const EventEmitter = require('events').EventEmitter;
+const EventEmitter = require('events');
 const JSONB = require('json-buffer');
 
 const loadStore = opts => {
