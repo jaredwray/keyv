@@ -1,5 +1,7 @@
 'use strict';
 
+const EventEmitter = require('events').EventEmitter;
+
 const loadStore = opts => {
 	const adapters = {
 		redis: 'keyv-redis',
@@ -17,8 +19,9 @@ const loadStore = opts => {
 	return new Map();
 };
 
-class Keyv {
+class Keyv extends EventEmitter {
 	constructor(uri, opts) {
+		super();
 		this.opts = Object.assign(
 			{},
 			(typeof uri === 'string') ? { uri } : uri,
@@ -26,7 +29,8 @@ class Keyv {
 		);
 
 		if (!this.opts.store) {
-			this.opts.store = loadStore(this.opts);
+			const adapterOpts = Object.assign({ keyv: this }, this.opts);
+			this.opts.store = loadStore(adapterOpts);
 		}
 	}
 
