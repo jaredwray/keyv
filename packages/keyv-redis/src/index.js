@@ -2,7 +2,6 @@
 
 const redis = require('redis');
 const pify = require('pify');
-const JSONB = require('json-buffer');
 
 class KeyvRedis {
 	constructor(opts) {
@@ -26,12 +25,7 @@ class KeyvRedis {
 
 	get(key) {
 		return this.redis.get(key)
-			.then(value => {
-				if (value === null) {
-					return undefined;
-				}
-				return JSONB.parse(value);
-			});
+			.then(value => (value === null) ? undefined : value);
 	}
 
 	set(key, value, ttl) {
@@ -40,7 +34,6 @@ class KeyvRedis {
 		}
 		return Promise.resolve()
 			.then(() => {
-				value = JSONB.stringify(value);
 				if (typeof ttl === 'number') {
 					return this.redis.set(key, value, 'PX', ttl);
 				}

@@ -32,7 +32,6 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-redis",
   "dependencies": {
-    "json-buffer": "^2.0.11",
     "pify": "^3.0.0",
     "redis": "^2.7.1"
   },
