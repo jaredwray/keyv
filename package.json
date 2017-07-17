@@ -27,7 +27,9 @@
     "url": "https://github.com/lukechilds/keyv/issues"
   },
   "homepage": "https://github.com/lukechilds/keyv",
-  "dependencies": {},
+  "dependencies": {
+    "json-buffer": "^3.0.0"
+  },
   "devDependencies": {
     "ava": "^0.19.1",
     "coveralls": "^2.13.1",

@@ -21,7 +21,7 @@ test('Keyv accepts storage adapters', async t => {
 });
 
 test('Keyv hands tll functionality over to ttl supporting stores', async t => {
-	t.plan(4);
+	t.plan(3);
 	const store = new Map();
 	store.ttlSupport = true;
 	const storeSet = store.set;
@@ -32,7 +32,6 @@ test('Keyv hands tll functionality over to ttl supporting stores', async t => {
 	const keyv = new Keyv({ store });
 	await keyv.set('foo', 'bar', 100);
 	t.is(await keyv.get('foo'), 'bar');
-	t.is(store.get('foo'), 'bar');
 	await delay(100);
 	t.is(await keyv.get('foo'), 'bar');
 });

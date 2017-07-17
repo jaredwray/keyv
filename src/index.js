@@ -1,6 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
+const JSONB = require('json-buffer');
 
 const loadStore = opts => {
 	const adapters = {
@@ -37,6 +38,7 @@ class Keyv extends EventEmitter {
 	get(key) {
 		const store = this.opts.store;
 		return Promise.resolve(store.get(key)).then(data => {
+			data = (typeof data === 'string') ? JSONB.parse(data) : data;
 			if (data === undefined) {
 				return undefined;
 			}
@@ -51,15 +53,16 @@ class Keyv extends EventEmitter {
 	set(key, value, ttl) {
 		ttl = ttl || this.opts.ttl;
 		const store = this.opts.store;
-		let set;
-		if (store.ttlSupport) {
-			set = store.set(key, value, ttl);
-		} else {
-			const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
-			const data = { value, expires };
-			set = store.set(key, data);
-		}
-		return Promise.resolve(set).then(() => value);
+
+		return Promise.resolve()
+			.then(() => {
+				if (!store.ttlSupport) {
+					const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
+					value = { value, expires };
+				}
+				return store.set(key, JSONB.stringify(value), ttl);
+			})
+			.then(() => true);
 	}
 
 	delete(key) {
