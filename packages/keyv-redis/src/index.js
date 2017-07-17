@@ -6,7 +6,8 @@ const pify = require('pify');
 class KeyvRedis {
 	constructor(opts) {
 		this.ttlSupport = true;
-		if (opts && opts.uri) {
+		opts = opts || {};
+		if (opts.uri) {
 			opts = Object.assign({}, { url: opts.uri }, opts);
 		}
 
