@@ -46,12 +46,6 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.get('foo'), undefined);
 	});
 
-	test.serial('.get(key) with falsey key resolves to value', async t => {
-		const keyv = new Keyv({ store });
-		await keyv.set('foo', false);
-		t.is(await keyv.get('foo'), false);
-	});
-
 	test.serial('.delete(key) returns a Promise', t => {
 		const keyv = new Keyv({ store });
 		t.true(keyv.delete('foo') instanceof Promise);
@@ -94,6 +88,18 @@ const keyvApiTests = (test, Keyv, store) => {
 		await keyv.clear();
 		t.is(await keyv.get('foo'), undefined);
 		t.is(await keyv.get('fizz'), undefined);
+	});
+
+	test.serial('value can be false', async t => {
+		const keyv = new Keyv({ store });
+		await keyv.set('foo', false);
+		t.is(await keyv.get('foo'), false);
+	});
+
+	test.serial('value can be null', async t => {
+		const keyv = new Keyv({ store });
+		await keyv.set('foo', null);
+		t.is(await keyv.get('foo'), null);
 	});
 
 	test.serial('value can be an object', async t => {
