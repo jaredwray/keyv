@@ -96,6 +96,13 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.get('fizz'), undefined);
 	});
 
+	test.serial('value can be an object', async t => {
+		const keyv = new Keyv({ store });
+		const value = { fizz: 'buzz' };
+		t.is(await keyv.set('foo', value), value);
+		t.deepEqual(await keyv.get('foo'), value);
+	});
+
 	test.after.always(async () => {
 		const keyv = new Keyv({ store });
 		await keyv.clear();
