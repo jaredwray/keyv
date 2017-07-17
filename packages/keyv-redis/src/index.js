@@ -1,22 +1,25 @@
 'use strict';
 
-const EventEmitter = require('events').EventEmitter;
 const redis = require('redis');
 const pify = require('pify');
 
-class KeyvRedis extends EventEmitter {
+class KeyvRedis {
 	constructor(opts) {
-		super();
 		this.ttlSupport = true;
 		if (opts && opts.uri) {
 			opts = Object.assign({}, { url: opts.uri }, opts);
 		}
+
 		const client = redis.createClient(opts);
-		client.on('error', err => this.emit('error', err));
+
 		this.redis = ['get', 'set', 'del', 'flushdb'].reduce((obj, method) => {
 			obj[method] = pify(client[method].bind(client));
 			return obj;
 		}, {});
+
+		if (opts.keyv) {
+			client.on('error', err => opts.keyv.emit('error', err));
+		}
 	}
 
 	get(key) {
