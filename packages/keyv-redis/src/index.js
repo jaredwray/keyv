@@ -25,7 +25,12 @@ class KeyvRedis {
 
 	get(key) {
 		return this.redis.get(key)
-			.then(value => (value === null) ? undefined : value);
+			.then(value => {
+				if (value === null) {
+					return undefined;
+				}
+				return value;
+			});
 	}
 
 	set(key, value, ttl) {
