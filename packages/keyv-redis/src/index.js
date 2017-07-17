@@ -35,6 +35,9 @@ class KeyvRedis {
 	}
 
 	set(key, value, ttl) {
+		if (typeof value === 'undefined') {
+			return Promise.resolve(undefined);
+		}
 		return Promise.resolve()
 			.then(() => {
 				value = JSONB.stringify(value);
