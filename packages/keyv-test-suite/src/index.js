@@ -103,6 +103,13 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.deepEqual(await keyv.get('foo'), value);
 	});
 
+	test.serial('value can be a buffer', async t => {
+		const keyv = new Keyv({ store });
+		const buf = Buffer.from('bar');
+		await keyv.set('foo', buf);
+		t.true(buf.equals(await keyv.get('foo')));
+	});
+
 	test.after.always(async () => {
 		const keyv = new Keyv({ store });
 		await keyv.clear();
