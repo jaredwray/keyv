@@ -40,8 +40,8 @@ class KeyvMongo {
 			});
 	}
 
-	set(key, value) {
-		const expiresAt = (typeof value.expires === 'number') ? new Date(value.expires) : null;
+	set(key, value, ttl) {
+		const expiresAt = (typeof ttl === 'number') ? new Date(Date.now() + ttl) : null;
 		return this.mongo.update({ key }, { key, value, expiresAt }, { upsert: true });
 	}
 
