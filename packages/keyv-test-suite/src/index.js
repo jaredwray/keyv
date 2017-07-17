@@ -11,20 +11,20 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.true(keyv.set('foo', 'bar') instanceof Promise);
 	});
 
-	test.serial('.set(key, value) resolves to value', async t => {
+	test.serial('.set(key, value) resolves to true', async t => {
 		const keyv = new Keyv({ store });
-		t.is(await keyv.set('foo', 'bar'), 'bar');
+		t.is(await keyv.set('foo', 'bar'), true);
 	});
 
 	test.serial('.set(key, value) sets a value', async t => {
 		const keyv = new Keyv({ store });
-		t.is(await keyv.set('foo', 'bar'), 'bar');
+		await keyv.set('foo', 'bar');
 		t.is(await keyv.get('foo'), 'bar');
 	});
 
 	test.serial('.set(key, value, ttl) sets a value that expires', async t => {
 		const keyv = new Keyv({ store });
-		t.is(await keyv.set('foo', 'bar', 100), 'bar');
+		await keyv.set('foo', 'bar', 100);
 		t.is(await keyv.get('foo'), 'bar');
 		await delay(110);
 		t.is(await keyv.get('foo'), undefined);
@@ -117,7 +117,7 @@ const keyvApiTests = (test, Keyv, store) => {
 	test.serial('value can be an object', async t => {
 		const keyv = new Keyv({ store });
 		const value = { fizz: 'buzz' };
-		t.is(await keyv.set('foo', value), value);
+		await keyv.set('foo', value);
 		t.deepEqual(await keyv.get('foo'), value);
 	});
 
@@ -131,7 +131,7 @@ const keyvApiTests = (test, Keyv, store) => {
 	test.serial('value can be an object containing a buffer', async t => {
 		const keyv = new Keyv({ store });
 		const value = { buff: Buffer.from('buzz') };
-		t.is(await keyv.set('foo', value), value);
+		await keyv.set('foo', value);
 		t.deepEqual(await keyv.get('foo'), value);
 	});
 
