@@ -32,6 +32,10 @@ class KeyvMongo {
 			obj[method] = pify(collection[method].bind(collection));
 			return obj;
 		}, {});
+
+		if (opts.keyv) {
+			this.db.on('error', err => opts.keyv.emit('error', err));
+		}
 	}
 
 	get(key) {
