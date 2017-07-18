@@ -6,8 +6,12 @@ const pify = require('pify');
 class KeyvMongo {
 	constructor(opts) {
 		this.ttlSupport = false;
+		opts = opts || {};
 		if (typeof opts === 'string') {
 			opts = { url: opts };
+		}
+		if (opts.uri) {
+			opts = Object.assign({ url: opts.uri }, opts);
 		}
 		this.opts = Object.assign({
 			url: 'mongodb://127.0.0.1:27017',
