@@ -1,4 +1,5 @@
 import test from 'ava';
+import keyvApiTests from 'keyv-api-tests';
 import Keyv from '../../';
 
 test('connection string automatically requires module', async t => {
@@ -14,3 +15,6 @@ test.cb('connection errors are emitted', t => {
 		t.end();
 	});
 });
+
+const store = new (require('keyv-redis'))('redis://localhost');
+keyvApiTests(test, Keyv, store);
