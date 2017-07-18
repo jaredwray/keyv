@@ -3,9 +3,6 @@ import delay from 'delay';
 import keyvApiTests from 'keyv-api-tests';
 import Keyv from '../';
 
-const store = new Map();
-keyvApiTests(test, Keyv, store);
-
 test('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
 	t.throws(() => Keyv()); // eslint-disable-line new-cap
@@ -64,3 +61,6 @@ test('.set(key, val, ttl) overwrites default tll option', async t => {
 	await delay(50);
 	t.is(await keyv.get('ping'), undefined);
 });
+
+const store = new Map();
+keyvApiTests(test, Keyv, store);
