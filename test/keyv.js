@@ -38,7 +38,7 @@ test('Keyv respects default tll option', async t => {
 	const keyv = new Keyv({ store, ttl: 100 });
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
-	await delay(100);
+	await delay(110);
 	t.is(await keyv.get('foo'), undefined);
 });
 
