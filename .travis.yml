@@ -5,7 +5,7 @@ node_js:
   - '4'
 services:
   - redis-server
-script: npm test
+script: npm run test:full
 after_success: npm run coverage
 notifications:
   email:
