@@ -16,5 +16,5 @@ test.cb('connection errors are emitted', t => {
 	});
 });
 
-const store = new (require('keyv-redis'))('redis://localhost');
+const store = new (require('keyv-redis'))('redis://localhost'); // eslint-disable-line import/newline-after-import
 keyvApiTests(test, Keyv, store);
