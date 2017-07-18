@@ -4,7 +4,7 @@
   "description": "Simple key/value store with support for multiple backends",
   "main": "src/index.js",
   "scripts": {
-    "test": "xo && nyc ava",
+    "test": "xo && nyc ava --serial",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {
