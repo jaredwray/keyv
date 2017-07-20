@@ -1,7 +1,7 @@
 import test from 'ava';
 import delay from 'delay';
 import keyvApiTests from 'keyv-api-tests';
-import Keyv from '../';
+import Keyv from 'get-root-module';
 
 test('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');

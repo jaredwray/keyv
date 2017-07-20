@@ -36,6 +36,7 @@
     "coveralls": "^2.13.1",
     "delay": "^2.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
+    "get-root-module": "^0.1.3",
     "keyv-api-tests": "*",
     "keyv-mongo": "*",
     "keyv-redis": "*",

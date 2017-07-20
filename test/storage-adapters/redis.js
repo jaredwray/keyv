@@ -1,6 +1,6 @@
 import test from 'ava';
 import keyvApiTests from 'keyv-api-tests';
-import Keyv from '../../';
+import Keyv from 'get-root-module';
 
 test('connection string automatically requires module', async t => {
 	const keyv = new Keyv('redis://localhost');
