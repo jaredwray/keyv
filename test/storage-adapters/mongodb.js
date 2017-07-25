@@ -1,5 +1,5 @@
 import test from 'ava';
-import keyvApiTests from 'keyv-api-tests';
+import keyvTestSuite from 'keyv-test-suite';
 import Keyv from 'get-root-module';
 
 test('connection string automatically requires module', async t => {
@@ -17,4 +17,4 @@ test.cb('connection errors are emitted', t => {
 });
 
 const store = new (require('keyv-mongo'))('mongodb://127.0.0.1:27017'); // eslint-disable-line import/newline-after-import
-keyvApiTests(test, Keyv, store);
+keyvTestSuite(test, Keyv, store);

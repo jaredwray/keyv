@@ -1,6 +1,6 @@
 import test from 'ava';
 import delay from 'delay';
-import keyvApiTests from 'keyv-api-tests';
+import keyvTestSuite from 'keyv-test-suite';
 import Keyv from 'get-root-module';
 
 test('Keyv is a class', t => {
@@ -63,4 +63,4 @@ test('.set(key, val, ttl) overwrites default tll option', async t => {
 });
 
 const store = new Map();
-keyvApiTests(test, Keyv, store);
+keyvTestSuite(test, Keyv, store);
