@@ -1,5 +1,6 @@
 import keyvApiTests from './api';
 import keyvValueTests from './values';
+import keyvOfficialTests from './official';
 
 const keyvTestSuite = (test, Keyv, store) => {
 	keyvApiTests(test, Keyv, store);
@@ -8,6 +9,7 @@ const keyvTestSuite = (test, Keyv, store) => {
 
 export {
 	keyvApiTests,
-	keyvValueTests
+	keyvValueTests,
+	keyvOfficialTests
 };
 export default keyvTestSuite;
