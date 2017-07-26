@@ -21,8 +21,6 @@ class KeyvRedis {
 		if (opts.keyv) {
 			client.on('error', err => opts.keyv.emit('error', err));
 		}
-
-		this.namespace = opts.keyv ? opts.keyv.opts.namespace : '';
 	}
 
 	get(key) {
