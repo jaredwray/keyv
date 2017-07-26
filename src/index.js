@@ -26,7 +26,7 @@ class Keyv extends EventEmitter {
 		);
 
 		if (!this.opts.store) {
-			const adapterOpts = Object.assign({ keyv: this }, this.opts);
+			const adapterOpts = Object.assign({}, this.opts);
 			this.opts.store = loadStore(adapterOpts);
 		}
 
