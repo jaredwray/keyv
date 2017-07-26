@@ -62,7 +62,7 @@ class KeyvMongo extends EventEmitter {
 	}
 
 	clear() {
-		return this.mongo.remove()
+		return this.mongo.remove({ key: new RegExp(`^${this.namespace}:`) })
 			.then(() => undefined);
 	}
 }
