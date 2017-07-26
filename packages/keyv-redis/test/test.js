@@ -1,7 +1,7 @@
 import test from 'ava';
-import keyvApiTests from 'keyv-api-tests';
+import keyvTestSuite from 'keyv-test-suite';
 import Keyv from 'keyv';
 import KeyvRedis from '../';
 
 const store = new KeyvRedis();
-keyvApiTests(test, Keyv, store);
+keyvTestSuite(test, Keyv, store);
