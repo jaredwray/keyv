@@ -12,9 +12,10 @@ test('Keyv is a class', t => {
 test('Keyv accepts storage adapters', async t => {
 	const store = new Map();
 	const keyv = new Keyv({ store });
+	t.is(store.size, 0);
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
-	t.true(store.has('foo'));
+	t.is(store.size, 1);
 });
 
 test('Keyv hands tll functionality over to ttl supporting stores', async t => {
