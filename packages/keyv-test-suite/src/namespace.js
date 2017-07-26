@@ -15,6 +15,16 @@ const keyvNamepsaceTests = (test, Keyv, store) => {
 		t.is(await keyv2.get('foo'), 'keyv2');
 	});
 
+	test.serial('namespaced delete only deletes from current namespace', async t => {
+		const keyv1 = new Keyv({ store, namespace: 'keyv1' });
+		const keyv2 = new Keyv({ store, namespace: 'keyv2' });
+		await keyv1.set('foo', 'keyv1');
+		await keyv2.set('foo', 'keyv2');
+		t.is(await keyv1.delete('foo'), true);
+		t.is(await keyv1.get('foo'), undefined);
+		t.is(await keyv2.get('foo'), 'keyv2');
+	});
+
 	test.after.always(async () => {
 		const keyv1 = new Keyv({ store, namespace: 'keyv1' });
 		const keyv2 = new Keyv({ store, namespace: 'keyv2' });
