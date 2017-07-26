@@ -1,15 +1,12 @@
 import test from 'ava';
-import keyvApiTests from 'keyv-api-tests';
+import keyvTestSuite, { keyvOfficialTests } from 'keyv-test-suite';
 import Keyv from 'keyv';
 import KeyvMongo from '../';
 
-const store = new KeyvMongo();
-keyvApiTests(test, Keyv, store);
+keyvOfficialTests(test, Keyv, 'mongodb://127.0.0.1:27017', 'mongodb://127.0.0.1:1234');
 
-test('Redis URL can be passed in as string', t => {
-	const store = new KeyvMongo('foo');
-	t.is(store.opts.url, 'foo');
-});
+const store = () => new KeyvMongo();
+keyvTestSuite(test, Keyv, store);
 
 test('Collection option merges into default options', t => {
 	const store = new KeyvMongo({ collection: 'foo' });
