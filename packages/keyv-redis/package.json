@@ -41,7 +41,7 @@
     "delay": "^2.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
-    "keyv-api-tests": "*",
+    "keyv-test-suite": "^1.3.0",
     "nyc": "^10.3.2",
     "xo": "^0.19.0"
   }
