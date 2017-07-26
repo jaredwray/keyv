@@ -63,5 +63,5 @@ test('.set(key, val, ttl) overwrites default tll option', async t => {
 	t.is(await keyv.get('ping'), undefined);
 });
 
-const store = new Map();
+const store = () => new Map();
 keyvTestSuite(test, Keyv, store);
