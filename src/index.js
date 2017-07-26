@@ -29,6 +29,8 @@ class Keyv extends EventEmitter {
 			const adapterOpts = Object.assign({ keyv: this }, this.opts);
 			this.opts.store = loadStore(adapterOpts);
 		}
+
+		this.opts.store.namespace = this.opts.namespace;
 	}
 
 	_getKeyPrefix(key) {
