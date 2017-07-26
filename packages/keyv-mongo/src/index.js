@@ -1,10 +1,12 @@
 'use strict';
 
+const EventEmitter = require('events');
 const mongojs = require('mongojs');
 const pify = require('pify');
 
-class KeyvMongo {
+class KeyvMongo extends EventEmitter {
 	constructor(opts) {
+		super();
 		this.ttlSupport = false;
 		opts = opts || {};
 		if (typeof opts === 'string') {
@@ -33,9 +35,7 @@ class KeyvMongo {
 			return obj;
 		}, {});
 
-		if (opts.keyv) {
-			this.db.on('error', err => opts.keyv.emit('error', err));
-		}
+		this.db.on('error', err => this.emit('error', err));
 	}
 
 	get(key) {
