@@ -13,7 +13,7 @@ class KeyvRedis {
 
 		const client = redis.createClient(opts);
 
-		this.redis = ['get', 'set', 'del', 'flushdb'].reduce((obj, method) => {
+		this.redis = ['get', 'set', 'sadd', 'del', 'srem', 'smembers'].reduce((obj, method) => {
 			obj[method] = pify(client[method].bind(client));
 			return obj;
 		}, {});
@@ -21,6 +21,8 @@ class KeyvRedis {
 		if (opts.keyv) {
 			client.on('error', err => opts.keyv.emit('error', err));
 		}
+
+		this.namespace = opts.keyv ? opts.keyv.opts.namespace : '';
 	}
 
 	get(key) {
@@ -43,16 +45,21 @@ class KeyvRedis {
 					return this.redis.set(key, value, 'PX', ttl);
 				}
 				return this.redis.set(key, value);
-			});
+			})
+			.then(() => this.redis.sadd(`namespace:${this.namespace}`, key));
 	}
 
 	delete(key) {
 		return this.redis.del(key)
-			.then(items => items > 0);
+			.then(items => {
+				return this.redis.srem(`namespace:${this.namespace}`, key)
+					.then(() => items > 0);
+			});
 	}
 
 	clear() {
-		return this.redis.flushdb()
+		return this.redis.smembers(`namespace:${this.namespace}`)
+			.then(keys => this.redis.del.apply(null, keys.concat(`namespace:${this.namespace}`)))
 			.then(() => undefined);
 	}
 }
