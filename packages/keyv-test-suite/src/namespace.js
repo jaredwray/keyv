@@ -6,7 +6,7 @@ const keyvNamepsaceTests = (test, Keyv, store) => {
 		await keyv2.clear();
 	});
 
-	test.serial('namespaced .set(key, value) don\'t collide', async t => {
+	test.serial('namespaced set/get don\'t collide', async t => {
 		const keyv1 = new Keyv({ store, namespace: 'keyv1' });
 		const keyv2 = new Keyv({ store, namespace: 'keyv2' });
 		await keyv1.set('foo', 'keyv1');
