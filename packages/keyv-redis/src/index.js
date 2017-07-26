@@ -23,6 +23,10 @@ class KeyvRedis {
 		}
 	}
 
+	_getNamespace() {
+		return `namespace:${this.namespace}`;
+	}
+
 	get(key) {
 		return this.redis.get(key)
 			.then(value => {
@@ -44,20 +48,20 @@ class KeyvRedis {
 				}
 				return this.redis.set(key, value);
 			})
-			.then(() => this.redis.sadd(`namespace:${this.namespace}`, key));
+			.then(() => this.redis.sadd(this._getNamespace(), key));
 	}
 
 	delete(key) {
 		return this.redis.del(key)
 			.then(items => {
-				return this.redis.srem(`namespace:${this.namespace}`, key)
+				return this.redis.srem(this._getNamespace(), key)
 					.then(() => items > 0);
 			});
 	}
 
 	clear() {
-		return this.redis.smembers(`namespace:${this.namespace}`)
-			.then(keys => this.redis.del.apply(null, keys.concat(`namespace:${this.namespace}`)))
+		return this.redis.smembers(this._getNamespace())
+			.then(keys => this.redis.del.apply(null, keys.concat(this._getNamespace())))
 			.then(() => undefined);
 	}
 }
