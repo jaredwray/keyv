@@ -5,5 +5,5 @@ import KeyvRedis from '../';
 
 keyvOfficialTests(test, Keyv, 'redis://localhost', 'redis://foo');
 
-const store = new KeyvRedis();
+const store = () => new KeyvRedis();
 keyvTestSuite(test, Keyv, store);
