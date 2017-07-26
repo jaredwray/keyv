@@ -30,6 +30,10 @@ class Keyv extends EventEmitter {
 			this.opts.store = loadStore(adapterOpts);
 		}
 
+		if (typeof this.opts.store.on === 'function') {
+			this.opts.store.on('error', err => this.emit('error', err));
+		}
+
 		this.opts.store.namespace = this.opts.namespace;
 	}
 
