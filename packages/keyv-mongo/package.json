@@ -10,6 +10,11 @@
   "xo": {
     "extends": "xo-lukechilds"
   },
+  "ava": {
+    "require": [
+      "requireable"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lukechilds/keyv-mongo.git"
@@ -44,6 +49,7 @@
     "keyv": "*",
     "keyv-test-suite": "*",
     "nyc": "^10.3.2",
+    "requireable": "^0.3.0",
     "xo": "^0.19.0"
   }
 }
