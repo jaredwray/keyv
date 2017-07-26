@@ -1,10 +1,12 @@
 'use strict';
 
+const EventEmitter = require('events');
 const redis = require('redis');
 const pify = require('pify');
 
-class KeyvRedis {
+class KeyvRedis extends EventEmitter {
 	constructor(opts) {
+		super();
 		this.ttlSupport = true;
 		opts = opts || {};
 		if (opts.uri) {
@@ -18,9 +20,7 @@ class KeyvRedis {
 			return obj;
 		}, {});
 
-		if (opts.keyv) {
-			client.on('error', err => opts.keyv.emit('error', err));
-		}
+		client.on('error', err => this.emit('error', err));
 	}
 
 	_getNamespace() {
