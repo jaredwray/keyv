@@ -20,7 +20,7 @@ class Keyv extends EventEmitter {
 	constructor(uri, opts) {
 		super();
 		this.opts = Object.assign(
-			{},
+			{ namespace: 'keyv' },
 			(typeof uri === 'string') ? { uri } : uri,
 			opts
 		);
@@ -31,7 +31,12 @@ class Keyv extends EventEmitter {
 		}
 	}
 
+	_getKeyPrefix(key) {
+		return `${this.opts.namespace}:${key}`;
+	}
+
 	get(key) {
+		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
 		return Promise.resolve(store.get(key)).then(data => {
 			data = (typeof data === 'string') ? JSONB.parse(data) : data;
@@ -47,6 +52,7 @@ class Keyv extends EventEmitter {
 	}
 
 	set(key, value, ttl) {
+		key = this._getKeyPrefix(key);
 		ttl = ttl || this.opts.ttl;
 		const store = this.opts.store;
 
@@ -62,6 +68,7 @@ class Keyv extends EventEmitter {
 	}
 
 	delete(key) {
+		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
 		return Promise.resolve(store.delete(key));
 	}
