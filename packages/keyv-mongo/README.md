@@ -1,5 +1,7 @@
 # keyv-mongo
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/lukechilds/keyv-mongo.svg)](https://greenkeeper.io/)
+
 > MongoDB storage adapter for Keyv
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-mongo.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mongo)

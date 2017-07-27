@@ -42,12 +42,12 @@
     "pify": "^3.0.0"
   },
   "devDependencies": {
-    "ava": "^0.19.1",
+    "ava": "^0.21.0",
     "coveralls": "^2.13.1",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
     "keyv-test-suite": "*",
-    "nyc": "^10.3.2",
+    "nyc": "^11.0.3",
     "requireable": "^1.0.1",
     "xo": "^0.19.0"
   }
