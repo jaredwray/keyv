@@ -1,7 +1,5 @@
 # keyv-redis
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/lukechilds/keyv-redis.svg)](https://greenkeeper.io/)
-
 > Redis storage adapter for Keyv
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-redis.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-redis)
