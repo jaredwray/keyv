@@ -1,5 +1,7 @@
 # keyv
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/lukechilds/keyv.svg)](https://greenkeeper.io/)
+
 > Simple key/value store with support for multiple backends
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv.svg?branch=master)](https://travis-ci.org/lukechilds/keyv)
