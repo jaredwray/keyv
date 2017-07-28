@@ -1,6 +1,6 @@
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from 'keyv-test-suite';
-import Keyv from 'get-root-module';
+import Keyv from 'this';
 
 keyvOfficialTests(test, Keyv, 'mongodb://127.0.0.1:27017', 'mongodb://127.0.0.1:1234');
 

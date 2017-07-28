@@ -1,6 +1,6 @@
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from 'keyv-test-suite';
-import Keyv from 'get-root-module';
+import Keyv from 'this';
 
 keyvOfficialTests(test, Keyv, 'redis://localhost', 'redis://foo');
 
