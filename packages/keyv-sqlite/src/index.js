@@ -9,9 +9,7 @@ class KeyvSqlite extends KeyvSequelize {
 		}
 		opts = Object.assign({
 			dialect: 'sqlite',
-			uri: 'sqlite://:memory:',
-			table: 'keyv',
-			logging: false
+			uri: 'sqlite://:memory:'
 		}, opts);
 
 		super(opts);
