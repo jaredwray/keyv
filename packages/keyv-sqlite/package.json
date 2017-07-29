@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
-    "keyv-sequelize": "0.0.0",
+    "keyv-sequelize": "0.1.0",
     "sqlite3": "^3.1.8"
   },
   "devDependencies": {
