@@ -7,10 +7,3 @@ keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/exist
 
 const store = () => new KeyvSqlite('sqlite://test/testdb.sqlite');
 keyvTestSuite(test, Keyv, store);
-
-test('options have expected defaults', t => {
-	const store = new KeyvSqlite();
-	t.is(store.opts.uri, 'sqlite://:memory:');
-	t.is(store.opts.table, 'keyv');
-	t.false(store.opts.logging);
-});
