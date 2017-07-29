@@ -3,22 +3,13 @@
 const EventEmitter = require('events');
 const Sequelize = require('sequelize');
 
-class KeyvSqlite extends EventEmitter {
+class KeyvSequelize extends EventEmitter {
 	constructor(opts) {
 		super();
 		this.ttlSupport = false;
-		opts = opts || {};
-		if (typeof opts === 'string') {
-			opts = { uri: opts };
-		}
-		this.opts = Object.assign({
-			uri: 'sqlite://:memory:',
-			table: 'keyv',
-			logging: false
-		}, opts);
 
-		const sequelize = new Sequelize(this.opts.uri, this.opts);
-		this.Entry = sequelize.define(this.opts.table, {
+		const sequelize = new Sequelize(opts.uri, opts);
+		this.Entry = sequelize.define(opts.table, {
 			key: {
 				primaryKey: true,
 				unique: true,
@@ -69,4 +60,4 @@ class KeyvSqlite extends EventEmitter {
 	}
 }
 
-module.exports = KeyvSqlite;
+module.exports = KeyvSequelize;
