@@ -8,6 +8,9 @@ class KeyvSqlite extends EventEmitter {
 		super();
 		this.ttlSupport = false;
 		opts = opts || {};
+		if (typeof opts === 'string') {
+			opts = { uri: opts };
+		}
 		this.opts = Object.assign({
 			uri: 'sqlite://:memory:',
 			table: 'keyv',
