@@ -20,8 +20,8 @@
     "url": "git+https://github.com/lukechilds/keyv-sqlite.git"
   },
   "keywords": [
-    "mongo",
-    "mongodb",
+    "sqlite",
+    "sql",
     "keyv",
     "storage",
     "adapter",
