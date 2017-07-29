@@ -10,3 +10,12 @@ const sqliteOpts = {
 
 const store = () => new KeyvSequelize(sqliteOpts);
 keyvTestSuite(test, Keyv, store);
+
+test.serial.cb('connection errors are emitted', t => {
+	const store = new KeyvSequelize({ uri: 'sqlite://non/existent/database.sqlite' });
+	const keyv = new Keyv({ store });
+	keyv.on('error', () => {
+		t.pass();
+		t.end();
+	});
+});
