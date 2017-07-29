@@ -30,7 +30,7 @@ test('Keyv hands tll functionality over to ttl supporting stores', async t => {
 	const keyv = new Keyv({ store });
 	await keyv.set('foo', 'bar', 100);
 	t.is(await keyv.get('foo'), 'bar');
-	await delay(100);
+	await delay(150);
 	t.is(await keyv.get('foo'), 'bar');
 });
 
@@ -39,27 +39,27 @@ test('Keyv respects default tll option', async t => {
 	const keyv = new Keyv({ store, ttl: 100 });
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
-	await delay(110);
+	await delay(150);
 	t.is(await keyv.get('foo'), undefined);
 });
 
 test('.set(key, val, ttl) overwrites default tll option', async t => {
 	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 100 });
+	const keyv = new Keyv({ store, ttl: 200 });
 	await keyv.set('foo', 'bar');
-	await keyv.set('fizz', 'buzz', 50);
-	await keyv.set('ping', 'pong', 150);
+	await keyv.set('fizz', 'buzz', 100);
+	await keyv.set('ping', 'pong', 300);
 	t.is(await keyv.get('foo'), 'bar');
 	t.is(await keyv.get('fizz'), 'buzz');
 	t.is(await keyv.get('ping'), 'pong');
-	await delay(60);
+	await delay(150);
 	t.is(await keyv.get('foo'), 'bar');
 	t.is(await keyv.get('fizz'), undefined);
 	t.is(await keyv.get('ping'), 'pong');
-	await delay(50);
+	await delay(100);
 	t.is(await keyv.get('foo'), undefined);
 	t.is(await keyv.get('ping'), 'pong');
-	await delay(50);
+	await delay(100);
 	t.is(await keyv.get('ping'), undefined);
 });
 
