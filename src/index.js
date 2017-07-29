@@ -7,7 +7,8 @@ const loadStore = opts => {
 	const adapters = {
 		redis: 'keyv-redis',
 		mongodb: 'keyv-mongo',
-		mongo: 'keyv-mongo'
+		mongo: 'keyv-mongo',
+		sqlite: 'keyv-sqlite'
 	};
 	if (opts.adapter || opts.uri) {
 		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
