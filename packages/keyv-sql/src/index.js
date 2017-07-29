@@ -8,6 +8,11 @@ class KeyvSequelize extends EventEmitter {
 		super();
 		this.ttlSupport = false;
 
+		opts = Object.assign({
+			table: 'keyv',
+			logging: false
+		}, opts);
+
 		const sequelize = new Sequelize(opts.uri, opts);
 		this.Entry = sequelize.define(opts.table, {
 			key: {

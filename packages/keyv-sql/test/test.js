@@ -5,9 +5,7 @@ import KeyvSequelize from 'this';
 
 const sqliteOpts = {
 	dialect: 'sqlite',
-	uri: 'sqlite://test/testdb.sqlite',
-	table: 'keyv',
-	logging: false
+	uri: 'sqlite://test/testdb.sqlite'
 };
 
 const store = () => new KeyvSequelize(sqliteOpts);
