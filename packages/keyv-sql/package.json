@@ -1,6 +1,6 @@
 {
-  "name": "keyv-sqlite",
-  "version": "0.2.0",
+  "name": "keyv-sequelize",
+  "version": "0.0.0",
   "description": "SQLite storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
@@ -38,8 +38,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
-    "sequelize": "^4.4.2",
-    "sqlite3": "^3.1.8"
+    "sequelize": "^4.4.2"
   },
   "devDependencies": {
     "ava": "^0.21.0",
