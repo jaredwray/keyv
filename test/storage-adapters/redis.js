@@ -1,8 +1,9 @@
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from 'keyv-test-suite';
 import Keyv from 'this';
+import KeyvRedis from 'keyv-redis';
 
 keyvOfficialTests(test, Keyv, 'redis://localhost', 'redis://foo');
 
-const store = () => new (require('keyv-redis'))('redis://localhost'); // eslint-disable-line import/newline-after-import
+const store = () => new KeyvRedis('redis://localhost');
 keyvTestSuite(test, Keyv, store);
