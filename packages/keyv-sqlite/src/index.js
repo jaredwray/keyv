@@ -46,6 +46,7 @@ class KeyvSqlite extends EventEmitter {
 	}
 
 	clear() {
+		return this.Entry.destroy({ where: {} });
 	}
 }
 
