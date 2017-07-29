@@ -10,7 +10,8 @@ class KeyvSqlite extends EventEmitter {
 		opts = opts || {};
 		this.opts = Object.assign({
 			uri: 'sqlite://:memory:',
-			table: 'keyv'
+			table: 'keyv',
+			logging: false
 		}, opts);
 
 		const sequelize = new Sequelize(this.opts.uri, this.opts);
