@@ -3,7 +3,7 @@ import keyvTestSuite, { keyvOfficialTests } from 'keyv-test-suite';
 import Keyv from 'keyv';
 import Keyvpostgres from 'this';
 
-keyvOfficialTests(test, Keyv, 'postgresql://localhost:5432', 'postgresql://foo');
+keyvOfficialTests(test, Keyv, 'postgresql://postgres@localhost:5432/keyv_test', 'postgresql://foo');
 
-const store = () => new Keyvpostgres('postgresql://localhost:5432');
+const store = () => new Keyvpostgres('postgresql://postgres@localhost:5432/keyv_test');
 keyvTestSuite(test, Keyv, store);
