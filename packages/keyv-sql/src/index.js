@@ -60,7 +60,11 @@ class KeyvSqlite extends EventEmitter {
 
 	clear() {
 		return this.connected
-			.then(() => this.Entry.destroy({ where: {} }))
+			.then(() => this.Entry.destroy({
+				where: {
+					key: { $like: `${this.namespace}:%` }
+				}
+			}))
 			.then(() => undefined);
 	}
 }
