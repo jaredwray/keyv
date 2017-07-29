@@ -14,7 +14,17 @@ class KeyvSqlite extends EventEmitter {
 		}, opts);
 
 		const sequelize = new Sequelize(this.opts.uri, this.opts);
+		this.Entry = sequelize.define('entry', {
+			key: {
+				type: Sequelize.STRING
+			},
+			value: {
+				type: Sequelize.TEXT
+			}
+		});
+
 		sequelize.authenticate()
+			.then(() => sequelize.sync())
 			.catch(err => this.emit('error', err));
 	}
 
