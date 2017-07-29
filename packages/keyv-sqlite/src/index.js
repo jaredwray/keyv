@@ -35,7 +35,12 @@ class KeyvSqlite extends EventEmitter {
 	get(key) {
 		return this.connected
 			.then(() => this.Entry.findById(key))
-			.then(data => data.get('value'));
+			.then(data => {
+				if (data === null) {
+					return undefined;
+				}
+				return data.get('value');
+			});
 	}
 
 	set(key, value) {
