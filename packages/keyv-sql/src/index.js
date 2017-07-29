@@ -33,12 +33,16 @@ class KeyvSqlite extends EventEmitter {
 	}
 
 	get(key) {
+		return this.Entry.findById(key)
+			.then(data => data.get('value'));
 	}
 
-	set(key, value, ttl) {
+	set(key, value) {
+		return this.Entry.upsert({ key, value });
 	}
 
 	delete(key) {
+		return this.Entry.destroy({ where: { key } });
 	}
 
 	clear() {
