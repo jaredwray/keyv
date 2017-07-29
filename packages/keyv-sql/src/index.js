@@ -23,6 +23,8 @@ class KeyvSqlite extends EventEmitter {
 			value: {
 				type: Sequelize.TEXT
 			}
+		}, {
+			timestamps: false
 		});
 
 		sequelize.authenticate()
