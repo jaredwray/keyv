@@ -1,7 +1,7 @@
 {
   "name": "keyv-sequelize",
   "version": "0.0.0",
-  "description": "SQLite storage adapter for Keyv",
+  "description": "Parent class for Sequelize based Keyv storage adapters",
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava",
@@ -20,8 +20,8 @@
     "url": "git+https://github.com/lukechilds/keyv-sqlite.git"
   },
   "keywords": [
-    "mongo",
-    "mongodb",
+    "sequelize",
+    "sql",
     "keyv",
     "storage",
     "adapter",
