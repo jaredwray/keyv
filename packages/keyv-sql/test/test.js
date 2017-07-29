@@ -5,5 +5,5 @@ import KeyvSQLite from 'this';
 
 keyvOfficialTests(test, Keyv, 'sqlite://:memory:', 'sqlite://non/existent/database.sqlite');
 
-const store = () => new KeyvSQLite();
+const store = () => new KeyvSQLite('sqlite://:memory:');
 keyvTestSuite(test, Keyv, store);
