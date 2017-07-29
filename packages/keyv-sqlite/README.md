@@ -1,7 +1,5 @@
 # keyv-sqlite
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/lukechilds/keyv-sqlite.svg)](https://greenkeeper.io/)
-
 > SQLite storage adapter for Keyv
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-sqlite.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-sqlite)
