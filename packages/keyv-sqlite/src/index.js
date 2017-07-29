@@ -16,6 +16,7 @@ class KeyvSqlite extends EventEmitter {
 		const sequelize = new Sequelize(this.opts.uri, this.opts);
 		this.Entry = sequelize.define('entry', {
 			key: {
+				primaryKey: true,
 				type: Sequelize.STRING
 			},
 			value: {
