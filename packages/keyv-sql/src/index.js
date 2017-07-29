@@ -45,7 +45,8 @@ class KeyvSqlite extends EventEmitter {
 
 	delete(key) {
 		return this.connected
-			.then(() => this.Entry.destroy({ where: { key } }));
+			.then(() => this.Entry.destroy({ where: { key } }))
+			.then(items => items > 0);
 	}
 
 	clear() {
