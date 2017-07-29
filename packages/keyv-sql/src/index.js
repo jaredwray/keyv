@@ -27,26 +27,30 @@ class KeyvSqlite extends EventEmitter {
 			timestamps: false
 		});
 
-		sequelize.authenticate()
+		this.connected = sequelize.authenticate()
 			.then(() => sequelize.sync())
 			.catch(err => this.emit('error', err));
 	}
 
 	get(key) {
-		return this.Entry.findById(key)
+		return this.connected
+			.then(() => this.Entry.findById(key))
 			.then(data => data.get('value'));
 	}
 
 	set(key, value) {
-		return this.Entry.upsert({ key, value });
+		return this.connected
+			.then(() => this.Entry.upsert({ key, value }));
 	}
 
 	delete(key) {
-		return this.Entry.destroy({ where: { key } });
+		return this.connected
+			.then(() => this.Entry.destroy({ where: { key } }));
 	}
 
 	clear() {
-		return this.Entry.destroy({ where: {} });
+		return this.connected
+			.then(() => this.Entry.destroy({ where: {} }));
 	}
 }
 
