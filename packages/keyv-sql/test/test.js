@@ -1,21 +1,32 @@
 import test from 'ava';
 import keyvTestSuite from 'keyv-test-suite';
 import Keyv from 'keyv';
-import KeyvSQL from 'this';
+import KeyvSql from 'this';
 
-const sqliteOpts = {
-	dialect: 'sqlite',
-	uri: 'sqlite://test/testdb.sqlite'
-};
+import sqlite3 from 'sqlite3';
+import pify from 'pify';
 
-const store = () => new KeyvSQL(sqliteOpts);
+class TestSqlite extends KeyvSql {
+	constructor() {
+		const opts = {
+			dialect: 'sqlite',
+			db: 'test/testdb.sqlite'
+		};
+
+		opts.connect = () => new Promise((resolve, reject) => {
+			const db = new sqlite3.Database(opts.db, err => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(db);
+				}
+			});
+		})
+		.then(db => pify(db.all).bind(db));
+
+		super(opts);
+	}
+}
+
+const store = () => new TestSqlite();
 keyvTestSuite(test, Keyv, store);
-
-test.serial.cb('connection errors are emitted', t => {
-	const store = new KeyvSQL({ uri: 'sqlite://non/existent/database.sqlite' });
-	const keyv = new Keyv({ store });
-	keyv.on('error', () => {
-		t.pass();
-		t.end();
-	});
-});
