@@ -10,7 +10,8 @@ const loadStore = opts => {
 		mongo: 'keyv-mongo',
 		sqlite: 'keyv-sqlite',
 		postgresql: 'keyv-postgres',
-		postgres: 'keyv-postgres'
+		postgres: 'keyv-postgres',
+		mysql: 'keyv-mysql'
 	};
 	if (opts.adapter || opts.uri) {
 		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
