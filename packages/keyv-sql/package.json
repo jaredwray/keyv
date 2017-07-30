@@ -1,6 +1,6 @@
 {
-  "name": "keyv-sequelize",
-  "version": "0.1.0",
+  "name": "keyv-sql",
+  "version": "0.0.0",
   "description": "Parent class for Sequelize based Keyv storage adapters",
   "main": "src/index.js",
   "scripts": {
@@ -20,7 +20,6 @@
     "url": "git+https://github.com/lukechilds/keyv-sqlite.git"
   },
   "keywords": [
-    "sequelize",
     "sql",
     "keyv",
     "storage",
@@ -38,7 +37,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
-    "sequelize": "^4.4.2"
+    "sql": "^0.76.1"
   },
   "devDependencies": {
     "ava": "^0.21.0",

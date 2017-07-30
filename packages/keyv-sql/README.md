@@ -1,12 +1,12 @@
-# keyv-sequelize
+# keyv-sql
 
 > Parent class for Sequelize based Keyv storage adapters
 
-[![Build Status](https://travis-ci.org/lukechilds/keyv-sequelize.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-sequelize)
-[![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-sequelize/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-sequelize?branch=master)
-[![npm](https://img.shields.io/npm/v/keyv-sequelize.svg)](https://www.npmjs.com/package/keyv-sequelize)
+[![Build Status](https://travis-ci.org/lukechilds/keyv-sql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-sql)
+[![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-sql/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-sql?branch=master)
+[![npm](https://img.shields.io/npm/v/keyv-sql.svg)](https://www.npmjs.com/package/keyv-sql)
 
-Parent class containing the common logic for Sequelize based Keyv storage adapters:
+Parent class containing the common logic for SQL based Keyv storage adapters:
 
 - [`keyv-sqlite`](https://github.com/lukechilds/keyv-sqlite)
 
