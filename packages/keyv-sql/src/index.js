@@ -33,6 +33,16 @@ class KeyvSql extends EventEmitter {
 	}
 
 	get(key) {
+		const select = this.entry.select().where({ key }).toString();
+		return this.connected
+			.then(query => query(select))
+			.then(rows => {
+				const row = rows[0];
+				if (row === undefined) {
+					return undefined;
+				}
+				return row.value;
+			});
 	}
 
 	set(key, value) {
