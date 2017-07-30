@@ -1,8 +1,10 @@
 'use strict';
 
-const KeyvSequelize = require('keyv-sequelize');
+const KeyvSql = require('keyv-sql');
+const sqlite3 = require('sqlite3');
+const pify = require('pify');
 
-class KeyvSqlite extends KeyvSequelize {
+class KeyvSqlite extends KeyvSql {
 	constructor(opts) {
 		if (typeof opts === 'string') {
 			opts = { uri: opts };
@@ -11,6 +13,18 @@ class KeyvSqlite extends KeyvSequelize {
 			dialect: 'sqlite',
 			uri: 'sqlite://:memory:'
 		}, opts);
+		opts.db = opts.uri.replace(/^sqlite:\/\//, '');
+
+		opts.connect = () => new Promise((resolve, reject) => {
+			const db = new sqlite3.Database(opts.db, err => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(db);
+				}
+			});
+		})
+		.then(db => pify(db.all).bind(db));
 
 		super(opts);
 	}
