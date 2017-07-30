@@ -16,7 +16,8 @@ class KeyvPostgres extends KeyvSql {
 		opts.connect = () => Promise.resolve()
 			.then(() => {
 				const pool = new Pool({ connectionString: opts.uri });
-				return pool.query.bind(pool);
+				return sql => pool.query(sql)
+					.then(data => data.rows);
 			});
 
 		super(opts);
