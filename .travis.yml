@@ -10,8 +10,8 @@ services:
   - mysql
 before_script:
   - psql -c 'create database keyv_test;' -U postgres
-  - mysql -e 'CREATE DATABASE keyv_test;'
-  - mysql -e 'GRANT ALL PRIVILEGES ON keyv_test.* TO 'mysql'@'localhost';'
+  - mysql -u root -e 'CREATE DATABASE keyv_test;'
+  - mysql -u root -e 'GRANT ALL PRIVILEGES ON keyv_test.* TO 'mysql'@'localhost';'
 script: npm run test:full
 after_success: npm run coverage
 notifications:
