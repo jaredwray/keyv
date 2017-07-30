@@ -1,7 +1,5 @@
 # keyv-postgres
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/lukechilds/keyv-postgres.svg)](https://greenkeeper.io/)
-
 > PostgreSQL storage adapter for Keyv
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-postgres.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-postgres)
