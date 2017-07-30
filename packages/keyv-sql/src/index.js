@@ -17,6 +17,7 @@ class KeyvSql extends EventEmitter {
 			columns: [
 				{
 					name: 'key',
+					primaryKey: true,
 					dataType: 'VARCHAR(255)'
 				},
 				{
