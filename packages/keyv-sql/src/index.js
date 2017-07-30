@@ -69,6 +69,10 @@ class KeyvSql extends EventEmitter {
 	}
 
 	clear() {
+		const del = this.entry.delete(this.entry.key.like(`${this.namespace}:%`)).toString();
+		return this.connected
+			.then(query => query(del))
+			.then(() => undefined);
 	}
 }
 
