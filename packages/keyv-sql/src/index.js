@@ -36,6 +36,9 @@ class KeyvSql extends EventEmitter {
 	}
 
 	set(key, value) {
+		const insert = this.entry.insert({ key, value }).toString();
+		return this.connected
+			.then(query => query(insert));
 	}
 
 	delete(key) {
