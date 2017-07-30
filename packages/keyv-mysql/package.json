@@ -1,7 +1,7 @@
 {
   "name": "keyv-mysql",
   "version": "0.0.0",
-  "description": "MySQL storage adapter for Keyv",
+  "description": "MySQL/MariaDB storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava",

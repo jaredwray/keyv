@@ -1,6 +1,6 @@
 # keyv-mysql
 
-> MySQL storage adapter for Keyv
+> MySQL/MariaDB storage adapter for Keyv
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-mysql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mysql)
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-mysql/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-mysql?branch=master)
