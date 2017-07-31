@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
-const Sql = require('sql').Sql;
+const Sql = require('sql-replace-fork').Sql;
 
 class KeyvSql extends EventEmitter {
 	constructor(opts) {
