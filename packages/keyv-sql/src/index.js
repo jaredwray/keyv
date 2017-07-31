@@ -49,9 +49,11 @@ class KeyvSql extends EventEmitter {
 	}
 
 	set(key, value) {
-		let upsert = this.entry.replace({ key, value }).toString();
+		let upsert;
 		if (this.sql.dialectName === 'postgres') {
 			upsert = this.entry.insert({ key, value }).onConflict({ columns: ['key'], update: ['value'] }).toString();
+		} else {
+			upsert = this.entry.replace({ key, value }).toString();
 		}
 		return this.query(upsert);
 	}
