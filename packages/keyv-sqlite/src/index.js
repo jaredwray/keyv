@@ -6,9 +6,6 @@ const pify = require('pify');
 
 class KeyvSqlite extends KeyvSql {
 	constructor(opts) {
-		if (typeof opts === 'string') {
-			opts = { uri: opts };
-		}
 		opts = Object.assign({
 			dialect: 'sqlite',
 			uri: 'sqlite://:memory:'
