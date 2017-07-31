@@ -8,12 +8,12 @@ class KeyvSql extends EventEmitter {
 		super();
 		this.ttlSupport = false;
 
-		opts = Object.assign({ table: 'keyv' }, opts);
+		this.opts = Object.assign({ table: 'keyv' }, opts);
 
-		this.sql = new Sql(opts.dialect);
+		const sql = new Sql(opts.dialect);
 
-		this.entry = this.sql.define({
-			name: opts.table,
+		this.entry = sql.define({
+			name: this.opts.table,
 			columns: [
 				{
 					name: 'key',
@@ -28,7 +28,7 @@ class KeyvSql extends EventEmitter {
 		});
 		const createTable = this.entry.create().ifNotExists().toString();
 
-		const connected = opts.connect()
+		const connected = this.opts.connect()
 			.then(query => query(createTable).then(() => query))
 			.catch(err => this.emit('error', err));
 
@@ -50,7 +50,7 @@ class KeyvSql extends EventEmitter {
 
 	set(key, value) {
 		let upsert;
-		if (this.sql.dialectName === 'postgres') {
+		if (this.opts.dialect === 'postgres') {
 			upsert = this.entry.insert({ key, value }).onConflict({ columns: ['key'], update: ['value'] }).toString();
 		} else {
 			upsert = this.entry.replace({ key, value }).toString();
