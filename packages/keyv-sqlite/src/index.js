@@ -20,6 +20,9 @@ class KeyvSqlite extends KeyvSql {
 				if (err) {
 					reject(err);
 				} else {
+					if (opts.busyTimeout) {
+						db.configure('busyTimeout', opts.busyTimeout);
+					}
 					resolve(db);
 				}
 			});
