@@ -28,15 +28,17 @@ class KeyvSql extends EventEmitter {
 		});
 		const createTable = this.entry.create().ifNotExists().toString();
 
-		this.connected = opts.connect()
+		const connected = opts.connect()
 			.then(query => query(createTable).then(() => query))
 			.catch(err => this.emit('error', err));
+
+		this.query = sqlString => connected
+			.then(query => query(sqlString));
 	}
 
 	get(key) {
 		const select = this.entry.select().where({ key }).toString();
-		return this.connected
-			.then(query => query(select))
+		return this.query(select)
 			.then(rows => {
 				const row = rows[0];
 				if (row === undefined) {
@@ -51,31 +53,26 @@ class KeyvSql extends EventEmitter {
 		if (this.sql.dialectName === 'postgres') {
 			upsert = this.entry.insert({ key, value }).onConflict({ columns: ['key'], update: ['value'] }).toString();
 		}
-		return this.connected
-			.then(query => query(upsert));
+		return this.query(upsert);
 	}
 
 	delete(key) {
 		const select = this.entry.select().where({ key }).toString();
 		const del = this.entry.delete().where({ key }).toString();
-		return this.connected
-			.then(query => {
-				return query(select)
-					.then(rows => {
-						const row = rows[0];
-						if (row === undefined) {
-							return false;
-						}
-						return query(del)
-							.then(() => true);
-					});
+		return this.query(select)
+			.then(rows => {
+				const row = rows[0];
+				if (row === undefined) {
+					return false;
+				}
+				return this.query(del)
+					.then(() => true);
 			});
 	}
 
 	clear() {
 		const del = this.entry.delete(this.entry.key.like(`${this.namespace}:%`)).toString();
-		return this.connected
-			.then(query => query(del))
+		return this.query(del)
 			.then(() => undefined);
 	}
 }
