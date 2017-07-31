@@ -18,6 +18,7 @@ class TestSqlite extends KeyvSql {
 				if (err) {
 					reject(err);
 				} else {
+					db.configure('busyTimeout', 30000);
 					resolve(db);
 				}
 			});
