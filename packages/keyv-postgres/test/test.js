@@ -5,5 +5,5 @@ import KeyvPostgres from 'this';
 
 keyvOfficialTests(test, Keyv, 'postgresql://postgres@localhost:5432/keyv_test', 'postgresql://foo');
 
-const store = () => new KeyvPostgres('postgresql://postgres@localhost:5432/keyv_test');
+const store = () => new KeyvPostgres({ uri: 'postgresql://postgres@localhost:5432/keyv_test' });
 keyvTestSuite(test, Keyv, store);

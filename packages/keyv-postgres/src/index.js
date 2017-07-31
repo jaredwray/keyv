@@ -5,9 +5,6 @@ const Pool = require('pg').Pool;
 
 class KeyvPostgres extends KeyvSql {
 	constructor(opts) {
-		if (typeof opts === 'string') {
-			opts = { uri: opts };
-		}
 		opts = Object.assign({
 			dialect: 'postgres',
 			uri: 'postgresql://localhost:5432'
