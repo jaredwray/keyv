@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
-    "sql-replace-fork": "^0.76.1"
+    "sql": "^0.77"
   },
   "devDependencies": {
     "ava": "^0.21.0",
