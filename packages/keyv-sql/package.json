@@ -12,7 +12,7 @@
   },
   "ava": {
     "require": [
-      "requireable"
+      "requirable"
     ]
   },
   "repository": {
@@ -47,7 +47,7 @@
     "keyv-test-suite": "*",
     "nyc": "^11.0.3",
     "pify": "^3.0.0",
-    "requireable": "^1.0.1",
+    "requirable": "^1.0.1",
     "sqlite3": "^3.1.8",
     "this": "^1.0.2",
     "xo": "^0.19.0"
