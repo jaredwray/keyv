@@ -9,6 +9,8 @@
 Parent class containing the common logic for SQL based Keyv storage adapters:
 
 - [`keyv-sqlite`](https://github.com/lukechilds/keyv-sqlite)
+- [`keyv-postgres`](https://github.com/lukechilds/keyv-postgres)
+- [`keyv-mysql`](https://github.com/lukechilds/keyv-mysql)
 
 ## License
 
