@@ -1,7 +1,7 @@
 {
   "name": "keyv",
   "version": "0.8.0",
-  "description": "Simple key-value store with support for multiple backends",
+  "description": "Simple key-value storage with support for multiple backends",
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava test/keyv.js",
