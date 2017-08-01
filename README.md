@@ -1,5 +1,7 @@
 <h1 align="center">
 	<img width="250" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">
+	<br>
+	<br>
 </h1>
 
 > Simple key-value store with support for multiple backends
