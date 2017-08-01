@@ -1,7 +1,7 @@
 {
   "name": "keyv-sql",
   "version": "1.0.0",
-  "description": "Parent class for Sequelize based Keyv storage adapters",
+  "description": "Parent class for SQL based Keyv storage adapters",
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava",
