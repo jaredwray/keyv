@@ -1,6 +1,6 @@
 # keyv-sql
 
-> Parent class for Sequelize based Keyv storage adapters
+> Parent class for SQL based Keyv storage adapters
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-sql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-sql)
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-sql/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-sql?branch=master)
