@@ -1,8 +1,9 @@
 'use strict';
 
-const KeyvSequelize = require('keyv-sequelize');
+const KeyvSql = require('keyv-sql');
+const mysql = require('mysql2/promise');
 
-class KeyvMysql extends KeyvSequelize {
+class KeyvMysql extends KeyvSql {
 	constructor(opts) {
 		if (typeof opts === 'string') {
 			opts = { uri: opts };
@@ -11,6 +12,13 @@ class KeyvMysql extends KeyvSequelize {
 			dialect: 'mysql',
 			uri: 'mysql://localhost'
 		}, opts);
+
+		opts.connect = () => Promise.resolve()
+			.then(() => mysql.createConnection(opts.uri))
+			.then(connection => {
+				return sql => connection.execute(sql)
+					.then(data => data[0]);
+			});
 
 		super(opts);
 	}

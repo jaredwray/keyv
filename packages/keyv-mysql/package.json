@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-mysql",
   "dependencies": {
-    "keyv-sequelize": "0.1.0",
+    "keyv-sql": "^0.2.3",
     "mysql2": "^1.3.6"
   },
   "devDependencies": {
