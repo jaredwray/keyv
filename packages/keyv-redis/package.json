@@ -37,8 +37,8 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-redis",
   "dependencies": {
-    "pify": "^3.0.0",
-    "redis": "^2.7.1"
+    "pify": "3.0.0",
+    "redis": "2.7.1"
   },
   "devDependencies": {
     "ava": "^0.20.0",
