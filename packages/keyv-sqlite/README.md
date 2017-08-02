@@ -1,4 +1,4 @@
-# keyv-sqlite
+# keyv-sqlite [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
 
 > SQLite storage adapter for Keyv
 
@@ -6,21 +6,29 @@
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-sqlite/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-sqlite?branch=master)
 [![npm](https://img.shields.io/npm/v/keyv-sqlite.svg)](https://www.npmjs.com/package/keyv-sqlite)
 
+SQLite storage adapter for [Keyv](https://github.com/lukechilds/keyv).
+
 ## Install
 
 ```shell
-npm install --save keyv-sqlite
+npm install --save keyv keyv-sqlite
 ```
 
 ## Usage
 
 ```js
 const Keyv = require('keyv');
-const KeyvSqlite = require('keyv-sqlite');
 
-const sqlite = new KeyvSqlite('sqlite://path/to/database.sqlite');
+const keyv = new Keyv('sqlite://path/to/database.sqlite');
+keyv.on('error', handleConnectionError);
+```
 
-const keyv = new Keyv({ store: sqlite });
+You can specify the [`busyTimeout`](https://sqlite.org/c3ref/busy_timeout.html) option in milliseconds.
+
+e.g:
+
+```js
+const keyv = new Keyv('sqlite://path/to/database.sqlite', { busyTimeout: 10000 });
 ```
 
 ## License
