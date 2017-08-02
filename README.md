@@ -19,7 +19,7 @@ There are a few existing modules similar to Keyv, however none of them fulfilled
 - Wasn't bloated
 - Had a simple Promise based API
 - Suitable as a TTL based cache or persistent key-value store
-- Easily embeddable inside another module
+- [Easily embeddable](#add-cache-support-to-your-module) inside another module
 - Works with any storage that implements the [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) API
 - Handles all JavaScript types (values can be `Buffer`/`null`/`undefined`)
 - Supports namespaces
