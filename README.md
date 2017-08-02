@@ -69,7 +69,24 @@ await keyv.delete('foo'); // true
 await keyv.clear(); // undefined
 ```
 
-### Official Storage Adapters
+### Namespaces
+
+You can namespace your Keyv instance to avoid key collisions and allow you to clear only a certain namespace while using the same database.
+
+```js
+const users = new Keyv('redis://user:pass@localhost:6379', { namespace: 'users' });
+const cache = new Keyv('redis://user:pass@localhost:6379', { namespace: 'cache' });
+
+await users.set('foo', 'users'); // true
+await cache.set('foo', 'cache'); // true
+await users.get('foo'); // 'users'
+await cache.get('foo'); // 'cache'
+await users.clear(); // undefined
+await users.get('foo'); // undefined
+await cache.get('foo'); // 'cache'
+```
+
+## Official Storage Adapters
 
 The official storage adapters are covered by over 150 integration tests to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
 
@@ -81,7 +98,7 @@ SQLite | [keyv-sqlite](https://github.com/lukechilds/keyv-sqlite) | No | [![Buil
 PostgreSQL | [keyv-postgres](https://github.com/lukechilds/keyv-postgres) | No | [![Build Status](https://travis-ci.org/lukechilds/keyv-postgres.svg?branch=master)](https://travis-ci.org/lukechildskeyv-postgreskeyv)
 MySQL | [keyv-mysql](https://github.com/lukechilds/keyv-mysql) | No | [![Build Status](https://travis-ci.org/lukechilds/keyv-mysql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mysql)
 
-### Third-party Storage Adapters
+## Third-party Storage Adapters
 
 You can also use third-party storage adapters or build your own. Keyv will wrap these storage adapters in TTL functionality and handle complex types internally.
 
@@ -106,23 +123,6 @@ const QuickLRU = require('quick-lru');
 
 const lru = new QuickLRU({ maxSize: 1000 });
 const keyv = new Keyv({ store: lru });
-```
-
-### Namespaces
-
-You can namespace your Keyv instance to avoid key collisions and allow you to clear only a certain namespace while using the same database.
-
-```js
-const users = new Keyv('redis://user:pass@localhost:6379', { namespace: 'users' });
-const cache = new Keyv('redis://user:pass@localhost:6379', { namespace: 'cache' });
-
-await users.set('foo', 'users'); // true
-await cache.set('foo', 'cache'); // true
-await users.get('foo'); // 'users'
-await cache.get('foo'); // 'cache'
-await users.clear(); // undefined
-await users.get('foo'); // undefined
-await cache.get('foo'); // 'cache'
 ```
 
 ## License
