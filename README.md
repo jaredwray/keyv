@@ -158,7 +158,7 @@ const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
 
 Returns a new Keyv instance.
 
-The Keyv instance is also an `EventEmitter` that will emit `'error'` events if the storage adapter connection fails.
+The Keyv instance is also an `EventEmitter` that will emit an `'error'` event if the storage adapter connection fails.
 
 ### uri
 
