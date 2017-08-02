@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="250" src="/media/logo.svg" alt="keyv">
+	<img width="250" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">
 	<br>
 	<br>
 </h1>
