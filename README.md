@@ -67,7 +67,7 @@ await keyv.delete('foo'); // true
 await keyv.clear(); // undefined
 ```
 
-### Official Storage adapters
+### Official Storage Adapters
 
 The official storage adapters are covered by over 100 unit tests to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
 
