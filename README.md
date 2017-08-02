@@ -26,17 +26,39 @@ There are a few existing modules similar to Keyv, however none of them covered a
 - Connection errors are passed through (db failures won't kill your app)
 - Supports the latest active LTS version of Node.js
 
-## Install
+## Usage
 
-```shell
+Install Keyv.
+
+```
 npm install --save keyv
 ```
 
-## Usage
+By default everything is stored in memory, you can optionally also install a storage adapter.
+
+```
+npm install --save keyv-redis
+npm install --save keyv-mongo
+npm install --save keyv-sqlite
+npm install --save keyv-postgres
+npm install --save keyv-mysql
+```
+
+Create a new Keyv instance, passing your connection string if applicable. That's it!
 
 ```js
 const Keyv = require('keyv');
+
+// One of the following
 const keyv = new Keyv();
+const keyv = new Keyv('redis://user:secret@localhost:6379');
+const keyv = new Keyv('mongodb://127.0.0.1:27017');
+const keyv = new Keyv('sqlite://path/to/database.sqlite');
+const keyv = new Keyv('postgresql://user:pass@example.com:5432/dbname');
+const keyv = new Keyv('mysql://user:pass@host/db');
+
+// Handle DB connection errors
+keyv.on('error' err => console.log('Connection Error', err));
 
 await keyv.set('foo', 'expires in 1 second', 1000); // true
 await keyv.set('foo', 'never expires'); // true
