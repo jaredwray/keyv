@@ -1,4 +1,4 @@
-# keyv-redis
+# keyv-redis [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
 
 > Redis storage adapter for Keyv
 
