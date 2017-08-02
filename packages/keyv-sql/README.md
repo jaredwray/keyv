@@ -1,4 +1,4 @@
-# keyv-sql
+# keyv-sql [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
 
 > Parent class for SQL based Keyv storage adapters
 
