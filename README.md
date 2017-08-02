@@ -12,6 +12,20 @@
 
 Keyv is a simple key-value storage module with support for multiple backends via storage adapters. Supports TTL based expiry making it suitable as a cache or a persistent key-value store.
 
+## Features
+
+There are a few existing modules similar to Keyv, however none of them covered all of these use cases:
+
+- Simple Promise based API
+- Suitable as cache or persistent key-value store
+- Works with any storage that implements the [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) API
+- TTL based expiry
+- Handles all JavaScript types (values can be `Buffer`/`null`/`undefined`)
+- Supports namespaces
+- Wide range of **efficient, well tested** storage adapters
+- Connection errors are passed through (db failures won't kill your app)
+- Supports the latest active LTS version of Node.js
+
 ## Install
 
 ```shell
