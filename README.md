@@ -73,7 +73,7 @@ await keyv.clear(); // undefined
 
 The official storage adapters are covered by over 150 integration tests to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
 
-Database|Adapter|Native TTL|Status
+Database | Adapter | Native TTL | Status
 ---|---|---|
 Redis | [keyv-redis](https://github.com/lukechilds/keyv-redis) | Yes | [![Build Status](https://travis-ci.org/lukechilds/keyv-redis.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-redis)
 MongoDB | [keyv-mongo](https://github.com/lukechilds/keyv-mongo) | Yes | [![Build Status](https://travis-ci.org/lukechilds/keyv-mongo.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mongo)
