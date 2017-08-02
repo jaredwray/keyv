@@ -11,33 +11,24 @@ Redis storage adapter for [Keyv](https://github.com/lukechilds/keyv). TTL functi
 ## Install
 
 ```shell
-npm install --save keyv-redis
+npm install --save keyv keyv-redis
 ```
 
 ## Usage
 
 ```js
 const Keyv = require('keyv');
-const KeyvRedis = require('keyv-redis');
 
-const redis = new KeyvRedis('redis://user:secret@localhost:6379');
-redis.client.on('error', handleError);
-
-const keyv = new Keyv({ store: redis });
+const keyv = new Keyv('redis://user:pass@localhost:6379');
+keyv.on('error', handleConnectionError);
 ```
 
-## API
+You can pass any valid options directly through to the Redis client.
 
-### new KeyvRedis([options])
-
-Returns a Keyv storage adapter for Redis.
-
-#### options
-
-Type: `undefined`, `string`, `object`<br>
-Default: `undefined`
-
-A Redis connection URI string or connection object. If `undefined`, default Redis settings will be used. View [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) docs for more info.
+```js
+const keyv = new Keyv('redis://user:pass@localhost:6379', { disable_resubscribing: true });
+```
+View [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) documentation for more information in accepted arguments.
 
 ## License
 
