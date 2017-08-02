@@ -87,7 +87,7 @@ await cache.get('foo'); // 'cache'
 
 ## Official Storage Adapters
 
-The official storage adapters are covered by over 150 integration tests to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
+The official storage adapters are covered by [over 150 integration tests](https://travis-ci.org/lukechilds/keyv/jobs/260418145) to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
 
 Database | Adapter | Native TTL | Status
 ---|---|---|---
