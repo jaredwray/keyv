@@ -201,7 +201,7 @@ The storage adapter instance to be used by Keyv.
 Type: `String`<br>
 Default: `undefined`
 
-Specify an adapter to use. e.g 'redis' or 'mongodb'
+Specify an adapter to use. e.g `'redis'` or `'mongodb'`.
 
 ### Instance
 
