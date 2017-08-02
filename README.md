@@ -79,6 +79,33 @@ SQLite | [keyv-sqlite](https://github.com/lukechilds/keyv-sqlite) | [![Build Sta
 PostgreSQL | [keyv-postgres](https://github.com/lukechilds/keyv-postgres) | [![Build Status](https://travis-ci.org/lukechilds/keyv-postgres.svg?branch=master)](https://travis-ci.org/lukechildskeyv-postgreskeyv)
 MySQL | [keyv-mysql](https://github.com/lukechilds/keyv-mysql) | [![Build Status](https://travis-ci.org/lukechilds/keyv-mysql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mysql)
 
+### Third Party Storage Adapters
+
+You can also use third party storage adapters or build your own.
+
+```js
+const Keyv = require('keyv');
+const myAdapter = require('./my-storage-adapter');
+
+const keyv = new Keyv({ store: myAdapter });
+```
+
+Any store that follows the [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) api will work.
+
+```js
+new Keyv({ store: new Map() });
+```
+
+For example, [`quick-lru`](https://github.com/sindresorhus/quick-lru) is a completely unrelated module that implements the Map API.
+
+```js
+const Keyv = require('keyv');
+const QuickLRU = require('quick-lru');
+
+const lru = new QuickLRU({ maxSize: 1000 });
+const keyv = new Keyv({ store: lru });
+```
+
 ### Namespaces
 
 You can namespace your Keyv instance to avoid key collisions and allow you to clear only a certain namespace while using the same database.
