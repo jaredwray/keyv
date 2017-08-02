@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="250" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">
+	<img width="250" src="/media/logo.svg" alt="keyv">
 	<br>
 	<br>
 </h1>
@@ -66,6 +66,16 @@ await keyv.get('foo'); // 'never expires'
 await keyv.delete('foo'); // true
 await keyv.clear(); // undefined
 ```
+
+### Official Storage adapters
+
+Database|Adapter|Status
+---|---|---
+Redis | [keyv-redis](https://github.com/lukechilds/keyv-redis) | [![Build Status](https://travis-ci.org/lukechilds/keyv-redis.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-redis)
+MongoDB | [keyv-mongo](https://github.com/lukechilds/keyv-mongo) | [![Build Status](https://travis-ci.org/lukechilds/keyv-mongo.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mongo)
+SQLite | [keyv-sqlite](https://github.com/lukechilds/keyv-sqlite) | [![Build Status](https://travis-ci.org/lukechilds/keyv-sqlite.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-sqlite)
+PostgreSQL | [keyv-postgres](https://github.com/lukechilds/keyv-postgres) | [![Build Status](https://travis-ci.org/lukechilds/keyv-postgres.svg?branch=master)](https://travis-ci.org/lukechildskeyv-postgreskeyv)
+MySQL | [keyv-mysql](https://github.com/lukechilds/keyv-mysql) | [![Build Status](https://travis-ci.org/lukechilds/keyv-mysql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mysql)
 
 ### Namespaces
 
