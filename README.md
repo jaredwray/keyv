@@ -83,7 +83,7 @@ MySQL | [keyv-mysql](https://github.com/lukechilds/keyv-mysql) | No | [![Build S
 
 ### Third-party Storage Adapters
 
-You can also use third-party storage adapters or build your own.
+You can also use third-party storage adapters or build your own. Keyv will wrap these storage adapters in TTL functionality and handle complex types internally.
 
 ```js
 const Keyv = require('keyv');
