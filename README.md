@@ -32,6 +32,19 @@ There are a few existing modules similar to Keyv, however none of them covered a
 npm install --save keyv
 ```
 
+## Usage
+
+```js
+const Keyv = require('keyv');
+const keyv = new Keyv();
+
+await keyv.set('foo', 'expires in 1 second', 1000); // true
+await keyv.set('foo', 'never expires'); // true
+await keyv.get('foo'); // 'never expires'
+await keyv.delete('foo'); // true
+await keyv.clear(); // undefined
+```
+
 ## License
 
 MIT © Luke Childs
