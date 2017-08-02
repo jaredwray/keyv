@@ -10,7 +10,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv?branch=master)
 [![npm](https://img.shields.io/npm/v/keyv.svg)](https://www.npmjs.com/package/keyv)
 
-Keyv is a simple key-value storage module with support for multiple backends via storage adapters. Supports TTL based expiry making it suitable as a cache or a persistent key-value store.
+Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. Supports TTL based expiry making it suitable as a cache or a persistent key-value store.
 
 ## Features
 
