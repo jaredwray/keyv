@@ -152,6 +152,92 @@ const awesomeModule = new AwesomeModule();
 const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
 ```
 
+## API
+
+### new Keyv([uri], [options])
+
+Returns a new Keyv instance.
+
+The Keyv instance is also an `EventEmitter` that will emit `'error'` events if the storage adapter connection fails.
+
+### uri
+
+Type: `String`<br>
+Default: `undefined`
+
+The connection string URI.
+
+Merged into the options object as options.uri.
+
+### options
+
+Type: `Object`
+
+The options object is also passed through to the storage adapter. Check your storage adapter docs for any extra options.
+
+#### options.namespace
+
+Type: `String`<br>
+Default: `'keyv'`
+
+Namespace for the current instance.
+
+#### options.ttl
+
+Type: `Number`<br>
+Default: `undefined`
+
+Default TTL. Can be overridden by specififying a TTL on `.set()`.
+
+#### options.store
+
+Type: `Storage adapter instance`<br>
+Default: `new Map()`
+
+The storage adapter instance to be used by Keyv.
+
+#### options.adapter
+
+Type: `String`<br>
+Default: `undefined`
+
+Specify an adapter to use. e.g 'redis' or 'mongodb'
+
+#### options.uri
+
+Type: `String`<br>
+Default: `undefined`
+
+The connection string URI.
+
+### Instance
+
+Keys must always be strings. Values can be of any type.
+
+#### .set(key, value, [ttl])
+
+Set a value.
+
+By default keys are persistent. You can set an expiry TTL in milliseconds.
+
+Returns `true`.
+
+#### .get(key)
+
+Returns the value.
+
+#### .delete(key)
+
+Deletes an entry.
+
+Returns `true` if the key existed, `false` if not.
+
+#### .clear()
+
+Delete all entries f the current namespace.
+
+Returns `undefined`.
+
 ## License
 
 MIT © Luke Childs
