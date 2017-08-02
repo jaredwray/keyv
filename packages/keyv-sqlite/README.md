@@ -23,12 +23,15 @@ const keyv = new Keyv('sqlite://path/to/database.sqlite');
 keyv.on('error', handleConnectionError);
 ```
 
-You can specify the [`busyTimeout`](https://sqlite.org/c3ref/busy_timeout.html) option in milliseconds.
+You can specify the `table` and [`busyTimeout`](https://sqlite.org/c3ref/busy_timeout.html) option.
 
 e.g:
 
 ```js
-const keyv = new Keyv('sqlite://path/to/database.sqlite', { busyTimeout: 10000 });
+const keyv = new Keyv('sqlite://path/to/database.sqlite', {
+  table: 'cache',
+  busyTimeout: 10000
+});
 ```
 
 ## License
