@@ -22,7 +22,7 @@ There are a few existing modules similar to Keyv, however none of them covered a
 - TTL based expiry
 - Handles all JavaScript types (values can be `Buffer`/`null`/`undefined`)
 - Supports namespaces
-- Wide range of **efficient, well tested** storage adapters
+- Wide range of [**efficient, well tested**](#official-storage-adapters) storage adapters
 - Connection errors are passed through (db failures won't kill your app)
 - Supports the latest active LTS version of Node.js
 
