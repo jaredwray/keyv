@@ -203,13 +203,6 @@ Default: `undefined`
 
 Specify an adapter to use. e.g 'redis' or 'mongodb'
 
-#### options.uri
-
-Type: `String`<br>
-Default: `undefined`
-
-The connection string URI.
-
 ### Instance
 
 Keys must always be strings. Values can be of any type.
