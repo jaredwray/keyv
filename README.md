@@ -51,11 +51,11 @@ const Keyv = require('keyv');
 
 // One of the following
 const keyv = new Keyv();
-const keyv = new Keyv('redis://user:secret@localhost:6379');
-const keyv = new Keyv('mongodb://127.0.0.1:27017');
+const keyv = new Keyv('redis://user:pass@localhost:6379');
+const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
 const keyv = new Keyv('sqlite://path/to/database.sqlite');
-const keyv = new Keyv('postgresql://user:pass@example.com:5432/dbname');
-const keyv = new Keyv('mysql://user:pass@host/db');
+const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname');
+const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname');
 
 // Handle DB connection errors
 keyv.on('error' err => console.log('Connection Error', err));
