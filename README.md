@@ -79,9 +79,9 @@ SQLite | [keyv-sqlite](https://github.com/lukechilds/keyv-sqlite) | [![Build Sta
 PostgreSQL | [keyv-postgres](https://github.com/lukechilds/keyv-postgres) | [![Build Status](https://travis-ci.org/lukechilds/keyv-postgres.svg?branch=master)](https://travis-ci.org/lukechildskeyv-postgreskeyv)
 MySQL | [keyv-mysql](https://github.com/lukechilds/keyv-mysql) | [![Build Status](https://travis-ci.org/lukechilds/keyv-mysql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-mysql)
 
-### Third Party Storage Adapters
+### Third-party Storage Adapters
 
-You can also use third party storage adapters or build your own.
+You can also use third-party storage adapters or build your own.
 
 ```js
 const Keyv = require('keyv');
