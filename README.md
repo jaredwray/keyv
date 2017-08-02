@@ -44,7 +44,7 @@ npm install --save keyv-postgres
 npm install --save keyv-mysql
 ```
 
-Create a new Keyv instance, passing your connection string if applicable. That's it!
+Create a new Keyv instance, passing your connection string if applicable. Keyv will automatically load the correct storage adapter.
 
 ```js
 const Keyv = require('keyv');
