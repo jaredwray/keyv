@@ -227,7 +227,7 @@ Returns `true` if the key existed, `false` if not.
 
 #### .clear()
 
-Delete all entries f the current namespace.
+Delete all entries in the current namespace.
 
 Returns `undefined`.
 
