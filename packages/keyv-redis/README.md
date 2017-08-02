@@ -23,12 +23,13 @@ const keyv = new Keyv('redis://user:pass@localhost:6379');
 keyv.on('error', handleConnectionError);
 ```
 
-You can pass any valid options directly through to the Redis client.
+Any valid [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) options will be passed directly through.
+
+e.g:
 
 ```js
 const keyv = new Keyv('redis://user:pass@localhost:6379', { disable_resubscribing: true });
 ```
-View [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) documentation for more information in accepted arguments.
 
 ## License
 
