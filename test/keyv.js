@@ -68,5 +68,17 @@ test.serial('.set(key, val, ttl) overwrites default tll option', async t => {
 	tk.reset();
 });
 
+test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option and sets key to never expire', async t => {
+	const startTime = Date.now();
+	tk.freeze(startTime);
+	const store = new Map();
+	const keyv = new Keyv({ store, ttl: 200 });
+	await keyv.set('foo', 'bar', 0);
+	t.is(await keyv.get('foo'), 'bar');
+	tk.freeze(startTime + 250);
+	t.is(await keyv.get('foo'), 'bar');
+	tk.reset();
+});
+
 const store = () => new Map();
 keyvTestSuite(test, Keyv, store);
