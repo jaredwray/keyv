@@ -1,4 +1,4 @@
-# keyv-test-suite
+# keyv-test-suite [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
 
 > Test suite for Keyv API compliancy
 
@@ -30,7 +30,7 @@ import keyvTestSuite from 'keyv-test-suite';
 import Keyv from 'keyv';
 import KeyvStore from './';
 
-const store = new KeyvStore();
+const store = () => new KeyvStore();
 keyvTestSuite(test, Keyv, store);
 ```
 
@@ -43,7 +43,7 @@ Set your test script in `package.json` to `ava`.
 }
 ```
 
-### Test on all supported Node.js versions
+### Test on Active Node.js LTS and Higher
 
 An example configuration for Travis CI would look like this:
 
