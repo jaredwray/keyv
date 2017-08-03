@@ -26,6 +26,9 @@
     "url": "git+https://github.com/lukechilds/keyv-test-suite.git"
   },
   "keywords": [
+    "test",
+    "suite",
+    "tests",
     "key",
     "value",
     "store",
