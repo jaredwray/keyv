@@ -126,7 +126,7 @@ const keyv = new Keyv({ store: lru });
 
 ## Add Cache Support to your Module
 
-Keyv is designed to be easily embedded into other modules to add cache support. The recommended pattern is to expose a `cache` option in your modules options which is passed through to Keyv. Caching will work in memory by default and users have the option to also install a Keyv storage adapter and pass in a connection string.
+Keyv is designed to be easily embedded into other modules to add cache support. The recommended pattern is to expose a `cache` option in your modules options which is passed through to Keyv. Caching will work in memory by default and users have the option to also install a Keyv storage adapter and pass in a connection string, or any other storage that implements the `Map` API.
 
 You should also set a namespace for your module so you can safely call `.clear()` without clearing unrelated app data.
 
@@ -150,6 +150,9 @@ const awesomeModule = new AwesomeModule();
 
 // After npm install --save keyv-redis
 const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
+
+// Some third-party module that implements the Map API
+const awesomeModule = new AwesomeModule({ cache: some3rdPartyStore });
 ```
 
 ## API
