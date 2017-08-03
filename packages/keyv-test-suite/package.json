@@ -39,7 +39,8 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-test-suite",
   "dependencies": {
-    "delay": "^2.0.0"
+    "delay": "^2.0.0",
+    "timekeeper": "^1.0.0"
   },
   "devDependencies": {
     "ava": "^0.21.0",
