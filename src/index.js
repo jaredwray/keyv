@@ -63,13 +63,15 @@ class Keyv extends EventEmitter {
 
 	set(key, value, ttl) {
 		key = this._getKeyPrefix(key);
-		ttl = ttl || this.opts.ttl;
+		if (typeof ttl === 'undefined') {
+			ttl = this.opts.ttl;
+		}
 		const store = this.opts.store;
 
 		return Promise.resolve()
 			.then(() => {
 				if (!store.ttlSupport) {
-					const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
+					const expires = (typeof ttl === 'number' && ttl > 0) ? (Date.now() + ttl) : null;
 					value = { value, expires };
 				}
 				return store.set(key, JSONB.stringify(value), ttl);
