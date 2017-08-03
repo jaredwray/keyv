@@ -10,14 +10,14 @@
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv?branch=master)
 [![npm](https://img.shields.io/npm/v/keyv.svg)](https://www.npmjs.com/package/keyv)
 
-Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. Supports TTL based expiry making it suitable as a cache or a persistent key-value store.
+Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. It supports TTL based expiry, making it suitable as a cache or a persistent key-value store.
 
 ## Features
 
-There are a few existing modules similar to Keyv, however none of them fulfilled all of my requirements. I created Keyv because I wanted something that:
+There are a few existing modules similar to Keyv, however Keyv is different because it:
 
-- Wasn't bloated
-- Had a simple Promise based API
+- Isn't bloated
+- Has a simple Promise based API
 - Suitable as a TTL based cache or persistent key-value store
 - [Easily embeddable](#add-cache-support-to-your-module) inside another module
 - Works with any storage that implements the [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) API
