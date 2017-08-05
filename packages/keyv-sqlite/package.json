@@ -40,7 +40,7 @@
   "dependencies": {
     "keyv-sql": "1.0.2",
     "pify": "3.0.0",
-    "sqlite3": "3.1.8"
+    "sqlite3": "3.1.9"
   },
   "devDependencies": {
     "ava": "^0.21.0",
