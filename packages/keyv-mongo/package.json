@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-mongo",
   "dependencies": {
-    "mongojs": "2.4.0",
+    "mongojs": "2.4.1",
     "pify": "3.0.0"
   },
   "devDependencies": {
