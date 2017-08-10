@@ -135,7 +135,11 @@ Inside your module:
 ```js
 class AwesomeModule {
 	constructor(opts) {
-		this.cache = new Keyv(opts.cache, { namespace: 'awesome-module' });
+		this.cache = new Keyv({
+			uri: typeof opts.cache === 'string' && opts.cache,
+			store: typeof opts.cache !== 'string' && opts.cache,
+			namespace: 'awesome-module'
+		});
 	}
 }
 ```
