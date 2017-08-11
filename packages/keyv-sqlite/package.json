@@ -1,5 +1,5 @@
 {
-  "name": "keyv-sqlite",
+  "name": "@keyv/sqlite",
   "version": "1.2.4",
   "description": "SQLite storage adapter for Keyv",
   "main": "src/index.js",
@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
-    "keyv-sql": "1.0.3",
+    "@keyv/sql": "1.0.5",
     "pify": "3.0.0",
     "sqlite3": "3.1.9"
   },
@@ -47,7 +47,7 @@
     "coveralls": "^2.13.1",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
-    "keyv-test-suite": "*",
+    "@keyv/test-suite": "*",
     "nyc": "^11.0.3",
     "requirable": "^1.0.1",
     "this": "^1.0.2",
