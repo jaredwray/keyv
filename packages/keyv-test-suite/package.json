@@ -1,5 +1,5 @@
 {
-  "name": "keyv-test-suite",
+  "name": "@keyv/test-suite",
   "version": "1.5.0",
   "description": "Test suite for Keyv API compliancy",
   "main": "dist/index.js",
@@ -52,7 +52,7 @@
     "coveralls": "^2.13.1",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
-    "keyv-sqlite": "*",
+    "@keyv/sqlite": "*",
     "nyc": "^11.0.3",
     "this": "^1.0.2",
     "xo": "^0.19.0"
