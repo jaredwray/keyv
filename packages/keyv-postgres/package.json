@@ -1,5 +1,5 @@
 {
-  "name": "keyv-postgres",
+  "name": "@keyv/postgres",
   "version": "1.0.6",
   "description": "PostgreSQL storage adapter for Keyv",
   "main": "src/index.js",
@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-postgres",
   "dependencies": {
-    "keyv-sql": "1.0.3",
+    "@keyv/sql": "1.0.5",
     "pg": "7.1.0"
   },
   "devDependencies": {
@@ -47,7 +47,7 @@
     "coveralls": "^2.13.1",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
-    "keyv-test-suite": "*",
+    "@keyv/test-suite": "*",
     "nyc": "^11.0.3",
     "requirable": "^1.0.4",
     "this": "^1.0.2",
