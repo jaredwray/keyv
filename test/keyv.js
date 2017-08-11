@@ -1,6 +1,6 @@
 import test from 'ava';
 import tk from 'timekeeper';
-import keyvTestSuite from 'keyv-test-suite';
+import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'this';
 
 test.serial('Keyv is a class', t => {
