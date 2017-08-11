@@ -1,6 +1,6 @@
 'use strict';
 
-const KeyvSql = require('keyv-sql');
+const KeyvSql = require('@keyv/sql');
 const sqlite3 = require('sqlite3');
 const pify = require('pify');
 
