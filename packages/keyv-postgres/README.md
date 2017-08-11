@@ -1,10 +1,10 @@
-# keyv-postgres [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
+# @keyv/postgres [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
 
 > PostgreSQL storage adapter for Keyv
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-postgres.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-postgres)
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-postgres/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-postgres?branch=master)
-[![npm](https://img.shields.io/npm/v/keyv-postgres.svg)](https://www.npmjs.com/package/keyv-postgres)
+[![npm](https://img.shields.io/npm/v/@keyv/postgres.svg)](https://www.npmjs.com/package/@keyv/postgres)
 
 PostgreSQL storage adapter for [Keyv](https://github.com/lukechilds/keyv).
 
@@ -13,7 +13,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 ## Install
 
 ```shell
-npm install --save keyv keyv-postgres
+npm install --save keyv @keyv/postgres
 ```
 
 ## Usage
