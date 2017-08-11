@@ -1,7 +1,7 @@
 import test from 'ava';
-import keyvTestSuite, { keyvOfficialTests } from 'keyv-test-suite';
+import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'this';
-import KeyvMysql from 'keyv-mysql';
+import KeyvMysql from '@keyv/mysql';
 
 keyvOfficialTests(test, Keyv, 'mysql://mysql@localhost/keyv_test', 'mysql://foo');
 

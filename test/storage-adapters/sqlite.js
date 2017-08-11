@@ -1,7 +1,7 @@
 import test from 'ava';
-import keyvTestSuite, { keyvOfficialTests } from 'keyv-test-suite';
+import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'this';
-import KeyvSqlite from 'keyv-sqlite';
+import KeyvSqlite from '@keyv/sqlite';
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
