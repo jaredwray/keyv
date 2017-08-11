@@ -1,5 +1,5 @@
 import test from 'ava';
-import keyvTestSuite from 'keyv-test-suite';
+import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvSql from 'this';
 
