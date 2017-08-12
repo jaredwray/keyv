@@ -24,13 +24,14 @@ const keyvApiTests = (test, Keyv, store) => {
 	});
 
 	test.serial('.set(key, value, ttl) sets a value that expires', async t => {
+		const ttl = 1000;
 		const keyv = new Keyv({ store: store() });
-		await keyv.set('foo', 'bar', 100);
+		await keyv.set('foo', 'bar', ttl);
 		t.is(await keyv.get('foo'), 'bar');
 		if (keyv.opts.store.ttlSupport === true) {
-			await delay(150);
+			await delay(ttl + 1);
 		} else {
-			tk.freeze(Date.now() + 150);
+			tk.freeze(Date.now() + ttl + 1);
 		}
 		t.is(await keyv.get('foo'), undefined);
 		tk.reset();
