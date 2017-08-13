@@ -48,17 +48,19 @@ class Keyv extends EventEmitter {
 	get(key) {
 		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
-		return Promise.resolve(store.get(key)).then(data => {
-			data = (typeof data === 'string') ? JSONB.parse(data) : data;
-			if (data === undefined) {
-				return undefined;
-			}
-			if (!store.ttlSupport && typeof data.expires === 'number' && Date.now() > data.expires) {
-				this.delete(key);
-				return undefined;
-			}
-			return store.ttlSupport ? data : data.value;
-		});
+		return Promise.resolve()
+			.then(() => store.get(key))
+			.then(data => {
+				data = (typeof data === 'string') ? JSONB.parse(data) : data;
+				if (data === undefined) {
+					return undefined;
+				}
+				if (!store.ttlSupport && typeof data.expires === 'number' && Date.now() > data.expires) {
+					this.delete(key);
+					return undefined;
+				}
+				return store.ttlSupport ? data : data.value;
+			});
 	}
 
 	set(key, value, ttl) {
@@ -85,12 +87,14 @@ class Keyv extends EventEmitter {
 	delete(key) {
 		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
-		return Promise.resolve(store.delete(key));
+		return Promise.resolve()
+			.then(() => store.delete(key));
 	}
 
 	clear() {
 		const store = this.opts.store;
-		return Promise.resolve(store.clear());
+		return Promise.resolve()
+			.then(() => store.clear());
 	}
 }
 
