@@ -8,7 +8,10 @@ class KeyvSql extends EventEmitter {
 		super();
 		this.ttlSupport = false;
 
-		this.opts = Object.assign({ table: 'keyv' }, opts);
+		this.opts = Object.assign({
+			table: 'keyv',
+			keySize: 255
+		}, opts);
 
 		const sql = new Sql(opts.dialect);
 
@@ -18,7 +21,7 @@ class KeyvSql extends EventEmitter {
 				{
 					name: 'key',
 					primaryKey: true,
-					dataType: 'VARCHAR(255)'
+					dataType: `VARCHAR(${this.opts.keySize})`
 				},
 				{
 					name: 'value',
