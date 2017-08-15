@@ -41,7 +41,7 @@
     "redis": "2.8.0"
   },
   "devDependencies": {
-    "ava": "^0.20.0",
+    "ava": "^0.22.0",
     "coveralls": "^2.13.1",
     "delay": "^2.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
