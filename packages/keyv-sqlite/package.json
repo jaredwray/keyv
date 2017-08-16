@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
-    "@keyv/sql": "1.0.5",
+    "@keyv/sql": "1.0.6",
     "pify": "3.0.0",
     "sqlite3": "3.1.9"
   },
