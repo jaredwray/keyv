@@ -49,6 +49,13 @@ const keyvValueTests = (test, Keyv, store) => {
 		t.deepEqual(await keyv.get('foo'), value);
 	});
 
+	test.serial('value can contain quotes', async t => {
+		const keyv = new Keyv({ store: store() });
+		const value = '"';
+		await keyv.set('foo', value);
+		t.deepEqual(await keyv.get('foo'), value);
+	});
+
 	test.after.always(async () => {
 		const keyv = new Keyv({ store: store() });
 		await keyv.clear();
