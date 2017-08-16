@@ -11,7 +11,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/lukechilds/keyv).
 ## Install
 
 ```shell
-npm install --save keyv @keyv/mysq
+npm install --save keyv @keyv/mysql
 ```
 
 ## Usage
