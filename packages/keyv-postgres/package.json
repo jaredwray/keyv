@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-postgres",
   "dependencies": {
-    "@keyv/sql": "1.0.5",
+    "@keyv/sql": "1.0.6",
     "pg": "7.1.2"
   },
   "devDependencies": {
