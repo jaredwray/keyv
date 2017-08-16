@@ -50,6 +50,9 @@ class KeyvSql extends EventEmitter {
 
 	set(key, value) {
 		let upsert;
+		if (this.opts.dialect === 'mysql') {
+			value = value.replace(/\\/g, '\\\\');
+		}
 		if (this.opts.dialect === 'postgres') {
 			upsert = this.entry.insert({ key, value }).onConflict({ columns: ['key'], update: ['value'] }).toString();
 		} else {
