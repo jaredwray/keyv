@@ -5,12 +5,16 @@ const redis = require('redis');
 const pify = require('pify');
 
 class KeyvRedis extends EventEmitter {
-	constructor(opts) {
+	constructor(uri, opts) {
 		super();
 		this.ttlSupport = true;
-		opts = opts || {};
-		if (opts.uri) {
-			opts = Object.assign({}, { url: opts.uri }, opts);
+		opts = Object.assign(
+			{},
+			(typeof uri === 'string') ? { uri } : uri,
+			opts
+		);
+		if (opts.uri && typeof opts.url === 'undefined') {
+			opts.url = opts.uri;
 		}
 
 		const client = redis.createClient(opts);
