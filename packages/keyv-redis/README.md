@@ -33,6 +33,16 @@ e.g:
 const keyv = new Keyv('redis://user:pass@localhost:6379', { disable_resubscribing: true });
 ```
 
+Or you can manually create a storage adapter instance and pass it to Keyv:
+
+```js
+const Keyv = require('keyv');
+const KeyvRedis = require('@keyv/redis');
+
+const redis = new KeyvRedis('redis://user:pass@localhost:6379');
+const keyv = new Keyv({ store: redis });
+```
+
 ## License
 
 MIT © Luke Childs
