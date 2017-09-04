@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-mysql",
   "dependencies": {
-    "@keyv/sql": "1.0.6",
+    "@keyv/sql": "1.1.0",
     "mysql2": "1.4.2"
   },
   "devDependencies": {
