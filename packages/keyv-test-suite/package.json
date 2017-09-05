@@ -3,6 +3,7 @@
   "version": "1.6.5",
   "description": "Test suite for Keyv API compliancy",
   "main": "dist/index.js",
+  "files": "dist",
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "babel -d dist src",
