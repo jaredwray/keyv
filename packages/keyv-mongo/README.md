@@ -21,7 +21,7 @@ npm install --save keyv @keyv/mongo
 ```js
 const Keyv = require('keyv');
 
-const keyv = new Keyv('git');
+const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
 keyv.on('error', handleConnectionError);
 ```
 
@@ -30,7 +30,7 @@ You can specify the collection name, by default `'keyv'` is used.
 e.g:
 
 ```js
-const keyv = new Keyv('git', { collection: 'cache' });
+const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname', { collection: 'cache' });
 ```
 
 ## License
