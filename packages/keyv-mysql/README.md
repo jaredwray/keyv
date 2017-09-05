@@ -23,13 +23,18 @@ const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname');
 keyv.on('error', handleConnectionError);
 ```
 
-You can specify the `table` option.
+You can specify a custom table with the `table` option and the primary key size with `keySize`.
 
 e.g:
 
 ```js
-const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname', { table: 'cache' });
+const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname', {
+  table: 'cache',
+  keySize: 255
+});
 ```
+
+
 
 ## License
 
