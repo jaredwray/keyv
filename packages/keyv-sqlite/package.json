@@ -1,6 +1,6 @@
 {
   "name": "@keyv/sqlite",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "SQLite storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
