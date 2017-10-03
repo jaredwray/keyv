@@ -55,11 +55,11 @@ class Keyv extends EventEmitter {
 				if (data === undefined) {
 					return undefined;
 				}
-				if (!store.ttlSupport && typeof data.expires === 'number' && Date.now() > data.expires) {
+				if (typeof data.expires === 'number' && Date.now() > data.expires) {
 					this.delete(key);
 					return undefined;
 				}
-				return store.ttlSupport ? data : data.value;
+				return data.value;
 			});
 	}
 
@@ -75,10 +75,8 @@ class Keyv extends EventEmitter {
 
 		return Promise.resolve()
 			.then(() => {
-				if (!store.ttlSupport) {
-					const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
-					value = { value, expires };
-				}
+				const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
+				value = { value, expires };
 				return store.set(key, JSONB.stringify(value), ttl);
 			})
 			.then(() => true);
