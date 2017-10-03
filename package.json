@@ -1,6 +1,6 @@
 {
   "name": "keyv",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "Simple key-value storage with support for multiple backends",
   "main": "src/index.js",
   "scripts": {
