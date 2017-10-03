@@ -18,10 +18,9 @@ test.serial('Keyv accepts storage adapters', async t => {
 	t.is(store.size, 1);
 });
 
-test.serial('Keyv hands tll functionality over to ttl supporting stores', async t => {
-	t.plan(3);
+test.serial('Keyv passes tll info to stores', async t => {
+	t.plan(1);
 	const store = new Map();
-	store.ttlSupport = true;
 	const storeSet = store.set;
 	store.set = (key, val, ttl) => {
 		t.is(ttl, 100);
@@ -29,10 +28,6 @@ test.serial('Keyv hands tll functionality over to ttl supporting stores', async 
 	};
 	const keyv = new Keyv({ store });
 	await keyv.set('foo', 'bar', 100);
-	t.is(await keyv.get('foo'), 'bar');
-	tk.freeze(Date.now() + 150);
-	t.is(await keyv.get('foo'), 'bar');
-	tk.reset();
 });
 
 test.serial('Keyv respects default tll option', async t => {
