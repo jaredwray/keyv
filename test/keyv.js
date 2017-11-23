@@ -76,20 +76,19 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 });
 
 test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {
-	t.plan(2);
+	t.plan(3);
 	const serialize = obj => {
 		t.pass();
 		return JSON.stringify(obj);
 	};
 	const deserialize = str => {
 		t.pass();
-		const obj = JSON.parse(str);
-		return obj;
+		return JSON.parse(str);
 	};
 	const store = new Map();
 	const keyv = new Keyv({ store, serialize, deserialize });
-	await keyv.set('foo', 'foo');
-	await keyv.get('foo');
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.get('foo'), 'bar');
 });
 
 const store = () => new Map();
