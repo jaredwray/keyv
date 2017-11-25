@@ -24,7 +24,11 @@ class Keyv extends EventEmitter {
 	constructor(uri, opts) {
 		super();
 		this.opts = Object.assign(
-			{ namespace: 'keyv' },
+			{
+				namespace: 'keyv',
+				serialize: JSONB.stringify,
+				deserialize: JSONB.parse
+			},
 			(typeof uri === 'string') ? { uri } : uri,
 			opts
 		);
@@ -51,7 +55,7 @@ class Keyv extends EventEmitter {
 		return Promise.resolve()
 			.then(() => store.get(key))
 			.then(data => {
-				data = (typeof data === 'string') ? JSONB.parse(data) : data;
+				data = (typeof data === 'string') ? this.opts.deserialize(data) : data;
 				if (data === undefined) {
 					return undefined;
 				}
@@ -77,7 +81,7 @@ class Keyv extends EventEmitter {
 			.then(() => {
 				const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
 				value = { value, expires };
-				return store.set(key, JSONB.stringify(value), ttl);
+				return store.set(key, this.opts.serialize(value), ttl);
 			})
 			.then(() => true);
 	}

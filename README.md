@@ -86,6 +86,18 @@ await users.get('foo'); // undefined
 await cache.get('foo'); // 'cache'
 ```
 
+### Custom Serializers
+
+Keyv uses [`json-buffer`](https://github.com/dominictarr/json-buffer) for data serialization to ensure consistency across different backends.
+
+You can optionally provide your own serialization functions to support extra data types or to serialize to something other than JSON.
+
+```js
+const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
+```
+
+**Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialisation functions and chosen storage engine.
+
 ## Official Storage Adapters
 
 The official storage adapters are covered by [over 150 integration tests](https://travis-ci.org/lukechilds/keyv/jobs/260418145) to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
@@ -201,6 +213,20 @@ Type: `Number`<br>
 Default: `undefined`
 
 Default TTL. Can be overridden by specififying a TTL on `.set()`.
+
+#### options.serialize
+
+Type: `Function`<br>
+Default: `JSONB.stringify`
+
+A custom serialization function.
+
+#### options.deserialize
+
+Type: `Function`<br>
+Default: `JSONB.parse`
+
+A custom deserialization function.
 
 #### options.store
 
