@@ -214,6 +214,20 @@ Default: `undefined`
 
 Default TTL. Can be overridden by specififying a TTL on `.set()`.
 
+#### options.serialize
+
+Type: `Function`<br>
+Default: `JSONB.stringify`
+
+A custom serialization function.
+
+#### options.deserialize
+
+Type: `Function`<br>
+Default: `JSONB.parse`
+
+A custom deserialization function.
+
 #### options.store
 
 Type: `Storage adapter instance`<br>
