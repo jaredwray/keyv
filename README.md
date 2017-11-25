@@ -85,18 +85,17 @@ await users.get('foo'); // undefined
 await cache.get('foo'); // 'cache'
 ```
 
-### Custom serialize/deserialize functions
+### Custom Serializers
 
-Keyv uses [json-buffer](https://www.npmjs.com/package/json-buffer) by default to serialize and deserialize data. It will handle correctly `Buffer`s, `null`, `undefined` and of course regular objects and primitives.
+Keyv uses [`json-buffer`](https://github.com/dominictarr/json-buffer) for data serialization to ensure consistency across different backends.
 
-You can provide your own `serialize` and `deserialize` functions to support custom classes or to serialize data to something other than JSON. Both functions must return a string.
+You can optionally provide your own serialization functions to support extra data types or to serialize to something other than JSON.
 
 ```js
-let {serialize, deserialize} = require('./lib/serializer.js')
-const mycache = new Keyv('redis://user:pass@localhost:6379', { serialize, deserialize });
+const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
 ```
 
-If you set only one of those two functions, `json-buffer` will be used for the other one.
+**Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialisation functions and chosen storage engine.
 
 ## Official Storage Adapters
 
