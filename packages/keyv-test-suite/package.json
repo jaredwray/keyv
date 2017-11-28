@@ -46,7 +46,7 @@
     "timekeeper": "^2.0.0"
   },
   "devDependencies": {
-    "ava": "^0.23.0",
+    "ava": "^0.24.0",
     "babel-cli": "^6.24.1",
     "babel-preset-es2016-node4": "^6.0.1",
     "coveralls": "^3.0.0",
