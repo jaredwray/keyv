@@ -49,7 +49,7 @@ class Keyv extends EventEmitter {
 		return `${this.opts.namespace}:${key}`;
 	}
 
-	get(key) {
+	get(key, opts) {
 		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
 		return Promise.resolve()
@@ -62,6 +62,9 @@ class Keyv extends EventEmitter {
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {
 					this.delete(key);
 					return undefined;
+				}
+				if (opts && opts.raw) {
+					return data;
 				}
 				return data.value;
 			});
