@@ -49,6 +49,10 @@ class Keyv extends EventEmitter {
 		return `${this.opts.namespace}:${key}`;
 	}
 
+	_removeKeyPrefix(key) {
+		return key.replace(`${this.opts.namespace}:`, '');
+	}
+
 	get(key) {
 		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
@@ -97,6 +101,45 @@ class Keyv extends EventEmitter {
 		const store = this.opts.store;
 		return Promise.resolve()
 			.then(() => store.clear());
+	}
+
+	keys() {
+		const store = this.opts.store;
+		return Promise.resolve()
+			.then(() => store.keys())
+			.then(keys => {
+				const data = [];
+				for (const key of keys) {
+					data.push(this._removeKeyPrefix(key));
+				}
+				return data;
+			});
+	}
+
+	values() {
+		const store = this.opts.store;
+		return Promise.resolve()
+			.then(() => store.values())
+			.then(values => {
+				const data = [];
+				for (const value of values) {
+					data.push(this.opts.deserialize(value).value);
+				}
+				return data;
+			});
+	}
+
+	entries() {
+		const store = this.opts.store;
+		return Promise.resolve()
+			.then(() => store.entries())
+			.then(entries => {
+				const data = [];
+				for (const entry of entries) {
+					data.push([this._removeKeyPrefix(entry[0]), this.opts.deserialize(entry[1]).value]);
+				}
+				return data;
+			});
 	}
 }
 

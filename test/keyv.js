@@ -75,6 +75,30 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 	tk.reset();
 });
 
+test.serial('.keys()', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	await keyv.set('fizz', 'buzz');
+	t.deepEqual(await keyv.keys(), ['foo', 'fizz']);
+});
+
+test.serial('.values()', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	await keyv.set('fizz', 'buzz');
+	t.deepEqual(await keyv.values(), ['bar', 'buzz']);
+});
+
+test.serial('.entries()', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	await keyv.set('fizz', 'buzz');
+	t.deepEqual(await keyv.entries(), [['foo', 'bar'], ['fizz', 'buzz']]);
+});
+
 test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {
 	t.plan(3);
 	const store = new Map();
