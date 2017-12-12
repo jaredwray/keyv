@@ -5,6 +5,9 @@ test/testdb.sqlite
 #npm5
 package-lock.json
 
+#yarn
+yarn.lock
+
 # Logs
 logs
 *.log
