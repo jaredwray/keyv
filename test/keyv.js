@@ -75,42 +75,11 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 	tk.reset();
 });
 
-test.serial('.get(key) gets only the value', async t => {
-	const startTime = Date.now();
-	tk.freeze(startTime);
-	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 200 });
-	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
-	tk.freeze(startTime + 250);
-	t.is(await keyv.get('foo'), undefined);
-	tk.reset();
-});
-
 test.serial('.get(key, {raw: true}) get db object insted only value', async t => {
-	const startTime = Date.now();
-	tk.freeze(startTime);
 	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 200 });
+	const keyv = new Keyv({ store });
 	await keyv.set('foo', 'bar');
-	await keyv.set('fizz', 'buzz', 100);
-	await keyv.set('ping', 'pong', 300);
 	t.is(typeof await keyv.get('foo', { raw: true }), 'object');
-	t.is(typeof await keyv.get('fizz', { raw: true }), 'object');
-	t.is(typeof await keyv.get('ping', { raw: true }), 'object');
-	tk.freeze(startTime + 150);
-	t.is(typeof await keyv.get('foo', { raw: true }), 'object');
-	t.is(typeof await keyv.get('fizz', { raw: true }), 'undefined');
-	t.is(typeof await keyv.get('ping', { raw: true }), 'object');
-	tk.freeze(startTime + 250);
-	t.is(typeof await keyv.get('foo', { raw: true }), 'undefined');
-	t.is(typeof await keyv.get('fizz', { raw: true }), 'undefined');
-	t.is(typeof await keyv.get('ping', { raw: true }), 'object');
-	tk.freeze(startTime + 350);
-	t.is(typeof await keyv.get('foo', { raw: true }), 'undefined');
-	t.is(typeof await keyv.get('fizz', { raw: true }), 'undefined');
-	t.is(typeof await keyv.get('ping', { raw: true }), 'undefined');
-	tk.reset();
 });
 
 test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {

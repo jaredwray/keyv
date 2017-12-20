@@ -63,10 +63,7 @@ class Keyv extends EventEmitter {
 					this.delete(key);
 					return undefined;
 				}
-				if (opts && opts.raw) {
-					return data;
-				}
-				return data.value;
+				return (opts && opts.raw) ? data : data.value;
 			});
 	}
 
