@@ -258,6 +258,15 @@ Returns `true`.
 
 Returns the value.
 
+#### .get(key, [options])
+
+Returns the value.
+
+Options type: `Object`
+Options default: `undefined`
+
+If options have property `raw` that's `true` function returns `object` with the value property.
+
 #### .delete(key)
 
 Deletes an entry.
