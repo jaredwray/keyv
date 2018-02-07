@@ -91,5 +91,12 @@ test.serial('Keyv uses custom serializer when provided instead of json-buffer', 
 	t.is(await keyv.get('foo'), 'bar');
 });
 
+test.serial('An empty namespace stores the key as-is', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store, namespace: '' });
+	await keyv.set(42, 'foo');
+	t.is(Array.from(store.keys())[0], 42);
+});
+
 const store = () => new Map();
 keyvTestSuite(test, Keyv, store);
