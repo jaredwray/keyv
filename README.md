@@ -44,6 +44,7 @@ npm install --save @keyv/mongo
 npm install --save @keyv/sqlite
 npm install --save @keyv/postgres
 npm install --save @keyv/mysql
+npm install --save @keyv/lru
 ```
 
 Create a new Keyv instance, passing your connection string if applicable. Keyv will automatically load the correct storage adapter.
