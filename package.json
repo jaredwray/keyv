@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv",
   "dependencies": {
-    "json-buffer": "3.0.0"
+    "json-buffer": "3.0.1"
   },
   "devDependencies": {
     "ava": "^0.25.0",
