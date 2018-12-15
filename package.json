@@ -32,7 +32,7 @@
     "json-buffer": "3.0.0"
   },
   "devDependencies": {
-    "ava": "^0.25.0",
+    "ava": "^1.0.1",
     "coveralls": "^3.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "@keyv/mongo": "*",
