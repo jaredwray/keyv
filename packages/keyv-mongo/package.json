@@ -1,6 +1,6 @@
 {
   "name": "@keyv/mongo",
-  "version": "1.0.6",
+  "version": "1.0.4",
   "description": "MongoDB storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
@@ -42,12 +42,11 @@
     "pify": "3.0.0"
   },
   "devDependencies": {
-    "@keyv/test-suite": "*",
     "ava": "^0.25.0",
     "coveralls": "^3.0.0",
-    "dotenv": "^6.2.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
+    "@keyv/test-suite": "*",
     "nyc": "^11.0.3",
     "requirable": "^1.0.1",
     "this": "^1.0.2",
