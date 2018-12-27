@@ -5,20 +5,20 @@ const mongojs = require('mongojs');
 const pify = require('pify');
 
 class KeyvMongo extends EventEmitter {
-	constructor(url, opts) {
+	constructor(opts) {
 		super();
 		this.ttlSupport = false;
-		url = url || {};
-		if (typeof url === 'string') {
-			url = { url };
+		opts = opts || {};
+		if (typeof opts === 'string') {
+			opts = { url: opts };
 		}
-		if (url.uri) {
-			url = Object.assign({ url: url.uri }, url);
+		if (opts.uri) {
+			opts = Object.assign({ url: opts.uri }, opts);
 		}
 		this.opts = Object.assign({
 			url: 'mongodb://127.0.0.1:27017',
 			collection: 'keyv'
-		}, url, opts);
+		}, opts);
 		this.db = mongojs(this.opts.url);
 
 		const collection = this.db.collection(this.opts.collection);
