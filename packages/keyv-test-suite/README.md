@@ -1,12 +1,12 @@
 # @keyv/test-suite [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
 
-> Test suite for Keyv API compliancy
+> Test suite for Keyv API compliance
 
 [![Build Status](https://travis-ci.org/lukechilds/keyv-test-suite.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-test-suite)
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-test-suite/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-test-suite?branch=master)
 [![npm](https://img.shields.io/npm/v/@keyv/test-suite.svg)](https://www.npmjs.com/package/@keyv/test-suite)
 
-Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https://github.com/lukechilds/keyv) storage adapter for API compliancy.
+Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https://github.com/lukechilds/keyv) storage adapter for API compliance.
 
 ## Usage
 
