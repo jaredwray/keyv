@@ -46,6 +46,9 @@ class Keyv extends EventEmitter {
 	}
 
 	_getKeyPrefix(key) {
+		if (Array.isArray(key)) {
+			return key.map(key => `${this.opts.namespace}:${key}`);
+		}
 		return `${this.opts.namespace}:${key}`;
 	}
 
@@ -90,7 +93,12 @@ class Keyv extends EventEmitter {
 		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
 		return Promise.resolve()
-			.then(() => store.delete(key));
+			.then(() => {
+				if (store instanceof Map && Array.isArray(key)) {
+					return Promise.all(key.map(key => store.delete(key)));
+				}
+				return store.delete(key);
+			});
 	}
 
 	clear() {

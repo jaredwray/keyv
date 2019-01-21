@@ -75,6 +75,21 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 	tk.reset();
 });
 
+test.serial('.delete(key) where key is a single key', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.delete('foo'), true);
+});
+
+test.serial('.delete(key) where key is array of keys', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	await keyv.set('fizz', 'buzz');
+	t.deepEqual(await keyv.delete(['foo', 'fizz']), [true, true]);
+});
+
 test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {
 	t.plan(3);
 	const store = new Map();
