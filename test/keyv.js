@@ -91,7 +91,15 @@ test.serial('.has(key) where key is the key we are looking for', async t => {
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.has('foo'), true);
 	t.is(await keyv.has('fizz'), false);
-	t.is(await keyv.set('fizz'), false);
+});
+
+test.serial('.isUndefined(key) where key is the key which we are checking if it\' undefined', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	await keyv.set('fizz');
+	t.is(await keyv.isUndefined('foo'), false);
+	t.is(await keyv.isUndefined('fizz'), true);
 });
 
 test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {

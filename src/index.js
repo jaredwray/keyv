@@ -79,14 +79,11 @@ class Keyv extends EventEmitter {
 
 		return Promise.resolve()
 			.then(() => {
-				if (value === undefined) {
-					return false;
-				}
 				const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
 				value = { value, expires };
 				return store.set(key, this.opts.serialize(value), ttl);
 			})
-			.then(result => result !== false);
+			.then(() => true);
 	}
 
 	has(key) {
@@ -95,7 +92,17 @@ class Keyv extends EventEmitter {
 
 		return Promise.resolve()
 			.then(() => {
-				return Boolean(store.get(key, { raw: true }));
+				return store.has(key);
+			});
+	}
+
+	isUndefined(key) {
+		key = this._getKeyPrefix(key);
+		const store = this.opts.store;
+
+		return Promise.resolve()
+			.then(() => {
+				return store.has(key) && this.opts.deserialize(store.get(key)).value === undefined;
 			});
 	}
 
