@@ -49,7 +49,7 @@ class Keyv extends EventEmitter {
 		return `${this.opts.namespace}:${key}`;
 	}
 
-	get(key) {
+	get(key, opts) {
 		key = this._getKeyPrefix(key);
 		const store = this.opts.store;
 		return Promise.resolve()
@@ -63,7 +63,7 @@ class Keyv extends EventEmitter {
 					this.delete(key);
 					return undefined;
 				}
-				return data.value;
+				return (opts && opts.raw) ? data : data.value;
 			});
 	}
 

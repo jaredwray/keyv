@@ -75,6 +75,16 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 	tk.reset();
 });
 
+test.serial('.get(key, {raw: true}) returns the raw object instead of the value', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store });
+	await keyv.set('foo', 'bar');
+	const value = await keyv.get('foo');
+	const rawObject = await keyv.get('foo', { raw: true });
+	t.is(value, 'bar');
+	t.is(rawObject.value, 'bar');
+});
+
 test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {
 	t.plan(3);
 	const store = new Map();

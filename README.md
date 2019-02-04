@@ -255,9 +255,18 @@ By default keys are persistent. You can set an expiry TTL in milliseconds.
 
 Returns `true`.
 
-#### .get(key)
+#### .get(key, [options])
 
 Returns the value.
+
+##### options.raw
+
+Type: `Boolean`<br>
+Default: `false`
+
+If set to true the raw DB object Keyv stores internally will be returned instead of just the value.
+
+This contians the TTL timestamp.
 
 #### .delete(key)
 
