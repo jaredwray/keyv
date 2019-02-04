@@ -92,17 +92,7 @@ class Keyv extends EventEmitter {
 
 		return Promise.resolve()
 			.then(() => {
-				return store.has(key);
-			});
-	}
-
-	isUndefined(key) {
-		key = this._getKeyPrefix(key);
-		const store = this.opts.store;
-
-		return Promise.resolve()
-			.then(() => {
-				return store.has(key) && this.opts.deserialize(store.get(key)).value === undefined;
+				return Boolean(store.get(key, { raw: true }));
 			});
 	}
 
