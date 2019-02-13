@@ -86,14 +86,8 @@ class Keyv extends EventEmitter {
 			.then(() => true);
 	}
 
-	has(key) {
-		key = this._getKeyPrefix(key);
-		const store = this.opts.store;
-
-		return Promise.resolve()
-			.then(() => {
-				return Boolean(store.get(key, { raw: true }));
-			});
+	async has(key) {
+		return Boolean(await this.get(key, { raw: true }));
 	}
 
 	delete(key) {
