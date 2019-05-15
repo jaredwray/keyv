@@ -5,6 +5,7 @@ node_js:
   - '6'
   - '4'
   - '10'
+  - '12'
 services:
   - redis-server
   - mongodb
