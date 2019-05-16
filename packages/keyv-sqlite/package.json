@@ -48,7 +48,7 @@
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
     "@keyv/test-suite": "*",
-    "nyc": "^11.0.3",
+    "nyc": "^14.1.1",
     "requirable": "^1.0.1",
     "this": "^1.0.2",
     "xo": "^0.19.0"
