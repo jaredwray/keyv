@@ -58,6 +58,10 @@ class Keyv extends EventEmitter {
 		return false;
 	}
 
+	_deserializeKey(key) {
+		return key.replace(this.opts.namespace + ':', '');
+	}
+
 	_deserializeData(data, key) {
 		if (!data) {
 			return data;
@@ -69,8 +73,12 @@ class Keyv extends EventEmitter {
 
 		if (Array.isArray(data)) {
 			return data
-				.map(row => this._deserializeData(row, key))
-				.map(row => this._checkIsExpired(row, key) ? undefined : row.value);
+				.map(row => ({
+					key: this._deserializeKey(row.key),
+					value: this._deserializeData(row.value, key),
+					expiresAt: row.expiresAt
+				}))
+				.map(row => this._checkIsExpired(row, row.key) ? undefined : row);
 		}
 
 		return data;
