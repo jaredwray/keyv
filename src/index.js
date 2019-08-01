@@ -46,6 +46,10 @@ class Keyv extends EventEmitter {
 	}
 
 	_checkIsExpired(data, key) {
+		if (!data) {
+			return true;
+		}
+
 		if (typeof data.expires === 'number' && Date.now() > data.expires) {
 			this.delete(key);
 			return true;
