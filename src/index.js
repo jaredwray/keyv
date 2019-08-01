@@ -45,8 +45,32 @@ class Keyv extends EventEmitter {
 		this.opts.store.namespace = this.opts.namespace;
 	}
 
+    _checkIsExpired(data) {
+		if (typeof data.expires === 'number' && Date.now() > data.expires) {
+			this.delete(key);
+			return true;
+		}
+
+        return false;
+    }
+
+    _deserializeData(data) {
+        if (!data) return data;
+        if (typeof data === 'string') {
+            return this.opts.deserialize(data);
+        }
+
+        if (Array.isArray(data)) {
+            return data
+                .map(row => this._deserializeData(row))
+                .map(row => this._checkIsExpired(row) ? undefined : row.value);
+        }
+
+        return data;
+    }
+
 	_getKeyPrefix(key) {
-		return `${this.opts.namespace}:${key}`;
+		return key ? `${this.opts.namespace}:${key}` : undefined;
 	}
 
 	get(key, opts) {
@@ -54,16 +78,13 @@ class Keyv extends EventEmitter {
 		const store = this.opts.store;
 		return Promise.resolve()
 			.then(() => store.get(key))
+            .then(rawData => this._deserializeData(rawData))
 			.then(data => {
-				data = (typeof data === 'string') ? this.opts.deserialize(data) : data;
-				if (data === undefined) {
-					return undefined;
-				}
-				if (typeof data.expires === 'number' && Date.now() > data.expires) {
-					this.delete(key);
-					return undefined;
-				}
-				return (opts && opts.raw) ? data : data.value;
+                if (!Array.isArray(data) && this._checkIsExpired(data)) {
+                    return undefined;
+                }
+
+                return (opts && opts.raw) ? data : (data.value || data)
 			});
 	}
 
