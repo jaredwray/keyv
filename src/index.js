@@ -55,7 +55,10 @@ class Keyv extends EventEmitter {
 	}
 
 	_deserializeData(data, key) {
-		if (!data) return data;
+		if (!data) {
+			return data;
+		}
+
 		if (typeof data === 'string') {
 			return this.opts.deserialize(data);
 		}
@@ -84,7 +87,7 @@ class Keyv extends EventEmitter {
 					return undefined;
 				}
 
-				return (opts && opts.raw) ? data : (data.value || data)
+				return (opts && opts.raw) ? data : (data.value || data);
 			});
 	}
 
