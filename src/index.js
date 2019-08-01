@@ -15,7 +15,7 @@ const loadStore = opts => {
 	};
 	if (opts.adapter || opts.uri) {
 		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
-		return new(require(adapters[adapter]))(opts);
+		return new (require(adapters[adapter]))(opts);
 	}
 	return new Map();
 };
@@ -23,14 +23,13 @@ const loadStore = opts => {
 class Keyv extends EventEmitter {
 	constructor(uri, opts) {
 		super();
-		this.opts = Object.assign({
+		this.opts = Object.assign(
+			{
 				namespace: 'keyv',
 				serialize: JSONB.stringify,
 				deserialize: JSONB.parse
 			},
-			(typeof uri === 'string') ? {
-				uri
-			} : uri,
+			(typeof uri === 'string') ? { uri } : uri,
 			opts
 		);
 
@@ -102,10 +101,7 @@ class Keyv extends EventEmitter {
 		return Promise.resolve()
 			.then(() => {
 				const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
-				value = {
-					value,
-					expires
-				};
+				value = { value, expires };
 				return store.set(key, this.opts.serialize(value), ttl);
 			})
 			.then(() => true);
