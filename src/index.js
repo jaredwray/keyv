@@ -45,7 +45,7 @@ class Keyv extends EventEmitter {
 		this.opts.store.namespace = this.opts.namespace;
 	}
 
-	_checkIsExpired(data) {
+	_checkIsExpired(data, key) {
 		if (typeof data.expires === 'number' && Date.now() > data.expires) {
 			this.delete(key);
 			return true;
@@ -54,7 +54,7 @@ class Keyv extends EventEmitter {
 		return false;
 	}
 
-	_deserializeData(data) {
+	_deserializeData(data, key) {
 		if (!data) return data;
 		if (typeof data === 'string') {
 			return this.opts.deserialize(data);
@@ -62,8 +62,8 @@ class Keyv extends EventEmitter {
 
 		if (Array.isArray(data)) {
 			return data
-				.map(row => this._deserializeData(row))
-				.map(row => this._checkIsExpired(row) ? undefined : row.value);
+				.map(row => this._deserializeData(row, key))
+				.map(row => this._checkIsExpired(row, key) ? undefined : row.value);
 		}
 
 		return data;
@@ -78,9 +78,9 @@ class Keyv extends EventEmitter {
 		const store = this.opts.store;
 		return Promise.resolve()
 			.then(() => store.get(key))
-			.then(rawData => this._deserializeData(rawData))
+			.then(rawData => this._deserializeData(rawData, key))
 			.then(data => {
-				if (!Array.isArray(data) && this._checkIsExpired(data)) {
+				if (!Array.isArray(data) && this._checkIsExpired(data, key)) {
 					return undefined;
 				}
 
