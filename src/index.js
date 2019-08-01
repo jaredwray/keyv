@@ -78,6 +78,12 @@ class Keyv extends EventEmitter {
 					value: this._deserializeData(row.value, key),
 					expiresAt: row.expiresAt
 				}))
+		        .map(row => {
+		          if (row.value.value) {
+		            row.value = row.value.value;
+		          }
+		          return row;
+		        })
 				.map(row => this._checkIsExpired(row, row.key) ? undefined : row);
 		}
 
