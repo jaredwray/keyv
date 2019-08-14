@@ -17,6 +17,7 @@ const loadStore = opts => {
 		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
 		return new (require(adapters[adapter]))(opts);
 	}
+
 	return new Map();
 };
 
@@ -51,7 +52,7 @@ class Keyv extends EventEmitter {
 
 	get(key, opts) {
 		key = this._getKeyPrefix(key);
-		const store = this.opts.store;
+		const { store } = this.opts;
 		return Promise.resolve()
 			.then(() => store.get(key))
 			.then(data => {
@@ -59,10 +60,12 @@ class Keyv extends EventEmitter {
 				if (data === undefined) {
 					return undefined;
 				}
+
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {
 					this.delete(key);
 					return undefined;
 				}
+
 				return (opts && opts.raw) ? data : data.value;
 			});
 	}
@@ -72,10 +75,12 @@ class Keyv extends EventEmitter {
 		if (typeof ttl === 'undefined') {
 			ttl = this.opts.ttl;
 		}
+
 		if (ttl === 0) {
 			ttl = undefined;
 		}
-		const store = this.opts.store;
+
+		const { store } = this.opts;
 
 		return Promise.resolve()
 			.then(() => {
@@ -88,13 +93,13 @@ class Keyv extends EventEmitter {
 
 	delete(key) {
 		key = this._getKeyPrefix(key);
-		const store = this.opts.store;
+		const { store } = this.opts;
 		return Promise.resolve()
 			.then(() => store.delete(key));
 	}
 
 	clear() {
-		const store = this.opts.store;
+		const { store } = this.opts;
 		return Promise.resolve()
 			.then(() => store.clear());
 	}

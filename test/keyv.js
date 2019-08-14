@@ -26,6 +26,7 @@ test.serial('Keyv passes tll info to stores', async t => {
 		t.is(ttl, 100);
 		storeSet.call(store, key, val, ttl);
 	};
+
 	const keyv = new Keyv({ store });
 	await keyv.set('foo', 'bar', 100);
 });
@@ -92,10 +93,12 @@ test.serial('Keyv uses custom serializer when provided instead of json-buffer', 
 		t.pass();
 		return JSON.stringify(data);
 	};
+
 	const deserialize = data => {
 		t.pass();
 		return JSON.parse(data);
 	};
+
 	const keyv = new Keyv({ store, serialize, deserialize });
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
