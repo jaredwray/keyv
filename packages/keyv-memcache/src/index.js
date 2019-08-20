@@ -1,6 +1,7 @@
 "use strict";
 
 const EventEmitter = require("events");
+const memcache = require("memjs");
 
 class KeyvMemcache extends EventEmitter {
   constructor(uri, opts) {
@@ -9,7 +10,9 @@ class KeyvMemcache extends EventEmitter {
     opts = Object.assign({}, typeof uri === "string" ? { uri } : uri, opts);
     if (opts.uri && typeof opts.url === "undefined") {
       opts.url = opts.uri;
-    }
+	}
+	
+	let client = memcache.Client.create(uri, opts);
 
   }
 
@@ -18,17 +21,51 @@ class KeyvMemcache extends EventEmitter {
   }
 
   get(key) {
-
+	  return new Promise((resolve, reject) => {
+		this.client.get(key, function(err, value, flags) {
+			if(err) {
+				reject(err);
+			} else {
+				resolve(value, flags);
+			}
+		});
+	  });
   }
 
   set(key, value, ttl) {
+	  return new Promise((resolve, reject) => {
+		this.client.set(key, value, {ttl: ttl}, (err, success) => {
+			if(err) {
+				reject(err);
+			} else {
+				resolve(success);
+			}
+		});
+	  });
   }
 
   delete(key) {
-
+	return new Promise((resolve, reject) => {
+		this.client.delete(key, (err, success) => {
+			if(err) {
+				reject(err);
+			} else {
+				resolve(success);
+			}
+		});
+	  });
   }
 
   clear() {
+	return new Promise((resolve, reject) => {
+		this.client.flush((err, success) => {
+			if(err) {
+				reject(err);
+			} else {
+				resolve(success);
+			}
+		});
+	  });
   }
 }
 
