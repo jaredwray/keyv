@@ -1,72 +1,68 @@
-"use strict";
+'use strict';
 
-const EventEmitter = require("events");
-const memcache = require("memjs");
+const EventEmitter = require('events');
+const memcache = require('memjs');
 
 class KeyvMemcache extends EventEmitter {
-  constructor(uri, opts) {
+	constructor(uri, opts) {
     super();
     this.ttlSupport = true;
-    opts = Object.assign({}, typeof uri === "string" ? { uri } : uri, opts);
-    if (opts.uri && typeof opts.url === "undefined") {
-      opts.url = opts.uri;
+    opts = Object.assign({}, typeof uri === 'string' ? { uri } : uri, opts);
+
+    this.client = memcache.Client.create(uri, opts);
 	}
-	
-	let client = memcache.Client.create(uri, opts);
 
-  }
+	_getNamespace() {
+		return `namespace:${this.namespace}`;
+	}
 
-  _getNamespace() {
-    return `namespace:${this.namespace}`;
-  }
-
-  get(key) {
-	  return new Promise((resolve, reject) => {
-		this.client.get(key, function(err, value, flags) {
-			if(err) {
+	get(key) {
+		return new Promise((resolve, reject) => {
+		this.client.get(key, (err, value, flags) => {
+			if (err) {
 				reject(err);
 			} else {
 				resolve(value, flags);
 			}
 		});
-	  });
-  }
+		});
+	}
 
-  set(key, value, ttl) {
-	  return new Promise((resolve, reject) => {
-		this.client.set(key, value, {ttl: ttl}, (err, success) => {
-			if(err) {
+	set(key, value, ttl) {
+		return new Promise((resolve, reject) => {
+		this.client.set(key, value, { ttl }, (err, success) => {
+			if (err) {
 				reject(err);
 			} else {
 				resolve(success);
 			}
 		});
-	  });
-  }
+		});
+	}
 
-  delete(key) {
-	return new Promise((resolve, reject) => {
+	delete(key) {
+		return new Promise((resolve, reject) => {
 		this.client.delete(key, (err, success) => {
-			if(err) {
+			if (err) {
 				reject(err);
 			} else {
 				resolve(success);
 			}
 		});
-	  });
-  }
+		});
+	}
 
-  clear() {
-	return new Promise((resolve, reject) => {
+	clear() {
+		return new Promise((resolve, reject) => {
 		this.client.flush((err, success) => {
-			if(err) {
+			if (err) {
 				reject(err);
 			} else {
 				resolve(success);
 			}
 		});
-	  });
-  }
+		});
+	}
 }
 
 module.exports = KeyvMemcache;

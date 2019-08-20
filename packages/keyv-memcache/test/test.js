@@ -1,9 +1,9 @@
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvRedis from 'this';
+import KeyvMemcache from '../src';
 
-keyvOfficialTests(test, Keyv, 'redis://localhost', 'redis://foo');
+keyvOfficialTests(test, Keyv, '', '');
 
-const store = () => new KeyvRedis();
+const store = () => new KeyvMemcache();
 keyvTestSuite(test, Keyv, store);
