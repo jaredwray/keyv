@@ -3283,6 +3283,11 @@ mem@^1.1.0:
   dependencies:
     mimic-fn "^1.0.0"
 
+memjs@^1.2.2:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/memjs/-/memjs-1.2.2.tgz#f7c7276c7016ba1b8ad800df09cecc32522a536c"
+  integrity sha512-j6I5cQsjT8izm0FcBZrwga4VmlhTMsBTPKdyKolQenLulHNvKuNcDgDmBhQvScqNLy4tjpCCFwiqFK+5l6J20g==
+
 meow@^3.7.0:
   version "3.7.0"
   resolved "https://registry.yarnpkg.com/meow/-/meow-3.7.0.tgz#72cb668b425228290abbfa856892587308a801fb"
