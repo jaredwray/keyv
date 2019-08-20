@@ -37,10 +37,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv-memcache",
   "dependencies": {
-    "@keyv/redis": "^1.3.8",
-    "memjs": "^1.2.2",
-    "pify": "^3.0.0",
-    "redis": "^2.8.0"
+    "memjs": "^1.2.2"
   },
   "devDependencies": {
     "@keyv/test-suite": "^1.3.0",

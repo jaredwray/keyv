@@ -1,4 +1,4 @@
-# @kkeyv-memcache [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/jaredwray/keyv-memcache)
+# @keyv-memcache [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/jaredwray/keyv-memcache)
 
 > Memcache storage adapter for Keyv
 
