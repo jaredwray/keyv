@@ -4,11 +4,8 @@
   "description": "MemCache storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
-    "test": "xo && nyc ava",
+    "test": "nyc ava",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
-  },
-  "xo": {
-    "extends": "xo-lukechilds"
   },
   "ava": {
     "require": [
@@ -44,11 +41,9 @@
     "ava": "^0.25.0",
     "coveralls": "^3.0.0",
     "delay": "^2.0.0",
-    "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
     "nyc": "^11.0.3",
     "requirable": "^1.0.4",
-    "this": "^1.0.2",
-    "xo": "^0.20.1"
+    "this": "^1.0.2"
   }
 }
