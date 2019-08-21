@@ -11,11 +11,11 @@ MemCache storage adapter for [Keyv](https://github.com/lukechilds/keyv).
 ## Install
 
 ```shell
-npm install --save @keyv-memcache
+npm install --save keyv-memcache
 ```
 or 
 ```
-yarn add @keyv-memcache
+yarn add keyv-memcache
 ```
 
 ## Usage
