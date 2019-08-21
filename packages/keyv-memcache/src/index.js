@@ -1,72 +1,86 @@
-'use strict';
+"use strict";
 
-const EventEmitter = require('events');
-const memcache = require('memjs');
+const EventEmitter = require("events");
+const memcache = require("memjs");
 
 class KeyvMemcache extends EventEmitter {
-	constructor(uri, opts) {
+  constructor(uri, opts) {
     super();
     this.ttlSupport = true;
-    opts = Object.assign({}, typeof uri === 'string' ? { uri } : uri, opts);
+    opts = Object.assign({}, typeof uri === "string" ? { uri } : uri, opts);
 
-    this.client = memcache.Client.create(uri, opts);
-	}
+    if (uri === undefined) {
+      uri = "localhost:11211";
+    }
 
-	_getNamespace() {
-		return `namespace:${this.namespace}`;
-	}
+    try {
+      this.client = memcache.Client.create(uri, opts);
+    } catch (error) {
+      this.emit("error", error);
+    }
+  }
 
-	get(key) {
-		return new Promise((resolve, reject) => {
-		this.client.get(key, (err, value, flags) => {
-			if (err) {
-				this.emit('error', err);
-				reject(err);
-			} else {
-				resolve(value, flags);
-			}
-		});
-		});
-	}
+  _getNamespace() {
+    return `namespace:${this.namespace}`;
+  }
 
-	set(key, value, ttl) {
-		return new Promise((resolve, reject) => {
-		this.client.set(key, value, { ttl }, (err, success) => {
-			if (err) {
-				this.emit('error', err);
-				reject(err);
-			} else {
-				resolve(success);
-			}
-		});
-		});
-	}
+  get(key) {
+    return new Promise((resolve, reject) => {
+      this.client.get(key, (err, value, flags) => {
+        if (err) {
+          this.emit("error", err);
+          reject(err);
+        } else {
+          resolve(value, flags);
+        }
+      });
+    });
+  }
 
-	delete(key) {
-		return new Promise((resolve, reject) => {
-		this.client.delete(key, (err, success) => {
-			if (err) {
-				this.emit('error', err);
-				reject(err);
-			} else {
-				resolve(success);
-			}
-		});
-		});
-	}
+  set(key, value, ttl) {
+    const opts = {};
 
-	clear() {
-		return new Promise((resolve, reject) => {
-		this.client.flush((err, success) => {
-			if (err) {
-				this.emit('error', err);
-				reject(err);
-			} else {
-				resolve(success);
-			}
-		});
-		});
-	}
+    if (ttl !== undefined) {
+      opts.ttl = ttl;
+    }
+
+    return new Promise((resolve, reject) => {
+      this.client.set(key, value, opts, (err, success) => {
+        if (err) {
+          this.emit("error", err);
+          reject(err);
+        } else {
+          resolve(success);
+        }
+      });
+    });
+  }
+
+  delete(key) {
+    return new Promise((resolve, reject) => {
+      this.client.delete(key, (err, success) => {
+        if (err) {
+          this.emit("error", err);
+          reject(err);
+        } else {
+          resolve(success);
+        }
+      });
+    });
+  }
+
+  clear() {
+    return new Promise((resolve, reject) => {
+      this.client.flush((err, success) => {
+        if (err) {
+          this.emit("error", err);
+          reject(err);
+        } else {
+          resolve(success);
+        }
+      });
+    });
+  }
 }
 
 module.exports = KeyvMemcache;
