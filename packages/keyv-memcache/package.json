@@ -7,6 +7,9 @@
     "test": "nyc ava",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
+  "engines" : { 
+    "node" : "^10.16.0" 
+  },
   "ava": {
     "require": [
       "requirable"
