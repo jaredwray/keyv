@@ -12,12 +12,9 @@ class KeyvMemcache extends EventEmitter {
     if (uri === undefined) {
       uri = "localhost:11211";
     }
+    
+    this.client = memcache.Client.create(uri, opts);
 
-    try {
-      this.client = memcache.Client.create(uri, opts);
-    } catch (error) {
-      this.emit("error", error);
-    }
   }
 
   _getNamespace() {
