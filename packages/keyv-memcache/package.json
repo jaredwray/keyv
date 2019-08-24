@@ -7,8 +7,8 @@
     "test": "nyc ava",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
-  "engines" : { 
-    "node" : "^10.16.0" 
+  "engines": {
+    "node": "^10.16.0"
   },
   "ava": {
     "require": [
@@ -37,6 +37,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv-memcache",
   "dependencies": {
+    "json-buffer": "^3.0.1",
     "memjs": "^1.2.2"
   },
   "devDependencies": {
