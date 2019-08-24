@@ -2,12 +2,21 @@
 
 const EventEmitter = require("events");
 const memcache = require("memjs");
+const JSONB = require('json-buffer');
 
 class KeyvMemcache extends EventEmitter {
   constructor(uri, opts) {
     super();
     this.ttlSupport = true;
-    opts = Object.assign({}, typeof uri === "string" ? { uri } : uri, opts);
+
+    opts = Object.assign(
+			{},
+			(typeof uri === 'string') ? { uri } : uri,
+			opts
+		);
+		if (opts.uri && typeof opts.url === 'undefined') {
+			opts.url = opts.uri;
+    }
 
     if (uri === undefined) {
       uri = "localhost:11211";
@@ -23,12 +32,21 @@ class KeyvMemcache extends EventEmitter {
 
   get(key) {
     return new Promise((resolve, reject) => {
-      this.client.get(key, (err, value, flags) => {
+      this.client.get(key, (err, value) => {
         if (err) {
           this.emit("error", err);
           reject(err);
         } else {
-          resolve(value, flags);
+          let val = {};
+          if(value === null){
+            val = {
+              value: undefined,
+              expires: 0
+            }
+          } else {
+            val = JSONB.parse(value);
+          }
+          resolve(val);
         }
       });
     });
@@ -73,7 +91,7 @@ class KeyvMemcache extends EventEmitter {
           this.emit("error", err);
           reject(err);
         } else {
-          resolve(success);
+          resolve(undefined);
         }
       });
     });
