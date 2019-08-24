@@ -86,7 +86,7 @@ class KeyvMemcache extends EventEmitter {
 
   clear() {
     return new Promise((resolve, reject) => {
-      this.client.flush((err, success) => {
+      this.client.flush((err) => {
         if (err) {
           this.emit("error", err);
           reject(err);
