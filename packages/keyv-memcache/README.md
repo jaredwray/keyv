@@ -23,18 +23,9 @@ yarn add keyv-memcache
 
 ```js
 const Keyv = require('keyv');
+const KeyvMemcache = require('keyv-memcache');
 
-const keyv = new Keyv('memcache://user:pass@localhost:11211');
-keyv.on('error', handleConnectionError);
-```
-
-Or you can manually create a storage adapter instance and pass it to Keyv:
-
-```js
-const Keyv = require('keyv');
-const KeyvMemcache = require('@keyv-memcache');
-
-const memcache = new KeyvMemcache('memcache://user:pass@localhost:11211');
+const memcache = new KeyvMemcache('user:pass@localhost:11211');
 const keyv = new Keyv({ store: memcache });
 ```
 
