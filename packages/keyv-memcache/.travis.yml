@@ -13,6 +13,9 @@ before_install:
 
 install:
   - yarn
+  - yarn add codecov --global
 
 script:
   - yarn test
+  - yarn report-coverage
+  - codecov

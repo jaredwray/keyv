@@ -60,3 +60,6 @@ typings/
 # next.js build output
 .next
 *.rdb
+
+#codecov
+coverage.lcov
