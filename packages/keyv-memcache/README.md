@@ -41,6 +41,26 @@ await keyv.clear();
 
 ```
 
+## Usage with Namespaces
+
+```js
+const Keyv = require('keyv');
+const KeyvMemcache = require('keyv-memcache');
+
+const memcache = new KeyvMemcache('user:pass@localhost:11211');
+const keyv1 = new Keyv({ store: memcache, namespace: "namespace1" });
+const keyv2 = new Keyv({ store: memcache, namespace: "namespace2" });
+
+//set 
+await keyv1.set("foo","bar1", 6000) //Expiring time is optional
+await keyv2.set("foo","bar2", 6000) //Expiring time is optional
+
+//get
+let obj1 = await keyv1.get("foo"); //will return bar1
+let obj2 = await keyv1.get("foo"); //will return bar2
+
+```
+
 ## License
 
 MIT © Jared Wray
