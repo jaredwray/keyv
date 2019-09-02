@@ -32,7 +32,7 @@ class KeyvMemcache extends EventEmitter {
 
   get(key) {
     return new Promise((resolve, reject) => {
-      this.client.get(key, (err, value) => {
+      this.client.get(this.formatKey(key), (err, value) => {
         if (err) {
           this.emit("error", err);
           reject(err);
@@ -60,7 +60,7 @@ class KeyvMemcache extends EventEmitter {
     }
 
     return new Promise((resolve, reject) => {
-      this.client.set(key, value, opts, (err, success) => {
+      this.client.set(this.formatKey(key), value, opts, (err, success) => {
         if (err) {
           this.emit("error", err);
           reject(err);
@@ -73,7 +73,7 @@ class KeyvMemcache extends EventEmitter {
 
   delete(key) {
     return new Promise((resolve, reject) => {
-      this.client.delete(key, (err, success) => {
+      this.client.delete(this.formatKey(key), (err, success) => {
         if (err) {
           this.emit("error", err);
           reject(err);
@@ -95,6 +95,16 @@ class KeyvMemcache extends EventEmitter {
         }
       });
     });
+  }
+
+  formatKey(key) {
+    let result = key;
+
+    if(this.namespace) {
+      result = this.namespace.trim() + ":" + key.trim();
+    }
+
+    return result;
   }
 }
 
