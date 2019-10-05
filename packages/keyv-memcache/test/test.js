@@ -4,6 +4,9 @@ import KeyvMemcache from "this";
 import keyvApiTests from '@keyv/test-suite/dist/api';
 import keyvValueTests from '@keyv/test-suite/dist/values';
 
+//handle all the tests with listeners.
+require('events').EventEmitter.prototype._maxListeners = 100;
+
 const uri = "localhost:11211";
 const keyvMemcache = new KeyvMemcache(uri);
 
@@ -78,6 +81,8 @@ test.cb('clear should emit an error', timeout( 1000, async t => {
 
         t.pass();
         t.end();
+
+        
     });
     
     try {
@@ -120,7 +125,6 @@ test.cb('get should emit an error', timeout( 1000, async t => {
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
     keyv.on("error", (error) => {
-
         t.pass();
         t.end();
     });
