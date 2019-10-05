@@ -4,7 +4,8 @@ import KeyvMemcache from "this";
 import keyvApiTests from '@keyv/test-suite/dist/api';
 import keyvValueTests from '@keyv/test-suite/dist/values';
 
-const keyvMemcache = new KeyvMemcache("localhost:11211");
+const uri = "localhost:11211";
+const keyvMemcache = new KeyvMemcache(uri);
 
 test.serial('keyv get / no expired', async t => {
     const keyv = new Keyv({store: keyvMemcache});
@@ -16,6 +17,10 @@ test.serial('keyv get / no expired', async t => {
     t.is(val, 'bar');
 });
 
+test.serial('testing defaults', async t => {
+    const m = new KeyvMemcache();
+    t.is(m.opts.url, 'localhost:11211');
+});
 
 test.serial('keyv clear', async t => {
     const keyv = new Keyv({store: keyvMemcache});
@@ -32,8 +37,8 @@ test.serial('keyv get', async t => {
 });
 
 test.serial('keyv get with namespace', async t => {
-    const keyv1 = new Keyv({store: new KeyvMemcache("localhost:11211"), namespace: "1"});
-    const keyv2 = new Keyv({store: new KeyvMemcache("localhost:11211"), namespace: "2"});
+    const keyv1 = new Keyv({store: new KeyvMemcache(uri), namespace: "1"});
+    const keyv2 = new Keyv({store: new KeyvMemcache(uri), namespace: "2"});
 
     keyv1.set("foo", "bar1");
     keyv2.set("foo", "bar2");
@@ -48,7 +53,7 @@ test('get namespace', t => {
     t.is(keyvMemcache._getNamespace(), 'namespace:keyv');
 });
 test('format key for no namespace', t => {
-    t.is(new KeyvMemcache("localhost:11211").formatKey("foo"), 'foo');
+    t.is(new KeyvMemcache(uri).formatKey("foo"), 'foo');
 });
 
 test('format key for namespace', t => {
@@ -122,7 +127,7 @@ test.cb('get should emit an error', timeout( 1000, async t => {
     } catch (err) {}
 }));
 
-const store = () => new KeyvMemcache();
+const store = () => new KeyvMemcache(uri);
 
 keyvApiTests(test, Keyv, store);
 keyvValueTests(test, Keyv, store);

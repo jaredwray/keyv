@@ -20,8 +20,11 @@ class KeyvMemcache extends EventEmitter {
 
     if (uri === undefined) {
       uri = "localhost:11211";
+      opts.url = opts.uri = uri;
     }
     
+    this.opts = opts;
+
     this.client = memcache.Client.create(uri, opts);
 
   }

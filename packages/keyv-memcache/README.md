@@ -62,6 +62,26 @@ let obj2 = await keyv1.get("foo"); //will return bar2
 
 ```
 
+## Using Memcachier 
+
+1. Go to https://www.memcachier.com and signup
+2. Create a cache and setup where. 
+3. In the screen take the username, password, and url and place it into your code:
+```js
+
+//best practice is to not hard code your config in code. 
+let user = ""; 
+let pass = "";
+let server = "XXX.XXX.XXX.memcachier.com:11211"
+
+const Keyv = require("keyv");
+const KeyvMemcache = require("keyv-memcache");
+
+const memcache = new KeyvMemcache(user +":"+ pass +"@"+ server);
+const keyv = new Keyv({ store: memcache});
+
+```
+
 ## License
 
 MIT © Jared Wray
