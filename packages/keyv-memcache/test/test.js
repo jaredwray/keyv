@@ -37,8 +37,8 @@ test.serial('keyv get', async t => {
 });
 
 test.serial('keyv get with namespace', async t => {
-    const keyv1 = new Keyv({store: new KeyvMemcache(uri), namespace: "1"});
-    const keyv2 = new Keyv({store: new KeyvMemcache(uri), namespace: "2"});
+    const keyv1 = new Keyv({store: keyvMemcache, namespace: "1"});
+    const keyv2 = new Keyv({store: keyvMemcache, namespace: "2"});
 
     keyv1.set("foo", "bar1");
     keyv2.set("foo", "bar2");
@@ -86,7 +86,8 @@ test.cb('clear should emit an error', timeout( 1000, async t => {
 }));
 
 test.cb('delete should emit an error', timeout( 1000, async t => {
-    const keyv = new Keyv({store: new KeyvMemcache("baduri:11211")});
+    var opts = { logger: { log: function(){}}};
+    const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
     keyv.on("error", (error) => {
 
@@ -100,7 +101,8 @@ test.cb('delete should emit an error', timeout( 1000, async t => {
 }));
 
 test.cb('set should emit an error', timeout( 1000, async t => {
-    const keyv = new Keyv({store: new KeyvMemcache("baduri:11211")});
+    var opts = { logger: { log: function(){}}};
+    const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
     keyv.on("error", (error) => {
 
@@ -114,7 +116,8 @@ test.cb('set should emit an error', timeout( 1000, async t => {
 }));
 
 test.cb('get should emit an error', timeout( 1000, async t => {
-    const keyv = new Keyv({store: new KeyvMemcache("baduri:11211")});
+    var opts = { logger: { log: function(){}}};
+    const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
     keyv.on("error", (error) => {
 
@@ -127,7 +130,7 @@ test.cb('get should emit an error', timeout( 1000, async t => {
     } catch (err) {}
 }));
 
-const store = () => new KeyvMemcache(uri);
+const store = () => keyvMemcache;
 
 keyvApiTests(test, Keyv, store);
 keyvValueTests(test, Keyv, store);
