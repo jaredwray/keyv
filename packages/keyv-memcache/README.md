@@ -92,7 +92,7 @@ const keyv = new Keyv({ store: memcache});
 //best practice is to not hard code your config in code. 
 let user = ""; 
 let pass = "";
-let server = "XXX.XXX.XXX.memcachier.com:11211"
+let server = "XXX.XXX.XXX.XXX.cloud.redislabs.com:XXX"
 
 const Keyv = require("keyv");
 const KeyvMemcache = require("keyv-memcache");
