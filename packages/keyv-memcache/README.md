@@ -82,6 +82,26 @@ const keyv = new Keyv({ store: memcache});
 
 ```
 
+## Using Redislabs Memcache Protocol 
+
+1. Go to https://www.redislabs.com and signup
+2. Create a database and make sure to set the `Protocol` to memcached
+3. In the screen take the username, password, and `endpoint` (the server) and place it into your code:
+```js
+
+//best practice is to not hard code your config in code. 
+let user = ""; 
+let pass = "";
+let server = "XXX.XXX.XXX.memcachier.com:11211"
+
+const Keyv = require("keyv");
+const KeyvMemcache = require("keyv-memcache");
+
+const memcache = new KeyvMemcache(user +":"+ pass +"@"+ server);
+const keyv = new Keyv({ store: memcache});
+
+```
+
 ## License
 
 MIT © Jared Wray
