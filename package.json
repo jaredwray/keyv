@@ -2,10 +2,14 @@
   "name": "keyv",
   "version": "3.1.0",
   "description": "Simple key-value storage with support for multiple backends",
-  "main": "src/index.js",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "xo && nyc ava test/keyv.js",
     "test:full": "xo && nyc ava --serial",
+    "build": "tsc",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {
@@ -29,7 +33,8 @@
   },
   "homepage": "https://github.com/lukechilds/keyv",
   "dependencies": {
-    "json-buffer": "3.0.1"
+    "json-buffer": "3.0.1",
+    "tslib": "^1.10.0"
   },
   "devDependencies": {
     "ava": "^2.2.0",
@@ -45,5 +50,6 @@
     "this": "^1.0.2",
     "timekeeper": "^2.0.0",
     "xo": "^0.24.0"
+    "typescript": "^3.6.3"
   }
 }

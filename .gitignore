@@ -41,6 +41,9 @@ build/Release
 node_modules
 jspm_packages
 
+# Typescript cache
+tsconfig.tsbuildinfo
+
 # Optional npm cache directory
 .npm
 
@@ -78,3 +81,6 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Transpiled JS output
+dist
