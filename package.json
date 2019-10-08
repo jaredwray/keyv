@@ -7,13 +7,43 @@
     "dist"
   ],
   "scripts": {
-    "test": "xo && nyc ava test/keyv.js",
-    "test:full": "xo && nyc ava --serial",
     "build": "tsc",
+    "lint": "eslint --ignore-path .gitignore --ext .js,.ts --format pretty ./",
+    "test": "nyc ava test/keyv.js",
+    "test:full": "nyc ava --serial",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
-  "xo": {
-    "extends": "xo-lukechilds"
+  "eslintConfig": {
+    "extends": [
+      "xo",
+      "xo-lukechilds",
+      "xo-typescript",
+      "plugin:@typescript-eslint/recommended-requiring-type-checking"
+    ],
+    "parserOptions": {
+      "project": "tsconfig.json"
+    },
+    "rules": {
+      "@typescript-eslint/no-unnecessary-condition": [
+        "warn",
+        {
+          "ignoreRhs": true
+        }
+      ],
+      "@typescript-eslint/strict-boolean-expressions": "off",
+      "no-dupe-class-members": 0
+    },
+    "overrides": [
+      {
+        "files": [
+          "**/*.js"
+        ],
+        "rules": {
+          "@typescript-eslint/unbound-method": "off",
+          "@typescript-eslint/explicit-function-return-type": "off"
+        }
+      }
+    ]
   },
   "repository": {
     "type": "git",
@@ -39,13 +69,19 @@
   "devDependencies": {
     "ava": "^2.2.0",
     "coveralls": "^3.0.0",
-    "eslint-config-xo-lukechilds": "^1.0.0",
     "@keyv/mongo": "*",
     "@keyv/mysql": "*",
     "@keyv/postgres": "*",
     "@keyv/redis": "*",
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
+    "@typescript-eslint/eslint-plugin": "^2.3.3",
+    "@typescript-eslint/parser": "^2.3.3",
+    "eslint": "^6.5.1",
+    "eslint-config-xo": "^0.27.1",
+    "eslint-config-xo-lukechilds": "^1.0.0",
+    "eslint-config-xo-typescript": "^0.19.0",
+    "eslint-formatter-pretty": "^2.1.1",
     "nyc": "^14.1.1",
     "this": "^1.0.2",
     "timekeeper": "^2.0.0",
