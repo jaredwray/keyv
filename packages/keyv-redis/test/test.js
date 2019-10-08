@@ -3,7 +3,10 @@ import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvRedis from 'this';
 
-keyvOfficialTests(test, Keyv, 'redis://localhost', 'redis://foo');
+const { REDIS_HOST = 'localhost' } = process.env;
+const redisURI = `redis://${REDIS_HOST}`;
 
-const store = () => new KeyvRedis();
+keyvOfficialTests(test, Keyv, redisURI, 'redis://foo');
+
+const store = () => new KeyvRedis(redisURI);
 keyvTestSuite(test, Keyv, store);
