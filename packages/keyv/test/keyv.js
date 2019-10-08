@@ -1,7 +1,7 @@
 import test from 'ava';
 import tk from 'timekeeper';
 import keyvTestSuite from '@keyv/test-suite';
-import Keyv from 'this';
+import Keyv from '..';
 
 test.serial('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
