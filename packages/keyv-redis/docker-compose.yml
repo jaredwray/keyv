@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  redis:
+    image: redis:latest
+
+  test:
+    build: .
+    environment:
+      REDIS_HOST: redis
+    volumes:
+      - ./:/repo
