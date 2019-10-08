@@ -78,6 +78,8 @@
     "@keyv/redis": "*",
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
+    "@types/json-buffer": "^3.0.0",
+    "@types/node": "^12.7.11",
     "@typescript-eslint/eslint-plugin": "^2.3.3",
     "@typescript-eslint/parser": "^2.3.3",
     "ava": "^2.2.0",
