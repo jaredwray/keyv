@@ -1,7 +1,7 @@
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvRedis from 'this';
+import KeyvRedis from '..';
 
 const { REDIS_HOST = 'localhost' } = process.env;
 const redisURI = `redis://${REDIS_HOST}`;
