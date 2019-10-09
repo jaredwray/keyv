@@ -3,6 +3,7 @@
   "references": [
     { "path": "packages/keyv" },
     { "path": "packages/keyv-mongo" },
-    { "path": "packages/keyv-redis" }
+    { "path": "packages/keyv-redis" },
+    { "path": "packages/keyv-sqlite" }
   ]
 }
