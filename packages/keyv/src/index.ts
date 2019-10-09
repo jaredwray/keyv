@@ -18,6 +18,7 @@ const loadStore = <
 		uri?: string;
 	}
 >(opts: TAdapterOpts): KeyvStore<TVal> => {
+	/* eslint-disable @typescript-eslint/no-var-requires */
 	const validAdapters = Object.keys(adapters);
 
 	if (opts.adapter) {
@@ -25,7 +26,8 @@ const loadStore = <
 			throw new Error(`[keyv]: Invalid adapter "${opts.adapter}"`);
 		} else {
 			try {
-				return new (require(adapters[opts.adapter]))(opts);
+				const adapter = require(adapters[opts.adapter]);
+				return new (adapter.__esModule ? adapter.default : adapter)(opts);
 			} catch (e) {
 				throw new Error(`[key]: Failed to load adapter "${opts.adapter}", did you forget to install it?\n\nnpm install @keyv/${opts.adapter}\n\n${e}`);
 			}
@@ -38,11 +40,13 @@ const loadStore = <
 			throw new Error(`[keyv]: Failed to load adapter with uri "${opts.uri}"`);
 		}
 
-		const adapter = matches[0] as keyof typeof adapters;
-		return new (require(adapters[adapter]))(opts);
+		const adapterName = matches[0] as keyof typeof adapters;
+		const adapter = require(adapters[adapterName]);
+		return new (adapter.__esModule ? adapter.default : adapter)(opts);
 	}
 
 	return new Map() as (Map<string, string> & { namespace: string });
+	/* eslint-enable @typescript-eslint/no-var-requires */
 };
 
 type MaybePromise<T> = T | Promise<T>;
