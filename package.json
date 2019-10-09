@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc --build",
     "lint": "eslint --ignore-path .gitignore --ext .js,.ts --format pretty ./",
+    "format": "yarn lint --fix",
     "test": "nyc ava --serial",
     "test:docker": "docker-compose up --build --abort-on-container-exit --exit-code-from test",
     "posttest:docker": "docker-compose down --rmi local",
