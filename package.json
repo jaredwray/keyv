@@ -10,7 +10,8 @@
     "test": "nyc ava --serial",
     "test:docker": "docker-compose up --build --abort-on-container-exit --exit-code-from test",
     "posttest:docker": "docker-compose down --rmi local",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "release": "lerna publish"
   },
   "nyc": {
     "extends": "@istanbuljs/nyc-config-typescript",
