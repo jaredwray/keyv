@@ -4,9 +4,13 @@ services:
   redis:
     image: redis:latest
 
+  mongo:
+    image: mongo:latest
+
   test:
     build: .
     environment:
       REDIS_HOST: redis
+      MONGO_URL: 'mongodb://mongo:27017'
     volumes:
       - ./:/repo

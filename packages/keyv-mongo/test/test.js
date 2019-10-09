@@ -1,8 +1,8 @@
-import 'dotenv/config'; // eslint-disable-line import/no-unassigned-import
+import 'dotenv/config';
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvMongo from 'this';
+import KeyvMongo from '..';
 
 const mongoURL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017';
 
@@ -13,6 +13,9 @@ keyvTestSuite(test, Keyv, store);
 
 test('Collection option merges into default options', t => {
 	const store = new KeyvMongo({ collection: 'foo' });
+
+	store.on('error', (() => {}));
+
 	t.deepEqual(store.opts, {
 		url: 'mongodb://127.0.0.1:27017',
 		collection: 'foo'
@@ -28,6 +31,6 @@ test('Collection option merges into default options if URL is passed', t => {
 });
 
 test('.delete() with no args doesn\'t empty the collection', async t => {
-	const store = new KeyvMongo('foo'); // Make sure we don't actually connect
+	const store = new KeyvMongo('mongodb://foo'); // Make sure we don't actually connect
 	t.false(await store.delete());
 });

@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "packages/keyv" },
+    { "path": "packages/keyv-mongo" },
     { "path": "packages/keyv-redis" }
   ]
 }

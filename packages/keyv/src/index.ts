@@ -51,21 +51,23 @@ const loadStore = <
 
 type MaybePromise<T> = T | Promise<T>;
 
-export interface KeyvOptions<TVal> {
+export interface KeyvOptions<TVal, TSerialized = string> {
 	namespace: string;
-	store: KeyvStore<TVal>;
+	store: KeyvStore<TVal, TSerialized>;
 	adapter?: keyof typeof adapters;
 	ttl?: number;
-	serialize(x: KeyvStoreObject<TVal>): string;
-	deserialize(str: string): KeyvStoreObject<TVal>;
+	serialize(x: KeyvStoreObject<TVal>): TSerialized;
+	deserialize(x: TSerialized): KeyvStoreObject<TVal>;
 }
 
-export interface KeyvStore<TVal> {
+export interface KeyvStore<TVal, TSerialized = string> {
 	namespace: string;
+	ttlSupport?: boolean;
+
 	on?(event: 'error', cb: (err: Error) => void | never): void;
 
-	get(key: string): MaybePromise<void | string | KeyvStoreObject<TVal>>;
-	set(key: string, val: string, ttl?: number): MaybePromise<unknown>;
+	get(key: string): MaybePromise<void | TSerialized | KeyvStoreObject<TVal>>;
+	set(key: string, val: TSerialized, ttl?: number): MaybePromise<unknown>;
 	delete(key: string): MaybePromise<boolean>;
 	clear(): MaybePromise<void>;
 }

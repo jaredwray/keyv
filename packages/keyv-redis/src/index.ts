@@ -24,7 +24,7 @@ export default class KeyvRedis<TVal> extends EventEmitter implements KeyvStore<T
 
 	private readonly _redis: Client;
 
-	constructor(uriOrOpts: string | KeyvRedisOptions, _opts: KeyvRedisOptions) {
+	constructor(uriOrOpts: string | KeyvRedisOptions, _opts?: KeyvRedisOptions) {
 		super();
 
 		const opts = {
