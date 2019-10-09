@@ -29,8 +29,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-mongo",
   "dependencies": {
-    "mongodb": "^3.3.2",
-    "pify": "3.0.0"
+    "mongodb": "^3.3.2"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
