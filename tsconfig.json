@@ -4,6 +4,7 @@
     { "path": "packages/keyv" },
     { "path": "packages/keyv-mongo" },
     { "path": "packages/keyv-redis" },
+    { "path": "packages/keyv-sql" },
     { "path": "packages/keyv-sqlite" }
   ]
 }
