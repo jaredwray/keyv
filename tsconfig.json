@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/keyv" }
+    { "path": "packages/keyv" },
+    { "path": "packages/keyv-redis" }
   ]
 }
