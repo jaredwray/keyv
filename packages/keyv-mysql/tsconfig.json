@@ -3,5 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src"
-  }
+  },
+  "references": [
+    { "path": "../keyv-sql" }
+  ]
 }
