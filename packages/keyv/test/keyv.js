@@ -1,4 +1,3 @@
-import { promises as fs } from 'fs';
 import test from 'ava';
 import tk from 'timekeeper';
 import keyvTestSuite from '@keyv/test-suite';
