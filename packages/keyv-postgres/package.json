@@ -2,19 +2,8 @@
   "name": "@keyv/postgres",
   "version": "1.0.16",
   "description": "PostgreSQL storage adapter for Keyv",
-  "main": "src/index.js",
-  "scripts": {
-    "test": "xo && nyc ava",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
-  },
-  "xo": {
-    "extends": "xo-lukechilds"
-  },
-  "ava": {
-    "require": [
-      "requirable"
-    ]
-  },
+  "main": "dist/index.js",
+  "files": ["dist"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lukechilds/keyv-postgres.git"
@@ -39,18 +28,11 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-postgres",
   "dependencies": {
-    "@keyv/sql": "1.1.2",
+    "@keyv/sql": "*",
     "pg": "7.4.1"
   },
   "devDependencies": {
-    "ava": "^0.24.0",
-    "coveralls": "^3.0.0",
-    "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
-    "@keyv/test-suite": "*",
-    "nyc": "^11.0.3",
-    "requirable": "^1.0.4",
-    "this": "^1.0.2",
-    "xo": "^0.19.0"
+    "@keyv/test-suite": "*"
   }
 }
