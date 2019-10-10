@@ -4,7 +4,8 @@ import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMongo from '..';
 
-const mongoURL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017';
+const { MONGO_HOST = '127.0.0.1' } = process.env;
+const mongoURL = `mongodb://${MONGO_HOST}:27017`;
 
 keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://127.0.0.1:1234');
 

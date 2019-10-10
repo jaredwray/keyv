@@ -3,7 +3,16 @@ import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvPostgres from '..';
 
-keyvOfficialTests(test, Keyv, 'postgresql://postgres@localhost:5432/keyv_test', 'postgresql://foo');
+const {
+	POSTGRES_HOST = 'localhost',
+	POSTGRES_USER = 'postgres',
+	POSTGRES_PASSWORD,
+	POSTGRES_DB = 'keyv_test'
+} = process.env;
 
-const store = () => new KeyvPostgres({ uri: 'postgresql://postgres@localhost:5432/keyv_test' });
+const postgresUri = `postgresql://${POSTGRES_USER}${POSTGRES_PASSWORD ? ':' + POSTGRES_PASSWORD : ''}@${POSTGRES_HOST}:5432/${POSTGRES_DB}`;
+
+keyvOfficialTests(test, Keyv, postgresUri, 'postgresql://foo');
+
+const store = () => new KeyvPostgres({ uri: postgresUri });
 keyvTestSuite(test, Keyv, store);

@@ -1,16 +1,44 @@
-version: "3"
+version: "3.7"
+
+x-silent: &silent
+  logging:
+    driver: 'none'
 
 services:
   redis:
     image: redis:latest
+    <<: *silent
 
   mongo:
     image: mongo:latest
+    <<: *silent
+
+  mysql:
+    image: mysql:5
+    <<: *silent
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: keyv
+      MYSQL_DATABASE: keyv_test
+
+  postgres:
+    image: postgres:latest
+    <<: *silent
+    command: ['-c', 'max_connections=200']
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: keyv
+      POSTGRES_DB: keyv_test
 
   test:
     build: .
     environment:
       REDIS_HOST: redis
-      MONGO_URL: 'mongodb://mongo:27017'
+      MONGO_HOST: mongo
+      POSTGRES_HOST: postgres
+      POSTGRES_PASSWORD: keyv
+      MYSQL_HOST: mysql
+      MYSQL_PASSWORD: keyv
     volumes:
       - ./:/repo

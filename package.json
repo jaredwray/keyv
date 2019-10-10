@@ -36,6 +36,7 @@
           "ignoreRhs": true
         }
       ],
+      "@typescript-eslint/promise-function-async": "off",
       "@typescript-eslint/strict-boolean-expressions": "off",
       "no-dupe-class-members": 0
     },
