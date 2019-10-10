@@ -1,9 +1,9 @@
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvSqlite from 'this';
+import KeyvSqlite from '..';
 
-keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
+keyvOfficialTests(test, Keyv, 'sqlite://testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
-const store = () => new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 30000 });
+const store = () => new KeyvSqlite({ uri: 'sqlite://testdb.sqlite', busyTimeout: 30000 });
 keyvTestSuite(test, Keyv, store);

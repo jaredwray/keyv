@@ -1,19 +1,19 @@
+import { promisify as pify } from 'util';
 import test from 'ava';
+import sqlite3 from 'sqlite3';
 import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvSql from 'this';
-
-import sqlite3 from 'sqlite3';
-import pify from 'pify';
+import KeyvSql from '..';
 
 class TestSqlite extends KeyvSql {
 	constructor(opts) {
-		opts = Object.assign({
+		opts = {
 			dialect: 'sqlite',
-			db: 'test/testdb.sqlite'
-		}, opts);
+			db: ':memory:',
+			...opts
+		};
 
-		opts.connect = () => new Promise((resolve, reject) => {
+		opts.connect = async () => new Promise((resolve, reject) => {
 			const db = new sqlite3.Database(opts.db, err => {
 				if (err) {
 					reject(err);
@@ -23,7 +23,7 @@ class TestSqlite extends KeyvSql {
 				}
 			});
 		})
-		.then(db => pify(db.all).bind(db));
+			.then(db => pify(db.all).bind(db));
 
 		super(opts);
 	}

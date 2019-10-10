@@ -3,7 +3,9 @@
   "version": "1.1.2",
   "description": "Parent class for SQL based Keyv storage adapters",
   "main": "dist/index.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lukechilds/keyv-sql.git"
@@ -26,11 +28,11 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sql",
   "dependencies": {
-    "sql": "~0.78.0"
+    "sql-ts": "^3.0.1"
   },
   "devDependencies": {
-    "keyv": "*",
     "@keyv/test-suite": "*",
+    "keyv": "*",
     "sqlite3": "^4.0.0"
   }
 }

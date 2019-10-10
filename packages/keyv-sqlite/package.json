@@ -3,7 +3,9 @@
   "version": "2.0.1",
   "description": "SQLite storage adapter for Keyv",
   "main": "dist/index.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lukechilds/keyv-sqlite.git"
@@ -27,12 +29,12 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
-    "@keyv/sql": "1.1.2",
-    "pify": "3.0.0",
+    "@keyv/sql": "*",
     "sqlite3": "4.0.8"
   },
   "devDependencies": {
-    "keyv": "*",
-    "@keyv/test-suite": "*"
+    "@keyv/test-suite": "*",
+    "@types/sqlite3": "^3.1.5",
+    "keyv": "*"
   }
 }
