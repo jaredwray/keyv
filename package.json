@@ -12,6 +12,7 @@
     "test:docker": "docker-compose up --build --abort-on-container-exit --exit-code-from test",
     "posttest:docker": "docker-compose down --rmi local",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "coverage:html": "nyc report --reporter=html",
     "release": "lerna publish"
   },
   "nyc": {
