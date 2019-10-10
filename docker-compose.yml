@@ -40,5 +40,10 @@ services:
       POSTGRES_PASSWORD: keyv
       MYSQL_HOST: mysql
       MYSQL_PASSWORD: keyv
+    depends_on: 
+      - redis
+      - mongo
+      - mysql
+      - postgres
     volumes:
       - ./:/repo
