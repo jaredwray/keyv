@@ -21,7 +21,7 @@ export default class KeyvMongo<TVal> extends EventEmitter implements KeyvStore<T
 
 	public opts: KeyvMongoOptions;
 
-	public mongo: Promise<void | Collection<Document<TVal>>>;
+	public mongo: Promise<Collection<Document<TVal>>>;
 
 	constructor(
 		urlOrOpts: string | Partial<KeyvMongoOptions> = {},
@@ -39,14 +39,16 @@ export default class KeyvMongo<TVal> extends EventEmitter implements KeyvStore<T
 			..._opts
 		};
 
-		this.mongo = new Promise<Collection<Document<TVal>>>((resolve, reject) =>
+		this.mongo = new Promise<Collection<Document<TVal>>>(resolve =>
 			MongoClient.connect(this.opts.url, (err, client) => {
 				if (err !== null) {
-					return reject(err);
+					return this.emit('error', err);
 				}
 
 				const db = client.db();
 				const collection = db.collection(this.opts.collection);
+
+				db.on('error', err => this.emit('error', err));
 
 				collection.createIndex({ key: 1 }, {
 					unique: true,
@@ -57,31 +59,19 @@ export default class KeyvMongo<TVal> extends EventEmitter implements KeyvStore<T
 					background: true
 				});
 
-				db.on('error', err => this.emit('error', err));
-
 				resolve(collection);
 			})
-		).catch(err => {
-			this.emit('error', err);
-		});
+		);
 	}
 
 	public async get(key: string): Promise<void | KeyvStoreObject<TVal>> {
 		const collection = await this.mongo;
-		if (!collection) {
-			return;
-		}
-
 		const doc = await collection.findOne({ key });
 		return doc === null ? undefined : doc.value;
 	}
 
 	public async set(key: string, value: KeyvStoreObject<TVal>, ttl?: number): Promise<unknown> {
 		const collection = await this.mongo;
-		if (!collection) {
-			return;
-		}
-
 		const expiresAt = (typeof ttl === 'number') ? new Date(Date.now() + ttl) : null;
 		return collection.replaceOne({ key }, { key, value, expiresAt }, { upsert: true });
 	}
@@ -92,20 +82,12 @@ export default class KeyvMongo<TVal> extends EventEmitter implements KeyvStore<T
 		}
 
 		const collection = await this.mongo;
-		if (!collection) {
-			return false;
-		}
-
 		const { deletedCount } = await collection.deleteOne({ key });
 		return deletedCount !== undefined && deletedCount > 0;
 	}
 
 	public async clear(): Promise<void> {
 		const collection = await this.mongo;
-		if (!collection) {
-			return;
-		}
-
 		await collection.deleteMany({ key: new RegExp(`^${this.namespace}:`) });
 	}
 }

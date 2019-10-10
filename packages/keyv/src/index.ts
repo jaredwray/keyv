@@ -18,35 +18,31 @@ const loadStore = <
 		uri?: string;
 	}
 >(opts: TAdapterOpts): KeyvStore<TVal> => {
-	/* eslint-disable @typescript-eslint/no-var-requires */
 	const validAdapters = Object.keys(adapters);
 
+	let adapter: void | keyof typeof adapters;
+
 	if (opts.adapter) {
-		if (validAdapters.includes(opts.adapter)) {
-			throw new Error(`[keyv]: Invalid adapter "${opts.adapter}"`);
-		} else {
-			try {
-				const adapter = require(adapters[opts.adapter]);
-				return new (adapter.__esModule ? adapter.default : adapter)(opts);
-			} catch (e) {
-				throw new Error(`[key]: Failed to load adapter "${opts.adapter}", did you forget to install it?\n\nnpm install @keyv/${opts.adapter}\n\n${e}`);
-			}
-		}
-	}
-
-	if (opts.uri) {
-		const matches = /^[^:]*/.exec(opts.uri);
-		if (matches === null || !Object.keys(adapters).includes(matches[0])) {
-			throw new Error(`[keyv]: Failed to load adapter with uri "${opts.uri}"`);
+		adapter = opts.adapter;
+	} else if (opts.uri) {
+		const matches = /^[^:]+/.exec(opts.uri);
+		if (matches === null) {
+			throw new Error(`[keyv]: Could not infer adapter from uri "${opts.uri}"`);
 		}
 
-		const adapterName = matches[0] as keyof typeof adapters;
-		const adapter = require(adapters[adapterName]);
-		return new (adapter.__esModule ? adapter.default : adapter)(opts);
+		adapter = matches[0] as keyof typeof adapters;
 	}
 
-	return new Map() as (Map<string, string> & { namespace: string });
-	/* eslint-enable @typescript-eslint/no-var-requires */
+	if (!adapter) {
+		return new Map() as (Map<string, string> & { namespace: string });
+	}
+
+	if (validAdapters.includes(adapter)) {
+		const Adapter = require(adapters[adapter]).default;
+		return new Adapter(opts);
+	}
+
+	throw new Error(`[keyv]: Invalid adapter "${adapter}"`);
 };
 
 type MaybePromise<T> = T | Promise<T>;

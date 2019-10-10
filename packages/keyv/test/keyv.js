@@ -1,12 +1,32 @@
+import { promises as fs } from 'fs';
 import test from 'ava';
 import tk from 'timekeeper';
 import keyvTestSuite from '@keyv/test-suite';
+import KeyvSqlite from '@keyv/sqlite';
 import Keyv from '..';
 
 test.serial('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
 	t.throws(() => Keyv()); // eslint-disable-line new-cap
 	t.notThrows(() => new Keyv());
+});
+
+test.serial('Keyv throws error if invalid adapter', t => {
+	t.throws(() => new Keyv({ adapter: 'foo' }));
+});
+
+test.serial('Keyv loads adapter from \'adapter\' option', t => {
+	const keyv = new Keyv({ adapter: 'sqlite' });
+	t.true(keyv.opts.store instanceof KeyvSqlite);
+});
+
+test.serial('Keyv infers adapter from uri', t => {
+	const keyv = new Keyv('sqlite://:memory:');
+	t.true(keyv.opts.store instanceof KeyvSqlite);
+});
+
+test.serial('Keyv throws error if adapter can not be inferred from uri', t => {
+	t.throws(() => new Keyv(':'));
 });
 
 test.serial('Keyv accepts storage adapters', async t => {

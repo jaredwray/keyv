@@ -9,24 +9,24 @@ export interface KeyvMysqlOptions {
 }
 
 export default class KeyvMysql<TVal> extends KeyvSql<TVal> implements KeyvStore<TVal> {
-	constructor(opts: string | KeyvMysqlOptions) {
-		const normalizedOpts = {
+	constructor(uriOrOpts: string | KeyvMysqlOptions) {
+		const opts = {
 			uri: 'mysql://localhost',
-			...(typeof opts === 'string' ? { uri: opts } : opts)
+			...(typeof uriOrOpts === 'string' ? { uri: uriOrOpts } : uriOrOpts)
 		};
 
 		super({
 			dialect: 'mysql',
 
 			async connect() {
-				const connection = await mysql.createConnection(normalizedOpts.uri);
+				const connection = await mysql.createConnection(opts.uri);
 				return async (sql: string) => {
 					const [row] = await connection.execute(sql);
 					return row;
 				};
 			},
 
-			...normalizedOpts
+			...opts
 		});
 	}
 }
