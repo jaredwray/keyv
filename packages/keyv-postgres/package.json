@@ -31,7 +31,7 @@
   "homepage": "https://github.com/lukechilds/keyv-postgres",
   "dependencies": {
     "@keyv/sql": "*",
-    "pg": "7.4.1"
+    "pg": "^7.12.1"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",

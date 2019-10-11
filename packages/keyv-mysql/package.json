@@ -3,7 +3,9 @@
   "version": "1.1.4",
   "description": "MySQL/MariaDB storage adapter for Keyv",
   "main": "dist/index.js",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lukechilds/keyv-mysql.git"
@@ -29,10 +31,10 @@
   "homepage": "https://github.com/lukechilds/keyv-mysql",
   "dependencies": {
     "@keyv/sql": "*",
-    "mysql2": "1.5.2"
+    "mysql2": "^1.7.0"
   },
   "devDependencies": {
-    "keyv": "*",
-    "@keyv/test-suite": "*"
+    "@keyv/test-suite": "*",
+    "keyv": "*"
   }
 }

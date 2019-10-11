@@ -30,7 +30,7 @@
   "homepage": "https://github.com/lukechilds/keyv-sqlite",
   "dependencies": {
     "@keyv/sql": "*",
-    "sqlite3": "4.0.8"
+    "sqlite3": "^4.1.0"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
