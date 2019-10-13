@@ -58,7 +58,7 @@ await keyv2.set("foo","bar2", 6000) //Expiring time is optional
 
 //get
 let obj1 = await keyv1.get("foo"); //will return bar1
-let obj2 = await keyv1.get("foo"); //will return bar2
+let obj2 = await keyv2.get("foo"); //will return bar2
 
 ```
 
