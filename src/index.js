@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
-const JSONB = require('json-buffer');
+const JSONB = require('buffer-json');
 
 const loadStore = opts => {
 	const adapters = {

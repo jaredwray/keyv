@@ -88,7 +88,7 @@ await cache.get('foo'); // 'cache'
 
 ### Custom Serializers
 
-Keyv uses [`json-buffer`](https://github.com/dominictarr/json-buffer) for data serialization to ensure consistency across different backends.
+Keyv uses [`buffer-json`](https://npm.im/buffer-json) for data serialization to ensure consistency across different backends.
 
 You can optionally provide your own serialization functions to support extra data types or to serialize to something other than JSON.
 
