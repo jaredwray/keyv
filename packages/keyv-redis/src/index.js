@@ -7,7 +7,6 @@ const pify = require('pify');
 class KeyvRedis extends EventEmitter {
 	constructor(uri, opts) {
 		super();
-		this.ttlSupport = true;
 		opts = Object.assign(
 			{},
 			(typeof uri === 'string') ? { uri } : uri,
