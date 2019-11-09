@@ -25,7 +25,7 @@ const keyv = new Keyv('redis://user:pass@localhost:6379');
 keyv.on('error', handleConnectionError);
 ```
 
-Any valid [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) options will be passed directly through.
+Any valid [`Redis`](https://github.com/luin/ioredis#connect-to-redis) options will be passed directly through.
 
 e.g:
 

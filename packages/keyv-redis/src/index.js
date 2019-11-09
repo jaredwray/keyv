@@ -1,8 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
-const redis = require('redis');
-const pify = require('pify');
+const Redis = require('ioredis');
 
 class KeyvRedis extends EventEmitter {
 	constructor(uri, opts) {
@@ -12,18 +11,9 @@ class KeyvRedis extends EventEmitter {
 			(typeof uri === 'string') ? { uri } : uri,
 			opts
 		);
-		if (opts.uri && typeof opts.url === 'undefined') {
-			opts.url = opts.uri;
-		}
 
-		const client = redis.createClient(opts);
-
-		this.redis = ['get', 'set', 'sadd', 'del', 'srem', 'smembers'].reduce((obj, method) => {
-			obj[method] = pify(client[method].bind(client));
-			return obj;
-		}, {});
-
-		client.on('error', err => this.emit('error', err));
+		this.redis = new Redis(opts.uri, opts);
+		this.redis.on('error', err => this.emit('error', err));
 	}
 
 	_getNamespace() {
@@ -64,7 +54,7 @@ class KeyvRedis extends EventEmitter {
 
 	clear() {
 		return this.redis.smembers(this._getNamespace())
-			.then(keys => this.redis.del.apply(null, keys.concat(this._getNamespace())))
+			.then(keys => this.redis.del(keys.concat(this._getNamespace())))
 			.then(() => undefined);
 	}
 }
