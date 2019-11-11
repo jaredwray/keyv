@@ -269,7 +269,7 @@ Default: `false`
 
 If set to true the raw DB object Keyv stores internally will be returned instead of just the value.
 
-This contians the TTL timestamp.
+This contains the TTL timestamp.
 
 #### .delete(key)
 
