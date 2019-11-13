@@ -256,11 +256,11 @@ Set a value.
 
 By default keys are persistent. You can set an expiry TTL in milliseconds.
 
-Returns `true`.
+Returns a promise which resolves to `true`.
 
 #### .get(key, [options])
 
-Returns the value.
+Returns a promise which resolves to the retrieved value.
 
 ##### options.raw
 
@@ -275,13 +275,13 @@ This contains the TTL timestamp.
 
 Deletes an entry.
 
-Returns `true` if the key existed, `false` if not.
+Returns a promise which resolves to `true` if the key existed, `false` if not.
 
 #### .clear()
 
 Delete all entries in the current namespace.
 
-Returns `undefined`.
+Returns a promise which is resolved when the entries have been cleared.
 
 ## License
 
