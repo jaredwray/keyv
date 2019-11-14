@@ -87,7 +87,7 @@ class Keyv extends EventEmitter {
 	}
 
 	async has(key) {
-		return Boolean(await this.get(key, { raw: true }));
+		return (await this.get(key, { raw: true })) !== undefined;
 	}
 
 	delete(key) {
