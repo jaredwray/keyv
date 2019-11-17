@@ -85,14 +85,6 @@ test.serial('.get(key, {raw: true}) returns the raw object instead of the value'
 	t.is(rawObject.value, 'bar');
 });
 
-test.serial('.has(key) where key is the key we are looking for', async t => {
-	const store = new Map();
-	const keyv = new Keyv({ store });
-	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
-});
-
 test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {
 	t.plan(3);
 	const store = new Map();
