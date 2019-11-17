@@ -36,11 +36,23 @@ const keyv = new Keyv('redis://user:pass@localhost:6379', { disable_resubscribin
 Or you can manually create a storage adapter instance and pass it to Keyv:
 
 ```js
-const Keyv = require('keyv');
 const KeyvRedis = require('@keyv/redis');
+const Keyv = require('keyv');
 
-const redis = new KeyvRedis('redis://user:pass@localhost:6379');
-const keyv = new Keyv({ store: redis });
+const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379');
+const keyv = new Keyv({ store: keyvRedis });
+```
+
+Or reuse a previous Redis instance:
+
+```js
+const KeyvRedis = require('@keyv/redis');
+const Redis = require('ioredis');
+const Keyv = require('keyv');
+
+const redis = new Redis('redis://user:pass@localhost:6379');
+const keyvRedis = new KeyvRedis(redis);
+const keyv = new Keyv({ store: keyvRedis });
 ```
 
 ## License

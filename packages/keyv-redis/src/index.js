@@ -6,13 +6,14 @@ const Redis = require('ioredis');
 class KeyvRedis extends EventEmitter {
 	constructor(uri, opts) {
 		super();
-		opts = Object.assign(
-			{},
-			(typeof uri === 'string') ? { uri } : uri,
-			opts
-		);
 
-		this.redis = new Redis(opts.uri, opts);
+		if (uri instanceof Redis) {
+			this.redis = uri;
+		} else {
+			opts = Object.assign({}, typeof uri === 'string' ? { uri } : uri, opts);
+			this.redis = new Redis(opts.uri, opts);
+		}
+
 		this.redis.on('error', err => this.emit('error', err));
 	}
 
