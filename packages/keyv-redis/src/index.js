@@ -27,6 +27,7 @@ class KeyvRedis extends EventEmitter {
 				if (value === null) {
 					return undefined;
 				}
+
 				return value;
 			});
 	}
@@ -35,11 +36,13 @@ class KeyvRedis extends EventEmitter {
 		if (typeof value === 'undefined') {
 			return Promise.resolve(undefined);
 		}
+
 		return Promise.resolve()
 			.then(() => {
 				if (typeof ttl === 'number') {
 					return this.redis.set(key, value, 'PX', ttl);
 				}
+
 				return this.redis.set(key, value);
 			})
 			.then(() => this.redis.sadd(this._getNamespace(), key));

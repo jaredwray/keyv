@@ -16,10 +16,10 @@ test('reuse a redis instance', async t => {
 	const redis = new Redis(redisURI);
 	redis.foo = 'bar';
 	const keyv = new KeyvRedis(redis);
-  t.is(keyv.redis.foo, 'bar');
+	t.is(keyv.redis.foo, 'bar');
 
-  await keyv.set('foo', 'bar');
-  const value = await redis.get('foo');
+	await keyv.set('foo', 'bar');
+	const value = await redis.get('foo');
 	t.true(value === 'bar');
 	t.true(await keyv.get('foo') === value);
 });
