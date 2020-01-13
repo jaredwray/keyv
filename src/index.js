@@ -40,7 +40,7 @@ class Keyv extends EventEmitter {
 		}
 
 		if (typeof this.opts.store.on === 'function' && !this.opts.store.errorAlreadyHandled) {
-			this.opts.store.errorAlreadyHandled = true
+			this.opts.store.errorAlreadyHandled = true;
 			this.opts.store.once('error', err => this.emit('error', err));
 		}
 
