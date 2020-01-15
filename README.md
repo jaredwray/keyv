@@ -232,6 +232,13 @@ Default: `JSONB.parse`
 
 A custom deserialization function.
 
+#### options.handleErrors
+
+Type: `Boolean`<br>
+Default: `true`
+
+When it's `true`, errors on `options.store` will not be emitted at keyv level.
+
 #### options.store
 
 Type: `Storage adapter instance`<br>
