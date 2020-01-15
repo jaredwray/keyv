@@ -28,7 +28,8 @@ class Keyv extends EventEmitter {
 			{
 				namespace: 'keyv',
 				serialize: JSONB.stringify,
-				deserialize: JSONB.parse
+				deserialize: JSONB.parse,
+				handleErrors: true
 			},
 			(typeof uri === 'string') ? { uri } : uri,
 			opts
@@ -39,8 +40,7 @@ class Keyv extends EventEmitter {
 			this.opts.store = loadStore(adapterOpts);
 		}
 
-		if (typeof this.opts.store.on === 'function' && !this.opts.store.errorAlreadyHandled) {
-			this.opts.store.errorAlreadyHandled = true;
+		if (this.opts.handleErrors && typeof this.opts.store.on === 'function') {
 			this.opts.store.on('error', err => this.emit('error', err));
 		}
 
