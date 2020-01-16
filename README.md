@@ -237,7 +237,7 @@ A custom deserialization function.
 Type: `Boolean`<br>
 Default: `true`
 
-When it's `true`, errors on `options.store` will not be emitted at keyv level.
+When it's `true`, errors on `options.store` will be emitted at keyv level.
 
 #### options.store
 
