@@ -144,6 +144,7 @@ The following are third-party storage adapters compatible with Keyv:
 - [keyv-dynamodb](https://www.npmjs.com/package/keyv-dynamodb) - DynamoDB storage adapter for Keyv
 - [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
 - [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
+- [keyv-memcache](https://github.com/jaredwray/keyv-memcache) - Memcache storage adapter for Keyv
 
 ## Add Cache Support to your Module
 
@@ -255,11 +256,11 @@ Set a value.
 
 By default keys are persistent. You can set an expiry TTL in milliseconds.
 
-Returns `true`.
+Returns a promise which resolves to `true`.
 
 #### .get(key, [options])
 
-Returns the value.
+Returns a promise which resolves to the retrieved value.
 
 ##### options.raw
 
@@ -268,19 +269,19 @@ Default: `false`
 
 If set to true the raw DB object Keyv stores internally will be returned instead of just the value.
 
-This contians the TTL timestamp.
+This contains the TTL timestamp.
 
 #### .delete(key)
 
 Deletes an entry.
 
-Returns `true` if the key existed, `false` if not.
+Returns a promise which resolves to `true` if the key existed, `false` if not.
 
 #### .clear()
 
 Delete all entries in the current namespace.
 
-Returns `undefined`.
+Returns a promise which is resolved when the entries have been cleared.
 
 ## License
 

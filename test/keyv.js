@@ -104,5 +104,24 @@ test.serial('Keyv uses custom serializer when provided instead of json-buffer', 
 	t.is(await keyv.get('foo'), 'bar');
 });
 
+test.serial('Keyv supports async serializer/deserializer', async t => {
+	t.plan(3);
+	const store = new Map();
+
+	const serialize = async data => {
+		t.pass();
+		return JSON.stringify(data);
+	};
+
+	const deserialize = async data => {
+		t.pass();
+		return JSON.parse(data);
+	};
+
+	const keyv = new Keyv({ store, serialize, deserialize });
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.get('foo'), 'bar');
+});
+
 const store = () => new Map();
 keyvTestSuite(test, Keyv, store);
