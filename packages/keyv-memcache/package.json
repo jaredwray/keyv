@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv-memcache",
   "dependencies": {
-    "codecov": "^3.5.0",
+    "codecov": "^~> 3.6.5",
     "json-buffer": "^3.0.1",
     "memjs": "^1.2.2"
   },
