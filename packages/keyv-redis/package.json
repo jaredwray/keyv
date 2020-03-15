@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-redis",
   "dependencies": {
-    "ioredis": "~4.14.1"
+    "ioredis": "~4.16.0"
   },
   "devDependencies": {
     "ava": "^2.4.0",
