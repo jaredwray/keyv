@@ -38,6 +38,7 @@ test.serial('Keyv respects default tll option', async t => {
 	t.is(await keyv.get('foo'), 'bar');
 	tk.freeze(Date.now() + 150);
 	t.is(await keyv.get('foo'), undefined);
+	t.is(store.size, 0);
 	tk.reset();
 });
 

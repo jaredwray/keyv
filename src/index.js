@@ -51,10 +51,10 @@ class Keyv extends EventEmitter {
 	}
 
 	get(key, opts) {
-		key = this._getKeyPrefix(key);
+		const keyPrefixed = this._getKeyPrefix(key);
 		const { store } = this.opts;
 		return Promise.resolve()
-			.then(() => store.get(key))
+			.then(() => store.get(keyPrefixed))
 			.then(data => {
 				return (typeof data === 'string') ? this.opts.deserialize(data) : data;
 			})
