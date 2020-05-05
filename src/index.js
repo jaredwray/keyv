@@ -73,7 +73,7 @@ class Keyv extends EventEmitter {
 	}
 
 	set(key, value, ttl) {
-		key = this._getKeyPrefix(key);
+		const keyPrefixed = this._getKeyPrefix(key);
 		if (typeof ttl === 'undefined') {
 			ttl = this.opts.ttl;
 		}
@@ -90,15 +90,15 @@ class Keyv extends EventEmitter {
 				value = { value, expires };
 				return this.opts.serialize(value);
 			})
-			.then(value => store.set(key, value, ttl))
+			.then(value => store.set(keyPrefixed, value, ttl))
 			.then(() => true);
 	}
 
 	delete(key) {
-		key = this._getKeyPrefix(key);
+		const keyPrefixed = this._getKeyPrefix(key);
 		const { store } = this.opts;
 		return Promise.resolve()
-			.then(() => store.delete(key));
+			.then(() => store.delete(keyPrefixed));
 	}
 
 	clear() {
