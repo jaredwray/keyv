@@ -8,9 +8,6 @@
     "coverage": "yarn test && nyc report --reporter=text-lcov | coveralls",
     "report-coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -t 1b59c79f-b189-4e77-ac69-e7d5765ee3fb"
   },
-  "engines": {
-    "node": "^10.16.0"
-  },
   "ava": {
     "require": [
       "requirable"
