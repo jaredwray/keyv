@@ -15,7 +15,7 @@ const loadStore = opts => {
 	};
 	if (opts.adapter || opts.uri) {
 		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
-		return new adapters[adapter]()(opts);
+		return new (adapters[adapter]())(opts);
 	}
 
 	return new Map();
