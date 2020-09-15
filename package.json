@@ -32,18 +32,24 @@
     "json-buffer": "3.0.1"
   },
   "devDependencies": {
-    "ava": "latest",
-    "coveralls": "latest",
-    "eslint-config-xo-lukechilds": "latest",
     "@keyv/mongo": "latest",
     "@keyv/mysql": "latest",
     "@keyv/postgres": "latest",
     "@keyv/redis": "latest",
     "@keyv/sqlite": "latest",
     "@keyv/test-suite": "latest",
+    "ava": "latest",
+    "coveralls": "latest",
+    "eslint-config-xo-lukechilds": "latest",
+    "esm": "latest",
     "nyc": "latest",
     "this": "latest",
     "timekeeper": "latest",
     "xo": "latest"
+  },
+  "ava": {
+    "require": [
+      "esm"
+    ]
   }
 }
