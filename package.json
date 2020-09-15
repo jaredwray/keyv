@@ -32,18 +32,18 @@
     "json-buffer": "3.0.1"
   },
   "devDependencies": {
-    "ava": "^2.2.0",
-    "coveralls": "^3.0.0",
-    "eslint-config-xo-lukechilds": "^1.0.0",
-    "@keyv/mongo": "*",
-    "@keyv/mysql": "*",
-    "@keyv/postgres": "*",
-    "@keyv/redis": "*",
-    "@keyv/sqlite": "*",
-    "@keyv/test-suite": "*",
-    "nyc": "^14.1.1",
-    "this": "^1.0.2",
-    "timekeeper": "^2.0.0",
-    "xo": "^0.25.3"
+    "ava": "latest",
+    "coveralls": "latest",
+    "eslint-config-xo-lukechilds": "latest",
+    "@keyv/mongo": "latest",
+    "@keyv/mysql": "latest",
+    "@keyv/postgres": "latest",
+    "@keyv/redis": "latest",
+    "@keyv/sqlite": "latest",
+    "@keyv/test-suite": "latest",
+    "nyc": "latest",
+    "this": "latest",
+    "timekeeper": "latest",
+    "xo": "latest"
   }
 }

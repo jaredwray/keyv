@@ -1,7 +1,7 @@
-import test from 'ava';
-import tk from 'timekeeper';
-import keyvTestSuite from '@keyv/test-suite';
-import Keyv from 'this';
+const test = require('ava');
+const tk = require('timekeeper');
+const keyvTestSuite = require('@keyv/test-suite').default;
+const Keyv = require('this');
 
 test.serial('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
@@ -11,7 +11,9 @@ test.serial('Keyv is a class', t => {
 
 test.serial('Keyv accepts storage adapters', async t => {
 	const store = new Map();
-	const keyv = new Keyv({ store });
+	const keyv = new Keyv({
+		store
+	});
 	t.is(store.size, 0);
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
@@ -22,18 +24,23 @@ test.serial('Keyv passes tll info to stores', async t => {
 	t.plan(1);
 	const store = new Map();
 	const storeSet = store.set;
-	store.set = (key, val, ttl) => {
+	store.set = (key, value, ttl) => {
 		t.is(ttl, 100);
-		storeSet.call(store, key, val, ttl);
+		storeSet.call(store, key, value, ttl);
 	};
 
-	const keyv = new Keyv({ store });
+	const keyv = new Keyv({
+		store
+	});
 	await keyv.set('foo', 'bar', 100);
 });
 
 test.serial('Keyv respects default tll option', async t => {
 	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 100 });
+	const keyv = new Keyv({
+		store,
+		ttl: 100
+	});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 	tk.freeze(Date.now() + 150);
@@ -46,7 +53,10 @@ test.serial('.set(key, val, ttl) overwrites default tll option', async t => {
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 200 });
+	const keyv = new Keyv({
+		store,
+		ttl: 200
+	});
 	await keyv.set('foo', 'bar');
 	await keyv.set('fizz', 'buzz', 100);
 	await keyv.set('ping', 'pong', 300);
@@ -69,7 +79,10 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 200 });
+	const keyv = new Keyv({
+		store,
+		ttl: 200
+	});
 	await keyv.set('foo', 'bar', 0);
 	t.is(await keyv.get('foo'), 'bar');
 	tk.freeze(startTime + 250);
@@ -79,10 +92,14 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 
 test.serial('.get(key, {raw: true}) returns the raw object instead of the value', async t => {
 	const store = new Map();
-	const keyv = new Keyv({ store });
+	const keyv = new Keyv({
+		store
+	});
 	await keyv.set('foo', 'bar');
 	const value = await keyv.get('foo');
-	const rawObject = await keyv.get('foo', { raw: true });
+	const rawObject = await keyv.get('foo', {
+		raw: true
+	});
 	t.is(value, 'bar');
 	t.is(rawObject.value, 'bar');
 });
@@ -100,7 +117,11 @@ test.serial('Keyv uses custom serializer when provided instead of json-buffer', 
 		return JSON.parse(data);
 	};
 
-	const keyv = new Keyv({ store, serialize, deserialize });
+	const keyv = new Keyv({
+		store,
+		serialize,
+		deserialize
+	});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 });
@@ -119,7 +140,11 @@ test.serial('Keyv supports async serializer/deserializer', async t => {
 		return JSON.parse(data);
 	};
 
-	const keyv = new Keyv({ store, serialize, deserialize });
+	const keyv = new Keyv({
+		store,
+		serialize,
+		deserialize
+	});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 });
