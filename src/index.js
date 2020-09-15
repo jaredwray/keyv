@@ -5,17 +5,17 @@ const JSONB = require('json-buffer');
 
 const loadStore = opts => {
 	const adapters = {
-		redis: '@keyv/redis',
-		mongodb: '@keyv/mongo',
-		mongo: '@keyv/mongo',
-		sqlite: '@keyv/sqlite',
-		postgresql: '@keyv/postgres',
-		postgres: '@keyv/postgres',
-		mysql: '@keyv/mysql'
+		redis: () => require('@keyv/redis'),
+		mongodb: () => require('@keyv/mongo'),
+		mongo: () => require('@keyv/mongo'),
+		sqlite: () => require('@keyv/sqlite'),
+		postgresql: () => require('@keyv/postgres'),
+		postgres: () => require('@keyv/postgres'),
+		mysql: () => require('@keyv/mysql')
 	};
 	if (opts.adapter || opts.uri) {
 		const adapter = opts.adapter || /^[^:]*/.exec(opts.uri)[0];
-		return new (require(adapters[adapter]))(opts);
+		return new (adapters[adapter]())(opts);
 	}
 
 	return new Map();
