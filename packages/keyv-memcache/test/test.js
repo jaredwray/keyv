@@ -1,8 +1,8 @@
-import test from "ava";
-import Keyv from "keyv";
-import KeyvMemcache from "this";
-import keyvApiTests from '@keyv/test-suite/dist/api';
-import keyvValueTests from '@keyv/test-suite/dist/values';
+const test = require("ava");
+const Keyv = require("keyv");
+const KeyvMemcache = require("this");
+
+const kvat = require("@keyv/test-suite");
 
 //handle all the tests with listeners.
 require('events').EventEmitter.prototype._maxListeners = 100;
@@ -136,6 +136,6 @@ test.cb('get should emit an error', timeout( 1000, async t => {
 
 const store = () => keyvMemcache;
 
-keyvApiTests(test, Keyv, store);
-keyvValueTests(test, Keyv, store);
+kvat.keyvApiTests(test, Keyv, store);
+kvat.keyvValueTests(test, Keyv, store);
 
