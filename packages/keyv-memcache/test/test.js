@@ -39,18 +39,6 @@ test.serial('keyv get', async t => {
     t.is(await keyv.get('foo'), 'bar');
 });
 
-test.serial('keyv get with namespace', async t => {
-    const keyv1 = new Keyv({store: keyvMemcache, namespace: "1"});
-    const keyv2 = new Keyv({store: keyvMemcache, namespace: "2"});
-
-    keyv1.set("foo", "bar1");
-    keyv2.set("foo", "bar2");
-
-    t.is(await keyv1.get("foo"), "bar1");
-
-    t.is(await keyv2.get("foo"), "bar2");
-});
-
 test('get namespace', t => {
     const keyv = new Keyv({store: keyvMemcache});
     t.is(keyvMemcache._getNamespace(), 'namespace:keyv');
@@ -62,6 +50,18 @@ test('format key for no namespace', t => {
 test('format key for namespace', t => {
     const keyv = new Keyv({store: keyvMemcache});
     t.is(keyvMemcache.formatKey("foo"), 'keyv:foo');
+});
+
+test.serial('keyv get with namespace', async t => {
+    const keyv1 = new Keyv({store: keyvMemcache, namespace: "keyv1"});
+    const keyv2 = new Keyv({store: keyvMemcache, namespace: "2"});
+
+    await keyv1.set('foo', 'bar');
+    t.is(await keyv1.get('foo'), 'bar');
+
+    await keyv2.set('foo', 'bar2');
+    t.is(await keyv2.get('foo'), 'bar2');
+
 });
 
 function timeout (ms, fn) {
