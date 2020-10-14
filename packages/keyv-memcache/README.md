@@ -4,7 +4,7 @@
 _Memcache storage adapter for [Keyv](https://github.com/lukechilds/keyv)_
 
 
-[![Build Status](https://travis-ci.org/jaredwray/keyv-memcache.svg?branch=master)](https://travis-ci.org/jaredwray/keyv-memcache)
+[![Build Status](https://travis-ci.com/jaredwray/keyv-memcache.svg?branch=master)](https://travis-ci.com/jaredwray/keyv-memcache)
 [![GitHub license](https://img.shields.io/github/license/jaredwray/keyv-memcache)](https://github.com/jaredwray/keyv-memcache/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/jaredwray/keyv-memcache/branch/master/graph/badge.svg)](https://codecov.io/gh/jaredwray/keyv-memcache)
 [![npm](https://img.shields.io/npm/dm/keyv-memcache)](https://npmjs.com/packages/keyv-memcache)
