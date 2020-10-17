@@ -1,0 +1,36 @@
+name: keyv-memcache CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [10]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Memcached Service
+      # You may pin to the exact commit or the version.
+      # uses: niden/actions-memcached@3b3ecd9d0d035ea92db716dc1540a7dbe9e56349
+      uses: niden/actions-memcached@v7
+
+    - name: Install Dependencies
+    - run: yarn
+    
+    - run: memcached
+    - run: add codeconv --global
+    - run: yarn test
+    - run: yarn coverage
