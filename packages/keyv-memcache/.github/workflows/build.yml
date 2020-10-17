@@ -1,4 +1,4 @@
-name: keyv-memcache build
+name: keyv-memcache-build
 
 on:
   push:
