@@ -30,7 +30,7 @@ jobs:
     - name: Install Dependencies
       run: yarn
     - name: Setting up Codecoverage
-      run: yarn add codeconv --global
+      run: yarn add codecov --global
     - name: Testing    
       run: yarn test
     - name: Updating Code Coverage    
