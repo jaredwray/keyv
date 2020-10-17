@@ -1,4 +1,4 @@
-name: keyv-memcache CI
+name: keyv-memcache build
 
 on:
   push:
@@ -28,9 +28,9 @@ jobs:
       uses: niden/actions-memcached@v7
 
     - name: Install Dependencies
-    - run: yarn
+      run: yarn
     
-    - run: memcached
-    - run: add codeconv --global
-    - run: yarn test
-    - run: yarn coverage
+      run: memcached
+      run: add codeconv --global
+      run: yarn test
+      run: yarn coverage
