@@ -29,8 +29,11 @@ jobs:
 
     - name: Install Dependencies
       run: yarn
-    
+    - name: Setting up Memcached
       run: memcached
+    - name: Setting up Codecoverage
       run: add codeconv --global
+    - name: Testing    
       run: yarn test
+    - name: Updating Code Coverage    
       run: yarn coverage
