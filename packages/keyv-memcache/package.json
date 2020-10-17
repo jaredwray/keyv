@@ -2,7 +2,7 @@
   "name": "keyv-memcache",
   "version": "1.0.1",
   "description": "MemCache storage adapter for Keyv",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
     "test": "nyc ava",
     "coverage": "yarn test && nyc report --reporter=text-lcov | coveralls",
