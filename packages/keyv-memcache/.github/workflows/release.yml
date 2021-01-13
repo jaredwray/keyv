@@ -1,0 +1,47 @@
+name: keyv-memcache-release
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [12]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Memcached Service
+      # You may pin to the exact commit or the version.
+      # uses: niden/actions-memcached@3b3ecd9d0d035ea92db716dc1540a7dbe9e56349
+      uses: niden/actions-memcached@v7
+
+    - name: Install Dependencies
+      run: yarn
+
+    - name: Testing    
+      run: yarn test
+
+    - name: Generate Code Coverage Report
+      run: yarn report-coverage
+
+    - name: Code Coverage
+      uses: codecov/codecov-action@v1.0.15
+      with:
+        token: ${{ secrets.CODECOV_KEY }}   
+
+    - name: Publish
+      run: |
+        npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+        npm publish --ignore-scripts
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
