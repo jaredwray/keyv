@@ -33,6 +33,9 @@ jobs:
     - name: Testing    
       run: yarn test
 
+    - name: Generate Code Coverage Report
+      run: yarn report-coverage
+
     - name: Code Coverage
       uses: codecov/codecov-action@v1.0.15
       with:
