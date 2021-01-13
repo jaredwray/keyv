@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10]
+        node-version: [12]
 
     steps:
     - uses: actions/checkout@v2
@@ -29,9 +29,11 @@ jobs:
 
     - name: Install Dependencies
       run: yarn
-    - name: Setting up Codecoverage
-      run: yarn add codecov --global
+
     - name: Testing    
       run: yarn test
-    - name: Updating Code Coverage    
-      run: yarn report-coverage
+
+    - name: Code Coverage
+      uses: codecov/codecov-action@v1.0.15
+      with:
+        token: ${{ secrets.CODECOV_KEY }}
