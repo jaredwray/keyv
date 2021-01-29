@@ -145,6 +145,7 @@ The following are third-party storage adapters compatible with Keyv:
 - [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
 - [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
 - [keyv-memcache](https://github.com/jaredwray/keyv-memcache) - Memcache storage adapter for Keyv
+- [keyv-anyredis](https://github.com/natesilva/keyv-anyredis) - Support for Redis clusters and alternative Redis clients
 
 ## Add Cache Support to your Module
 
