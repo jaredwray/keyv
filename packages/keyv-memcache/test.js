@@ -4,8 +4,10 @@ const KeyvMemcache = require("this");
 
 const kvat = require("@keyv/test-suite");
 
+const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 //handle all the tests with listeners.
-require('events').EventEmitter.prototype._maxListeners = 100;
+require('events').EventEmitter.prototype._maxListeners = 200;
 
 const uri = "localhost:11211";
 const keyvMemcache = new KeyvMemcache(uri);
@@ -19,6 +21,7 @@ test.serial('keyv get / no expired', async t => {
 
     t.is(val, 'bar');
 });
+
 
 test.serial('testing defaults', async t => {
     const m = new KeyvMemcache();
@@ -62,6 +65,30 @@ test.serial('keyv get with namespace', async t => {
     await keyv2.set('foo', 'bar2');
     t.is(await keyv2.get('foo'), 'bar2');
 
+});
+
+test.serial('keyv get / expired existing', async t => {
+    const keyv = new Keyv({store: keyvMemcache});
+
+    await keyv.set('foo-expired', 'bar-expired', 3000);
+
+    await snooze(1000);
+
+    let val = await keyv.get('foo-expired');
+
+    t.is(val, 'bar-expired');
+});
+
+test.serial('keyv get / expired', async t => {
+    const keyv = new Keyv({store: keyvMemcache});
+
+    await keyv.set('foo-expired', 'bar-expired', 1000);
+
+    await snooze(1000);
+
+    let val = await keyv.get('foo-expired');
+
+    t.is(val, undefined);
 });
 
 function timeout (ms, fn) {

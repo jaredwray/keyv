@@ -56,7 +56,7 @@ class KeyvMemcache extends EventEmitter {
   }
 
   set(key, value, ttl) {
-    const opts = {};
+    let opts = {};
 
     if (ttl !== undefined) {
       opts.ttl = ttl;
