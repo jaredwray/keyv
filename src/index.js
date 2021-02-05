@@ -47,7 +47,7 @@ class Keyv extends EventEmitter {
 	}
 
 	_getKeyPrefix(key) {
-		return this.opts.namespace ? `${this.opts.namespace}:${key}` : key;
+		return this.opts.namespace ? `${this.opts.namespace}:${key}` : String(key);
 	}
 
 	get(key, opts) {

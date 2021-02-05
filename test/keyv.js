@@ -128,21 +128,40 @@ test.serial('Keyv uses a default namespace', async t => {
 	const store = new Map();
 	const keyv = new Keyv({ store });
 	await keyv.set('foo', 'bar');
+	const savedValue = await keyv.get('foo');
+
 	t.is([...store.keys()][0], 'keyv:foo');
+	t.is(savedValue, 'bar');
 });
 
 test.serial('Default namespace can be overridden', async t => {
 	const store = new Map();
 	const keyv = new Keyv({ store, namespace: 'magic' });
 	await keyv.set('foo', 'bar');
+	const savedValue = await keyv.get('foo');
+
 	t.is([...store.keys()][0], 'magic:foo');
+	t.is(savedValue, 'bar');
 });
 
-test.serial('An empty namespace stores the key as-is', async t => {
+test.serial('An empty namespace can be used', async t => {
 	const store = new Map();
 	const keyv = new Keyv({ store, namespace: '' });
-	await keyv.set(42, 'foo');
-	t.is([...store.keys()][0], 42);
+	await keyv.set(42, 'bar');
+	const savedValue = await keyv.get('42');
+
+	t.is([...store.keys()][0], '42');
+	t.is(savedValue, 'bar');
+});
+
+test.serial('A null namespace can be used', async t => {
+	const store = new Map();
+	const keyv = new Keyv({ store, namespace: null });
+	await keyv.set(42, 'bar');
+	const savedValue = await keyv.get('42');
+
+	t.is([...store.keys()][0], '42');
+	t.is(savedValue, 'bar');
 });
 
 const store = () => new Map();
