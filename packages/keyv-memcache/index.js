@@ -59,7 +59,7 @@ class KeyvMemcache extends EventEmitter {
     let opts = {};
 
     if (ttl !== undefined) {
-      opts.ttl = ttl;
+      opts.ttl = Math.floor(ttl/1000); //moving to seconds
     }
 
     return new Promise((resolve, reject) => {
