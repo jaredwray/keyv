@@ -61,5 +61,8 @@ typings/
 .next
 *.rdb
 
+# apple
+.DS_Store
+
 #codecov
 coverage.lcov
