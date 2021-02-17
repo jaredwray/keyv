@@ -1,4 +1,4 @@
-[<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/jaredwray/keyv-memcache)
+[<img width="100" align="right" src="docs/keyv_logo.svg" alt="keyv">](https://github.com/jaredwray/keyv-memcache)
 
 # Keyv-Memcache
 _Memcache storage adapter for [Keyv](https://github.com/lukechilds/keyv)_
@@ -8,7 +8,7 @@ _Memcache storage adapter for [Keyv](https://github.com/lukechilds/keyv)_
 ![keyv-memcache-release](https://github.com/jaredwray/keyv-memcache/workflows/keyv-memcache-release/badge.svg)
 [![GitHub license](https://img.shields.io/github/license/jaredwray/keyv-memcache)](https://github.com/jaredwray/keyv-memcache/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/jaredwray/keyv-memcache/branch/master/graph/badge.svg?token=AHybiBglfQ)](https://codecov.io/gh/jaredwray/keyv-memcache)
-[![npm](https://img.shields.io/npm/dm/keyv-memcache)](https://npmjs.com/packages/keyv-memcache)
+[![npm](https://img.shields.io/npm/dm/keyv-memcache)](https://npmjs.com/package/keyv-memcache)
 
 ## Install
 
