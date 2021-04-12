@@ -103,6 +103,27 @@ const keyv = new Keyv({ store: memcache});
 
 ```
 
+## Using Google Cloud
+
+1. Go to https://cloud.google.com/ and sign up.
+2. Go to the memcached configuration page in the google cloud console by navigating to Memorystore > Memcached. 
+3. On the memcached page (Eg. https://console.cloud.google.com/memorystore/memcached/instances?project=example), Click Create Instance
+4. Fill in all mandatory fields as needed. You will need to set up a private service connection.
+5. To set up a private service connection, click the Set Up Connection button.
+6. Once required fields are complete, click the Create button to create the instance.
+7. Google provides further documentation for connecting to and managing your Memecached instance [here](https://cloud.google.com/memorystore/docs/memcached). 
+
+```js
+
+const Keyv = require("keyv");
+const KeyvMemcache = require("keyv-memcache");
+
+const memcache = new KeyvMemcache("insert the internal google memcached discovery endpoint");
+const keyv = new Keyv({ store: memcache});
+
+```
+
+
 ## License
 
 MIT © Jared Wray
