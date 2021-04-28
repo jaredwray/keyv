@@ -50,7 +50,7 @@ class KeyvMongo extends EventEmitter {
 
 	set(key, value, ttl) {
 		const expiresAt = (typeof ttl === 'number') ? new Date(Date.now() + ttl) : null;
-		return this.mongo.update({ key }, { key, value, expiresAt }, { upsert: true });
+		return this.mongo.update({ key }, { $set: { key, value, expiresAt } }, { upsert: true });
 	}
 
 	delete(key) {
