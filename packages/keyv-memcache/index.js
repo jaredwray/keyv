@@ -1,7 +1,7 @@
 "use strict";
 
-const EventEmitter = require("events");
-const memcache = require("memjs");
+const EventEmitter = require('events');
+const memcache = require('memjs');
 const JSONB = require('json-buffer');
 
 class KeyvMemcache extends EventEmitter {
@@ -19,7 +19,7 @@ class KeyvMemcache extends EventEmitter {
     }
 
     if (uri === undefined) {
-      uri = "localhost:11211";
+      uri = 'localhost:11211';
       opts.url = opts.uri = uri;
     }
     
@@ -65,7 +65,7 @@ class KeyvMemcache extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.client.set(this.formatKey(key), value, opts, (err, success) => {
         if (err) {
-          this.emit("error", err);
+          this.emit('error', err);
           reject(err);
         } else {
           resolve(success);
@@ -78,7 +78,7 @@ class KeyvMemcache extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.client.delete(this.formatKey(key), (err, success) => {
         if (err) {
-          this.emit("error", err);
+          this.emit('error', err);
           reject(err);
         } else {
           resolve(success);
@@ -91,7 +91,7 @@ class KeyvMemcache extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.client.flush((err) => {
         if (err) {
-          this.emit("error", err);
+          this.emit('error', err);
           reject(err);
         } else {
           resolve(undefined);
@@ -104,7 +104,7 @@ class KeyvMemcache extends EventEmitter {
     let result = key;
 
     if(this.namespace) {
-      result = this.namespace.trim() + ":" + key.trim();
+      result = this.namespace.trim() + ':' + key.trim();
     }
 
     return result;
