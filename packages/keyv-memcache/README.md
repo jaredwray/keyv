@@ -8,6 +8,7 @@ _Memcache storage adapter for [Keyv](https://github.com/lukechilds/keyv)_
 ![keyv-memcache-release](https://github.com/jaredwray/keyv-memcache/workflows/keyv-memcache-release/badge.svg)
 [![GitHub license](https://img.shields.io/github/license/jaredwray/keyv-memcache)](https://github.com/jaredwray/keyv-memcache/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/jaredwray/keyv-memcache/branch/master/graph/badge.svg?token=AHybiBglfQ)](https://codecov.io/gh/jaredwray/keyv-memcache)
+[![keyv-memcache-integrations](https://github.com/jaredwray/keyv-memcache/actions/workflows/integrations.yml/badge.svg)](https://github.com/jaredwray/keyv-memcache/actions/workflows/integrations.yml)
 [![npm](https://img.shields.io/npm/dm/keyv-memcache)](https://npmjs.com/package/keyv-memcache)
 
 ## Install
@@ -61,6 +62,23 @@ await keyv2.set("foo","bar2", 6000) //Expiring time is optional
 let obj1 = await keyv1.get("foo"); //will return bar1
 let obj2 = await keyv2.get("foo"); //will return bar2
 
+```
+
+# Works with Memcached, Memcachier, Redislabs, and Google Cloud
+
+## Using Memcached 
+
+1. Install Memcached and start an instance
+```js
+
+//set the server to the correct address and port 
+let server = "localhost:11211"
+
+const Keyv = require("keyv");
+const KeyvMemcache = require("keyv-memcache");
+
+const memcache = new KeyvMemcache();
+const keyv = new Keyv({ store: memcache});
 ```
 
 ## Using Memcachier 
