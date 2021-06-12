@@ -9,7 +9,12 @@ const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
 //handle all the tests with listeners.
 require('events').EventEmitter.prototype._maxListeners = 200;
 
-const uri = "localhost:11211";
+let uri = "localhost:11211";
+
+if(process.env.URI) {
+    uri = process.env.URI;
+}
+
 const keyvMemcache = new KeyvMemcache(uri);
 
 test.serial('keyv get / no expired', async t => {
