@@ -42,13 +42,13 @@
     "ioredis": "~4.17.1"
   },
   "devDependencies": {
+    "@keyv/test-suite": "^1.6.11",
     "ava": "^2.4.0",
     "coveralls": "^3.0.7",
     "delay": "^4.3.0",
     "eslint-config-xo-lukechilds": "^1.0.1",
     "keyv": "*",
-    "@keyv/test-suite": "^1.6.11",
-    "nyc": "^14.1.1",
+    "nyc": "^15.1.0",
     "requirable": "^1.0.5",
     "this": "^1.1.0",
     "xo": "^0.25.3"
