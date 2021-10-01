@@ -23,3 +23,12 @@ test('reuse a redis instance', async t => {
 	t.true(value === 'bar');
 	t.true(await keyv.get('foo') === value);
 });
+
+test('set an undefined key', async t => {
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvRedis(redis);
+
+	await keyv.set('foo2', undefined);
+	const val = await keyv.get('foo2');
+	t.true(val === undefined);
+});
