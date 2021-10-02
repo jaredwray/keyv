@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/lukechilds/keyv-redis",
   "dependencies": {
-    "ioredis": "~4.17.1"
+    "ioredis": "~4.27.9"
   },
   "devDependencies": {
     "@keyv/test-suite": "^1.6.11",
