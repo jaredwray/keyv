@@ -1,9 +1,8 @@
-const test = require('ava');
-const keyvTestSuite = require('@keyv/test-suite');
-const { keyvOfficialTests } = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const KeyvRedis = require('this');
-const Redis = require('ioredis');
+import test from 'ava';
+import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
+import Keyv from 'keyv';
+import KeyvRedis from 'this';
+import Redis from 'ioredis';
 
 const { REDIS_HOST = 'localhost' } = process.env;
 const redisURI = `redis://${REDIS_HOST}`;
@@ -11,10 +10,7 @@ const redisURI = `redis://${REDIS_HOST}`;
 keyvOfficialTests(test, Keyv, redisURI, 'redis://foo');
 
 const store = () => new KeyvRedis(redisURI);
-
-keyvTestSuite.keyvApiTests(test, Keyv, store);
-keyvTestSuite.keyvNamepsaceTests(test, Keyv, store);
-keyvTestSuite.keyvValueTests(test, Keyv, store);
+keyvTestSuite(test, Keyv, store);
 
 test('reuse a redis instance', async t => {
 	const redis = new Redis(redisURI);
