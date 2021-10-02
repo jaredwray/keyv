@@ -1,8 +1,7 @@
 language: node_js
 node_js:
-  - '13'
-  - '12'
-  - '10'
+  - '15'
+  - '14'
 services:
   - redis-server
 script: npm test
