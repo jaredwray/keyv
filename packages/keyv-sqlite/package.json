@@ -40,7 +40,7 @@
   "dependencies": {
     "@keyv/sql": "1.1.2",
     "pify": "5.0.0",
-    "sqlite3": "^4.1.0"
+    "sqlite3": "^5.0.2"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
