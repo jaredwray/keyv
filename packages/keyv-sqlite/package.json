@@ -8,7 +8,11 @@
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {
-    "extends": "xo-lukechilds"
+    "extends": "xo-lukechilds",
+    "rules": {
+      "unicorn/prefer-module": 0
+    }
+
   },
   "ava": {
     "require": [
@@ -51,6 +55,6 @@
     "nyc": "^15.1.0",
     "requirable": "^1.0.1",
     "this": "^1.0.2",
-    "xo": "^0.19.0"
+    "xo": "^0.45.0"
   }
 }
