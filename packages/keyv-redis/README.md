@@ -2,7 +2,7 @@
 
 > Redis storage adapter for Keyv
 
-[![Build Status](https://travis-ci.org/lukechilds/keyv-redis.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-redis)
+[![build](https://github.com/lukechilds/keyv-redis/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-redis/actions/workflows/build.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-redis/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-redis?branch=master)
 [![npm](https://img.shields.io/npm/v/@keyv/redis.svg)](https://www.npmjs.com/package/@keyv/redis)
 
