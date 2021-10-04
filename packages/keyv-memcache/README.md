@@ -4,11 +4,11 @@
 _Memcache storage adapter for [Keyv](https://github.com/lukechilds/keyv)_
 
 
-![keyv-memcache-build](https://github.com/jaredwray/keyv-memcache/workflows/keyv-memcache-build/badge.svg)
-![keyv-memcache-release](https://github.com/jaredwray/keyv-memcache/workflows/keyv-memcache-release/badge.svg)
+![build](https://github.com/jaredwray/keyv-memcache/workflows/build/badge.svg)
+![release](https://github.com/jaredwray/keyv-memcache/workflows/release/badge.svg)
 [![GitHub license](https://img.shields.io/github/license/jaredwray/keyv-memcache)](https://github.com/jaredwray/keyv-memcache/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/jaredwray/keyv-memcache/branch/master/graph/badge.svg?token=AHybiBglfQ)](https://codecov.io/gh/jaredwray/keyv-memcache)
-[![keyv-memcache-integrations](https://github.com/jaredwray/keyv-memcache/actions/workflows/integrations.yml/badge.svg)](https://github.com/jaredwray/keyv-memcache/actions/workflows/integrations.yml)
+[![ntegrations](https://github.com/jaredwray/keyv-memcache/actions/workflows/integrations.yml/badge.svg)](https://github.com/jaredwray/keyv-memcache/actions/workflows/integrations.yml)
 [![npm](https://img.shields.io/npm/dm/keyv-memcache)](https://npmjs.com/package/keyv-memcache)
 
 ## Install
