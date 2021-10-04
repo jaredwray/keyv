@@ -5,7 +5,7 @@ const Keyv = require('keyv');
 const KeyvRedis = require('this');
 const Redis = require('ioredis');
 
-const { REDIS_HOST = 'localhost' } = process.env;
+const REDIS_HOST = 'localhost';
 const redisURI = `redis://${REDIS_HOST}`;
 
 keyvOfficialTests(test, Keyv, redisURI, 'redis://foo');
@@ -33,6 +33,6 @@ test('set an undefined key', async t => {
 	const keyv = new KeyvRedis(redis);
 
 	await keyv.set('foo2', undefined);
-	const val = await keyv.get('foo2');
-	t.true(val === undefined);
+	const result = await keyv.get('foo2');
+	t.true(result === undefined);
 });
