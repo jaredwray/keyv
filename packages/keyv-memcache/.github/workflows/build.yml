@@ -1,4 +1,4 @@
-name: keyv-memcache-build
+name: build
 
 on:
   push:
@@ -13,8 +13,9 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [14]
-
+        node: [ '12', '14', '16' ]
+    
+    name: Node ${{ matrix.node }}
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js ${{ matrix.node-version }}
