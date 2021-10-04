@@ -1,4 +1,4 @@
-name: keyv-memcache-integrations
+name: integrations
 
 on:
   push:
