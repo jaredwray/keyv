@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
-    "ava": "^1.4.1",
+    "ava": "^3.15.0",
     "coveralls": "^3.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
