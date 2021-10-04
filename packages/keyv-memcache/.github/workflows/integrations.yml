@@ -3,9 +3,8 @@ name: keyv-memcache-integrations
 on:
   push:
     branches: [ main ]
-  schedule:
-      # * is a special character in YAML so you have to quote this string
-      - cron:  '0 5 * * *'
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
