@@ -1,4 +1,4 @@
-name: keyv-sqlite-build
+name: build
 
 on:
   push:
