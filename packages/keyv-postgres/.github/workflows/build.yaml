@@ -14,15 +14,18 @@ jobs:
         node: [ '12', '14', '16' ]
     name: Node ${{ matrix.node }}
     steps:
+
+      # Use preinstalled PostgreSQL 
+      - name: Start PostgreSQL on Ubuntu
+        run: |
+          sudo systemctl start postgresql.service
+          pg_isready
+
       - uses: actions/checkout@v2
       - name: Setup node
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node }}
-
-      - uses: harmon758/postgresql-action@v1
-        with:
-          postgresql version: '14'
         
       - run: npm install
       - run: npm test
