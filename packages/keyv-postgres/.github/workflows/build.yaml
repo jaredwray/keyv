@@ -25,6 +25,10 @@ jobs:
         run: |
           sudo -u postgres psql -c 'create database keyv_test;' -U postgres
 
+      - name: Set User Password
+        run: |
+          sudo -u postgres psql -c 'ALTER USER postgres PASSWORD ‘postgres’; ALTER ROLE' -U postgres
+
       - uses: actions/checkout@v2
       - name: Setup node
         uses: actions/setup-node@v2
