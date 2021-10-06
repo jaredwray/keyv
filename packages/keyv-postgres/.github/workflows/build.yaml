@@ -21,9 +21,9 @@ jobs:
           sudo systemctl start postgresql.service
           pg_isready
 
-      - name: Create additional user
+      - name: Create Database
         run: |
-          sudo psql -c 'create database keyv_test;' -U postgres
+          sudo -u postgres psql -c 'create database keyv_test;' -U postgres
 
       - uses: actions/checkout@v2
       - name: Setup node
