@@ -27,7 +27,7 @@ jobs:
 
       - name: Set User Password
         run: |
-          sudo -u postgres psql -c "ALTER USER postgres PASSWORD ''; ALTER ROLE" -U postgres
+          sudo -u postgres psql -c "ALTER USER postgres PASSWORD '';" -U postgres
 
       - uses: actions/checkout@v2
       - name: Setup node
