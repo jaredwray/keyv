@@ -6,6 +6,3 @@ const KeyvPostgres = require('this');
 
 keyvOfficialTests(test, Keyv, 'postgresql://postgres:postgres@localhost:5432/keyv_test', 'postgresql://foo');
 
-const store = () => new KeyvPostgres({ uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test' });
-keyvTestSuite.keyvApiTests(test, Keyv, store);
-keyvTestSuite.keyvValueTests(test, Keyv, store);
