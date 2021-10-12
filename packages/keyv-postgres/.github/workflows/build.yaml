@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
         node: [ '12', '14', '16' ]
     name: Node ${{ matrix.node }}
@@ -20,7 +19,6 @@ jobs:
       - name: Start PostgreSQL on Ubuntu
         run: |
           sudo systemctl start postgresql.service
-          pg_isready
 
       - name: Create Database
         run: |
@@ -38,3 +36,7 @@ jobs:
         
       - run: npm install
       - run: npm test
+
+      - name: Start PostgreSQL on Ubuntu
+        run: |
+          sudo systemctl stop postgresql.service
