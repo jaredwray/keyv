@@ -1,4 +1,3 @@
-import 'dotenv/config'; // eslint-disable-line import/no-unassigned-import
 import test from 'ava';
 import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
 import Keyv from 'keyv';
