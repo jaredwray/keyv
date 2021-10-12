@@ -36,4 +36,10 @@ jobs:
           node-version: ${{ matrix.node }}
         
       - run: npm install
-      - run: npm test
+  test:
+    name: testing
+    needs: build
+    runs-on: [ ubuntu-latest ]
+
+    steps:
+      - run: yarn run test
