@@ -52,7 +52,7 @@
     "coveralls": "^3.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
-    "nyc": "^11.0.3",
+    "nyc": "^15.1.0",
     "requirable": "^1.0.1",
     "this": "^1.0.2",
     "xo": "^0.45.0"
