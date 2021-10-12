@@ -11,6 +11,14 @@ keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://127.0.0.1:1234');
 const store = () => new KeyvMongo(mongoURL);
 keyvTestSuite(test, Keyv, store);
 
+test('default options', t => {
+	const store = new KeyvMongo();
+	t.deepEqual(store.opts, {
+		url: 'mongodb://127.0.0.1:27017',
+		collection: 'keyv'
+	});
+});
+
 test('Collection option merges into default options', t => {
 	const store = new KeyvMongo({ collection: 'foo' });
 	t.deepEqual(store.opts, {
