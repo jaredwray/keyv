@@ -6,6 +6,7 @@ const keyvTestSuite = require('@keyv/test-suite');
 
 keyvOfficialTests(test, Keyv, 'postgresql://postgres:postgres@localhost:5432/keyv_test', 'postgresql://foo');
 
-const store = () => new KeyvPostgres({ uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test' });
-keyvTestSuite.keyvApiTests(test, Keyv, store);
-keyvTestSuite.keyvValueTests(test, Keyv, store);
+const storeApi = () => new KeyvPostgres({ uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', table: 'cacheApi' });
+const storeValue = () => new KeyvPostgres({ uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', table: 'cacheValue' });
+keyvTestSuite.keyvApiTests(test, Keyv, storeApi);
+keyvTestSuite.keyvValueTests(test, Keyv, storeValue);
