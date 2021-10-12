@@ -39,7 +39,7 @@
   "homepage": "https://github.com/lukechilds/keyv-mongo",
   "dependencies": {
     "mongojs": "^3",
-    "pify": "^3.0.0"
+    "pify": "^5.0.0"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
