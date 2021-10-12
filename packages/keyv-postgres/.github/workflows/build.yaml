@@ -23,7 +23,7 @@ jobs:
 
       - name: Create Database
         run: |
-          sudo -u postgres -c "createdb keyv_test;"
+          sudo -u postgres psql -c "create database keyv_test OWNER=postgres;" -U postgres
 
       - name: Set User Password
         run: |
