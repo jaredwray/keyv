@@ -17,8 +17,7 @@ jobs:
 
       # Use preinstalled PostgreSQL 
       - name: Start Database
-        run: |
-          docker-compose -f "docker-compose.yaml" up -d --build
+        run: npm run start-postgres
 
       - uses: actions/checkout@v2
       - name: Setup node
