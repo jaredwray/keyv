@@ -45,7 +45,7 @@ To run each step manually do the following to start the server, and run the test
 
 ```shell
 npm run test:postgres:start
-npm run test:db
+npm run test
 npm run test:postgres:stop
 ```
 
