@@ -5,8 +5,9 @@
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava --serial",
-    "test:postgres:start": "docker-compose -f ./test/postgres.yaml up -d",
-    "test:postgres:stop": "docker-compose -f ./test/postgres.yaml down",
+    "test:db": "docker-compose -f ./test/postgres.yaml up -d && xo && nyc ava --serial && docker-compose -f ./test/postgres.yaml down",
+    "test:db:start": "docker-compose -f ./test/postgres.yaml up -d",
+    "test:db:stop": "docker-compose -f ./test/postgres.yaml down",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {
