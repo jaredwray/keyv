@@ -5,9 +5,9 @@
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava --serial",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "start-postgres": "docker-compose -f docker-compose.yaml up -d --build",
-    "stop-postgres": "docker-compose -f docker-compose.yaml down"
+    "test:postgres:start": "docker-compose -f ./test/postgres.yaml up -d",
+    "test:postgres:stop": "docker-compose -f ./test/postgres.yaml down",
+    "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {
     "extends": "xo-lukechilds",
