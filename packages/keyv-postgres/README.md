@@ -35,24 +35,19 @@ const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname', { table: '
 
 ## Testing
 
-When testing you can use our `docker-compose` postgresql instance by having docker installed and running:
+When testing you can use our `docker-compose` postgresql instance by having docker installed and running. This will start a postgres server, run the tests, and stop the server:
+
+```shell
+npm run test:db
+```
+
+To run each step manually do the following to start the server, and run the tests:
 
 ```shell
 npm run test:postgres:start
-```
-
-This will start the postgres instances and then you can run your tests:
-
-```shell
-npm run test
-```
-
-To shutdown the postgres instances run the following command:
-
-```shell
+npm run test:db
 npm run test:postgres:stop
 ```
-
 
 ## License
 
