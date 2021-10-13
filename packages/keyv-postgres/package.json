@@ -4,7 +4,7 @@
   "description": "PostgreSQL storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
-    "test": "xo && nyc ava",
+    "test": "xo && nyc ava --serial",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {
