@@ -16,17 +16,9 @@ jobs:
     steps:
 
       # Use preinstalled PostgreSQL 
-      - name: Start PostgreSQL on Ubuntu
+      - name: Start Database
         run: |
-          sudo systemctl start postgresql.service
-
-      - name: Create Database
-        run: |
-          sudo -u postgres psql -c "create database keyv_test;" -U postgres
-
-      - name: Set User Password
-        run: |
-          sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';" -U postgres
+          docker-compose -f "docker-compose.yaml" up -d --build
 
       - uses: actions/checkout@v2
       - name: Setup node
