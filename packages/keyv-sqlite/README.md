@@ -36,4 +36,4 @@ const keyv = new Keyv('sqlite://path/to/database.sqlite', {
 
 ## License
 
-MIT © Luke Childs
+MIT © Jared Wray & Luke Childs
