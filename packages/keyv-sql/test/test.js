@@ -7,25 +7,25 @@ import sqlite3 from 'sqlite3';
 import pify from 'pify';
 
 class TestSqlite extends KeyvSql {
-	constructor(opts) {
-		opts = Object.assign({
+	constructor(options) {
+		options = Object.assign({
 			dialect: 'sqlite',
-			db: 'test/testdb.sqlite'
-		}, opts);
+			db: 'test/testdb.sqlite',
+		}, options);
 
-		opts.connect = () => new Promise((resolve, reject) => {
-			const db = new sqlite3.Database(opts.db, err => {
-				if (err) {
-					reject(err);
+		options.connect = () => new Promise((resolve, reject) => {
+			const db = new sqlite3.Database(options.db, error => {
+				if (error) {
+					reject(error);
 				} else {
-					db.configure('busyTimeout', 30000);
+					db.configure('busyTimeout', 3000);
 					resolve(db);
 				}
 			});
 		})
-		.then(db => pify(db.all).bind(db));
+			.then(db => pify(db.all).bind(db));
 
-		super(opts);
+		super(options);
 	}
 }
 
