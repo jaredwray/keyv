@@ -1,10 +1,9 @@
-import test from 'ava';
-import keyvTestSuite from '@keyv/test-suite';
-import Keyv from 'keyv';
-import KeyvSql from 'this';
-
-import sqlite3 from 'sqlite3';
-import pify from 'pify';
+const test = require('ava');
+const keyvTestSuite = require('@keyv/test-suite').default;
+const Keyv = require('keyv');
+const KeyvSql = require('this');
+const sqlite3 = require('sqlite3');
+const pify = require('pify');
 
 class TestSqlite extends KeyvSql {
 	constructor(options) {
