@@ -51,4 +51,4 @@ npm run test:postgres:stop
 
 ## License
 
-MIT © Luke Childs
+MIT © Jared Wray & Luke Childs
