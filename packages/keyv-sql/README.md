@@ -2,7 +2,7 @@
 
 > Parent class for SQL based Keyv storage adapters
 
-[![Build Status](https://travis-ci.org/lukechilds/keyv-sql.svg?branch=master)](https://travis-ci.org/lukechilds/keyv-sql)
+[![build](https://github.com/jaredwray/keyv-sql/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv-sql/actions/workflows/build.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-sql/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-sql?branch=master)
 [![npm](https://img.shields.io/npm/v/@keyv/sql.svg)](https://www.npmjs.com/package/@keyv/sql)
 
@@ -14,4 +14,4 @@ Parent class containing the common logic for SQL based Keyv storage adapters:
 
 ## License
 
-MIT © Luke Childs
+MIT © Jared Wray & Luke Childs
