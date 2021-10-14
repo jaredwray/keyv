@@ -1,19 +1,18 @@
-'use strict';
 
 const EventEmitter = require('events');
 const Sql = require('sql').Sql;
 
 class KeyvSql extends EventEmitter {
-	constructor(opts) {
+	constructor(options) {
 		super();
 		this.ttlSupport = false;
 
 		this.opts = Object.assign({
 			table: 'keyv',
-			keySize: 255
-		}, opts);
+			keySize: 255,
+		}, options);
 
-		const sql = new Sql(opts.dialect);
+		const sql = new Sql(options.dialect);
 
 		this.entry = sql.define({
 			name: this.opts.table,
@@ -21,19 +20,19 @@ class KeyvSql extends EventEmitter {
 				{
 					name: 'key',
 					primaryKey: true,
-					dataType: `VARCHAR(${Number(this.opts.keySize)})`
+					dataType: `VARCHAR(${Number(this.opts.keySize)})`,
 				},
 				{
 					name: 'value',
-					dataType: 'TEXT'
-				}
-			]
+					dataType: 'TEXT',
+				},
+			],
 		});
 		const createTable = this.entry.create().ifNotExists().toString();
 
 		const connected = this.opts.connect()
 			.then(query => query(createTable).then(() => query))
-			.catch(err => this.emit('error', err));
+			.catch(error => this.emit('error', error));
 
 		this.query = sqlString => connected
 			.then(query => query(sqlString));
@@ -47,20 +46,17 @@ class KeyvSql extends EventEmitter {
 				if (row === undefined) {
 					return undefined;
 				}
+
 				return row.value;
 			});
 	}
 
 	set(key, value) {
-		let upsert;
 		if (this.opts.dialect === 'mysql') {
 			value = value.replace(/\\/g, '\\\\');
 		}
-		if (this.opts.dialect === 'postgres') {
-			upsert = this.entry.insert({ key, value }).onConflict({ columns: ['key'], update: ['value'] }).toString();
-		} else {
-			upsert = this.entry.replace({ key, value }).toString();
-		}
+
+		const upsert = this.opts.dialect === 'postgres' ? this.entry.insert({ key, value }).onConflict({ columns: ['key'], update: ['value'] }).toString() : this.entry.replace({ key, value }).toString();
 		return this.query(upsert);
 	}
 
@@ -73,6 +69,7 @@ class KeyvSql extends EventEmitter {
 				if (row === undefined) {
 					return false;
 				}
+
 				return this.query(del)
 					.then(() => true);
 			});
