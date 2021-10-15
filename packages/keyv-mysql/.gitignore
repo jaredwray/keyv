@@ -74,3 +74,6 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Database directory
+test/.mysql-data/*
