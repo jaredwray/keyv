@@ -1,4 +1,4 @@
-# @keyv/mysql [<img width="100" align="right" src="https://rawgit.com/jaredwray/keyv/master/media/logo.svg" alt="keyv">](https://github.com/jaredwray/keyv)
+# @keyv/mysql [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > MySQL/MariaDB storage adapter for Keyv
 
