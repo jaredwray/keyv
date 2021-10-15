@@ -1,0 +1,14 @@
+version: '2'
+services:
+  keyv_test:
+    image: mysql:latest
+    volumes:
+      - "./.mysql-data/db:/var/lib/mysql"
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: keyv_test
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: mysql
