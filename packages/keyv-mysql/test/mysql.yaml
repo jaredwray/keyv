@@ -8,6 +8,6 @@ services:
     ports:
       - 3306:3306
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: true
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
       MYSQL_DATABASE: keyv_test
       MYSQL_USER: mysql
