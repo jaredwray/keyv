@@ -20,6 +20,9 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
+      - name: Shutdown Ubuntu MySQL (SUDO)
+        run: sudo service mysql stop
+
       - uses: mirromutth/mysql-action@v1.1
         with:
           mysql database: 'keyv_test'
