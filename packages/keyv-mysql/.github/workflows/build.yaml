@@ -24,7 +24,7 @@ jobs:
         with:
           mysql database: 'keyv_test'
           mysql root password: mysql
-          mysql user: 'mysql' 
+          mysql user: mysql 
           mysql password: mysql 
               
       - run: npm install
