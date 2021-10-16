@@ -24,7 +24,7 @@ jobs:
         run: sudo service mysql stop
 
       - name: Start Database
-        run: npm run test:db:start
-           
+        run: run: sudo service mysql start
+
       - run: npm install
       - run: npm test
