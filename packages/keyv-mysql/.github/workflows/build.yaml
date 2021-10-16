@@ -23,9 +23,9 @@ jobs:
       - uses: mirromutth/mysql-action@v1.1
         with:
           mysql database: 'keyv_test'
-          mysql root password: mysql
-          mysql user: mysql 
-          mysql password: mysql 
+          mysql root password: 'mysql'
+          mysql user: 'mysql' 
+          mysql password: 'mysql' 
               
       - run: npm install
       - run: npm test
