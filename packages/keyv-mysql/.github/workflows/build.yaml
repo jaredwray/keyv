@@ -30,7 +30,7 @@ jobs:
           character set server: 'utf8' # Optional, default value is 'utf8mb4'. The '--character-set-server' option for mysqld
           collation server: 'utf8_general_ci' # Optional, default value is 'utf8mb4_general_ci'. The '--collation-server' option for mysqld
           mysql database: 'keyv_test' # Optional, default value is "test". The specified database which will be create
-
+          mysql user: 'mysql' # Required if "mysql root password" is empty, default is empty. The superuser for the specified database. Can use secrets, too
               
       - run: npm install
       - run: npm test
