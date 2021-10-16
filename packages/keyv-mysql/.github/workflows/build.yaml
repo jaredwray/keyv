@@ -19,9 +19,13 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node }}
-      
-      - name: Start Database
-        run: npm run test:db:start
-        
+
+      - uses: mirromutth/mysql-action@v1.1
+        with:
+          mysql database: 'keyv_test'
+          mysql root password: mysql
+          mysql user: 'mysql' 
+          mysql password: mysql 
+              
       - run: npm install
       - run: npm test
