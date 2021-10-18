@@ -75,9 +75,9 @@ test.serial('keyv get with namespace', async t => {
 test.serial('keyv get / should still exist', async t => {
     const keyv = new Keyv({store: keyvMemcache});
 
-    await keyv.set('foo-expired', 'bar-expired', 4000);
+    await keyv.set('foo-expired', 'bar-expired', 10000);
 
-    await snooze(3000);
+    await snooze(2000);
 
     let val = await keyv.get('foo-expired');
 
@@ -87,7 +87,7 @@ test.serial('keyv get / should still exist', async t => {
 test.serial('keyv get / expired existing', async t => {
     const keyv = new Keyv({store: keyvMemcache});
 
-    await keyv.set('foo-expired', 'bar-expired', 2000);
+    await keyv.set('foo-expired', 'bar-expired', 1000);
 
     await snooze(3000);
 
