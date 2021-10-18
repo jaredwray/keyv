@@ -2,8 +2,7 @@ version: '2'
 services:
   keyv_test:
     image: mysql:latest
-    volumes:
-      - "./.mysql-data/db:/var/lib/mysql"
+    command: --default-authentication-plugin=mysql_native_password
     restart: always
     ports:
       - 3306:3306

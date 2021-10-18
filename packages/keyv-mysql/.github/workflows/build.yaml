@@ -10,22 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      mariadb:
-        image: mysql:latest
-        ports:
-          - 3306
-        env:
-          MYSQL_USER: mysql
-          MYSQL_PASSWORD: mysql
-          MYSQL_DATABASE: keyv_test
-          MYSQL_ROOT_PASSWORD: mysql
-        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
-
     strategy:
       matrix:
         node: [ '12', '14', '16' ]
-        
+
     name: Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v2
@@ -33,6 +21,8 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node }}
+
+      - run: npm run test:db:start
 
       - run: npm install
       - run: npm test
