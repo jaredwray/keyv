@@ -4,23 +4,22 @@ const KeyvSql = require('@keyv/sql');
 const mysql = require('mysql2/promise');
 
 class KeyvMysql extends KeyvSql {
-	constructor(opts) {
-		if (typeof opts === 'string') {
-			opts = { uri: opts };
+	constructor(options) {
+		if (typeof options === 'string') {
+			options = { uri: options };
 		}
-		opts = Object.assign({
+
+		options = Object.assign({
 			dialect: 'mysql',
-			uri: 'mysql://localhost'
-		}, opts);
+			uri: 'mysql://localhost',
+		}, options);
 
-		opts.connect = () => Promise.resolve()
-			.then(() => mysql.createConnection(opts.uri))
-			.then(connection => {
-				return sql => connection.execute(sql)
-					.then(data => data[0]);
-			});
+		options.connect = () => Promise.resolve()
+			.then(() => mysql.createConnection(options.uri))
+			.then(connection => sql => connection.execute(sql)
+				.then(data => data[0]));
 
-		super(opts);
+		super(options);
 	}
 }
 
