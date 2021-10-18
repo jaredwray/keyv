@@ -18,7 +18,7 @@ jobs:
         env:
           MYSQL_USER: mysql
           MYSQL_PASSWORD: mysql
-          MYSQL_DATABASE: mysql
+          MYSQL_DATABASE: keyv_test
           MYSQL_ROOT_PASSWORD: mysql
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
@@ -32,14 +32,6 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node }}
-
-      - name: Verify MariaDB connection
-        env:
-          PORT: ${{ job.services.mariadb.ports[3306] }}
-        run: |
-          while ! mysqladmin ping -h"127.0.0.1" -P"$PORT" --silent; do
-            sleep 1
-          done  
 
       - run: npm install
       - run: npm test
