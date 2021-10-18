@@ -12,7 +12,7 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:latest
+        image: mysql:latest
         ports:
           - 3306
         env:
@@ -25,6 +25,7 @@ jobs:
     strategy:
       matrix:
         node: [ '12', '14', '16' ]
+        
     name: Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v2
