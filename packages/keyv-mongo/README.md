@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-mongo/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-mongo?branch=master)
 [![npm](https://img.shields.io/npm/v/@keyv/mongo.svg)](https://www.npmjs.com/package/@keyv/mongo)
 
-MongoDB storage adapter for [Keyv](https://github.com/lukechilds/keyv).
+MongoDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 Uses TTL indexes to automatically remove expired documents. However [MongoDB doesn't guarantee data will be deleted immediately upon expiration](https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation), so expiry dates are revalidated in Keyv.
 
@@ -35,4 +35,4 @@ const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname', { collection
 
 ## License
 
-MIT © Luke Childs
+MIT © Jared Wray & Luke Childs
