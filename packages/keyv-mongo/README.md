@@ -1,4 +1,4 @@
-# @keyv/mongo [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
+# @keyv/mongo [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > MongoDB storage adapter for Keyv
 
