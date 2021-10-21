@@ -36,12 +36,12 @@
     "cache",
     "ttl"
   ],
-  "author": "Luke Childs <lukechilds123@gmail.com> (http://lukechilds.co.uk)",
+  "author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/lukechilds/keyv-mongo/issues"
+    "url": "https://github.com/jaredwray/keyv-mongo/issues"
   },
-  "homepage": "https://github.com/lukechilds/keyv-mongo",
+  "homepage": "https://github.com/jaredwray/keyv-mongo",
   "dependencies": {
     "mongojs": "^3",
     "pify": "^5.0.0"
