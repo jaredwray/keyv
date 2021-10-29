@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  keyv_postgres:
+    image: postgres:latest
+    command: postgres -c 'max_connections=200'
+    environment:
+      POSTGRES_DB: keyv_test
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+    - 5432:5432/tcp
+  keyv_mysql:
+    image: mysql:latest
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      MYSQL_DATABASE: keyv_test
+      MYSQL_USER: mysql
+  keyv_redis:
+    image: redis:latest
+    environment:
+      REDIS_HOST: redis
+    ports:
+      - 6379:6379
+  keyv_mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
