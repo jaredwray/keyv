@@ -33,7 +33,7 @@ jobs:
         run: npm run test:full
 
       - name: Generate Code Coverage Report
-        run: yarn report-coverage
+        run: yarn coverage
 
       - name: Code Coverage
         uses: codecov/codecov-action@v1.0.15
