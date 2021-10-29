@@ -22,10 +22,12 @@ jobs:
       
       - name: Start Services
         run: npm run test:services:start
+
+      - name: Install Dependencies  
+        run: npm install
         
-      - run: npm install
       - name: Test Keyv
-      - run: npm test
+        run: npm test
 
       - name: Test Storage Adapters
         run: npm run test:full
