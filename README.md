@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="250" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">
+	<img width="250" src="https://jaredwray.com/images/keyv.svg" alt="keyv">
 	<br>
 	<br>
 </h1>
@@ -142,6 +142,8 @@ The following are third-party storage adapters compatible with Keyv:
 - [quick-lru](https://github.com/sindresorhus/quick-lru) - Simple "Least Recently Used" (LRU) cache
 - [keyv-file](https://github.com/zaaack/keyv-file) - File system storage adapter for Keyv
 - [keyv-dynamodb](https://www.npmjs.com/package/keyv-dynamodb) - DynamoDB storage adapter for Keyv
+- [keyv-lru] (https://www.npmjs.com/package/keyv-lru) - LRU storage adapter for Keyv
+- [keyv-null] (https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
 - [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
 - [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
 - [keyv-memcache](https://github.com/jaredwray/keyv-memcache) - Memcache storage adapter for Keyv
@@ -285,4 +287,4 @@ Returns a promise which is resolved when the entries have been cleared.
 
 ## License
 
-MIT © Luke Childs
+MIT © Jared Wray & Luke Childs
