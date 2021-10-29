@@ -8,7 +8,7 @@
     "test:full": "xo && nyc ava --serial",
     "test:services:start": "docker-compose -f ./test/storage-adapters/services-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./test/storage-adapters/services-compose.yaml down -v",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov"
   },
   "xo": {
     "extends": "xo-lukechilds",
@@ -44,7 +44,7 @@
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
     "ava": "^2.2.0",
-    "coveralls": "^3.0.0",
+    "codecov": "^3.8.3",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "nyc": "^14.1.1",
     "this": "^1.0.2",
