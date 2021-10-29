@@ -31,3 +31,11 @@ jobs:
 
       - name: Test Storage Adapters
         run: npm run test:full
+
+      - name: Generate Code Coverage Report
+        run: yarn coverage
+
+      - name: Code Coverage
+        uses: codecov/codecov-action@v1.0.15
+        with:
+          token: ${{ secrets.CODECOV_KEY }}
