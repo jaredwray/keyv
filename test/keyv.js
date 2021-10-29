@@ -22,9 +22,9 @@ test.serial('Keyv passes tll info to stores', async t => {
 	t.plan(1);
 	const store = new Map();
 	const storeSet = store.set;
-	store.set = (key, val, ttl) => {
+	store.set = (key, value, ttl) => {
 		t.is(ttl, 100);
-		storeSet.call(store, key, val, ttl);
+		storeSet.call(store, key, value, ttl);
 	};
 
 	const keyv = new Keyv({ store });
