@@ -1,7 +1,8 @@
-import test from 'ava';
-import keyvTestSuite, { keyvOfficialTests } from '@keyv/test-suite';
-import Keyv from 'this';
-import KeyvPostgres from '@keyv/postgres';
+const test = require('ava');
+const keyvTestSuite = require('@keyv/test-suite').default;
+const { keyvOfficialTests } = require('@keyv/test-suite');
+const Keyv = require('this');
+const KeyvPostgres = require('@keyv/postgres');
 
 keyvOfficialTests(test, Keyv, 'postgresql://postgres:postgres@localhost:5432/keyv_test', 'postgresql://foo');
 
