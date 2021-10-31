@@ -44,7 +44,6 @@
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
     "ava": "^3.15.0",
-    "codecov": "^3.8.3",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "nyc": "^15.1.0",
     "this": "^1.0.2",
