@@ -25,8 +25,3 @@ services:
       REDIS_HOST: redis
     ports:
       - 6379:6379
-  keyv_mongo:
-    image: mongo
-    restart: always
-    ports:
-      - 27017:27017
