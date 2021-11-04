@@ -1,12 +1,9 @@
-version: "3"
+version: "3.8"
 
 services:
-  redis:
+  keyv_redis:
     image: redis:latest
-
-  test:
-    build: .
     environment:
       REDIS_HOST: redis
-    volumes:
-      - ./:/repo
+    ports:
+      - 6379:6379

@@ -5,9 +5,9 @@
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava",
-    "test:docker": "docker-compose up --build --abort-on-container-exit --exit-code-from test",
-    "posttest:docker": "docker-compose down --rmi local",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "test:services:start": "docker-compose -f ./test/redis-compose.yaml up -d",
+    "test:services:stop": "docker-compose -f ./test/redis-compose.yaml down -v",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov"
   },
   "xo": {
     "extends": "xo-lukechilds",
