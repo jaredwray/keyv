@@ -21,7 +21,7 @@ jobs:
           node-version: ${{ matrix.node }}
       
       - name: Start Database
-        run: npm run test:db:start
+        run: npm run test:services:start
         
       - run: npm install
       - run: npm test
