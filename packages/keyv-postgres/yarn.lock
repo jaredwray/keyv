@@ -262,10 +262,10 @@
   resolved "https://registry.yarnpkg.com/@istanbuljs/schema/-/schema-0.1.3.tgz#e45e384e4b8ec16bce2fd903af78450f6bf7ec98"
   integrity sha512-ZXRY4jNvVgSVQ8DL3LTcakaAtXwTVUxE81hslsyD2AtoXW/wVob10HkOJ1X/pAlcI7D+2YoZKg5do8G/w6RYgA==
 
-"@keyv/sql@1.1.2":
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/@keyv/sql/-/sql-1.1.2.tgz#1dd84a5c5ad2384df8934f0ddfe20ab81dc2a75d"
-  integrity sha1-HdhKXFrSOE34k08N3+IKuB3Cp10=
+"@keyv/sql@1.1.3":
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/@keyv/sql/-/sql-1.1.3.tgz#91ec7ec6f969b8ae0fde6e663d191b287d293025"
+  integrity sha512-k8AS/jIkCACFLJu8069ql4caIS/bWbx5K8tZwYsaBtYlDrFM0+H5ZiqZrudaoHNa9V0EVJsv7m1wz8bNzc7i1A==
   dependencies:
     sql "~0.78.0"
 
@@ -348,7 +348,7 @@
   resolved "https://registry.yarnpkg.com/@types/parse-json/-/parse-json-4.0.0.tgz#2f8bb441434d163b35fb8ffdccd7138927ffb8c0"
   integrity sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==
 
-"@typescript-eslint/eslint-plugin@*":
+"@typescript-eslint/eslint-plugin@^5.2.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/eslint-plugin/-/eslint-plugin-5.3.0.tgz#a55ae72d28ffeb6badd817fe4566c9cced1f5e29"
   integrity sha512-ARUEJHJrq85aaiCqez7SANeahDsJTD3AEua34EoQN9pHS6S5Bq9emcIaGGySt/4X2zSi+vF5hAH52sEen7IO7g==
@@ -374,7 +374,7 @@
     eslint-scope "^5.1.1"
     eslint-utils "^3.0.0"
 
-"@typescript-eslint/parser@*":
+"@typescript-eslint/parser@^5.2.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/parser/-/parser-5.3.0.tgz#7879f15e26d370ed3f653fb7dd06479531ed3ab9"
   integrity sha512-rKu/yAReip7ovx8UwOAszJVO5MgBquo8WjIQcp1gx4pYQCwYzag+I5nVNHO4MqyMkAo0gWt2gWUi+36gWAVKcw==
@@ -1418,7 +1418,7 @@ eslint-config-xo-lukechilds@^1.0.0:
   resolved "https://registry.yarnpkg.com/eslint-config-xo-lukechilds/-/eslint-config-xo-lukechilds-1.0.1.tgz#d27d018c0fac3dad95d0503fb4610d05e933f950"
   integrity sha512-L8irm/JYi33CXk2hhmyrfCVtBxyIaofYKtosJs7yhZWoizj+ZYhPQM57WNLr5pGD6S1jU5jSDSLH30BfSskJRg==
 
-eslint-config-xo-typescript@*:
+eslint-config-xo-typescript@^0.47.1:
   version "0.47.1"
   resolved "https://registry.yarnpkg.com/eslint-config-xo-typescript/-/eslint-config-xo-typescript-0.47.1.tgz#87b5865d8a3428fa26cc8dc3146ef4f712dfed46"
   integrity sha512-BkbzIltZCWp8QLekKJKG8zJ/ZGezD8Z9FaJ+hJ5PrAVUGkIPmxXLLEHCKS3ax7oOqZLYQiG+jyKfQDIEdTQgbg==
