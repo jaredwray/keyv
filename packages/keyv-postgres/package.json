@@ -8,7 +8,7 @@
     "test:services": "docker-compose -f ./test/postgres.yaml up -d && xo && nyc ava --serial && docker-compose -f ./test/postgres.yaml down",
     "test:services:start": "docker-compose -f ./test/postgres.yaml up -d",
     "test:services:stop": "docker-compose -f ./test/postgres.yaml down",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov"
   },
   "xo": {
     "extends": "xo-lukechilds",
@@ -51,7 +51,6 @@
   "devDependencies": {
     "@keyv/test-suite": "*",
     "ava": "^3.15.0",
-    "coveralls": "^3.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
     "nyc": "^15.1.0",
