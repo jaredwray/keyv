@@ -77,3 +77,6 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Code Coverage
+coverage.lcov
