@@ -1,4 +1,4 @@
-# @keyv/test-suite [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
+# @keyv/test-suite [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Test suite for Keyv API compliance
 
@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-test-suite/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-test-suite?branch=master)
 [![npm](https://img.shields.io/npm/v/@keyv/test-suite.svg)](https://www.npmjs.com/package/@keyv/test-suite)
 
-Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https://github.com/lukechilds/keyv) storage adapter for API compliance.
+Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https://github.com/jaredwray/keyv) storage adapter for API compliance.
 
 ## Usage
 
@@ -60,8 +60,8 @@ script: npm test
 
 ## Example
 
-Take a look at [keyv-redis](https://github.com/lukechilds/keyv-redis) for an example of an existing storage adapter using `@keyv/test-suite`.
+Take a look at [keyv-redis](https://github.com/jaredwray/keyv-redis) for an example of an existing storage adapter using `@keyv/test-suite`.
 
 ## License
 
-MIT © Luke Childs
+MIT © Jared Wray & Luke Childs
