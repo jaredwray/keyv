@@ -21,3 +21,11 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm install
       - run: npm test
+
+      - name: Generate Code Coverage Report
+        run: npm run coverage
+
+      - name: Code Coverage
+        uses: codecov/codecov-action@v1.0.15
+        with:
+          token: ${{ secrets.CODECOV_KEY }}
