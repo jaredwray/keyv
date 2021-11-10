@@ -10,7 +10,7 @@
     "build:map": "babel --source-maps=true -d dist src",
     "pretest": "npm run build:map",
     "test": "xo && nyc ava",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
     "prepublish": "npm run build"
   },
   "xo": {
