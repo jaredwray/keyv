@@ -3,8 +3,9 @@ dist
 
 ## Node
 
-#npm5
+#node managers
 package-lock.json
+yarn.lock
 
 # Logs
 logs
