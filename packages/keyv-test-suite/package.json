@@ -46,14 +46,14 @@
     "timekeeper": "^2.0.0"
   },
   "devDependencies": {
+    "@keyv/sqlite": "*",
     "ava": "^0.25.0",
     "babel-cli": "^6.24.1",
     "babel-preset-es2016-node4": "^6.0.1",
     "coveralls": "^3.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
-    "@keyv/sqlite": "*",
-    "nyc": "^11.0.3",
+    "nyc": "^15.1.0",
     "this": "^1.0.2",
     "xo": "^0.19.0"
   }
