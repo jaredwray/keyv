@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@keyv/sqlite": "*",
-    "ava": "^0.25.0",
+    "ava": "^3.15.0",
     "babel-cli": "^6.24.1",
     "babel-preset-es2016-node4": "^6.0.1",
     "coveralls": "^3.0.0",
