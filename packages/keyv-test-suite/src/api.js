@@ -33,6 +33,7 @@ const keyvApiTests = (test, Keyv, store) => {
 		} else {
 			tk.freeze(Date.now() + ttl + 1);
 		}
+
 		t.is(await keyv.get('foo'), undefined);
 		tk.reset();
 	});
