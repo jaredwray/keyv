@@ -53,7 +53,7 @@
     "ava": "^0.25.0",
     "coveralls": "^3.0.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
-    "keyv": "*",
+    "keyv": "4.0.4",
     "nyc": "^15.1.0",
     "requirable": "^1.0.1",
     "this": "^1.0.2",
