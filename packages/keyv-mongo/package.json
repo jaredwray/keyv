@@ -5,6 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava",
+    "test:services:start": "docker-compose -f ./test/services-compose.yaml up -d",
+    "test:services:stop": "docker-compose -f ./test/services-compose.yaml down -v",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {

@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  keyv_mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
