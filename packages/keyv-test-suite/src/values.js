@@ -37,14 +37,14 @@ const keyvValueTests = (test, Keyv, store) => {
 
 	test.serial('value can be a buffer', async t => {
 		const keyv = new Keyv({ store: store() });
-		const buf = Buffer.from('bar');
+		const buf = require('buffer').Buffer.from('bar');
 		await keyv.set('foo', buf);
 		t.true(buf.equals(await keyv.get('foo')));
 	});
 
 	test.serial('value can be an object containing a buffer', async t => {
 		const keyv = new Keyv({ store: store() });
-		const value = { buff: Buffer.from('buzz') };
+		const value = { buff: require('buffer').Buffer.from('buzz') };
 		await keyv.set('foo', value);
 		t.deepEqual(await keyv.get('foo'), value);
 	});
