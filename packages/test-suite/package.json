@@ -11,7 +11,8 @@
     "pretest": "npm run build:map",
     "test": "xo && nyc ava",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf dist"
   },
   "xo": {
     "extends": "xo-lukechilds",
