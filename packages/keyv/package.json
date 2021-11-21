@@ -1,0 +1,52 @@
+{
+  "name": "keyv",
+  "version": "4.0.4",
+  "description": "Simple key-value storage with support for multiple backends",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "xo && nyc ava --serial",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
+    "clean": "rimraf node_modules .nyc_output coverage.lcov"
+  },
+  "xo": {
+    "extends": "xo-lukechilds",
+    "rules": {
+      "unicorn/prefer-module": 0
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/keyv.git"
+  },
+  "keywords": [
+    "key",
+    "value",
+    "store",
+    "cache",
+    "ttl"
+  ],
+  "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/keyv/issues"
+  },
+  "homepage": "https://github.com/jaredwray/keyv",
+  "dependencies": {
+    "json-buffer": "3.0.1"
+  },
+  "devDependencies": {
+    "@keyv/mongo": "*",
+    "@keyv/mysql": "*",
+    "@keyv/postgres": "*",
+    "@keyv/redis": "*",
+    "@keyv/sqlite": "*",
+    "@keyv/test-suite": "*",
+    "ava": "^3.15.0",
+    "eslint-config-xo-lukechilds": "^1.0.0",
+    "nyc": "^15.1.0",
+    "rimraf": "^3.0.2",
+    "this": "^1.0.2",
+    "timekeeper": "^2.0.0",
+    "xo": "^0.46.3"
+  }
+}

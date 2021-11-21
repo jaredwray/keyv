@@ -26,7 +26,11 @@ services:
     ports:
       - 6379:6379
   keyv_mongo:
-    image: mongo
+    image: mongo:latest
     restart: always
     ports:
       - 27017:27017
+  keyv_memcached:
+    image: memcached:latest
+    ports:
+        - "11211:11211"
