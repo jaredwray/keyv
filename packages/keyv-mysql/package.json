@@ -5,8 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "test": "xo && nyc ava",
-    "test:db:start": "docker-compose -f ./test/mysql.yaml up -d",
-    "test:db:stop": "docker-compose -f ./test/mysql.yaml down -v && rm -rf ./test/.mysql-data",
+    "test:services:start": "docker-compose -f ./test/mysql.yaml up -d",
+    "test:services:stop": "docker-compose -f ./test/mysql.yaml down -v && rm -rf ./test/.mysql-data",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "xo": {

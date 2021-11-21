@@ -1,6 +1,6 @@
-version: '2'
+version: '3.8'
 services:
-  keyv_test:
+  keyv_mysql:
     image: mysql:latest
     command: --default-authentication-plugin=mysql_native_password
     restart: always
