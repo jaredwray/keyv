@@ -4,6 +4,7 @@ const Keyv = require('keyv');
 const KeyvSql = require('this');
 const sqlite3 = require('sqlite3');
 const pify = require('pify');
+const KeyvMysql = require('@keyv/mysql');
 
 class TestSqlite extends KeyvSql {
 	constructor(options) {
@@ -37,13 +38,14 @@ test('Default key data type is VARCHAR(255)', t => {
 });
 
 test('Do replacement if it is mysql', async t => {
-	const store = new TestSqlite();
+	const store = new KeyvMysql('mysql://root@localhost/keyv_test');
 	const options = {
 		store,
 		dialect: 'mysql',
 	};
 	const keyv = new Keyv(options);
 	t.is(await keyv.set('foo', 'bar'), true);
+	t.is(await keyv.get('foo'), 'bar');
 });
 
 test('keySize option overrides default', t => {
