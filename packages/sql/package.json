@@ -41,6 +41,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv-sql",
   "dependencies": {
+    "@keyv/mysql": "^1.1.5",
     "sql": "~0.78.0"
   },
   "devDependencies": {
