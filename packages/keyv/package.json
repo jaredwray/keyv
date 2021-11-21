@@ -6,7 +6,7 @@
   "scripts": {
     "test": "xo && nyc ava --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-    "clean": "rimraf node_modules .nyc_output coverage.lcov"
+    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
     "extends": "xo-lukechilds",
@@ -43,8 +43,8 @@
     "@keyv/test-suite": "*",
     "ava": "^3.15.0",
     "eslint-config-xo-lukechilds": "^1.0.0",
+    "eslint-plugin-promise": "^5.1.1",
     "nyc": "^15.1.0",
-    "rimraf": "^3.0.2",
     "this": "^1.0.2",
     "timekeeper": "^2.0.0",
     "xo": "^0.46.3"

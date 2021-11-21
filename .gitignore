@@ -1,5 +1,3 @@
-test/testdb.sqlite
-
 ## Node
 
 #npm5
@@ -79,3 +77,7 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+#Sqlite files
+*.sqlite
+packages/keyv/test/testdb.sqlite
