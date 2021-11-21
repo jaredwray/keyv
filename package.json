@@ -6,7 +6,7 @@
   "author": "Jared Wray <me@jaredwray.com>",
   "license": "MIT",
   "private": true,
-	"workspaces": [
+  "workspaces": [
     "packages/*"
   ],
   "scripts": {
