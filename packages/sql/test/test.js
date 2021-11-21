@@ -45,6 +45,7 @@ test('Do replacement if it is mysql', async t => {
 	};
 	const keyv = new Keyv(options);
 	t.is(await keyv.set('foo', 'bar'), true);
+	t.is(await keyv.get('foo'), 'bar');
 });
 
 test('keySize option overrides default', t => {
