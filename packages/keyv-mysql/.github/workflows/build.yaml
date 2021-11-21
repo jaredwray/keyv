@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      - run: npm run test:db:start
+      - run: npm run test:services:start
 
       - run: npm install
       - run: npm test
