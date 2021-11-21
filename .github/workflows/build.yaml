@@ -24,18 +24,16 @@ jobs:
         run: npm run test:services:start
 
       - name: Install Dependencies  
-        run: npm install
+        run: npm run build
         
-      - name: Test Keyv
-        run: npm test
-
-      - name: Test Storage Adapters
-        run: npm run test:full
+      - name: Test All Packages
+        run: npm run test
 
       - name: Generate Code Coverage Report
-        run: yarn coverage
+        run: npm run coverage
 
       - name: Code Coverage
         uses: codecov/codecov-action@v1.0.15
         with:
           token: ${{ secrets.CODECOV_KEY }}
+          files: ./packages/keyv/coverage.lcov
