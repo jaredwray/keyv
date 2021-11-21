@@ -21,19 +21,19 @@ jobs:
           node-version: ${{ matrix.node }}
       
       - name: Start Services
-        run: npm run test:services:start
+        run: yarn test:services:start
 
       - name: Install Dependencies  
-        run: npm run build
+        run: yarn build
         
-      - name: Test All Packages
-        run: npm run test
+      - name: Test Packages
+        run: yarn test
 
       - name: Generate Code Coverage Report
-        run: npm run coverage
+        run: yarn coverage
 
       - name: Code Coverage
-        uses: codecov/codecov-action@v1.0.15
+        uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_KEY }}
-          files: ./packages/keyv/coverage.lcov ./packages/sql/coverage.lcov
+          files: ./packages/keyv/coverage.lcov,./packages/sql/coverage.lcov,./packages/mysql/coverage.lcov
