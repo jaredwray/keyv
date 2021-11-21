@@ -31,8 +31,7 @@ class KeyvSql extends EventEmitter {
 		const createTable = this.entry.create().ifNotExists().toString();
 
 		const connected = this.opts.connect()
-			.then(query => query(createTable).then(() => query))
-			.catch(error => this.emit('error', error));
+			.then(query => query(createTable).then(() => query));
 
 		this.query = sqlString => connected
 			.then(query => query(sqlString));
