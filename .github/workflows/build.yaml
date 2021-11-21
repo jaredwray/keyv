@@ -33,7 +33,7 @@ jobs:
         run: yarn coverage
 
       - name: Code Coverage
-        uses: codecov/codecov-action@v1.0.15
+        uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_KEY }}
           files: ./packages/keyv/coverage.lcov,./packages/sql/coverage.lcov,./packages/mysql/coverage.lcov
