@@ -1,53 +1,20 @@
 {
-  "name": "keyv",
-  "version": "4.0.4",
-  "description": "Simple key-value storage with support for multiple backends",
-  "main": "src/index.js",
-  "scripts": {
-    "test": "xo && nyc ava test/keyv.js",
-    "test:full": "xo && nyc ava --serial",
-    "test:services:start": "docker-compose -f ./test/storage-adapters/services-compose.yaml up -d",
-    "test:services:stop": "docker-compose -f ./test/storage-adapters/services-compose.yaml down -v",
-    "coverage": "nyc report --reporter=text-lcov > coverage.lcov"
-  },
-  "xo": {
-    "extends": "xo-lukechilds",
-    "rules": {
-      "unicorn/prefer-module": 0
-    }
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jaredwray/keyv.git"
-  },
-  "keywords": [
-    "key",
-    "value",
-    "store",
-    "cache",
-    "ttl"
-  ],
-  "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+  "name": "@keyv/mono-repo",
+  "version": "1.0.0",
+  "description": "Keyv Mono Repo",
+  "repository": "https://github.com/jaredwray/keyv.git",
+  "author": "Jared Wray <me@jaredwray.com>",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/jaredwray/keyv/issues"
-  },
-  "homepage": "https://github.com/jaredwray/keyv",
-  "dependencies": {
-    "json-buffer": "3.0.1"
-  },
-  "devDependencies": {
-    "@keyv/mongo": "*",
-    "@keyv/mysql": "*",
-    "@keyv/postgres": "*",
-    "@keyv/redis": "*",
-    "@keyv/sqlite": "*",
-    "@keyv/test-suite": "*",
-    "ava": "^3.15.0",
-    "eslint-config-xo-lukechilds": "^1.0.0",
-    "nyc": "^15.1.0",
-    "this": "^1.0.2",
-    "timekeeper": "^2.0.0",
-    "xo": "^0.46.3"
+  "private": true,
+	"workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "lerna run test",
+    "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
+    "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
+    "coverage": "lerna run coverage",
+    "clean": "rimraf node_modules && lerna run clean",
+    "build": "lerna bootstrap"
   }
 }
