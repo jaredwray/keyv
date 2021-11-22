@@ -1,7 +1,14 @@
 const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
+const { keyvOfficialTests } = require('@keyv/test-suite');
 const Keyv = require('this');
 const tk = require('timekeeper');
+const KeyvSqlite = require('@keyv/sqlite');
+
+keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
+
+const store = () => new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000 });
+keyvTestSuite(test, Keyv, store);
 
 test.serial('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
@@ -123,6 +130,3 @@ test.serial('Keyv supports async serializer/deserializer', async t => {
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 });
-
-const store = () => new Map();
-keyvTestSuite(test, Keyv, store);
