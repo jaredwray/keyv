@@ -1,0 +1,59 @@
+{
+  "name": "@keyv/postgres",
+  "version": "1.0.18",
+  "description": "PostgreSQL storage adapter for Keyv",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "xo && nyc ava --serial",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
+    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
+  },
+  "xo": {
+    "extends": "xo-lukechilds",
+    "rules": {
+      "unicorn/prefer-module": 0
+    }
+  },
+  "ava": {
+    "require": [
+      "requirable"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lukechilds/keyv-postgres.git"
+  },
+  "keywords": [
+    "postgres",
+    "postgresql",
+    "sql",
+    "keyv",
+    "storage",
+    "adapter",
+    "key",
+    "value",
+    "store",
+    "cache",
+    "ttl"
+  ],
+  "author": "Luke Childs <lukechilds123@gmail.com> (http://lukechilds.co.uk)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lukechilds/keyv-postgres/issues"
+  },
+  "homepage": "https://github.com/lukechilds/keyv-postgres",
+  "dependencies": {
+    "@keyv/sql": "1.1.3",
+    "pg": "8.7.1"
+  },
+  "devDependencies": {
+    "@keyv/test-suite": "*",
+    "ava": "^3.15.0",
+    "eslint-config-xo-lukechilds": "^1.0.0",
+    "keyv": "*",
+    "nyc": "^15.1.0",
+    "requirable": "^1.0.4",
+    "this": "^1.0.2",
+    "xo": "^0.46.4"
+  }
+}
