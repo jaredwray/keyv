@@ -1,0 +1,6 @@
+version: '3.8'
+services:
+  keyv_memcached:
+    image: memcached:latest
+    ports:
+        - "11211:11211"
