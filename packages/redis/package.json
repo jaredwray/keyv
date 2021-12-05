@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jaredwray/keyv-redis.git"
+    "url": "git+https://github.com/jaredwray/keyv.git"
   },
   "keywords": [
     "redis",
@@ -37,9 +37,9 @@
   "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jaredwray/keyv-redis/issues"
+    "url": "https://github.com/jaredwray/keyv/issues"
   },
-  "homepage": "https://github.com/jaredwray/keyv-redis",
+  "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
     "ioredis": "^4.28.2"
   },
