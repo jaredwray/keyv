@@ -1,9 +1,0 @@
-version: "3.8"
-
-services:
-  keyv_redis:
-    image: redis:latest
-    environment:
-      REDIS_HOST: redis
-    ports:
-      - 6379:6379
