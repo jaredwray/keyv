@@ -1,6 +1,6 @@
 {
   "name": "@keyv/redis",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Redis storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jaredwray/keyv-redis.git"
+    "url": "git+https://github.com/jaredwray/keyv.git"
   },
   "keywords": [
     "redis",
@@ -37,11 +37,11 @@
   "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jaredwray/keyv-redis/issues"
+    "url": "https://github.com/jaredwray/keyv/issues"
   },
-  "homepage": "https://github.com/jaredwray/keyv-redis",
+  "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "ioredis": "^4.28.0"
+    "ioredis": "^4.28.2"
   },
   "devDependencies": {
     "@keyv/test-suite": "^1.6.12",
@@ -52,6 +52,6 @@
     "nyc": "^15.1.0",
     "requirable": "^1.0.5",
     "this": "^1.1.0",
-    "xo": "^0.46.4"
+    "xo": "^0.47.0"
   }
 }
