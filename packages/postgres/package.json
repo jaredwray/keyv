@@ -6,7 +6,7 @@
   "scripts": {
     "test": "xo && nyc ava --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
+    "clean": "rm -rf node_modules && rm -rf package-lock.json && rm -rf .nyc_output && rm -rf coverage.lcov"
   },
   "xo": {
     "extends": "xo-lukechilds",
