@@ -23,6 +23,9 @@ jobs:
       - name: Start Services
         run: npm run test:services:start
 
+      - name: Install Lastest NPM  
+        run: npm install -g npm@latest 
+
       - name: Install Dependencies  
         run: npm install       
         
