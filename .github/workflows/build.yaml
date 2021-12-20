@@ -21,16 +21,16 @@ jobs:
           node-version: ${{ matrix.node }}
       
       - name: Start Services
-        run: yarn test:services:start
+        run: npm run test:services:start
 
       - name: Install Dependencies  
-        run: yarn bootstrap
+        run: npm install       
         
       - name: Test Packages
-        run: yarn test
+        run: npm run test --workspaces
 
       - name: Generate Code Coverage Report
-        run: yarn coverage
+        run: npm run coverage --workspaces
 
       - name: Code Coverage
         uses: codecov/codecov-action@v2
