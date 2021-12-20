@@ -15,6 +15,6 @@
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
     "coverage": "lerna run coverage",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && lerna run clean",
-    "build": "lerna bootstrap"
+    "bootstrap": "lerna bootstrap"
   }
 }
