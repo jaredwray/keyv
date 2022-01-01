@@ -1,6 +1,6 @@
 {
   "name": "@keyv/mongo",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "MongoDB storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jaredwray/keyv-mongo.git"
+    "url": "git+https://github.com/jaredwray/keyv.git"
   },
   "keywords": [
     "mongo",
@@ -40,9 +40,9 @@
   "author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jaredwray/keyv-mongo/issues"
+    "url": "https://github.com/jaredwray/keyv/issues"
   },
-  "homepage": "https://github.com/jaredwray/keyv-mongo",
+  "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
     "mongojs": "^3",
     "pify": "^5.0.0"
@@ -50,10 +50,10 @@
   "devDependencies": {
     "@keyv/test-suite": "*",
     "ava": "^3.15.0",
-    "eslint-config-xo-lukechilds": "^1.0.0",
+    "eslint-config-xo-lukechilds": "^1.0.1",
     "keyv": "*",
     "nyc": "^15.1.0",
-    "requirable": "^1.0.1",
+    "requirable": "^1.0.5",
     "this": "^1.1.0",
     "xo": "^0.47.0"
   }
