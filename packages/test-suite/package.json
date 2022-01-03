@@ -47,7 +47,7 @@
   "homepage": "https://github.com/jaredwray/keyv-test-suite",
   "dependencies": {
     "delay": "^5.0.0",
-    "timekeeper": "^2.0.0"
+    "timekeeper": "^2.2.0"
   },
   "devDependencies": {
     "@keyv/sqlite": "*",
