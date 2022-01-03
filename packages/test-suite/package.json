@@ -54,7 +54,7 @@
     "ava": "^3.15.0",
     "babel-cli": "^6.26.0",
     "babel-preset-es2016-node4": "^6.0.1",
-    "eslint-config-xo-lukechilds": "^1.0.0",
+    "eslint-config-xo-lukechilds": "^1.0.1",
     "keyv": "*",
     "nyc": "^15.1.0",
     "this": "^1.1.0",
