@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/prefer-export-from */
 import keyvApiTests from './api.js';
 import keyvValueTests from './values.js';
 import keyvNamepsaceTests from './namespace.js';
@@ -15,4 +16,5 @@ export {
 	keyvNamepsaceTests,
 	keyvOfficialTests,
 };
+
 export default keyvTestSuite;
