@@ -57,7 +57,7 @@
     "eslint-config-xo-lukechilds": "^1.0.0",
     "keyv": "*",
     "nyc": "^15.1.0",
-    "this": "^1.0.2",
+    "this": "^1.1.0",
     "xo": "^0.47.0"
   }
 }
