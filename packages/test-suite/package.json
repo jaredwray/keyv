@@ -1,6 +1,6 @@
 {
   "name": "@keyv/test-suite",
-  "version": "1.6.12",
+  "version": "1.6.13",
   "description": "Test suite for Keyv API compliancy",
   "main": "dist/index.js",
   "scripts": {
