@@ -1,6 +1,6 @@
 {
   "name": "@keyv/postgres",
-  "version": "1.0.18",
+  "version": "1.1.0",
   "description": "PostgreSQL storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lukechilds/keyv-postgres.git"
+    "url": "git+https://github.com/jaredwray/keyv.git"
   },
   "keywords": [
     "postgres",
@@ -36,12 +36,12 @@
     "cache",
     "ttl"
   ],
-  "author": "Luke Childs <lukechilds123@gmail.com> (http://lukechilds.co.uk)",
+  "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/lukechilds/keyv-postgres/issues"
+    "url": "https://github.com/jaredwray/keyv/issues"
   },
-  "homepage": "https://github.com/lukechilds/keyv-postgres",
+  "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
     "@keyv/sql": "1.1.3",
     "pg": "8.7.1"
