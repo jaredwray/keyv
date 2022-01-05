@@ -1,4 +1,4 @@
-[<img width="100" align="right" src="docs/keyv_logo.svg" alt="keyv">](https://github.com/jaredwray/keyv-memcache)
+[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwray/keyv-memcache)
 
 # Keyv-Memcache
 _Memcache storage adapter for [Keyv](https://github.com/lukechilds/keyv)_
