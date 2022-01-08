@@ -1,6 +1,6 @@
 {
   "name": "@keyv/postgres",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "PostgreSQL storage adapter for Keyv",
   "main": "src/index.js",
   "scripts": {
