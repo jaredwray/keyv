@@ -50,7 +50,7 @@
     "@keyv/test-suite": "*",
     "ava": "^3.15.0",
     "eslint-config-xo-lukechilds": "^1.0.1",
-    "keyv": "4.0.4",
+    "keyv": "*",
     "nyc": "^15.1.0",
     "requirable": "^1.0.5",
     "this": "^1.1.0",
