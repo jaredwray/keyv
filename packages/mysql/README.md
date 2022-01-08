@@ -2,8 +2,8 @@
 
 > MySQL/MariaDB storage adapter for Keyv
 
-[![build](https://github.com/jaredwray/keyv-mysql/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv-mysql/actions/workflows/build.yaml)
-[![codecov](https://codecov.io/gh/jaredwray/keyv-mysql/branch/master/graph/badge.svg?token=nyJpM3zqzF)](https://codecov.io/gh/jaredwray/keyv-mysql)
+[![build](https://github.com/jaredwray/keyv/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/master/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/v/@keyv/mysql.svg)](https://www.npmjs.com/package/@keyv/mysql)
 
 MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).

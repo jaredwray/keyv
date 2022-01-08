@@ -2,8 +2,8 @@
 
 > MongoDB storage adapter for Keyv
 
-[![build](https://github.com/lukechilds/keyv-mongo/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-mongo/actions/workflows/build.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-mongo/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-mongo?branch=master)
+[![build](https://github.com/jaredwray/keyv/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/master/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/v/@keyv/mongo.svg)](https://www.npmjs.com/package/@keyv/mongo)
 
 MongoDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).

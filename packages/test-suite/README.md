@@ -2,8 +2,8 @@
 
 > Test suite for Keyv API compliance
 
-[![build](https://github.com/jaredwray/keyv-test-suite/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv-test-suite/actions/workflows/build.yaml)
-[![codecov](https://codecov.io/gh/jaredwray/keyv-test-suite/branch/master/graph/badge.svg?token=1LrVPh2uZ8)](https://codecov.io/gh/jaredwray/keyv-test-suite)
+[![build](https://github.com/jaredwray/keyv/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/master/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/v/@keyv/test-suite.svg)](https://www.npmjs.com/package/@keyv/test-suite)
 
 Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https://github.com/jaredwray/keyv) storage adapter for API compliance.

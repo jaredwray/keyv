@@ -2,8 +2,8 @@
 
 > SQLite storage adapter for Keyv
 
-[![build](https://github.com/lukechilds/keyv-sqlite/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-sqlite/actions/workflows/build.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-sqlite/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-sqlite?branch=master)
+[![build](https://github.com/jaredwray/keyv/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/master/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/v/@keyv/sqlite.svg)](https://www.npmjs.com/package/@keyv/sqlite)
 
 SQLite storage adapter for [Keyv](https://github.com/lukechilds/keyv).
