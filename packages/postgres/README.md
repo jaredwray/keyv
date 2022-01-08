@@ -2,8 +2,8 @@
 
 > PostgreSQL storage adapter for Keyv
 
-[![build](https://github.com/lukechilds/keyv-postgres/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-postgres/actions/workflows/build.yaml)
-[![codecov](https://codecov.io/gh/jaredwray/keyv-postgres/branch/master/graph/badge.svg?token=SDFRdh5gQU)](https://codecov.io/gh/jaredwray/keyv-postgres)
+[![build](https://github.com/jaredwray/keyv/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/master/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/v/@keyv/postgres.svg)](https://www.npmjs.com/package/@keyv/postgres)
 
 PostgreSQL storage adapter for [Keyv](https://github.com/lukechilds/keyv).
