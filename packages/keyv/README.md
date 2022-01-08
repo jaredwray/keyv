@@ -102,13 +102,13 @@ const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
 
 The official storage adapters are covered by [over 150 integration tests](https://github.com/jaredwray/keyv/actions/workflows/build.yaml) to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
 
-Database | Adapter | Native TTL | Status
----|---|---|---
-Redis | [@keyv/redis](https://github.com/lukechilds/keyv-redis) | Yes | [![build](https://github.com/lukechilds/keyv-redis/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-redis/actions/workflows/build.yaml) [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-redis/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-redis?branch=master)
-MongoDB | [@keyv/mongo](https://github.com/lukechilds/keyv-mongo) | Yes | [![build](https://github.com/lukechilds/keyv-mongo/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-mongo/actions/workflows/build.yaml) [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-mongo/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-mongo?branch=master)
-SQLite | [@keyv/sqlite](https://github.com/lukechilds/keyv-sqlite) | No | [![build](https://github.com/lukechilds/keyv-sqlite/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-sqlite/actions/workflows/build.yaml) [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-sqlite/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-sqlite?branch=master)
-PostgreSQL | [@keyv/postgres](https://github.com/lukechilds/keyv-postgres) | No | [![build](https://github.com/lukechilds/keyv-postgres/actions/workflows/build.yaml/badge.svg)](https://github.com/lukechilds/keyv-postgres/actions/workflows/build.yaml) [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-postgres/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-postgres?branch=master)
-MySQL | [@keyv/mysql](https://github.com/lukechilds/keyv-mysql) | No | [![build](https://github.com/jaredwray/keyv-mysql/actions/workflows/build.yaml/badge.svg)](https://github.com/jaredwray/keyv-mysql/actions/workflows/build.yaml) [![Coverage Status](https://coveralls.io/repos/github/lukechilds/keyv-mysql/badge.svg?branch=master)](https://coveralls.io/github/lukechilds/keyv-mysql?branch=master)
+Database | Adapter | Native TTL
+---|---|---
+Redis | [@keyv/redis](https://github.com/jaredwray/keyv/tree/master/packages/redis) | Yes
+MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/master/packages/mongo) | Yes 
+SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/packages/sqlite) | No 
+PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/packages/postgres) | No 
+MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mysql) | No 
 
 ## Third-party Storage Adapters
 
@@ -146,7 +146,8 @@ The following are third-party storage adapters compatible with Keyv:
 - [keyv-null](https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
 - [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
 - [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
-- [keyv-memcache](https://github.com/jaredwray/keyv-memcache) - Memcache storage adapter for Keyv
+- [keyv-memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) - Memcache storage adapter for Keyv
+- [keyv-azuretable](https://github.com/howlowck/keyv-azuretable) - Azure Table Storage/API adapter for Keyv
 
 ## Add Cache Support to your Module
 
