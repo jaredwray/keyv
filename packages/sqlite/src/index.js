@@ -3,7 +3,6 @@
 const EventEmitter = require('events');
 const sqlite3 = require('sqlite3');
 const pify = require('pify');
-const Sql = require('sql').Sql;
 
 class KeyvSqlite extends EventEmitter {
 	constructor(options) {
@@ -35,23 +34,7 @@ class KeyvSqlite extends EventEmitter {
 			keySize: 255,
 		}, options);
 
-		const sql = new Sql(options.dialect);
-
-		this.entry = sql.define({
-			name: this.opts.table,
-			columns: [
-				{
-					name: 'key',
-					primaryKey: true,
-					dataType: `VARCHAR(${Number(this.opts.keySize)})`,
-				},
-				{
-					name: 'value',
-					dataType: 'TEXT',
-				},
-			],
-		});
-		const createTable = this.entry.create().ifNotExists().toString();
+		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
 		const connected = this.opts.connect()
 			.then(query => query(createTable).then(() => query))
@@ -62,7 +45,7 @@ class KeyvSqlite extends EventEmitter {
 	}
 
 	get(key) {
-		const select = this.entry.select().where({ key }).toString();
+		const select = `SELECT * FROM ${this.opts.table} WHERE key = '${key}'`;
 		return this.query(select)
 			.then(rows => {
 				const row = rows[0];
@@ -75,13 +58,16 @@ class KeyvSqlite extends EventEmitter {
 	}
 
 	set(key, value) {
-		const upsert = this.entry.replace({ key, value }).toString();
+		const upsert = `INSERT INTO ${this.opts.table} (key, value)
+			VALUES('${key}', '${value}') 
+			ON CONFLICT(key) 
+			DO UPDATE SET value=excluded.value;`;
 		return this.query(upsert);
 	}
 
 	delete(key) {
-		const select = this.entry.select().where({ key }).toString();
-		const del = this.entry.delete().where({ key }).toString();
+		const select = `SELECT * FROM ${this.opts.table} WHERE key = '${key}'`;
+		const del = `DELETE FROM ${this.opts.table} WHERE key = '${key}'`;
 		return this.query(select)
 			.then(rows => {
 				const row = rows[0];
@@ -95,7 +81,7 @@ class KeyvSqlite extends EventEmitter {
 	}
 
 	clear() {
-		const del = this.entry.delete(this.entry.key.like(`${this.namespace}:%`)).toString();
+		const del = `DELETE FROM ${this.opts.table} WHERE key LIKE '${this.namespace}:%'`;
 		return this.query(del)
 			.then(() => undefined);
 	}
