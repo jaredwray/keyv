@@ -35,13 +35,10 @@
     "json-buffer": "3.0.1"
   },
   "devDependencies": {
-    "@keyv/mongo": "*",
-    "@keyv/mysql": "*",
-    "@keyv/postgres": "*",
-    "@keyv/redis": "*",
-    "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
     "ava": "^3.15.0",
+    "pify": "5.0.0",
+		"sqlite3": "^5.0.2",
     "eslint-config-xo-lukechilds": "^1.0.0",
     "eslint-plugin-promise": "^5.1.1",
     "nyc": "^15.1.0",
