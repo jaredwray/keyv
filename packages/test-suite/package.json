@@ -12,7 +12,7 @@
     "test": "xo && nyc ava",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
     "prepublish": "npm run build",
-    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf dist"
+    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf dist && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
     "extends": "xo-lukechilds",
@@ -50,7 +50,6 @@
     "timekeeper": "^2.2.0"
   },
   "devDependencies": {
-    "@keyv/sqlite": "*",
     "ava": "^3.15.0",
     "babel-cli": "^6.26.0",
     "babel-preset-es2016-node4": "^6.0.1",
