@@ -50,19 +50,13 @@ class KeyvMongo extends EventEmitter {
 							background: true,
 						},
 					);
-					this.store.createIndex(
-						{ expiresAt: 1 },
-						{
-							expireAfterSeconds: 0,
-							background: true,
-						},
-					);
 
 					for (const method of [
 						'updateOne',
 						'findOne',
 						'deleteOne',
 						'deleteMany',
+						'insertOne',
 					]) {
 						this.store[method] = pify(this.store[method].bind(this.store));
 					}
@@ -92,12 +86,11 @@ class KeyvMongo extends EventEmitter {
 		);
 	}
 
-	set(key, value, ttl) {
-		const expiresAt = typeof ttl === 'number' ? new Date(Date.now() + ttl) : null;
+	set(key, value) {
 		return this.connect.then(store =>
 			store.updateOne(
 				{ key: { $eq: key } },
-				{ $set: { key, value, expiresAt } },
+				{ $set: { key, value } },
 				{ upsert: true },
 			),
 		);
@@ -115,11 +108,11 @@ class KeyvMongo extends EventEmitter {
 		);
 	}
 
-	clear(namespace) {
+	clear() {
 		return this.connect.then(store =>
 			store
 				.deleteMany({
-					key: new RegExp(`^${namespace ? namespace + ':' : '.*'}`),
+					key: new RegExp(`^${this.namespace ? this.namespace + ':' : '.*'}`),
 				})
 				.then(() => undefined),
 		);
