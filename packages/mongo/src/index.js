@@ -23,8 +23,6 @@ class KeyvMongo extends EventEmitter {
 			{
 				url: 'mongodb://127.0.0.1:27017',
 				collection: 'keyv',
-				useNewUrlParser: true,
-				useUnifiedTopology: true,
 			},
 			url,
 			options,
