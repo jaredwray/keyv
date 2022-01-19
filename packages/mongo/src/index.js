@@ -4,8 +4,6 @@ const EventEmitter = require('events');
 const { MongoClient } = require('mongodb');
 const pify = require('pify');
 
-const keyvMongoKeys = new Set(['url', 'collection']);
-
 class KeyvMongo extends EventEmitter {
 	constructor(url, options) {
 		super();
@@ -27,13 +25,13 @@ class KeyvMongo extends EventEmitter {
 			url,
 			options,
 		);
-		const mongoOptions = Object.fromEntries(
-			Object.entries(this.opts).filter(
-				([key]) => !keyvMongoKeys.has(key),
-			),
-		);
 
-		this.client = new MongoClient(this.opts.url, mongoOptions);
+		try {
+			this.client = new MongoClient(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true });
+		} catch (error) {
+			console.log(error);
+			return;
+		}
 
 		let listeningEvents = false;
 		// Implementation from sql by lukechilds,
@@ -50,13 +48,19 @@ class KeyvMongo extends EventEmitter {
 							background: true,
 						},
 					);
+					this.store.createIndex(
+						{ expiresAt: 1 },
+						{
+							expireAfterSeconds: 0,
+							background: true,
+						},
+					);
 
 					for (const method of [
 						'updateOne',
 						'findOne',
 						'deleteOne',
 						'deleteMany',
-						'insertOne',
 					]) {
 						this.store[method] = pify(this.store[method].bind(this.store));
 					}
@@ -86,11 +90,12 @@ class KeyvMongo extends EventEmitter {
 		);
 	}
 
-	set(key, value) {
+	set(key, value, ttl) {
+		const expiresAt = typeof ttl === 'number' ? new Date(Date.now() + ttl) : null;
 		return this.connect.then(store =>
 			store.updateOne(
 				{ key: { $eq: key } },
-				{ $set: { key, value } },
+				{ $set: { key, value, expiresAt } },
 				{ upsert: true },
 			),
 		);
