@@ -28,7 +28,6 @@ class KeyvMongo extends EventEmitter {
 
 		this.client = new MongoClient(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true });
 
-		let listeningEvents = false;
 		// Implementation from sql by lukechilds,
 		this.connect = new Promise(resolve => {
 			this.client
@@ -60,15 +59,9 @@ class KeyvMongo extends EventEmitter {
 						this.store[method] = pify(this.store[method].bind(this.store));
 					}
 
-					if (!listeningEvents) {
-						this.client.on('error', error => this.emit('error', error));
-						listeningEvents = true;
-					}
+					this.client.on('error', error => this.emit('error', error));
 
 					resolve(this.store);
-				})
-				.catch(error => {
-					this.emit('error', error);
 				});
 		});
 	}
