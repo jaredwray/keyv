@@ -26,12 +26,7 @@ class KeyvMongo extends EventEmitter {
 			options,
 		);
 
-		try {
-			this.client = new MongoClient(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true });
-		} catch (error) {
-			console.log(error);
-			return;
-		}
+		this.client = new MongoClient(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true });
 
 		let listeningEvents = false;
 		// Implementation from sql by lukechilds,
