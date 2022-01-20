@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
-const { MongoClient } = require('mongodb');
+const mongoClient = require('mongodb').MongoClient;
 const pify = require('pify');
 
 class KeyvMongo extends EventEmitter {
@@ -26,13 +26,14 @@ class KeyvMongo extends EventEmitter {
 			options,
 		);
 
-		this.client = new MongoClient(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true });
-
 		// Implementation from sql by lukechilds,
 		this.connect = new Promise(resolve => {
-			this.client
-				.connect()
-				.then(client => {
+			mongoClient.connect(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true }
+				, (error, client) => {
+					if (error) {
+						this.emit('error', error);
+					}
+
 					this.db = client.db(this.opts.db);
 					this.store = this.db.collection(this.opts.collection);
 					this.store.createIndex(
@@ -58,8 +59,6 @@ class KeyvMongo extends EventEmitter {
 					]) {
 						this.store[method] = pify(this.store[method].bind(this.store));
 					}
-
-					this.client.on('error', error => this.emit('error', error));
 
 					resolve(this.store);
 				});

@@ -2,8 +2,11 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const Keyv = require('keyv');
 const KeyvMongo = require('this');
+const { keyvOfficialTests } = require('@keyv/test-suite');
 
 const mongoURL = 'mongodb://127.0.0.1:27017';
+
+keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo');
 
 const store = () => new KeyvMongo(mongoURL);
 keyvTestSuite(test, Keyv, store);
