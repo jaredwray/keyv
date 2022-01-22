@@ -28,10 +28,10 @@ class KeyvMongo extends EventEmitter {
 
 		// Implementation from sql by lukechilds,
 		this.connect = new Promise(resolve => {
-			mongoClient.connect(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true }
+			mongoClient.connect(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000 }
 				, (error, client) => {
 					if (error) {
-						this.emit('error', error);
+						return this.emit('error', error);
 					}
 
 					this.db = client.db(this.opts.db);
@@ -104,7 +104,7 @@ class KeyvMongo extends EventEmitter {
 		return this.connect.then(store =>
 			store
 				.deleteMany({
-					key: new RegExp(`^${this.namespace ? this.namespace + ':' : '.*'}`),
+					key: new RegExp(`^${this.namespace}:`),
 				})
 				.then(() => undefined),
 		);
