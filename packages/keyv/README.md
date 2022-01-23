@@ -286,6 +286,85 @@ Delete all entries in the current namespace.
 
 Returns a promise which is resolved when the entries have been cleared.
 
+# How to Contribute
+
+In this section of the documentation we will cover:
+
+1) How to set up this repository locally
+2) How to get started with running commands
+3) How to contribute changes using Pull Requests
+
+## Dependencies
+
+This package requires the following dependencies to run:
+
+1) [Yarn V1](https://yarnpkg.com/getting-started/install)
+2) [Lerna](https://lerna.js.org/)
+3) [Docker](https://docs.docker.com/get-docker/)
+
+## Setting up your workspace
+
+To contribute to this repository, start by setting up this project locally:
+
+1) Fork this repository into your Git account
+2) Clone the forked repository to your local directory using `git clone`
+3) Install any of the above missing dependencies
+
+## Launching the project
+
+Once the project is installed locally, you are ready to start up its services:
+
+1) Ensure that your Docker service is running.
+2) From the root directory of your project, run the `yarn` command in the command prompt to install yarn.
+3) Run the `yarn bootstrap` command to  install any necessary dependencies.
+4) Run `yarn test:services:start` to start up this project's Docker container. The container will launch all services within your workspace.
+
+## Available Commands
+
+Once the project is running, you can execute a variety of commands. The root workspace and each subpackage contain a `package.json` file with a  `scripts` field listing all the commands that can be executed from that directory. This project also supports native `yarn`, `lerna`, and `docker` commands.
+
+Here, we'll cover the primary commands that can be executed from the root directory. Unless otherwise noted, these commands can also be executed from a subpackage. If executed from a subpackage, they will only affect that subpackage, rather than the entire workspace.
+
+### `yarn`
+
+The `yarn` command installs yarn in the workspace.
+
+### `yarn bootstrap`
+
+The `yarn bootstrap` command installs all dependencies in the workspace.
+
+### `yarn test:services:start`
+
+The `yarn test:services:start` command starts up the project's Docker container, launching all services in the workspace. This command must be executed from the root directory.
+
+### `yarn test:services:stop`
+
+The `yarn test:services:stop` command brings down the project's Docker container, halting all services. This command must be executed from the root directory.
+
+### `yarn test`
+
+The `yarn test` command runs all tests in the workspace.
+
+### `yarn clean`
+
+The `yarn clean` command removes yarn and all dependencies installed by yarn. After executing this command, you must repeat the steps in *Setting up your workspace* to rebuild your workspace.
+
+## Contributing Changes
+
+Now that you've set up your workspace, you're ready to contribute changes to the `keyv` repository.
+
+1) Make any changes that you would like to contribute in your local workspace.
+2) After making these changes, ensure that the project's tests still pass by executing the `yarn test` command in the root directory.
+3) Commit your changes and push them to your forked repository.
+4) Navigate to the original `keyv` repository and go the *Pull Requests* tab.
+5) Click the *New pull request* button, and open a pull request for the branch in your repository that contains your changes.
+6) Once your pull request is created, ensure that all checks have passed and that your branch has no conflicts with the base branch. If there are any issues, resolve these changes in your local repository, and then commit and push them to git.
+7) Similarly, respond to any reviewer comments or requests for changes by making edits to your local repository and pushing them to Git.
+8) Once the pull request has been reviewed, those with write access to the branch will be able to merge your changes into the `keyv` repository.
+
+If you need more information on the steps to create a pull request, you can find a detailed walkthrough in the [Github documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)
+
+
 ## License
 
 MIT © Jared Wray & Luke Childs
