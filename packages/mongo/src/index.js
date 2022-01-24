@@ -4,6 +4,7 @@ const EventEmitter = require('events');
 const mongoClient = require('mongodb').MongoClient;
 const pify = require('pify');
 
+const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri']);
 class KeyvMongo extends EventEmitter {
 	constructor(url, options) {
 		super();
@@ -26,9 +27,15 @@ class KeyvMongo extends EventEmitter {
 			options,
 		);
 
+		const mongoOptions = Object.fromEntries(
+			Object.entries(this.opts).filter(
+				([k]) => !keyvMongoKeys.has(k),
+			),
+		);
+
 		// Implementation from sql by lukechilds,
 		this.connect = new Promise(resolve => {
-			mongoClient.connect(this.opts.url, { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000 }
+			mongoClient.connect(this.opts.url, mongoOptions
 				, (error, client) => {
 					if (error) {
 						return this.emit('error', error);

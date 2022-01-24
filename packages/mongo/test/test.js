@@ -4,11 +4,13 @@ const Keyv = require('keyv');
 const KeyvMongo = require('this');
 const { keyvOfficialTests } = require('@keyv/test-suite');
 
+const options = { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000 };
+
 const mongoURL = 'mongodb://127.0.0.1:27017';
 
-keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo');
+keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo', options);
 
-const store = () => new KeyvMongo(mongoURL);
+const store = () => new KeyvMongo(mongoURL, options);
 keyvTestSuite(test, Keyv, store);
 
 test('default options', t => {
