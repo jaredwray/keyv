@@ -35,6 +35,15 @@ test('Collection option merges into default options', t => {
 	});
 });
 
+test('useGridFS option merges into default options', t => {
+	const store = new KeyvMongo({ useGridFS: true, collection: 'foo' });
+	t.deepEqual(store.opts, {
+		url: mongoURL,
+		useGridFS: true,
+		collection: 'foo',
+	});
+});
+
 test('Collection option merges into default options if URL is passed', t => {
 	const store = new KeyvMongo(mongoURL, { collection: 'foo' });
 	t.deepEqual(store.opts, {
