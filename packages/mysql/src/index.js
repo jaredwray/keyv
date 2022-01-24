@@ -17,7 +17,7 @@ class KeyvMysql extends EventEmitter {
 		}, options);
 
 		options.connect = () => Promise.resolve()
-			.then(() => mysql.createConnection(options.uri))
+			.then(() => mysql.createPool(options.uri))
 			.then(connection => sql => connection.execute(sql)
 				.then(data => data[0]));
 
