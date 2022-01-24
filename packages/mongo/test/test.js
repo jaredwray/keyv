@@ -2,10 +2,15 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const Keyv = require('keyv');
 const KeyvMongo = require('this');
+const { keyvOfficialTests } = require('@keyv/test-suite');
+
+const options = { useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000 };
 
 const mongoURL = 'mongodb://127.0.0.1:27017';
 
-const store = () => new KeyvMongo(mongoURL);
+keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo', options);
+
+const store = () => new KeyvMongo(mongoURL, options);
 keyvTestSuite(test, Keyv, store);
 
 test('default options', t => {
@@ -39,6 +44,11 @@ test('Collection option merges into default options if URL is passed', t => {
 });
 
 test('.delete() with no args doesn\'t empty the collection', async t => {
-	const store = new KeyvMongo('foo'); // Make sure we don't actually connect
+	const store = new KeyvMongo('mongodb://foo'); // Make sure we don't actually connect
 	t.false(await store.delete());
+});
+
+test('.delete() with key as number', async t => {
+	const store = new KeyvMongo(mongoURL, { collection: 'foo' }); // Make sure we don't actually connect
+	t.false(await store.delete(123));
 });
