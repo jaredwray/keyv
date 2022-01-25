@@ -183,22 +183,10 @@ class KeyvMongo extends EventEmitter {
 		}
 
 		if (this.opts.useGridFS) {
-			const del = async () => {
-				const file = await this.bucket.find({
-					filename: key,
-				}).next();
-				if (file) {
-					await this.bucket.delete(file._id);
-					return true;
-				}
-			};
-
-			del();
-
 			return this.connect.then(client => {
 				client.bucket.find({ filename: key }).then(file => {
 					if (file) {
-						client.bucket.delete(file._id);
+						client.bucket.delete(file._id).then(() => true);
 					} else {
 						return false;
 					}
@@ -225,6 +213,26 @@ class KeyvMongo extends EventEmitter {
 				})
 				.then(() => undefined),
 		);
+	}
+
+	clearExpired() {
+		return this.connect.then(client => {
+			client.bucket.find({
+				'metadata.expiresAt': {
+					$lte: new Date(Date.now()),
+				},
+			}).then(expiredFiles => Promise.all(expiredFiles.map(file => client.bucket.delete(file._id).then(() => true))));
+		});
+	}
+
+	clearUnusedFor(seconds) {
+		return this.connect.then(client => {
+			client.bucket.find({
+				'metadata.lastAccessed': {
+					$lte: new Date(Date.now() - (seconds * 1000)),
+				},
+			}).then(expiredFiles => Promise.all(expiredFiles.map(file => client.bucket.delete(file._id).then(() => true))));
+		});
 	}
 }
 
