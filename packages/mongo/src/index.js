@@ -75,6 +75,12 @@ class KeyvMongo extends EventEmitter {
 							this.store[method] = pify(this.store[method].bind(this.store));
 						}
 
+						for (const method of [
+							'find',
+						]) {
+							this.bucket[method] = pify(this.bucket[method].bind(this.bucket));
+						}
+
 						resolve({ bucket: this.bucket, store: this.store });
 					} else {
 						this.store = this.db.collection(this.opts.collection);
