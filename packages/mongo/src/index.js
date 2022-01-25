@@ -1,6 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
+const Buffer = require('buffer').Buffer;
 const mongoClient = require('mongodb').MongoClient;
 const GridFSBucket = require('mongodb').GridFSBucket;
 const pify = require('pify');
@@ -34,6 +35,12 @@ class KeyvMongo extends EventEmitter {
 			),
 		);
 
+		this.opts = Object.fromEntries(
+			Object.entries(this.opts).filter(
+				([k]) => keyvMongoKeys.has(k),
+			),
+		);
+
 		// Implementation from sql by lukechilds,
 		this.connect = new Promise(resolve => {
 			mongoClient.connect(this.opts.url, mongoOptions
@@ -43,23 +50,32 @@ class KeyvMongo extends EventEmitter {
 					}
 
 					this.db = client.db(this.opts.db);
-					if (this.opts.usGridFS) {
+					if (this.opts.useGridFS) {
 						this.bucket = new GridFSBucket(this.db, {
 							readPreference: this.opts.readPreference || 'primary',
 							bucketName: this.opts.collection,
 						});
-						this.db.collection(this.opts.collection + '.files').createIndex({
+						this.store = this.db.collection(this.opts.collection + '.files');
+						this.store.createIndex({
 							filename: 'hashed',
 						});
-						this.db.collection(this.opts.collection + '.files').createIndex({
+						this.store.createIndex({
 							uploadDate: -1,
 						});
-						this.db.collection(this.opts.collection + '.files').createIndex({
+						this.store.createIndex({
 							'metadata.expiresAt': 1,
 						});
-						this.db.collection(this.opts.collection + '.files').createIndex({
+						this.store.createIndex({
 							'metadata.lastAccessed': 1,
 						});
+
+						for (const method of [
+							'updateOne',
+						]) {
+							this.store[method] = pify(this.store[method].bind(this.store));
+						}
+
+						resolve({ bucket: this.bucket, store: this.store });
 					} else {
 						this.store = this.db.collection(this.opts.collection);
 						this.store.createIndex(
@@ -94,28 +110,28 @@ class KeyvMongo extends EventEmitter {
 
 	get(key) {
 		if (this.opts.useGridFS) {
-			this.db.collection(this.opts.collection + '.files').updateOne({
-				filename: key,
-			}, {
-				$set: {
-					'metadata.lastAccessed': new Date(),
-				},
-			});
-
-			const stream = this.bucket.openDownloadStreamByName(key);
-			return new Promise(resolve => {
-				let resp = [];
-				stream.on('error', error => {
-					this.emit('error', error);
+			return this.connect.then(client => {
+				client.store.updateOne({
+					filename: key,
+				}, {
+					$set: {
+						'metadata.lastAccessed': new Date(),
+					},
 				});
 
-				stream.on('end', () => {
-					resp = Buffer.concat(resp).toString('utf-8');
-					resolve(resp);
-				});
+				const stream = client.bucket.openDownloadStreamByName(key);
+				return new Promise(resolve => {
+					let resp = [];
+					stream.on('error', () => undefined);
 
-				stream.on('data', chunk => {
-					resp.push(chunk);
+					stream.on('end', () => {
+						resp = Buffer.concat(resp).toString('utf-8');
+						resolve(resp);
+					});
+
+					stream.on('data', chunk => {
+						resp.push(chunk);
+					});
 				});
 			});
 		}
@@ -133,19 +149,22 @@ class KeyvMongo extends EventEmitter {
 
 	set(key, value, ttl) {
 		const expiresAt = typeof ttl === 'number' ? new Date(Date.now() + ttl) : null;
-		if (this.opts.usGridFS) {
-			const stream = this.bucket.openUploadStream(key, {
-				metadata: {
-					expiresAt,
-					lastAccessed: new Date(),
-				},
-			});
 
-			return new Promise(resolve => {
-				stream.on('finish', () => {
-					resolve(stream);
+		if (this.opts.useGridFS) {
+			return this.connect.then(client => {
+				const stream = client.bucket.openUploadStream(key, {
+					metadata: {
+						expiresAt,
+						lastAccessed: new Date(),
+					},
 				});
-				stream.end(value);
+
+				return new Promise(resolve => {
+					stream.on('finish', () => {
+						resolve(stream);
+					});
+					stream.end(value);
+				});
 			});
 		}
 
@@ -162,6 +181,31 @@ class KeyvMongo extends EventEmitter {
 		if (typeof key !== 'string') {
 			return Promise.resolve(false);
 		}
+
+		if (this.opts.useGridFS) {
+			const del = async () => {
+				const file = await this.bucket.find({
+					filename: key,
+				}).next();
+				if (file) {
+					await this.bucket.delete(file._id);
+					return true;
+				}
+			};
+
+			del();
+
+			return this.connect.then(client => {
+				client.bucket.find({ filename: key }).then(file => {
+					if (file) {
+						client.bucket.delete(file._id);
+					} else {
+						return false;
+					}
+				});
+			});
+		}
+
 		return this.connect.then(store =>
 			store
 				.deleteOne({ key: { $eq: key } })
@@ -170,6 +214,10 @@ class KeyvMongo extends EventEmitter {
 	}
 
 	clear() {
+		if (this.opts.useGridFS) {
+			return this.connect.then(client => client.bucket.drop().then(() => undefined));
+		}
+
 		return this.connect.then(store =>
 			store
 				.deleteMany({

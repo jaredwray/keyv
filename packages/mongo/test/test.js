@@ -58,6 +58,33 @@ test('.delete() with no args doesn\'t empty the collection', async t => {
 });
 
 test('.delete() with key as number', async t => {
-	const store = new KeyvMongo(mongoURL, { collection: 'foo' }); // Make sure we don't actually connect
+	const store = new KeyvMongo(mongoURL, { collection: 'foo' });
 	t.false(await store.delete(123));
+});
+
+test.serial('Stores value in GridFS', async t => {
+	const store = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	const result = await store.set('key1', 'keyv1');
+	const get = await store.get('key1');
+	t.is(result.filename, 'key1');
+	t.is(get, 'keyv1');
+});
+
+test.serial('Gets value from GridFS', async t => {
+	const store = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	const result = await store.get('key1');
+	t.is(result, 'keyv1');
+});
+
+test.serial('Stores value with TTL in GridFS', async t => {
+	const store = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	const result = await store.set('key1', 'keyv1', 0);
+	t.is(result.filename, 'key1');
+	await store.clear();
 });
