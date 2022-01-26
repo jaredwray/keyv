@@ -238,8 +238,7 @@ class KeyvMongo extends EventEmitter {
 					$lte: new Date(Date.now()),
 				},
 			}).toArray()
-			.then(expiredFiles => Promise.all(expiredFiles.map(file => client.bucket.delete(file._id))).then(() => true)
-			.catch(() => false));
+			.then(expiredFiles => Promise.all(expiredFiles.map(file => client.bucket.delete(file._id))).then(() => true));
 		});
 	}
 
@@ -259,8 +258,7 @@ class KeyvMongo extends EventEmitter {
 					$lte: new Date(Date.now() - (seconds * 1000)),
 				},
 			}).toArray()
-			.then(lastAccessedFiles => Promise.all(lastAccessedFiles.map(file => client.bucket.delete(file._id))).then(() => true)
-			.catch(() => false));
+			.then(lastAccessedFiles => Promise.all(lastAccessedFiles.map(file => client.bucket.delete(file._id))).then(() => true);
 		});
 	}
 }
