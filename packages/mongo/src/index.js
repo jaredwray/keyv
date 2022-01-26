@@ -258,7 +258,7 @@ class KeyvMongo extends EventEmitter {
 					$lte: new Date(Date.now() - (seconds * 1000)),
 				},
 			}).toArray()
-			.then(lastAccessedFiles => Promise.all(lastAccessedFiles.map(file => client.bucket.delete(file._id))).then(() => true);
+			.then(lastAccessedFiles => Promise.all(lastAccessedFiles.map(file => client.bucket.delete(file._id))).then(() => true));
 		});
 	}
 }
