@@ -77,11 +77,12 @@ class KeyvMongo extends EventEmitter {
 
 						for (const method of [
 							'find',
+							'drop',
 						]) {
 							this.bucket[method] = pify(this.bucket[method].bind(this.bucket));
 						}
 
-						resolve({ bucket: this.bucket, store: this.store });
+						resolve({ bucket: this.bucket, store: this.store, db: this.db });
 					} else {
 						this.store = this.db.collection(this.opts.collection);
 						this.store.createIndex(
@@ -128,7 +129,7 @@ class KeyvMongo extends EventEmitter {
 				const stream = client.bucket.openDownloadStreamByName(key);
 				return new Promise(resolve => {
 					let resp = [];
-					stream.on('error', () => undefined);
+					stream.on('error', () => resolve());
 
 					stream.on('end', () => {
 						resp = Buffer.concat(resp).toString('utf-8');
@@ -190,13 +191,13 @@ class KeyvMongo extends EventEmitter {
 
 		if (this.opts.useGridFS) {
 			return this.connect.then(client => {
-				client.bucket.find({ filename: key }).then(file => {
-					if (file) {
-						client.bucket.delete(file._id).then(() => true);
-					} else {
-						return false;
-					}
+				const connection = client.db;
+				const bucket = new GridFSBucket(connection, {
+					bucketName: this.opts.collection,
 				});
+				return bucket.find({ filename: key }).toArray()
+					.then(files => client.bucket.delete(files[0]._id).then(() => true))
+					.catch(() => false);
 			});
 		}
 
@@ -222,22 +223,44 @@ class KeyvMongo extends EventEmitter {
 	}
 
 	clearExpired() {
+		if (!this.opts.useGridFS) {
+			return false;
+		}
+
 		return this.connect.then(client => {
-			client.bucket.find({
+			const connection = client.db;
+			const bucket = new GridFSBucket(connection, {
+				bucketName: this.opts.collection,
+			});
+
+			return bucket.find({
 				'metadata.expiresAt': {
 					$lte: new Date(Date.now()),
 				},
-			}).then(expiredFiles => Promise.all(expiredFiles.map(file => client.bucket.delete(file._id).then(() => true))));
+			}).toArray()
+			.then(expiredFiles => Promise.all(expiredFiles.map(file => client.bucket.delete(file._id))).then(() => true)
+			.catch(() => false));
 		});
 	}
 
 	clearUnusedFor(seconds) {
+		if (!this.opts.useGridFS) {
+			return false;
+		}
+
 		return this.connect.then(client => {
-			client.bucket.find({
+			const connection = client.db;
+			const bucket = new GridFSBucket(connection, {
+				bucketName: this.opts.collection,
+			});
+
+			return bucket.find({
 				'metadata.lastAccessed': {
 					$lte: new Date(Date.now() - (seconds * 1000)),
 				},
-			}).then(expiredFiles => Promise.all(expiredFiles.map(file => client.bucket.delete(file._id).then(() => true))));
+			}).toArray()
+			.then(lastAccessedFiles => Promise.all(lastAccessedFiles.map(file => client.bucket.delete(file._id))).then(() => true)
+			.catch(() => false));
 		});
 	}
 }

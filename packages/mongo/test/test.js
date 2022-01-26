@@ -66,7 +66,7 @@ test.serial('Stores value in GridFS', async t => {
 	const store = new KeyvMongo(Object.assign({
 		useGridFS: true,
 	}, options));
-	const result = await store.set('key1', 'keyv1');
+	const result = await store.set('key1', 'keyv1', 0);
 	const get = await store.get('key1');
 	t.is(result.filename, 'key1');
 	t.is(get, 'keyv1');
@@ -88,13 +88,20 @@ test.serial('Deletes value from GridFS', async t => {
 	t.is(result, true);
 });
 
+test.serial('Deletes non existent value from GridFS', async t => {
+	const store = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	const result = await store.delete('no-existent-value');
+	t.is(result, false);
+});
+
 test.serial('Stores value with TTL in GridFS', async t => {
 	const store = new KeyvMongo(Object.assign({
 		useGridFS: true,
 	}, options));
 	const result = await store.set('key1', 'keyv1', 0);
 	t.is(result.filename, 'key1');
-	await store.clear();
 });
 
 test.serial('Clears expired value from GridFS', async t => {
@@ -111,6 +118,18 @@ test.serial('Clears unused files from GridFS', async t => {
 	}, options));
 	const cleared = await store.clearUnusedFor(5);
 	t.is(cleared, true);
+});
+
+test.serial('Clears expired value only when GridFS options is true', async t => {
+	const store = new KeyvMongo(Object.assign(options));
+	const cleared = await store.clearExpired();
+	t.is(cleared, false);
+});
+
+test.serial('Clears unused files only when GridFS options is true', async t => {
+	const store = new KeyvMongo(Object.assign(options));
+	const cleared = await store.clearUnusedFor(5);
+	t.is(cleared, false);
 });
 
 test.serial('Gets non-existent file and return should be undefined', async t => {
