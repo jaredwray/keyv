@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mongo",
-	"version": "1.2.3",
+	"version": "2.0.0",
 	"description": "MongoDB storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
@@ -44,7 +44,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mongodb": "^4.3.0",
+		"mongodb": "^4.3.1",
 		"pify": "^5.0.0"
 	},
 	"devDependencies": {
