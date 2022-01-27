@@ -1,6 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
+const { Etcd3 } = require('etcd3');
 
 class KeyvEtcd extends EventEmitter {
 	constructor(url, options) {
@@ -15,37 +16,32 @@ class KeyvEtcd extends EventEmitter {
 			url = Object.assign({ url: url.uri }, url);
 		}
 
-		options = Object.assign({
-			dialect: 'etcd',
-			uri: 'etcd://:memory:',
-		}, options);
-		options.db = options.uri.replace(/^etcd:\/\//, '');
-
 		this.opts = Object.assign(
 			{
-				url: 'etcd://127.0.0.1:2379',
-				collection: 'keyv',
+				url: '127.0.0.1:2379'
 			},
 			url,
 			options,
 		);
 
-		console.log(this.opts);
+		this.client = new Etcd3(options = { hosts: this.opts.url });
 	}
 
 	get(key) {
-		console.log(key);
+		return this.client.get(key);
 	}
 
-	set(key, value, ttl) {
-		console.log(key + value + ttl);
+	set(key, value) {
+		return this.client.put(key).value(value);
 	}
 
 	delete(key) {
-		console.log(key);
+		return this.client.delete().key(key).then(() => true);
 	}
 
-	clear() {}
+	clear() {
+		return this.client.delete().all().then(() => undefined);
+	}
 }
 
 module.exports = KeyvEtcd;

@@ -34,3 +34,7 @@ services:
     image: memcached:latest
     ports:
         - "11211:11211"
+  keyv_etcd:
+    image: bitnami/etcd:lastest
+    ports:
+        - "2379:2379"
