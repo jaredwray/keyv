@@ -47,4 +47,4 @@ const keyvNamepsaceTests = (test, Keyv, store) => {
 	});
 };
 
-export default keyvNamepsaceTests;
+module.exports = keyvNamepsaceTests;

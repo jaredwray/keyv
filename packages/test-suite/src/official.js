@@ -17,4 +17,4 @@ const keyvOfficialTests = (test, Keyv, goodUri, badUri, options = {}) => {
 	});
 };
 
-export default keyvOfficialTests;
+module.exports = keyvOfficialTests;
