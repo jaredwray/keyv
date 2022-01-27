@@ -7,7 +7,6 @@ test('default options', t => {
 	const store = new KeyvEtcd();
 	t.deepEqual(store.opts, {
 		url: etcdURL,
-		collection: 'keyv',
 	});
 });
 
