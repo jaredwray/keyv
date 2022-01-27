@@ -35,6 +35,6 @@ services:
     ports:
         - "11211:11211"
   keyv_etcd:
-    image: bitnami/etcd:lastest
+    image: bitnami/etcd:latest
     ports:
         - "2379:2379"
