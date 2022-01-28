@@ -1,5 +1,6 @@
 const test = require('ava');
-const { keyvTestSuite, keyvOfficialTests } = require('@keyv/test-suite');
+const keyvTestSuite = require('@keyv/test-suite').default;
+const { keyvOfficialTests } = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const KeyvMysql = require('this');
 

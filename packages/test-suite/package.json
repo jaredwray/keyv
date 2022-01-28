@@ -5,7 +5,7 @@
 	"main": "src/index.js",
 	"type": "commonjs",
 	"scripts": {
-		"test": "xo --fix && nyc ava",
+		"test": "xo && nyc ava",
 		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf dist && rm -rf ./test/testdb.sqlite"
 	},

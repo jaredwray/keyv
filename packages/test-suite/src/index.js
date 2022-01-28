@@ -10,10 +10,9 @@ const keyvTestSuite = (test, Keyv, store) => {
 	keyvNamepsaceTests(test, Keyv, store);
 };
 
-module.exports = {
-	keyvApiTests,
-	keyvValueTests,
-	keyvNamepsaceTests,
-	keyvOfficialTests,
-	keyvTestSuite,
-};
+exports.keyvApiTests = keyvApiTests;
+exports.keyvValueTests = keyvValueTests;
+exports.keyvNamepsaceTests = keyvNamepsaceTests;
+exports.keyvOfficialTests = keyvOfficialTests;
+
+exports.default = keyvTestSuite;
