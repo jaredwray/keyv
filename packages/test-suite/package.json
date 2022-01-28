@@ -1,62 +1,50 @@
 {
-  "name": "@keyv/test-suite",
-  "version": "1.6.15",
-  "description": "Test suite for Keyv API compliancy",
-  "main": "dist/index.js",
-  "scripts": {
-    "prebuild": "rm -rf dist",
-    "build": "babel -d dist src",
-    "prebuild:map": "npm run prebuild",
-    "build:map": "babel --source-maps=true -d dist src",
-    "pretest": "npm run build:map",
-    "test": "xo && nyc ava",
-    "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-    "prepublish": "npm run build",
-    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf dist && rm -rf ./test/testdb.sqlite"
-  },
-  "xo": {
-    "extends": "xo-lukechilds",
-    "rules": {
-      "unicorn/prefer-module": 0
-    }
-  },
-  "babel": {
-    "presets": [
-      "es2016-node4"
-    ]
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jaredwray/keyv.git"
-  },
-  "keywords": [
-    "test",
-    "suite",
-    "tests",
-    "key",
-    "value",
-    "store",
-    "cache",
-    "ttl"
-  ],
-  "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/jaredwray/keyv/issues"
-  },
-  "homepage": "https://github.com/jaredwray/keyv",
-  "dependencies": {
-    "delay": "^5.0.0",
-    "timekeeper": "^2.2.0"
-  },
-  "devDependencies": {
-    "ava": "^3.15.0",
-    "babel-cli": "^6.26.0",
-    "babel-preset-es2016-node4": "^6.0.1",
-    "eslint-config-xo-lukechilds": "^1.0.1",
-    "keyv": "*",
-    "nyc": "^15.1.0",
-    "this": "^1.1.0",
-    "xo": "^0.47.0"
-  }
+	"name": "@keyv/test-suite",
+	"version": "1.6.15",
+	"description": "Test suite for Keyv API compliancy",
+	"main": "src/index.js",
+	"type": "commonjs",
+	"scripts": {
+		"test": "xo && nyc ava",
+		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
+		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf dist && rm -rf ./test/testdb.sqlite"
+	},
+	"xo": {
+		"extends": "xo-lukechilds",
+		"rules": {
+			"unicorn/prefer-module": 0
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"test",
+		"suite",
+		"tests",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+		"delay": "^5.0.0",
+		"timekeeper": "^2.2.0"
+	},
+	"devDependencies": {
+		"ava": "^3.15.0",
+		"eslint-config-xo-lukechilds": "^1.0.1",
+		"keyv": "*",
+		"nyc": "^15.1.0",
+		"this": "^1.1.0",
+		"xo": "^0.47.0"
+	}
 }

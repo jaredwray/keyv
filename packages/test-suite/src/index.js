@@ -1,8 +1,8 @@
-/* eslint-disable unicorn/prefer-export-from */
-import keyvApiTests from './api.js';
-import keyvValueTests from './values.js';
-import keyvNamepsaceTests from './namespace.js';
-import keyvOfficialTests from './official.js';
+
+const keyvApiTests = require('./api.js');
+const keyvValueTests = require('./values.js');
+const keyvNamepsaceTests = require('./namespace.js');
+const keyvOfficialTests = require('./official.js');
 
 const keyvTestSuite = (test, Keyv, store) => {
 	keyvApiTests(test, Keyv, store);
@@ -10,11 +10,9 @@ const keyvTestSuite = (test, Keyv, store) => {
 	keyvNamepsaceTests(test, Keyv, store);
 };
 
-export {
-	keyvApiTests,
-	keyvValueTests,
-	keyvNamepsaceTests,
-	keyvOfficialTests,
-};
+exports.keyvApiTests = keyvApiTests;
+exports.keyvValueTests = keyvValueTests;
+exports.keyvNamepsaceTests = keyvNamepsaceTests;
+exports.keyvOfficialTests = keyvOfficialTests;
 
-export default keyvTestSuite;
+exports.default = keyvTestSuite;

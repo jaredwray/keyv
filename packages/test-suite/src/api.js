@@ -1,5 +1,5 @@
-import tk from 'timekeeper';
-import delay from 'delay';
+const tk = require('timekeeper');
+const delay = require('delay');
 
 const keyvApiTests = (test, Keyv, store) => {
 	test.beforeEach(async () => {
@@ -106,4 +106,4 @@ const keyvApiTests = (test, Keyv, store) => {
 	});
 };
 
-export default keyvApiTests;
+module.exports = keyvApiTests;

@@ -1,4 +1,4 @@
-const keyvOfficialTests = (test, Keyv, goodUri, badUri, options = {}) => {
+const keyvOfficialTests = (test, Keyv, goodUri, badUri, options = {}) => { // eslint-disable-line max-params
 	test.serial('connection string automatically requires storage adapter', async t => {
 		const keyv = new Keyv(goodUri, options);
 		await keyv.clear();
@@ -17,4 +17,4 @@ const keyvOfficialTests = (test, Keyv, goodUri, badUri, options = {}) => {
 	});
 };
 
-export default keyvOfficialTests;
+module.exports = keyvOfficialTests;

@@ -1,5 +1,5 @@
 const test = require('ava');
-const { keyvOfficialTests, default: keyvTestSuite } = require('@keyv/test-suite');
+const { default: keyvTestSuite, keyvOfficialTests } = require('@keyv/test-suite');
 const Keyv = require('this');
 const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');

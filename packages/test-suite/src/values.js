@@ -62,4 +62,4 @@ const keyvValueTests = (test, Keyv, store) => {
 	});
 };
 
-export default keyvValueTests;
+module.exports = keyvValueTests;
