@@ -2,7 +2,6 @@
 
 const EventEmitter = require('events');
 const { Etcd3 } = require('etcd3');
-const { Policy } = require('cockatiel');
 
 class KeyvEtcd extends EventEmitter {
 	constructor(url, options) {
@@ -27,18 +26,10 @@ class KeyvEtcd extends EventEmitter {
 
 		this.opts.url = this.opts.url.replace(/^etcd:\/\//, '');
 
-		this.policy = Policy.handleAll().retry();
-		this.policy.onFailure(error => {
-			this.emit('error', error.reason);
-		});
-		this.client = new Etcd3(options = { hosts: this.opts.url,
-			faultHandling: {
-				host: () => this.policy,
-				global: this.policy,
-			} });
+		this.client = new Etcd3(options = { hosts: this.opts.url });
 
 		// Https://github.com/microsoft/etcd3/issues/105
-		this.client.getRoles().catch();
+		this.client.getRoles().catch(error => this.emit('error', error));
 	}
 
 	get(key) {
