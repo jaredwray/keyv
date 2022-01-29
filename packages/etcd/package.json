@@ -4,7 +4,7 @@
 	"description": "Etcd storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
-		"test": "xo --fix && nyc ava",
+		"test": "xo && nyc ava",
 		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
 	},
@@ -43,6 +43,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
+		"cockatiel": "^3.0.0-beta.0",
 		"etcd3": "^1.1.0",
 		"pify": "^5.0.0"
 	},

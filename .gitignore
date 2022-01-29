@@ -85,3 +85,6 @@ packages/keyv/test/testdb.sqlite
 
 #test-suite
 dist
+
+#etcd files
+default.etcd

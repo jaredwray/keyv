@@ -1,37 +1,26 @@
 const test = require('ava');
 const KeyvEtcd = require('this');
+const Keyv = require('keyv');
+const keyvTestSuite = require('@keyv/test-suite').default;
+const { keyvOfficialTests } = require('@keyv/test-suite');
 
-const etcdURL = '127.0.0.1:2379';
+const etcdURL = 'etcd://127.0.0.1:2379';
+
+keyvOfficialTests(test, Keyv, etcdURL, 'etcd://foo');
+
+const store = () => new KeyvEtcd({ uri: etcdURL, busyTimeout: 3000 });
+
+keyvTestSuite(test, Keyv, store);
 
 test('default options', t => {
 	const store = new KeyvEtcd();
 	t.deepEqual(store.opts, {
-		url: etcdURL,
+		url: '127.0.0.1:2379',
 	});
 });
 
-test.serial('Stores value in etcd', async t => {
-	const store = new KeyvEtcd();
-	await store.set('key1', 'keyv1');
-	const get = await store.get('key1');
-	t.is(get, 'keyv1');
-});
-
-test.serial('Gets value from etcd', async t => {
-	const store = new KeyvEtcd();
-	const result = await store.get('key1');
-	t.is(result, 'keyv1');
-});
-
-test.serial('Deletes value from etcd', async t => {
-	const store = new KeyvEtcd();
-	const result = await store.delete('key1');
-	t.is(result, true);
-});
-
-test.serial('Clears entire etcd store', async t => {
-	const store = new KeyvEtcd();
-	const result = await store.clear();
-	t.is(typeof result, 'undefined');
+test('.delete() with key as number', async t => {
+	const store = new KeyvEtcd(etcdURL);
+	t.false(await store.delete(123));
 });
 
