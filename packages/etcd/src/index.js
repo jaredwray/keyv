@@ -2,11 +2,12 @@
 
 const EventEmitter = require('events');
 const { Etcd3 } = require('etcd3');
+const { Policy } = require('cockatiel');
 
 class KeyvEtcd extends EventEmitter {
 	constructor(url, options) {
 		super();
-		this.ttlSupport = false;
+		this.ttlSupport = options && typeof options.ttl === 'number';
 		url = url || {};
 		if (typeof url === 'string') {
 			url = { url };
@@ -14,6 +15,10 @@ class KeyvEtcd extends EventEmitter {
 
 		if (url.uri) {
 			url = Object.assign({ url: url.uri }, url);
+		}
+
+		if (url.ttl) {
+			this.ttlSupport = typeof url.ttl === 'number' ? url.ttl : false;
 		}
 
 		this.opts = Object.assign(
@@ -25,11 +30,26 @@ class KeyvEtcd extends EventEmitter {
 		);
 
 		this.opts.url = this.opts.url.replace(/^etcd:\/\//, '');
-
-		this.client = new Etcd3(options = { hosts: this.opts.url });
+		const policy = Policy.handleAll().retry();
+		policy.onFailure(error => {
+			this.emit('error', error.reason);
+		});
+		this.client = new Etcd3(options = { hosts: this.opts.url,
+			faultHandling: {
+				host: () => policy,
+				global: policy,
+			},
+		});
 
 		// Https://github.com/microsoft/etcd3/issues/105
 		this.client.getRoles().catch(error => this.emit('error', error));
+
+		if (this.ttlSupport) {
+			this.lease = this.client.lease(this.opts.ttl / 1000);
+			this.lease.on('lost', () => {
+				this.lease = this.client.lease(this.opts.ttl / 1000);
+			});
+		}
 	}
 
 	get(key) {
@@ -37,7 +57,7 @@ class KeyvEtcd extends EventEmitter {
 	}
 
 	set(key, value) {
-		return this.client.put(key).value(value);
+		return this.opts.ttl ? this.lease.put(key).value(value) : this.client.put(key).value(value);
 	}
 
 	delete(key) {

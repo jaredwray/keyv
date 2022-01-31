@@ -43,6 +43,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
+		"cockatiel": "^2.0.2",
 		"etcd3": "^1.1.0",
 		"pify": "^5.0.0"
 	},
@@ -54,6 +55,7 @@
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
+		"timekeeper": "^2.0.0",
 		"xo": "^0.47.0"
 	}
 }
