@@ -44,6 +44,7 @@ npm install --save @keyv/mongo
 npm install --save @keyv/sqlite
 npm install --save @keyv/postgres
 npm install --save @keyv/mysql
+npm install --save @keyv/etcd
 ```
 
 Create a new Keyv instance, passing your connection string if applicable. Keyv will automatically load the correct storage adapter.
@@ -58,6 +59,7 @@ const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
 const keyv = new Keyv('sqlite://path/to/database.sqlite');
 const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname');
 const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname');
+const keyv = new Keyv('etcd://localhost:2379');
 
 // Handle DB connection errors
 keyv.on('error', err => console.log('Connection Error', err));
@@ -109,6 +111,7 @@ MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/master/packages/m
 SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/packages/sqlite) | No 
 PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/packages/postgres) | No 
 MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mysql) | No 
+Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes
 
 ## Third-party Storage Adapters
 
@@ -363,7 +366,6 @@ Now that you've set up your workspace, you're ready to contribute changes to the
 8) Once the pull request has been reviewed, those with write access to the branch will be able to merge your changes into the `keyv` repository.
 
 If you need more information on the steps to create a pull request, you can find a detailed walkthrough in the [Github documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)
-
 
 ## License
 
