@@ -12,6 +12,7 @@ const loadStore = options => {
 		postgresql: '@keyv/postgres',
 		postgres: '@keyv/postgres',
 		mysql: '@keyv/mysql',
+		etcd: '@keyv/etcd',
 	};
 	if (options.adapter || options.uri) {
 		const adapter = options.adapter || /^[^:]*/.exec(options.uri)[0];
@@ -57,7 +58,7 @@ class Keyv extends EventEmitter {
 			.then(() => store.get(keyPrefixed))
 			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
 			.then(data => {
-				if (data === undefined) {
+				if (data === undefined || data === null) {
 					return undefined;
 				}
 
