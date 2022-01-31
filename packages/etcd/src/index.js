@@ -45,9 +45,8 @@ class KeyvEtcd extends EventEmitter {
 		this.client.getRoles().catch(error => this.emit('error', error));
 
 		if (this.ttlSupport) {
-			this.lease = this.client.lease(this.opts.ttl / 1000);
-			this.lease.on('lost', () => {
-				this.lease = this.client.lease(this.opts.ttl / 1000);
+			this.lease = this.client.lease(this.opts.ttl / 1000, {
+				autoKeepAlive: false,
 			});
 		}
 	}
