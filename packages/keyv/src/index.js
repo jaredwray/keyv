@@ -12,7 +12,7 @@ const loadStore = options => {
 		postgresql: '@keyv/postgres',
 		postgres: '@keyv/postgres',
 		mysql: '@keyv/mysql',
-		etcd: '@keyv/etcd'
+		etcd: '@keyv/etcd',
 	};
 	if (options.adapter || options.uri) {
 		const adapter = options.adapter || /^[^:]*/.exec(options.uri)[0];
@@ -61,6 +61,7 @@ class Keyv extends EventEmitter {
 				if (data === undefined || data === null) {
 					return undefined;
 				}
+
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {
 					this.delete(key);
 					return undefined;
