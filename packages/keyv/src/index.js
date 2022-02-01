@@ -3,6 +3,11 @@
 const EventEmitter = require('events');
 const JSONB = require('json-buffer');
 
+// eslint-disable-next-line no-extend-native
+BigInt.prototype.toJSON = function () {
+	return this.toString();
+};
+
 const loadStore = options => {
 	const adapters = {
 		redis: '@keyv/redis',
@@ -86,6 +91,10 @@ class Keyv extends EventEmitter {
 		return Promise.resolve()
 			.then(() => {
 				const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
+				if (typeof value === 'symbol') {
+					this.emit('error', 'symbol cannot be serialized');
+				}
+
 				value = { value, expires };
 				return this.opts.serialize(value);
 			})

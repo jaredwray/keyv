@@ -56,6 +56,24 @@ const keyvValueTests = (test, Keyv, store) => {
 		t.deepEqual(await keyv.get('foo'), value);
 	});
 
+	test.serial('value can not be symbol', async t => {
+		const keyv = new Keyv({ store: store() });
+		const value = Symbol('value');
+		try {
+			await keyv.set('foo', value);
+		} catch (error) {
+			t.is(error.context, 'symbol cannot be serialized');
+		}
+	});
+
+	test.serial('value can be bigint', async t => {
+		const keyv = new Keyv({ store: store() });
+		// eslint-disable-next-line no-loss-of-precision
+		const value = 9_223_372_036_854_775_807;
+		await keyv.set('foo', value);
+		t.deepEqual(await keyv.get('foo'), value);
+	});
+
 	test.after.always(async () => {
 		const keyv = new Keyv({ store: store() });
 		await keyv.clear();
