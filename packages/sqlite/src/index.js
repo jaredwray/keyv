@@ -69,6 +69,28 @@ class KeyvSqlite extends EventEmitter {
 		this.db.prepare(del).run(`${this.namespace}:%`);
 		return undefined;
 	}
+
+	async * iterator(namespace) {
+		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
+		async function * iterate(offset, options, db) {
+			const select = `SELECT * FROM ${options.table} WHERE key LIKE ? LIMIT ? OFFSET ?`;
+			const entries = db.prepare(select).iterate([`${namespace ? namespace + ':' : ''}%`, limit, offset]);
+			for (const entry of entries) {
+				offset += 1;
+				yield [entry.key, entry.value];
+			}
+
+			if (entries.next().done === true) {
+				return;
+			}
+
+			if (offset !== '0') {
+				yield * iterate(offset, options, db);
+			}
+		}
+
+		yield * iterate(0, this.opts, this.db);
+	}
 }
 
 module.exports = KeyvSqlite;
