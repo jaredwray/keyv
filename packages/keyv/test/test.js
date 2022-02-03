@@ -1,5 +1,5 @@
 const test = require('ava');
-const { default: keyvTestSuite, keyvOfficialTests } = require('@keyv/test-suite');
+const { default: keyvTestSuite, keyvOfficialTests, keyvIteratorTests } = require('@keyv/test-suite');
 const Keyv = require('this');
 const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
@@ -7,6 +7,7 @@ const KeyvSqlite = require('@keyv/sqlite');
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000 });
 keyvTestSuite(test, Keyv, store);
+keyvIteratorTests(test, Keyv, store);
 
 test.serial('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');

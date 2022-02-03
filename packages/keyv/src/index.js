@@ -57,9 +57,6 @@ class Keyv extends EventEmitter {
 					? iterator(this.opts.store.namespace)
 					: iterator) {
 					const data = typeof raw === 'string' ? this.opts.deserialize(raw) : raw;
-					if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
-						continue;
-					}
 
 					if (typeof data.expires === 'number' && Date.now() > data.expires) {
 						this.delete(key);
@@ -73,7 +70,7 @@ class Keyv extends EventEmitter {
 		// Attach iterators
 		if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
 			this.iterator = generateIterator(this.opts.store);
-		} else if (typeof this.opts.store.iterator === 'function') {
+		} else if (typeof this.opts.store.iterator === 'function' && this.opts.store.opts?.dialect === 'sqlite') { // Iterator only supported for sqlite for now
 			this.iterator = generateIterator(this.opts.store.iterator.bind(this.opts.store));
 		}
 	}
