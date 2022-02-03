@@ -57,6 +57,9 @@ class Keyv extends EventEmitter {
 					? iterator(this.opts.store.namespace)
 					: iterator) {
 					const data = typeof raw === 'string' ? this.opts.deserialize(raw) : raw;
+					if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
+						continue;
+					}
 
 					if (typeof data.expires === 'number' && Date.now() > data.expires) {
 						this.delete(key);
