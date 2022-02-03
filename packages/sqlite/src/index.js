@@ -66,7 +66,7 @@ class KeyvSqlite extends EventEmitter {
 
 	clear() {
 		const del = `DELETE FROM ${this.opts.table} WHERE key LIKE ?`;
-		this.db.prepare(del).run(`${this.namespace}:%`);
+		this.db.prepare(del).run(`${this.namespace ? this.namespace + ':' : ''}%`);
 		return undefined;
 	}
 
@@ -74,17 +74,18 @@ class KeyvSqlite extends EventEmitter {
 		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
 		async function * iterate(offset, options, db) {
 			const select = `SELECT * FROM ${options.table} WHERE key LIKE ? LIMIT ? OFFSET ?`;
-			const entries = db.prepare(select).iterate([`${namespace ? namespace + ':' : ''}%`, limit, offset]);
-			for (const entry of entries) {
+			const iterator = db.prepare(select).iterate([`${namespace ? namespace + ':' : ''}%`, limit, offset]);
+			const enteries = Array.from(iterator);
+			if (enteries.length === 0) {
+				return;
+			}
+
+			for (const entry of enteries) {
 				offset += 1;
 				yield [entry.key, entry.value];
 			}
 
-			if (entries.next().done === true) {
-				return;
-			}
-
-			if (offset !== '0') {
+			if (offset !== 0) {
 				yield * iterate(offset, options, db);
 			}
 		}
