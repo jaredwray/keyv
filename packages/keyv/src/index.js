@@ -50,32 +50,6 @@ class Keyv extends EventEmitter {
 		}
 
 		this.opts.store.namespace = this.opts.namespace;
-
-		const generateIterator = iterator =>
-			async function * () {
-				for await (const [key, raw] of typeof iterator === 'function'
-					? iterator(this.namespace)
-					: iterator) {
-					const data = typeof raw === 'string' ? this.deserialize(raw) : raw;
-					if (this.namespace && !key.includes(this.namespace)) {
-						continue;
-					}
-
-					if (typeof data.expires === 'number' && Date.now() > data.expires) {
-						this.delete(key);
-						continue;
-					}
-
-					yield [this._getKeyUnprefix(key), data.value];
-				}
-			};
-
-		// Attach iterators
-		// if (typeof this.store[Symbol.iterator] === 'function' && this.store instanceof Map) {
-		// 	this.iterator = generateIterator(this.store);
-		// } else if (typeof this.store.iterator === 'function') {
-		// 	this.iterator = generateIterator(this.store.iterator.bind(this.store));
-		// }
 	}
 
 	_getKeyPrefix(key) {
