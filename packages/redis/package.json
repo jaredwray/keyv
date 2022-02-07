@@ -41,7 +41,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "ioredis": "^4.28.2"
+    "ioredis": "^4.28.5"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
