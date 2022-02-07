@@ -50,10 +50,45 @@ class Keyv extends EventEmitter {
 		}
 
 		this.opts.store.namespace = this.opts.namespace;
+
+		const generateIterator = iterator =>
+			async function * () {
+				for await (const [key, raw] of typeof iterator === 'function'
+					? iterator(this.opts.store.namespace)
+					: iterator) {
+					const data = typeof raw === 'string' ? this.opts.deserialize(raw) : raw;
+					if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
+						continue;
+					}
+
+					if (typeof data.expires === 'number' && Date.now() > data.expires) {
+						this.delete(key);
+						continue;
+					}
+
+					yield [this._getKeyUnprefix(key), data.value];
+				}
+			};
+
+		// Attach iterators
+		if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
+			this.iterator = generateIterator(this.opts.store);
+		} else if (typeof this.opts.store.iterator === 'function' && this.opts.store.opts && this.opts.store.opts.dialect === 'sqlite') { // Iterator only supported for sqlite for now
+			this.iterator = generateIterator(this.opts.store.iterator.bind(this.opts.store));
+		}
 	}
 
 	_getKeyPrefix(key) {
 		return `${this.opts.namespace}:${key}`;
+	}
+
+	_getKeyUnprefix(key) {
+		return this.opts.store.namespace
+			? key
+				.split(':')
+				.splice(1)
+				.join(':')
+			: key;
 	}
 
 	get(key, options) {
