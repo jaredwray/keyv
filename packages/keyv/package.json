@@ -37,8 +37,8 @@
   "devDependencies": {
     "@keyv/test-suite": "*",
     "ava": "^3.15.0",
-    "eslint-config-xo-lukechilds": "^1.0.0",
-    "eslint-plugin-promise": "^5.1.1",
+    "eslint-config-xo-lukechilds": "^1.0.1",
+    "eslint-plugin-promise": "^6.0.0",
     "nyc": "^15.1.0",
     "pify": "5.0.0",
     "this": "^1.0.2",
