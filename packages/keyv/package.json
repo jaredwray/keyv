@@ -1,6 +1,6 @@
 {
   "name": "keyv",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Simple key-value storage with support for multiple backends",
   "main": "src/index.js",
   "scripts": {
@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
-    "ava": "^3.15.0",
+    "ava": "^4.0.1",
     "eslint-config-xo-lukechilds": "^1.0.1",
     "eslint-plugin-promise": "^6.0.0",
     "nyc": "^15.1.0",
