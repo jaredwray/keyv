@@ -79,7 +79,7 @@ class KeyvPostgres extends EventEmitter {
 		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
 		async function * iterate(offset, options, query) {
 			const select = `SELECT * FROM ${options.table} WHERE key LIKE '${namespace ? namespace + ':' : ''}%' LIMIT ${limit} OFFSET ${offset}`;
-			const enteries = await this.query(select);
+			const enteries = await query(select);
 			if (enteries.length === 0) {
 				return;
 			}
