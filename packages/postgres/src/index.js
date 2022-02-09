@@ -74,6 +74,28 @@ class KeyvPostgres extends EventEmitter {
 		return this.query(del)
 			.then(() => undefined);
 	}
+
+	async * iterator(namespace) {
+		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
+		async function * iterate(offset, options, query) {
+			const select = `SELECT * FROM ${options.table} WHERE key LIKE '${namespace ? namespace + ':' : ''}%' LIMIT ${limit} OFFSET ${offset}`;
+			const enteries = await this.query(select);
+			if (enteries.length === 0) {
+				return;
+			}
+
+			for (const entry of enteries) {
+				offset += 1;
+				yield [entry.key, entry.value];
+			}
+
+			if (offset !== 0) {
+				yield * iterate(offset, options, query);
+			}
+		}
+
+		yield * iterate(0, this.opts, this.query);
+	}
 }
 
 module.exports = KeyvPostgres;
