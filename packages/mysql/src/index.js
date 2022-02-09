@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const mysql = require('mysql2/promise');
+const { pool } = require('./pool.js');
 
 class KeyvMysql extends EventEmitter {
 	constructor(options) {
@@ -17,7 +18,7 @@ class KeyvMysql extends EventEmitter {
 		}, options);
 
 		options.connect = () => Promise.resolve()
-			.then(() => mysql.createPool(options.uri))
+			.then(() => pool(options.uri))
 			.then(connection => sql => connection.execute(sql)
 				.then(data => data[0]));
 
