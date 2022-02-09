@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
-const Pool = require('pg').Pool;
+const { pool } = require('./pool.js');
 
 class KeyvPostgres extends EventEmitter {
 	constructor(options) {
@@ -14,8 +14,8 @@ class KeyvPostgres extends EventEmitter {
 
 		options.connect = () => Promise.resolve()
 			.then(() => {
-				const pool = new Pool({ connectionString: options.uri });
-				return sql => pool.query(sql)
+				const conn = pool(options.uri);
+				return sql => conn.query(sql)
 					.then(data => data.rows);
 			});
 		this.opts = Object.assign({
