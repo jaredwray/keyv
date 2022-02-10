@@ -262,8 +262,8 @@ class KeyvMongo extends EventEmitter {
 		});
 	}
 
-	* iterator(namespace) {
-		const iterator = this.connect.then(store =>
+	async * iterator(namespace) {
+		const iterator = await this.connect.then(store =>
 			store
 				.find({
 					key: new RegExp(`^${namespace ? namespace + ':' : '.*'}`),
