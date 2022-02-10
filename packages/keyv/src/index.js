@@ -79,8 +79,7 @@ class Keyv extends EventEmitter {
 		// Attach iterators
 		if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
 			this.iterator = generateIterator(this.opts.store);
-		} else if (typeof this.opts.store.iterator === 'function' && this.opts.store.opts
-					&& iterableAdapters.has(this.opts.store.opts.dialect)) {
+		} else if (typeof this.opts.store.iterator === 'function' && this.opts.store.opts && (this.opts.store.opts.dialect === 'sqlite' || this.opts.store.opts.uri.includes('mongo'))) { // Iterator only supported for sqlite for now
 			this.iterator = generateIterator(this.opts.store.iterator.bind(this.opts.store));
 		}
 	}
