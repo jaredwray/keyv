@@ -58,6 +58,32 @@ class KeyvRedis extends EventEmitter {
 			.then(keys => this.redis.del(keys.concat(this._getNamespace())))
 			.then(() => undefined);
 	}
+
+	async * iterator(namespace) {
+		const scan = this.redis.scan.bind(this.redis);
+		const get = this.redis.mget.bind(this.redis);
+		async function * iterate(curs, pattern) {
+			const [cursor, keys] = await scan(curs, 'MATCH', pattern);
+			if (keys.length === 0) {
+				return;
+			}
+
+			const values = await get(keys);
+			for (const i in keys) {
+				if (Object.prototype.hasOwnProperty.call(keys, i)) {
+					const key = keys[i];
+					const value = values[i];
+					yield [key, value];
+				}
+			}
+
+			if (cursor !== '0') {
+				yield * iterate(cursor, pattern);
+			}
+		}
+
+		yield * iterate(0, `${namespace ? namespace + ':' : ''}*`);
+	}
 }
 
 module.exports = KeyvRedis;

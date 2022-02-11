@@ -1,6 +1,6 @@
 const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
-const { keyvOfficialTests } = require('@keyv/test-suite');
+const { keyvOfficialTests, keyvIteratorTests } = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const KeyvRedis = require('this');
 const Redis = require('ioredis');
@@ -13,6 +13,7 @@ keyvOfficialTests(test, Keyv, redisURI, 'redis://foo');
 const store = () => new KeyvRedis(redisURI);
 
 keyvTestSuite(test, Keyv, store);
+keyvIteratorTests(test, Keyv, store);
 
 test('reuse a redis instance', async t => {
 	const redis = new Redis(redisURI);
