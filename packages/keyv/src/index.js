@@ -27,6 +27,11 @@ const loadStore = options => {
 	return new Map();
 };
 
+const iterableAdapters = new Set([
+	'sqlite',
+	'postgres',
+]);
+
 class Keyv extends EventEmitter {
 	constructor(uri, options) {
 		super();
@@ -74,7 +79,7 @@ class Keyv extends EventEmitter {
 		if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
 			this.iterator = generateIterator(this.opts.store);
 		} else if (typeof this.opts.store.iterator === 'function' && this.opts.store.opts
-					&& (this.opts.store.opts.dialect === 'sqlite' || this.opts.store.opts.dialect === 'postgres')) { // Iterator only supported for sqlite for now
+					&& iterableAdapters.has(this.opts.store.opts.dialect)) {
 			this.iterator = generateIterator(this.opts.store.iterator.bind(this.opts.store));
 		}
 	}
