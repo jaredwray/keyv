@@ -129,3 +129,53 @@ test.serial('Keyv supports async serializer/deserializer', async t => {
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 });
+
+test.serial('Keyv should wait for the expired get', async t => {
+	const _store = new Map();
+	const store = {
+		get: key => _store.get(key),
+		set: (key, value) => {
+			_store.set(key, value);
+		},
+		delete: async key => {
+			await new Promise(resolve => {
+				setTimeout(() => {
+					// Simulate database latency
+					resolve();
+				}, 20);
+			});
+			_store.delete(key);
+		},
+	};
+
+	const keyv = new Keyv({ store });
+
+	// Round 1
+	const v1 = await keyv.get('foo');
+	t.is(v1, undefined);
+
+	await keyv.set('foo', 'bar', 1000);
+	const v2 = await keyv.get('foo');
+	t.is(v2, 'bar');
+
+	await new Promise(resolve => {
+		setTimeout(() => {
+			// Wait for expired
+			resolve();
+		}, 1100);
+	});
+
+	// Round 2
+	const v3 = await keyv.get('foo');
+	t.is(v3, undefined);
+
+	await keyv.set('foo', 'bar', 1000);
+	await new Promise(resolve => {
+		setTimeout(() => {
+			// Simulate database latency
+			resolve();
+		}, 30);
+	});
+	const v4 = await keyv.get('foo');
+	t.is(v4, 'bar');
+});

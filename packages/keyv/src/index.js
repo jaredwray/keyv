@@ -104,8 +104,7 @@ class Keyv extends EventEmitter {
 				}
 
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {
-					this.delete(key);
-					return undefined;
+					return this.delete(key).then(() => undefined);
 				}
 
 				return (options && options.raw) ? data : data.value;
