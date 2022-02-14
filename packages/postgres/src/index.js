@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
-const Pool = require('pg').Pool;
+const { pool } = require('./pool.js');
 
 class KeyvPostgres extends EventEmitter {
 	constructor(options) {
@@ -14,8 +14,8 @@ class KeyvPostgres extends EventEmitter {
 
 		options.connect = () => Promise.resolve()
 			.then(() => {
-				const pool = new Pool({ connectionString: options.uri });
-				return sql => pool.query(sql)
+				const conn = pool(options.uri);
+				return sql => conn.query(sql)
 					.then(data => data.rows);
 			});
 		this.opts = Object.assign({
@@ -73,6 +73,28 @@ class KeyvPostgres extends EventEmitter {
 		const del = `DELETE FROM ${this.opts.table} WHERE key LIKE '${this.namespace}:%'`;
 		return this.query(del)
 			.then(() => undefined);
+	}
+
+	async * iterator(namespace) {
+		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
+		async function * iterate(offset, options, query) {
+			const select = `SELECT * FROM ${options.table} WHERE key LIKE '${namespace ? namespace + ':' : ''}%' LIMIT ${limit} OFFSET ${offset}`;
+			const enteries = await query(select);
+			if (enteries.length === 0) {
+				return;
+			}
+
+			for (const entry of enteries) {
+				offset += 1;
+				yield [entry.key, entry.value];
+			}
+
+			if (offset !== 0) {
+				yield * iterate(offset, options, query);
+			}
+		}
+
+		yield * iterate(0, this.opts, this.query);
 	}
 }
 
