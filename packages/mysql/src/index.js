@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const mysql = require('mysql2/promise');
+const { pool } = require('./pool.js');
 
 class KeyvMysql extends EventEmitter {
 	constructor(options) {
@@ -17,7 +18,7 @@ class KeyvMysql extends EventEmitter {
 		}, options);
 
 		options.connect = () => Promise.resolve()
-			.then(() => mysql.createPool(options.uri))
+			.then(() => pool(options.uri))
 			.then(connection => sql => connection.execute(sql)
 				.then(data => data[0]));
 
@@ -77,6 +78,28 @@ class KeyvMysql extends EventEmitter {
 		const del = `DELETE FROM ${this.opts.table} WHERE id LIKE '${this.namespace}:%'`;
 		return this.query(del)
 			.then(() => undefined);
+	}
+
+	async * iterator(namespace) {
+		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
+		async function * iterate(offset, options, query) {
+			const select = `SELECT * FROM ${options.table} WHERE id LIKE '${namespace ? namespace + ':' : ''}%' LIMIT ${limit} OFFSET ${offset}`;
+			const enteries = await query(select);
+			if (enteries.length === 0) {
+				return;
+			}
+
+			for (const entry of enteries) {
+				offset += 1;
+				yield [entry.id, entry.value];
+			}
+
+			if (offset !== 0) {
+				yield * iterate(offset, options, query);
+			}
+		}
+
+		yield * iterate(0, this.opts, this.query);
 	}
 }
 
