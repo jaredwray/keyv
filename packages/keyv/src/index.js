@@ -31,7 +31,7 @@ const iterableAdapters = new Set([
 	'sqlite',
 	'postgres',
 	'mysql',
-	'mongo'
+	'mongo',
 ]);
 
 class Keyv extends EventEmitter {
