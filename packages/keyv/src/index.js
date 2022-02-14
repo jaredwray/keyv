@@ -30,7 +30,7 @@ const loadStore = options => {
 const iterableAdapters = new Set([
 	'sqlite',
 	'postgres',
-	'mysql'
+	'mysql',
 ]);
 
 class Keyv extends EventEmitter {
