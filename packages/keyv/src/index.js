@@ -32,7 +32,7 @@ const iterableAdapters = [
 	'postgres',
 	'mysql',
 	'mongo',
-	'redis'
+	'redis',
 ];
 
 class Keyv extends EventEmitter {
