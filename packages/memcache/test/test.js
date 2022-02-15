@@ -121,21 +121,11 @@ test.serial('keyv get / expired', async t => {
     t.is(val, undefined);
 });
 
-function timeout (ms, fn) {
-    return function (t) {
-        setTimeout(() => {
-            t.fail("Timeout error!")
-            t.end()
-        }, ms)
-        fn(t)
-    }
- }
-
 const withCallback = fn => async t => {
     await promisify(fn)(t);
 };
 
-test('clear should emit an error', timeout( 1000, withCallback(async (t, end) => {
+test('clear should emit an error', withCallback(async (t, end) => {
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211")});
 
     keyv.on("error", () => {
@@ -146,9 +136,9 @@ test('clear should emit an error', timeout( 1000, withCallback(async (t, end) =>
     try {
     await keyv.clear();
     } catch (err) {}
-})));
+}));
 
-test('delete should emit an error', timeout( 1000, withCallback(async (t, end) => {
+test('delete should emit an error', withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
@@ -160,9 +150,9 @@ test('delete should emit an error', timeout( 1000, withCallback(async (t, end) =
     try {
     await keyv.delete("foo");
     } catch (err) {}
-})));
+}));
 
-test('set should emit an error', timeout( 1000, withCallback(async (t, end) => {
+test('set should emit an error', withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
@@ -174,9 +164,9 @@ test('set should emit an error', timeout( 1000, withCallback(async (t, end) => {
     try {
     await keyv.set("foo", "bar");
     } catch (err) {}
-})));
+}));
 
-test('get should emit an error', timeout( 1000, withCallback(async (t, end) => {
+test('get should emit an error', withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
@@ -188,7 +178,7 @@ test('get should emit an error', timeout( 1000, withCallback(async (t, end) => {
     try {
     await keyv.get("foo");
     } catch (err) {}
-})));
+}));
 
 const store = () => keyvMemcache;
 
