@@ -1,6 +1,7 @@
 const test = require("ava");
 const Keyv = require("keyv");
 const KeyvMemcache = require("this");
+const promisify = require('util').promisify;
 
 const kvat = require("@keyv/test-suite");
 
