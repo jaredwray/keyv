@@ -6,7 +6,7 @@ const mongoClient = require('mongodb').MongoClient;
 const GridFSBucket = require('mongodb').GridFSBucket;
 const pify = require('pify');
 
-const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS']);
+const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect']);
 class KeyvMongo extends EventEmitter {
 	constructor(url, options) {
 		super();

@@ -5,6 +5,8 @@ class KeyvRedis extends EventEmitter {
 	constructor(uri, options) {
 		super();
 		this.ttlSupport = true;
+		this.opts = {};
+		this.opts.dialect = 'redis';
 
 		if (uri instanceof Redis || uri instanceof Redis.Cluster) {
 			this.redis = uri;
@@ -57,6 +59,32 @@ class KeyvRedis extends EventEmitter {
 		return this.redis.smembers(this._getNamespace())
 			.then(keys => this.redis.del(keys.concat(this._getNamespace())))
 			.then(() => undefined);
+	}
+
+	async * iterator(namespace) {
+		const scan = this.redis.scan.bind(this.redis);
+		const get = this.redis.mget.bind(this.redis);
+		async function * iterate(curs, pattern) {
+			const [cursor, keys] = await scan(curs, 'MATCH', pattern);
+			if (keys.length === 0) {
+				return;
+			}
+
+			const values = await get(keys);
+			for (const i in keys) {
+				if (Object.prototype.hasOwnProperty.call(keys, i)) {
+					const key = keys[i];
+					const value = values[i];
+					yield [key, value];
+				}
+			}
+
+			if (cursor !== '0') {
+				yield * iterate(cursor, pattern);
+			}
+		}
+
+		yield * iterate(0, `${namespace ? namespace + ':' : ''}*`);
 	}
 }
 
