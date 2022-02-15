@@ -103,7 +103,7 @@ class KeyvMysql extends EventEmitter {
 	}
 
 	has(key) {
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table} WHERE key = '${key}' )`;
+		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table} WHERE id = '${key}' )`;
 		return this.query(exists).then(rows => rows[0].exists);
 	}
 }
