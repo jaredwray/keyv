@@ -3,11 +3,6 @@
 const EventEmitter = require('events');
 const JSONB = require('json-buffer');
 
-// eslint-disable-next-line no-extend-native
-BigInt.prototype.toJSON = function () {
-	return this.toString();
-};
-
 const loadStore = options => {
 	const adapters = {
 		redis: '@keyv/redis',
