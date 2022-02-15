@@ -10,3 +10,10 @@ const store = () => new KeyvPostgres({ uri: 'postgresql://postgres:postgres@loca
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
+test.serial('.has(key) where key is the key we are looking for', async t => {
+	const keyv = new KeyvPostgres({ uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test' });
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.has('foo'), true);
+	t.is(await keyv.has('fizz'), false);
+});
+
