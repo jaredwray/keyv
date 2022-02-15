@@ -24,6 +24,7 @@ class KeyvMongo extends EventEmitter {
 			{
 				url: 'mongodb://127.0.0.1:27017',
 				collection: 'keyv',
+				dialect: 'mongo',
 			},
 			url,
 			options,

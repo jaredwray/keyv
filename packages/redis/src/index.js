@@ -5,6 +5,7 @@ class KeyvRedis extends EventEmitter {
 	constructor(uri, options) {
 		super();
 		this.ttlSupport = true;
+		this.opts.dialect = 'redis';
 
 		if (uri instanceof Redis || uri instanceof Redis.Cluster) {
 			this.redis = uri;

@@ -27,12 +27,13 @@ const loadStore = options => {
 	return new Map();
 };
 
-const iterableAdapters = [
+const iterableAdapters = new Set([
 	'sqlite',
 	'postgres',
 	'mysql',
 	'mongo',
-];
+	'redis',
+]);
 
 class Keyv extends EventEmitter {
 	constructor(uri, options) {
@@ -87,8 +88,7 @@ class Keyv extends EventEmitter {
 	}
 
 	_checkIterableAdaptar() {
-		return iterableAdapters.includes(this.opts.store.opts.dialect)
-			|| iterableAdapters.findIndex(element => this.opts.store.opts.url.includes(element)) >= 0;
+		return iterableAdapters.has(this.opts.store.opts.dialect);
 	}
 
 	_getKeyPrefix(key) {
