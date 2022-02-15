@@ -1,6 +1,6 @@
 const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
-const { keyvOfficialTests } = require('@keyv/test-suite');
+const { keyvOfficialTests, keyvIteratorTests } = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const KeyvMongo = require('this');
 
@@ -12,6 +12,7 @@ keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo', options);
 
 const store = () => new KeyvMongo(mongoURL, options);
 keyvTestSuite(test, Keyv, store);
+keyvIteratorTests(test, Keyv, store);
 
 test('default options', t => {
 	const store = new KeyvMongo();

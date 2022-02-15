@@ -261,6 +261,17 @@ class KeyvMongo extends EventEmitter {
 				.then(lastAccessedFiles => Promise.all(lastAccessedFiles.map(file => client.bucket.delete(file._id))).then(() => true));
 		});
 	}
+
+	async * iterator(namespace) {
+		const iterator = await this.connect.then(store =>
+			store
+				.find({
+					key: new RegExp(`^${namespace ? namespace + ':' : '.*'}`),
+				})
+				.map(x => [x.key, x.value]),
+		);
+		yield * iterator;
+	}
 }
 
 module.exports = KeyvMongo;
