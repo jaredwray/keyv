@@ -130,65 +130,64 @@ function timeout (ms, fn) {
     }
  }
 
-test.cb('clear should emit an error', timeout( 1000, async t => {
+const withCallback = fn => async t => {
+    await promisify(fn)(t);
+};
+
+test('clear should emit an error', timeout( 1000, withCallback((t, end) => {
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211")});
 
-    keyv.on("error", (error) => {
-
+    keyv.on("error", () => {
         t.pass();
-        t.end();
-
-        
+        end();    
     });
     
     try {
     await keyv.clear();
     } catch (err) {}
-}));
+})));
 
-test.cb('delete should emit an error', timeout( 1000, async t => {
+test('delete should emit an error', timeout( 1000, withCallback((t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
-    keyv.on("error", (error) => {
-
+    keyv.on("error", () => {
         t.pass();
-        t.end();
+        end();
     });
     
     try {
     await keyv.delete("foo");
     } catch (err) {}
-}));
+})));
 
-test.cb('set should emit an error', timeout( 1000, async t => {
+test('set should emit an error', timeout( 1000, withCallback((t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
-    keyv.on("error", (error) => {
-
+    keyv.on("error", () => {
         t.pass();
-        t.end();
+        end();
     });
     
     try {
     await keyv.set("foo", "bar");
     } catch (err) {}
-}));
+})));
 
-test.cb('get should emit an error', timeout( 1000, async t => {
+test('get should emit an error', timeout( 1000, withCallback((t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
-    keyv.on("error", (error) => {
+    keyv.on("error", () => {
         t.pass();
-        t.end();
+        end();
     });
     
     try {
     await keyv.get("foo");
     } catch (err) {}
-}));
+})));
 
 const store = () => keyvMemcache;
 
