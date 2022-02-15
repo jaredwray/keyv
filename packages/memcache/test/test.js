@@ -135,7 +135,7 @@ const withCallback = fn => async t => {
     await promisify(fn)(t);
 };
 
-test('clear should emit an error', timeout( 1000, withCallback((t, end) => {
+test('clear should emit an error', timeout( 1000, withCallback(async (t, end) => {
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211")});
 
     keyv.on("error", () => {
@@ -148,7 +148,7 @@ test('clear should emit an error', timeout( 1000, withCallback((t, end) => {
     } catch (err) {}
 })));
 
-test('delete should emit an error', timeout( 1000, withCallback((t, end) => {
+test('delete should emit an error', timeout( 1000, withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
@@ -162,7 +162,7 @@ test('delete should emit an error', timeout( 1000, withCallback((t, end) => {
     } catch (err) {}
 })));
 
-test('set should emit an error', timeout( 1000, withCallback((t, end) => {
+test('set should emit an error', timeout( 1000, withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
@@ -176,7 +176,7 @@ test('set should emit an error', timeout( 1000, withCallback((t, end) => {
     } catch (err) {}
 })));
 
-test('get should emit an error', timeout( 1000, withCallback((t, end) => {
+test('get should emit an error', timeout( 1000, withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
