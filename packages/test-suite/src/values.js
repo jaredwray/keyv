@@ -75,7 +75,7 @@ const keyvValueTests = (test, Keyv, store) => {
 			deserialize: JSONbig.parse });
 		const value = BigInt('9223372036854775807');
 		await keyv.set('foo', value);
-		t.deepEqual(await keyv.get('foo'), bigNumber(value));
+		t.deepEqual(await keyv.get('foo'), bigNumber('9223372036854775807'));
 	});
 
 	test.after.always(async () => {
