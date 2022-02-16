@@ -2,7 +2,6 @@ const test = require("ava");
 const Keyv = require("keyv");
 const KeyvMemcache = require("this");
 const promisify = require('util').promisify;
-const JSONbig = require('json-bigint');
 
 const kvat = require("@keyv/test-suite");
 
