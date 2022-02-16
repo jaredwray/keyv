@@ -35,3 +35,11 @@ test('set an undefined key', async t => {
 	const result = await keyv.get('foo2');
 	t.true(result === undefined);
 });
+
+test('.has(key) where key is the key we are looking for', async t => {
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvRedis(redis);
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.has('foo'), true);
+	t.is(await keyv.has('fizz'), false);
+});
