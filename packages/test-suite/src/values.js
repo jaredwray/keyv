@@ -69,13 +69,14 @@ const keyvValueTests = (test, Keyv, store) => {
 		}
 	});
 
-	test.serial('value can be BigInt', async t => {
+	test.serial('value can be BigInt using other serializer/deserializer', async t => {
 		const keyv = new Keyv({ store: store(),
 			serialize: JSONbig.stringify,
 			deserialize: JSONbig.parse });
 		const value = BigInt('9223372036854775807');
 		await keyv.set('foo', value);
-		t.deepEqual(await keyv.get('foo'), bigNumber('9223372036854775807'));
+		console.log(bigNumber(value));
+		t.deepEqual(await keyv.get('foo'), bigNumber(value));
 	});
 
 	test.after.always(async () => {
