@@ -71,6 +71,7 @@ class KeyvMongo extends EventEmitter {
 
 						for (const method of [
 							'updateOne',
+							'count',
 						]) {
 							this.store[method] = pify(this.store[method].bind(this.store));
 						}
@@ -105,6 +106,7 @@ class KeyvMongo extends EventEmitter {
 							'findOne',
 							'deleteOne',
 							'deleteMany',
+							'count',
 						]) {
 							this.store[method] = pify(this.store[method].bind(this.store));
 						}
@@ -271,6 +273,20 @@ class KeyvMongo extends EventEmitter {
 				.map(x => [x.key, x.value]),
 		);
 		yield * iterator;
+	}
+
+	has(key) {
+		if (this.opts.useGridFS) {
+			return this.connect.then(client => client.store.count(
+				{ filename: { $eq: key } },
+			).then(doc => doc !== 0));
+		}
+
+		return this.connect.then(store =>
+			store.count(
+				{ key: { $eq: key } },
+			),
+		).then(doc => doc !== 0);
 	}
 }
 
