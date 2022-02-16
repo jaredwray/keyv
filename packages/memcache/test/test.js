@@ -1,6 +1,7 @@
 const test = require("ava");
 const Keyv = require("keyv");
 const KeyvMemcache = require("this");
+const promisify = require('util').promisify;
 
 const kvat = require("@keyv/test-suite");
 
@@ -120,25 +121,16 @@ test.serial('keyv get / expired', async t => {
     t.is(val, undefined);
 });
 
-function timeout (ms, fn) {
-    return function (t) {
-        setTimeout(() => {
-            t.fail("Timeout error!")
-            t.end()
-        }, ms)
-        fn(t)
-    }
- }
+const withCallback = fn => async t => {
+    await promisify(fn)(t);
+};
 
-test.cb('clear should emit an error', timeout( 1000, async t => {
+test('clear should emit an error', withCallback(async (t, end) => {
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211")});
 
-    keyv.on("error", (error) => {
-
+    keyv.on("error", () => {
         t.pass();
-        t.end();
-
-        
+        end();    
     });
     
     try {
@@ -146,14 +138,13 @@ test.cb('clear should emit an error', timeout( 1000, async t => {
     } catch (err) {}
 }));
 
-test.cb('delete should emit an error', timeout( 1000, async t => {
+test('delete should emit an error', withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
-    keyv.on("error", (error) => {
-
+    keyv.on("error", () => {
         t.pass();
-        t.end();
+        end();
     });
     
     try {
@@ -161,14 +152,13 @@ test.cb('delete should emit an error', timeout( 1000, async t => {
     } catch (err) {}
 }));
 
-test.cb('set should emit an error', timeout( 1000, async t => {
+test('set should emit an error', withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
-    keyv.on("error", (error) => {
-
+    keyv.on("error", () => {
         t.pass();
-        t.end();
+        end();
     });
     
     try {
@@ -176,13 +166,13 @@ test.cb('set should emit an error', timeout( 1000, async t => {
     } catch (err) {}
 }));
 
-test.cb('get should emit an error', timeout( 1000, async t => {
+test('get should emit an error', withCallback(async (t, end) => {
     var opts = { logger: { log: function(){}}};
     const keyv = new Keyv({store: new KeyvMemcache("baduri:11211", opts)});
 
-    keyv.on("error", (error) => {
+    keyv.on("error", () => {
         t.pass();
-        t.end();
+        end();
     });
     
     try {

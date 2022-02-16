@@ -1,3 +1,5 @@
+const promisify = require('util').promisify;
+
 const keyvOfficialTests = (test, Keyv, goodUri, badUri, options = {}) => { // eslint-disable-line max-params
 	test.serial('connection string automatically requires storage adapter', async t => {
 		const keyv = new Keyv(goodUri, options);
@@ -8,13 +10,17 @@ const keyvOfficialTests = (test, Keyv, goodUri, badUri, options = {}) => { // es
 		await keyv.clear();
 	});
 
-	test.serial.cb('connection errors are emitted', t => {
+	const withCallback = fn => async t => {
+		await promisify(fn)(t);
+	};
+
+	test.serial('connection errors are emitted', withCallback((t, end) => {
 		const keyv = new Keyv(badUri, options);
 		keyv.on('error', () => {
 			t.pass();
-			t.end();
+			end();
 		});
-	});
+	}));
 };
 
 module.exports = keyvOfficialTests;
