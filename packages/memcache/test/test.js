@@ -2,6 +2,7 @@ const test = require("ava");
 const Keyv = require("keyv");
 const KeyvMemcache = require("this");
 const promisify = require('util').promisify;
+const JSONbig = require('json-bigint');
 
 const kvat = require("@keyv/test-suite");
 
@@ -180,7 +181,8 @@ test('get should emit an error', withCallback(async (t, end) => {
     } catch (err) {}
 }));
 
-const store = () => keyvMemcache;
+const options = { deserialize: JSONbig.parse };
+const store = () => new KeyvMemcache(uri, options);
 
 kvat.keyvApiTests(test, Keyv, store);
 kvat.keyvValueTests(test, Keyv, store);

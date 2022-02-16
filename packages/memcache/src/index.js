@@ -47,7 +47,7 @@ class KeyvMemcache extends EventEmitter {
               expires: 0
             }
           } else {
-            val = JSONB.parse(value);
+            val = this.opts.deserialize ? this.opts.deserialize(value) : JSONB.parse(value);
           }
           resolve(val);
         }
