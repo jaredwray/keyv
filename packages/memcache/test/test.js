@@ -1,11 +1,8 @@
 const test = require("ava");
 const Keyv = require("keyv");
 const KeyvMemcache = require("this");
-<<<<<<< HEAD
 const promisify = require('util').promisify;
-=======
 const JSONbig = require('json-bigint');
->>>>>>> added test for bigint using different json lib
 
 const kvat = require("@keyv/test-suite");
 
