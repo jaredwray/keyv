@@ -71,8 +71,10 @@ const keyvValueTests = (test, Keyv, store) => {
 
 	test.serial('value can be BigInt using other serializer/deserializer', async t => {
 		// For memchache
-		if(store().opts)
+		if (store().opts) {
 			store().opts.deserialize = JSONbig.parse;
+		}
+
 		const keyv = new Keyv({ store: store(),
 			serialize: JSONbig.stringify,
 			deserialize: JSONbig.parse });
