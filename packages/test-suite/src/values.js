@@ -1,4 +1,5 @@
-const JSONbig = require('json-bigint')({ useNativeBigInt: true });
+const JSONbig = require('json-bigint');
+const bigNumber = require('bignumber.js');
 
 const keyvValueTests = (test, Keyv, store) => {
 	test.beforeEach(async () => {
@@ -74,7 +75,7 @@ const keyvValueTests = (test, Keyv, store) => {
 			deserialize: JSONbig.parse });
 		const value = BigInt('9223372036854775807');
 		await keyv.set('foo', value);
-		t.deepEqual(await keyv.get('foo'), value);
+		t.deepEqual(await keyv.get('foo'), bigNumber(value));
 	});
 
 	test.after.always(async () => {
