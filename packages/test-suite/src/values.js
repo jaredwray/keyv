@@ -1,3 +1,5 @@
+const JSONbig = require('json-bigint')({ useNativeBigInt: true });
+
 const keyvValueTests = (test, Keyv, store) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({ store: store() });
@@ -64,6 +66,15 @@ const keyvValueTests = (test, Keyv, store) => {
 		} catch (error) {
 			t.is(error.context, 'symbol cannot be serialized');
 		}
+	});
+
+	test.serial('value can be BigInt', async t => {
+		const keyv = new Keyv({ store: store(),
+			serialize: JSONbig.stringify,
+			deserialize: JSONbig.parse });
+		const value = BigInt('9223372036854775807');
+		await keyv.set('foo', value);
+		t.deepEqual(await keyv.get('foo'), value);
 	});
 
 	test.after.always(async () => {

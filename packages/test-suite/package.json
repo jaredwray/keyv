@@ -37,6 +37,7 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"delay": "^5.0.0",
+		"json-bigint": "^1.0.0",
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
