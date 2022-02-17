@@ -1,3 +1,6 @@
+const JSONbig = require('json-bigint');
+const bigNumber = require('bignumber.js');
+
 const keyvValueTests = (test, Keyv, store) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({ store: store() });
@@ -66,12 +69,18 @@ const keyvValueTests = (test, Keyv, store) => {
 		}
 	});
 
-	test.serial('value can be bigint', async t => {
-		const keyv = new Keyv({ store: store() });
-		// eslint-disable-next-line no-loss-of-precision
-		const value = 9_223_372_036_854_775_807;
+	test.serial('value can be BigInt using other serializer/deserializer', async t => {
+		// For memchache
+		if (store().opts) {
+			store().opts.deserialize = JSONbig.parse;
+		}
+
+		const keyv = new Keyv({ store: store(),
+			serialize: JSONbig.stringify,
+			deserialize: JSONbig.parse });
+		const value = BigInt('9223372036854775807');
 		await keyv.set('foo', value);
-		t.deepEqual(await keyv.get('foo'), value);
+		t.deepEqual(await keyv.get('foo'), bigNumber(value));
 	});
 
 	test.after.always(async () => {
