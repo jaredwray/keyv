@@ -162,6 +162,13 @@ class Keyv extends EventEmitter {
 		return Promise.resolve()
 			.then(() => store.clear());
 	}
+
+	has(key) {
+		const keyPrefixed = this._getKeyPrefix(key);
+		const { store } = this.opts;
+		return Promise.resolve()
+			.then(() => store.has(keyPrefixed));
+	}
 }
 
 module.exports = Keyv;

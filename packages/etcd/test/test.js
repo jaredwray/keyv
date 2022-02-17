@@ -40,10 +40,3 @@ test('.delete() with key as number', async t => {
 	t.false(await store.delete(123));
 });
 
-test('.has(key) where key is the key we are looking for', async t => {
-	const keyv = new KeyvEtcd(etcdURL);
-	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
-});
-

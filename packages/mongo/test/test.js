@@ -36,13 +36,6 @@ test('Collection option merges into default options', t => {
 	});
 });
 
-test('.has(key) where key is the key we are looking for', async t => {
-	const keyv = new KeyvMongo({ collection: 'foo' });
-	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
-});
-
 test('useGridFS .has(key) where key is the key we are looking for', async t => {
 	const keyv = new KeyvMongo({ useGridFS: true, collection: 'foo' });
 	await keyv.set('foo', 'bar');

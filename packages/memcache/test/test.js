@@ -190,13 +190,6 @@ test.cb('get should emit an error', timeout( 1000, async t => {
     } catch (err) {}
 }));
 
-test('.has(key) where key is the key we are looking for', async t => {
-	const keyv = keyvMemcache;
-	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
-});
-
 const store = () => keyvMemcache;
 
 kvat.keyvApiTests(test, Keyv, store);

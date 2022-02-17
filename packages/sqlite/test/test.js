@@ -66,10 +66,3 @@ test.serial('Async Iterator 0 element test', async t => {
 	const key = await iterator.next();
 	t.is(key.value, undefined);
 });
-
-test.serial('.has(key) where key is the key we are looking for', async t => {
-	const keyv = new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000 });
-	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
-});

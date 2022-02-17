@@ -100,6 +100,13 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.get('fizz'), undefined);
 	});
 
+	test.serial('.has(key) where key is the key we are looking for', async t => {
+		const keyv = new Keyv({ store: store() });
+		await keyv.set('foo', 'bar');
+		t.is(await keyv.has('foo'), true);
+		t.is(await keyv.has('fizz'), false);
+	});
+
 	test.after.always(async () => {
 		const keyv = new Keyv({ store: store() });
 		await keyv.clear();
