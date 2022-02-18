@@ -210,6 +210,18 @@ class KeyvMongo extends EventEmitter {
 		);
 	}
 
+	deleteMany(keys) {
+		if (!Array.isArray(keys)) {
+			return Promise.resolve(false);
+		}
+
+		return this.connect.then(store =>
+			store
+				.deleteMany({ key: { $in: keys } })
+				.then(object => object.deletedCount > 0),
+		);
+	}
+
 	clear() {
 		if (this.opts.useGridFS) {
 			return this.connect.then(client => client.bucket.drop().then(() => undefined));

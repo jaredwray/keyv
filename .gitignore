@@ -88,3 +88,6 @@ dist
 
 #etcd files
 default.etcd
+
+#intellij
+.idea
