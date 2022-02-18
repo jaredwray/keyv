@@ -211,9 +211,6 @@ class KeyvMongo extends EventEmitter {
 	}
 
 	deleteMany(keys) {
-		if (!Array.isArray(keys)) {
-			return Promise.resolve(false);
-		}
 
 		return this.connect.then(store =>
 			store
