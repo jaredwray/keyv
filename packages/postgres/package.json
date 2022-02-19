@@ -43,7 +43,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.7.1"
+		"pg": "8.7.3"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
@@ -53,6 +53,6 @@
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
-		"xo": "^0.47.0"
+		"xo": "^0.48.0"
 	}
 }
