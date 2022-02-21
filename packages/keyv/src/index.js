@@ -167,7 +167,14 @@ class Keyv extends EventEmitter {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const { store } = this.opts;
 		return Promise.resolve()
-			.then(() => store.has(keyPrefixed));
+			.then(async () => {
+				if (typeof store.has === 'function') {
+					return store.has(keyPrefixed);
+				}
+
+				const value = await store.get(keyPrefixed);
+				return value !== undefined;
+			});
 	}
 }
 
