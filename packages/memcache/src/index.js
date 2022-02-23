@@ -109,6 +109,14 @@ class KeyvMemcache extends EventEmitter {
 
     return result;
   }
+
+  has(key) {
+    return new Promise((resolve, reject) => {
+      this.client.get(this.formatKey(key), (err, value) => {
+        err ? reject(false) : resolve(value !== null);
+      });
+    });
+  }
 }
 
 module.exports = KeyvMemcache;

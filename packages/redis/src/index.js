@@ -86,6 +86,11 @@ class KeyvRedis extends EventEmitter {
 
 		yield * iterate(0, `${namespace ? namespace + ':' : ''}*`);
 	}
+
+	has(key) {
+		return this.redis.exists(key)
+			.then(value => value !== 0);
+	}
 }
 
 module.exports = KeyvRedis;

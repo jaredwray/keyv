@@ -73,6 +73,10 @@ class KeyvEtcd extends EventEmitter {
 			: this.client.delete().all();
 		return promise.then(() => undefined);
 	}
+
+	has(key) {
+		return this.client.get(key).exists();
+	}
 }
 
 module.exports = KeyvEtcd;

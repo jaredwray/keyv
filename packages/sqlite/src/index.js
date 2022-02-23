@@ -92,6 +92,11 @@ class KeyvSqlite extends EventEmitter {
 
 		yield * iterate(0, this.opts, this.db);
 	}
+
+	has(key) {
+		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table} WHERE key = ? )`;
+		return Object.values(this.db.prepare(exists).get(key))[0] === 1;
+	}
 }
 
 module.exports = KeyvSqlite;

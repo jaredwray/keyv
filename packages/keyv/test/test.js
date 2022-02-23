@@ -179,3 +179,11 @@ test.serial('Keyv should wait for the expired get', async t => {
 	const v4 = await keyv.get('foo');
 	t.is(v4, 'bar');
 });
+
+test.serial('Keyv has should return if adapter does not support has', async t => {
+	const keyv = new Keyv({ store: store() });
+	keyv.opts.store.has = undefined;
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.has('foo'), true);
+	t.is(await keyv.has('fizz'), false);
+});
