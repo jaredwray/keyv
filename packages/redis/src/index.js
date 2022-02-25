@@ -56,7 +56,7 @@ class KeyvRedis extends EventEmitter {
 	}
 
 	deleteMany(key) {
-		return del(key);
+		return this.del(key);
 	}
 
 	clear() {
