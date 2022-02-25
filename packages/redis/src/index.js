@@ -55,6 +55,12 @@ class KeyvRedis extends EventEmitter {
 				.then(() => items > 0));
 	}
 
+	deleteMany(key) {
+		return this.redis.del(key)
+			.then(() => this.redis.srem(this._getNamespace(), key))
+			.then(items => items > 0);
+	}
+
 	clear() {
 		return this.redis.smembers(this._getNamespace())
 			.then(keys => this.redis.del(keys.concat(this._getNamespace())))
