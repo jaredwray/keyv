@@ -38,7 +38,8 @@ class KeyvMysql extends EventEmitter {
 	}
 
 	get(key) {
-		const select = `SELECT * FROM ${this.opts.table} WHERE id = '${key}'`;
+		const sql = `SELECT * FROM ${this.opts.table} WHERE id = ?`;
+		const select = mysql.format(sql, [key]);
 		return this.query(select)
 			.then(rows => {
 				const row = rows[0];
@@ -60,8 +61,10 @@ class KeyvMysql extends EventEmitter {
 	}
 
 	delete(key) {
-		const select = `SELECT * FROM ${this.opts.table} WHERE id = '${key}'`;
-		const del = `DELETE FROM ${this.opts.table} WHERE id = '${key}'`;
+		const sql = `SELECT * FROM ${this.opts.table} WHERE id = ?`;
+		const select = mysql.format(sql, [key]);
+		const delSql = `DELETE FROM ${this.opts.table} WHERE id = ?`;
+		const del = mysql.format(delSql, [key]);
 		return this.query(select)
 			.then(rows => {
 				const row = rows[0];
@@ -74,8 +77,16 @@ class KeyvMysql extends EventEmitter {
 			});
 	}
 
+	deleteMany(key) {
+		const sql = `DELETE FROM ${this.opts.table} WHERE id IN (?)`;
+		const del = mysql.format(sql, [key]);
+		return this.query(del)
+			.then(row => row.affectedRows !== 0);
+	}
+
 	clear() {
-		const del = `DELETE FROM ${this.opts.table} WHERE id LIKE '${this.namespace}:%'`;
+		const sql = `DELETE FROM ${this.opts.table} WHERE id LIKE ?`;
+		const del = mysql.format(sql, [`${this.namespace}:%`]);
 		return this.query(del)
 			.then(() => undefined);
 	}
@@ -83,7 +94,8 @@ class KeyvMysql extends EventEmitter {
 	async * iterator(namespace) {
 		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
 		async function * iterate(offset, options, query) {
-			const select = `SELECT * FROM ${options.table} WHERE id LIKE '${namespace ? namespace + ':' : ''}%' LIMIT ${limit} OFFSET ${offset}`;
+			const sql = `SELECT * FROM ${options.table} WHERE id LIKE ? LIMIT ? OFFSET ?`;
+			const select = mysql.format(sql, [`${namespace ? namespace + ':' : ''}%`, limit, offset]);
 			const enteries = await query(select);
 			if (enteries.length === 0) {
 				return;
