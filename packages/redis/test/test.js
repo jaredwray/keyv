@@ -35,20 +35,3 @@ test('set an undefined key', async t => {
 	const result = await keyv.get('foo2');
 	t.true(result === undefined);
 });
-
-test.serial('.deleteMany([keys]) should delete multiple key', async t => {
-	const redis = new Redis(redisURI);
-	const keyv = new KeyvRedis(redis);
-
-	await keyv.set('foo', 'bar');
-	await keyv.set('foo1', 'bar1');
-	await keyv.set('foo2', 'bar2');
-	t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), true);
-});
-
-test.serial('.deleteMany([keys]) with nonexistent keys resolves to false', async t => {
-	const redis = new Redis(redisURI);
-	const keyv = new KeyvRedis(redis);
-
-	t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), false);
-});

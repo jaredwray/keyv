@@ -59,6 +59,11 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.true(keyv.delete('foo') instanceof Promise);
 	});
 
+	test.serial('.delete([key]) returns a Promise', t => {
+		const keyv = new Keyv({ store: store() });
+		t.true(keyv.delete(['foo', 'foo1']) instanceof Promise);
+	});
+
 	test.serial('.delete(key) resolves to true', async t => {
 		const keyv = new Keyv({ store: store() });
 		await keyv.set('foo', 'bar');
@@ -75,6 +80,22 @@ const keyvApiTests = (test, Keyv, store) => {
 		await keyv.set('foo', 'bar');
 		t.is(await keyv.delete('foo'), true);
 		t.is(await keyv.get('foo'), undefined);
+	});
+
+	test.serial('.deleteMany([keys]) should delete multiple key', async t => {
+		const keyv = new Keyv({ store: store() });
+		await keyv.set('foo', 'bar');
+		await keyv.set('foo1', 'bar1');
+		await keyv.set('foo2', 'bar2');
+		t.is(await keyv.delete(['foo', 'foo1', 'foo2']), true);
+		t.is(await keyv.get('foo'), undefined);
+		t.is(await keyv.get('foo1'), undefined);
+		t.is(await keyv.get('foo2'), undefined);
+	});
+
+	test.serial('.deleteMany([keys]) with nonexistent keys resolves to false', async t => {
+		const keyv = new Keyv({ store: store() });
+		t.is(await keyv.delete(['foo', 'foo1', 'foo2']), false);
 	});
 
 	test.serial('.clear() returns a Promise', async t => {

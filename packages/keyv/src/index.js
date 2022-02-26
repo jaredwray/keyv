@@ -91,6 +91,10 @@ class Keyv extends EventEmitter {
 		return `${this.opts.namespace}:${key}`;
 	}
 
+	_getKeyPrefixArray(keys) {
+		return keys.map(key => `${this.opts.namespace}:${key}`);
+	}
+
 	_getKeyUnprefix(key) {
 		return this.opts.store.namespace
 			? key
@@ -146,8 +150,14 @@ class Keyv extends EventEmitter {
 	}
 
 	delete(key) {
-		const keyPrefixed = this._getKeyPrefix(key);
 		const { store } = this.opts;
+		let keyPrefixed = this._getKeyPrefix(key);
+		if (Array.isArray(key)) {
+			keyPrefixed = this._getKeyPrefixArray(key);
+			return Promise.resolve()
+				.then(() => store.deleteMany(key));
+		}
+
 		return Promise.resolve()
 			.then(() => store.delete(keyPrefixed));
 	}
