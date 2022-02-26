@@ -67,6 +67,16 @@ class KeyvEtcd extends EventEmitter {
 		return this.client.delete().key(key).then(key => key.deleted !== '0');
 	}
 
+	deleteMany(keys) {
+		const promises = [];
+		for (const key of keys) {
+			promises.push(this.delete(key));
+		}
+
+		return Promise.allSettled(promises)
+			.then(values => values.every(x => x.value === true));
+	}
+
 	clear() {
 		const promise = this.namespace
 			? this.client.delete().prefix(this.namespace)
