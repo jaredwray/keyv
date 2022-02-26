@@ -187,3 +187,19 @@ test.serial('Keyv has should return if adapter does not support has', async t =>
 	t.is(await keyv.has('foo'), true);
 	t.is(await keyv.has('fizz'), false);
 });
+
+test.serial('.deleteMany([keys]) should delete multiple key for storage adapter not supporting deleteMany', async t => {
+	const keyv = new Keyv({ store: new Map() });
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	t.is(await keyv.delete(['foo', 'foo1', 'foo2']), true);
+	t.is(await keyv.get('foo'), undefined);
+	t.is(await keyv.get('foo1'), undefined);
+	t.is(await keyv.get('foo2'), undefined);
+});
+
+test.serial('.deleteMany([keys]) with nonexistent keys resolves to false for storage adapter not supporting deleteMany', async t => {
+	const keyv = new Keyv({ store: new Map() });
+	t.is(await keyv.delete(['foo', 'foo1', 'foo2']), false);
+});
