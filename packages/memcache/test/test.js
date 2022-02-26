@@ -180,6 +180,19 @@ test('get should emit an error', withCallback(async (t, end) => {
     } catch (err) {}
 }));
 
+test.serial('.deleteMany([keys]) should delete multiple key', async t => {
+    const keyv = keyvMemcache;
+    await keyv.set('foo', 'bar');
+    await keyv.set('foo1', 'bar1');
+    await keyv.set('foo2', 'bar2');
+    t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), true);
+});
+
+test.serial('.deleteMany([keys]) with nonexistent keys resolves to false', async t => {
+    const keyv = keyvMemcache;
+    t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), false);
+});
+
 const store = () => keyvMemcache;
 
 kvat.keyvApiTests(test, Keyv, store);
