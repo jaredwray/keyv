@@ -66,7 +66,7 @@ class KeyvSqlite extends EventEmitter {
 
 	deleteMany(keys) {
 		const del = `DELETE FROM ${this.opts.table} WHERE key IN (SELECT value FROM json_each(?))`;
-		const result = this.db.prepare(del).run(keys);
+		const result = this.db.prepare(del).run(JSON.stringify(keys));
 		return result.changes !== 0;
 	}
 

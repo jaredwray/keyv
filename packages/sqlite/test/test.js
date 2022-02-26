@@ -72,10 +72,10 @@ test.serial('.deleteMany([keys]) should delete multiple key', async t => {
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
-	t.is(await keyv.deleteMany(JSON.stringify(['foo', 'foo1', 'foo2'])), true);
+	t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), true);
 });
 
 test.serial('.deleteMany([keys]) with nonexistent keys resolves to false', async t => {
 	const keyv = new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1 });
-	t.is(await keyv.deleteMany(JSON.stringify(['foo', 'foo1', 'foo2'])), false);
+	t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), false);
 });
