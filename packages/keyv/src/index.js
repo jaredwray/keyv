@@ -154,7 +154,7 @@ class Keyv extends EventEmitter {
 		let keyPrefixed = this._getKeyPrefix(key);
 		if (Array.isArray(key)) {
 			keyPrefixed = this._getKeyPrefixArray(key);
-			if (store.deleteMany === 'function'){
+			if (store.deleteMany === 'function') {
 				const promises = [];
 				for (const key of keyPrefixed) {
 					promises.push(this.delete(key));
@@ -163,6 +163,7 @@ class Keyv extends EventEmitter {
 				return Promise.allSettled(promises)
 					.then(values => values.every(x => x.value === true));
 			}
+
 			return Promise.resolve()
 				.then(() => store.deleteMany(keyPrefixed));
 		}
