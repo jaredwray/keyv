@@ -87,6 +87,18 @@ class KeyvMemcache extends EventEmitter {
     });
   }
 
+
+
+  deleteMany(keys) {
+    const promises = [];
+    for (const key of keys) {
+      promises.push(this.delete(key));
+    }
+
+    return Promise.allSettled(promises)
+        .then(values => values.every(x => x.value === true));
+  }
+
   clear() {
     return new Promise((resolve, reject) => {
       this.client.flush((err) => {

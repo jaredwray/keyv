@@ -158,6 +158,26 @@ test.serial('Non-string keys are not permitted in delete', async t => {
 	t.is(result, false);
 });
 
+test.serial('.deleteMany([keys]) should delete multiple gridfs key', async t => {
+	const keyv = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), true);
+	t.is(await keyv.get('foo'), undefined);
+	t.is(await keyv.get('foo1'), undefined);
+	t.is(await keyv.get('foo2'), undefined);
+});
+
+test.serial('.deleteMany([keys]) with nonexistent gridfs keys resolves to false', async t => {
+	const keyv = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), false);
+});
+
 test.serial('Clears entire cache store', async t => {
 	const store = new KeyvMongo(Object.assign({
 		useGridFS: true,

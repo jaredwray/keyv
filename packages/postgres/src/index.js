@@ -15,7 +15,7 @@ class KeyvPostgres extends EventEmitter {
 		options.connect = () => Promise.resolve()
 			.then(() => {
 				const conn = pool(options.uri);
-				return sql => conn.query(sql)
+				return (sql, values) => conn.query(sql, values)
 					.then(data => data.rows);
 			});
 		this.opts = Object.assign({
@@ -29,13 +29,13 @@ class KeyvPostgres extends EventEmitter {
 			.then(query => query(createTable).then(() => query))
 			.catch(error => this.emit('error', error));
 
-		this.query = sqlString => connected
-			.then(query => query(sqlString));
+		this.query = (sqlString, values) => connected
+			.then(query => query(sqlString, values));
 	}
 
 	get(key) {
-		const select = `SELECT * FROM ${this.opts.table} WHERE key = '${key}'`;
-		return this.query(select)
+		const select = `SELECT * FROM ${this.opts.table} WHERE key = $1`;
+		return this.query(select, [key])
 			.then(rows => {
 				const row = rows[0];
 				if (row === undefined) {
@@ -48,38 +48,53 @@ class KeyvPostgres extends EventEmitter {
 
 	set(key, value) {
 		const upsert = `INSERT INTO ${this.opts.table} (key, value)
-			VALUES('${key}', '${value}') 
+			VALUES($1, $2) 
 			ON CONFLICT(key) 
 			DO UPDATE SET value=excluded.value;`;
-		return this.query(upsert);
+		return this.query(upsert, [key, value]);
 	}
 
 	delete(key) {
-		const select = `SELECT * FROM ${this.opts.table} WHERE key = '${key}'`;
-		const del = `DELETE FROM ${this.opts.table} WHERE key = '${key}'`;
-		return this.query(select)
+		const select = `SELECT * FROM ${this.opts.table} WHERE key = $1`;
+		const del = `DELETE FROM ${this.opts.table} WHERE key = $1`;
+		return this.query(select, [key])
 			.then(rows => {
 				const row = rows[0];
 				if (row === undefined) {
 					return false;
 				}
 
-				return this.query(del)
+				return this.query(del, [key])
+					.then(() => true);
+			});
+	}
+
+	deleteMany(key) {
+		const select = `SELECT * FROM ${this.opts.table} WHERE key = ANY($1)`;
+		const del = `DELETE FROM ${this.opts.table} WHERE key = ANY($1)`;
+		return this.query(select, [key])
+			.then(rows => {
+				const row = rows[0];
+				if (row === undefined) {
+					return false;
+				}
+
+				return this.query(del, [key])
 					.then(() => true);
 			});
 	}
 
 	clear() {
-		const del = `DELETE FROM ${this.opts.table} WHERE key LIKE '${this.namespace}:%'`;
-		return this.query(del)
+		const del = `DELETE FROM ${this.opts.table} WHERE key LIKE $1`;
+		return this.query(del, [`${this.namespace}:%`])
 			.then(() => undefined);
 	}
 
 	async * iterator(namespace) {
 		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
 		async function * iterate(offset, options, query) {
-			const select = `SELECT * FROM ${options.table} WHERE key LIKE '${namespace ? namespace + ':' : ''}%' LIMIT ${limit} OFFSET ${offset}`;
-			const enteries = await query(select);
+			const select = `SELECT * FROM ${options.table} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
+			const enteries = await query(select, [`${namespace ? namespace + ':' : ''}%`, limit, offset]);
 			if (enteries.length === 0) {
 				return;
 			}

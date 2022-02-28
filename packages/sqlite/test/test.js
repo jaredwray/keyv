@@ -62,7 +62,7 @@ test.serial('Async Iterator multiple elements with limit=1 test', async t => {
 test.serial('Async Iterator 0 element test', async t => {
 	const keyv = new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1 });
 	await keyv.clear();
-	const iterator = keyv.iterator();
+	const iterator = keyv.iterator('keyv');
 	const key = await iterator.next();
 	t.is(key.value, undefined);
 });

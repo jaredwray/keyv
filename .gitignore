@@ -88,3 +88,7 @@ dist
 
 #etcd files
 default.etcd
+
+#intellij
+.idea
+keyv.iml
