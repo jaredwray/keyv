@@ -46,6 +46,31 @@ class KeyvPostgres extends EventEmitter {
 			});
 	}
 
+	getMany(keys) {
+		const getMany = `SELECT * FROM ${this.opts.table} WHERE key = ANY($1)`;
+		return this.query(getMany, [keys]).then(rows => {
+			if (rows.length === 0) {
+				return [];
+			}
+
+			const results = [...keys];
+			let i = 0;
+			for (const key of keys) {
+				const rowIndex = rows.findIndex(row => row.key === key);
+
+				if (rowIndex > -1) {
+					results[i] = rows[rowIndex].value;
+				} else {
+					results[i] = undefined;
+				}
+
+				i++;
+			}
+
+			return results;
+		});
+	}
+
 	set(key, value) {
 		const upsert = `INSERT INTO ${this.opts.table} (key, value)
 			VALUES($1, $2) 
@@ -86,7 +111,7 @@ class KeyvPostgres extends EventEmitter {
 
 	clear() {
 		const del = `DELETE FROM ${this.opts.table} WHERE key LIKE $1`;
-		return this.query(del, [`${this.namespace}:%`])
+		return this.query(del, [this.namespace ? `${this.namespace}:%` : '%'])
 			.then(() => undefined);
 	}
 

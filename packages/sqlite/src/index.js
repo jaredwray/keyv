@@ -46,6 +46,10 @@ class KeyvSqlite extends EventEmitter {
 	getMany(keys) {
 		const getMany = `SELECT * FROM ${this.opts.table} WHERE key IN (SELECT value FROM json_each(?))`;
 		const rows = this.db.prepare(getMany).all(JSON.stringify(keys));
+		if (rows.length === 0) {
+			return [];
+		}
+
 		const results = [...keys];
 		let i = 0;
 		for (const key of keys) {
@@ -60,11 +64,7 @@ class KeyvSqlite extends EventEmitter {
 			i++;
 		}
 
-		if (results.findIndex(result => result !== undefined) > -1) {
-			return results;
-		}
-
-		return [];
+		return results;
 	}
 
 	set(key, value) {
