@@ -43,6 +43,30 @@ class KeyvSqlite extends EventEmitter {
 		return row.value;
 	}
 
+	getMany(keys) {
+		const getMany = `SELECT * FROM ${this.opts.table} WHERE key IN (SELECT value FROM json_each(?))`;
+		const rows = this.db.prepare(getMany).all(JSON.stringify(keys));
+		const results = [...keys];
+		let i = 0;
+		for (const key of keys) {
+			const rowIndex = rows.findIndex(row => row.key === key);
+
+			if (rowIndex > -1) {
+				results[i] = rows[rowIndex].value;
+			} else {
+				results[i] = undefined;
+			}
+
+			i++;
+		}
+
+		if (results.findIndex(result => result !== undefined) > -1) {
+			return results;
+		}
+
+		return [];
+	}
+
 	set(key, value) {
 		const upsert = `INSERT INTO ${this.opts.table} (key, value)
 			VALUES(?, ?) 
