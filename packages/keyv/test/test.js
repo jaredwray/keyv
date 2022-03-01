@@ -134,10 +134,10 @@ test.serial('Keyv should wait for the expired get', async t => {
 	const _store = new Map();
 	const store = {
 		get: key => _store.get(key),
-		set: (key, value) => {
+		set(key, value) {
 			_store.set(key, value);
 		},
-		delete: async key => {
+		async delete(key) {
 			await new Promise(resolve => {
 				setTimeout(() => {
 					// Simulate database latency
