@@ -51,6 +51,32 @@ class KeyvMysql extends EventEmitter {
 			});
 	}
 
+	getMany(keys) {
+		const sql = `SELECT * FROM ${this.opts.table} WHERE id IN (?)`;
+		const select = mysql.format(sql, [keys]);
+		return this.query(select).then(rows => {
+			if (rows.length === 0) {
+				return [];
+			}
+
+			const results = [...keys];
+			let i = 0;
+			for (const key of keys) {
+				const rowIndex = rows.findIndex(row => row.id === key);
+
+				if (rowIndex > -1) {
+					results[i] = rows[rowIndex].value;
+				} else {
+					results[i] = undefined;
+				}
+
+				i++;
+			}
+
+			return results;
+		});
+	}
+
 	set(key, value) {
 		const sql = `INSERT INTO ${this.opts.table} (id, value)
 			VALUES(?, ?) 
@@ -86,7 +112,7 @@ class KeyvMysql extends EventEmitter {
 
 	clear() {
 		const sql = `DELETE FROM ${this.opts.table} WHERE id LIKE ?`;
-		const del = mysql.format(sql, [`${this.namespace}:%`]);
+		const del = mysql.format(sql, [this.namespace ? `${this.namespace}:%` : '%']);
 		return this.query(del)
 			.then(() => undefined);
 	}
