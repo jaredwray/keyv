@@ -33,6 +33,11 @@ class KeyvRedis extends EventEmitter {
 			});
 	}
 
+	getMany(keys) {
+		return this.redis.mget(keys)
+			.then(rows => rows.every(row => row === null) ? [] : rows);
+	}
+
 	set(key, value, ttl) {
 		if (typeof value === 'undefined') {
 			return Promise.resolve(undefined);
