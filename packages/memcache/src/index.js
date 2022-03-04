@@ -65,10 +65,10 @@ class KeyvMemcache extends EventEmitter {
         .then(values => {
           const data = [];
           for (const value of values) {
-            data.push(value.value);
+            data.push(value.value.value);
           }
 
-          return data.every(x => x === null) ? [] : data;
+          return data.every(x => x === undefined) ? [] : data;
         });
   }
 
