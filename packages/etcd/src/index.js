@@ -65,8 +65,11 @@ class KeyvEtcd extends EventEmitter {
 			.then(values => {
 				const data = [];
 				for (const value of values) {
-				    if (value.value === null) data.push(undefined);
-				    else data.push(value.value);
+					if (value.value === null) {
+						data.push(undefined);
+					} else {
+						data.push(value.value);
+					}
 				}
 
 				return data.every(x => x === null) ? [] : data;
