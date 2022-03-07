@@ -56,9 +56,10 @@ const keyvApiTests = (test, Keyv, store) => {
 
 	test.serial('.getMany([keys]) should return array values', async t => {
 		const keyv = new Keyv({ store: store() });
-		await keyv.set('foo', 'bar');
-		await keyv.set('foo1', 'bar1');
-		await keyv.set('foo2', 'bar2');
+		const ttl = 3000;
+		await keyv.set('foo', 'bar', ttl);
+		await keyv.set('foo1', 'bar1', ttl);
+		await keyv.set('foo2', 'bar2', ttl);
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
 		t.is(values[0], 'bar');
@@ -68,8 +69,9 @@ const keyvApiTests = (test, Keyv, store) => {
 
 	test.serial('.getMany([keys]) should return array values with undefined', async t => {
 		const keyv = new Keyv({ store: store() });
-		await keyv.set('foo', 'bar');
-		await keyv.set('foo2', 'bar2');
+		const ttl = 3000;
+		await keyv.set('foo', 'bar', ttl);
+		await keyv.set('foo2', 'bar2', ttl);
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
 		t.is(values[0], 'bar');

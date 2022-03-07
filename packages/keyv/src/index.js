@@ -152,18 +152,22 @@ class Keyv extends EventEmitter {
 					for (let row of data) {
 						if ((typeof row === 'string')) {
 							row = this.opts.deserialize(row);
+						}
 
-							if (typeof row.expires === 'number' && Date.now() > row.expires) {
-								return this.delete(key).then(() => undefined);
-							}
-
-							result.push((options && options.raw) ? row : row.value);
-						} else {
+						if (row === undefined || row === null) {
 							result.push(row);
+							continue;
+						}
+
+						if (typeof row.expires === 'number' && Date.now() > row.expires) {
+							this.delete(key).then(() => undefined);
+							result.push(undefined);
+						} else {
+							result.push((options && options.raw) ? row : row.value);
 						}
 					}
 
-					return result;
+					return result.every(x => x === undefined) ? [] : result;
 				}
 
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {
