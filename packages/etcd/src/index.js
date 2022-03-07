@@ -72,7 +72,7 @@ class KeyvEtcd extends EventEmitter {
 					}
 				}
 
-				return data.every(x => x === null) ? [] : data;
+				return data.every(x => x === undefined) ? [] : data;
 			});
 	}
 
