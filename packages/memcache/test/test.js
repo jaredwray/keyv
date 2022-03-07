@@ -181,40 +181,6 @@ test('get should emit an error', withCallback(async (t, end) => {
     } catch (err) {}
 }));
 
-
-test.serial('.getMany([keys]) should return array values', async t => {
-    const keyv = keyvMemcache;
-    await keyv.clear();
-    await keyv.set('foo', '{"value":"bar"}');
-    await keyv.set('foo1', '{"value":"bar1"}');
-    await keyv.set('foo2', '{"value":"bar2"}');
-    const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
-    t.is(Array.isArray(values), true);
-    t.deepEqual(values[0], 'bar');
-    t.deepEqual(values[1], 'bar1');
-    t.deepEqual(values[2], 'bar2');
-});
-
-test.serial('.getMany([keys]) should return array values with undefined', async t => {
-    const keyv = keyvMemcache;
-    await keyv.clear();
-    await keyv.set('foo', '{"value":"bar"}');
-    await keyv.set('foo2', '{"value":"bar2"}');
-    const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
-    t.is(Array.isArray(values), true);
-    t.deepEqual(values[0], 'bar');
-    t.is(values[1], undefined);
-    t.deepEqual(values[2], 'bar2');
-});
-
-test.serial('.getMany([keys]) should return empty array for all no existent keys', async t => {
-    const keyv = keyvMemcache;
-    await keyv.clear();
-    const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
-    t.is(Array.isArray(values), true);
-    t.deepEqual(values, []);
-});
-
 const store = () => keyvMemcache;
 
 kvat.keyvApiTests(test, Keyv, store);
