@@ -149,13 +149,17 @@ class Keyv extends EventEmitter {
 
 				if (isArray) {
 					const result = [];
+					if (data.length === 0) {
+						return [];
+					}
+
 					for (let row of data) {
 						if ((typeof row === 'string')) {
 							row = this.opts.deserialize(row);
 						}
 
 						if (row === undefined || row === null) {
-							result.push(row);
+							result.push(undefined);
 							continue;
 						}
 
