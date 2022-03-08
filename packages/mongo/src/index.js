@@ -156,6 +156,48 @@ class KeyvMongo extends EventEmitter {
 		);
 	}
 
+	getMany(keys) {
+		if (this.opts.useGridFS) {
+			const promises = [];
+			for (const key of keys) {
+				promises.push(this.get(key));
+			}
+
+			return Promise.allSettled(promises)
+				.then(values => {
+					const data = [];
+					for (const value of values) {
+						data.push(value.value);
+					}
+
+					return data.every(x => x === undefined) ? [] : data;
+				});
+		}
+
+		const results = [...keys];
+		return this.connect.then(store =>
+			store.s.db.collection(this.opts.collection)
+				.find({ key: { $in: keys } })
+				.project({ _id: 0, value: 1, key: 1 })
+				.toArray().then(values => {
+					let i = 0;
+					for (const key of keys) {
+						const rowIndex = values.findIndex(row => row.key === key);
+
+						if (rowIndex > -1) {
+							results[i] = values[rowIndex].value;
+						} else {
+							results[i] = undefined;
+						}
+
+						i++;
+					}
+
+					return results.every(x => x === undefined) ? [] : results;
+				}),
+		);
+	}
+
 	set(key, value, ttl) {
 		const expiresAt = typeof ttl === 'number' ? new Date(Date.now() + ttl) : null;
 
@@ -245,7 +287,7 @@ class KeyvMongo extends EventEmitter {
 		return this.connect.then(store =>
 			store
 				.deleteMany({
-					key: new RegExp(`^${this.namespace}:`),
+					key: { $regex: this.namespace ? `^${this.namespace}:*` : '' },
 				})
 				.then(() => undefined),
 		);

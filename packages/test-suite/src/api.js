@@ -54,6 +54,56 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(await keyv.get('foo'), undefined);
 	});
 
+	test.serial('.get([keys]) should return array values', async t => {
+		const keyv = new Keyv({ store: store() });
+		const ttl = 3000;
+		await keyv.set('foo', 'bar', ttl);
+		await keyv.set('foo1', 'bar1', ttl);
+		await keyv.set('foo2', 'bar2', ttl);
+		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		t.is(Array.isArray(values), true);
+		t.is(values[0], 'bar');
+		t.is(values[1], 'bar1');
+		t.is(values[2], 'bar2');
+	});
+
+	test.serial('.get([keys]) should return array value undefined when expires', async t => {
+		const keyv = new Keyv({ store: new Map() });
+		await keyv.set('foo', 'bar');
+		await keyv.set('foo1', 'bar1', 1);
+		await keyv.set('foo2', 'bar2');
+		await new Promise(resolve => {
+			setTimeout(() => {
+				// Simulate database latency
+				resolve();
+			}, 30);
+		});
+		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		t.is(Array.isArray(values), true);
+		t.is(values[0], 'bar');
+		t.is(values[1], undefined);
+		t.is(values[2], 'bar2');
+	});
+
+	test.serial('.get([keys]) should return array values with undefined', async t => {
+		const keyv = new Keyv({ store: store() });
+		const ttl = 3000;
+		await keyv.set('foo', 'bar', ttl);
+		await keyv.set('foo2', 'bar2', ttl);
+		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		t.is(Array.isArray(values), true);
+		t.is(values[0], 'bar');
+		t.is(values[1], undefined);
+		t.is(values[2], 'bar2');
+	});
+
+	test.serial('.get([keys]) should return empty array for all no existent keys', async t => {
+		const keyv = new Keyv({ store: store() });
+		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		t.is(Array.isArray(values), true);
+		t.deepEqual(values, []);
+	});
+
 	test.serial('.delete(key) returns a Promise', t => {
 		const keyv = new Keyv({ store: store() });
 		t.true(keyv.delete('foo') instanceof Promise);

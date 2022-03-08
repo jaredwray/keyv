@@ -105,14 +105,73 @@ class Keyv extends EventEmitter {
 	}
 
 	get(key, options) {
-		const keyPrefixed = this._getKeyPrefix(key);
 		const { store } = this.opts;
+		const isArray = Array.isArray(key);
+		const keyPrefixed = isArray ? this._getKeyPrefixArray(key) : this._getKeyPrefix(key);
+		if (isArray && store.getMany === undefined) {
+			const promises = [];
+			for (const key of keyPrefixed) {
+				promises.push(Promise.resolve()
+					.then(() => store.get(key))
+					.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
+					.then(data => {
+						if (data === undefined || data === null) {
+							return undefined;
+						}
+
+						if (typeof data.expires === 'number' && Date.now() > data.expires) {
+							return this.delete(key).then(() => undefined);
+						}
+
+						return (options && options.raw) ? data : data.value;
+					}),
+				);
+			}
+
+			return Promise.allSettled(promises)
+				.then(values => {
+					const data = [];
+					for (const value of values) {
+						data.push(value.value);
+					}
+
+					return data.every(x => x === undefined) ? [] : data;
+				});
+		}
+
 		return Promise.resolve()
-			.then(() => store.get(keyPrefixed))
+			.then(() => isArray ? store.getMany(keyPrefixed) : store.get(keyPrefixed))
 			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
 			.then(data => {
 				if (data === undefined || data === null) {
 					return undefined;
+				}
+
+				if (isArray) {
+					const result = [];
+					if (data.length === 0) {
+						return [];
+					}
+
+					for (let row of data) {
+						if ((typeof row === 'string')) {
+							row = this.opts.deserialize(row);
+						}
+
+						if (row === undefined || row === null) {
+							result.push(undefined);
+							continue;
+						}
+
+						if (typeof row.expires === 'number' && Date.now() > row.expires) {
+							this.delete(key).then(() => undefined);
+							result.push(undefined);
+						} else {
+							result.push((options && options.raw) ? row : row.value);
+						}
+					}
+
+					return result.every(x => x === undefined) ? [] : result;
 				}
 
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {
@@ -151,9 +210,8 @@ class Keyv extends EventEmitter {
 
 	delete(key) {
 		const { store } = this.opts;
-		let keyPrefixed = this._getKeyPrefix(key);
 		if (Array.isArray(key)) {
-			keyPrefixed = this._getKeyPrefixArray(key);
+			const keyPrefixed = this._getKeyPrefixArray(key);
 			if (store.deleteMany === undefined) {
 				const promises = [];
 				for (const key of keyPrefixed) {
@@ -168,6 +226,7 @@ class Keyv extends EventEmitter {
 				.then(() => store.deleteMany(keyPrefixed));
 		}
 
+		const keyPrefixed = this._getKeyPrefix(key);
 		return Promise.resolve()
 			.then(() => store.delete(keyPrefixed));
 	}

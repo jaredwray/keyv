@@ -55,6 +55,23 @@ class KeyvMemcache extends EventEmitter {
     });
   }
 
+  getMany(keys) {
+    const promises = [];
+    for (const key of keys) {
+      promises.push(this.get(key));
+    }
+
+    return Promise.allSettled(promises)
+        .then(values => {
+          const data = [];
+          for (const value of values) {
+            data.push(value.value);
+          }
+
+          return data.every(x => x === undefined) ? [] : data;
+        });
+  }
+
   set(key, value, ttl) {
     let opts = {};
 

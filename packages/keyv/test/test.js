@@ -188,7 +188,7 @@ test.serial('Keyv has should return if adapter does not support has', async t =>
 	t.is(await keyv.has('fizz'), false);
 });
 
-test.serial('.deleteMany([keys]) should delete multiple key for storage adapter not supporting deleteMany', async t => {
+test.serial('.delete([keys]) should delete multiple key for storage adapter not supporting deleteMany', async t => {
 	const keyv = new Keyv({ store: new Map() });
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
@@ -199,7 +199,74 @@ test.serial('.deleteMany([keys]) should delete multiple key for storage adapter 
 	t.is(await keyv.get('foo2'), undefined);
 });
 
-test.serial('.deleteMany([keys]) with nonexistent keys resolves to false for storage adapter not supporting deleteMany', async t => {
+test.serial('.delete([keys]) with nonexistent keys resolves to false for storage adapter not supporting deleteMany', async t => {
 	const keyv = new Keyv({ store: new Map() });
 	t.is(await keyv.delete(['foo', 'foo1', 'foo2']), false);
+});
+
+test.serial('keyv.get([keys]) should return array values', async t => {
+	const keyv = new Keyv({ store: new Map() });
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.get(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values[0], 'bar');
+	t.is(values[1], 'bar1');
+	t.is(values[2], 'bar2');
+});
+
+test.serial('keyv.get([keys]) should return array value undefined when expires', async t => {
+	const keyv = new Keyv({ store: new Map() });
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1', 1);
+	await keyv.set('foo2', 'bar2');
+	await new Promise(resolve => {
+		setTimeout(() => {
+			// Simulate database latency
+			resolve();
+		}, 30);
+	});
+	const values = await keyv.get(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values[0], 'bar');
+	t.is(values[1], undefined);
+	t.is(values[2], 'bar2');
+});
+
+test.serial('keyv.get([keys]) should return array value undefined when expires sqlite', async t => {
+	const keyv = new Keyv({ store: store() });
+	await keyv.clear();
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1', 1);
+	await keyv.set('foo2', 'bar2');
+	await new Promise(resolve => {
+		setTimeout(() => {
+			// Simulate database latency
+			resolve();
+		}, 30);
+	});
+	const values = await keyv.get(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values[0], 'bar');
+	t.is(values[1], undefined);
+	t.is(values[2], 'bar2');
+});
+
+test.serial('keyv.get([keys]) should return array values with undefined', async t => {
+	const keyv = new Keyv({ store: new Map() });
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.get(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values[0], 'bar');
+	t.is(values[1], undefined);
+	t.is(values[2], 'bar2');
+});
+
+test.serial('keyv.get([keys]) should return empty array for all no existent keys', async t => {
+	const keyv = new Keyv({ store: new Map() });
+	const values = await keyv.get(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.deepEqual(values, []);
 });

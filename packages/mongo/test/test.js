@@ -178,6 +178,45 @@ test.serial('.deleteMany([keys]) with nonexistent gridfs keys resolves to false'
 	t.is(await keyv.deleteMany(['foo', 'foo1', 'foo2']), false);
 });
 
+test.serial('.getMany([keys]) using GridFS should return array values', async t => {
+	const keyv = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	await keyv.clearUnusedFor(0);
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values[0], 'bar');
+	t.is(values[1], 'bar1');
+	t.is(values[2], 'bar2');
+});
+
+test.serial('.getMany([keys]) using GridFS should return array values with undefined', async t => {
+	const keyv = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	await keyv.clearUnusedFor(0);
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values[0], 'bar');
+	t.is(values[1], undefined);
+	t.is(values[2], 'bar2');
+});
+
+test.serial('.getMany([keys]) using GridFS should return empty array for all no existent keys', async t => {
+	const keyv = new KeyvMongo(Object.assign({
+		useGridFS: true,
+	}, options));
+	await keyv.clearUnusedFor(0);
+	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.deepEqual(values, []);
+});
+
 test.serial('Clears entire cache store', async t => {
 	const store = new KeyvMongo(Object.assign({
 		useGridFS: true,

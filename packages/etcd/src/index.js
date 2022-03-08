@@ -55,6 +55,27 @@ class KeyvEtcd extends EventEmitter {
 		return this.client.get(key);
 	}
 
+	getMany(keys) {
+		const promises = [];
+		for (const key of keys) {
+			promises.push(this.get(key));
+		}
+
+		return Promise.allSettled(promises)
+			.then(values => {
+				const data = [];
+				for (const value of values) {
+					if (value.value === null) {
+						data.push(undefined);
+					} else {
+						data.push(value.value);
+					}
+				}
+
+				return data.every(x => x === undefined) ? [] : data;
+			});
+	}
+
 	set(key, value) {
 		return this.opts.ttl ? this.lease.put(key).value(value) : this.client.put(key).value(value);
 	}

@@ -18,6 +18,7 @@ if(process.env.URI) {
 
 const keyvMemcache = new KeyvMemcache(uri);
 
+
 test.serial('keyv get / no expired', async t => {
     const keyv = new Keyv({store: keyvMemcache});
 
@@ -130,9 +131,9 @@ test('clear should emit an error', withCallback(async (t, end) => {
 
     keyv.on("error", () => {
         t.pass();
-        end();    
+        end();
     });
-    
+
     try {
     await keyv.clear();
     } catch (err) {}
@@ -146,7 +147,7 @@ test('delete should emit an error', withCallback(async (t, end) => {
         t.pass();
         end();
     });
-    
+
     try {
     await keyv.delete("foo");
     } catch (err) {}
@@ -160,7 +161,7 @@ test('set should emit an error', withCallback(async (t, end) => {
         t.pass();
         end();
     });
-    
+
     try {
     await keyv.set("foo", "bar");
     } catch (err) {}
@@ -174,7 +175,7 @@ test('get should emit an error', withCallback(async (t, end) => {
         t.pass();
         end();
     });
-    
+
     try {
     await keyv.get("foo");
     } catch (err) {}
