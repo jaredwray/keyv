@@ -1,18 +1,28 @@
 import EventEmitter from 'node:events';
+import Database from 'better-sqlite3';
 
 export = KeyvSqlite;
 declare class KeyvSqlite extends EventEmitter {
-	readonly ttlSupport: boolean;
+	readonly ttlSupport: false;
+	namespace?: string | undefined;
 	opts: any;
-	db: any;
-	constructor(options: any);
+	db: Database;
+	constructor(options?: string | KeyvSqlite.Options);
 	get(key: any): any;
 	getMany(keys: any): any[];
-	set(key: any, value: any): any;
-	delete(key: any): boolean;
-	deleteMany(keys: any): boolean;
-	clear(): any;
+	set(key: string, value: any): Promise<any>;
+	delete(key: string): boolean;
+	deleteMany(keys: string[]): boolean;
+	clear(): Promise<void>;
 	iterator(namespace: any): AsyncGenerator<any, void, any>;
 	has(key: any): boolean;
 }
-// # sourceMappingURL=index.d.ts.map
+
+declare namespace KeyvSqlite {
+	interface Options {
+		uri?: string | undefined;
+		busyTimeout?: number | undefined;
+		table?: string | undefined;
+		keySize?: number | undefined;
+	}
+}
