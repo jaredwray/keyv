@@ -16,5 +16,8 @@
     "coverage": "lerna run coverage",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && lerna run clean",
     "bootstrap": "yarn && lerna run --scope @keyv/test-suite build"
+  },
+  "dependencies": {
+    "@types/node": "^17.0.21"
   }
 }
