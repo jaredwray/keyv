@@ -1,3 +1,4 @@
+// @ts-ignore
 'use strict';
 
 const EventEmitter = require('events');
@@ -12,20 +13,16 @@ class KeyvMysql extends EventEmitter {
 			options = { uri: options };
 		}
 
-		options = Object.assign({
-			dialect: 'mysql',
-			uri: 'mysql://localhost',
-		}, options);
+		options = { dialect: 'mysql',
+			uri: 'mysql://localhost', ...options };
 
 		options.connect = () => Promise.resolve()
 			.then(() => pool(options.uri))
 			.then(connection => sql => connection.execute(sql)
 				.then(data => data[0]));
 
-		this.opts = Object.assign({
-			table: 'keyv',
-			keySize: 255,
-		}, options);
+		this.opts = { table: 'keyv',
+			keySize: 255, ...options };
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(id VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
