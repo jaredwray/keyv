@@ -52,6 +52,18 @@
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
+		"tsd": "^0.19.1",
+		"typescript": "^4.6.2",
 		"xo": "^0.47.0"
-	}
+	},
+	"tsd" : {
+		"directory" : "test"
+	},
+	"types": "./src/index.d.ts",
+	"engines": {
+		"node": ">= 12"
+	},
+	"files": [
+		"src"
+	]
 }

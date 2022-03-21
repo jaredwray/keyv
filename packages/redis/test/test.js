@@ -1,3 +1,4 @@
+// @ts-ignore
 const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const { keyvOfficialTests, keyvIteratorTests } = require('@keyv/test-suite');

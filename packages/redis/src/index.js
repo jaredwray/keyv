@@ -1,3 +1,4 @@
+// @ts-ignore
 const EventEmitter = require('events');
 const Redis = require('ioredis');
 
@@ -11,7 +12,7 @@ class KeyvRedis extends EventEmitter {
 		if (uri instanceof Redis || uri instanceof Redis.Cluster) {
 			this.redis = uri;
 		} else {
-			options = Object.assign({}, typeof uri === 'string' ? { uri } : uri, options);
+			options = { ...(typeof uri === 'string' ? { uri } : uri), ...options };
 			this.redis = new Redis(options.uri, options);
 		}
 
@@ -66,7 +67,7 @@ class KeyvRedis extends EventEmitter {
 
 	clear() {
 		return this.redis.smembers(this._getNamespace())
-			.then(keys => this.redis.del(keys.concat(this._getNamespace())))
+			.then(keys => this.redis.del([...keys, ...this._getNamespace()]))
 			.then(() => undefined);
 	}
 
