@@ -5,14 +5,21 @@ declare class KeyvMysql extends EventEmitter {
 	readonly ttlSupport: false;
 	opts: any;
 	query: (sqlString: any) => any;
-	constructor(options?: string | KeyvSqlite.Options);
-	get(key: any): any;
-	getMany(keys: any): any;
-	set(key: any, value: any): any;
-	delete(key: any): any;
-	deleteMany(key: any): any;
-	clear(): any;
-	iterator(namespace: any): AsyncGenerator<any, void, any>;
-	has(key: any): any;
+	constructor(options?: string | KeyvMysql.Options);
+	get(key: string): Promise<string | undefined>;
+	getMany(keys: string[]): Promise<string[] | undefined>;
+	set(key: string, value: string | undefined): Promise<any>;
+	delete(key: string): boolean;
+	deleteMany(keys: string[]): boolean;
+	clear(): Promise<void>;
+	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
+	has(key: string): boolean;
 }
-// # sourceMappingURL=index.d.ts.map
+declare namespace KeyvMysql {
+	interface Options {
+		uri?: string | undefined;
+		busyTimeout?: number | undefined;
+		table?: string | undefined;
+		keySize?: number | undefined;
+	}
+}
