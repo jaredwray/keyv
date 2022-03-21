@@ -18,7 +18,6 @@ declare class KeyvPostgres extends EventEmitter {
 declare namespace KeyvPostgres {
 	interface Options {
 		uri?: string | undefined;
-		busyTimeout?: number | undefined;
 		table?: string | undefined;
 		keySize?: number | undefined;
 	}

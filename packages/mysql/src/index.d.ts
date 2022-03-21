@@ -18,7 +18,6 @@ declare class KeyvMysql extends EventEmitter {
 declare namespace KeyvMysql {
 	interface Options {
 		uri?: string | undefined;
-		busyTimeout?: number | undefined;
 		table?: string | undefined;
 		keySize?: number | undefined;
 	}

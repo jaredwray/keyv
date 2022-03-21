@@ -18,9 +18,7 @@ declare class KeyvRedis extends EventEmitter {
 declare namespace KeyvRedis {
 	interface Options {
 		uri?: string | undefined;
-		busyTimeout?: number | undefined;
-		table?: string | undefined;
-		keySize?: number | undefined;
+		dialect?: string | undefined;
 	}
 }
 export = KeyvRedis;
