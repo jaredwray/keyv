@@ -1,4 +1,5 @@
-const Pool = require('pg').Pool;
+// @ts-ignore
+const { Pool } = require('pg');
 
 let pool;
 let globalUri;

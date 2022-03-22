@@ -1,9 +1,10 @@
+// @ts-ignore
 'use strict';
 
 const EventEmitter = require('events');
-const Buffer = require('buffer').Buffer;
+const { Buffer } = require('buffer');
 const mongoClient = require('mongodb').MongoClient;
-const GridFSBucket = require('mongodb').GridFSBucket;
+const { GridFSBucket } = require('mongodb');
 const pify = require('pify');
 
 const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect']);
@@ -17,17 +18,15 @@ class KeyvMongo extends EventEmitter {
 		}
 
 		if (url.uri) {
-			url = Object.assign({ url: url.uri }, url);
+			url = { url: url.uri, ...url };
 		}
 
-		this.opts = Object.assign(
-			{
-				url: 'mongodb://127.0.0.1:27017',
-				collection: 'keyv',
-			},
-			url,
-			options,
-		);
+		this.opts = {
+			url: 'mongodb://127.0.0.1:27017',
+			collection: 'keyv',
+			...url,
+			...options,
+		};
 
 		const mongoOptions = Object.fromEntries(
 			Object.entries(this.opts).filter(

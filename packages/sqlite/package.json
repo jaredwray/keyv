@@ -4,7 +4,7 @@
 	"description": "SQLite storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
-		"test": "xo && nyc ava",
+		"test": "xo --fix && nyc ava",
 		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
 	},
@@ -52,6 +52,18 @@
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
+		"tsd": "^0.19.1",
+		"typescript": "^4.6.2",
 		"xo": "^0.48.0"
-	}
+	},
+	"tsd" : {
+		"directory" : "test"
+	},
+	"types": "./src/index.d.ts",
+	"engines": {
+		"node": ">= 12"
+	},
+	"files": [
+		"src"
+	]
 }

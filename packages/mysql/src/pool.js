@@ -1,3 +1,4 @@
+// @ts-ignore
 const mysql = require('mysql2');
 
 let pool;

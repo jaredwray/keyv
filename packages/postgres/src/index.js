@@ -1,3 +1,4 @@
+// @ts-ignore
 'use strict';
 
 const EventEmitter = require('events');
@@ -7,10 +8,8 @@ class KeyvPostgres extends EventEmitter {
 	constructor(options) {
 		super();
 		this.ttlSupport = false;
-		options = Object.assign({
-			dialect: 'postgres',
-			uri: 'postgresql://localhost:5432',
-		}, options);
+		options = { dialect: 'postgres',
+			uri: 'postgresql://localhost:5432', ...options };
 
 		options.connect = () => Promise.resolve()
 			.then(() => {
@@ -18,10 +17,8 @@ class KeyvPostgres extends EventEmitter {
 				return (sql, values) => conn.query(sql, values)
 					.then(data => data.rows);
 			});
-		this.opts = Object.assign({
-			table: 'keyv',
-			keySize: 255,
-		}, options);
+		this.opts = { table: 'keyv',
+			keySize: 255, ...options };
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 

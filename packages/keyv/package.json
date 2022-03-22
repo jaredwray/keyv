@@ -43,6 +43,15 @@
 		"pify": "5.0.0",
 		"this": "^1.1.0",
 		"timekeeper": "^2.2.0",
+		"tsd": "^0.19.1",
+		"typescript": "^4.6.2",
 		"xo": "^0.48.0"
-	}
+    },
+    "tsd" : {
+      "directory" : "test"
+    },
+    "types": "./src/index.d.ts",
+    "files": [
+      "src"
+    ]
 }

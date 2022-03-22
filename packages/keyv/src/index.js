@@ -33,18 +33,16 @@ const iterableAdapters = [
 class Keyv extends EventEmitter {
 	constructor(uri, options) {
 		super();
-		this.opts = Object.assign(
-			{
-				namespace: 'keyv',
-				serialize: JSONB.stringify,
-				deserialize: JSONB.parse,
-			},
-			(typeof uri === 'string') ? { uri } : uri,
-			options,
-		);
+		this.opts = {
+			namespace: 'keyv',
+			serialize: JSONB.stringify,
+			deserialize: JSONB.parse,
+			...((typeof uri === 'string') ? { uri } : uri),
+			...options,
+		};
 
 		if (!this.opts.store) {
-			const adapterOptions = Object.assign({}, this.opts);
+			const adapterOptions = { ...this.opts };
 			this.opts.store = loadStore(adapterOptions);
 		}
 

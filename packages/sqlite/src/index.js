@@ -1,3 +1,4 @@
+// @ts-ignore
 'use strict';
 
 const EventEmitter = require('events');
@@ -7,16 +8,12 @@ class KeyvSqlite extends EventEmitter {
 	constructor(options) {
 		super();
 		this.ttlSupport = false;
-		options = Object.assign({
-			dialect: 'sqlite',
-			uri: 'sqlite://:memory:',
-		}, options);
+		options = { dialect: 'sqlite',
+			uri: 'sqlite://:memory:', ...options };
 		options.db = options.uri.replace(/^sqlite:\/\//, '');
 
-		this.opts = Object.assign({
-			table: 'keyv',
-			keySize: 255,
-		}, options);
+		this.opts = { table: 'keyv',
+			keySize: 255, ...options };
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
@@ -105,7 +102,7 @@ class KeyvSqlite extends EventEmitter {
 		async function * iterate(offset, options, db) {
 			const select = `SELECT * FROM ${options.table} WHERE key LIKE ? LIMIT ? OFFSET ?`;
 			const iterator = db.prepare(select).iterate([`${namespace ? namespace + ':' : ''}%`, limit, offset]);
-			const enteries = Array.from(iterator);
+			const enteries = [...iterator];
 			if (enteries.length === 0) {
 				return;
 			}
