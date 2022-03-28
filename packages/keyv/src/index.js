@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const JSONB = require('json-buffer');
+const compressBrotli = require('compress-brotli');
 
 const loadStore = options => {
 	const adapters = {
@@ -44,6 +45,15 @@ class Keyv extends EventEmitter {
 		if (!this.opts.store) {
 			const adapterOptions = { ...this.opts };
 			this.opts.store = loadStore(adapterOptions);
+		}
+
+		if (this.opts.compress) {
+			const brotli = compressBrotli(this.opts.compress.opts);
+			this.opts.serialize = async ({ value, expires }) => brotli.serialize({ value: await brotli.compress(value), expires });
+			this.opts.deserialize = async data => {
+				const { value, expires } = brotli.deserialize(data);
+				return { value: await brotli.decompress(value), expires };
+			};
 		}
 
 		if (typeof this.opts.store.on === 'function') {
@@ -141,6 +151,7 @@ class Keyv extends EventEmitter {
 			.then(() => isArray ? store.getMany(keyPrefixed) : store.get(keyPrefixed))
 			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
 			.then(data => {
+				// Console.log('get', data);
 				if (data === undefined || data === null) {
 					return undefined;
 				}

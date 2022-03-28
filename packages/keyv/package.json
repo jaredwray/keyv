@@ -32,6 +32,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
+		"compress-brotli": "^1.3.6",
 		"json-buffer": "3.0.1"
 	},
 	"devDependencies": {

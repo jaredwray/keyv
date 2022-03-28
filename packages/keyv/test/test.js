@@ -1,6 +1,8 @@
 const test = require('ava');
+const compressBrotli = require('compress-brotli');
 const { default: keyvTestSuite, keyvOfficialTests, keyvIteratorTests } = require('@keyv/test-suite');
 const Keyv = require('this');
+const JSONB = require('json-buffer');
 const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
 
@@ -269,4 +271,34 @@ test.serial('keyv.get([keys]) should return empty array for all no existent keys
 	const values = await keyv.get(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
 	t.deepEqual(values, []);
+});
+
+test('pass compress options', async t => {
+	const compressOptions = { enable: false };
+	const brotli = compressBrotli(compressOptions);
+	const compress = { compress: true, opts: compressOptions };
+	const keyv = new Keyv({ store: new Map(), compress });
+	const compressed = await brotli.compress('bar');
+	const decompressed = await brotli.decompress(compressed);
+
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.get('foo'), 'bar');
+
+	t.deepEqual(
+		await keyv.opts.deserialize(JSONB.stringify({ value: 'bar', expires: null })),
+		await brotli.deserialize(
+			JSONB.stringify({ value: decompressed, expires: null }),
+		),
+	);
+});
+
+test('enable compression', async t => {
+	const compress = { compress: true };
+	const keyv = new Keyv({ store: new Map(), namespace: null, compress });
+	await keyv.set('foo', 'bar');
+
+	t.is(
+		await keyv.get('foo'),
+		'bar',
+	);
 });
