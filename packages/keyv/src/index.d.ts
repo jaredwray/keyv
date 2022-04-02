@@ -2,8 +2,8 @@ import { EventEmitter } from 'events';
 
 declare class Keyv<T = any> extends EventEmitter {
 	constructor(uri: string, options: Keyv.Options);
-	get(key: string, options: any): Promise<T>;
-	set(key: string, value: T, ttl: number): Promise<boolean>;
+	get(key: string, options?: any): Promise<T>;
+	set(key: string, value: T, ttl?: number): Promise<boolean>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has(key: string): Promise<boolean>;
