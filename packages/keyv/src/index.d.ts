@@ -1,4 +1,4 @@
-import EventEmitter from 'node:events';
+import EventEmitter from 'events';
 
 declare class Keyv extends EventEmitter {
 	constructor(uri: string, options: Keyv.Options);
