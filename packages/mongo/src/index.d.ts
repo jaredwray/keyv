@@ -1,4 +1,4 @@
-import EventEmitter from 'events';
+import { EventEmitter } from 'events';
 import GridFSBucket from 'mongodb';
 
 declare class KeyvMongo extends EventEmitter {

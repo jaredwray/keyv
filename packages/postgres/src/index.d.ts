@@ -1,4 +1,4 @@
-import EventEmitter from 'events';
+import { EventEmitter } from 'events';
 
 export = KeyvPostgres;
 declare class KeyvPostgres extends EventEmitter {
