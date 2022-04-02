@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/test-suite",
-	"version": "1.7.0",
+	"version": "1.7.1",
 	"description": "Test suite for Keyv API compliancy",
 	"main": "src/index.js",
 	"type": "commonjs",
@@ -42,7 +42,7 @@
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
-		"ava": "^4.0.1",
+		"ava": "^4.1.0",
 		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
