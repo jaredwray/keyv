@@ -44,7 +44,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mongodb": "^4.4.0",
+		"mongodb": "^4.4.1",
 		"pify": "^5.0.0"
 	},
 	"devDependencies": {
