@@ -11,7 +11,8 @@
 	"xo": {
 		"extends": "xo-lukechilds",
 		"rules": {
-			"unicorn/prefer-module": 0
+			"unicorn/prefer-module": 0,
+			"unicorn/prefer-node-protocol": 0
 		}
 	},
 	"repository": {
