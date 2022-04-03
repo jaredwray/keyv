@@ -1,6 +1,6 @@
 {
 	"name": "keyv-memcache",
-	"version": "1.3.0",
+	"version": "1.3.1",
 	"description": "Memcache storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
