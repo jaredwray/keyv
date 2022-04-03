@@ -1,151 +1,156 @@
-"use strict";
+'use strict';
 
 const EventEmitter = require('events');
 const memcache = require('memjs');
 const JSONB = require('json-buffer');
 
 class KeyvMemcache extends EventEmitter {
-  constructor(uri, opts) {
-    super();
-    this.ttlSupport = true;
+	constructor(uri, opts) {
+		super();
+		this.ttlSupport = true;
 
-    opts = Object.assign(
-			{},
-			(typeof uri === 'string') ? { uri } : uri,
-			opts
-		);
+		opts = {
+
+			...((typeof uri === 'string') ? {uri} : uri),
+			...opts,
+		};
 		if (opts.uri && typeof opts.url === 'undefined') {
 			opts.url = opts.uri;
-    }
+		}
 
-    if (uri === undefined) {
-      uri = 'localhost:11211';
-      opts.url = opts.uri = uri;
-    }
-    
-    this.opts = opts;
+		if (uri === undefined) {
+			uri = 'localhost:11211';
+			// eslint-disable-next-line no-multi-assign
+			opts.url = opts.uri = uri;
+		}
 
-    this.client = memcache.Client.create(uri, opts);
+		this.opts = opts;
 
-  }
+		this.client = memcache.Client.create(uri, opts);
+	}
 
-  _getNamespace() {
-    return `namespace:${this.namespace}`;
-  }
+	_getNamespace() {
+		return `namespace:${this.namespace}`;
+	}
 
-  get(key) {
-    return new Promise((resolve, reject) => {
-      this.client.get(this.formatKey(key), (err, value) => {
-        if (err) {
-          this.emit("error", err);
-          reject(err);
-        } else {
-          let val = {};
-          if(value === null){
-            val = {
-              value: undefined,
-              expires: 0
-            }
-          } else {
-            val = this.opts.deserialize ? this.opts.deserialize(value) : JSONB.parse(value);
-          }
-          resolve(val);
-        }
-      });
-    });
-  }
+	get(key) {
+		return new Promise((resolve, reject) => {
+			this.client.get(this.formatKey(key), (err, value) => {
+				if (err) {
+					this.emit('error', err);
+					reject(err);
+				} else {
+					let val = {};
+					if (value === null) {
+						val = {
+							value: undefined,
+							expires: 0,
+						};
+					} else {
+						val = this.opts.deserialize ? this.opts.deserialize(value) : JSONB.parse(value);
+					}
 
-  getMany(keys) {
-    const promises = [];
-    for (const key of keys) {
-      promises.push(this.get(key));
-    }
+					resolve(val);
+				}
+			});
+		});
+	}
 
-    return Promise.allSettled(promises)
-        .then(values => {
-          const data = [];
-          for (const value of values) {
-            data.push(value.value);
-          }
+	getMany(keys) {
+		const promises = [];
+		for (const key of keys) {
+			promises.push(this.get(key));
+		}
 
-          return data.every(x => x === undefined) ? [] : data;
-        });
-  }
+		return Promise.allSettled(promises)
+			.then(values => {
+				const data = [];
+				for (const value of values) {
+					data.push(value.value);
+				}
 
-  set(key, value, ttl) {
-    let opts = {};
+				return data.every(x => x === undefined) ? [] : data;
+			});
+	}
 
-    if (ttl !== undefined) {
-      opts.expires = opts.ttl = Math.floor(ttl/1000); //moving to seconds
-    }
+	set(key, value, ttl) {
+		const opts = {};
 
-    return new Promise((resolve, reject) => {
-      this.client.set(this.formatKey(key), value, opts, (err, success) => {
-        if (err) {
-          this.emit('error', err);
-          reject(err);
-        } else {
-          resolve(success);
-        }
-      });
-    });
-  }
+		if (ttl !== undefined) {
+			// eslint-disable-next-line no-multi-assign
+			opts.expires = opts.ttl = Math.floor(ttl / 1000); // Moving to seconds
+		}
 
-  delete(key) {
-    return new Promise((resolve, reject) => {
-      this.client.delete(this.formatKey(key), (err, success) => {
-        if (err) {
-          this.emit('error', err);
-          reject(err);
-        } else {
-          resolve(success);
-        }
-      });
-    });
-  }
+		return new Promise((resolve, reject) => {
+			this.client.set(this.formatKey(key), value, opts, (err, success) => {
+				if (err) {
+					this.emit('error', err);
+					reject(err);
+				} else {
+					resolve(success);
+				}
+			});
+		});
+	}
 
+	delete(key) {
+		return new Promise((resolve, reject) => {
+			this.client.delete(this.formatKey(key), (err, success) => {
+				if (err) {
+					this.emit('error', err);
+					reject(err);
+				} else {
+					resolve(success);
+				}
+			});
+		});
+	}
 
+	deleteMany(keys) {
+		const promises = [];
+		for (const key of keys) {
+			promises.push(this.delete(key));
+		}
 
-  deleteMany(keys) {
-    const promises = [];
-    for (const key of keys) {
-      promises.push(this.delete(key));
-    }
+		return Promise.allSettled(promises)
+			.then(values => values.every(x => x.value === true));
+	}
 
-    return Promise.allSettled(promises)
-        .then(values => values.every(x => x.value === true));
-  }
+	clear() {
+		return new Promise((resolve, reject) => {
+			this.client.flush(err => {
+				if (err) {
+					this.emit('error', err);
+					reject(err);
+				} else {
+					resolve(undefined);
+				}
+			});
+		});
+	}
 
-  clear() {
-    return new Promise((resolve, reject) => {
-      this.client.flush((err) => {
-        if (err) {
-          this.emit('error', err);
-          reject(err);
-        } else {
-          resolve(undefined);
-        }
-      });
-    });
-  }
+	formatKey(key) {
+		let result = key;
 
-  formatKey(key) {
-    let result = key;
+		if (this.namespace) {
+			result = this.namespace.trim() + ':' + key.trim();
+		}
 
-    if(this.namespace) {
-      result = this.namespace.trim() + ':' + key.trim();
-    }
+		return result;
+	}
 
-    return result;
-  }
-
-  has(key) {
-    return new Promise((resolve, reject) => {
-      this.client.get(this.formatKey(key), (err, value) => {
-        err ? reject(false) : resolve(value !== null);
-      });
-    });
-  }
+	has(key) {
+		return new Promise((resolve, reject) => {
+			this.client.get(this.formatKey(key), (err, value) => {
+				if (err) {
+					// eslint-disable-next-line prefer-promise-reject-errors
+					reject(false);
+				} else {
+					resolve(value !== null);
+				}
+			});
+		});
+	}
 }
 
 module.exports = KeyvMemcache;

@@ -1,4 +1,4 @@
-import EventEmitter from 'node:events';
+import {EventEmitter} from 'events';
 import Database from 'better-sqlite3';
 
 export = KeyvSqlite;

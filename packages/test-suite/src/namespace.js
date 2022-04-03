@@ -1,14 +1,14 @@
 const keyvNamepsaceTests = (test, Keyv, store) => {
 	test.beforeEach(async () => {
-		const keyv1 = new Keyv({ store: store(), namespace: 'keyv1' });
-		const keyv2 = new Keyv({ store: store(), namespace: 'keyv2' });
+		const keyv1 = new Keyv({store: store(), namespace: 'keyv1'});
+		const keyv2 = new Keyv({store: store(), namespace: 'keyv2'});
 		await keyv1.clear();
 		await keyv2.clear();
 	});
 
 	test.serial('namespaced set/get don\'t collide', async t => {
-		const keyv1 = new Keyv({ store: store(), namespace: 'keyv1' });
-		const keyv2 = new Keyv({ store: store(), namespace: 'keyv2' });
+		const keyv1 = new Keyv({store: store(), namespace: 'keyv1'});
+		const keyv2 = new Keyv({store: store(), namespace: 'keyv2'});
 		await keyv1.set('foo', 'keyv1');
 		await keyv2.set('foo', 'keyv2');
 		t.is(await keyv1.get('foo'), 'keyv1');
@@ -16,8 +16,8 @@ const keyvNamepsaceTests = (test, Keyv, store) => {
 	});
 
 	test.serial('namespaced delete only deletes from current namespace', async t => {
-		const keyv1 = new Keyv({ store: store(), namespace: 'keyv1' });
-		const keyv2 = new Keyv({ store: store(), namespace: 'keyv2' });
+		const keyv1 = new Keyv({store: store(), namespace: 'keyv1'});
+		const keyv2 = new Keyv({store: store(), namespace: 'keyv2'});
 		await keyv1.set('foo', 'keyv1');
 		await keyv2.set('foo', 'keyv2');
 		t.is(await keyv1.delete('foo'), true);
@@ -26,8 +26,8 @@ const keyvNamepsaceTests = (test, Keyv, store) => {
 	});
 
 	test.serial('namespaced clear only clears current namespace', async t => {
-		const keyv1 = new Keyv({ store: store(), namespace: 'keyv1' });
-		const keyv2 = new Keyv({ store: store(), namespace: 'keyv2' });
+		const keyv1 = new Keyv({store: store(), namespace: 'keyv1'});
+		const keyv2 = new Keyv({store: store(), namespace: 'keyv2'});
 		await keyv1.set('foo', 'keyv1');
 		await keyv1.set('bar', 'keyv1');
 		await keyv2.set('foo', 'keyv2');
@@ -40,8 +40,8 @@ const keyvNamepsaceTests = (test, Keyv, store) => {
 	});
 
 	test.after.always(async () => {
-		const keyv1 = new Keyv({ store: store(), namespace: 'keyv1' });
-		const keyv2 = new Keyv({ store: store(), namespace: 'keyv2' });
+		const keyv1 = new Keyv({store: store(), namespace: 'keyv1'});
+		const keyv2 = new Keyv({store: store(), namespace: 'keyv2'});
 		await keyv1.clear();
 		await keyv2.clear();
 	});

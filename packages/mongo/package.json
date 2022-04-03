@@ -9,11 +9,11 @@
 		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
 	},
 	"xo": {
-		"extends": "xo-lukechilds",
 		"rules": {
 			"unicorn/prefer-module": 0,
 			"unicorn/no-array-reduce": 0,
-			"unicorn/prefer-object-from-entries": 0
+			"unicorn/prefer-object-from-entries": 0,
+			"unicorn/prefer-node-protocol": 0
 		}
 	},
 	"ava": {
@@ -50,7 +50,6 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"ava": "^4.1.0",
-		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",

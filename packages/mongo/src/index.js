@@ -1,10 +1,9 @@
-// @ts-ignore
 'use strict';
 
 const EventEmitter = require('events');
-const { Buffer } = require('buffer');
+const {Buffer} = require('buffer');
 const mongoClient = require('mongodb').MongoClient;
-const { GridFSBucket } = require('mongodb');
+const {GridFSBucket} = require('mongodb');
 const pify = require('pify');
 
 const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect']);
@@ -14,11 +13,11 @@ class KeyvMongo extends EventEmitter {
 		this.ttlSupport = false;
 		url = url || {};
 		if (typeof url === 'string') {
-			url = { url };
+			url = {url};
 		}
 
 		if (url.uri) {
-			url = { url: url.uri, ...url };
+			url = {url: url.uri, ...url};
 		}
 
 		this.opts = {
@@ -42,77 +41,76 @@ class KeyvMongo extends EventEmitter {
 
 		// Implementation from sql by lukechilds,
 		this.connect = new Promise(resolve => {
-			mongoClient.connect(this.opts.url, mongoOptions
-				, (error, client) => {
-					if (error) {
-						return this.emit('error', error);
+			mongoClient.connect(this.opts.url, mongoOptions, (error, client) => {
+				if (error) {
+					return this.emit('error', error);
+				}
+
+				this.db = client.db(this.opts.db);
+				if (this.opts.useGridFS) {
+					this.bucket = new GridFSBucket(this.db, {
+						readPreference: this.opts.readPreference || 'primary',
+						bucketName: this.opts.collection,
+					});
+					this.store = this.db.collection(this.opts.collection + '.files');
+					this.store.createIndex({
+						filename: 'hashed',
+					});
+					this.store.createIndex({
+						uploadDate: -1,
+					});
+					this.store.createIndex({
+						'metadata.expiresAt': 1,
+					});
+					this.store.createIndex({
+						'metadata.lastAccessed': 1,
+					});
+
+					for (const method of [
+						'updateOne',
+						'count',
+					]) {
+						this.store[method] = pify(this.store[method].bind(this.store));
 					}
 
-					this.db = client.db(this.opts.db);
-					if (this.opts.useGridFS) {
-						this.bucket = new GridFSBucket(this.db, {
-							readPreference: this.opts.readPreference || 'primary',
-							bucketName: this.opts.collection,
-						});
-						this.store = this.db.collection(this.opts.collection + '.files');
-						this.store.createIndex({
-							filename: 'hashed',
-						});
-						this.store.createIndex({
-							uploadDate: -1,
-						});
-						this.store.createIndex({
-							'metadata.expiresAt': 1,
-						});
-						this.store.createIndex({
-							'metadata.lastAccessed': 1,
-						});
-
-						for (const method of [
-							'updateOne',
-							'count',
-						]) {
-							this.store[method] = pify(this.store[method].bind(this.store));
-						}
-
-						for (const method of [
-							'find',
-							'drop',
-						]) {
-							this.bucket[method] = pify(this.bucket[method].bind(this.bucket));
-						}
-
-						resolve({ bucket: this.bucket, store: this.store, db: this.db });
-					} else {
-						this.store = this.db.collection(this.opts.collection);
-						this.store.createIndex(
-							{ key: 1 },
-							{
-								unique: true,
-								background: true,
-							},
-						);
-						this.store.createIndex(
-							{ expiresAt: 1 },
-							{
-								expireAfterSeconds: 0,
-								background: true,
-							},
-						);
-
-						for (const method of [
-							'updateOne',
-							'findOne',
-							'deleteOne',
-							'deleteMany',
-							'count',
-						]) {
-							this.store[method] = pify(this.store[method].bind(this.store));
-						}
-
-						resolve(this.store);
+					for (const method of [
+						'find',
+						'drop',
+					]) {
+						this.bucket[method] = pify(this.bucket[method].bind(this.bucket));
 					}
-				});
+
+					resolve({bucket: this.bucket, store: this.store, db: this.db});
+				} else {
+					this.store = this.db.collection(this.opts.collection);
+					this.store.createIndex(
+						{key: 1},
+						{
+							unique: true,
+							background: true,
+						},
+					);
+					this.store.createIndex(
+						{expiresAt: 1},
+						{
+							expireAfterSeconds: 0,
+							background: true,
+						},
+					);
+
+					for (const method of [
+						'updateOne',
+						'findOne',
+						'deleteOne',
+						'deleteMany',
+						'count',
+					]) {
+						this.store[method] = pify(this.store[method].bind(this.store));
+					}
+
+					resolve(this.store);
+				}
+			});
 		});
 	}
 
@@ -145,7 +143,7 @@ class KeyvMongo extends EventEmitter {
 		}
 
 		return this.connect.then(store =>
-			store.findOne({ key: { $eq: key } }).then(doc => {
+			store.findOne({key: {$eq: key}}).then(doc => {
 				if (!doc) {
 					return undefined;
 				}
@@ -176,8 +174,8 @@ class KeyvMongo extends EventEmitter {
 		const results = [...keys];
 		return this.connect.then(store =>
 			store.s.db.collection(this.opts.collection)
-				.find({ key: { $in: keys } })
-				.project({ _id: 0, value: 1, key: 1 })
+				.find({key: {$in: keys}})
+				.project({_id: 0, value: 1, key: 1})
 				.toArray().then(values => {
 					let i = 0;
 					for (const key of keys) {
@@ -220,9 +218,9 @@ class KeyvMongo extends EventEmitter {
 
 		return this.connect.then(store =>
 			store.updateOne(
-				{ key: { $eq: key } },
-				{ $set: { key, value, expiresAt } },
-				{ upsert: true },
+				{key: {$eq: key}},
+				{$set: {key, value, expiresAt}},
+				{upsert: true},
 			),
 		);
 	}
@@ -238,7 +236,7 @@ class KeyvMongo extends EventEmitter {
 				const bucket = new GridFSBucket(connection, {
 					bucketName: this.opts.collection,
 				});
-				return bucket.find({ filename: key }).toArray()
+				return bucket.find({filename: key}).toArray()
 					.then(files => client.bucket.delete(files[0]._id).then(() => true))
 					.catch(() => false);
 			});
@@ -246,7 +244,7 @@ class KeyvMongo extends EventEmitter {
 
 		return this.connect.then(store =>
 			store
-				.deleteOne({ key: { $eq: key } })
+				.deleteOne({key: {$eq: key}})
 				.then(object => object.deletedCount > 0),
 		);
 	}
@@ -258,7 +256,7 @@ class KeyvMongo extends EventEmitter {
 				const bucket = new GridFSBucket(connection, {
 					bucketName: this.opts.collection,
 				});
-				return bucket.find({ filename: { $in: keys } }).toArray()
+				return bucket.find({filename: {$in: keys}}).toArray()
 					.then(
 						files => {
 							if (files.length === 0) {
@@ -273,7 +271,7 @@ class KeyvMongo extends EventEmitter {
 
 		return this.connect.then(store =>
 			store
-				.deleteMany({ key: { $in: keys } })
+				.deleteMany({key: {$in: keys}})
 				.then(object => object.deletedCount > 0),
 		);
 	}
@@ -286,7 +284,7 @@ class KeyvMongo extends EventEmitter {
 		return this.connect.then(store =>
 			store
 				.deleteMany({
-					key: { $regex: this.namespace ? `^${this.namespace}:*` : '' },
+					key: {$regex: this.namespace ? `^${this.namespace}:*` : ''},
 				})
 				.then(() => undefined),
 		);
@@ -346,13 +344,13 @@ class KeyvMongo extends EventEmitter {
 	has(key) {
 		if (this.opts.useGridFS) {
 			return this.connect.then(client => client.store.count(
-				{ filename: { $eq: key } },
+				{filename: {$eq: key}},
 			).then(doc => doc !== 0));
 		}
 
 		return this.connect.then(store =>
 			store.count(
-				{ key: { $eq: key } },
+				{key: {$eq: key}},
 			),
 		).then(doc => doc !== 0);
 	}

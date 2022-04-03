@@ -38,21 +38,21 @@ class Keyv extends EventEmitter {
 			namespace: 'keyv',
 			serialize: JSONB.stringify,
 			deserialize: JSONB.parse,
-			...((typeof uri === 'string') ? { uri } : uri),
+			...((typeof uri === 'string') ? {uri} : uri),
 			...options,
 		};
 
 		if (!this.opts.store) {
-			const adapterOptions = { ...this.opts };
+			const adapterOptions = {...this.opts};
 			this.opts.store = loadStore(adapterOptions);
 		}
 
 		if (this.opts.compress) {
 			const brotli = compressBrotli(this.opts.compress.opts);
-			this.opts.serialize = async ({ value, expires }) => brotli.serialize({ value: await brotli.compress(value), expires });
+			this.opts.serialize = async ({value, expires}) => brotli.serialize({value: await brotli.compress(value), expires});
 			this.opts.deserialize = async data => {
-				const { value, expires } = brotli.deserialize(data);
-				return { value: await brotli.decompress(value), expires };
+				const {value, expires} = brotli.deserialize(data);
+				return {value: await brotli.decompress(value), expires};
 			};
 		}
 
@@ -113,7 +113,7 @@ class Keyv extends EventEmitter {
 	}
 
 	get(key, options) {
-		const { store } = this.opts;
+		const {store} = this.opts;
 		const isArray = Array.isArray(key);
 		const keyPrefixed = isArray ? this._getKeyPrefixArray(key) : this._getKeyPrefix(key);
 		if (isArray && store.getMany === undefined) {
@@ -201,7 +201,7 @@ class Keyv extends EventEmitter {
 			ttl = undefined;
 		}
 
-		const { store } = this.opts;
+		const {store} = this.opts;
 
 		return Promise.resolve()
 			.then(() => {
@@ -210,7 +210,7 @@ class Keyv extends EventEmitter {
 					this.emit('error', 'symbol cannot be serialized');
 				}
 
-				value = { value, expires };
+				value = {value, expires};
 				return this.opts.serialize(value);
 			})
 			.then(value => store.set(keyPrefixed, value, ttl))
@@ -218,7 +218,7 @@ class Keyv extends EventEmitter {
 	}
 
 	delete(key) {
-		const { store } = this.opts;
+		const {store} = this.opts;
 		if (Array.isArray(key)) {
 			const keyPrefixed = this._getKeyPrefixArray(key);
 			if (store.deleteMany === undefined) {
@@ -241,14 +241,14 @@ class Keyv extends EventEmitter {
 	}
 
 	clear() {
-		const { store } = this.opts;
+		const {store} = this.opts;
 		return Promise.resolve()
 			.then(() => store.clear());
 	}
 
 	has(key) {
 		const keyPrefixed = this._getKeyPrefix(key);
-		const { store } = this.opts;
+		const {store} = this.opts;
 		return Promise.resolve()
 			.then(async () => {
 				if (typeof store.has === 'function') {

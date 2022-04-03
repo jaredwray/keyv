@@ -1,8 +1,8 @@
 'use strict';
 
 const EventEmitter = require('events');
-const { Etcd3 } = require('etcd3');
-const { Policy } = require('cockatiel');
+const {Etcd3} = require('etcd3');
+const {Policy} = require('cockatiel');
 
 class KeyvEtcd extends EventEmitter {
 	constructor(url, options) {
@@ -10,31 +10,29 @@ class KeyvEtcd extends EventEmitter {
 		this.ttlSupport = options && typeof options.ttl === 'number';
 		url = url || {};
 		if (typeof url === 'string') {
-			url = { url };
+			url = {url};
 		}
 
 		if (url.uri) {
-			url = Object.assign({ url: url.uri }, url);
+			url = {url: url.uri, ...url};
 		}
 
 		if (url.ttl) {
 			this.ttlSupport = typeof url.ttl === 'number' ? url.ttl : false;
 		}
 
-		this.opts = Object.assign(
-			{
-				url: '127.0.0.1:2379',
-			},
-			url,
-			options,
-		);
+		this.opts = {
+			url: '127.0.0.1:2379',
+			...url,
+			...options,
+		};
 
 		this.opts.url = this.opts.url.replace(/^etcd:\/\//, '');
 		const policy = Policy.handleAll().retry();
 		policy.onFailure(error => {
 			this.emit('error', error.reason);
 		});
-		this.client = new Etcd3(options = { hosts: this.opts.url,
+		this.client = new Etcd3(options = {hosts: this.opts.url,
 			faultHandling: {
 				host: () => policy,
 				global: policy,

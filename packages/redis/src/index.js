@@ -1,4 +1,3 @@
-// @ts-ignore
 const EventEmitter = require('events');
 const Redis = require('ioredis');
 
@@ -12,7 +11,7 @@ class KeyvRedis extends EventEmitter {
 		if (uri instanceof Redis || uri instanceof Redis.Cluster) {
 			this.redis = uri;
 		} else {
-			options = { ...(typeof uri === 'string' ? { uri } : uri), ...options };
+			options = {...(typeof uri === 'string' ? {uri} : uri), ...options};
 			this.redis = new Redis(options.uri, options);
 		}
 

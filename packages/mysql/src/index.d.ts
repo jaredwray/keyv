@@ -1,4 +1,4 @@
-import EventEmitter from 'node:events';
+import {EventEmitter} from 'events';
 
 export = KeyvMysql;
 declare class KeyvMysql extends EventEmitter {

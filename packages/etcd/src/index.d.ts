@@ -1,5 +1,4 @@
-
-import EventEmitter from 'node:events';
+import {EventEmitter} from 'events';
 import Etcd3 from 'etcd3';
 
 declare class KeyvEtcd extends EventEmitter {

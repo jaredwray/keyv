@@ -1,4 +1,4 @@
-import EventEmitter from 'node:events';
+import {EventEmitter} from 'events';
 
 declare class KeyvRedis extends EventEmitter {
 	readonly ttlSupport: false;
