@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import {EventEmitter} from 'events';
 
 declare class Keyv<T = any> extends EventEmitter {
 	constructor(uri: string, options: Keyv.Options);

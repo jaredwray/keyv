@@ -1,18 +1,17 @@
-// @ts-ignore
 const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
-const { keyvOfficialTests } = require('@keyv/test-suite');
+const {keyvOfficialTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const KeyvSqlite = require('this');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
-const store = () => new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000 });
+const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 
 keyvTestSuite(test, Keyv, store);
 
 test.serial('Async Iterator single element test', async t => {
-	const keyv = new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000 });
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	const iterator = keyv.iterator();
@@ -23,7 +22,7 @@ test.serial('Async Iterator single element test', async t => {
 });
 
 test.serial('Async Iterator multiple element test', async t => {
-	const keyv = new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 3 });
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 3});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
@@ -40,7 +39,7 @@ test.serial('Async Iterator multiple element test', async t => {
 });
 
 test.serial('Async Iterator multiple elements with limit=1 test', async t => {
-	const keyv = new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1 });
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
@@ -61,7 +60,7 @@ test.serial('Async Iterator multiple elements with limit=1 test', async t => {
 });
 
 test.serial('Async Iterator 0 element test', async t => {
-	const keyv = new KeyvSqlite({ uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1 });
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1});
 	await keyv.clear();
 	const iterator = keyv.iterator('keyv');
 	const key = await iterator.next();

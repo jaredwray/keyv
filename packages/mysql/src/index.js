@@ -1,28 +1,27 @@
-// @ts-ignore
 'use strict';
 
 const EventEmitter = require('events');
 const mysql = require('mysql2/promise');
-const { pool } = require('./pool.js');
+const {pool} = require('./pool.js');
 
 class KeyvMysql extends EventEmitter {
 	constructor(options) {
 		super();
 		this.ttlSupport = false;
 		if (typeof options === 'string') {
-			options = { uri: options };
+			options = {uri: options};
 		}
 
-		options = { dialect: 'mysql',
-			uri: 'mysql://localhost', ...options };
+		options = {dialect: 'mysql',
+			uri: 'mysql://localhost', ...options};
 
 		options.connect = () => Promise.resolve()
 			.then(() => pool(options.uri))
 			.then(connection => sql => connection.execute(sql)
 				.then(data => data[0]));
 
-		this.opts = { table: 'keyv',
-			keySize: 255, ...options };
+		this.opts = {table: 'keyv',
+			keySize: 255, ...options};
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(id VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 

@@ -1,4 +1,4 @@
-const promisify = require('util').promisify;
+const {promisify} = require('util');
 
 const keyvOfficialTests = (test, Keyv, goodUri, badUri, options = {}) => { // eslint-disable-line max-params
 	test.serial('connection string automatically requires storage adapter', async t => {

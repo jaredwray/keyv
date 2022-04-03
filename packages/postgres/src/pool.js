@@ -1,5 +1,4 @@
-// @ts-ignore
-const { Pool } = require('pg');
+const {Pool} = require('pg');
 
 let pool;
 let globalUri;
@@ -10,7 +9,7 @@ const pools = uri => {
 		globalUri = uri;
 	}
 
-	pool = pool || new Pool({ connectionString: uri });
+	pool = pool || new Pool({connectionString: uri});
 	return pool;
 };
 

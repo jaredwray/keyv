@@ -3,19 +3,19 @@ const delay = require('delay');
 
 const keyvIteratorTests = (test, Keyv, store) => {
 	test.beforeEach(async () => {
-		const keyv = new Keyv({ store: store() });
+		const keyv = new Keyv({store: store()});
 		await keyv.clear();
 	});
 
 	test.serial('.iterator() returns an asyncIterator', t => {
-		const keyv = new Keyv({ store: store() });
+		const keyv = new Keyv({store: store()});
 		t.true(typeof keyv.iterator()[Symbol.asyncIterator] === 'function');
 	});
 
 	test.serial('iterator() iterates over all values', async t => {
-		const keyv = new Keyv({ store: store() });
+		const keyv = new Keyv({store: store()});
 		const map = new Map(
-			Array.from({ length: 5 })
+			Array.from({length: 5})
 				.fill(0)
 				.map((x, i) => [String(i), String(i + 10)]),
 		);
@@ -38,9 +38,9 @@ const keyvIteratorTests = (test, Keyv, store) => {
 		async t => {
 			const KeyvStore = store();
 
-			const keyv1 = new Keyv({ store: KeyvStore, namespace: 'keyv1' });
+			const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1'});
 			const map1 = new Map(
-				Array.from({ length: 5 })
+				Array.from({length: 5})
 					.fill(0)
 					.map((x, i) => [String(i), String(i + 10)]),
 			);
@@ -51,9 +51,9 @@ const keyvIteratorTests = (test, Keyv, store) => {
 
 			await Promise.all(toResolve);
 
-			const keyv2 = new Keyv({ store: KeyvStore, namespace: 'keyv2' });
+			const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2'});
 			const map2 = new Map(
-				Array.from({ length: 5 })
+				Array.from({length: 5})
 					.fill(0)
 					.map((x, i) => [String(i), String(i + 11)]),
 			);
@@ -76,9 +76,9 @@ const keyvIteratorTests = (test, Keyv, store) => {
 	test.serial(
 		'iterator() doesn\'t yield expired values, and deletes them',
 		async t => {
-			const keyv = new Keyv({ store: store() });
+			const keyv = new Keyv({store: store()});
 			const map = new Map(
-				Array.from({ length: 5 })
+				Array.from({length: 5})
 					.fill(0)
 					.map((x, i) => [String(i), String(i + 10)]),
 			);

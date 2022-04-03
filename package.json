@@ -19,5 +19,8 @@
   },
   "dependencies": {
     "@types/node": "^17.0.21"
+  },
+  "devDependencies": {
+    "lerna": "^4.0.0"
   }
 }
