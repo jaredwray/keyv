@@ -8,6 +8,7 @@ class KeyvOffline extends EventEmitter {
 		super();
 		this.proxy = new Proxy(keyv, {
 			get(keyv, method) {
+				console.log(method);
 				switch (method) {
 					case 'get':
 						return async (...args) => {
@@ -53,16 +54,6 @@ class KeyvOffline extends EventEmitter {
 						return async (...args) => {
 							try {
 								const value = await keyv.delete(...args);
-								return value;
-							} catch {
-								return false;
-							}
-						};
-
-					case 'deleteMany':
-						return async (...args) => {
-							try {
-								const value = await keyv.deleteMany(...args);
 								return value;
 							} catch {
 								return false;

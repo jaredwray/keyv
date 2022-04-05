@@ -54,12 +54,6 @@ test('.delete return false if store is unreachable', async t => {
 	t.is(typeof keyv.delete, 'function');
 });
 
-test('.deleteMany return false if store is unreachable', async t => {
-	const keyv = new KeyvOffline(keyvRedisBad);
-	t.is(await keyv.deleteMany(), false);
-	t.is(typeof keyv.deleteMany, 'function');
-});
-
 test('.getMany return false if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
 	t.is(await keyv.getMany(), false);
