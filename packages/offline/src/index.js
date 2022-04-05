@@ -19,10 +19,60 @@ class KeyvOffline extends EventEmitter {
 							}
 						};
 
+					case 'getMany':
+						return async (...args) => {
+							try {
+								const value = await keyv.getMany(...args);
+								return value;
+							} catch {
+								return false;
+							}
+						};
+
 					case 'set':
 						return async (...args) => {
 							try {
 								const value = await keyv.set(...args);
+								return value;
+							} catch {
+								return false;
+							}
+						};
+
+					case 'clear':
+						return async (...args) => {
+							try {
+								const value = await keyv.clear(...args);
+								return value;
+							} catch {
+								return false;
+							}
+						};
+
+					case 'delete':
+						return async (...args) => {
+							try {
+								const value = await keyv.delete(...args);
+								return value;
+							} catch {
+								return false;
+							}
+						};
+
+					case 'deleteMany':
+						return async (...args) => {
+							try {
+								const value = await keyv.deleteMany(...args);
+								return value;
+							} catch {
+								return false;
+							}
+						};
+
+					case 'has':
+						return async (...args) => {
+							try {
+								const value = await keyv.has(...args);
 								return value;
 							} catch {
 								return false;
@@ -62,10 +112,6 @@ class KeyvOffline extends EventEmitter {
 
 	has(key) {
 		return this.proxy.has(key);
-	}
-
-	async * iterator(namespace) {
-		yield this.proxy.iterator(namespace);
 	}
 }
 
