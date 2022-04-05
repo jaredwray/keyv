@@ -83,34 +83,45 @@ class KeyvOffline extends EventEmitter {
 						return Reflect.get(keyv, method);
 				}
 			},
+			set(target, prop, value) {
+				target[prop] = value;
+				return true;
+			},
 		});
 	}
 
 	set(key, value, ttl) {
+		this.proxy.namespace = this.namespace;
 		return this.proxy.set(key, value, ttl);
 	}
 
 	get(key) {
+		this.proxy.namespace = this.namespace;
 		return this.proxy.get(key);
 	}
 
 	getMany(keys) {
+		this.proxy.namespace = this.namespace;
 		return this.proxy.getMany(keys);
 	}
 
 	delete(key) {
+		this.proxy.namespace = this.namespace;
 		return this.proxy.delete(key);
 	}
 
 	deleteMany(key) {
+		this.proxy.namespace = this.namespace;
 		return this.proxy.deleteMany(key);
 	}
 
 	clear() {
+		this.proxy.namespace = this.namespace;
 		return this.proxy.clear();
 	}
 
 	has(key) {
+		this.proxy.namespace = this.namespace;
 		return this.proxy.has(key);
 	}
 }
