@@ -5,6 +5,7 @@ const Keyv = require('this');
 const JSONB = require('json-buffer');
 const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
+const KeyvMongo = require('@keyv/mongo');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
@@ -302,3 +303,48 @@ test('enable compression', async t => {
 		'bar',
 	);
 });
+
+test('iterator should exists with url', t => {
+	const store = new Keyv({store: new KeyvMongo({url: 'mongodb://127.0.0.1:27017'})});
+	t.is(typeof store.iterator, 'function');
+});
+
+test.serial(
+	'keyv iterator() doesn\'t yield values from other namespaces',
+	async t => {
+		const KeyvStore = new Map();
+
+		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1'});
+		const map1 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), String(i + 10)]),
+		);
+		const toResolve = [];
+		for (const [key, value] of map1) {
+			toResolve.push(keyv1.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2'});
+		const map2 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), String(i + 11)]),
+		);
+		toResolve.length = 0;
+		for (const [key, value] of map2) {
+			toResolve.push(keyv2.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		t.plan(map2.size);
+		for await (const [key, value] of keyv2.iterator()) {
+			const doesKeyExist = map2.has(key);
+			const isValueSame = map2.get(key) === value;
+			t.true(doesKeyExist && isValueSame);
+		}
+	},
+);
