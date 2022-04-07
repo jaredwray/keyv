@@ -1,0 +1,67 @@
+{
+	"name": "@keyv/offline",
+	"version": "3.0.0",
+	"description": "Offline storage adapter for Keyv",
+	"main": "src/index.js",
+	"scripts": {
+		"test": "xo && nyc ava",
+		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
+		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
+	},
+	"xo": {
+		"extends": "xo-lukechilds",
+		"rules": {
+			"unicorn/prefer-module": 0
+		}
+	},
+	"ava": {
+		"require": [
+			"requirable"
+		]
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"offline",
+		"keyv",
+		"storage",
+		"adapter",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+	},
+	"devDependencies": {
+		"@keyv/test-suite": "*",
+		"ava": "^4.0.1",
+		"eslint-config-xo-lukechilds": "^1.0.1",
+		"keyv": "*",
+		"nyc": "^15.1.0",
+		"requirable": "^1.0.5",
+		"this": "^1.1.0",
+		"tsd": "^0.19.1",
+		"typescript": "^4.6.2",
+		"xo": "^0.48.0"
+	},
+	"tsd" : {
+		"directory" : "test"
+	},
+	"types": "./src/index.d.ts",
+	"engines": {
+		"node": ">= 12"
+	},
+	"files": [
+		"src"
+	]
+}

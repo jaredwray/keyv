@@ -36,4 +36,4 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_KEY }}
-          files: ./packages/keyv/coverage.lcov,./packages/mysql/coverage.lcov,./packages/test-suite/coverage.lcov,./packages/sqlite/coverage.lcov,./packages/postgres/coverage.lcov,./packages/mongo/coverage.lcov,./packages/redis/coverage.lcov,./packages/memcache/coverage.lcov,./packages/etcd/coverage.lcov
+          files: ./packages/keyv/coverage.lcov,./packages/mysql/coverage.lcov,./packages/test-suite/coverage.lcov,./packages/sqlite/coverage.lcov,./packages/postgres/coverage.lcov,./packages/mongo/coverage.lcov,./packages/redis/coverage.lcov,./packages/memcache/coverage.lcov,./packages/etcd/coverage.lcov,./packages/offline/coverage.lcov

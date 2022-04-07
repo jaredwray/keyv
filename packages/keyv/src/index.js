@@ -14,6 +14,7 @@ const loadStore = options => {
 		postgres: '@keyv/postgres',
 		mysql: '@keyv/mysql',
 		etcd: '@keyv/etcd',
+		offline: '@keyv/offline',
 	};
 	if (options.adapter || options.uri) {
 		const adapter = options.adapter || /^[^:]*/.exec(options.uri)[0];
