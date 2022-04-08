@@ -178,8 +178,6 @@ class Keyv extends EventEmitter {
 						}
 					}
 
-					console.log(result[0]);
-
 					return result.every(x => x === undefined) ? [] : result;
 				}
 
