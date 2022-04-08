@@ -67,7 +67,7 @@ class Keyv extends EventEmitter {
 				for await (const [key, raw] of typeof iterator === 'function'
 					? iterator(this.opts.store.namespace)
 					: iterator) {
-					const data = typeof raw === 'string' ? this.opts.deserialize(raw) : raw;
+					const data = this.opts.deserialize(raw);
 					if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
 						continue;
 					}
@@ -104,12 +104,10 @@ class Keyv extends EventEmitter {
 	}
 
 	_getKeyUnprefix(key) {
-		return this.opts.store.namespace
-			? key
-				.split(':')
-				.splice(1)
-				.join(':')
-			: key;
+		return key
+			.split(':')
+			.splice(1)
+			.join(':');
 	}
 
 	get(key, options) {
@@ -151,13 +149,13 @@ class Keyv extends EventEmitter {
 			.then(() => isArray ? store.getMany(keyPrefixed) : store.get(keyPrefixed))
 			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
 			.then(data => {
-				// Console.log('get', data);
 				if (data === undefined || data === null) {
 					return undefined;
 				}
 
 				if (isArray) {
 					const result = [];
+
 					if (data.length === 0) {
 						return [];
 					}
@@ -179,6 +177,8 @@ class Keyv extends EventEmitter {
 							result.push((options && options.raw) ? row : row.value);
 						}
 					}
+
+					console.log(result[0]);
 
 					return result.every(x => x === undefined) ? [] : result;
 				}
