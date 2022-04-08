@@ -27,7 +27,7 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	constructor(uri?: string, options?: Keyv.Options<Value> & Options);
 
 	/** Returns the value. */
-	get<Raw extends boolean = false>(key: string, options?: {raw?: Raw}):
+	get<Raw extends boolean = false>(key: string | string[] = [], options?: {raw?: Raw}):
 	Promise<(Raw extends false
 		? Value
 		: Keyv.DeserializedData<Value>) | undefined>;
@@ -42,9 +42,11 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
      *
      * Returns `true` if the key existed, `false` if not.
      */
-	delete(key: string): Promise<boolean>;
+	delete(key: string | string[] = []): Promise<boolean>;
 	/** Delete all entries in the current namespace. */
 	clear(): Promise<void>;
+	/** Check if key exists in current namespace. */
+	has(key: string): Promise<boolean>;
 }
 
 declare namespace Keyv {
@@ -65,6 +67,8 @@ declare namespace Keyv {
 		ttl?: number | undefined;
 		/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
 		adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql' | undefined;
+		/** Enable compression option **/
+		compress?: Record<string, unknown> | undefined;
 	}
 
 	interface DeserializedData<Value> {
@@ -76,6 +80,7 @@ declare namespace Keyv {
 		set(key: string, value: Value, ttl?: number): any;
 		delete(key: string): boolean | Promise<boolean>;
 		clear(): void | Promise<void>;
+		has(key: string): boolean | Promise<boolean>;
 	}
 }
 

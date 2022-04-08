@@ -24,6 +24,7 @@ test.serial('Keyv accepts storage adapters', async t => {
 	t.is(store.size, 0);
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
+	t.deepEqual(await keyv.get('foo', {raw: true}), {value: 'bar', expires: null});
 	t.is(store.size, 1);
 });
 
@@ -217,6 +218,12 @@ test.serial('keyv.get([keys]) should return array values', async t => {
 	t.is(values[0], 'bar');
 	t.is(values[1], 'bar1');
 	t.is(values[2], 'bar2');
+
+	const rawValues = await keyv.get(['foo', 'foo1', 'foo2'], {raw: true});
+	t.is(Array.isArray(rawValues), true);
+	t.deepEqual(rawValues[0], {value: 'bar', expires: null});
+	t.deepEqual(rawValues[1], {value: 'bar1', expires: null});
+	t.deepEqual(rawValues[2], {value: 'bar2', expires: null});
 });
 
 test.serial('keyv.get([keys]) should return array value undefined when expires', async t => {
@@ -256,6 +263,43 @@ test.serial('keyv.get([keys]) should return array value undefined when expires s
 	t.is(values[2], 'bar2');
 });
 
+test.serial('keyv.get([keys]) should return empty array when expires sqlite', async t => {
+	const keyv = new Keyv({store: store()});
+	await keyv.clear();
+	await keyv.set('foo', 'bar', 1);
+	await keyv.set('foo1', 'bar1', 1);
+	await keyv.set('foo2', 'bar2', 1);
+	await new Promise(resolve => {
+		setTimeout(() => {
+			// Simulate database latency
+			resolve();
+		}, 30);
+	});
+	const values = await keyv.get(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values.length, 0);
+});
+
+test.serial('keyv.get([keys]) should return array raw values sqlite', async t => {
+	const keyv = new Keyv({store: store()});
+	await keyv.clear();
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	const values = await keyv.get(['foo', 'foo1'], {raw: true});
+	t.is(Array.isArray(values), true);
+	t.deepEqual(values[0], {value: 'bar', expires: null});
+	t.deepEqual(values[1], {value: 'bar1', expires: null});
+});
+
+test.serial('keyv.get([keys]) should return array raw values undefined sqlite', async t => {
+	const keyv = new Keyv({store: store()});
+	await keyv.clear();
+	const values = await keyv.get(['foo', 'foo1'], {raw: true});
+	t.is(Array.isArray(values), true);
+	t.is(values[0], undefined);
+	t.is(values[1], undefined);
+});
+
 test.serial('keyv.get([keys]) should return array values with undefined', async t => {
 	const keyv = new Keyv({store: new Map()});
 	await keyv.set('foo', 'bar');
@@ -265,6 +309,15 @@ test.serial('keyv.get([keys]) should return array values with undefined', async 
 	t.is(values[0], 'bar');
 	t.is(values[1], undefined);
 	t.is(values[2], 'bar2');
+});
+
+test.serial('keyv.get([keys]) should return array values with all undefined using storage adapter', async t => {
+	const keyv = new Keyv({store: store()});
+	const values = await keyv.get(['foo', 'foo1', 'foo2']);
+	t.is(Array.isArray(values), true);
+	t.is(values[0], undefined);
+	t.is(values[1], undefined);
+	t.is(values[2], undefined);
 });
 
 test.serial('keyv.get([keys]) should return empty array for all no existent keys', async t => {
@@ -331,7 +384,7 @@ test.serial(
 		const map2 = new Map(
 			Array.from({length: 5})
 				.fill(0)
-				.map((x, i) => [String(i), String(i + 11)]),
+				.map((x, i) => [String(i), i + 11]),
 		);
 		toResolve.length = 0;
 		for (const [key, value] of map2) {
