@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
-import { Store } from 'keyv';
-import { ClientOpts } from 'redis';
+import {Store} from 'keyv';
+import {ClientOpts} from 'redis';
 
 declare class KeyvRedis extends EventEmitter implements Store<string | undefined> {
 	readonly ttlSupport: false;
