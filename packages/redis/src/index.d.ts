@@ -1,14 +1,17 @@
 import {EventEmitter} from 'events';
+import {Store} from 'keyv';
+import {ClientOpts} from 'redis';
 
-declare class KeyvRedis extends EventEmitter {
+declare class KeyvRedis extends EventEmitter implements Store<string | undefined> {
 	readonly ttlSupport: false;
+	namespace?: string | undefined;
 	opts: Record<string, unknown>;
 	redis: any;
-	constructor(options?: string | KeyvRedis.Options);
-	_getNamespace(): string;
+	constructor(options?: KeyvRedis.Options);
+	constructor(uri: string, options?: KeyvRedis.Options);
 	get(key: string): Promise<string | undefined>;
 	getMany(keys: string[]): Promise<string[] | undefined>;
-	set(key: string, value: string | undefined): Promise<any>;
+	set(key: string, value: string | undefined, ttl?: number): Promise<any>;
 	delete(key: string): boolean;
 	deleteMany(keys: string[]): boolean;
 	clear(): Promise<void>;
@@ -16,7 +19,7 @@ declare class KeyvRedis extends EventEmitter {
 	has(key: string): boolean;
 }
 declare namespace KeyvRedis {
-	interface Options {
+	interface Options extends ClientOpts {
 		uri?: string | undefined;
 		dialect?: string | undefined;
 	}
