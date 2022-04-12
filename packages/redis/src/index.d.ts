@@ -19,7 +19,7 @@ declare class KeyvRedis extends EventEmitter implements Store<string | undefined
 	has(key: string): boolean;
 }
 declare namespace KeyvRedis {
-	interface Options extends ClientOpts {
+	interface Options {
 		uri?: string | undefined;
 		dialect?: string | undefined;
 	}
