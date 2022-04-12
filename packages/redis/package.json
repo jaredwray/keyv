@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/redis",
-	"version": "2.3.1",
+	"version": "2.3.2",
 	"description": "Redis storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
