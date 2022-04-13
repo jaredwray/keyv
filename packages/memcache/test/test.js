@@ -122,6 +122,23 @@ test.serial('keyv get / expired', async t => {
 	t.is(val, undefined);
 });
 
+test.serial('keyvMemcache getMany', async t => {
+
+	const val = await keyvMemcache.getMany(['foo0', 'Foo1']);
+	t.is(Array.isArray(val), true);
+
+	t.is(val[0], undefined);
+});
+
+test.serial('keyv has / false', async t => {
+	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211')});
+
+	const val = await keyv.has('foo');
+	console.log('error', val);
+
+	t.is(val, false);
+});
+
 const withCallback = fn => async t => {
 	await promisify(fn)(t);
 };

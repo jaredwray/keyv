@@ -69,7 +69,7 @@ class KeyvMemcache extends EventEmitter {
 					data.push(value.value);
 				}
 
-				return data.every(x => x === undefined) ? [] : data;
+				return data.every(x => x.value === undefined) ? [] : data;
 			});
 	}
 
@@ -144,7 +144,7 @@ class KeyvMemcache extends EventEmitter {
 			this.client.get(this.formatKey(key), (err, value) => {
 				if (err) {
 					// eslint-disable-next-line prefer-promise-reject-errors
-					reject(false);
+					resolve(false);
 				} else {
 					resolve(value !== null);
 				}
