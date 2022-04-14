@@ -6,11 +6,11 @@ declare class KeyvTiered extends EventEmitter {
 	constructor(options: KeyvTiered.Options);
 	set(key: string, value: string | Record<string, unknown> | undefined): Promise<any>;
 	get(key: string): Promise<string | undefined>;
-	//getMany(keys: string[]): Promise<string[] | undefined>;
+	// GetMany(keys: string[]): Promise<string[] | undefined>;
 	delete(key: string): boolean;
-	//deleteMany(keys: string[]): boolean;
+	// DeleteMany(keys: string[]): boolean;
 	clear(): Promise<void>;
-	//iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
+	// Iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
 	has(key: string): boolean;
 }
 

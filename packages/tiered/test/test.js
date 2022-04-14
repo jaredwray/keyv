@@ -23,6 +23,12 @@ test.beforeEach(() => {
 	return store.clear();
 });
 
+test.serial('constructor on default', t => {
+	const store = new KeyvTiered({});
+	t.is(store.local.opts.store instanceof Map, true);
+	t.is(store.remote.opts.store instanceof Map, true);
+});
+
 test.serial('.set() sets to both stores', async t => {
 	const remote = remoteStore();
 	const local = localStore();
@@ -69,6 +75,24 @@ test.serial('.delete() deletes both stores', async t => {
 	t.is(await store.get('fizz'), undefined);
 	t.is(await local.get('fizz'), undefined);
 	t.is(await remote.get('fizz'), undefined);
+});
+
+test.serial('.deleteMany() deletes both stores', async t => {
+	const remote = remoteStore();
+	const local = localStore();
+	const store = new KeyvTiered({remote, local});
+
+	await store.set('fizz', 'buzz');
+	await store.set('fizz1', 'buzz1');
+	const value = await store.deleteMany(['fizz', 'fizz1']);
+
+	t.is(value, true);
+	t.is(await store.get('fizz'), undefined);
+	t.is(await local.get('fizz'), undefined);
+	t.is(await remote.get('fizz'), undefined);
+	t.is(await store.get('fizz1'), undefined);
+	t.is(await local.get('fizz1'), undefined);
+	t.is(await remote.get('fizz1'), undefined);
 });
 
 test.serial(

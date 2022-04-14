@@ -20,9 +20,8 @@ class KeyvTiered extends EventEmitter {
 
 	get(key) {
 		return this.local.get(key).then(localResult => {
-			console.log(this.validator(localResult, key));
 			if (localResult === undefined || !this.validator(localResult, key)) {
-				this.remote.get(key).then(remoteResult => {
+				return this.remote.get(key).then(remoteResult => {
 					if (remoteResult === localResult) {
 						return remoteResult;
 					}
@@ -34,6 +33,27 @@ class KeyvTiered extends EventEmitter {
 
 			return localResult;
 		});
+	}
+
+	getMany(keys) {
+		const promises = [];
+		for (const key of keys) {
+			promises.push(this.get(key));
+		}
+
+		return Promise.all(promises)
+			.then(values => {
+				const data = [];
+				for (const value of values) {
+					if (value.value === null) {
+						data.push(undefined);
+					} else {
+						data.push(value.value);
+					}
+				}
+
+				return data.every(x => x === undefined) ? [] : data;
+			});
 	}
 
 	set(...args) {
@@ -56,6 +76,18 @@ class KeyvTiered extends EventEmitter {
 				.filter(Boolean)
 				.map(store => this[store].delete(key)),
 		).then(deleted => deleted);
+	}
+
+	deleteMany(keys, {localOnly = false} = {}) {
+		const promises = [];
+		for (const key of keys) {
+			promises.push(this.delete(key, localOnly));
+		}
+
+		console.log('delete');
+
+		return Promise.all(promises)
+			.then(values => values.every(x => x.value === true));
 	}
 
 	has(key) {
