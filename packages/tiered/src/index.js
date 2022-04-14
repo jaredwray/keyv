@@ -87,7 +87,7 @@ class KeyvTiered extends EventEmitter {
 		console.log('delete');
 
 		return Promise.all(promises)
-			.then(values => values.every(x => x.value === true));
+			.then(values => values.every(x => x));
 	}
 
 	has(key) {
