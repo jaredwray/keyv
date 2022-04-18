@@ -93,7 +93,7 @@ const keyvValueTests = (test, Keyv, store) => {
 		value = "''";
 		await keyv.set('key1', value);
 		t.is(await keyv.get('key1'), value);
-		value = '"'
+		value = '"';
 		await keyv.set('key2', value);
 		t.is(await keyv.get('key2'), value);
 	});
