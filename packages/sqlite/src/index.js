@@ -4,6 +4,8 @@ const EventEmitter = require('events');
 const sqlite3 = require('sqlite3');
 const pify = require('pify');
 
+const toString = input => String(input).search(/^[a-zA-Z]+$/) < 0 ? '_' + input : input;
+
 class KeyvSqlite extends EventEmitter {
 	constructor(options) {
 		super();
@@ -29,6 +31,8 @@ class KeyvSqlite extends EventEmitter {
 
 		this.opts = {table: 'keyv',
 			keySize: 255, ...options};
+
+		this.opts.table = toString(this.opts.table);
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
