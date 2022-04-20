@@ -8,7 +8,6 @@ class KeyvOffline extends EventEmitter {
 		super();
 		this.proxy = new Proxy(keyv, {
 			get(keyv, method) {
-				console.log(method);
 				switch (method) {
 					case 'get':
 						return async (...args) => {
