@@ -83,6 +83,31 @@ const keyvValueTests = (test, Keyv, store) => {
 		t.deepEqual(await keyv.get('foo'), bigNumber(value));
 	});
 
+	test.serial('single quotes value should be saved', async t => {
+		const keyv = new Keyv({store: store()});
+		// eslint-disable-next-line quotes
+		let value = "'";
+		await keyv.set('key', value);
+		t.is(await keyv.get('key'), value);
+		// eslint-disable-next-line quotes
+		value = "''";
+		await keyv.set('key1', value);
+		t.is(await keyv.get('key1'), value);
+		value = '"';
+		await keyv.set('key2', value);
+		t.is(await keyv.get('key2'), value);
+	});
+
+	test.serial('single quotes key should be saved', async t => {
+		const keyv = new Keyv({store: store()});
+		// eslint-disable-next-line quotes
+		const value = "'";
+		// eslint-disable-next-line quotes
+		const key = "'";
+		await keyv.set(key, value);
+		t.is(await keyv.get(key), value);
+	});
+
 	test.after.always(async () => {
 		const keyv = new Keyv({store: store()});
 		await keyv.clear();

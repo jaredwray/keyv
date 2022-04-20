@@ -10,6 +10,17 @@ const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTime
 
 keyvTestSuite(test, Keyv, store);
 
+test.serial('table name can be numeric, alphabet, special case', t => {
+	let keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: 3000});
+	t.is(keyv.opts.table, '_3000');
+
+	keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: 'sample'});
+	t.is(keyv.opts.table, 'sample');
+
+	keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: '$sample'});
+	t.is(keyv.opts.table, '_$sample');
+});
+
 test.serial('Async Iterator single element test', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 	await keyv.clear();
