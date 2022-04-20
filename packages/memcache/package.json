@@ -5,7 +5,7 @@
 	"main": "src/index.js",
 	"scripts": {
 		"test": "nyc ava",
-		"report-coverage": "nyc report --reporter=text-lcov > coverage.lcov",
+		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
 	},
 	"ava": {
