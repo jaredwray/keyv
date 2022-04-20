@@ -95,12 +95,26 @@ test.serial('.deleteMany() deletes both stores', async t => {
 	t.is(await remote.get('fizz1'), undefined);
 });
 
+test.serial('.getMany() deletes both stores', async t => {
+	const remote = remoteStore();
+	const local = localStore();
+	const store = new KeyvTiered({remote, local});
+
+	await store.set('fizz', 'buzz');
+	await store.set('fizz1', 'buzz1');
+	let value = await store.getMany(['fizz', 'fizz1']);
+	t.deepEqual(value, ['buzz', 'buzz1']);
+
+	value = await store.getMany(['fizz3', 'fizz4']);
+	t.deepEqual(value, []);
+});
+
 test.serial(
 	'.delete({ localOnly: true }) deletes only local store',
 	async t => {
 		const remote = remoteStore();
 		const local = localStore();
-		const store = new KeyvTiered({remote, local});
+		const store = new KeyvTiered({remote, local, localOnly: true});
 
 		await store.set('fizz', 'buzz');
 		await store.delete('fizz', {localOnly: true});
@@ -124,7 +138,7 @@ test.serial('.clear() clears both stores', async t => {
 test.serial('.clear({ localOnly: true }) clears local store alone', async t => {
 	const remote = remoteStore();
 	const local = localStore();
-	const store = new KeyvTiered({remote, local});
+	const store = new KeyvTiered({remote, local, localOnly: true});
 
 	await store.set('fizz', 'buzz');
 	await store.clear({localOnly: true});

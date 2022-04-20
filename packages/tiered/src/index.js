@@ -45,46 +45,40 @@ class KeyvTiered extends EventEmitter {
 			.then(values => {
 				const data = [];
 				for (const value of values) {
-					if (value.value === null) {
-						data.push(undefined);
-					} else {
-						data.push(value.value);
-					}
+					data.push(value);
 				}
 
 				return data.every(x => x === undefined) ? [] : data;
 			});
 	}
 
-	set(...args) {
+	set(key, value, ttl) {
 		return Promise.all(
-			['local', 'remote'].map(store => this[store].set(...args)),
+			['local', 'remote'].map(store => this[store].set(key, value, ttl)),
 		);
 	}
 
-	clear({localOnly = false} = {}) {
+	clear() {
 		return Promise.all(
-			['local', !localOnly && 'remote']
+			['local', !this.localOnly && 'remote']
 				.filter(Boolean)
 				.map(store => this[store].clear()),
 		);
 	}
 
-	delete(key, {localOnly = false} = {}) {
+	delete(key) {
 		return Promise.all(
-			['local', !localOnly && 'remote']
+			['local', !this.localOnly && 'remote']
 				.filter(Boolean)
 				.map(store => this[store].delete(key)),
 		).then(deleted => deleted);
 	}
 
-	deleteMany(keys, {localOnly = false} = {}) {
+	deleteMany(keys) {
 		const promises = [];
 		for (const key of keys) {
-			promises.push(this.delete(key, localOnly));
+			promises.push(this.delete(key));
 		}
-
-		console.log('delete');
 
 		return Promise.all(promises)
 			.then(values => values.every(x => x));
