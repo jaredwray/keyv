@@ -10,7 +10,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "lerna run test",
+    "test": "lerna run test --concurrency=1",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
     "coverage": "lerna run coverage",
