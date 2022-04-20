@@ -63,7 +63,7 @@ class KeyvTiered extends EventEmitter {
 			['local', !this.localOnly && 'remote']
 				.filter(Boolean)
 				.map(store => this[store].clear()),
-		);
+		).then(() => undefined);
 	}
 
 	delete(key) {
@@ -71,7 +71,7 @@ class KeyvTiered extends EventEmitter {
 			['local', !this.localOnly && 'remote']
 				.filter(Boolean)
 				.map(store => this[store].delete(key)),
-		).then(deleted => deleted);
+		).then(deleted => deleted.every(x => x === true));
 	}
 
 	deleteMany(keys) {

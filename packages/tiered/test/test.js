@@ -2,10 +2,13 @@
 
 const test = require('ava');
 const delay = require('delay');
+const keyvTestSuite = require('@keyv/test-suite').default;
+const {keyvOfficialTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
-
 const KeyvSqlite = require('@keyv/sqlite');
 const KeyvTiered = require('..');
+
+keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
 const remoteStore = () => new Keyv({
 	store: new KeyvSqlite({
@@ -15,6 +18,9 @@ const remoteStore = () => new Keyv({
 });
 
 const localStore = () => new Keyv();
+const store = () => new KeyvTiered({remote: remoteStore(), local: localStore()});
+
+keyvTestSuite(test, Keyv, store);
 
 test.beforeEach(() => {
 	const remote = remoteStore();
