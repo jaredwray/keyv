@@ -289,6 +289,19 @@ Delete all entries in the current namespace.
 
 Returns a promise which is resolved when the entries have been cleared.
 
+#### .iterator()
+
+Iterate over all entries of the current namespace.
+
+Returns a iterable that can be iterated by for-of loops. For example:
+
+```js
+// please note that the "await" keyword should be used here
+for await (const [key, value] of this.keyv.iterator()) {
+  console.log(key, value);
+};
+```
+
 # How to Contribute
 
 In this section of the documentation we will cover:
