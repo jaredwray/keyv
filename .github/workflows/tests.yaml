@@ -24,7 +24,7 @@ jobs:
         run: yarn test:services:start
 
       - name: Install Dependencies  
-        run: yarn bootstrap
+        run: yarn
         
       - name: Test Packages
         run: yarn test
