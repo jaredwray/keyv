@@ -3,7 +3,7 @@
 const test = require('ava');
 const delay = require('delay');
 const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests} = require('@keyv/test-suite');
+const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const KeyvSqlite = require('@keyv/sqlite');
 const KeyvTiered = require('..');
@@ -21,6 +21,8 @@ const localStore = () => new Keyv();
 const store = () => new KeyvTiered({remote: remoteStore(), local: localStore()});
 
 keyvTestSuite(test, Keyv, store);
+
+keyvIteratorTests(test, Keyv, store);
 
 test.beforeEach(() => {
 	const remote = remoteStore();

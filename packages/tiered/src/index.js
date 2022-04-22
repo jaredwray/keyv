@@ -6,21 +6,18 @@ const Keyv = require('keyv');
 class KeyvTiered extends EventEmitter {
 	constructor({remote = new Keyv(), local = new Keyv(), ...options}) {
 		super();
-		const normalizedOptions = {
+		this.opts = {
 			validator: () => true,
+			dialect: 'tiered',
 			...options,
 		};
 		this.remote = remote;
 		this.local = local;
-
-		for (const key of Object.keys(normalizedOptions)) {
-			(this[key] = normalizedOptions[key]);
-		}
 	}
 
 	get(key) {
 		return this.local.get(key).then(localResult => {
-			if (localResult === undefined || !this.validator(localResult, key)) {
+			if (localResult === undefined || !this.opts.validator(localResult, key)) {
 				return this.remote.get(key).then(remoteResult => {
 					if (remoteResult === localResult) {
 						return remoteResult;
@@ -60,7 +57,7 @@ class KeyvTiered extends EventEmitter {
 
 	clear() {
 		return Promise.all(
-			['local', !this.localOnly && 'remote']
+			['local', !this.opts.localOnly && 'remote']
 				.filter(Boolean)
 				.map(store => this[store].clear()),
 		).then(() => undefined);
@@ -68,7 +65,7 @@ class KeyvTiered extends EventEmitter {
 
 	delete(key) {
 		return Promise.all(
-			['local', !this.localOnly && 'remote']
+			['local', !this.opts.localOnly && 'remote']
 				.filter(Boolean)
 				.map(store => this[store].delete(key)),
 		).then(deleted => deleted.every(x => x === true));
@@ -87,12 +84,20 @@ class KeyvTiered extends EventEmitter {
 	has(key) {
 		return this.local.has(key)
 			.then(response => {
-				if (response === false || !this.validator(response, key)) {
+				if (response === false || !this.opts.validator(response, key)) {
 					return this.remote.has(key);
 				}
 
 				return response;
 			});
+	}
+
+	async * iterator(namespace) {
+		const limit = Number.parseInt(this.iterationLimit, 10) || 10;
+		this.remote.opts.iterationLimit = limit;
+		for await (const enteries of this.remote.iterator(namespace)) {
+			yield enteries;
+		}
 	}
 }
 

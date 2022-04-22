@@ -10,7 +10,7 @@ declare class KeyvTiered extends EventEmitter {
 	delete(key: string): boolean;
 	deleteMany(keys: string[]): boolean;
 	clear(): Promise<void>;
-	// Iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
+	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
 	has(key: string): boolean;
 }
 
@@ -18,6 +18,7 @@ declare namespace KeyvTiered {
 	interface Options {
 		local: Store<Value>;
 		remote: Store<Value>;
-		localOnly: boolean;
+		localOnly?: boolean;
+		iterationLimit?: number | undefined;
 	}
 }
