@@ -15,7 +15,7 @@ const loadStore = options => {
 		mysql: '@keyv/mysql',
 		etcd: '@keyv/etcd',
 		offline: '@keyv/offline',
-		tiered: '@keyv/tiered'
+		tiered: '@keyv/tiered',
 	};
 	if (options.adapter || options.uri) {
 		const adapter = options.adapter || /^[^:]*/.exec(options.uri)[0];
@@ -31,7 +31,7 @@ const iterableAdapters = [
 	'mysql',
 	'mongo',
 	'redis',
-	'tiered'
+	'tiered',
 ];
 
 class Keyv extends EventEmitter {
@@ -65,25 +65,23 @@ class Keyv extends EventEmitter {
 
 		this.opts.store.namespace = this.opts.namespace;
 
-		const generateIterator = iterator => {
-				return async function * () {
-					for await (const [key, raw] of typeof iterator === 'function'
-						? iterator(this.opts.store.namespace)
-						: iterator) {
-						const data = this.opts.deserialize(raw);
-						if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
-							continue;
-						}
+		const generateIterator = iterator => async function * () {
+			for await (const [key, raw] of typeof iterator === 'function'
+				? iterator(this.opts.store.namespace)
+				: iterator) {
+				const data = this.opts.deserialize(raw);
+				if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
+					continue;
+				}
 
-						if (typeof data.expires === 'number' && Date.now() > data.expires) {
-							this.delete(key);
-							continue;
-						}
+				if (typeof data.expires === 'number' && Date.now() > data.expires) {
+					this.delete(key);
+					continue;
+				}
 
-						yield [this._getKeyUnprefix(key), data.value];
-					}
-				};
+				yield [this._getKeyUnprefix(key), data.value];
 			}
+		};
 
 		// Attach iterators
 		if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {

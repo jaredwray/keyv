@@ -47,7 +47,7 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	clear(): Promise<void>;
 	/** Check if key exists in current namespace. */
 	has(key: string): Promise<boolean>;
-	/** iterator */
+	/** Iterator */
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
 }
 
