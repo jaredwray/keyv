@@ -5,6 +5,16 @@ const {keyvOfficialTests, keyvIteratorTests} = require('this');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
-const store = () => new Map();
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
+const storeExtended = () => {
+	class MapExtend extends Map {
+		constructor(map, options) {
+			super(map);
+			this.opts = options;
+		}
+	}
+
+	return new MapExtend(new Map(), {timeout: 1000});
+};
+
+keyvTestSuite(test, Keyv, storeExtended);
+keyvIteratorTests(test, Keyv, storeExtended);
