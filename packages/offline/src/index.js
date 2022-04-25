@@ -78,6 +78,7 @@ class KeyvOffline extends EventEmitter {
 				return true;
 			},
 		});
+		this.opts = keyv.opts;
 	}
 
 	set(key, value, ttl) {
