@@ -125,9 +125,7 @@ class KeyvPostgres extends EventEmitter {
 				yield [entry.key, entry.value];
 			}
 
-			if (offset !== 0) {
-				yield * iterate(offset, options, query);
-			}
+			yield * iterate(offset, options, query);
 		}
 
 		yield * iterate(0, this.opts, this.query);
