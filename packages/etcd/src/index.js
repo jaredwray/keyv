@@ -18,7 +18,7 @@ class KeyvEtcd extends EventEmitter {
 		}
 
 		if (url.ttl) {
-			this.ttlSupport = typeof url.ttl === 'number' ? url.ttl : false;
+			this.ttlSupport = typeof url.ttl === 'number';
 		}
 
 		this.opts = {

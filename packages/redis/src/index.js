@@ -80,12 +80,10 @@ class KeyvRedis extends EventEmitter {
 			}
 
 			const values = await get(keys);
-			for (const i in keys) {
-				if (Object.prototype.hasOwnProperty.call(keys, i)) {
-					const key = keys[i];
-					const value = values[i];
-					yield [key, value];
-				}
+			for (const [i] of keys.entries()) {
+				const key = keys[i];
+				const value = values[i];
+				yield [key, value];
 			}
 
 			if (cursor !== '0') {
@@ -93,7 +91,7 @@ class KeyvRedis extends EventEmitter {
 			}
 		}
 
-		yield * iterate(0, `${namespace ? namespace + ':' : ''}*`);
+		yield * iterate(0, `${namespace}:*`);
 	}
 
 	has(key) {

@@ -14,6 +14,18 @@ const store = () => new KeyvMongo(mongoURL, options);
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
+test.after.always(async () => {
+	let keyv = new KeyvMongo({...options});
+	await keyv.clear();
+	keyv = new KeyvMongo({collection: 'foo', useGridFS: true, ...options});
+	await keyv.clear();
+});
+
+test.beforeEach(async () => {
+	const keyv = new KeyvMongo({...options});
+	await keyv.clear();
+});
+
 test('default options', t => {
 	const store = new KeyvMongo();
 	t.deepEqual(store.opts, {
@@ -193,4 +205,40 @@ test.serial('Clears entire cache store', async t => {
 	const store = new KeyvMongo({useGridFS: true, ...options});
 	const result = await store.clear();
 	t.is(typeof result, 'undefined');
+});
+
+test.serial('Clears entire cache store with default namespace', async t => {
+	const store = new KeyvMongo({...options});
+	const result = await store.clear();
+	t.is(typeof result, 'undefined');
+});
+
+test.serial('iterator with default namespace', async t => {
+	const store = new KeyvMongo({...options});
+	await store.set('foo', 'bar');
+	await store.set('foo2', 'bar2');
+	const iterator = store.iterator();
+	let entry = await iterator.next();
+	t.is(entry.value[0], 'foo');
+	t.is(entry.value[1], 'bar');
+	entry = await iterator.next();
+	t.is(entry.value[0], 'foo2');
+	t.is(entry.value[1], 'bar2');
+	entry = await iterator.next();
+	t.is(entry.value, undefined);
+});
+
+test.serial('iterator with namespace', async t => {
+	const store = new KeyvMongo({namespace: 'key1', ...options});
+	await store.set('key1:foo', 'bar');
+	await store.set('key1:foo2', 'bar2');
+	const iterator = store.iterator('key1');
+	let entry = await iterator.next();
+	t.is(entry.value[0], 'key1:foo');
+	t.is(entry.value[1], 'bar');
+	entry = await iterator.next();
+	t.is(entry.value[0], 'key1:foo2');
+	t.is(entry.value[1], 'bar2');
+	entry = await iterator.next();
+	t.is(entry.value, undefined);
 });

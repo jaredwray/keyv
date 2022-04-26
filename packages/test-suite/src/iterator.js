@@ -87,13 +87,17 @@ const keyvIteratorTests = (test, Keyv, store) => {
 				toResolve.push(keyv.set(key, value, 200));
 			}
 
+			toResolve.push(keyv.set('foo', 'bar'));
+
 			await Promise.all(toResolve);
 			await delay(250);
-			for await (const entry of keyv.iterator()) {
-				t.fail('Found an expired value' + entry);
-			}
-
-			t.pass();
+			const iterator = keyv.iterator();
+			let entry = await iterator.next();
+			const [k, v] = entry.value;
+			t.is(k, 'foo');
+			t.is(v, 'bar');
+			entry = await iterator.next();
+			t.is(entry.value, undefined);
 		},
 	);
 };
