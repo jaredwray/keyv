@@ -35,3 +35,12 @@ test('set an undefined key', async t => {
 	const result = await keyv.get('foo2');
 	t.true(result === undefined);
 });
+
+test.serial('Async Iterator 0 element test', async t => {
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvRedis(redis);
+	await keyv.clear();
+	const iterator = keyv.iterator('keyv');
+	const key = await iterator.next();
+	t.is(key.value, undefined);
+});
