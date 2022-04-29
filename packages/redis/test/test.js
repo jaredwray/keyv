@@ -44,3 +44,16 @@ test.serial('Async Iterator 0 element test', async t => {
 	const key = await iterator.next();
 	t.is(key.value, undefined);
 });
+
+test.serial('close connection successfully', async t => {
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvRedis(redis);
+	t.is(await keyv.get('foo'), undefined);
+	await keyv.disconnect();
+	try {
+		await keyv.get('foo');
+		t.fail();
+	} catch {
+		t.pass();
+	}
+});
