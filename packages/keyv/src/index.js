@@ -259,6 +259,13 @@ class Keyv extends EventEmitter {
 				return value !== undefined;
 			});
 	}
+
+	disconnect() {
+		const {store} = this.opts;
+		if (typeof store.disconnect === 'function') {
+			return store.disconnect();
+		}
+	}
 }
 
 module.exports = Keyv;

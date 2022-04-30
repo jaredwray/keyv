@@ -401,3 +401,17 @@ test.serial(
 		}
 	},
 );
+
+test.serial('close connection successfully', async t => {
+	const keyv = new Keyv({store: store()});
+	await keyv.clear();
+	t.is(await keyv.get('foo'), undefined);
+	keyv.set('foo', 'bar');
+	t.is(await keyv.disconnect(), undefined);
+});
+
+test.serial('close connection undefined', async t => {
+	const store = new Map();
+	const keyv = new Keyv({store});
+	t.is(await keyv.disconnect(), undefined);
+});
