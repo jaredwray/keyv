@@ -106,6 +106,10 @@ class KeyvEtcd extends EventEmitter {
 	has(key) {
 		return this.client.get(key).exists();
 	}
+
+	disconnect() {
+		return this.client.close();
+	}
 }
 
 module.exports = KeyvEtcd;
