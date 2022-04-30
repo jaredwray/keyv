@@ -4,15 +4,15 @@ const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const KeyvMysql = require('this');
 
-keyvOfficialTests(test, Keyv, 'mysql://root:root@localhost/keyv_test', 'mysql://foo');
+keyvOfficialTests(test, Keyv, 'mysql://root@localhost/keyv_test', 'mysql://foo');
 
-const store = () => new KeyvMysql('mysql://root:root@localhost/keyv_test');
+const store = () => new KeyvMysql('mysql://root@localhost/keyv_test');
 keyvTestSuite(test, Keyv, store);
-const iteratorStore = () => new KeyvMysql({uri: 'mysql://root:root@localhost/keyv_test', iterationLimit: 2});
+const iteratorStore = () => new KeyvMysql({uri: 'mysql://root@localhost/keyv_test', iterationLimit: 2});
 keyvIteratorTests(test, Keyv, iteratorStore);
 
 test.serial('iterator with default namespace', async t => {
-	const keyv = new KeyvMysql({uri: 'mysql://root:root@localhost/keyv_test'});
+	const keyv = new KeyvMysql({uri: 'mysql://root@localhost/keyv_test'});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
