@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events');
-const {pool} = require('./pool.js');
+const {pool, endPool} = require('./pool.js');
 
 class KeyvPostgres extends EventEmitter {
 	constructor(options) {
@@ -134,6 +134,10 @@ class KeyvPostgres extends EventEmitter {
 	has(key) {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table} WHERE key = '${key}' )`;
 		return this.query(exists).then(rows => rows[0].exists);
+	}
+
+	disconnect() {
+		return endPool();
 	}
 }
 
