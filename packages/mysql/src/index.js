@@ -2,7 +2,7 @@
 
 const EventEmitter = require('events');
 const mysql = require('mysql2/promise');
-const {pool} = require('./pool.js');
+const {pool, endPool} = require('./pool.js');
 
 class KeyvMysql extends EventEmitter {
 	constructor(options) {
@@ -137,6 +137,10 @@ class KeyvMysql extends EventEmitter {
 	has(key) {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table} WHERE id = '${key}' )`;
 		return this.query(exists).then(rows => Object.values(rows[0])[0] === 1);
+	}
+
+	disconnect() {
+		return endPool();
 	}
 }
 

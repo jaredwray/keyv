@@ -302,6 +302,17 @@ for await (const [key, value] of this.keyv.iterator()) {
 };
 ```
 
+#### .disconnect()
+
+Closes connection.
+
+Return `undefined` when connection closes.
+
+```js
+// please note that the "await" keyword should be used here
+await disconnect()
+```
+
 # How to Contribute
 
 In this section of the documentation we will cover:

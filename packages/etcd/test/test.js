@@ -89,3 +89,15 @@ test('.clear() with namespace', async t => {
 	t.is(await store.get(store.namespace + ':key'), null);
 });
 
+test.serial('close connection successfully', async t => {
+	const keyv = new KeyvEtcd(etcdURL);
+	t.is(await keyv.get('foo'), null);
+	await keyv.disconnect();
+	try {
+		await keyv.get('foo');
+		t.fail();
+	} catch {
+		t.pass();
+	}
+});
+

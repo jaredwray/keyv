@@ -77,3 +77,11 @@ test.serial('Async Iterator 0 element test', async t => {
 	const key = await iterator.next();
 	t.is(key.value, undefined);
 });
+
+test.serial('close connection successfully', async t => {
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
+	await keyv.clear();
+	t.is(await keyv.get('foo'), undefined);
+	keyv.set('foo', 'bar');
+	t.is(await keyv.disconnect(), undefined);
+});

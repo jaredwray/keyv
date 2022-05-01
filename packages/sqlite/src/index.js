@@ -13,7 +13,7 @@ class KeyvSqlite extends EventEmitter {
 		options = {dialect: 'sqlite',
 			uri: 'sqlite://:memory:', ...options};
 		options.db = options.uri.replace(/^sqlite:\/\//, '');
-
+		this.close = {};
 		options.connect = () => new Promise((resolve, reject) => {
 			const db = new sqlite3.Database(options.db, error => {
 				if (error) {
@@ -27,7 +27,7 @@ class KeyvSqlite extends EventEmitter {
 				}
 			});
 		})
-			.then(db => pify(db.all).bind(db));
+			.then(db => ({query: pify(db.all).bind(db), close: pify(db.close).bind(db)}));
 
 		this.opts = {table: 'keyv',
 			keySize: 255, ...options};
@@ -37,11 +37,13 @@ class KeyvSqlite extends EventEmitter {
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
 		const connected = this.opts.connect()
-			.then(query => query(createTable).then(() => query))
+			.then(db => db.query(createTable).then(() => db))
 			.catch(error => this.emit('error', error));
 
 		this.query = (sqlString, ...parameter) => connected
-			.then(query => query(sqlString, ...parameter));
+			.then(db => db.query(sqlString, ...parameter));
+
+		this.close = () => connected.then(db => db.close);
 	}
 
 	get(key) {
@@ -147,6 +149,10 @@ class KeyvSqlite extends EventEmitter {
 	has(key) {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table} WHERE key = ? )`;
 		return this.query(exists, key).then(result => Object.values(result[0])[0] === 1);
+	}
+
+	disconnect() {
+		return this.close().then(() => undefined);
 	}
 }
 

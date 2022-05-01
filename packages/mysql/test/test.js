@@ -34,3 +34,15 @@ test.serial('.clear() with undefined namespace', async t => {
 	const keyv = store();
 	t.is(await keyv.clear(), undefined);
 });
+
+test.serial('close connection successfully', async t => {
+	const keyv = store();
+	t.is(await keyv.get('foo'), undefined);
+	await keyv.disconnect();
+	try {
+		await keyv.get('foo');
+		t.fail();
+	} catch {
+		t.pass();
+	}
+});

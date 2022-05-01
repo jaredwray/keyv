@@ -98,6 +98,10 @@ class KeyvRedis extends EventEmitter {
 		return this.redis.exists(key)
 			.then(value => value !== 0);
 	}
+
+	disconnect() {
+		return this.redis.disconnect();
+	}
 }
 
 module.exports = KeyvRedis;

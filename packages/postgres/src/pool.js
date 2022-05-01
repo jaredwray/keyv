@@ -13,6 +13,12 @@ const pools = uri => {
 	return pool;
 };
 
+const endPool = () => {
+	pool.end();
+	globalUri = undefined;
+};
+
 module.exports = {
 	pool: uri => pools(uri),
+	endPool,
 };
