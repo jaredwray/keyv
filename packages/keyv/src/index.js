@@ -18,7 +18,7 @@ const loadStore = options => {
 		tiered: '@keyv/tiered',
 	};
 	if (options.adapter || options.uri) {
-		const adapter = options.adapter || /^[^:]*/.exec(options.uri)[0];
+		const adapter = options.adapter || /^[^:+]*/.exec(options.uri)[0];
 		return new (require(adapters[adapter]))(options);
 	}
 
