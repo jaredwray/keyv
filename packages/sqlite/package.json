@@ -42,7 +42,8 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"sqlite3": "^5.0.3"
+		"sqlite3": "^5.0.3",
+		"pify": "^5.0.0"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
