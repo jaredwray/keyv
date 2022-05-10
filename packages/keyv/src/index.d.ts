@@ -49,7 +49,7 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	has(key: string): Promise<boolean>;
 	/** Iterator */
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
-	/** 
+	/**
 	 * Closes the connection.
 	 *
 	 * Returns `undefined` when the connection closes.
