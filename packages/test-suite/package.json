@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/test-suite",
-	"version": "1.7.2",
+	"version": "1.7.3",
 	"description": "Test suite for Keyv API compliancy",
 	"main": "src/index.js",
 	"type": "commonjs",
@@ -42,7 +42,7 @@
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
-		"ava": "^4.1.0",
+		"ava": "^4.2.0",
 		"keyv": "*",
 		"nyc": "^15.1.0",
 		"this": "^1.1.0",
