@@ -1,6 +1,6 @@
 {
 	"name": "keyv-memcache",
-	"version": "1.3.2",
+	"version": "1.3.3",
 	"description": "Memcache storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
@@ -40,13 +40,13 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.1.0",
+		"ava": "^4.2.0",
 		"keyv": "*",
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
 		"tsd": "^0.20.0",
-		"typescript": "^4.6.3"
+		"typescript": "^4.6.4"
 	},
 	"tsd": {
 		"directory": "test"
