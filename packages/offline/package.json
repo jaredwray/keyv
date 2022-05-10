@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/offline",
-	"version": "3.0.0",
+	"version": "3.0.1",
 	"description": "Offline storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
@@ -44,14 +44,14 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.0.1",
+		"ava": "^4.2.0",
 		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
-		"tsd": "^0.19.1",
-		"typescript": "^4.6.2",
+		"tsd": "^0.20.0",
+		"typescript": "^4.6.4",
 		"xo": "^0.48.0"
 	},
 	"tsd" : {
