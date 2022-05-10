@@ -27,7 +27,7 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	constructor(uri?: string, options?: Keyv.Options<Value> & Options);
 
 	/** Returns the value. */
-	get<Raw extends boolean = false>(key: string | string[] = [], options?: {raw?: Raw}):
+	get<Raw extends boolean = false>(key: string | string[], options?: {raw?: Raw}):
 	Promise<(Raw extends false
 		? Value
 		: Keyv.DeserializedData<Value>) | undefined>;
@@ -42,7 +42,7 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
      *
      * Returns `true` if the key existed, `false` if not.
      */
-	delete(key: string | string[] = []): Promise<boolean>;
+	delete(key: string | string[]): Promise<boolean>;
 	/** Delete all entries in the current namespace. */
 	clear(): Promise<void>;
 	/** Check if key exists in current namespace. */
