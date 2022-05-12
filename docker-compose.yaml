@@ -33,7 +33,7 @@ services:
     ports:
       - 6380:6380
     volumes:
-      - ./tls:/tls
+      - ./packages/redis/tls:/tls
   keyv_mongo:
     image: mongo:latest
     restart: always
