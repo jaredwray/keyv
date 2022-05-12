@@ -45,8 +45,16 @@ test.serial('Async Iterator 0 element test', async t => {
 	t.is(key.value, undefined);
 });
 
+test('should support tls', async t => {
+	const options = {tls: {rejectUnauthorized: false}};
+	const redis = new Redis(redisURI, options);
+	const keyvRedis = new KeyvRedis(redis);
+	await keyvRedis.set('foo', 'bar');
+	t.true(await keyvRedis.get('foo') === 'bar');
+});
+
 test.serial('close connection successfully', async t => {
-	const redis = new Redis(redisURI);
+	const redis = new Redis('redis://localhost:6380');
 	const keyv = new KeyvRedis(redis);
 	t.is(await keyv.get('foo'), undefined);
 	await keyv.disconnect();
