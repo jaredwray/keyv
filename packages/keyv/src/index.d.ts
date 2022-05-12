@@ -88,7 +88,7 @@ declare namespace Keyv {
 		set(key: string, value: Value, ttl?: number): any;
 		delete(key: string): boolean | Promise<boolean>;
 		clear(): void | Promise<void>;
-		has(key: string): boolean | Promise<boolean>;
+		has?(key: string): boolean | Promise<boolean>;
 	}
 }
 
