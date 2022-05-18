@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/redis",
-	"version": "2.3.5",
+	"version": "2.3.6",
 	"description": "Redis storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
@@ -55,8 +55,8 @@
 		"typescript": "^4.6.4",
 		"xo": "^0.48.0"
 	},
-	"tsd" : {
-		"directory" : "test"
+	"tsd": {
+		"directory": "test"
 	},
 	"types": "./src/index.d.ts",
 	"engines": {
