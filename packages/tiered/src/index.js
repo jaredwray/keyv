@@ -23,8 +23,8 @@ class KeyvTiered extends EventEmitter {
 						return remoteResult;
 					}
 
-					this.local.set(key, remoteResult);
-					return remoteResult;
+					return this.local.set(key, remoteResult)
+						.then(() => remoteResult);
 				});
 			}
 
