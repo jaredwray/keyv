@@ -25,6 +25,15 @@ services:
       REDIS_HOST: redis
     ports:
       - 6379:6379
+  keyv_redis_1:
+    image: redis:latest
+    command: redis-server --port 0 --tls-port 6380 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no
+    environment:
+      REDIS_HOST: redis
+    ports:
+      - 6380:6380
+    volumes:
+      - ./packages/redis/tls:/tls
   keyv_mongo:
     image: mongo:latest
     restart: always
