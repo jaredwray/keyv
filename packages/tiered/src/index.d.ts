@@ -11,7 +11,7 @@ declare class KeyvTiered extends EventEmitter {
 	deleteMany(keys: string[]): boolean;
 	clear(): Promise<void>;
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
-	has(key: string): boolean;
+	has(key: string): Promise<boolean>;
 }
 
 declare namespace KeyvTiered {
