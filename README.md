@@ -326,8 +326,7 @@ In this section of the documentation we will cover:
 This package requires the following dependencies to run:
 
 1) [Yarn V1](https://yarnpkg.com/getting-started/install)
-2) [Lerna](https://lerna.js.org/)
-3) [Docker](https://docs.docker.com/get-docker/)
+2) [Docker](https://docs.docker.com/get-docker/)
 
 ## Setting up your workspace
 
@@ -343,22 +342,17 @@ Once the project is installed locally, you are ready to start up its services:
 
 1) Ensure that your Docker service is running.
 2) From the root directory of your project, run the `yarn` command in the command prompt to install yarn.
-3) Run the `yarn bootstrap` command to  install any necessary dependencies.
-4) Run `yarn test:services:start` to start up this project's Docker container. The container will launch all services within your workspace.
+3) Run `yarn test:services:start` to start up this project's Docker container. The container will launch all services within your workspace.
 
 ## Available Commands
 
-Once the project is running, you can execute a variety of commands. The root workspace and each subpackage contain a `package.json` file with a  `scripts` field listing all the commands that can be executed from that directory. This project also supports native `yarn`, `lerna`, and `docker` commands.
+Once the project is running, you can execute a variety of commands. The root workspace and each subpackage contain a `package.json` file with a  `scripts` field listing all the commands that can be executed from that directory. This project also supports native `yarn` and `docker` commands.
 
 Here, we'll cover the primary commands that can be executed from the root directory. Unless otherwise noted, these commands can also be executed from a subpackage. If executed from a subpackage, they will only affect that subpackage, rather than the entire workspace.
 
 ### `yarn`
 
 The `yarn` command installs yarn in the workspace.
-
-### `yarn bootstrap`
-
-The `yarn bootstrap` command installs all dependencies in the workspace.
 
 ### `yarn test:services:start`
 
