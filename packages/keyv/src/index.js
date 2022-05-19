@@ -7,6 +7,7 @@ const compressBrotli = require('compress-brotli');
 const loadStore = options => {
 	const adapters = {
 		redis: '@keyv/redis',
+		rediss: '@keyv/redis',
 		mongodb: '@keyv/mongo',
 		mongo: '@keyv/mongo',
 		sqlite: '@keyv/sqlite',
