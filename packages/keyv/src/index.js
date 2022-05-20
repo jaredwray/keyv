@@ -36,7 +36,7 @@ const iterableAdapters = [
 ];
 
 class Keyv extends EventEmitter {
-	constructor(uri, options) {
+	constructor(uri, {emitErrors = true, ...options} = {}) {
 		super();
 		this.opts = {
 			namespace: 'keyv',
@@ -60,7 +60,7 @@ class Keyv extends EventEmitter {
 			};
 		}
 
-		if (typeof this.opts.store.on === 'function') {
+		if (typeof this.opts.store.on === 'function' && emitErrors) {
 			this.opts.store.on('error', error => this.emit('error', error));
 		}
 
