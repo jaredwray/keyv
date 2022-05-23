@@ -45,14 +45,14 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
-    "ava": "^4.0.1",
+    "ava": "^4.2.0",
     "keyv": "*",
     "nyc": "^15.1.0",
     "requirable": "^1.0.5",
     "this": "^1.1.0",
-    "tsd": "^0.19.1",
-    "typescript": "^4.6.2",
-    "xo": "^0.48.0"
+    "tsd": "^0.20.0",
+    "typescript": "^4.6.4",
+    "xo": "^0.49.0"
   },
   "tsd" : {
     "directory" : "test"
