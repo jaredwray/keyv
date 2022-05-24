@@ -112,6 +112,7 @@ SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/packages/s
 PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/packages/postgres) | No 
 MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mysql) | No 
 Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes
+Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) | Yes
 
 ## Third-party Storage Adapters
 
@@ -149,7 +150,6 @@ The following are third-party storage adapters compatible with Keyv:
 - [keyv-null](https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
 - [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
 - [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
-- [keyv-memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) - Memcache storage adapter for Keyv
 - [keyv-azuretable](https://github.com/howlowck/keyv-azuretable) - Azure Table Storage/API adapter for Keyv
 
 ## Add Cache Support to your Module

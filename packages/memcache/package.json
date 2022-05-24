@@ -1,5 +1,5 @@
 {
-	"name": "keyv-memcache",
+	"name": "@keyv/memcache",
 	"version": "1.3.3",
 	"description": "Memcache storage adapter for Keyv",
 	"main": "src/index.js",
@@ -15,7 +15,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/jaredwray/keyv-memcache.git"
+		"url": "git+https://github.com/jaredwray/keyv.git"
 	},
 	"keywords": [
 		"memcache",
@@ -31,9 +31,9 @@
 	"author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/jaredwray/keyv-memcache/issues"
+		"url": "https://github.com/jaredwray/keyv/issues"
 	},
-	"homepage": "https://github.com/jaredwray/keyv-memcache",
+	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"json-buffer": "^3.0.1",
 		"memjs": "^1.3.0"
