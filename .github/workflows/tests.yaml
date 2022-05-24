@@ -29,6 +29,9 @@ jobs:
       - name: Test Packages
         run: yarn test
 
+      - name: Test Sqlite Packages
+        run:  yarn test:sqlite
+
       - name: Generate Code Coverage Report
         run: yarn coverage
 
