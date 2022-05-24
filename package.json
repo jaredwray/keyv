@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "test": "yarn workspaces run test",
-    "test:sqlite": "cd packages/sqlite && yarn test",
+    "test:sqlite": "cd ./packages/sqlite && yarn test",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
     "coverage": "yarn workspaces run coverage",
