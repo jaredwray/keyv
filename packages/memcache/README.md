@@ -1,29 +1,31 @@
-[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwray/keyv-memcache)
+[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
-# Keyv-Memcache
-_Memcache storage adapter for [Keyv](https://github.com/lukechilds/keyv)_
+# @keyv/memcache
+_Memcache storage adapter for [Keyv](https://github.com/jaredwray/keyv)_
 
 
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/jaredwray/keyv/branch/master/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
-[![GitHub license](https://img.shields.io/github/license/jaredwray/keyv-memcache)](https://github.com/jaredwray/keyv-memcache/blob/master/LICENSE)
-[![npm](https://img.shields.io/npm/dm/keyv-memcache)](https://npmjs.com/package/keyv-memcache)
+[![GitHub license](https://img.shields.io/github/license/jaredwray/keyv)](https://github.com/jaredwray/keyv/blob/master/LICENSE)
+[![npm](https://img.shields.io/npm/dm/@keyv/memcache)](https://npmjs.com/package/@keyv/memcache)
 
 ## Install
 
 ```shell
-npm install --save keyv-memcache
+npm install --save @keyv/memcache
+```
 ```
 or 
 ```
-yarn add keyv-memcache
+yarn add @keyv/memcache
+```
 ```
 
 ## Usage
 
 ```js
 const Keyv = require('keyv');
-const KeyvMemcache = require('keyv-memcache');
+const KeyvMemcache = require('@keyv/memcache');
 
 const memcache = new KeyvMemcache('user:pass@localhost:11211');
 const keyv = new Keyv({ store: memcache });
@@ -46,7 +48,7 @@ await keyv.clear();
 
 ```js
 const Keyv = require('keyv');
-const KeyvMemcache = require('keyv-memcache');
+const KeyvMemcache = require('@keyv/memcache');
 
 const memcache = new KeyvMemcache('user:pass@localhost:11211');
 const keyv1 = new Keyv({ store: memcache, namespace: "namespace1" });
@@ -73,7 +75,7 @@ let obj2 = await keyv2.get("foo"); //will return bar2
 let server = "localhost:11211"
 
 const Keyv = require("keyv");
-const KeyvMemcache = require("keyv-memcache");
+const KeyvMemcache = require("@keyv/memcache");
 
 const memcache = new KeyvMemcache();
 const keyv = new Keyv({ store: memcache});
@@ -92,7 +94,7 @@ let pass = "";
 let server = "XXX.XXX.XXX.memcachier.com:11211"
 
 const Keyv = require("keyv");
-const KeyvMemcache = require("keyv-memcache");
+const KeyvMemcache = require("@keyv/memcache");
 
 const memcache = new KeyvMemcache(user +":"+ pass +"@"+ server);
 const keyv = new Keyv({ store: memcache});
@@ -112,7 +114,7 @@ let pass = "";
 let server = "XXX.XXX.XXX.XXX.cloud.redislabs.com:XXX"
 
 const Keyv = require("keyv");
-const KeyvMemcache = require("keyv-memcache");
+const KeyvMemcache = require("@keyv/memcache");
 
 const memcache = new KeyvMemcache(user +":"+ pass +"@"+ server);
 const keyv = new Keyv({ store: memcache});
@@ -132,7 +134,7 @@ const keyv = new Keyv({ store: memcache});
 ```js
 
 const Keyv = require("keyv");
-const KeyvMemcache = require("keyv-memcache");
+const KeyvMemcache = require("@keyv/memcache");
 
 const memcache = new KeyvMemcache("insert the internal google memcached discovery endpoint");
 const keyv = new Keyv({ store: memcache});
