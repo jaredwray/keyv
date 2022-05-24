@@ -7,8 +7,17 @@
   "license": "MIT",
   "private": true,
   "workspaces": [
+    "packages/etcd",
+    "packages/keyv",
+    "packages/memcache",
+    "packages/mongo",
+    "packages/mysql",
+    "packages/offline",
+    "packages/postgres",
+    "packages/redis",
     "packages/!sqlite/**",
-    "packages/*"
+    "packages/test-sutie",
+    "packages/tiered"
   ],
   "scripts": {
     "test": "yarn workspaces run test",
