@@ -1,6 +1,6 @@
 {
 	"name": "keyv",
-	"version": "4.2.9",
+	"version": "4.3.0",
 	"description": "Simple key-value storage with support for multiple backends",
 	"main": "src/index.js",
 	"scripts": {
@@ -8,6 +8,9 @@
 		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
 	},
+	"workspaces": [
+		"packages/test-suite"
+	],
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": 0,
