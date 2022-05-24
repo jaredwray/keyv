@@ -15,7 +15,6 @@
     "packages/offline",
     "packages/postgres",
     "packages/redis",
-    "packages/!sqlite/**",
     "packages/test-sutie",
     "packages/tiered"
   ],
