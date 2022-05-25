@@ -27,37 +27,37 @@ jobs:
         run: npm install --workspaces
         
       - name: Test [keyv]
-        run: npm run test --workspace=keyv
+        run: npm run test --workspace=./packages/keyv
 
       - name: Test [test-suite]
-        run: npm run test --workspace=test-suite
+        run: npm run test --workspace=./packages/test-suite
 
       - name: Test [etcd]
-        run: npm run test --workspace=etcd
+        run: npm run test --workspace=./packages/etcd
 
       - name: Test [memcache]
-        run: npm run test --workspace=memcache
+        run: npm run test --workspace=./packages/memcache
 
       - name: Test [mongo]
-        run: npm run test --workspace=mongo
+        run: npm run test --workspace=./packages/mongo
 
       - name: Test [mysql]
-        run: npm run test --workspace=mysql
+        run: npm run test --workspace=./packages/mysql
 
       - name: Test [offline]
-        run: npm run test --workspace=offline
+        run: npm run test --workspace=./packages/offline
 
       - name: Test [postgres]
-        run: npm run test --workspace=postgres
+        run: npm run test --workspace=./packages/postgres
 
       - name: Test [redis]
-        run: npm run test --workspace=redis
+        run: npm run test --workspace=./packages/redis
 
       - name: Test [sqlite]
-        run: npm run test --workspace=sqlite
+        run: npm run test --workspace=./packages/sqlite
 
       - name: Test [tiered]
-        run: npm run test --workspace=tiered
+        run: npm run test --workspace=./packages/tiered
 
       - name: Generate Code Coverage Report
         run: npm run coverage
