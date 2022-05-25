@@ -29,6 +29,9 @@ jobs:
       - name: Test [keyv]
         run: yarn workspace keyv test
 
+      - name: Test [sqlite]
+        run: yarn workspace @keyv/sqlite test        
+
       - name: Test [etcd]
         run: yarn workspace @keyv/etcd test
 
@@ -49,9 +52,6 @@ jobs:
 
       - name: Test [redis]
         run: yarn workspace @keyv/redis test
-
-      - name: Test [sqlite]
-        run: yarn workspace @keyv/sqlite test
 
       - name: Test [test-suite]
         run: yarn workspace @keyv/test-suite test
