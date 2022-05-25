@@ -30,34 +30,34 @@ jobs:
         run: yarn workspace keyv test
 
       - name: Test [etcd]
-        run: yarn workspace etcd test
+        run: yarn workspace @keyv/etcd test
 
       - name: Test [memcache]
-        run: yarn workspace memcache test
+        run: yarn workspace @keyv/memcache test
 
       - name: Test [mongo]
-        run: yarn workspace mongo test
+        run: yarn workspace @keyv/mongo test
 
       - name: Test [mysql]
-        run: yarn workspace mysql test
+        run: yarn workspace @keyv/mysql test
 
       - name: Test [offline]
-        run: yarn workspace offline test
+        run: yarn workspace @keyv/offline test
 
       - name: Test [postgres]
-        run: yarn workspace postgres test
+        run: yarn workspace @keyv/postgres test
 
       - name: Test [redis]
-        run: yarn workspace redis test
+        run: yarn workspace @keyv/redis test
 
       - name: Test [sqlite]
-        run: yarn workspace sqlite test
+        run: yarn workspace @keyv/sqlite test
 
       - name: Test [test-suite]
-        run: yarn workspace test-suite test
+        run: yarn workspace @keyv/test-suite test
 
       - name: Test [tiered]
-        run: yarn workspace tiered test
+        run: yarn workspace @keyv/tiered test
 
       - name: Generate Code Coverage Report
         run: yarn coverage
