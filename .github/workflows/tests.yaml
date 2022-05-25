@@ -60,7 +60,7 @@ jobs:
         run: npm run test --workspace=packages/tiered
 
       - name: Generate Code Coverage Report
-        run: npm coverage
+        run: npm run coverage
 
       - name: Code Coverage
         uses: codecov/codecov-action@v2
