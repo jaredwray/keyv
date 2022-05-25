@@ -7,24 +7,14 @@
   "license": "MIT",
   "private": true,
   "workspaces": [
-    "packages/etcd",
-    "packages/keyv",
-    "packages/memcache",
-    "packages/mongo",
-    "packages/mysql",
-    "packages/offline",
-    "packages/postgres",
-    "packages/redis",
-    "packages/test-sutie",
-    "packages/tiered"
+    "packages/*"
   ],
   "scripts": {
-    "test": "yarn workspaces run test",
-    "test:sqlite": "cd ./packages/sqlite && yarn test",
+    "test": "npm run test --workspaces",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
-    "coverage": "yarn workspaces run coverage",
-    "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
+    "coverage": "npm run coverage --workspaces",
+    "clean": "rm -rf node_modules && rm -rf package-lock.json && npm run clean --workspaces"
   },
   "dependencies": {
     "@types/node": "^17.0.21"
