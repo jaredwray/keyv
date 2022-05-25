@@ -26,8 +26,38 @@ jobs:
       - name: Install Dependencies  
         run: yarn
         
-      - name: Test Packages
-        run: yarn test
+      - name: Test [keyv]
+        run: yarn workspace keyv test
+
+      - name: Test [etcd]
+        run: yarn workspace etcd test
+
+      - name: Test [memcache]
+        run: yarn workspace memcache test
+
+      - name: Test [mongo]
+        run: yarn workspace mongo test
+
+      - name: Test [mysql]
+        run: yarn workspace mysql test
+
+      - name: Test [offline]
+        run: yarn workspace offline test
+
+      - name: Test [postgres]
+        run: yarn workspace postgres test
+
+      - name: Test [redis]
+        run: yarn workspace redis test
+
+      - name: Test [sqlite]
+        run: yarn workspace sqlite test
+
+      - name: Test [test-suite]
+        run: yarn workspace test-suite test
+
+      - name: Test [tiered]
+        run: yarn workspace tiered test
 
       - name: Generate Code Coverage Report
         run: yarn coverage
