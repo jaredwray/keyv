@@ -26,8 +26,8 @@ jobs:
       - name: Install Dependencies  
         run: npm install --workspaces
         
-      - name: Test [keyv]
-        run: npm run test --workspace=./packages/keyv
+      #- name: Test [keyv]
+      #  run: npm run test --workspace=./packages/keyv
 
       - name: Test [test-suite]
         run: npm run test --workspace=./packages/test-suite
