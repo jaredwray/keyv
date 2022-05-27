@@ -65,8 +65,8 @@ declare namespace Keyv {
 		namespace?: string | undefined;
 		/** A custom serialization function. */
 		serialize?: ((data: DeserializedData<Value>) => string | Promise<string>) | undefined;
-        /** A custom deserialization function. */
-    deserialize?: ((data: string) => DeserializedData<Value> | undefined | Promise<DeserializedData<Value> | undefined>) | undefined;
+    /** A custom deserialization function. */
+		deserialize?: ((data: string) => DeserializedData<Value> | undefined | Promise<DeserializedData<Value> | undefined>) | undefined;
 		/** The connection string URI. */
 		uri?: string | undefined;
 		/** The storage adapter instance to be used by Keyv. */
