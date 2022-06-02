@@ -3,7 +3,7 @@
 > Tiered storage adapter for Keyv to manage local and remote store as one for Keyv
 
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
-[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/master/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
+[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/v/@keyv/tiered.svg)](https://www.npmjs.com/package/@keyv/tiered)
 [![npm](https://img.shields.io/npm/dm/@keyv/tiered)](https://npmjs.com/package/@keyv/tiered)
 
