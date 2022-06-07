@@ -2,8 +2,7 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+All 4.0.x versions of Keyv receive security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -12,8 +11,6 @@ currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+To report a security vulnerability, please send an email to me@jaredwray.com. Once the issue has been validated, we will open a [Github Security Advisory](https://docs.github.com/en/code-security/repository-security-advisories/about-github-security-advisories-for-repositories), if necessary.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Once the security advisory has been opened, contributors can collaborate on a private fork to fix the vulnerability. When the issue has been resolved, we will alert users of the past vulnerability by publishing the security advisory.
