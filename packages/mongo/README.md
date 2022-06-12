@@ -36,4 +36,4 @@ const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname', { collection
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray

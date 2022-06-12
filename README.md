@@ -61,4 +61,4 @@ To request a new storage adapter, create an issue with the label "storage adapte
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray
