@@ -59,6 +59,17 @@ To request a new storage adapter, create an issue with the label "storage adapte
 * [sqlite](https://github.com/jaredwray/keyv/tree/main/packages/sqlite): SQLite storage adapter
 * [tiered](https://github.com/jaredwray/keyv/tree/main/packages/tiered): Tiered storage adapter to manage local and remote storage as one
 
+### Third-party Storage Adapters
+
+- [quick-lru](https://github.com/sindresorhus/quick-lru) - Simple "Least Recently Used" (LRU) cache
+- [keyv-file](https://github.com/zaaack/keyv-file) - File system storage adapter for Keyv
+- [keyv-dynamodb](https://www.npmjs.com/package/keyv-dynamodb) - DynamoDB storage adapter for Keyv
+- [keyv-lru](https://www.npmjs.com/package/keyv-lru) - LRU storage adapter for Keyv
+- [keyv-null](https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
+- [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
+- [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
+- [keyv-azuretable](https://github.com/howlowck/keyv-azuretable) - Azure Table Storage/API adapter for Keyv
+
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray
