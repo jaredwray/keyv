@@ -25,4 +25,4 @@ keyv.on('error', handleConnectionError);
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+Copyright (c) 2022 Jared Wray

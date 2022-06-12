@@ -65,4 +65,4 @@ Take a look at [keyv-redis](https://github.com/jaredwray/keyv-redis) for an exam
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray

@@ -39,4 +39,4 @@ const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname', {
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray

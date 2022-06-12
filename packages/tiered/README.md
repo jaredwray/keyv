@@ -66,4 +66,4 @@ The validator function is used as a precondition to determining is remote storag
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray

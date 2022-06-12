@@ -382,4 +382,4 @@ If you need more information on the steps to create a pull request, you can find
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray
