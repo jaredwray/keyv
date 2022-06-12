@@ -58,4 +58,4 @@ const keyv = new Keyv({ store: keyvRedis });
 
 ## License
 
-MIT © Jared Wray & Luke Childs
+MIT © Jared Wray
