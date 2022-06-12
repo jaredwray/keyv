@@ -61,6 +61,8 @@ To request a new storage adapter, create an issue with the label "storage adapte
 
 ### Third-party Storage Adapters
 
+Here are the storage adapters that are not in this repository but compatible with Keyv.
+
 - [quick-lru](https://github.com/sindresorhus/quick-lru) - Simple "Least Recently Used" (LRU) cache
 - [keyv-file](https://github.com/zaaack/keyv-file) - File system storage adapter for Keyv
 - [keyv-dynamodb](https://www.npmjs.com/package/keyv-dynamodb) - DynamoDB storage adapter for Keyv
