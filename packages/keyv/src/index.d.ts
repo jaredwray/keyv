@@ -35,11 +35,11 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	/** Returns an array of values. Uses `store.getMany` if it exists, otherwise uses parallel calls to `store.get`. */
 	get<Raw extends boolean = false>(
 		key: string[],
-		options?: { raw?: Raw }
+		options?: {raw?: Raw}
 	): Promise<
-		((Raw extends false ? Value : Keyv.DeserializedData<Value>) | undefined)[]
+	Array<(Raw extends false ? Value : Keyv.DeserializedData<Value>) | undefined>
 	>;
-	
+
 	/**
      * Set a value.
      *
