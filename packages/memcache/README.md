@@ -14,11 +14,9 @@ _Memcache storage adapter for [Keyv](https://github.com/jaredwray/keyv)_
 ```shell
 npm install --save @keyv/memcache
 ```
-```
 or 
 ```
 yarn add @keyv/memcache
-```
 ```
 
 ## Usage
