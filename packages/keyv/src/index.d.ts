@@ -27,10 +27,19 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	constructor(uri?: string, options?: Keyv.Options<Value> & Options);
 
 	/** Returns the value. */
-	get<Raw extends boolean = false>(key: string | string[], options?: {raw?: Raw}):
+	get<Raw extends boolean = false>(key: string, options?: {raw?: Raw}):
 	Promise<(Raw extends false
 		? Value
 		: Keyv.DeserializedData<Value>) | undefined>;
+
+	/** Returns an array of values. Uses `store.getMany` if it exists, otherwise uses parallel calls to `store.get`. */
+	get<Raw extends boolean = false>(
+		key: string[],
+		options?: {raw?: Raw}
+	): Promise<
+	Array<(Raw extends false ? Value : Keyv.DeserializedData<Value>) | undefined>
+	>;
+
 	/**
      * Set a value.
      *
