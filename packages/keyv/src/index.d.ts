@@ -92,17 +92,12 @@ declare namespace Keyv {
 		value: Value; expires: number | undefined;
 	}
 
-	type StoredData<Value> = DeserializedData<Value> | string | undefined | undefined;
-
 	interface Store<Value> {
 		get(key: string): Value | Promise<Value | undefined> | undefined;
 		set(key: string, value: Value, ttl?: number): any;
 		delete(key: string): boolean | Promise<boolean>;
 		clear(): void | Promise<void>;
 		has?(key: string): boolean | Promise<boolean>;
-		getMany?(
-			keys: string[]
-		): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined;
 	}
 }
 
