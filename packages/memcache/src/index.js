@@ -5,28 +5,28 @@ const memcache = require('memjs');
 const JSONB = require('json-buffer');
 
 class KeyvMemcache extends EventEmitter {
-	constructor(uri, opts) {
+	constructor(uri, options) {
 		super();
 		this.ttlSupport = true;
 
-		opts = {
+		options = {
 
 			...((typeof uri === 'string') ? {uri} : uri),
-			...opts,
+			...options,
 		};
-		if (opts.uri && typeof opts.url === 'undefined') {
-			opts.url = opts.uri;
+		if (options.uri && typeof options.url === 'undefined') {
+			options.url = options.uri;
 		}
 
 		if (uri === undefined) {
 			uri = 'localhost:11211';
 			// eslint-disable-next-line no-multi-assign
-			opts.url = opts.uri = uri;
+			options.url = options.uri = uri;
 		}
 
-		this.opts = opts;
+		this.opts = options;
 
-		this.client = memcache.Client.create(uri, opts);
+		this.client = memcache.Client.create(uri, options);
 	}
 
 	_getNamespace() {
@@ -35,22 +35,22 @@ class KeyvMemcache extends EventEmitter {
 
 	get(key) {
 		return new Promise((resolve, reject) => {
-			this.client.get(this.formatKey(key), (err, value) => {
-				if (err) {
-					this.emit('error', err);
-					reject(err);
+			this.client.get(this.formatKey(key), (error, value) => {
+				if (error) {
+					this.emit('error', error);
+					reject(error);
 				} else {
-					let val = {};
+					let value_ = {};
 					if (value === null) {
-						val = {
+						value_ = {
 							value: undefined,
 							expires: 0,
 						};
 					} else {
-						val = this.opts.deserialize ? this.opts.deserialize(value) : JSONB.parse(value);
+						value_ = this.opts.deserialize ? this.opts.deserialize(value) : JSONB.parse(value);
 					}
 
-					resolve(val);
+					resolve(value_);
 				}
 			});
 		});
@@ -74,18 +74,18 @@ class KeyvMemcache extends EventEmitter {
 	}
 
 	set(key, value, ttl) {
-		const opts = {};
+		const options = {};
 
 		if (ttl !== undefined) {
 			// eslint-disable-next-line no-multi-assign
-			opts.expires = opts.ttl = Math.floor(ttl / 1000); // Moving to seconds
+			options.expires = options.ttl = Math.floor(ttl / 1000); // Moving to seconds
 		}
 
 		return new Promise((resolve, reject) => {
-			this.client.set(this.formatKey(key), value, opts, (err, success) => {
-				if (err) {
-					this.emit('error', err);
-					reject(err);
+			this.client.set(this.formatKey(key), value, options, (error, success) => {
+				if (error) {
+					this.emit('error', error);
+					reject(error);
 				} else {
 					resolve(success);
 				}
@@ -95,10 +95,10 @@ class KeyvMemcache extends EventEmitter {
 
 	delete(key) {
 		return new Promise((resolve, reject) => {
-			this.client.delete(this.formatKey(key), (err, success) => {
-				if (err) {
-					this.emit('error', err);
-					reject(err);
+			this.client.delete(this.formatKey(key), (error, success) => {
+				if (error) {
+					this.emit('error', error);
+					reject(error);
 				} else {
 					resolve(success);
 				}
@@ -118,10 +118,10 @@ class KeyvMemcache extends EventEmitter {
 
 	clear() {
 		return new Promise((resolve, reject) => {
-			this.client.flush(err => {
-				if (err) {
-					this.emit('error', err);
-					reject(err);
+			this.client.flush(error => {
+				if (error) {
+					this.emit('error', error);
+					reject(error);
 				} else {
 					resolve(undefined);
 				}
@@ -140,10 +140,9 @@ class KeyvMemcache extends EventEmitter {
 	}
 
 	has(key) {
-		return new Promise((resolve, reject) => {
-			this.client.get(this.formatKey(key), (err, value) => {
-				if (err) {
-					// eslint-disable-next-line prefer-promise-reject-errors
+		return new Promise(resolve => {
+			this.client.get(this.formatKey(key), (error, value) => {
+				if (error) {
 					resolve(false);
 				} else {
 					resolve(value !== null);

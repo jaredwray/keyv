@@ -1,7 +1,8 @@
+/* eslint-disable node/prefer-global/process */
+const {promisify} = require('util');
 const test = require('ava');
 const Keyv = require('keyv');
 const KeyvMemcache = require('this');
-const {promisify} = require('util');
 
 const kvat = require('@keyv/test-suite');
 
@@ -24,12 +25,12 @@ test.serial('keyv get / no expired', async t => {
 
 	await keyv.set('foo', 'bar');
 
-	const val = await keyv.get('foo');
+	const value = await keyv.get('foo');
 
-	t.is(val, 'bar');
+	t.is(value, 'bar');
 });
 
-test.serial('testing defaults', async t => {
+test.serial('testing defaults', t => {
 	const m = new KeyvMemcache();
 	t.is(m.opts.url, 'localhost:11211');
 });
@@ -77,13 +78,13 @@ test.serial('keyv get with namespace', async t => {
 test.serial('keyv get / should still exist', async t => {
 	const keyv = new Keyv({store: keyvMemcache});
 
-	await keyv.set('foo-expired', 'bar-expired', 10000);
+	await keyv.set('foo-expired', 'bar-expired', 10_000);
 
 	await snooze(2000);
 
-	const val = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired');
 
-	t.is(val, 'bar-expired');
+	t.is(value, 'bar-expired');
 });
 
 test.serial('keyv get / expired existing', async t => {
@@ -93,9 +94,9 @@ test.serial('keyv get / expired existing', async t => {
 
 	await snooze(3000);
 
-	const val = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired');
 
-	t.is(val, undefined);
+	t.is(value, undefined);
 });
 
 test.serial('keyv get / expired existing with bad number', async t => {
@@ -105,9 +106,9 @@ test.serial('keyv get / expired existing with bad number', async t => {
 
 	await snooze(1000);
 
-	const val = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired');
 
-	t.is(val, undefined);
+	t.is(value, undefined);
 });
 
 test.serial('keyv get / expired', async t => {
@@ -117,26 +118,25 @@ test.serial('keyv get / expired', async t => {
 
 	await snooze(1000);
 
-	const val = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired');
 
-	t.is(val, undefined);
+	t.is(value, undefined);
 });
 
 test.serial('keyvMemcache getMany', async t => {
+	const value = await keyvMemcache.getMany(['foo0', 'Foo1']);
+	t.is(Array.isArray(value), true);
 
-	const val = await keyvMemcache.getMany(['foo0', 'Foo1']);
-	t.is(Array.isArray(val), true);
-
-	t.is(val[0], undefined);
+	t.is(value[0], undefined);
 });
 
 test.serial('keyv has / false', async t => {
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211')});
 
-	const val = await keyv.has('foo');
-	console.log('error', val);
+	const value = await keyv.has('foo');
+	console.log('error', value);
 
-	t.is(val, false);
+	t.is(value, false);
 });
 
 const withCallback = fn => async t => {
@@ -153,12 +153,12 @@ test('clear should emit an error', withCallback(async (t, end) => {
 
 	try {
 		await keyv.clear();
-	} catch (_) {}
+	} catch {}
 }));
 
 test('delete should emit an error', withCallback(async (t, end) => {
-	const opts = {logger: {log() {}}};
-	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', opts)});
+	const options = {logger: {log() {}}};
+	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
 	keyv.on('error', () => {
 		t.pass();
@@ -167,12 +167,12 @@ test('delete should emit an error', withCallback(async (t, end) => {
 
 	try {
 		await keyv.delete('foo');
-	} catch (_) {}
+	} catch {}
 }));
 
 test('set should emit an error', withCallback(async (t, end) => {
-	const opts = {logger: {log() {}}};
-	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', opts)});
+	const options = {logger: {log() {}}};
+	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
 	keyv.on('error', () => {
 		t.pass();
@@ -181,12 +181,12 @@ test('set should emit an error', withCallback(async (t, end) => {
 
 	try {
 		await keyv.set('foo', 'bar');
-	} catch (_) {}
+	} catch {}
 }));
 
 test('get should emit an error', withCallback(async (t, end) => {
-	const opts = {logger: {log() {}}};
-	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', opts)});
+	const options = {logger: {log() {}}};
+	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
 	keyv.on('error', () => {
 		t.pass();
@@ -195,7 +195,7 @@ test('get should emit an error', withCallback(async (t, end) => {
 
 	try {
 		await keyv.get('foo');
-	} catch (_) {}
+	} catch {}
 }));
 
 const store = () => keyvMemcache;
