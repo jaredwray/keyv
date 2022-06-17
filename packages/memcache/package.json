@@ -4,9 +4,17 @@
 	"description": "Memcache storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
-		"test": "nyc ava",
+		"test": "xo && nyc ava",
 		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
+	},
+	"xo": {
+		"rules": {
+			"unicorn/prefer-module": 0,
+			"unicorn/no-array-reduce": 0,
+			"unicorn/prefer-object-from-entries": 0,
+			"unicorn/prefer-node-protocol": 0
+		}
 	},
 	"ava": {
 		"require": [
