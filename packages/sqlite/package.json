@@ -47,7 +47,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.2.0",
+		"ava": "^4.3.0",
 		"keyv": "*",
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
