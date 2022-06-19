@@ -57,7 +57,7 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	/** Check if key exists in current namespace. */
 	has(key: string): Promise<boolean>;
 	/** Iterator */
-	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
+	iterator(namespace?: string): AsyncGenerator<any, void, any>;
 	/**
 	 * Closes the connection.
 	 *
