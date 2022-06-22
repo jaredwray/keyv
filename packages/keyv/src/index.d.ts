@@ -92,7 +92,7 @@ declare namespace Keyv {
 		value: Value; expires: number | undefined;
 	}
 
-	type StoredData<Value> = DeserializedData<Value> | string | undefined | undefined;
+	type StoredData<Value> = DeserializedData<Value> | string | null | undefined;
 
 	interface Store<Value> {
 		get(key: string): Value | Promise<Value | undefined> | undefined;
