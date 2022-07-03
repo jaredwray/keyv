@@ -42,7 +42,7 @@
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
-		"ava": "^4.2.0",
+		"ava": "^4.3.0",
 		"keyv": "*",
 		"nyc": "^15.1.0",
 		"this": "^1.1.0",
