@@ -44,7 +44,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.2.0",
+		"ava": "^4.3.0",
 		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
