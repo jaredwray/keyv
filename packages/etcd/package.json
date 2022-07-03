@@ -56,10 +56,11 @@
 		"this": "^1.1.0",
 		"tsd": "^0.20.0",
 		"typescript": "^4.6.4",
+		"webpack": "^5.73.0",
 		"xo": "^0.50.0"
 	},
-	"tsd" : {
-		"directory" : "test"
+	"tsd": {
+		"directory": "test"
 	},
 	"types": "./src/index.d.ts",
 	"files": [
