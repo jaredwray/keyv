@@ -45,7 +45,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.2.0",
+		"ava": "^4.3.0",
 		"delay": "^5.0.0",
 		"keyv": "*",
 		"nyc": "^15.1.0",
