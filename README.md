@@ -11,7 +11,7 @@
 [![npm](https://img.shields.io/npm/dm/keyv.svg)](https://www.npmjs.com/package/keyv)
 [![npm](https://img.shields.io/npm/v/keyv.svg)](https://www.npmjs.com/package/keyv)
 
-# How to Use this Repo
+# How to Use the Keyv Mono Repo
 
 ## Open a Pull Request
 
@@ -36,7 +36,9 @@ If you need more information on the steps to create a pull request, you can find
 
 To post an issue, navigate to the "Issues" tab in the main repository, and then select "New Issue." Enter a clear title describing the issue, as well as a description containing additional relevant information. Also select the label that best describes your issue type. For a bug report, for example, create an issue with the label "bug." In the description field, Be sure to include replication steps, as well as any relevant error messages.
 
-If you're reporting a security violation, be sure to check out the project's [security policy](https://github.com/jaredwray/keyv/security/policy).
+If you're reporting a security violation, be sure to check out the project's [security policy](https://github.com/jaredwray/keyv/blob/main/SECURITY.md).
+
+Please also refer to our [Code of Conduct](https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md) for more information on how to report issues.
 
 ## Ask a Question
 
@@ -44,7 +46,11 @@ To ask a question, create an issue with the label "question." In the issue descr
 
 ## Request the Addition of a Storage Adapter
 
-To request a new storage adapter, create an issue with the label "storage adapter." In the issue description, include any relevant information about the storage adapter that you would like to be added.
+To request a new storage adapter, create an issue with the label "storage adapter." In the issue description, include any relevant information about the storage adapter that you would like to be added. 
+
+Once this request has been submitted in "issues" we will give it 30-60 days for any upvotes to take place. If there is little interest in the request, it will be closed.
+
+If there is already an adapter that you would like to add, please post an issue with the label "storage adapter" and include the name of the adapter you would like to add with the description and any relevant information. 
 
 ## Packages in this Repository
 
