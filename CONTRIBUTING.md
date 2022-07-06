@@ -12,4 +12,4 @@ Increase the version numbers in any examples files and the README.md to the new 
 You may merge the Pull Request in once you have the sign-off of two other developers, or if you do not have permission to do that, you may request the second reviewer to merge it for you.
 
 # Code of Conduct
-Please refer to our (CODE_OF_CONDUCT.md)[Code of Conduct] readme for how to contribute to this open source project and work within the community. 
+Please refer to our [Code of Conduct](https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md) readme for how to contribute to this open source project and work within the community. 
