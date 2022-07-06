@@ -13,6 +13,12 @@
 
 # How to Use the Keyv Mono Repo
 
+Keyv and its storage adapters are in this mono repo and there are details below on how to use this repository. In addtion we have a couple of other documents for review:
+
+* [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Our code of conduct
+* [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute to this project
+* [SECURITY.md](SECURITY.md) - Security guidelines and supported versions 
+
 ## Open a Pull Request
 
 You can contribute changes to this repo by opening a pull request:
