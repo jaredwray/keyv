@@ -79,7 +79,7 @@ declare namespace Keyv {
 		/** The connection string URI. */
 		uri?: string | undefined;
 		/** The storage adapter instance to be used by Keyv. */
-		store?: Store<Value> | undefined;
+		store?: Store<string | undefined> | undefined;
 		/** Default TTL. Can be overridden by specififying a TTL on `.set()`. */
 		ttl?: number | undefined;
 		/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
