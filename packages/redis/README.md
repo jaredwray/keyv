@@ -56,6 +56,18 @@ const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis });
 ```
 
+Or reuse a previous Redis cluster:
+
+```js
+const KeyvRedis = require('@keyv/redis');
+const Redis = require('ioredis');
+const Keyv = require('keyv');
+
+const redis = new Redis.Cluster('redis://user:pass@localhost:6379');
+const keyvRedis = new KeyvRedis(redis);
+const keyv = new Keyv({ store: keyvRedis });
+```
+
 ## License
 
 MIT © Jared Wray
