@@ -8,7 +8,7 @@ class KeyvRedis extends EventEmitter {
 		this.opts = {};
 		this.opts.dialect = 'redis';
 
-		if ((uri.options && uri.options.family)) {
+		if ((uri.options && uri.options.family) || (uri.options && uri.isCluster)) {
 			this.redis = uri;
 		} else {
 			options = {...(typeof uri === 'string' ? {uri} : uri), ...options};
@@ -39,6 +39,9 @@ class KeyvRedis extends EventEmitter {
 	}
 
 	set(key, value, ttl) {
+		console.log('keys', key);
+		console.log('value', value);
+		console.log('namespace', this._getNamespace());
 		if (typeof value === 'undefined') {
 			return Promise.resolve(undefined);
 		}
@@ -49,9 +52,14 @@ class KeyvRedis extends EventEmitter {
 					return this.redis.set(key, value, 'PX', ttl);
 				}
 
+				console.log('return in set', this.redis);
+
 				return this.redis.set(key, value);
 			})
-			.then(() => this.redis.sadd(this._getNamespace(), key));
+			.then(() => {
+				console.log('return');
+				this.redis.sadd(this._getNamespace(), key);
+			});
 	}
 
 	delete(key) {
