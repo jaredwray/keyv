@@ -39,9 +39,6 @@ class KeyvRedis extends EventEmitter {
 	}
 
 	set(key, value, ttl) {
-		console.log('keys', key);
-		console.log('value', value);
-		console.log('namespace', this._getNamespace());
 		if (typeof value === 'undefined') {
 			return Promise.resolve(undefined);
 		}
