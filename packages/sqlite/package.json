@@ -42,7 +42,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"sqlite3": "^5.0.8",
+		"sqlite3": "^5.0.9",
 		"pify": "^5.0.0"
 	},
 	"devDependencies": {
