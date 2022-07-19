@@ -12,7 +12,15 @@
 		"rules": {
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
-			"ava/no-ignored-test-files": ["error", {"extensions": ["js", "ts"]}]
+			"ava/no-ignored-test-files": [
+				"error",
+				{
+					"extensions": [
+						"js",
+						"ts"
+					]
+				}
+			]
 		}
 	},
 	"ava": {
@@ -55,6 +63,7 @@
 		"delay": "^5.0.0",
 		"keyv": "*",
 		"nyc": "^15.1.0",
+		"ts-node": "^10.8.2",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
 		"ts-node": "^10.8.2",
