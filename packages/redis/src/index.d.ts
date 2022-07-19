@@ -10,7 +10,7 @@ declare class KeyvRedis extends EventEmitter implements Store<string | undefined
 	constructor(options?: KeyvRedis.Options | Redis | Cluster);
 	constructor(uri: string | Redis | Cluster, options?: KeyvRedis.Options);
 	get(key: string): Promise<string | undefined>;
-	getMany(keys: string[]): Promise<string[] | undefined>;
+	getMany(keys: string[]): Promise<string[]>;
 	set(key: string, value: string | undefined, ttl?: number): Promise<any>;
 	delete(key: string): boolean;
 	deleteMany(keys: string[]): boolean;
