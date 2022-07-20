@@ -11,6 +11,7 @@
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
