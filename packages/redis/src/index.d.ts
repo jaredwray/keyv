@@ -1,5 +1,5 @@
 import {EventEmitter} from 'events';
-import {Store} from 'keyv';
+import {Store, StoredData} from 'keyv';
 import {Redis, Cluster} from 'ioredis';
 
 declare class KeyvRedis extends EventEmitter implements Store<Value> {

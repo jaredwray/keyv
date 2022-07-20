@@ -1,7 +1,8 @@
 import {EventEmitter} from 'events';
+import {Store, StoredData} from 'keyv';
 
 export = KeyvMysql;
-declare class KeyvMysql extends EventEmitter {
+declare class KeyvMysql extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
 	opts: any;
 	query: (sqlString: any) => any;

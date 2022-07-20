@@ -1,8 +1,9 @@
 import {EventEmitter} from 'events';
 import Database from 'better-sqlite3';
+import {Store, StoredData} from 'keyv';
 
 export = KeyvSqlite;
-declare class KeyvSqlite extends EventEmitter {
+declare class KeyvSqlite extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
 	namespace?: string | undefined;
 	opts: any;
