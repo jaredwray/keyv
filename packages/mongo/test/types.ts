@@ -1,6 +1,6 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvSqlite from '../src/index.js';
+import KeyvMongo from '../src/index.js';
 
 type MyType = {
 	a: string;
@@ -8,7 +8,7 @@ type MyType = {
 
 test('can specify redis store in typescript', async t => {
 	const keyv = new Keyv<MyType>({
-		store: new KeyvSqlite('sqlite://test/testdb.sqlite'),
+		store: new KeyvMongo('mongodb://127.0.0.1:27017'),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
