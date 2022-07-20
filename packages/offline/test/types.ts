@@ -1,6 +1,6 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvRedis from '@Keyv/redis';
+import KeyvRedis from '@keyv/redis';
 import KeyvOffline from '../src/index.js';
 
 type MyType = {
