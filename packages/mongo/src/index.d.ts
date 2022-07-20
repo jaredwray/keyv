@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
 import GridFSBucket from 'mongodb';
-import {Store} from 'keyv';
+import {Store, StoredData} from 'keyv';
 
 declare class KeyvMongo extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
