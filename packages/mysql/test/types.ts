@@ -8,7 +8,7 @@ type MyType = {
 
 test('can specify redis store in typescript', async t => {
 	const keyv = new Keyv<MyType>({
-		store: new KeyvMysql("mysql://root@localhost/keyv_test"),
+		store: new KeyvMysql('mysql://root@localhost/keyv_test'),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
