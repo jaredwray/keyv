@@ -8,7 +8,7 @@ type MyType = {
 
 test('can specify postgres store in typescript', async t => {
 	const keyv = new Keyv<MyType>({
-		store: new KeyvPostgres('postgresql://postgres:postgres@localhost:5432/keyv_test'),
+		store: new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test'}),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
