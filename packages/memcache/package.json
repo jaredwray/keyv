@@ -13,12 +13,26 @@
 			"unicorn/prefer-module": 0,
 			"unicorn/no-array-reduce": 0,
 			"unicorn/prefer-object-from-entries": 0,
-			"unicorn/prefer-node-protocol": 0
+			"unicorn/prefer-node-protocol": 0,
+			"ava/no-ignored-test-files": [
+				"error",
+				{
+					"extensions": [
+						"js",
+						"ts"
+					]
+				}
+			]
 		}
 	},
 	"ava": {
 		"require": [
-			"requirable"
+			"requirable",
+			"ts-node/register"
+		],
+		"extensions": [
+			"js",
+			"ts"
 		]
 	},
 	"repository": {
@@ -44,7 +58,8 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"json-buffer": "^3.0.1",
-		"memjs": "^1.3.0"
+		"memjs": "^1.3.0",
+		"@types/keyv": "^3.1.4"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
@@ -52,6 +67,7 @@
 		"keyv": "*",
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
+		"ts-node": "^10.8.2",
 		"this": "^1.1.0",
 		"tsd": "^0.22.0",
 		"typescript": "^4.7.4"
