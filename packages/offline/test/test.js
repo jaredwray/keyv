@@ -6,7 +6,7 @@ const Keyv = require('keyv');
 const KeyvOffline = require('this');
 const KeyvRedis = require('@keyv/redis');
 const keyvTestSuite = require('@keyv/test-suite').default;
-const { keyvOfficialTests } = require('@keyv/test-suite');
+const {keyvOfficialTests} = require('@keyv/test-suite');
 
 const keyvRedisBad = new KeyvRedis({
 	uri: 'redis://user:pass@localhost:1338',
@@ -18,14 +18,14 @@ keyvRedisBad.on('error', () => console.log('Connection error'));
 
 test('.set return true under normal behavior', async t => {
 	const store = new Map();
-	const keyv = new KeyvOffline(new Keyv({ store }));
+	const keyv = new KeyvOffline(new Keyv({store}));
 	const result = await keyv.set('foo', 'expires in 1 second', 1000);
 	t.is(result, true);
 });
 
 test('.get return the expected value under normal behavior', async t => {
 	const store = new Map();
-	const keyv = new KeyvOffline(new Keyv({ store }));
+	const keyv = new KeyvOffline(new Keyv({store}));
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 });
