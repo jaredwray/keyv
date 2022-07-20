@@ -6,7 +6,7 @@ type MyType = {
 	a: string;
 };
 
-test('can specify redis store in typescript', async t => {
+test('can specify mongo store in typescript', async t => {
 	const keyv = new Keyv<MyType>({
 		store: new KeyvMongo('mongodb://127.0.0.1:27017'),
 	});

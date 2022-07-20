@@ -6,7 +6,7 @@ type MyType = {
 	a: string;
 };
 
-test('can specify redis store in typescript', async t => {
+test('can specify sqlite store in typescript', async t => {
 	const keyv = new Keyv<MyType>({
 		store: new KeyvSqlite('sqlite://test/testdb.sqlite'),
 	});
