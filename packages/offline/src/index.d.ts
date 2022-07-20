@@ -3,7 +3,7 @@ import {Store, StoredData} from 'keyv';
 
 declare class KeyvOffline extends EventEmitter implements Store<Value> {
 	proxy: any;
-	constructor(keyv: any);
+	constructor(keyv: Store<Value>);
 	get(key: string): Promise<Value>;
 	getMany?(
 		keys: string[]
