@@ -7,7 +7,7 @@ declare class KeyvEtcd extends EventEmitter implements Store<Value> {
 	opts: any;
 	client: Etcd3;
 	lease: import('etcd3').Lease;
-	constructor(url: any, options: any);
+	constructor(options?: string | KeyvEtcd.Options);
 	get(key: string): Promise<Value>;
 	getMany?(
 		keys: string[]
@@ -18,6 +18,14 @@ declare class KeyvEtcd extends EventEmitter implements Store<Value> {
 	clear(): void | Promise<void>;
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
 	has?(key: string): boolean | Promise<boolean>;
+}
+
+declare namespace KeyvEtcd {
+	interface Options {
+		url?: string | undefined;
+		uri?: string | undefined;
+		ttl?: number | undefined;
+	}
 }
 
 export = KeyvEtcd;
