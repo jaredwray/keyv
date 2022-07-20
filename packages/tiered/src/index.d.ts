@@ -1,17 +1,19 @@
 import {EventEmitter} from 'events';
-import Store from 'keyv';
+import {Store, StoredData} from 'keyv';
 
 export = KeyvTiered;
-declare class KeyvTiered extends EventEmitter {
+declare class KeyvTiered extends EventEmitter implements Store<Value> {
 	constructor(options: KeyvTiered.Options);
-	set(key: string, value: string | Record<string, unknown> | undefined): Promise<any>;
-	get(key: string): Promise<string | undefined>;
-	getMany(keys: string[]): Promise<string[] | undefined>;
-	delete(key: string): boolean;
+	get(key: string): Promise<Value>;
+	getMany?(
+		keys: string[]
+	): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined;
+	set(key: string, value: Value, ttl?: number): any;
+	delete(key: string): boolean | Promise<boolean>;
 	deleteMany(keys: string[]): boolean;
-	clear(): Promise<void>;
+	clear(): void | Promise<void>;
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
-	has(key: string): Promise<boolean>;
+	has?(key: string): boolean | Promise<boolean>;
 }
 
 declare namespace KeyvTiered {
