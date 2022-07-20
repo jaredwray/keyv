@@ -11,12 +11,26 @@
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": 0,
-			"unicorn/prefer-node-protocol": 0
+			"unicorn/prefer-node-protocol": 0,
+			"ava/no-ignored-test-files": [
+				"error",
+				{
+					"extensions": [
+						"js",
+						"ts"
+					]
+				}
+			]
 		}
 	},
 	"ava": {
 		"require": [
-			"requirable"
+			"requirable",
+			"ts-node/register"
+		],
+		"extensions": [
+			"js",
+			"ts"
 		]
 	},
 	"repository": {
@@ -42,8 +56,9 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"sqlite3": "^5.0.9",
-		"pify": "^5.0.0"
+		"sqlite3": "^5.0.8",
+		"pify": "^5.0.0",
+		"@types/keyv": "^3.1.4"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
@@ -52,7 +67,8 @@
 		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
-		"tsd": "^0.22.0",
+		"ts-node": "^10.8.2",
+		"tsd": "^0.21.0",
 		"typescript": "^4.7.4",
 		"xo": "^0.50.0"
 	},

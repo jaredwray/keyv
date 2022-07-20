@@ -1,6 +1,6 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvRedis from '../src/index.js';
+import KeyvSqlite from '../src/index.js';
 
 const redisHost = 'localhost';
 const redisUri = `redis://${redisHost}`;
@@ -11,7 +11,7 @@ type MyType = {
 
 test('can specify redis store in typescript', async t => {
 	const keyv = new Keyv<MyType>({
-		store: new KeyvRedis(redisUri),
+		store: new KeyvSqlite(redisUri),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
