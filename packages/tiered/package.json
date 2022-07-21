@@ -56,7 +56,6 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-		"@types/keyv": "^3.1.4"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
@@ -64,6 +63,7 @@
     "keyv": "*",
     "nyc": "^15.1.0",
     "requirable": "^1.0.5",
+		"@types/keyv": "^3.1.4",
 		"ts-node": "^10.8.2",
     "this": "^1.1.0",
     "tsd": "^0.22.0",

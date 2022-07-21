@@ -59,14 +59,14 @@
 	"dependencies": {
 		"cockatiel": "^2.0.2",
 		"etcd3": "^1.1.0",
-		"pify": "^5.0.0",
-		"@types/keyv": "^3.1.4"
+		"pify": "^5.0.0"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"ava": "^4.3.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
+		"@types/keyv": "^3.1.4",
 		"ts-node": "^10.8.2",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",

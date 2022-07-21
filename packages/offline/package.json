@@ -55,11 +55,11 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@types/keyv": "^3.1.4"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"@keyv/redis": "*",
+		"@types/keyv": "^3.1.4",
 		"ava": "^4.3.0",
 		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
