@@ -49,12 +49,9 @@ class KeyvRedis extends EventEmitter {
 					return this.redis.set(key, value, 'PX', ttl);
 				}
 
-				console.log('return in set', this.redis);
-
 				return this.redis.set(key, value);
 			})
 			.then(() => {
-				console.log('return');
 				this.redis.sadd(this._getNamespace(), key);
 			});
 	}
