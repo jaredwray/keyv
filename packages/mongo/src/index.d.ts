@@ -1,7 +1,8 @@
 import {EventEmitter} from 'events';
 import GridFSBucket from 'mongodb';
+import {Store, StoredData} from 'keyv';
 
-declare class KeyvMongo extends EventEmitter {
+declare class KeyvMongo extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
 	opts: Record<string, any>;
 	connect: Promise<any>;
@@ -9,16 +10,18 @@ declare class KeyvMongo extends EventEmitter {
 	bucket: GridFSBucket;
 	store: import('mongodb').Collection<import('bson').Document>;
 	constructor(options?: string | KeyvMongo.Options);
-	get(key: string): Promise<string | undefined>;
-	getMany(keys: string[]): Promise<string[] | undefined>;
-	set(key: string, value: string | undefined): Promise<any>;
-	delete(key: string): boolean;
+	get(key: string): Promise<Value>;
+	getMany?(
+		keys: string[]
+	): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined;
+	set(key: string, value: Value, ttl?: number): any;
+	delete(key: string): boolean | Promise<boolean>;
 	deleteMany(keys: string[]): boolean;
-	clearExpired(): false | Promise<boolean>;
-	clearUnusedFor(seconds: any): false | Promise<boolean>;
-	clear(): Promise<void>;
+	clear(): void | Promise<void>;
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
-	has(key: string): boolean;
+	has?(key: string): boolean | Promise<boolean>;
+	clearExpired(): boolean | Promise<boolean>;
+	clearUnusedFor(seconds: any): boolean | Promise<boolean>;
 }
 
 export = KeyvMongo;

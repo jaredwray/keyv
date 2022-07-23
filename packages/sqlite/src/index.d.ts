@@ -1,21 +1,24 @@
 import {EventEmitter} from 'events';
 import Database from 'better-sqlite3';
+import {Store, StoredData} from 'keyv';
 
 export = KeyvSqlite;
-declare class KeyvSqlite extends EventEmitter {
+declare class KeyvSqlite extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
 	namespace?: string | undefined;
 	opts: any;
 	db: Database;
 	constructor(options?: string | KeyvSqlite.Options);
-	get(key: string): Promise<string | undefined>;
-	getMany(keys: string[]): Promise<string[] | undefined>;
-	set(key: string, value: string | undefined): Promise<any>;
-	delete(key: string): boolean;
+	get(key: string): Promise<Value>;
+	getMany?(
+		keys: string[]
+	): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined;
+	set(key: string, value: Value, ttl?: number): any;
+	delete(key: string): boolean | Promise<boolean>;
 	deleteMany(keys: string[]): boolean;
-	clear(): Promise<void>;
+	clear(): void | Promise<void>;
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
-	has(key: string): boolean;
+	has?(key: string): boolean | Promise<boolean>;
 }
 
 declare namespace KeyvSqlite {

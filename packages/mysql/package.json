@@ -11,12 +11,26 @@
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": 0,
-			"unicorn/prefer-node-protocol": 0
+			"unicorn/prefer-node-protocol": 0,
+			"ava/no-ignored-test-files": [
+				"error",
+				{
+					"extensions": [
+						"js",
+						"ts"
+					]
+				}
+			]
 		}
 	},
 	"ava": {
 		"require": [
-			"requirable"
+			"requirable",
+			"ts-node/register"
+		],
+		"extensions": [
+			"js",
+			"ts"
 		]
 	},
 	"repository": {
@@ -50,6 +64,8 @@
 		"ava": "^4.3.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
+		"ts-node": "^10.8.2",
+		"@types/keyv": "^3.1.4",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
 		"tsd": "^0.22.0",
