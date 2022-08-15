@@ -1,4 +1,4 @@
-/* eslint-disable n/prefer-global/process */
+/* eslint-disable node/prefer-global/process */
 const {promisify} = require('util');
 const test = require('ava');
 const Keyv = require('keyv');
