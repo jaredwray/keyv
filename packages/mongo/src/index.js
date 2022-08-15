@@ -167,7 +167,7 @@ class KeyvMongo extends EventEmitter {
 						data.push(value.value);
 					}
 
-					return data.every(x => x === undefined) ? [] : data;
+					return data;
 				});
 		}
 
@@ -190,7 +190,7 @@ class KeyvMongo extends EventEmitter {
 						i++;
 					}
 
-					return results.every(x => x === undefined) ? [] : results;
+					return results;
 				}),
 		);
 	}

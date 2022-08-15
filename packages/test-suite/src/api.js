@@ -92,11 +92,11 @@ const keyvApiTests = (test, Keyv, store) => {
 		t.is(values[2], 'bar2');
 	});
 
-	test.serial('.get([keys]) should return empty array for all no existent keys', async t => {
+	test.serial('.get([keys]) should return undefined array for all no existent keys', async t => {
 		const keyv = new Keyv({store: store()});
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
-		t.deepEqual(values, []);
+		t.deepEqual(values, [undefined, undefined, undefined]);
 	});
 
 	test.serial('.delete(key) returns a Promise', t => {

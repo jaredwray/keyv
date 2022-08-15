@@ -198,7 +198,7 @@ test.serial('.getMany([keys]) using GridFS should return empty array for all no 
 	await keyv.clearUnusedFor(0);
 	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
-	t.deepEqual(values, []);
+	t.deepEqual(values, [undefined, undefined, undefined]);
 });
 
 test.serial('Clears entire cache store', async t => {

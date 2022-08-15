@@ -62,10 +62,6 @@ class KeyvSqlite extends EventEmitter {
 	getMany(keys) {
 		const select = `SELECT * FROM ${this.opts.table} WHERE key IN (SELECT value FROM json_each(?))`;
 		return this.query(select, JSON.stringify(keys)).then(rows => {
-			if (rows.length === 0) {
-				return [];
-			}
-
 			const results = [...keys];
 			let i = 0;
 			for (const key of keys) {

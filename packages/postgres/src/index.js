@@ -45,10 +45,6 @@ class KeyvPostgres extends EventEmitter {
 	getMany(keys) {
 		const getMany = `SELECT * FROM ${this.opts.table} WHERE key = ANY($1)`;
 		return this.query(getMany, [keys]).then(rows => {
-			if (rows.length === 0) {
-				return [];
-			}
-
 			const results = [...keys];
 			let i = 0;
 			for (const key of keys) {

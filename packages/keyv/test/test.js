@@ -277,7 +277,7 @@ test.serial('keyv.get([keys]) should return empty array when expires sqlite', as
 	});
 	const values = await keyv.get(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
-	t.is(values.length, 0);
+	t.is(values.length, 3);
 });
 
 test.serial('keyv.get([keys]) should return array raw values sqlite', async t => {
@@ -324,7 +324,7 @@ test.serial('keyv.get([keys]) should return empty array for all no existent keys
 	const keyv = new Keyv({store: new Map()});
 	const values = await keyv.get(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
-	t.deepEqual(values, []);
+	t.deepEqual(values, [undefined, undefined, undefined]);
 });
 
 test('pass compress options', async t => {

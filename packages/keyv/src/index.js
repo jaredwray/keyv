@@ -144,7 +144,7 @@ class Keyv extends EventEmitter {
 						data.push(value.value);
 					}
 
-					return data.every(x => x === undefined) ? [] : data;
+					return data;
 				});
 		}
 
@@ -158,10 +158,6 @@ class Keyv extends EventEmitter {
 
 				if (isArray) {
 					const result = [];
-
-					if (data.length === 0) {
-						return [];
-					}
 
 					for (let row of data) {
 						if ((typeof row === 'string')) {
@@ -181,7 +177,7 @@ class Keyv extends EventEmitter {
 						}
 					}
 
-					return result.every(x => x === undefined) ? [] : result;
+					return result;
 				}
 
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {

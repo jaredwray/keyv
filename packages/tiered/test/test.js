@@ -114,7 +114,7 @@ test.serial('.getMany() deletes both stores', async t => {
 	t.deepEqual(value, ['buzz', 'buzz1']);
 
 	value = await store.getMany(['fizz3', 'fizz4']);
-	t.deepEqual(value, []);
+	t.deepEqual(value, [undefined, undefined]);
 });
 
 test.serial(

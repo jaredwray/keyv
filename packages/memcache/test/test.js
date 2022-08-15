@@ -127,7 +127,7 @@ test.serial('keyvMemcache getMany', async t => {
 	const value = await keyvMemcache.getMany(['foo0', 'Foo1']);
 	t.is(Array.isArray(value), true);
 
-	t.is(value[0], undefined);
+	t.deepEqual(value[0], {expires: 0, value: undefined});
 });
 
 test.serial('keyv has / false', async t => {

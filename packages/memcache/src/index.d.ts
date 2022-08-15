@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unified-signatures */
+
 import {EventEmitter} from 'node:events';
 import {Store, StoredData} from 'keyv';
 
@@ -6,8 +6,7 @@ declare class KeyvMemcache extends EventEmitter implements Store<Value> {
 	ttlSupport: boolean;
 	namespace?: string | undefined;
 
-	constructor(uri?: string);
-	constructor(options?: KeyvMemcache.Options);
+	constructor(uri?: string | KeyvMemcache.Options);
 	get(key: string): Promise<Value>;
 	getMany?(
 		keys: string[]
