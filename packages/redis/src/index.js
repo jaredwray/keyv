@@ -35,7 +35,7 @@ class KeyvRedis extends EventEmitter {
 
 	getMany(keys) {
 		return this.redis.mget(keys)
-			.then(rows => rows.every(row => row === null) ? [] : rows);
+			.then(rows => rows);
 	}
 
 	set(key, value, ttl) {

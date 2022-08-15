@@ -69,7 +69,7 @@ class KeyvMemcache extends EventEmitter {
 					data.push(value.value);
 				}
 
-				return data.every(x => x.value === undefined) ? [] : data;
+				return data;
 			});
 	}
 

@@ -45,7 +45,7 @@ class KeyvTiered extends EventEmitter {
 					data.push(value);
 				}
 
-				return data.every(x => x === undefined) ? [] : data;
+				return data;
 			});
 	}
 

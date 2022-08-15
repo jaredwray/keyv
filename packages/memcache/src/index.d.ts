@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unified-signatures */
+
 import {EventEmitter} from 'node:events';
 import {Store, StoredData} from 'keyv';
 
