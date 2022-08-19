@@ -25,14 +25,16 @@ test('disable brotli compression', async t => {
 
 test('serialize with brotli compression', async t => {
 	const keyv = new KeyvBrotli();
-	const json = await keyv.serialize({value: 'whatever'});
+	const {serialize} = keyv.opts;
+	const json = await serialize({value: 'whatever'});
 	t.is(json, '{"value":":base64:GwkA+CVEShFHYpYE"}');
 });
 
 test('deserialize with brotli compression', async t => {
 	const keyv = new KeyvBrotli();
-	const json = await keyv.serialize({value: 'whatever'});
-	const djson = await keyv.deserialize(json);
+	const {serialize, deserialize} = keyv.opts;
+	const json = await serialize({value: 'whatever'});
+	const djson = await deserialize(json);
 	t.deepEqual(djson, {expires: undefined, value: 'whatever'});
 });
 

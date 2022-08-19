@@ -50,8 +50,11 @@ class Keyv extends EventEmitter {
 			this.opts.store = loadStore(adapterOptions);
 		}
 
-		if (this.opts.compress) {
-			//TODO pass here keyv brotli
+		if (this.opts.options) {
+			const compression = new (require('@keyv/compress-brotli'))(options);
+			const {serialize, deserialize} = compression.opts;
+			this.opts.serialize = serialize;
+			this.opts.deserialize = deserialize;
 		}
 
 		if (typeof this.opts.store.on === 'function' && emitErrors) {

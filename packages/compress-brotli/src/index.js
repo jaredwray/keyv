@@ -33,14 +33,6 @@ class KeyvBrotli extends EventEmitter {
 	decompress(value, options) {
 		return this.opts.decompress(value, options);
 	}
-
-	serialize(value) {
-		return this.opts.serialize(value);
-	}
-
-	deserialize(value) {
-		return this.opts.deserialize(value);
-	}
 }
 
 module.exports = KeyvBrotli;

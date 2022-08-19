@@ -1,5 +1,5 @@
 {
-	"name": "@keyv/compress-brotoli",
+	"name": "@keyv/compress-brotli",
 	"version": "1.0.0",
 	"description": "compression for keyv",
 	"main": "src/index.js",
