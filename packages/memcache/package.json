@@ -12,6 +12,8 @@
 		"rules": {
 			"unicorn/prefer-module": 0,
 			"unicorn/no-array-reduce": 0,
+			"n/prefer-global/process": 0,
+			"node/prefer-global/process": 0,
 			"unicorn/prefer-object-from-entries": 0,
 			"unicorn/prefer-node-protocol": 0,
 			"ava/no-ignored-test-files": [
