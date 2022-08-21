@@ -3,6 +3,7 @@
 	"version": "4.3.3",
 	"description": "Simple key-value storage with support for multiple backends",
 	"main": "src/index.js",
+	"node": ">=14",
 	"scripts": {
 		"test": "xo && nyc ava --serial",
 		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
