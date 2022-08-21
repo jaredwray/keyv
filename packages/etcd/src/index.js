@@ -2,7 +2,7 @@
 
 const EventEmitter = require('events');
 const {Etcd3} = require('etcd3');
-const {Policy} = require('cockatiel');
+const {handleAll, retry, ExponentialBackoff} = require('cockatiel');
 
 class KeyvEtcd extends EventEmitter {
 	constructor(url, options) {
@@ -28,7 +28,7 @@ class KeyvEtcd extends EventEmitter {
 		};
 
 		this.opts.url = this.opts.url.replace(/^etcd:\/\//, '');
-		const policy = Policy.handleAll().retry();
+		const policy = retry(handleAll, {backoff: new ExponentialBackoff()});
 		policy.onFailure(error => {
 			this.emit('error', error.reason);
 		});

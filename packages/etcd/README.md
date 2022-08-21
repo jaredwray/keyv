@@ -1,4 +1,4 @@
-# @keyv/mongo [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/etcd [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Etcd storage adapter for Keyv
 

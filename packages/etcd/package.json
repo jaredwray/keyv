@@ -57,7 +57,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"cockatiel": "^2.0.2",
+		"cockatiel": "^3.0.0",
 		"etcd3": "^1.1.0",
 		"pify": "^5.0.0"
 	},
