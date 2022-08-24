@@ -252,6 +252,11 @@ Default: `undefined`
 
 Specify an adapter to use. e.g `'redis'` or `'mongodb'`.
 
+#### options.compression
+
+Type: `Compression instance`<br>
+Default: `undefined`
+
 ### Instance
 
 Keys must always be strings. Values can be of any type.
