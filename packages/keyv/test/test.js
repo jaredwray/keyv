@@ -1,11 +1,10 @@
 const test = require('ava');
-const compressBrotli = require('compress-brotli');
 const {default: keyvTestSuite, keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('this');
-const JSONB = require('json-buffer');
 const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
 const KeyvMongo = require('@keyv/mongo');
+const KeyvBrotli = require('@keyv/compress-brotli');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
@@ -327,34 +326,11 @@ test.serial('keyv.get([keys]) should return undefined array for all no existent 
 	t.deepEqual(values, [undefined, undefined, undefined]);
 });
 
-// test('pass compress options', async t => {
-// 	const compressOptions = {enable: false};
-// 	const brotli = compressBrotli(compressOptions);
-// 	const keyv = new Keyv({store: new Map(), options: compressOptions});
-// 	const compressed = await brotli.compress('bar');
-// 	const decompressed = await brotli.decompress(compressed);
-
-// 	await keyv.set('foo', 'bar');
-// 	t.is(await keyv.get('foo'), 'bar');
-
-// 	t.deepEqual(
-// 		await keyv.opts.deserialize(JSONB.stringify({value: 'bar', expires: null})),
-// 		await brotli.deserialize(
-// 			JSONB.stringify({value: decompressed, expires: null}),
-// 		),
-// 	);
-// });
-
-// test('enable compression', async t => {
-// 	const compress = {enable: true};
-// 	const keyv = new Keyv({store: new Map(), namespace: null, options: compress});
-// 	await keyv.set('foo', 'bar');
-
-// 	t.is(
-// 		await keyv.get('foo'),
-// 		'bar',
-// 	);
-// });
+test('pass compress options', async t => {
+	const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.get('foo'), 'bar');
+});
 
 test('iterator should exists with url', t => {
 	const store = new Keyv({store: new KeyvMongo({url: 'mongodb://127.0.0.1:27017'})});

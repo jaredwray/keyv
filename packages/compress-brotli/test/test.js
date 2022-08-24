@@ -1,4 +1,3 @@
-const {compress, uncompress} = require('snappy');
 const test = require('ava');
 const KeyvBrotli = require('this');
 
@@ -11,12 +10,10 @@ test('enable brotli compression', async t => {
 });
 
 test('disable brotli compression', async t => {
-	const compress = {
-		options: {
-			enable: false,
-		},
+	const options = {
+		enable: false,
 	};
-	const keyv = new KeyvBrotli(compress);
+	const keyv = new KeyvBrotli(options);
 	const compressed = await keyv.compress('whatever');
 	t.is(compressed, 'whatever');
 	const decompressed = await keyv.decompress(compressed);
@@ -27,6 +24,7 @@ test('serialize with brotli compression', async t => {
 	const keyv = new KeyvBrotli();
 	const {serialize} = keyv.opts;
 	const json = await serialize({value: 'whatever'});
+	console.log(keyv.opts);
 	t.is(json, '{"value":":base64:GwkA+CVEShFHYpYE"}');
 });
 
@@ -36,16 +34,4 @@ test('deserialize with brotli compression', async t => {
 	const json = await serialize({value: 'whatever'});
 	const djson = await deserialize(json);
 	t.deepEqual(djson, {expires: undefined, value: 'whatever'});
-});
-
-test('compression/decompression with other package', async t => {
-	const snappy = {
-		compress,
-		decompress: uncompress,
-	};
-	const keyv = new KeyvBrotli(snappy);
-	const compressed = await keyv.compress('whatever');
-	t.not(compressed, 'whatever');
-	const decompressed = await keyv.decompress(compressed, {asBuffer: false});
-	t.is(decompressed, 'whatever');
 });

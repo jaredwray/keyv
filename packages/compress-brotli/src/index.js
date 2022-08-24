@@ -1,29 +1,22 @@
 'use strict';
-
-const EventEmitter = require('events');
 const compressBrotli = require('compress-brotli');
 
-class KeyvBrotli extends EventEmitter {
+class KeyvBrotli {
 	constructor(options) {
-		super();
 		this.opts = {
 			...options,
 		};
 
-		const {compress, decompress, serialize, deserialize} = compressBrotli(this.opts.options);
+		const {compress, decompress, serialize, deserialize} = compressBrotli(this.opts);
 
-		if (typeof this.opts.compress !== 'function') {
-			this.opts.compress = compress;
-			this.opts.serialize = async ({value, expires}) => serialize({value: await compress(value), expires});
-		}
+		this.opts.compress = compress;
+		this.opts.serialize = async ({value, expires}) => serialize({value: await compress(value), expires});
 
-		if (typeof this.opts.decompress !== 'function') {
-			this.opts.decompress = decompress;
-			this.opts.deserialize = async data => {
-				const {value, expires} = deserialize(data);
-				return {value: await decompress(value), expires};
-			};
-		}
+		this.opts.decompress = decompress;
+		this.opts.deserialize = async data => {
+			const {value, expires} = deserialize(data);
+			return {value: await decompress(value), expires};
+		};
 	}
 
 	compress(value, options) {
