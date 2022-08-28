@@ -1,11 +1,10 @@
 const test = require('ava');
-const compressBrotli = require('compress-brotli');
 const {default: keyvTestSuite, keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('this');
-const JSONB = require('json-buffer');
 const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
 const KeyvMongo = require('@keyv/mongo');
+const KeyvBrotli = require('@keyv/compress-brotli');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
@@ -320,7 +319,7 @@ test.serial('keyv.get([keys]) should return array values with all undefined usin
 	t.is(values[2], undefined);
 });
 
-test.serial('keyv.get([keys]) should return empty array for all no existent keys', async t => {
+test.serial('keyv.get([keys]) should return undefined array for all no existent keys', async t => {
 	const keyv = new Keyv({store: new Map()});
 	const values = await keyv.get(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
@@ -328,33 +327,9 @@ test.serial('keyv.get([keys]) should return empty array for all no existent keys
 });
 
 test('pass compress options', async t => {
-	const compressOptions = {enable: false};
-	const brotli = compressBrotli(compressOptions);
-	const compress = {compress: true, opts: compressOptions};
-	const keyv = new Keyv({store: new Map(), compress});
-	const compressed = await brotli.compress('bar');
-	const decompressed = await brotli.decompress(compressed);
-
+	const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
-
-	t.deepEqual(
-		await keyv.opts.deserialize(JSONB.stringify({value: 'bar', expires: null})),
-		await brotli.deserialize(
-			JSONB.stringify({value: decompressed, expires: null}),
-		),
-	);
-});
-
-test('enable compression', async t => {
-	const compress = {compress: true};
-	const keyv = new Keyv({store: new Map(), namespace: null, compress});
-	await keyv.set('foo', 'bar');
-
-	t.is(
-		await keyv.get('foo'),
-		'bar',
-	);
 });
 
 test('iterator should exists with url', t => {
