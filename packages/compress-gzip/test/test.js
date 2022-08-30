@@ -14,7 +14,7 @@ test('serialize compression', async t => {
 	const keyv = new KeyvGzip();
 	const {serialize} = keyv.opts;
 	const json = await serialize({value: 'whatever'});
-	t.is(json, '{"value":":base64:H4sIAAAAAAAAEyvPSCxJLUstAgCzQxFOCAAAAA=="}');
+	t.is(json, '{"value":":base64:H4sIAAAAAAAAAyvPSCxJLUstAgCzQxFOCAAAAA=="}');
 });
 // Test deserialize compression
 test('deserialize compression', async t => {
