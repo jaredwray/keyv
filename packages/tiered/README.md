@@ -1,4 +1,4 @@
-# @keyv/tiered [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
+# @keyv/tiered [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > Tiered storage adapter for Keyv to manage local and remote store as one for Keyv
 
@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/@keyv/tiered.svg)](https://www.npmjs.com/package/@keyv/tiered)
 [![npm](https://img.shields.io/npm/dm/@keyv/tiered)](https://npmjs.com/package/@keyv/tiered)
 
-Tiered storage adapter for [Keyv](https://github.com/lukechilds/keyv).
+Tiered storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 ## Install
 
@@ -17,7 +17,7 @@ npm install --save keyv @keyv/tiered
 
 ## Usage
 
-First, you need to provide your `local` and `remote` stores to be used, being possible to use any [Keyv storage adapter](https://keyv.js.org/#/?id=storage-adapters-1#/?id=storage-adapters-1#/?id=storage-adapters-1):
+First, you need to provide your `local` and `remote` stores to be used, being possible to use any [Keyv storage adapter](https://github.com/jaredwray/keyv#storage-adapters):
 
 ```js
 const Keyv = require('keyv');
