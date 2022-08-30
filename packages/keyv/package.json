@@ -35,9 +35,8 @@
 		"json-buffer": "3.0.1"
 	},
 	"devDependencies": {
+		"@keyv/compress-gzip": "file:../compress-gzip",
 		"@keyv/test-suite": "*",
-		"@keyv/sqlite": "*",
-		"@keyv/mongo": "*",
 		"ava": "^4.3.0",
 		"eslint": "^8.19.0",
 		"eslint-plugin-promise": "^6.0.0",

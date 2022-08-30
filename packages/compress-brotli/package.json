@@ -1,7 +1,7 @@
 {
 	"name": "@keyv/compress-brotli",
 	"version": "1.0.0",
-	"description": "compression for keyv",
+	"description": "brotli compression for keyv",
 	"main": "src/index.js",
 	"scripts": {
 		"test": "xo && nyc ava",
@@ -39,6 +39,7 @@
 	},
 	"keywords": [
 		"compress",
+		"brotli",
 		"keyv",
 		"storage",
 		"adapter",
