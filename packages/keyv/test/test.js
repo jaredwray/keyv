@@ -5,6 +5,7 @@ const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
 const KeyvMongo = require('@keyv/mongo');
 const KeyvBrotli = require('@keyv/compress-brotli');
+const KeyvGzip = require('@keyv/compress-gzip');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
@@ -328,6 +329,12 @@ test.serial('keyv.get([keys]) should return undefined array for all no existent 
 
 test('pass compress options', async t => {
 	const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.get('foo'), 'bar');
+});
+
+test('compress/decompress with gzip', async t => {
+	const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 });

@@ -1,19 +1,19 @@
 import {EventEmitter} from 'node:events';
 import {Store, StoredData} from 'keyv';
 
-declare class KeyvBrotli extends EventEmitter implements Store<Value> {
+declare class KeyvGzip extends EventEmitter {
 	ttlSupport: any;
 	opts: any;
-	constructor(options?: string | KeyvBrotli.Options);
+	constructor(options?: string | KeyvGzip.Options);
 	compress(value: Value);
 	decompress(value: Value);
 }
 
-declare namespace KeyvBrotli {
+declare namespace KeyvGzipv {
 	interface Options {
 		compress: (...args: any[]) => void;
 		decompress: (...args: any[]) => void;
 	}
 }
 
-export = KeyvBrotli;
+export = KeyvGzip;
