@@ -9,7 +9,7 @@ declare class KeyvGzip extends EventEmitter {
 	decompress(value: Value);
 }
 
-declare namespace KeyvGzipv {
+declare namespace KeyvGzip {
 	interface Options {
 		compress: (...args: any[]) => void;
 		decompress: (...args: any[]) => void;
