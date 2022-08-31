@@ -16,4 +16,4 @@ declare namespace KeyvBrotli {
 	}
 }
 
-export = KeyvEtcd;
+export = KeyvBrotli;
