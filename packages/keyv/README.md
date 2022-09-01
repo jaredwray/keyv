@@ -187,6 +187,27 @@ const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
 const awesomeModule = new AwesomeModule({ cache: some3rdPartyStore });
 ```
 
+## Compression
+
+Keyv supports `gzip` and `brotli` compression. To enable compression, pass the `compress` option to the constructor.
+
+```js
+const KeyvGzip = require('@keyv/compress-gzip');
+const Keyv = require('keyv');
+
+const keyvGzip = new KeyvGzip();;
+const keyv = new Keyv({ compression: KeyvGzip });
+```
+
+You can also pass a custom compression function to the `compression` option. Following the pattern of the official compression adapters.
+
+```js
+
+```js
+
+
+```js
+
 ## API
 
 ### new Keyv([uri], [options])
@@ -223,6 +244,13 @@ Type: `Number`<br>
 Default: `undefined`
 
 Default TTL. Can be overridden by specififying a TTL on `.set()`.
+
+#### options.compression
+
+Type: `@keyv/compress-<compression_package_name>`<br>
+Default: `undefined`
+
+Compression package to use. See [Compression](#compression) for more details.
 
 #### options.serialize
 
@@ -320,7 +348,6 @@ In this section of the documentation we will cover:
 This package requires the following dependencies to run:
 
 1) [Yarn V1](https://yarnpkg.com/getting-started/install)
-2) [Lerna](https://lerna.js.org/)
 3) [Docker](https://docs.docker.com/get-docker/)
 
 ## Setting up your workspace
@@ -342,7 +369,7 @@ Once the project is installed locally, you are ready to start up its services:
 
 ## Available Commands
 
-Once the project is running, you can execute a variety of commands. The root workspace and each subpackage contain a `package.json` file with a  `scripts` field listing all the commands that can be executed from that directory. This project also supports native `yarn`, `lerna`, and `docker` commands.
+Once the project is running, you can execute a variety of commands. The root workspace and each subpackage contain a `package.json` file with a  `scripts` field listing all the commands that can be executed from that directory. This project also supports native `yarn`, and `docker` commands.
 
 Here, we'll cover the primary commands that can be executed from the root directory. Unless otherwise noted, these commands can also be executed from a subpackage. If executed from a subpackage, they will only affect that subpackage, rather than the entire workspace.
 

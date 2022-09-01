@@ -27,11 +27,11 @@ const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 
 ## API
 
-### @keyv/compress-brotli(\[options])
+### @keyv/compress-gzip(\[options])
 
 #### options
 
-All options for @keyv/compress-brotli are based on the package [compress-brotli](https://github.com/Kikobeats/compress-brotli)
+All options for @keyv/compress-gzip are based on the package [compress-gzip](https://github.com/Rebsos/node-gzip#readme)
 
 ## License
 
