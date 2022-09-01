@@ -200,13 +200,7 @@ const keyv = new Keyv({ compression: KeyvGzip });
 ```
 
 You can also pass a custom compression function to the `compression` option. Following the pattern of the official compression adapters.
-
-```js
-
-```js
-
-
-```js
+```
 
 ## API
 
