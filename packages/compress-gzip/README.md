@@ -31,7 +31,7 @@ const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 
 #### options
 
-All options for @keyv/compress-gzip are based on the package [compress-gzip](https://github.com/Rebsos/node-gzip#readme)
+All options for @keyv/compress-gzip are based on the package [compress-gzip](https://github.com/nodeca/pako#readme)
 
 ## License
 
