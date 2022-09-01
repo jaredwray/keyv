@@ -6,7 +6,7 @@ test('gzip compression/decompression', async t => {
 	const compressed = await keyv.compress('whatever');
 	t.not(compressed, 'whatever');
 	const decompressed = await keyv.decompress(compressed);
-	t.is(decompressed.toString(), 'whatever');
+	t.is(decompressed, 'whatever');
 });
 
 // Test serialize compression
@@ -31,18 +31,6 @@ test('options while compress', async t => {
 	t.not(compressed, 'whatever');
 	const compressedWithoutOptions = await keyv.compress('whatever');
 	t.not(compressed, compressedWithoutOptions);
-});
-// Test options while decompress
-test('options while decompress', async t => {
-	const keyv = new KeyvGzip();
-	const compressed = await keyv.compress('whatever', {chunkSize: 32 * 1024});
-	t.not(compressed, 'whatever');
-	const compressedWithoutOptions = await keyv.compress('whatever');
-	t.not(compressed, compressedWithoutOptions);
-	const decompress = await keyv.decompress(compressed);
-	const decompressWithoutOptions = await keyv.decompress(compressedWithoutOptions);
-	t.not(decompress, decompressWithoutOptions);
-	t.is(decompress.toString(), decompressWithoutOptions.toString());
 });
 // Test options at class level
 test('options at class level', async t => {
