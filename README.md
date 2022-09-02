@@ -75,6 +75,11 @@ If there is already an adapter that you would like to add, please post an issue 
 * [sqlite](https://github.com/jaredwray/keyv/tree/main/packages/sqlite): SQLite storage adapter
 * [tiered](https://github.com/jaredwray/keyv/tree/main/packages/tiered): Tiered storage adapter to manage local and remote storage as one
 
+### Compression Adapters
+
+* [brotli](https://github.com/jaredwray/keyv/tree/main/packages/compress-brotli): Brotli compression adapter
+* [Gzip](https://github.com/jaredwray/keyv/tree/main/packages/compress-gzip): Gzip compression adapter
+
 ### Third-party Storage Adapters
 
 Here are the storage adapters that are not in this repository but compatible with Keyv.
