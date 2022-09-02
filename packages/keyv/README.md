@@ -195,7 +195,7 @@ Keyv supports `gzip` and `brotli` compression. To enable compression, pass the `
 const KeyvGzip = require('@keyv/compress-gzip');
 const Keyv = require('keyv');
 
-const keyvGzip = new KeyvGzip();;
+const keyvGzip = new KeyvGzip();
 const keyv = new Keyv({ compression: KeyvGzip });
 ```
 
