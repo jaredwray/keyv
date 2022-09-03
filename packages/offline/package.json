@@ -60,7 +60,7 @@
 		"@keyv/test-suite": "*",
 		"@keyv/redis": "*",
 		"@types/keyv": "^3.1.4",
-		"ava": "^4.3.1",
+		"ava": "^4.3.3",
 		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
