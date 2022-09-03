@@ -1,4 +1,4 @@
-# @keyv/offline [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
+# @keyv/offline [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > offline storage adapter for Keyv
 
@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/@keyv/offline.svg)](https://www.npmjs.com/package/@keyv/offline)
 [![npm](https://img.shields.io/npm/dm/@keyv/offline)](https://npmjs.com/package/@keyv/offline)
 
-offline storage adapter for [Keyv](https://github.com/lukechilds/keyv).
+Offline storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 ## Install
 
