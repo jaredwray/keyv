@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/consistent-type-definitions */
 import {EventEmitter} from 'events';
-import {Store, StoredData} from 'keyv';
-import {Redis, Cluster} from 'ioredis';
+import type {Store, StoredData} from 'keyv';
+import type {Redis, Cluster} from 'ioredis';
 
 declare class KeyvRedis extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
