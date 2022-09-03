@@ -1,4 +1,4 @@
-# @keyv/tiered [<img width="100" align="right" src="https://rawgit.com/lukechilds/keyv/master/media/logo.svg" alt="keyv">](https://github.com/lukechilds/keyv)
+# @keyv/compress-brotli [<img width="100" align="right" src="https://rawgit.com/jaredwray/keyv/master/media/logo.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > Brotli compression for Keyv
 
