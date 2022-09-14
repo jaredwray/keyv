@@ -10,14 +10,5 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
-**To Reproduce**
-Please provide code that can be ran in a stand alone fashion that will reproduce the error. 
-
-**Expected behavior**
-A clear and concise description of what you expected to happen.
-
-**Tests (Bonus!!!)**
-If you want to provide unit test examples so that we can use this to validate the bug and then fix it will dramatically increase the possibility of this being resolved. 
-
-**Additional context**
-Add any other context about the problem here.
+**How To Reproduce (best to provide workable code or tests!)**
+Please provide code that can be ran in a stand alone fashion that will reproduce the error. If you can provide a test that will be even better. If you can't provide code, please provide a detailed description of how to reproduce the error.
