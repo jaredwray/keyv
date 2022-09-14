@@ -17,7 +17,13 @@ Keyv and its storage adapters are in this mono repo and there are details below 
 
 * [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Our code of conduct
 * [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute to this project
-* [SECURITY.md](SECURITY.md) - Security guidelines and supported versions 
+* [SECURITY.md](SECURITY.md) - Security guidelines and supported versions
+
+## Getting Started
+
+Keyv is a simple key-value storage system that supports multiple backends. It's designed to be a simple and consistent way to work with key-value stores.
+
+To learn how to use Keyv, check out the [keyv](https://github.com/jaredwray/keyv/blob/main/packages/keyv/README.md) README. To learn how to use a specific storage adapter, check out the README for that adapter under [Storage Adapters](#storage-adapters).
 
 ## Open a Pull Request
 
