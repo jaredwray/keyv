@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/consistent-type-definitions */
 import {EventEmitter} from 'events';
-import {Store, StoredData} from 'keyv';
+import type {Store, StoredData} from 'keyv';
 
 export = KeyvMysql;
 declare class KeyvMysql extends EventEmitter implements Store<Value> {
