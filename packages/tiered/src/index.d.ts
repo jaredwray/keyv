@@ -1,5 +1,5 @@
 import {EventEmitter} from 'events';
-import {Store, StoredData} from 'keyv';
+import type {Store, StoredData} from 'keyv';
 
 export = KeyvTiered;
 declare class KeyvTiered extends EventEmitter implements Store<Value> {
@@ -17,6 +17,7 @@ declare class KeyvTiered extends EventEmitter implements Store<Value> {
 }
 
 declare namespace KeyvTiered {
+	/* eslint-disable-next-line @typescript-eslint/consistent-type-definitions */
 	interface Options {
 		local: Store<Value>;
 		remote: Store<Value>;
