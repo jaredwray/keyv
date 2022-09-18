@@ -1,11 +1,12 @@
 import {EventEmitter} from 'events';
-import Etcd3 from 'etcd3';
-import {Store, StoredData} from 'keyv';
+import type Etcd3 from 'etcd3';
+import type {Store, StoredData} from 'keyv';
 
 declare class KeyvEtcd extends EventEmitter implements Store<Value> {
 	ttlSupport: any;
 	opts: any;
 	client: Etcd3;
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	lease: import('etcd3').Lease;
 	constructor(options?: string | KeyvEtcd.Options);
 	get(key: string): Promise<Value>;
@@ -21,6 +22,7 @@ declare class KeyvEtcd extends EventEmitter implements Store<Value> {
 }
 
 declare namespace KeyvEtcd {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface Options {
 		url?: string | undefined;
 		uri?: string | undefined;
