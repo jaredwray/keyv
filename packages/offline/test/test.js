@@ -3,10 +3,10 @@
 
 const test = require('ava');
 const Keyv = require('keyv');
-const KeyvOffline = require('this');
 const KeyvRedis = require('@keyv/redis');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests} = require('@keyv/test-suite');
+const KeyvOffline = require('../src/index.js');
 
 const keyvRedisBad = new KeyvRedis({
 	uri: 'redis://user:pass@localhost:1338',
