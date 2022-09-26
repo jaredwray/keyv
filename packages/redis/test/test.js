@@ -2,8 +2,8 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
-const KeyvRedis = require('../src/index.js');
 const Redis = require('ioredis');
+const KeyvRedis = require('../src/index.js');
 
 const REDIS_HOST = 'localhost';
 const redisURI = `redis://${REDIS_HOST}`;
