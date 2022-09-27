@@ -1,7 +1,4 @@
-import {EventEmitter} from 'node:events';
-import {Store, StoredData} from 'keyv';
-
-declare class KeyvBrotli extends EventEmitter implements Store<Value> {
+declare class KeyvBrotli {
 	ttlSupport: any;
 	opts: any;
 	constructor(options?: string | KeyvBrotli.Options);
