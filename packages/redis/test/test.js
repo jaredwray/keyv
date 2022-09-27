@@ -106,10 +106,10 @@ test('namespace is not cleaned up by TTL', async t => {
 	const expiredValue = await redis.get(`v3:${key}`);
 	t.is(expiredValue, null);
 
-	// But the namespace doesn't expire
+	//namespace should also expire
 	t.true(await redis.exists('namespace:v3') === 0);
 
-	// And take out some of the memory for each of the keys
+	// memory of each key should be null
 	t.true(await redis.memory('USAGE', 'namespace:v3') === null);
 
 	// Even though the value is no longer there
