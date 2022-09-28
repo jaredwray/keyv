@@ -80,7 +80,7 @@ test('close tls connection successfully', async t => {
 	}
 });
 
-test('namespace is not cleaned up by TTL', async t => {
+test('.clear cleaned namespace', async t => {
 	// Setup
 	const keyv = new Keyv(redisURI, {
 		adapter: 'redis',
@@ -102,17 +102,9 @@ test('namespace is not cleaned up by TTL', async t => {
 	// Test
 	const redis = new Redis(redisURI);
 
-	// Stored key/value does expire
-	const expiredValue = await redis.get(`v3:${key}`);
-	t.is(expiredValue, null);
-
-	// Namespace should also expire
+	// Namespace should also expire after calling clear
 	t.true(await redis.exists('namespace:v3') === 0);
 
 	// Memory of each key should be null
 	t.true(await redis.memory('USAGE', 'namespace:v3') === null);
-
-	// Even though the value is no longer there
-	const storedValue = await redis.mget('namespace:v3', `v3:${key}`);
-	t.deepEqual(storedValue, [null, null]);
 });
