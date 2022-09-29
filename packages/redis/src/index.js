@@ -68,7 +68,7 @@ class KeyvRedis extends EventEmitter {
 
 	clear() {
 		return this.redis.smembers(this._getNamespace())
-			.then(keys => this.redis.del([...keys, ...this._getNamespace()]))
+			.then(keys => this.redis.del([...keys, this._getNamespace()]))
 			.then(() => undefined);
 	}
 

@@ -79,3 +79,32 @@ test('close tls connection successfully', async t => {
 		t.pass();
 	}
 });
+
+test('.clear cleaned namespace', async t => {
+	// Setup
+	const keyv = new Keyv(redisURI, {
+		adapter: 'redis',
+		namespace: 'v3',
+	});
+
+	const length = 1;
+	const key = [...Array.from({length}).keys()].join('');
+
+	await keyv.set(key, 'value', 1);
+
+	await new Promise(r => {
+		setTimeout(r, 250);
+	});
+
+	await keyv.clear();
+	await keyv.disconnect();
+
+	// Test
+	const redis = new Redis(redisURI);
+
+	// Namespace should also expire after calling clear
+	t.true(await redis.exists('namespace:v3') === 0);
+
+	// Memory of each key should be null
+	t.true(await redis.memory('USAGE', 'namespace:v3') === null);
+});
