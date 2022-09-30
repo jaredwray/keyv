@@ -7,23 +7,20 @@ class KeyvGzip {
 			to: 'string',
 			...options,
 		};
-
-		this.opts.compress = pako.deflate;
-		this.opts.decompress = pako.inflate;
-		this.opts.serialize = async ({value, expires}) => JSONB.stringify({value: await this.opts.compress(value, this.opts), expires});
+		this.opts.serialize = async ({value, expires}) => JSONB.stringify({value: await pako.deflate(value, this.opts), expires});
 		this.opts.deserialize = async data => {
 			const {value, expires} = JSONB.parse(data);
-			const value_ = await this.opts.decompress(value, this.opts);
+			const value_ = await pako.inflate(value, this.opts);
 			return {value: value_, expires};
 		};
 	}
 
 	compress(value) {
-		return this.opts.compress(value, this.opts);
+		return pako.deflate(value, this.opts);
 	}
 
 	decompress(value) {
-		return this.opts.decompress(value, this.opts);
+		return pako.inflate(value, this.opts);
 	}
 }
 

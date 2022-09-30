@@ -2,29 +2,27 @@
 const compressBrotli = require('compress-brotli');
 
 class KeyvBrotli {
+	brotli;
 	constructor(options) {
 		this.opts = {
 			...options,
 		};
 
-		const {compress, decompress, serialize, deserialize} = compressBrotli(this.opts);
+		this.brotli = compressBrotli(this.opts);
+		this.opts.serialize = async ({value, expires}) => this.brotli.serialize({value: await this.brotli.compress(value), expires});
 
-		this.opts.compress = compress;
-		this.opts.serialize = async ({value, expires}) => serialize({value: await compress(value), expires});
-
-		this.opts.decompress = decompress;
 		this.opts.deserialize = async data => {
-			const {value, expires} = deserialize(data);
-			return {value: await decompress(value), expires};
+			const {value, expires} = this.brotli.deserialize(data);
+			return {value: await this.brotli.decompress(value), expires};
 		};
 	}
 
 	compress(value) {
-		return this.opts.compress(value, this.opts);
+		return this.brotli.compress(value, this.opts);
 	}
 
 	decompress(value) {
-		return this.opts.decompress(value, this.opts);
+		return this.brotli.decompress(value, this.opts);
 	}
 }
 
