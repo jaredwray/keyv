@@ -18,12 +18,12 @@ class KeyvGzip {
 		};
 	}
 
-	compress(value) {
-		return this.opts.compress(value, this.opts);
+	compress(value, options) {
+		return this.opts.compress(value, {...this.opts, ...options});
 	}
 
-	decompress(value) {
-		return this.opts.decompress(value, this.opts);
+	decompress(value, options) {
+		return this.opts.decompress(value, {...this.opts, ...options});
 	}
 }
 
