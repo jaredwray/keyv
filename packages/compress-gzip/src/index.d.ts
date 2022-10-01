@@ -1,4 +1,7 @@
-declare class KeyvGzip {
+import {EventEmitter} from 'node:events';
+import {Store, StoredData} from 'keyv';
+
+declare class KeyvGzip extends EventEmitter {
 	ttlSupport: any;
 	opts: any;
 	constructor(options?: string | KeyvGzip.Options);

@@ -59,6 +59,7 @@
 		"compress-brotli": "^1.3.8"
 	},
 	"devDependencies": {
+		"@types/keyv": "^3.1.4",
 		"ava": "^4.2.0",
 		"keyv": "*",
 		"nyc": "^15.1.0",
