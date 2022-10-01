@@ -19,12 +19,12 @@ class KeyvBrotli {
 		};
 	}
 
-	compress(value, options) {
-		return this.opts.compress(value, options);
+	compress(value) {
+		return this.opts.compress(value, this.opts);
 	}
 
-	decompress(value, options) {
-		return this.opts.decompress(value, options);
+	decompress(value) {
+		return this.opts.decompress(value, this.opts);
 	}
 }
 
