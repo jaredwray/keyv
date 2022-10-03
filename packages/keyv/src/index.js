@@ -52,9 +52,8 @@ class Keyv extends EventEmitter {
 
 		if (this.opts.compression) {
 			const compression = this.opts.compression;
-			const {serialize, deserialize} = compression.opts;
-			this.opts.serialize = serialize;
-			this.opts.deserialize = deserialize;
+			this.opts.serialize = compression.serialize.bind(compression);
+			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
 		if (typeof this.opts.store.on === 'function' && emitErrors) {

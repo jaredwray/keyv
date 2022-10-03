@@ -1,16 +1,13 @@
-declare class KeyvBrotli {
-	ttlSupport: any;
-	opts: any;
-	constructor(options?: string | KeyvBrotli.Options);
-	compress(value: Value);
-	decompress(value: Value);
-}
+import type Brotli, {BrotliOptions} from 'compress-brotli';
 
-declare namespace KeyvBrotli {
-	interface Options {
-		compress: (...args: any[]) => void;
-		decompress: (...args: any[]) => void;
-	}
+declare class KeyvBrotli {
+	brotli: Brotli;
+	opts: BrotliOptions;
+	constructor(options?: BrotliOptions);
+	compress(value: any);
+	decompress(value: any);
+	serialize(value: any);
+	deserialize(value: any);
 }
 
 export = KeyvBrotli;

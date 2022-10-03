@@ -1,16 +1,11 @@
 declare class KeyvGzip {
 	ttlSupport: any;
 	opts: any;
-	constructor(options?: string | KeyvGzip.Options);
-	compress(value: Value);
-	decompress(value: Value);
-}
-
-declare namespace KeyvGzip {
-	interface Options {
-		compress: (...args: any[]) => void;
-		decompress: (...args: any[]) => void;
-	}
+	constructor(options?);
+	compress(value: any);
+	decompress(value: any);
+	serialize(value: any);
+	deserialize(value: any);
 }
 
 export = KeyvGzip;

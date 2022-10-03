@@ -12,16 +12,14 @@ test('gzip compression/decompression', async t => {
 // Test serialize compression
 test('serialize compression', async t => {
 	const keyv = new KeyvGzip();
-	const {serialize} = keyv.opts;
-	const json = await serialize({value: 'whatever'});
+	const json = await keyv.serialize({value: 'whatever'});
 	t.not(JSON.parse(json).value, 'whatever');
 });
 // Test deserialize compression
 test('deserialize compression', async t => {
 	const keyv = new KeyvGzip();
-	const {serialize, deserialize} = keyv.opts;
-	const json = await serialize({value: 'whatever'});
-	const djson = await deserialize(json);
+	const json = await keyv.serialize({value: 'whatever'});
+	const djson = await keyv.deserialize(json);
 	t.deepEqual(djson, {expires: undefined, value: 'whatever'});
 });
 // Test options while compress
