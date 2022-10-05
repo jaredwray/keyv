@@ -4,10 +4,10 @@ declare class KeyvBrotli {
 	brotli: Brotli;
 	opts: BrotliOptions;
 	constructor(options?: BrotliOptions);
-	compress(value: any);
-	decompress(value: any);
-	serialize(value: any);
-	deserialize(value: any);
+	async compress(value: any);
+	async decompress(value: any);
+	async serialize(value: any);
+	async deserialize(value: any);
 }
 
 export = KeyvBrotli;

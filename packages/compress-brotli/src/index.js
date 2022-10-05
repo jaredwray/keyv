@@ -7,11 +7,11 @@ class KeyvBrotli {
 		this.brotli = compressBrotli(this.opts);
 	}
 
-	compress(value) {
+	async compress(value) {
 		return this.brotli.compress(value, this.opts);
 	}
 
-	decompress(data) {
+	async decompress(data) {
 		return this.brotli.decompress(data);
 	}
 

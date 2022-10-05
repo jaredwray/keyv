@@ -9,11 +9,11 @@ class KeyvGzip {
 		};
 	}
 
-	compress(value) {
+	async compress(value) {
 		return pako.deflate(value, this.opts);
 	}
 
-	decompress(value) {
+	async decompress(value) {
 		return pako.inflate(value, this.opts);
 	}
 
