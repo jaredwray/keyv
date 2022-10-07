@@ -133,7 +133,6 @@ test.serial('keyv has / false', async t => {
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211')});
 
 	const value = await keyv.has('foo');
-	console.log('error', value);
 
 	t.is(value, false);
 });

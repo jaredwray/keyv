@@ -78,7 +78,6 @@ test('using number array with v8', async t => {
 	});
 
 	t.true(await keyv.set('testkey', {b: [1, 2, 3]}));
-	console.log(map.keys());
 	t.deepEqual(await keyv.get('testkey'), {b: [1, 2, 3]});
 });
 
@@ -95,6 +94,5 @@ test('decompression using number array with json-buffer', async t => {
 		compression: new KeyvBrotli(options),
 	});
 	t.true(await keyv.set('testkey', {b: [1, 2, 3]}));
-	console.log(map.keys());
 	t.deepEqual(await keyv.get('testkey'), {b: [1, 2, 3]});
 });

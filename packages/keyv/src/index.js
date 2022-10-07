@@ -148,7 +148,6 @@ class Keyv extends EventEmitter {
 			.then(() => isArray ? store.getMany(keyPrefixed) : store.get(keyPrefixed))
 			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
 			.then(data => {
-				console.log(typeof data);
 				if (data === undefined || data === null) {
 					return undefined;
 				}
@@ -207,11 +206,7 @@ class Keyv extends EventEmitter {
 				value = {value, expires};
 				return this.opts.serialize(value);
 			})
-			.then(value => {
-				console.log('key', keyPrefixed);
-				console.log('val', value);
-				store.set(keyPrefixed, value, ttl);
-			})
+			.then(value => store.set(keyPrefixed, value, ttl))
 			.then(() => true);
 	}
 
