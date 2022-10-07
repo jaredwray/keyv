@@ -1,5 +1,4 @@
 declare class KeyvGzip {
-	ttlSupport: any;
 	opts: any;
 	constructor(options?);
 	async compress(value: any);

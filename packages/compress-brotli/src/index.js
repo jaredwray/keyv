@@ -3,16 +3,15 @@ const compressBrotli = require('compress-brotli');
 
 class KeyvBrotli {
 	constructor(options) {
-		this.opts = options;
-		this.brotli = compressBrotli(this.opts);
+		this.brotli = compressBrotli(options);
 	}
 
-	async compress(value) {
-		return this.brotli.compress(value, this.opts);
+	async compress(value, options) {
+		return this.brotli.compress(value, options);
 	}
 
-	async decompress(data) {
-		return this.brotli.decompress(data);
+	async decompress(data, options) {
+		return this.brotli.decompress(data, options);
 	}
 
 	async serialize({value, expires}) {

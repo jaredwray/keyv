@@ -38,3 +38,31 @@ test('options at class level', async t => {
 	const compressedWithoutOptions = await new KeyvGzip().compress('whatever');
 	t.not(compressed, compressedWithoutOptions);
 });
+
+test('compression with compression options', async t => {
+	const options = {};
+
+	const keyv = new KeyvGzip(options);
+	const keyvWithoutOptions = new KeyvGzip();
+	const compressed = await keyv.compress('whatever');
+	const compressedWithoutOptions = await keyvWithoutOptions.compress('whatever');
+	t.not(compressed, compressedWithoutOptions);
+});
+
+test('decompression with decompression options', async t => {
+	const options = {};
+
+	const keyv = new KeyvGzip(options);
+	const compressed = await keyv.compress('whatever');
+	const decompressed = await keyv.decompress(compressed);
+	t.is(decompressed, 'whatever');
+});
+
+test('compression/decompression with compression/decompression options', async t => {
+	const options = {};
+
+	const keyv = new KeyvGzip(options);
+	const compressed = await keyv.compress('whatever');
+	const decompressed = await keyv.decompress(compressed);
+	t.is(decompressed, 'whatever');
+});
