@@ -120,6 +120,7 @@ class Keyv extends EventEmitter {
 					.then(() => store.get(key))
 					.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : (this.opts.compression ? this.opts.deserialize(data) : data))
 					.then(data => {
+						console.log(data);
 						if (data === undefined || data === null) {
 							return undefined;
 						}
@@ -146,7 +147,7 @@ class Keyv extends EventEmitter {
 
 		return Promise.resolve()
 			.then(() => isArray ? store.getMany(keyPrefixed) : store.get(keyPrefixed))
-			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
+			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : (this.opts.compression ? this.opts.deserialize(data) : data))
 			.then(data => {
 				if (data === undefined || data === null) {
 					return undefined;

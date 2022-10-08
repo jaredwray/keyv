@@ -59,10 +59,12 @@ test('decompression with decompression options', async t => {
 });
 
 test('compression/decompression with compression/decompression options', async t => {
-	const options = {};
+	const options = {
+		chunkSize: 1024,
+	};
 
-	const keyv = new KeyvGzip(options);
-	const compressed = await keyv.compress('whatever');
+	const keyv = new KeyvGzip();
+	const compressed = await keyv.compress('whatever', options);
 	const decompressed = await keyv.decompress(compressed);
 	t.is(decompressed, 'whatever');
 });
