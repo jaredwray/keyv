@@ -31,7 +31,7 @@ const keyvCompressionTests = (test, compression) => {
 	});
 
 	test('compress/decompress with main keyv', async t => {
-		const keyv = new Keyv({store: new Map(), compression: compression});
+		const keyv = new Keyv({store: new Map(), compression});
 		await keyv.set('foo', 'bar');
 		t.is(await keyv.get('foo'), 'bar');
 	});

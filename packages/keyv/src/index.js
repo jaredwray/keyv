@@ -120,7 +120,6 @@ class Keyv extends EventEmitter {
 					.then(() => store.get(key))
 					.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : (this.opts.compression ? this.opts.deserialize(data) : data))
 					.then(data => {
-						console.log(data);
 						if (data === undefined || data === null) {
 							return undefined;
 						}
