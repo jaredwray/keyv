@@ -14,16 +14,16 @@
       "unicorn/prefer-node-protocol": 0
     }
   },
-	"ava": {
-		"require": [
-			"requirable",
-			"ts-node/register"
-		],
-		"extensions": [
-			"js",
-			"ts"
-		]
-	},
+  "ava": {
+    "require": [
+      "requirable",
+      "ts-node/register"
+    ],
+    "extensions": [
+      "js",
+      "ts"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jaredwray/keyv.git"
@@ -51,6 +51,7 @@
     "pako": "^2.0.4"
   },
   "devDependencies": {
+    "@keyv/test-suite": "*",
     "@types/keyv": "^3.1.4",
     "ava": "^4.2.0",
     "keyv": "*",

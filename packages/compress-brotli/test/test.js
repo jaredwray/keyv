@@ -8,21 +8,28 @@ const v8 = require('v8');
 const test = require('ava');
 const KeyvBrotli = require('this');
 const json = require('json-buffer');
+const {keyvCompresstionTests} = require('@keyv/test-suite');
 
-test('enable brotli compression', async t => {
+keyvCompresstionTests(test, new KeyvBrotli());
+
+test('number array compression/decompression', async t => {
 	const keyv = new KeyvBrotli();
-	const compressed = await keyv.compress('whatever');
-	t.not(compressed, 'whatever');
-	const decompressed = await keyv.decompress(compressed);
-	t.is(decompressed, 'whatever');
+	const array = [4, 5, 6, 7];
+	const compressed = await keyv.compress(array);
+	const decompressed = await keyv.decompress(compressed, {});
+	t.deepEqual(decompressed, array);
 });
 
-test('test number array compression/decompression', async t => {
+test('object type compression/decompression', async t => {
 	const keyv = new KeyvBrotli();
-	const array = [1, 2, 3, 4];
-	const compressed = await keyv.compress(array);
-	const decompressed = await keyv.decompress(compressed);
-	t.deepEqual(decompressed, array);
+	const object = {
+		a: 1,
+		b: 'test',
+		c: true,
+	};
+	const compressed = await keyv.compress(object);
+	const decompressed = await keyv.decompress(compressed, {});
+	t.deepEqual(decompressed, object);
 });
 
 test('disable brotli compression', async t => {
@@ -34,21 +41,6 @@ test('disable brotli compression', async t => {
 	t.is(compressed, 'whatever');
 	const decompressed = await keyv.decompress(compressed);
 	t.is(decompressed, 'whatever');
-});
-
-// Test serialize compression
-test('serialize compression', async t => {
-	const keyv = new KeyvBrotli();
-	const json = await keyv.serialize({value: 'whatever'});
-	t.not(JSON.parse(json).value, 'whatever');
-});
-
-// Test deserialize compression
-test('deserialize compression', async t => {
-	const keyv = new KeyvBrotli();
-	const json = await keyv.serialize({value: 'whatever'});
-	const djson = await keyv.deserialize(json);
-	t.deepEqual(djson, {expires: undefined, value: 'whatever'});
 });
 
 test('compression with compression options', async t => {

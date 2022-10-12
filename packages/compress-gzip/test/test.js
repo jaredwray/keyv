@@ -1,27 +1,29 @@
 const test = require('ava');
-const KeyvGzip = require('../src/index.js');
+const {keyvCompresstionTests} = require('@keyv/test-suite');
+const KeyvGzip = require('this');
 
-test('gzip compression/decompression', async t => {
+keyvCompresstionTests(test, new KeyvGzip());
+
+test('number array compression/decompression', async t => {
 	const keyv = new KeyvGzip();
-	const compressed = await keyv.compress('whatever');
-	t.not(compressed, 'whatever');
-	const decompressed = await keyv.decompress(compressed);
-	t.is(decompressed, 'whatever');
+	const array = new Uint8Array([4, 5, 6, 7]);
+	const compressed = await keyv.compress(array);
+	const decompressed = await keyv.decompress(compressed, {});
+	t.deepEqual(decompressed, array);
 });
 
-// Test serialize compression
-test('serialize compression', async t => {
+test('object type compression/decompression', async t => {
 	const keyv = new KeyvGzip();
-	const json = await keyv.serialize({value: 'whatever'});
-	t.not(JSON.parse(json).value, 'whatever');
+	const object = new Uint8Array({
+		a: 1,
+		b: 'test',
+		c: true,
+	});
+	const compressed = await keyv.compress(object);
+	const decompressed = await keyv.decompress(compressed, {});
+	t.deepEqual(decompressed, object);
 });
-// Test deserialize compression
-test('deserialize compression', async t => {
-	const keyv = new KeyvGzip();
-	const json = await keyv.serialize({value: 'whatever'});
-	const djson = await keyv.deserialize(json);
-	t.deepEqual(djson, {expires: undefined, value: 'whatever'});
-});
+
 // Test options while compress
 test('options while compress', async t => {
 	const keyv = new KeyvGzip();
