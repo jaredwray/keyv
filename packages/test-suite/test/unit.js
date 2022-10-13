@@ -1,7 +1,8 @@
 const test = require('ava');
 const Keyv = require('keyv');
 const keyvTestSuite = require('this').default;
-const {keyvOfficialTests, keyvIteratorTests} = require('this');
+const {keyvOfficialTests, keyvIteratorTests, keyvCompresstionTests} = require('this');
+const KeyvBrotli = require('@keyv/compress-brotli');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
@@ -18,3 +19,4 @@ const storeExtended = () => {
 
 keyvTestSuite(test, Keyv, storeExtended);
 keyvIteratorTests(test, Keyv, storeExtended);
+keyvCompresstionTests(test, new KeyvBrotli());
