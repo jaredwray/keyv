@@ -44,6 +44,7 @@
 	"devDependencies": {
 		"ava": "^4.3.3",
 		"keyv": "*",
+		"@keyv/compress-brotli": "*",
 		"nyc": "^15.1.0",
 		"this": "^1.1.0",
 		"xo": "^0.52.3"

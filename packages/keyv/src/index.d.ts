@@ -85,7 +85,14 @@ declare namespace Keyv {
 		/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
 		adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql' | undefined;
 		/** Enable compression option **/
-		compress?: Record<string, unknown> | undefined;
+		compression?: CompressionAdapter | undefined;
+	}
+
+	interface CompressionAdapter {
+		async compress(value: any, options?: any);
+		async decompress(value: any, options?: any);
+		async serialize(value: any);
+		async deserialize(value: any);
 	}
 
 	interface DeserializedData<Value> {

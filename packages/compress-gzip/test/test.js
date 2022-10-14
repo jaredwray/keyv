@@ -1,29 +1,29 @@
 const test = require('ava');
-const KeyvGzip = require('../src/index.js');
+const {keyvCompresstionTests} = require('@keyv/test-suite');
+const KeyvGzip = require('this');
 
-test('gzip compression/decompression', async t => {
+keyvCompresstionTests(test, new KeyvGzip());
+
+test('number array compression/decompression', async t => {
 	const keyv = new KeyvGzip();
-	const compressed = await keyv.compress('whatever');
-	t.not(compressed, 'whatever');
-	const decompressed = await keyv.decompress(compressed);
-	t.is(decompressed, 'whatever');
+	const array = new Uint8Array([4, 5, 6, 7]);
+	const compressed = await keyv.compress(array);
+	const decompressed = await keyv.decompress(compressed, {});
+	t.deepEqual(decompressed, array);
 });
 
-// Test serialize compression
-test('serialize compression', async t => {
+test('object type compression/decompression', async t => {
 	const keyv = new KeyvGzip();
-	const {serialize} = keyv.opts;
-	const json = await serialize({value: 'whatever'});
-	t.not(JSON.parse(json).value, 'whatever');
+	const object = new Uint8Array({
+		a: 1,
+		b: 'test',
+		c: true,
+	});
+	const compressed = await keyv.compress(object);
+	const decompressed = await keyv.decompress(compressed, {});
+	t.deepEqual(decompressed, object);
 });
-// Test deserialize compression
-test('deserialize compression', async t => {
-	const keyv = new KeyvGzip();
-	const {serialize, deserialize} = keyv.opts;
-	const json = await serialize({value: 'whatever'});
-	const djson = await deserialize(json);
-	t.deepEqual(djson, {expires: undefined, value: 'whatever'});
-});
+
 // Test options while compress
 test('options while compress', async t => {
 	const keyv = new KeyvGzip();
@@ -39,4 +39,34 @@ test('options at class level', async t => {
 	t.not(compressed, 'whatever');
 	const compressedWithoutOptions = await new KeyvGzip().compress('whatever');
 	t.not(compressed, compressedWithoutOptions);
+});
+
+test('compression with compression options', async t => {
+	const options = {};
+
+	const keyv = new KeyvGzip(options);
+	const keyvWithoutOptions = new KeyvGzip();
+	const compressed = await keyv.compress('whatever');
+	const compressedWithoutOptions = await keyvWithoutOptions.compress('whatever');
+	t.not(compressed, compressedWithoutOptions);
+});
+
+test('decompression with decompression options', async t => {
+	const options = {};
+
+	const keyv = new KeyvGzip(options);
+	const compressed = await keyv.compress('whatever');
+	const decompressed = await keyv.decompress(compressed);
+	t.is(decompressed, 'whatever');
+});
+
+test('compression/decompression with compression/decompression options', async t => {
+	const options = {
+		chunkSize: 1024,
+	};
+
+	const keyv = new KeyvGzip();
+	const compressed = await keyv.compress('whatever', options);
+	const decompressed = await keyv.decompress(compressed);
+	t.is(decompressed, 'whatever');
 });

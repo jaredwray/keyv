@@ -52,9 +52,8 @@ class Keyv extends EventEmitter {
 
 		if (this.opts.compression) {
 			const compression = this.opts.compression;
-			const {serialize, deserialize} = compression.opts;
-			this.opts.serialize = serialize;
-			this.opts.deserialize = deserialize;
+			this.opts.serialize = compression.serialize.bind(compression);
+			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
 		if (typeof this.opts.store.on === 'function' && emitErrors) {
@@ -119,7 +118,7 @@ class Keyv extends EventEmitter {
 			for (const key of keyPrefixed) {
 				promises.push(Promise.resolve()
 					.then(() => store.get(key))
-					.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
+					.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : (this.opts.compression ? this.opts.deserialize(data) : data))
 					.then(data => {
 						if (data === undefined || data === null) {
 							return undefined;
@@ -147,7 +146,7 @@ class Keyv extends EventEmitter {
 
 		return Promise.resolve()
 			.then(() => isArray ? store.getMany(keyPrefixed) : store.get(keyPrefixed))
-			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : data)
+			.then(data => (typeof data === 'string') ? this.opts.deserialize(data) : (this.opts.compression ? this.opts.deserialize(data) : data))
 			.then(data => {
 				if (data === undefined || data === null) {
 					return undefined;

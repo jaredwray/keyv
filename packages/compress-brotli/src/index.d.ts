@@ -1,18 +1,23 @@
-import {EventEmitter} from 'node:events';
-import {Store, StoredData} from 'keyv';
+import type {InputType, BrotliOptions, CompressCallback} from 'node:zlib';
+import type Brotli, {CompressResult} from 'compress-brotli';
 
-declare class KeyvBrotli extends EventEmitter implements Store<Value> {
-	ttlSupport: any;
-	opts: any;
-	constructor(options?: string | KeyvBrotli.Options);
-	compress(value: Value);
-	decompress(value: Value);
+declare class KeyvBrotli {
+	brotli: Brotli;
+	constructor(options?: KeyvBrotli.Options);
+	async compress(value: InputType | number | boolean, options?: BrotliOptions);
+	async decompress(value: InputType | number | boolean, options?: BrotliOptions);
+	async serialize(value: any);
+	async deserialize(value: any);
 }
 
 declare namespace KeyvBrotli {
 	interface Options {
-		compress: (...args: any[]) => void;
-		decompress: (...args: any[]) => void;
+		compressOptions?: BrotliOptions;
+		decompressOptions?: BrotliOptions;
+		enable?: boolean;
+		serialize?: any;
+		deserialize?: any;
+		iltorb?: any;
 	}
 }
 

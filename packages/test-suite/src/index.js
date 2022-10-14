@@ -3,6 +3,7 @@ const keyvValueTests = require('./values.js');
 const keyvNamepsaceTests = require('./namespace.js');
 const keyvOfficialTests = require('./official.js');
 const keyvIteratorTests = require('./iterator.js');
+const keyvCompresstionTests = require('./compression.js');
 
 const keyvTestSuite = (test, Keyv, store) => {
 	keyvApiTests(test, Keyv, store);
@@ -15,5 +16,6 @@ exports.keyvValueTests = keyvValueTests;
 exports.keyvNamepsaceTests = keyvNamepsaceTests;
 exports.keyvOfficialTests = keyvOfficialTests;
 exports.keyvIteratorTests = keyvIteratorTests;
+exports.keyvCompresstionTests = keyvCompresstionTests;
 
 exports.default = keyvTestSuite;
