@@ -70,7 +70,7 @@
 		"@types/keyv": "^3.1.4",
 		"tsd": "^0.24.1",
 		"typescript": "^4.8.4",
-		"xo": "^0.52.3"
+		"xo": "^0.52.4"
 	},
 	"tsd": {
 		"directory": "test"
