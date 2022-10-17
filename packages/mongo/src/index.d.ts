@@ -2,7 +2,7 @@ import {EventEmitter} from 'events';
 import GridFSBucket from 'mongodb';
 import {Store, StoredData} from 'keyv';
 
-declare class KeyvMongo extends EventEmitter implements Store<Value> {
+declare class KeyvMongo<Value=any> extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
 	opts: Record<string, any>;
 	connect: Promise<any>;
