@@ -1,6 +1,6 @@
 {
   "name": "@keyv/compress-gzip",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "description": "gzip compression for keyv",
   "main": "src/index.js",
   "scripts": {
