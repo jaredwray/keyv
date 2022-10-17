@@ -3,7 +3,7 @@ import {EventEmitter} from 'events';
 import type {Store, StoredData} from 'keyv';
 
 export = KeyvPostgres;
-declare class KeyvPostgres extends EventEmitter implements Store<Value> {
+declare class KeyvPostgres<Value=any> extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
 	opts: any;
 	query: (sqlString: any) => any;

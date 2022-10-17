@@ -2,7 +2,7 @@
 import {EventEmitter} from 'node:events';
 import {Store, StoredData} from 'keyv';
 
-declare class KeyvMemcache extends EventEmitter implements Store<Value> {
+declare class KeyvMemcache<Value=any> extends EventEmitter implements Store<Value> {
 	ttlSupport: boolean;
 	namespace?: string | undefined;
 

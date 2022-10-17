@@ -2,7 +2,7 @@ import {EventEmitter} from 'events';
 import type {Store, StoredData} from 'keyv';
 
 export = KeyvTiered;
-declare class KeyvTiered extends EventEmitter implements Store<Value> {
+declare class KeyvTiered<Value=any> extends EventEmitter implements Store<Value> {
 	constructor(options: KeyvTiered.Options);
 	get(key: string): Promise<Value>;
 	getMany?(

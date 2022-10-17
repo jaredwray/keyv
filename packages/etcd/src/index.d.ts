@@ -2,7 +2,7 @@ import {EventEmitter} from 'events';
 import type Etcd3 from 'etcd3';
 import type {Store, StoredData} from 'keyv';
 
-declare class KeyvEtcd extends EventEmitter implements Store<Value> {
+declare class KeyvEtcd<Value=any> extends EventEmitter implements Store<Value> {
 	ttlSupport: any;
 	opts: any;
 	client: Etcd3;
