@@ -201,6 +201,28 @@ const keyv = new Keyv({ compression: KeyvGzip });
 
 You can also pass a custom compression function to the `compression` option. Following the pattern of the official compression adapters.
 
+### Want to build your own? 
+
+Great! Keyv is designed to be easily extended. You can build your own compression adapter by following the pattern of the official compression adapters based on this interface:
+
+```typescript
+interface CompressionAdapter {
+	async compress(value: any, options?: any);
+	async decompress(value: any, options?: any);
+	async serialize(value: any);
+	async deserialize(value: any);
+}
+```
+
+In addition to the interface, you can test it with our compression test suite using @keyv/test-suite:
+
+```js
+const {keyvCompresstionTests} = require('@keyv/test-suite');
+const KeyvGzip = require('@keyv/compress-gzip');
+
+keyvCompresstionTests(test, new KeyvGzip());
+```
+
 ## API
 
 ### new Keyv([uri], [options])

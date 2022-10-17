@@ -44,24 +44,20 @@ Set your test script in `package.json` to `ava`.
 }
 ```
 
-### Test on Active Node.js LTS and Higher
-
-An example configuration for Travis CI would look like this:
-
-`.travis.yml`
-
-```yaml
-language: node_js
-node_js:
-  - '8'
-  - '6'
-  - '4'
-script: npm test
-```
-
-## Example
+## Example for Storage Adapters
 
 Take a look at [keyv-redis](https://github.com/jaredwray/keyv-redis) for an example of an existing storage adapter using `@keyv/test-suite`.
+
+## Testing Compression Adapters
+
+If you're testing a compression adapter, you can use the `keyvCompresstionTests` method instead of `keyvTestSuite`.
+
+```js
+const {keyvCompresstionTests} = require('@keyv/test-suite');
+const KeyvGzip = require('@keyv/compress-gzip');
+
+keyvCompresstionTests(test, new KeyvGzip());
+```
 
 ## License
 
