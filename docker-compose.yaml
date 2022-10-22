@@ -11,7 +11,7 @@ services:
     - 5432:5432/tcp
   keyv_postgres_1:
     image: postgres:latest
-    command: postgres -c 'max_connections=200' -c 'ssl=on' -c 'ssl_cert_file=/var/lib/postgresql/server.crt' -c 'ssl_key_file=/var/lib/postgresql/server.key' -c 'hba_file=/var/lib/postgresql/pg_hba.conf'
+    command: postgres -c 'max_connections=200' -c 'ssl=on' -c 'ssl_cert_file=/var/lib/postgresql/server.crt' -c 'ssl_key_file=/var/lib/postgresql/server.key' -c 'hba_file=/var/lib/postgresql/pg_hba.conf' -c "listen_addresses=*"
     environment:
       POSTGRES_DB: keyv_test
       POSTGRES_PASSWORD: postgres
