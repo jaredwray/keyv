@@ -41,7 +41,11 @@ The following are third-party storage adapters compatible with Keyv:
 
 
 ## 3. Create a New Keyv Instance
-Pass your connection string if applicable. Keyv will automatically load the correct storage adapter.
+Pass your connection string if applicable, for example:
+```js
+const keyv = new Keyv('sqlite://path/to/database.sqlite');
+```
+Keyv will automatically load the correct storage adapter.
 
 `Keyv` Parameters
 
