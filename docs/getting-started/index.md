@@ -75,7 +75,7 @@ keyv.on('error', err => console.log('Connection Error', err));
 ```
 ### Example - Create an Instance of Keyv using a third-party storage adapter
 
-`quick-lru` is a third-party module that implements the Map API.
+[`quick-lru`](https://github.com/sindresorhus/quick-lru) is a third-party module that implements the Map API.
 
 ```js
 const Keyv = require('keyv');
@@ -146,4 +146,81 @@ await cache.get('foo'); // returns 'cache'
 
 // Delete all values for the specified namespace
 await users.clear();
+```
+
+## 6. Advanced - Enable Compression
+
+Keyv supports both `gzip` and `brotli` methods of compression. Before you can enable compression, you will need to install the compression package:
+
+```sh
+npm install --save keyv @keyv/compress-gzip
+```
+
+### Example - Enable Gzip compression
+To enable compression, pass the `compression` option to the constructor.
+
+```js
+const KeyvGzip = require('@keyv/compress-gzip');
+const Keyv = require('keyv');
+
+const keyvGzip = new KeyvGzip();
+const keyv = new Keyv({ compression: KeyvGzip });
+```
+
+You can also pass a custom compression function to the compression option. Custom compression functions must follow the pattern of the official compression adapter (see below for further information).
+
+### Want to build your own?
+
+Great! Keyv is designed to be easily extended. You can build your own compression adapter by following the pattern of the official compression adapters based on this interface:
+
+```js
+interface CompressionAdapter {
+	async compress(value: any, options?: any);
+	async decompress(value: any, options?: any);
+	async serialize(value: any);
+	async deserialize(value: any);
+}
+```
+
+#### Test your custom compression adapter
+In addition to the interface, you can test it with our compression test suite using `@keyv/test-suite`:
+
+```js
+const {keyvCompresstionTests} = require('@keyv/test-suite');
+const KeyvGzip = require('@keyv/compress-gzip');
+
+keyvCompresstionTests(test, new KeyvGzip());
+```
+
+## 7. Advanced - Caching
+Keyv can be easily embedded into other modules to add cache support.
+- Caching will work in memory by default, and users can also install a Keyv storage adapter and pass in a connection string or any other storage that implements the Map API.
+- You should also set a namespace for your module to safely call `.clear()` without clearing unrelated app data.
+
+>**Note**:
+> The recommended pattern is to expose a cache option in your module's options which is passed through to Keyv.
+
+### Example - Add Cache Support to a Module
+
+1. Install whichever storage adapter you will be using, `keyv-redis` in this example
+```sh
+npm install --save keyv-redis
+```
+2. Declare the Module with the cache controlled by a Keyv instance
+```js
+class AwesomeModule {
+	constructor(opts) {
+		this.cache = new Keyv({
+			uri: typeof opts.cache === 'string' && opts.cache,
+			store: typeof opts.cache !== 'string' && opts.cache,
+			namespace: 'awesome-module'  
+		});
+	}
+}
+```
+
+3. Create an Instance of the Module with caching support
+```js
+const AwesomeModule = require('awesome-module');
+const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
 ```
