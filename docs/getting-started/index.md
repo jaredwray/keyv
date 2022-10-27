@@ -27,6 +27,19 @@ npm install --save @keyv/mysql
 npm install --save @keyv/etcd
 ```
 
+> **Note**: You can also use third-party storage adapters
+
+The following are third-party storage adapters compatible with Keyv:
+- [`quick-lru`](https://github.com/sindresorhus/quick-lru) - Simple "Least Recently Used" (LRU) cache
+- [`keyv-file`](https://github.com/zaaack/keyv-file) - File system storage adapter for Keyv
+- [`keyv-dynamodb`](https://www.npmjs.com/package/keyv-dynamodb) - DynamoDB storage adapter for Keyv
+- [`keyv-lru`](https://www.npmjs.com/package/keyv-lru) - LRU storage adapter for Keyv
+- [`keyv-null`](https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
+- [`keyv-firestore`](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
+- [`keyv-mssql`](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
+- [`keyv-azuretable`](https://github.com/howlowck/keyv-azuretable) - Azure Table Storage/API adapter for Keyv
+
+
 ## 3. Create a New Keyv Instance
 Pass your connection string if applicable. Keyv will automatically load the correct storage adapter.
 
@@ -43,30 +56,37 @@ Parameter | Type | Required | Description
 ------------ | ------------- | ------------- | -------------
 namespace | String | N | Namespace for the current instance.  Default: 'keyv'
 ttl | Number | N | This is the default TTL, it can be overridden by specifying a TTL on .set().  Default: undefined
-compression | @keyv/compress-<compression_package_name> | N | Compression package to use. See Compression for more details. Default: undefined.
+compression | @keyv/compress\-\<compression_package_name> | N | Compression package to use. See Compression for more details. Default: undefined.
 serialize | Function | N | A custom serialization function. Default: JSONB.stringify
 deserialize | Function | N | A custom deserialization function. Default: JSONB.parse
 store | Storage adapter instance | N | The storage adapter instance to be used by Keyv. Default: new Map()
 adapter | String | N | Specify an adapter to use. e.g 'redis' or 'mongodb'. Default: undefined
 
-The following example shows how to create an Instance of Keyv either with or without a connection URI.
+### Example - Create an Instance of Keyv with a connection URI
+The following example shows how you would create and Instance of Keyv with a `mongodb` connection URI.
 
 ```js
 const Keyv = require('keyv');
 
-// One of the following
-const keyv = new Keyv();
-const keyv = new Keyv('redis://user:pass@localhost:6379');
 const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
-const keyv = new Keyv('sqlite://path/to/database.sqlite');
-const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname');
-const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname');
-const keyv = new Keyv('etcd://localhost:2379');
 
 // Handle DB connection errors
 keyv.on('error', err => console.log('Connection Error', err));
 ```
+### Example - Create an Instance of Keyv using a third-party storage adapter
 
+`quick-lru` is a third-party module that implements the Map API.
+
+```js
+const Keyv = require('keyv');
+const QuickLRU = require('quick-lru');
+
+const lru = new QuickLRU({ maxSize: 1000 });
+const keyv = new Keyv({ store: lru });
+
+// Handle DB connection errors
+keyv.on('error', err => console.log('Connection Error', err));
+```
 
 ## 4. Create Some Key Value Pairs
 
