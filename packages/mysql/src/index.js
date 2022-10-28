@@ -4,6 +4,8 @@ const EventEmitter = require('events');
 const mysql = require('mysql2/promise');
 const {pool, endPool} = require('./pool.js');
 
+const keyvMysqlKeys = new Set(['uri', 'dialect', 'connect']);
+
 class KeyvMysql extends EventEmitter {
 	constructor(options) {
 		super();
@@ -15,8 +17,14 @@ class KeyvMysql extends EventEmitter {
 		options = {dialect: 'mysql',
 			uri: 'mysql://localhost', ...options};
 
+		const mysqlOptions = Object.fromEntries(
+			Object.entries(options).filter(
+				([k]) => !keyvMysqlKeys.has(k),
+			),
+		);
+
 		options.connect = () => Promise.resolve()
-			.then(() => pool(options.uri))
+			.then(() => pool(options.uri, mysqlOptions))
 			.then(connection => sql => connection.execute(sql)
 				.then(data => data[0]));
 
