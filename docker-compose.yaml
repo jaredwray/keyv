@@ -21,7 +21,7 @@ services:
       MYSQL_USER: mysql
   keyv_mysql_1:
         image: "mysql/mysql-server:8.0.15"
-        command: [ "mysqld",
+        command: [ "sed -i 's/SECLEVEL=2/SECLEVEL=1/g' /etc/ssl/openssl.cnf && ", "mysqld",
                     "--character-set-server=utf8mb4",
                     "--collation-server=utf8mb4_unicode_ci",
                     "--require_secure_transport=ON",
