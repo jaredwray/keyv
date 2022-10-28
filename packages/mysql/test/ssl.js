@@ -6,7 +6,7 @@ const {endPool} = require('../src/pool.js');
 
 const options = {
 	ssl: {
-		rejectUnauthorized: true,
+		rejectUnauthorized: false,
 		ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')),
 		key: fs.readFileSync(path.join(__dirname, '/certs/client-key.pem')),
 		cert: fs.readFileSync(path.join(__dirname, '/certs/client-cert.pem')),
