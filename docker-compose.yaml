@@ -1,5 +1,14 @@
 version: '3.8'
 services:
+  keyv_postgres:
+    image: postgres:latest
+    command: postgres -c 'max_connections=200'
+    environment:
+      POSTGRES_DB: keyv_test
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+    - 5432:5432/tcp
   keyv_mysql:
     image: mysql:latest
     command: --default-authentication-plugin=mysql_native_password
@@ -32,4 +41,36 @@ services:
           MYSQL_ALLOW_EMPTY_PASSWORD: 1
           MYSQL_DATABASE: keyv_test
           MYSQL_ROOT_HOST: '%'
+  keyv_redis:
+    image: redis:latest
+    environment:
+      REDIS_HOST: redis
+    ports:
+      - 6379:6379
+  keyv_redis_1:
+    image: redis:latest
+    command: redis-server --port 0 --tls-port 6380 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no
+    environment:
+      REDIS_HOST: redis
+    ports:
+      - 6380:6380
+    volumes:
+      - ./packages/redis/tls:/tls
+  keyv_mongo:
+    image: mongo:latest
+    restart: always
+    ports:
+      - 27017:27017
+  keyv_memcached:
+    image: memcached:latest
+    ports:
+        - "11211:11211"
+  keyv_etcd:
+    image: bitnami/etcd:latest
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    ports:
+        - 2379:2379
+        - 2380:2380
+
         
