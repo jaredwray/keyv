@@ -197,7 +197,7 @@ const KeyvGzip = require('@keyv/compress-gzip');
 keyvCompresstionTests(test, new KeyvGzip());
 ```
 
-## 7. Advanced - Caching
+## 7. Advanced - Extend your own Module with Keyv
 Keyv can be easily embedded into other modules to add cache support.
 - Caching will work in memory by default, and users can also install a Keyv storage adapter and pass in a connection string or any other storage that implements the Map API.
 - You should also set a namespace for your module to safely call `.clear()` without clearing unrelated app data.
