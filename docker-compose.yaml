@@ -26,6 +26,8 @@ services:
                     "--collation-server=utf8mb4_unicode_ci",
                     "--require_secure_transport=ON",
                     "--bind-address=0.0.0.0",
+                    " --tls-version=TLSv1.2",
+                    "--ssl-cipher=ECDHE-RSA-AES128-GCM-SHA25",
                     "--ssl-ca=/etc/certs/ca.pem",
                     "--ssl-cert=/etc/certs/server-cert.pem",
                     "--ssl-key=/etc/certs/server-key.pem",
