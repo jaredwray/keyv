@@ -35,6 +35,26 @@ const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname', {
 });
 ```
 
+## SSL
+
+```
+const fs = require('fs');
+const path = require('path');
+const KeyvMysql = require('@keyv/mysql');
+
+const options = {
+	ssl: {
+		rejectUnauthorized: false,
+		ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')).toString(),
+		key: fs.readFileSync(path.join(__dirname, '/certs/client-key.pem')).toString(),
+		cert: fs.readFileSync(path.join(__dirname, '/certs/client-cert.pem')).toString(),
+	},
+};
+
+const keyv = new KeyvMysql({uri, ...options});
+
+```
+
 **Note:** Some MySQL/MariaDB installations won't allow a key size longer than 767 bytes. If you get an error on table creation try reducing `keySize` to 191 or lower. [#5](https://github.com/jaredwray/keyv-sql/issues/5)
 
 ## License

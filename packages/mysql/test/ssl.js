@@ -10,7 +10,6 @@ const options = {
 		ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')).toString(),
 		key: fs.readFileSync(path.join(__dirname, '/certs/client-key.pem')).toString(),
 		cert: fs.readFileSync(path.join(__dirname, '/certs/client-cert.pem')).toString(),
-		ciphers: 'DHE-RSA-AES128-GCM-SHA256',
 	},
 };
 
