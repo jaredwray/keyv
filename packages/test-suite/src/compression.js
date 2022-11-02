@@ -17,6 +17,14 @@ const keyvCompressionTests = (test, compression) => {
 		t.is(decompressed, 'whatever');
 	});
 
+	test.serial('compression/decompression with number', async t => {
+		const number_ = JSON.stringify(5);
+		const compressed = await compression.compress(number_);
+		t.not(compressed, 5);
+		const decompressed = JSON.parse(await compression.decompress(compressed));
+		t.is(decompressed, 5);
+	});
+
 	// Test serialize compression
 	test('serialize compression', async t => {
 		const json = await compression.serialize({value: 'whatever'});
