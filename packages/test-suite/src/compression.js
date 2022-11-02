@@ -10,6 +10,13 @@ const keyvCompressionTests = (test, compression) => {
 		await keyv.clear();
 	});
 
+	test('number array compression/decompression', async t => {
+		const array = JSON.stringify([4, 5, 6, 7]);
+		const compressed = await compression.compress(array);
+		const decompressed = JSON.parse(await compression.decompress(compressed));
+		t.deepEqual(decompressed, array);
+	});
+
 	test.serial('compression/decompression using default options', async t => {
 		const compressed = await compression.compress('whatever');
 		t.not(compressed, 'whatever');
