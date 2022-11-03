@@ -4,7 +4,7 @@ const KeyvGzip = require('this');
 
 keyvCompresstionTests(test, new KeyvGzip());
 
-test('number array compression/decompression', async t => {
+test('number array compression/decompression with Unit8Array', async t => {
 	const keyv = new KeyvGzip();
 	const array = new Uint8Array([4, 5, 6, 7]);
 	const compressed = await keyv.compress(array);

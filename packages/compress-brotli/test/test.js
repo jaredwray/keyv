@@ -12,14 +12,6 @@ const {keyvCompresstionTests} = require('@keyv/test-suite');
 
 keyvCompresstionTests(test, new KeyvBrotli());
 
-test('number array compression/decompression', async t => {
-	const keyv = new KeyvBrotli();
-	const array = [4, 5, 6, 7];
-	const compressed = await keyv.compress(array);
-	const decompressed = await keyv.decompress(compressed, {});
-	t.deepEqual(decompressed, array);
-});
-
 test('object type compression/decompression', async t => {
 	const keyv = new KeyvBrotli();
 	const object = {
