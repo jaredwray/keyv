@@ -3,13 +3,13 @@ const {Pool} = require('pg');
 let pool;
 let globalUri;
 
-const pools = uri => {
+const pools = (uri, options = {}) => {
 	if (globalUri !== uri) {
 		pool = undefined;
 		globalUri = uri;
 	}
 
-	pool = pool || new Pool({connectionString: uri});
+	pool = pool || new Pool({connectionString: uri, ...options});
 	return pool;
 };
 
@@ -19,6 +19,6 @@ const endPool = () => {
 };
 
 module.exports = {
-	pool: uri => pools(uri),
+	pool: (uri, options) => pools(uri, options),
 	endPool,
 };

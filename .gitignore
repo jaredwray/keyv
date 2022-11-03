@@ -92,3 +92,6 @@ default.etcd
 #intellij
 .idea
 keyv.iml
+
+#vim
+*.swp

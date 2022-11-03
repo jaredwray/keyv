@@ -1,0 +1,8 @@
+FROM postgres:latest
+
+RUN mkdir -p /keyv_postgres_ssl
+COPY ./tls/server.key /keyv_postgres_ssl
+COPY ./tls/server.crt /keyv_postgres_ssl
+COPY ./config/pg_hba.conf /keyv_postgres_ssl
+RUN chown postgres:postgres /keyv_postgres_ssl/server.key
+RUN chmod 600 /keyv_postgres_ssl/server.key

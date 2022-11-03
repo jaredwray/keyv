@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import {EventEmitter} from 'events';
 import type {Store, StoredData} from 'keyv';
 
@@ -24,5 +25,6 @@ declare namespace KeyvPostgres {
 		uri?: string | undefined;
 		table?: string | undefined;
 		keySize?: number | undefined;
+		ssl?: any | undefined;
 	}
 }
