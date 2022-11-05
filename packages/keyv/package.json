@@ -38,8 +38,8 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"ava": "^5.0.1",
-		"eslint": "^8.24.0",
-		"eslint-plugin-promise": "^6.0.1",
+		"eslint": "^8.26.0",
+		"eslint-plugin-promise": "^6.1.1",
 		"nyc": "^15.1.0",
 		"pify": "5.0.0",
 		"this": "^1.1.0",
