@@ -42,7 +42,7 @@
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
-		"ava": "^4.3.3",
+		"ava": "^5.0.1",
 		"keyv": "*",
 		"@keyv/compress-brotli": "*",
 		"nyc": "^15.1.0",
