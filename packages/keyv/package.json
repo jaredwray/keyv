@@ -37,7 +37,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.3.3",
+		"ava": "^5.0.1",
 		"eslint": "^8.24.0",
 		"eslint-plugin-promise": "^6.0.1",
 		"nyc": "^15.1.0",
