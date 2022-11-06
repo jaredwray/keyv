@@ -1,6 +1,6 @@
 const test = require('ava');
 const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('this');
+const KeyvGzip = require('../src/index.js');
 
 keyvCompresstionTests(test, new KeyvGzip());
 
