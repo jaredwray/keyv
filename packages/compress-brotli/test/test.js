@@ -6,9 +6,9 @@ const {
 } = require('zlib');
 const v8 = require('v8');
 const test = require('ava');
-const KeyvBrotli = require('this');
 const json = require('json-buffer');
 const {keyvCompresstionTests} = require('@keyv/test-suite');
+const KeyvBrotli = require('../src/index.js');
 
 keyvCompresstionTests(test, new KeyvBrotli());
 
