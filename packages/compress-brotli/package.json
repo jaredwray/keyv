@@ -60,7 +60,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.2.0",
+		"ava": "^5.0.1",
 		"json-buffer": "^3.0.1",
 		"keyv": "*",
 		"nyc": "^15.1.0",
