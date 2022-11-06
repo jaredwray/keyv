@@ -12,6 +12,7 @@
 		"rules": {
 			"unicorn/prefer-module": 0,
 			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/consistent-type-definitions": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -70,7 +71,7 @@
 		"tsd": "^0.20.0",
 		"typescript": "^4.6.4",
 		"webpack": "^5.74.0",
-		"xo": "^0.48.0"
+		"xo": "^0.52.4"
 	},
 	"tsd": {
 		"directory": "test"
