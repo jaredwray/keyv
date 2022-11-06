@@ -1,4 +1,4 @@
-import pako from 'pako';
+import type pako from 'pako';
 
 declare class KeyvGzip {
 	opts: any;
