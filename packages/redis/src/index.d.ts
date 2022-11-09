@@ -20,6 +20,7 @@ declare class KeyvRedis<Value=any> extends EventEmitter implements Store<Value> 
 	clear(): void | Promise<void>;
 	iterator(namespace: string | undefined): AsyncGenerator<any, void, any>;
 	has?(key: string): boolean | Promise<boolean>;
+	disconnect(): void;
 }
 declare namespace KeyvRedis {
 	interface Options {
