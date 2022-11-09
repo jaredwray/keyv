@@ -1,10 +1,10 @@
 const test = require('ava');
 const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('this');
+const KeyvGzip = require('../src/index.js');
 
 keyvCompresstionTests(test, new KeyvGzip());
 
-test('number array compression/decompression', async t => {
+test('number array compression/decompression with Unit8Array', async t => {
 	const keyv = new KeyvGzip();
 	const array = new Uint8Array([4, 5, 6, 7]);
 	const compressed = await keyv.compress(array);

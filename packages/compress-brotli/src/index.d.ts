@@ -4,10 +4,10 @@ import type Brotli, {CompressResult} from 'compress-brotli';
 declare class KeyvBrotli {
 	brotli: Brotli;
 	constructor(options?: KeyvBrotli.Options);
-	async compress(value: InputType | number | boolean, options?: BrotliOptions);
-	async decompress(value: InputType | number | boolean, options?: BrotliOptions);
-	async serialize(value: any);
-	async deserialize(value: any);
+	compress(value: InputType | number | boolean, options?: BrotliOptions): Promise<any>;
+	decompress(value: InputType | number | boolean, options?: BrotliOptions): Promise<any>;
+	serialize(value: any): Promise<any>;
+	deserialize(value: any): Promise<any>;
 }
 
 declare namespace KeyvBrotli {

@@ -12,7 +12,7 @@ class KeyvPostgres extends EventEmitter {
 
 		options.connect = () => Promise.resolve()
 			.then(() => {
-				const conn = pool(options.uri);
+				const conn = pool(options.uri, options);
 				return (sql, values) => conn.query(sql, values)
 					.then(data => data.rows);
 			});

@@ -89,10 +89,10 @@ declare namespace Keyv {
 	}
 
 	interface CompressionAdapter {
-		async compress(value: any, options?: any);
-		async decompress(value: any, options?: any);
-		async serialize(value: any);
-		async deserialize(value: any);
+		compress(value: any, options?: any): Promise<any>;
+		decompress(value: any, options?: any): Promise<any>;
+		serialize(value: any): Promise<any>;
+		deserialize(value: any): Promise<any>;
 	}
 
 	interface DeserializedData<Value> {

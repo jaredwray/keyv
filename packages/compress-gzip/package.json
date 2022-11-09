@@ -1,6 +1,6 @@
 {
   "name": "@keyv/compress-gzip",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "gzip compression for keyv",
   "main": "src/index.js",
   "scripts": {
@@ -47,21 +47,21 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
+    "@types/pako": "^2.0.0",
     "json-buffer": "^3.0.1",
     "pako": "^2.0.4"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
     "@types/keyv": "^3.1.4",
-    "ava": "^4.2.0",
+    "ava": "^5.0.1",
     "keyv": "*",
     "nyc": "^15.1.0",
     "requirable": "^1.0.5",
-    "this": "^1.1.0",
-    "ts-node": "^10.8.2",
-    "tsd": "^0.20.0",
-    "typescript": "^4.6.4",
-    "xo": "^0.48.0"
+    "ts-node": "^10.9.1",
+    "tsd": "^0.24.1",
+    "typescript": "^4.8.4",
+    "xo": "^0.52.4"
   },
   "tsd": {
     "directory": "test"

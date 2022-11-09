@@ -3,22 +3,25 @@ const mysql = require('mysql2');
 let pool;
 let globalUri;
 
-const pools = uri => {
+const pools = (uri, options = {}) => {
 	if (globalUri !== uri) {
 		pool = undefined;
 		globalUri = uri;
 	}
 
-	pool = pool || mysql.createPool(uri);
+	pool = pool || mysql.createPool({uri, ...options});
 	return pool.promise();
 };
 
 const endPool = () => {
-	pool.end();
+	if (pool) {
+		pool.end();
+	}
+
 	globalUri = undefined;
 };
 
 module.exports = {
-	pool: uri => pools(uri),
+	pool: (uri, options) => pools(uri, options),
 	endPool,
 };
