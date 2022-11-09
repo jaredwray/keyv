@@ -1,4 +1,9 @@
-# How to Implement Caching with Node
+# How to Implement Caching with Node.js
+
+## What is Node.js?
+Node.js is an async event-driven cross-platform JavaScript runtime environment for building scalable network applications. Using Node.js enables developers to write server-side scripts and command line tools and run them everywhere.
+
+As Node.js applications run in a single process, they do not create threads for each request; they use a set of async I/O primitives to prevent blocking. A single Node.js server can handle thousands of concurrent connections as it doesn't wait for responses; it resumes operations when the response comes back.
 
 ## What is a Cache?
 A cache is a short-term, high-speed data storage layer that stores a subset of data, enabling it to be retrieved faster than accessing it from its primary storage location. Caching allows you to reuse previously retrieved data efficiently.
