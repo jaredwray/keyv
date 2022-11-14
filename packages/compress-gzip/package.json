@@ -4,14 +4,15 @@
   "description": "gzip compression for keyv",
   "main": "src/index.js",
   "scripts": {
-    "test": "xo && nyc ava",
+    "test": "nyc ava",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
     "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
     "rules": {
       "unicorn/prefer-module": 0,
-      "unicorn/prefer-node-protocol": 0
+      "unicorn/prefer-node-protocol": 0,
+      "@typescript-eslint/no-unsafe-assignment": 0
     }
   },
   "ava": {
@@ -52,6 +53,7 @@
     "pako": "^2.0.4"
   },
   "devDependencies": {
+    "@ava/typescript": "^3.0.1",
     "@keyv/test-suite": "*",
     "@types/keyv": "^3.1.4",
     "ava": "^5.0.1",
