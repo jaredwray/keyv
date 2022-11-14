@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import test from 'ava';
-// Import {keyvCompresstionTests} from '@keyv/test-suite';
-import KeyvGzip from '../dist/index.js';
+const test = require('ava');
+const {keyvCompresstionTests} = require('@keyv/test-suite');
+const KeyvGzip = require('../dist/index.js').default;
 
-// KeyvCompresstionTests(test, new KeyvGzip());
+keyvCompresstionTests(test, new KeyvGzip());
 
 test('number array compression/decompression with Unit8Array', async (t: any) => {
 	const keyv = new KeyvGzip();

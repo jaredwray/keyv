@@ -1,7 +1,7 @@
 import pako from 'pako';
 import JSONB from 'json-buffer';
 
-export default class KeyvGzip {
+class KeyvGzip {
 	opts: any;
 	constructor(options?: any) {
 		this.opts = {
@@ -27,3 +27,5 @@ export default class KeyvGzip {
 		return {value: await this.decompress(value, this.opts), expires};
 	}
 }
+
+export default KeyvGzip;

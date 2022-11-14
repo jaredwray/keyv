@@ -4,7 +4,7 @@
   "description": "gzip compression for keyv",
   "main": "dist/index.js",
   "scripts": {
-    "test": "xo && yarn run build && nyc ava --serial --verbose",
+    "test": "xo && yarn run build && nyc ava --serial",
 		"prepare": "yarn run build",
 		"build": "tsc",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
@@ -14,7 +14,10 @@
     "rules": {
       "unicorn/prefer-module": 0,
       "unicorn/prefer-node-protocol": 0,
-      "@typescript-eslint/no-unsafe-assignment": 0
+      "@typescript-eslint/no-unsafe-assignment": 0,
+      "@typescript-eslint/no-var-requires": 0,
+      "@typescript-eslint/no-require-imports": 0,
+      "@typescript-eslint/naming-convention": 0
     }
   },
   "ava": {
