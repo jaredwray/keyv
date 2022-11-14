@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import test from 'ava';
 // Import {keyvCompresstionTests} from '@keyv/test-suite';
-import KeyvGzip from '../src/index';
+import KeyvGzip from '../dist/index.js';
 
 // KeyvCompresstionTests(test, new KeyvGzip());
 
