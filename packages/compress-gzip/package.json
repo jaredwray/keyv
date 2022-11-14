@@ -17,11 +17,9 @@
   },
   "ava": {
     "require": [
-      "requirable",
       "ts-node/register"
     ],
     "extensions": [
-      "js",
       "ts"
     ]
   },
