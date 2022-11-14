@@ -2,7 +2,7 @@
   "name": "@keyv/compress-gzip",
   "version": "1.1.2",
   "description": "gzip compression for keyv",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "xo && nyc ava",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
