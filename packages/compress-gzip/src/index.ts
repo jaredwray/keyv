@@ -10,11 +10,11 @@ class KeyvGzip {
 		};
 	}
 
-	async compress(value: any, options?: any) {
+	async compress(value: pako.Data | string, options?: pako.DeflateFunctionOptions) {
 		return pako.deflate(value, options ? options : this.opts);
 	}
 
-	async decompress(value: any, options?: any) {
+	async decompress(value: pako.Data, options?: pako.InflateFunctionOptions & {to: 'string'}) {
 		return pako.inflate(value, options ? options : this.opts);
 	}
 
