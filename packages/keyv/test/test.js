@@ -5,7 +5,7 @@ const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
 const KeyvMongo = require('@keyv/mongo');
 const KeyvBrotli = require('@keyv/compress-brotli');
-const KeyvGzip = require('@keyv/compress-gzip').default;
+const KeyvGzip = require('@keyv/compress-gzip');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});

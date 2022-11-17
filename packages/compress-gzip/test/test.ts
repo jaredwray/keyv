@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 const test = require('ava');
 const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('../dist/index.js').default;
+const KeyvGzip = require('../dist/index.js');
 
 keyvCompresstionTests(test, new KeyvGzip());
 
