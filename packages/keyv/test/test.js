@@ -345,6 +345,46 @@ test('iterator should exists with url', t => {
 });
 
 test.serial(
+	'keyv iterator() doesn\'t yield values from other namespaces with compression',
+	async t => {
+		const KeyvStore = new Map();
+
+		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
+		const map1 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), String(i + 10)]),
+		);
+		const toResolve = [];
+		for (const [key, value] of map1) {
+			toResolve.push(keyv1.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
+		const map2 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), String(i + 11)]),
+		);
+		toResolve.length = 0;
+		for (const [key, value] of map2) {
+			toResolve.push(keyv2.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		t.plan(map2.size);
+		for await (const [key, value] of keyv2.iterator()) {
+			const doesKeyExist = map2.has(key);
+			const isValueSame = map2.get(key) === value;
+			t.true(doesKeyExist && isValueSame);
+		}
+	},
+);
+
+test.serial(
 	'keyv iterator() doesn\'t yield values from other namespaces',
 	async t => {
 		const KeyvStore = new Map();
@@ -363,6 +403,94 @@ test.serial(
 		await Promise.all(toResolve);
 
 		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2'});
+		const map2 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), i + 11]),
+		);
+		toResolve.length = 0;
+		for (const [key, value] of map2) {
+			toResolve.push(keyv2.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		t.plan(map2.size);
+		for await (const [key, value] of keyv2.iterator()) {
+			const doesKeyExist = map2.has(key);
+			const isValueSame = map2.get(key) === value;
+			t.true(doesKeyExist && isValueSame);
+		}
+	},
+);
+
+test.serial(
+	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer',
+	async t => {
+		const KeyvStore = new Map();
+
+		const serialize = data => JSON.stringify(data);
+
+		const deserialize = data => JSON.parse(data);
+
+		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1'});
+		const map1 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), String(i + 10)]),
+		);
+		const toResolve = [];
+		for (const [key, value] of map1) {
+			toResolve.push(keyv1.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		const keyv2 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv2'});
+		const map2 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), i + 11]),
+		);
+		toResolve.length = 0;
+		for (const [key, value] of map2) {
+			toResolve.push(keyv2.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		t.plan(map2.size);
+		for await (const [key, value] of keyv2.iterator()) {
+			const doesKeyExist = map2.has(key);
+			const isValueSame = map2.get(key) === value;
+			t.true(doesKeyExist && isValueSame);
+		}
+	},
+);
+
+test.serial(
+	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer and compression',
+	async t => {
+		const KeyvStore = new Map();
+
+		const serialize = data => JSON.stringify(data);
+
+		const deserialize = data => JSON.parse(data);
+
+		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip()});
+		const map1 = new Map(
+			Array.from({length: 5})
+				.fill(0)
+				.map((x, i) => [String(i), String(i + 10)]),
+		);
+		const toResolve = [];
+		for (const [key, value] of map1) {
+			toResolve.push(keyv1.set(key, value));
+		}
+
+		await Promise.all(toResolve);
+
+		const keyv2 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv2'});
 		const map2 = new Map(
 			Array.from({length: 5})
 				.fill(0)
