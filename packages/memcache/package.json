@@ -16,6 +16,8 @@
 			"node/prefer-global/process": 0,
 			"unicorn/prefer-object-from-entries": 0,
 			"unicorn/prefer-node-protocol": 0,
+			"@typescript-eslint/consistent-type-imports": 0,
+			"@typescript-eslint/consistent-type-definitions": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
