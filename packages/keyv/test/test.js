@@ -1,11 +1,11 @@
 const test = require('ava');
 const {default: keyvTestSuite, keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const Keyv = require('this');
 const tk = require('timekeeper');
 const KeyvSqlite = require('@keyv/sqlite');
 const KeyvMongo = require('@keyv/mongo');
 const KeyvBrotli = require('@keyv/compress-brotli');
 const KeyvGzip = require('@keyv/compress-gzip');
+const Keyv = require('../src/index.js');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
