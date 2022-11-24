@@ -2,7 +2,7 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
-const KeyvSqlite = require('this');
+const KeyvSqlite = require('../src/index.js');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 

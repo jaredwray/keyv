@@ -2,7 +2,7 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
-const KeyvMongo = require('this');
+const KeyvMongo = require('../src/index.js');
 
 const options = {useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000};
 

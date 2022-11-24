@@ -1,8 +1,8 @@
 const test = require('ava');
-const KeyvEtcd = require('this');
 const Keyv = require('keyv');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests} = require('@keyv/test-suite');
+const KeyvEtcd = require('../src/index.js');
 
 const etcdURL = 'etcd://127.0.0.1:2379';
 

@@ -42,7 +42,6 @@
 		"eslint-plugin-promise": "^6.1.1",
 		"nyc": "^15.1.0",
 		"pify": "5.0.0",
-		"this": "^1.1.0",
 		"timekeeper": "^2.2.0",
 		"tsd": "^0.24.1",
 		"typescript": "^4.8.4",
