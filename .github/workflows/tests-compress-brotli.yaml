@@ -3,7 +3,8 @@ name: tests-compress-brotli
 on:
   pull_request:
     branches: [ main ]
-    path: packages/compress-brotli/**
+    paths: 
+      - packages/compress-brotli/**
 
 env:
   PACKAGE_NAME: @keyv/compress-brotli
