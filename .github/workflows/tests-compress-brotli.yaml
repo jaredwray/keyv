@@ -1,20 +1,25 @@
-name: tests
+name: tests-compress-brotli
 
 on:
-  push:
+  pull_request:
     branches: [ main ]
+    path: packages/compress-brotli/**
+
+env:
+  PACKAGE_NAME: @keyv/compress-brotli
+  COVERAGE_FILE: ./packages/compress-brotli/coverage.lcov
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [ '16', '18' ]
+        node: [ '14','16', '18' ]
     name: Node ${{ matrix.node }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
       
@@ -25,14 +30,14 @@ jobs:
         run: yarn
         
       - name: Test Packages
-        run: yarn test
+        run: yarn workspace ${{ env.PACKAGE_NAME }} test
 
       - name: Generate Code Coverage Report
-        run: yarn coverage
+        run: yarn workspace ${{ env.PACKAGE_NAME }} coverage
 
       - name: Code Coverage
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_KEY }}
           verbose: true
-          files: ./packages/keyv/coverage.lcov,./packages/mysql/coverage.lcov,./packages/test-suite/coverage.lcov,./packages/sqlite/coverage.lcov,./packages/postgres/coverage.lcov,./packages/mongo/coverage.lcov,./packages/redis/coverage.lcov,./packages/memcache/coverage.lcov,./packages/etcd/coverage.lcov,./packages/offline/coverage.lcov,./packages/tiered/coverage.lcov
+          files: ${{ env.COVERAGE_FILE }}
