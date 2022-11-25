@@ -7,7 +7,7 @@ on:
       - packages/compress-brotli/**
 
 env:
-  PACKAGE_NAME: @keyv/compress-brotli
+  PACKAGE_NAME: '@keyv/compress-brotli'
   COVERAGE_FILE: ./packages/compress-brotli/coverage.lcov
 
 jobs:
