@@ -6,6 +6,7 @@
 	"scripts": {
 		"test": "xo && ava --serial",
 		"test:ci": "xo && ava --serial",
+		"test:ci:coverage": "xo && c8 --reporter=lcov ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {

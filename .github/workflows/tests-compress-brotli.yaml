@@ -1,9 +1,11 @@
-name: tests
+name: tests-compress-brotli
 
 on:
-  push:
+  pull_request:
     branches: [ main ]
-
+    paths:
+      - 'packages/compress-brotli/**'
+      - '.github/workflows/tests-compress-brotli.yaml'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,11 +27,11 @@ jobs:
         run: yarn
         
       - name: Test Packages
-        run: yarn test
+        run: yarn workspace @keyv/compress-brotli run test:ci:coverage
 
       - name: Code Coverage
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_KEY }}
           verbose: true
-          files: ./coverage/lcov.info
+          files: ./packages/compress-brotli/coverage/lcov.info
