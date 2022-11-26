@@ -8,7 +8,7 @@ on:
 
 env:
   PACKAGE_NAME: '@keyv/compress-brotli'
-  COVERAGE_FILE: ./packages/compress-brotli/coverage.lcov
+  COVERAGE_FILE: ./packages/compress-brotli/coverage/lcov.info
 
 jobs:
   build:
@@ -32,9 +32,6 @@ jobs:
         
       - name: Test Packages
         run: yarn workspace ${{ env.PACKAGE_NAME }} test
-
-      - name: Generate Code Coverage Report
-        run: yarn workspace ${{ env.PACKAGE_NAME }} coverage
 
       - name: Code Coverage
         uses: codecov/codecov-action@v3
