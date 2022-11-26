@@ -5,6 +5,7 @@
 	"main": "src/index.js",
 	"scripts": {
 		"test": "xo && c8 ava --serial",
+		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {
