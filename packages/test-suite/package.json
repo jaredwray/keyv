@@ -5,9 +5,8 @@
 	"main": "src/index.js",
 	"type": "commonjs",
 	"scripts": {
-		"test": "xo && nyc ava --serial",
-		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf dist && rm -rf ./test/testdb.sqlite"
+		"test": "xo && c8 ava --serial",
+		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf dist && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {
 		"rules": {
@@ -44,8 +43,8 @@
 	"devDependencies": {
 		"@keyv/compress-brotli": "*",
 		"ava": "^5.0.1",
+		"c8": "^7.12.0",
 		"keyv": "*",
-		"nyc": "^15.1.0",
 		"xo": "^0.52.4"
 	}
 }

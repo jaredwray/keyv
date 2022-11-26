@@ -4,9 +4,8 @@
 	"description": "Etcd storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
-		"test": "xo && nyc ava --serial",
-		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
+		"test": "xo && c8 ava --serial",
+		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
 		"rules": {
@@ -64,8 +63,8 @@
 		"@keyv/test-suite": "*",
 		"@types/keyv": "^3.1.4",
 		"ava": "^5.1.0",
+		"c8": "^7.12.0",
 		"keyv": "*",
-		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
 		"tsd": "^0.24.1",
