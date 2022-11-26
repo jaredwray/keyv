@@ -4,9 +4,9 @@
 	"description": "brotli compression for keyv",
 	"main": "src/index.js",
 	"scripts": {
-		"test": "xo && nyc ava --serial",
-		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
+		"test": "xo && ava --serial",
+		"test:ci": "xo && ava --serial",
+		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {
 		"rules": {
@@ -62,9 +62,9 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"ava": "^5.0.1",
+		"c8": "^7.12.0",
 		"json-buffer": "^3.0.1",
 		"keyv": "*",
-		"nyc": "^15.1.0",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
 		"tsd": "^0.24.1",

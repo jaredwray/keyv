@@ -21,6 +21,29 @@ test.serial('table name can be numeric, alphabet, special case', t => {
 	t.is(keyv.opts.table, '_$sample');
 });
 
+test.serial('getMany will return multiple values', async t => {
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
+	await keyv.clear();
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.deepEqual(values, ['bar', 'bar1', 'bar2']);
+});
+
+test.serial('deleteMany will delete multiple records', async t => {
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
+	await keyv.clear();
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.deepEqual(values, ['bar', 'bar1', 'bar2']);
+	await keyv.deleteMany(['foo', 'foo1', 'foo2']);
+	const values1 = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.deepEqual(values1, [undefined, undefined, undefined]);
+});
+
 test.serial('Async Iterator single element test', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 	await keyv.clear();
