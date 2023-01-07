@@ -3,8 +3,9 @@
   "version": "1.1.3",
   "description": "gzip compression for keyv",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "xo && yarn run build && nyc ava --serial",
+    "test": "xo && yarn run build && ava --serial",
     "test:ci": "xo && yarn run build && ava --serial",
     "prepare": "yarn run build",
     "build": "tsc",
@@ -73,11 +74,10 @@
   "tsd": {
     "directory": "test"
   },
-  "types": "./src/index.d.ts",
   "engines": {
     "node": ">= 12"
   },
   "files": [
-    "src"
+    "dist"
   ]
 }

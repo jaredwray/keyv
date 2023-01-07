@@ -28,4 +28,4 @@ class KeyvGzip {
 	}
 }
 
-module.exports = KeyvGzip;
+export = KeyvGzip;
