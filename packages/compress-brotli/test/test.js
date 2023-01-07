@@ -3,8 +3,8 @@ const {
 		BROTLI_PARAM_MODE,
 		BROTLI_PARAM_QUALITY,
 	},
-} = require('zlib');
-const v8 = require('v8');
+} = require('node:zlib');
+const v8 = require('node:v8');
 const test = require('ava');
 const json = require('json-buffer');
 const {keyvCompresstionTests} = require('@keyv/test-suite');

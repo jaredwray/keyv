@@ -2,7 +2,7 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
-const KeyvSqlite = require('this');
+const KeyvSqlite = require('../src/index.js');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
@@ -19,6 +19,29 @@ test.serial('table name can be numeric, alphabet, special case', t => {
 
 	keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: '$sample'});
 	t.is(keyv.opts.table, '_$sample');
+});
+
+test.serial('getMany will return multiple values', async t => {
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
+	await keyv.clear();
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.deepEqual(values, ['bar', 'bar1', 'bar2']);
+});
+
+test.serial('deleteMany will delete multiple records', async t => {
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
+	await keyv.clear();
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.deepEqual(values, ['bar', 'bar1', 'bar2']);
+	await keyv.deleteMany(['foo', 'foo1', 'foo2']);
+	const values1 = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	t.deepEqual(values1, [undefined, undefined, undefined]);
 });
 
 test.serial('Async Iterator single element test', async t => {

@@ -2,8 +2,8 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
-const KeyvPostgres = require('this');
 const {endPool} = require('../src/pool.js');
+const KeyvPostgres = require('../src/index.js');
 
 test.serial('throws if ssl is not used', async t => {
 	endPool();

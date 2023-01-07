@@ -66,7 +66,7 @@ class Keyv extends EventEmitter {
 			for await (const [key, raw] of typeof iterator === 'function'
 				? iterator(this.opts.store.namespace)
 				: iterator) {
-				const data = this.opts.deserialize(raw);
+				const data = await this.opts.deserialize(raw);
 				if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
 					continue;
 				}

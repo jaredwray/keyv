@@ -1,5 +1,5 @@
 import EventEmitter from 'node:events';
-import type {Store, StoredData} from 'keyv';
+import type{Store, StoredData} from 'keyv';
 
 declare class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 	proxy: any;

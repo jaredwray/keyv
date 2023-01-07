@@ -1,9 +1,8 @@
 const {promisify} = require('util');
 const test = require('ava');
 const Keyv = require('keyv');
-const KeyvMemcache = require('this');
-
 const kvat = require('@keyv/test-suite');
+const KeyvMemcache = require('../src/index.js');
 
 // eslint-disable-next-line no-promise-executor-return
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));

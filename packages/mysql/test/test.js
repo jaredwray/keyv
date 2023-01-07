@@ -2,7 +2,7 @@ const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
-const KeyvMysql = require('this');
+const KeyvMysql = require('../src/index.js');
 
 keyvOfficialTests(test, Keyv, 'mysql://root@localhost/keyv_test', 'mysql://foo');
 

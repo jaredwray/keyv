@@ -1,12 +1,12 @@
 {
 	"name": "@keyv/mysql",
-	"version": "1.5.0",
+	"version": "1.5.1",
 	"description": "MySQL/MariaDB storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
-		"test": "xo && nyc ava --serial",
-		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-		"clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov"
+		"test": "xo && c8 ava --serial",
+		"test:ci": "xo && ava --serial",
+		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
 		"rules": {
@@ -61,19 +61,18 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^4.3.3",
-		"keyv": "*",
-		"nyc": "^15.1.0",
-		"ts-node": "^10.9.1",
 		"@types/keyv": "^3.1.4",
+		"ava": "^5.1.0",
+		"c8": "^7.12.0",
+		"keyv": "*",
 		"requirable": "^1.0.5",
-		"this": "^1.1.0",
-		"tsd": "^0.24.1",
-		"typescript": "^4.8.4",
-		"xo": "^0.52.4"
+		"ts-node": "^10.9.1",
+		"tsd": "^0.25.0",
+		"typescript": "^4.9.4",
+		"xo": "^0.53.1"
 	},
-	"tsd" : {
-		"directory" : "test"
+	"tsd": {
+		"directory": "test"
 	},
 	"types": "./src/index.d.ts",
 	"engines": {
