@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 const test = require('ava');
 const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('../src/index.js');
+const KeyvGzip = require('../dist/index.js');
 
 keyvCompresstionTests(test, new KeyvGzip());
 
-test('number array compression/decompression with Unit8Array', async t => {
+test('number array compression/decompression with Unit8Array', async (t: any) => {
 	const keyv = new KeyvGzip();
 	const array = new Uint8Array([4, 5, 6, 7]);
 	const compressed = await keyv.compress(array);
@@ -12,20 +13,16 @@ test('number array compression/decompression with Unit8Array', async t => {
 	t.deepEqual(decompressed, array);
 });
 
-test('object type compression/decompression', async t => {
+test('object type compression/decompression', async (t: any) => {
 	const keyv = new KeyvGzip();
-	const object = new Uint8Array({
-		a: 1,
-		b: 'test',
-		c: true,
-	});
+	const object = new Uint8Array([1, 2, 3]);
 	const compressed = await keyv.compress(object);
 	const decompressed = await keyv.decompress(compressed, {});
 	t.deepEqual(decompressed, object);
 });
 
 // Test options while compress
-test('options while compress', async t => {
+test('options while compress', async (t: any) => {
 	const keyv = new KeyvGzip();
 	const compressed = await keyv.compress('whatever', {chunkSize: 32 * 1024});
 	t.not(compressed, 'whatever');
@@ -33,7 +30,7 @@ test('options while compress', async t => {
 	t.not(compressed, compressedWithoutOptions);
 });
 // Test options at class level
-test('options at class level', async t => {
+test('options at class level', async (t: any) => {
 	const keyv = new KeyvGzip({chunkSize: 32 * 1024});
 	const compressed = await keyv.compress('whatever');
 	t.not(compressed, 'whatever');
@@ -41,7 +38,7 @@ test('options at class level', async t => {
 	t.not(compressed, compressedWithoutOptions);
 });
 
-test('compression with compression options', async t => {
+test('compression with compression options', async (t: any) => {
 	const options = {};
 
 	const keyv = new KeyvGzip(options);
@@ -51,7 +48,7 @@ test('compression with compression options', async t => {
 	t.not(compressed, compressedWithoutOptions);
 });
 
-test('decompression with decompression options', async t => {
+test('decompression with decompression options', async (t: any) => {
 	const options = {};
 
 	const keyv = new KeyvGzip(options);
@@ -60,7 +57,7 @@ test('decompression with decompression options', async t => {
 	t.is(decompressed, 'whatever');
 });
 
-test('compression/decompression with compression/decompression options', async t => {
+test('compression/decompression with compression/decompression options', async (t: any) => {
 	const options = {
 		chunkSize: 1024,
 	};
