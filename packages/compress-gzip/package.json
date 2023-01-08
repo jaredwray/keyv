@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "xo && yarn run build && ava --serial",
+    "test": "xo && yarn run build && c8 ava --serial",
     "test:ci": "xo && yarn run build && ava --serial",
     "prepare": "yarn run build",
     "build": "tsc",
