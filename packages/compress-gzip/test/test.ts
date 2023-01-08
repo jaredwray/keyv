@@ -1,30 +1,24 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable import/extensions */
+import KeyvGzip from '../src/index';
+
 const test = require('ava');
 const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('../dist/index.js');
 
 keyvCompresstionTests(test, new KeyvGzip());
 
-test('number array compression/decompression with Unit8Array', async (t: any) => {
-	const keyv = new KeyvGzip();
-	const array = new Uint8Array([4, 5, 6, 7]);
-	const compressed = await keyv.compress(array);
-	const decompressed = await keyv.decompress(compressed, {});
-	t.deepEqual(decompressed, array);
-});
-
 test('object type compression/decompression', async (t: any) => {
 	const keyv = new KeyvGzip();
-	const object = new Uint8Array([1, 2, 3]);
-	const compressed = await keyv.compress(object);
-	const decompressed = await keyv.decompress(compressed, {});
-	t.deepEqual(decompressed, object);
+	const testValue = JSON.stringify({my: 'super', puper: [456, 567], awesome: 'pako'});
+	const compressed = await keyv.compress(testValue);
+	const decompressed = await keyv.decompress(compressed);
+	t.deepEqual(decompressed, testValue);
 });
 
 // Test options while compress
 test('options while compress', async (t: any) => {
 	const keyv = new KeyvGzip();
-	const compressed = await keyv.compress('whatever', {chunkSize: 32 * 1024});
+	const compressed = await keyv.compress('whatever');
 	t.not(compressed, 'whatever');
 	const compressedWithoutOptions = await keyv.compress('whatever');
 	t.not(compressed, compressedWithoutOptions);
@@ -53,17 +47,6 @@ test('decompression with decompression options', async (t: any) => {
 
 	const keyv = new KeyvGzip(options);
 	const compressed = await keyv.compress('whatever');
-	const decompressed = await keyv.decompress(compressed);
-	t.is(decompressed, 'whatever');
-});
-
-test('compression/decompression with compression/decompression options', async (t: any) => {
-	const options = {
-		chunkSize: 1024,
-	};
-
-	const keyv = new KeyvGzip();
-	const compressed = await keyv.compress('whatever', options);
-	const decompressed = await keyv.decompress(compressed);
+	const decompressed = await keyv.decompress(compressed, options);
 	t.is(decompressed, 'whatever');
 });
