@@ -23,6 +23,10 @@ class KeyvMysql extends EventEmitter {
 			),
 		);
 
+		delete mysqlOptions.namespace;
+		delete mysqlOptions.serialize;
+		delete mysqlOptions.deserialize;
+
 		options.connect = () => Promise.resolve()
 			.then(() => pool(options.uri, mysqlOptions))
 			.then(connection => sql => connection.execute(sql)
