@@ -3,10 +3,13 @@
 	"version": "2.5.4",
 	"description": "Redis storage adapter for Keyv",
 	"main": "src/index.js",
+	"types": "src/index.d.ts",
 	"scripts": {
-		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
-		"clean": "rm -rf node_modules && rm -rf ./coverage"
+		"test": "yarn build && xo && c8 ava --serial",
+		"test:ci": "yarn build && xo && ava --serial",
+		"build": "tsc",
+		"prepublishOnly": "yarn build",
+		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./dist"
 	},
 	"xo": {
 		"rules": {
@@ -72,7 +75,6 @@
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"engines": {
 		"node": ">= 12"
 	},
