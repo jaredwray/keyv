@@ -1,9 +1,14 @@
+/* eslint-disable n/prefer-global/process */
 const test = require('ava');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const Redis = require('ioredis');
-const KeyvRedis = require('../src/index.js');
+let KeyvRedis = require('../src/index.js');
+
+if (process.env.TEST_NEXT === 'true') {
+	KeyvRedis = require('../dist/index.js');
+}
 
 const REDIS_HOST = 'localhost';
 const redisURI = `redis://${REDIS_HOST}`;
