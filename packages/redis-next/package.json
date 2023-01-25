@@ -5,8 +5,9 @@
 	"main": "src/index.js",
 	"types": "src/index.d.ts",
 	"scripts": {
-		"test": "yarn build && xo && c8 ava --serial",
-		"test:ci": "yarn build && xo && ava --serial",
+		"test": "xo && c8 ava --serial",
+		"test:ci": "xo && ava --serial",
+		"test:next": "yarn build && xo && NEXT=true ava --serial",
 		"build": "tsc",
 		"prepublishOnly": "yarn build",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./dist"
