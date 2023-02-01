@@ -1,0 +1,30 @@
+:root {
+  --font-family: 'Open Sans', sans-serif;
+
+  --color-primary:  #08c2ff;
+  --color-secondary: #bd72d1;
+  --color-secondary-dark: #af34d0;
+  --color-text: #322d3c;
+
+  --background: #ffffff;
+  --home-background: #F0F2FA;
+  --header-background: #fbfbfb;
+
+  --sidebar-background: #ffffff;
+  --sidebar-text: #322d3c;
+  --sidebar-text-active: #08c2ff;
+
+  --border: rgba(238,238,245,1);
+
+  --background-search-highlight: var(--color-secondary-dark);
+  --color-search-highlight: #ffffff;
+  --search-input-background: var(--header-background);
+
+  --code: rgba(238,238,245,1);
+
+  --pagefind-ui-text: var(--color-text) !important;
+  --pagefind-ui-font: var(--font-family) !important;
+  --pagefind-ui-background: var(--background) !important;
+  --pagefind-ui-border: var(--border) !important;
+  --pagefind-ui-scale: .9 !important;
+}
