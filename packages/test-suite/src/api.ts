@@ -1,6 +1,10 @@
-const tk = require('timekeeper');
+import tk from 'timekeeper';
 
-const keyvApiTests = (test, Keyv, store) => {
+import type {TestFn} from 'ava';
+import type KeyvModule from 'keyv';
+import type {KeyvStoreFn} from './types';
+
+const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({store: store()});
 		await keyv.clear();
@@ -67,7 +71,7 @@ const keyvApiTests = (test, Keyv, store) => {
 		await keyv.set('foo', 'bar');
 		await keyv.set('foo1', 'bar1', 1);
 		await keyv.set('foo2', 'bar2');
-		await new Promise(resolve => {
+		await new Promise<void>(resolve => {
 			setTimeout(() => {
 				// Simulate database latency
 				resolve();
@@ -179,4 +183,4 @@ const keyvApiTests = (test, Keyv, store) => {
 	});
 };
 
-module.exports = keyvApiTests;
+export default keyvApiTests;

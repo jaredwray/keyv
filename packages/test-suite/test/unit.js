@@ -1,8 +1,8 @@
 const test = require('ava');
 const Keyv = require('keyv');
 const KeyvBrotli = require('@keyv/compress-brotli');
-const keyvTestSuite = require('../src/index.js').default;
-const {keyvOfficialTests, keyvIteratorTests, keyvCompresstionTests} = require('../src/index.js');
+const keyvTestSuite = require('../dist/index.js').default;
+const {keyvOfficialTests, keyvIteratorTests, keyvCompresstionTests} = require('../dist/index.js');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 

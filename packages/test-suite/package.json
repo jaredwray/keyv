@@ -2,17 +2,20 @@
 	"name": "@keyv/test-suite",
 	"version": "1.8.9",
 	"description": "Test suite for Keyv API compliancy",
-	"main": "src/index.js",
+	"main": "dist/index.js",
 	"type": "commonjs",
 	"scripts": {
-		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
+		"build": "tsc",
+		"test": "xo && npm run build && c8 ava --serial",
+		"test:ci": "xo && npm run build && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf dist && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": 0,
-			"unicorn/prefer-node-protocol": 0
+			"unicorn/prefer-node-protocol": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-confusing-void-expression": 0
 		}
 	},
 	"repository": {
@@ -39,13 +42,16 @@
 		"bignumber.js": "^9.1.1",
 		"delay": "^5.0.0",
 		"json-bigint": "^1.0.0",
+		"sqlite3": "^5.1.4",
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
 		"@keyv/compress-brotli": "*",
+		"@types/json-bigint": "^1.0.1",
+		"@types/json-buffer": "^3.0.0",
 		"ava": "^5.1.0",
 		"c8": "^7.12.0",
 		"keyv": "*",
-		"xo": "^0.53.1"
+		"typescript": "^4.9.5"
 	}
 }

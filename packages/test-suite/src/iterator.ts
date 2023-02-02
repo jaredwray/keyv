@@ -1,7 +1,10 @@
-'use strict';
-const delay = require('delay');
+import delay from 'delay';
 
-const keyvIteratorTests = (test, Keyv, store) => {
+import type {TestFn} from 'ava';
+import type KeyvModule from 'keyv';
+import type {KeyvStoreFn} from './types';
+
+const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({store: store()});
 		await keyv.clear();
@@ -17,7 +20,7 @@ const keyvIteratorTests = (test, Keyv, store) => {
 		const map = new Map(
 			Array.from({length: 5})
 				.fill(0)
-				.map((x, i) => [String(i), String(i + 10)]),
+				.map((_x, i) => [String(i), String(i + 10)]),
 		);
 		const toResolve = [];
 		for (const [key, value] of map) {
@@ -36,13 +39,13 @@ const keyvIteratorTests = (test, Keyv, store) => {
 	test.serial(
 		'iterator() doesn\'t yield values from other namespaces',
 		async t => {
-			const KeyvStore = store();
+			const keyvStore = store();
 
-			const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1'});
+			const keyv1 = new Keyv({store: keyvStore, namespace: 'keyv1'});
 			const map1 = new Map(
 				Array.from({length: 5})
 					.fill(0)
-					.map((x, i) => [String(i), String(i + 10)]),
+					.map((_x, i) => [String(i), String(i + 10)]),
 			);
 			const toResolve = [];
 			for (const [key, value] of map1) {
@@ -51,11 +54,11 @@ const keyvIteratorTests = (test, Keyv, store) => {
 
 			await Promise.all(toResolve);
 
-			const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2'});
+			const keyv2 = new Keyv({store: keyvStore, namespace: 'keyv2'});
 			const map2 = new Map(
 				Array.from({length: 5})
 					.fill(0)
-					.map((x, i) => [String(i), String(i + 11)]),
+					.map((_x, i) => [String(i), String(i + 11)]),
 			);
 			toResolve.length = 0;
 			for (const [key, value] of map2) {
@@ -80,7 +83,7 @@ const keyvIteratorTests = (test, Keyv, store) => {
 			const map = new Map(
 				Array.from({length: 5})
 					.fill(0)
-					.map((x, i) => [String(i), String(i + 10)]),
+					.map((_x, i) => [String(i), String(i + 10)]),
 			);
 			const toResolve = [];
 			for (const [key, value] of map) {
@@ -102,4 +105,4 @@ const keyvIteratorTests = (test, Keyv, store) => {
 	);
 };
 
-module.exports = keyvIteratorTests;
+export default keyvIteratorTests;
