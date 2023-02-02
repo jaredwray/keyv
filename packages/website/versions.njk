@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+{% include "shared/head.njk" %}
+
+<body>
+{% include "shared/homeHeader.njk" %}
+
+<main class="home-container">
+  <div class="content-container versions-container">
+    <h2 class="home-title">Releases</h2>
+    {% for release in github.releases %}
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="{{ release.html_url }}" target="_blank" rel="noopener noreferrer">{{ release.name }}</a>
+        <span class="release-date">{% formatDate "MMM dd, yyyy", release.published_at %}</span>
+      </div>
+      <div class="release-body">
+        {% if release.body %}
+          <p>{% parseRelease release.body %}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    </div>
+
+</main>
+
+{% include "shared/searchModal.njk" %}
+{% include "shared/scripts.njk" %}
+{% include "search/pagefind.njk" %}
+
+</body>
+</html>
