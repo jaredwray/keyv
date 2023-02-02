@@ -65,15 +65,22 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 		t.deepEqual(await keyv.get('foo'), value);
 	});
 
+	test.serial('value can be a string', async t => {
+		const keyv = new Keyv({store: store()});
+		await keyv.set('foo', 'bar');
+		t.is(await keyv.get('foo'), 'bar');
+	});
+
 	test.serial('value can not be symbol', async t => {
 		const keyv = new Keyv({store: store()});
 		const value = Symbol('value');
-		try {
-			await keyv.set('foo', value);
-		} catch (error: unknown) {
-			// @ts-expect-error - TS doesn't know that error is an Error
-			t.is(error.context, 'symbol cannot be serialized');
-		}
+
+		const error = await (new Promise(resolve => {
+			keyv.set('foo', value).catch(error => {
+				resolve(error.context);
+			});
+		}));
+		t.is(error, 'symbol cannot be serialized');
 	});
 
 	test.serial('value can be BigInt using other serializer/deserializer', async t => {

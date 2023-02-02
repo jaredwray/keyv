@@ -6,8 +6,8 @@
 	"type": "commonjs",
 	"scripts": {
 		"build": "tsc",
-		"test": "xo && npm run build && c8 ava --serial",
-		"test:ci": "xo && npm run build && ava --serial",
+		"test": "xo && c8 ava --serial",
+		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf dist && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {
@@ -15,7 +15,8 @@
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
 			"@typescript-eslint/no-unsafe-assignment": 0,
-			"@typescript-eslint/no-confusing-void-expression": 0
+			"@typescript-eslint/no-confusing-void-expression": 0,
+			"import/extensions": 0
 		}
 	},
 	"repository": {
@@ -46,6 +47,8 @@
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
+		"@ava/typescript": "^3.0.1",
+		"ts-node": "^10.9.1",
 		"@keyv/compress-brotli": "*",
 		"@types/json-bigint": "^1.0.1",
 		"@types/json-buffer": "^3.0.0",
@@ -53,5 +56,13 @@
 		"c8": "^7.12.0",
 		"keyv": "*",
 		"typescript": "^4.9.5"
+	},
+	"ava": {
+		"extensions": [
+			"ts"
+		],
+		"require": [
+			"ts-node/register"
+		]
 	}
 }

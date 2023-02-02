@@ -1,14 +1,15 @@
-const test = require('ava');
-const Keyv = require('keyv');
-const KeyvBrotli = require('@keyv/compress-brotli');
-const keyvTestSuite = require('../dist/index.js').default;
-const {keyvOfficialTests, keyvIteratorTests, keyvCompresstionTests} = require('../dist/index.js');
+import test from 'ava';
+import Keyv from 'keyv';
+import KeyvBrotli from '@keyv/compress-brotli';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests, keyvCompresstionTests} from '../src/index';
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
 const storeExtended = () => {
 	class MapExtend extends Map {
-		constructor(map, options) {
+		private readonly opts: {timeout: number};
+		constructor(map: Map<any, any>, options: {timeout: number}) {
+			// @ts-expect-error - super don't accept arguments
 			super(map);
 			this.opts = options;
 		}

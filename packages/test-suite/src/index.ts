@@ -1,10 +1,10 @@
 import type KeyvModule from 'keyv';
 import type {TestFn} from 'ava';
-import type {KeyvStoreFn} from './types.js';
+import type {KeyvStoreFn} from './types';
 
-import keyvApiTests from './api.js';
-import keyvValueTests from './values.js';
-import keyvNamepsaceTests from './namespace.js';
+import keyvApiTests from './api';
+import keyvValueTests from './values';
+import keyvNamepsaceTests from './namespace';
 
 const keyvTestSuite = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	keyvApiTests(test, Keyv, store);
@@ -15,10 +15,10 @@ const keyvTestSuite = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreFn
 export {
 	keyvTestSuite as default,
 };
-export {default as keyvOfficialTests} from './official.js';
-export {default as keyvIteratorTests} from './iterator.js';
-export {default as keyvCompresstionTests} from './compression.js';
+export {default as keyvOfficialTests} from './official';
+export {default as keyvIteratorTests} from './iterator';
+export {default as keyvCompresstionTests} from './compression';
 
-export {default as keyvApiTests} from './api.js';
-export {default as keyvValueTests} from './values.js';
-export {default as keyvNamepsaceTests} from './namespace.js';
+export {default as keyvApiTests} from './api';
+export {default as keyvValueTests} from './values';
+export {default as keyvNamepsaceTests} from './namespace';
