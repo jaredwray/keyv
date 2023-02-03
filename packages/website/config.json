@@ -1,0 +1,14 @@
+{
+  "originPath": "packages/website",
+  "siteUrl": "https://www.rf.co",
+  "plugins": [
+    "github",
+    "robots",
+    "sitemap",
+    "pagefind"
+  ],
+  "github": {
+    "author": "jaredwray",
+    "repo": "keyv"
+  }
+}
