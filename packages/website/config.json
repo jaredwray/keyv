@@ -1,6 +1,7 @@
 {
   "originPath": "packages/website",
-  "siteUrl": "https://www.rf.co",
+  "outputPath": "packages/website/dist",
+  "siteUrl": "https://keyv.org",
   "plugins": [
     "github",
     "robots",
