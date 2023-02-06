@@ -25,6 +25,7 @@ declare namespace KeyvPostgres {
 		uri?: string | undefined;
 		table?: string | undefined;
 		keySize?: number | undefined;
+		schema?: string | 'public';
 		ssl?: any | undefined;
 	}
 }
