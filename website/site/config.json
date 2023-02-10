@@ -1,5 +1,4 @@
 {
-  "outputPath": "site/dist",
   "siteUrl": "https://keyv.org",
   "plugins": [
     "github",

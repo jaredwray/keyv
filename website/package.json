@@ -1,0 +1,16 @@
+{
+  "name": "@keyv/website",
+  "version": "1.0.0",
+  "description": "Keyv Website",
+  "repository": "https://github.com/jaredwray/keyv.git",
+  "author": "Jared Wray <me@jaredwray.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "website:build": "docula build",
+    "website:serve": "docula serve"
+  },
+  "devDependencies": {
+    "docula": "^0.0.9"
+  }
+}
