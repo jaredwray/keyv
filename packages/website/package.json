@@ -7,6 +7,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
+    "test:ci": "echo 'No testing needed'",
     "build": "docula build",
     "serve": "docula serve"
   },
