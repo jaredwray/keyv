@@ -7,8 +7,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "website:build": "docula build",
-    "website:serve": "docula serve"
+    "build": "docula build",
+    "serve": "docula serve"
   },
   "devDependencies": {
     "docula": "^0.0.9"
