@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/styles/variables.css">
+    <link rel="stylesheet" href="/assets/css/styles/index.css">
+    <link rel="stylesheet" href="/assets/css/styles/home.css">
+    <title></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/highlight/styles/base16/dracula.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/instantsearch.css@7.4.5/themes/satellite-min.css" integrity="sha256-TehzF/2QvNKhGQrrNpoOb2Ck4iGZ1J/DI4pkd2oUsBc=" crossorigin="anonymous">
+</head>
+
+
+<body>
+<header class="home-header">
+  <div class="header-content">
+    <nav class="nav">
+      <div class="header-menu">
+        <a class="header-logo" href="/">
+          <img src="/../assets/images/logo.svg" alt="logo" />
+        </a>
+        <a href="/docs" class="docs-link">Docs</a>
+      </div>
+
+
+      <div class="header-search">
+        <button class="icon search-btn" id="search-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg>
+          <span class="hidden search-text">Search the documentation</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+
+<main class="home-container">
+  <div class="content-container versions-container">
+    <h2 class="home-title">Releases</h2>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2023-02-04" target="_blank" rel="noopener noreferrer">2023-02-04</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h1>Redis v2.5.5</h1>
+<p>Update released with upgraded ioredis (v5.3.0) 🎉</p>
+<h2>What’s Changed</h2>
+<ul>
+<li>redis-next - adding in typescript build by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/646">https://github.com/jaredwray/keyv/pull/646</a></li>
+<li>redis-next - setting up next testing environment by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/648">https://github.com/jaredwray/keyv/pull/648</a></li>
+<li>removing redis-next and moving to a branch by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/649">https://github.com/jaredwray/keyv/pull/649</a></li>
+<li>add website package by @cialese in <a href="https://github.com/jaredwray/keyv/pull/651">https://github.com/jaredwray/keyv/pull/651</a></li>
+<li>updating modules and adding docula by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/653">https://github.com/jaredwray/keyv/pull/653</a></li>
+<li>memcache - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/654">https://github.com/jaredwray/keyv/pull/654</a></li>
+<li>memcache - upgrading typescript to 4.9.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/655">https://github.com/jaredwray/keyv/pull/655</a></li>
+<li>offline - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/656">https://github.com/jaredwray/keyv/pull/656</a></li>
+<li>offline - upgrading typescript to 4.9.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/657">https://github.com/jaredwray/keyv/pull/657</a></li>
+<li>compress-gzip - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/658">https://github.com/jaredwray/keyv/pull/658</a></li>
+<li>compress-gzip - upgrading typescript and eslint to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/659">https://github.com/jaredwray/keyv/pull/659</a></li>
+<li>compress-brotli - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/660">https://github.com/jaredwray/keyv/pull/660</a></li>
+<li>compres-brotli - upgrading typescript to 4.9.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/661">https://github.com/jaredwray/keyv/pull/661</a></li>
+<li>redis - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/662">https://github.com/jaredwray/keyv/pull/662</a></li>
+<li>redis - upgrading typescript to 4.9.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/663">https://github.com/jaredwray/keyv/pull/663</a></li>
+<li>redis - upgrading ioredis to 5.3.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/664">https://github.com/jaredwray/keyv/pull/664</a></li>
+<li>keyv - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/665">https://github.com/jaredwray/keyv/pull/665</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@cialese made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/651">https://github.com/jaredwray/keyv/pull/651</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2023-01-21...2023-02-04">https://github.com/jaredwray/keyv/compare/2023-01-21...2023-02-04</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2023-01-21" target="_blank" rel="noopener noreferrer">2023-01-21</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>MySql v1.6.0 - MySql2 module upgrade to 3.0.1!</h2>
+<p>The mysql storage adapter has been upgraded to the latest mysql2 driver which you can read about here: <a href="https://github.com/sidorares/node-mysql2/releases/tag/v3.0.0">https://github.com/sidorares/node-mysql2/releases/tag/v3.0.0</a></p>
+<h2>What’s Changed</h2>
+<ul>
+<li>redis-next - initial setup of the new version of redis by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/636">https://github.com/jaredwray/keyv/pull/636</a></li>
+<li>compress-gzip - cleaning up dev dependencies by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/638">https://github.com/jaredwray/keyv/pull/638</a></li>
+<li>sqlite - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/639">https://github.com/jaredwray/keyv/pull/639</a></li>
+<li>Postgres  - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/640">https://github.com/jaredwray/keyv/pull/640</a></li>
+<li>mysql - uprading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/641">https://github.com/jaredwray/keyv/pull/641</a></li>
+<li>mysql - removing options that are invalid by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/642">https://github.com/jaredwray/keyv/pull/642</a></li>
+<li>mysql - upgrading mysql2 to 3.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/643">https://github.com/jaredwray/keyv/pull/643</a></li>
+<li>Etcd   upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/644">https://github.com/jaredwray/keyv/pull/644</a></li>
+<li>tiered - upgrading ava to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/645">https://github.com/jaredwray/keyv/pull/645</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-01-07...2023-01-21">https://github.com/jaredwray/keyv/compare/2022-01-07...2023-01-21</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-01-07" target="_blank" rel="noopener noreferrer">2022-01-07</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h1>Compress-Gzip v1.2.3</h1>
+<p>API is all the same but fully re-written in tyepscript and generating its own type file.</p>
+<h1>Test-Suite v1.8.9 (Maintenance)</h1>
+<p>Test suite had a module upgraded that is used for testing <code>bignumber.js</code></p>
+<h2>What’s Changed</h2>
+<ul>
+<li>keyv - upgrading typescript to 4.9.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/624">https://github.com/jaredwray/keyv/pull/624</a></li>
+<li>keyv - upgrading eslint to 8.31.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/625">https://github.com/jaredwray/keyv/pull/625</a></li>
+<li>memcache - upgrading typescript to 4.9.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/626">https://github.com/jaredwray/keyv/pull/626</a></li>
+<li>redis - upgrading typescript to 4.9.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/627">https://github.com/jaredwray/keyv/pull/627</a></li>
+<li>test-suite - upgrading bignumber.js to 9.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/628">https://github.com/jaredwray/keyv/pull/628</a></li>
+<li>offline - upgrading typescript to 4.9.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/629">https://github.com/jaredwray/keyv/pull/629</a></li>
+<li>compress-gzip - upgrading typescript to 4.9.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/630">https://github.com/jaredwray/keyv/pull/630</a></li>
+<li>Gzip typescript conversion by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/562">https://github.com/jaredwray/keyv/pull/562</a></li>
+<li>updating the github actions to latest v3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/631">https://github.com/jaredwray/keyv/pull/631</a></li>
+<li>compress-gzip - migration to typescript by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/632">https://github.com/jaredwray/keyv/pull/632</a></li>
+<li>compress-brotoli - adding in c8 for unit testing by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/633">https://github.com/jaredwray/keyv/pull/633</a></li>
+<li>compress-brotli - upgrading typescript to 4.9.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/634">https://github.com/jaredwray/keyv/pull/634</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-12-17...2022-01-07">https://github.com/jaredwray/keyv/compare/2022-12-17...2022-01-07</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-12-17" target="_blank" rel="noopener noreferrer">2022-12-17</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h1>@keyv/sqlite is now upgraded</h1>
+<p>The module has the latest update of sqlite3 now!</p>
+<h2>What’s Changed</h2>
+<ul>
+<li>Added <code>keyv-arango</code> to  3rd party storage adapters by @TimMikeladze in <a href="https://github.com/jaredwray/keyv/pull/615">https://github.com/jaredwray/keyv/pull/615</a></li>
+<li>adding in arango storage adapter reference by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/616">https://github.com/jaredwray/keyv/pull/616</a></li>
+<li>sqlite - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/617">https://github.com/jaredwray/keyv/pull/617</a></li>
+<li>sqlite - upgrading sqlite3 to 5.1.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/618">https://github.com/jaredwray/keyv/pull/618</a></li>
+<li>postgres - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/619">https://github.com/jaredwray/keyv/pull/619</a></li>
+<li>mysql - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/620">https://github.com/jaredwray/keyv/pull/620</a></li>
+<li>etcd - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/621">https://github.com/jaredwray/keyv/pull/621</a></li>
+<li>tiered - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/622">https://github.com/jaredwray/keyv/pull/622</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@TimMikeladze made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/615">https://github.com/jaredwray/keyv/pull/615</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-12-05...2022-12-17">https://github.com/jaredwray/keyv/compare/2022-12-05...2022-12-17</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-12-05" target="_blank" rel="noopener noreferrer">2022-12-05</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h1>Maintenance Release 🎉</h1>
+<p>Majup updates to xo, ava, and core development libraries. Very minor changes overall.</p>
+<h2>What’s Changed</h2>
+<ul>
+<li>migrating to c8 for code coverage reporting by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/585">https://github.com/jaredwray/keyv/pull/585</a></li>
+<li>amazon documentdb storage adapter guide by @cprendergast19 in <a href="https://github.com/jaredwray/keyv/pull/587">https://github.com/jaredwray/keyv/pull/587</a></li>
+<li>mono - upgrading @types/node to 18.11.10 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/588">https://github.com/jaredwray/keyv/pull/588</a></li>
+<li>keyv - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/589">https://github.com/jaredwray/keyv/pull/589</a></li>
+<li>keyv - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/590">https://github.com/jaredwray/keyv/pull/590</a></li>
+<li>memcache - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/591">https://github.com/jaredwray/keyv/pull/591</a></li>
+<li>keyv - upgrading tsd to 0.25.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/592">https://github.com/jaredwray/keyv/pull/592</a></li>
+<li>keyv - upgrading eslint to 8.29.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/593">https://github.com/jaredwray/keyv/pull/593</a></li>
+<li>keyv - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/594">https://github.com/jaredwray/keyv/pull/594</a></li>
+<li>memcache - upgrading tsd to 0.25.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/595">https://github.com/jaredwray/keyv/pull/595</a></li>
+<li>memcache - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/596">https://github.com/jaredwray/keyv/pull/596</a></li>
+<li>redis - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/597">https://github.com/jaredwray/keyv/pull/597</a></li>
+<li>redis - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/598">https://github.com/jaredwray/keyv/pull/598</a></li>
+<li>redis - upgrading tsd to 0.25.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/599">https://github.com/jaredwray/keyv/pull/599</a></li>
+<li>redis - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/600">https://github.com/jaredwray/keyv/pull/600</a></li>
+<li>test-suite - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/601">https://github.com/jaredwray/keyv/pull/601</a></li>
+<li>test-suite - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/602">https://github.com/jaredwray/keyv/pull/602</a></li>
+<li>offline - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/603">https://github.com/jaredwray/keyv/pull/603</a></li>
+<li>offline - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/604">https://github.com/jaredwray/keyv/pull/604</a></li>
+<li>offline - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/605">https://github.com/jaredwray/keyv/pull/605</a></li>
+<li>compres-brotli - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/606">https://github.com/jaredwray/keyv/pull/606</a></li>
+<li>compress-brotli - upgrading webpack to 5.75.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/607">https://github.com/jaredwray/keyv/pull/607</a></li>
+<li>compress-brotli - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/608">https://github.com/jaredwray/keyv/pull/608</a></li>
+<li>compress-brotli - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/609">https://github.com/jaredwray/keyv/pull/609</a></li>
+<li>compress-gzip - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/610">https://github.com/jaredwray/keyv/pull/610</a></li>
+<li>compress-gzip - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/611">https://github.com/jaredwray/keyv/pull/611</a></li>
+<li>compress-gzip - upgrading pako to 2.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/612">https://github.com/jaredwray/keyv/pull/612</a></li>
+<li>compress-zip - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/613">https://github.com/jaredwray/keyv/pull/613</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-11-24...2022-12-05">https://github.com/jaredwray/keyv/compare/2022-11-24...2022-12-05</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-11-24" target="_blank" rel="noopener noreferrer">2022-11-24</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h1>Maintenance Release 2022-11-24</h1>
+<p>Most of the updates on this recent release are bug fixes or module updates. Here are the bug fixes:</p>
+<ul>
+<li>Exposing the <code>disconnect()</code> function via Typescript - redis issue 558 disconnect definition fix by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/561">https://github.com/jaredwray/keyv/pull/561</a></li>
+<li>When using the <code>{opts.compression}</code> parameter with a compression component it is not working because it is <code>async/await</code> fixed issue 559 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/563">https://github.com/jaredwray/keyv/pull/563</a> (Thanks @alphmth) 🥇</li>
+<li>Typescript Error because of CompressionAdapter on v4.5.1 of Keyv - <a href="https://github.com/jaredwray/keyv/pull/557">https://github.com/jaredwray/keyv/pull/557</a> (Thanks @ODudek!) 🎉</li>
+</ul>
+<h2>What’s Changed</h2>
+<ul>
+<li>Fix CompressionAdapter interface definition by @ODudek in <a href="https://github.com/jaredwray/keyv/pull/557">https://github.com/jaredwray/keyv/pull/557</a></li>
+<li>Added Caching Pages SEO  by @cprendergast19 in <a href="https://github.com/jaredwray/keyv/pull/560">https://github.com/jaredwray/keyv/pull/560</a></li>
+<li>redis issue 558 disconnect definition fix by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/561">https://github.com/jaredwray/keyv/pull/561</a></li>
+<li>fixed issue 559 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/563">https://github.com/jaredwray/keyv/pull/563</a></li>
+<li>sqlite - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/566">https://github.com/jaredwray/keyv/pull/566</a></li>
+<li>sqlite - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/567">https://github.com/jaredwray/keyv/pull/567</a></li>
+<li>sqlite - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/568">https://github.com/jaredwray/keyv/pull/568</a></li>
+<li>postgres - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/569">https://github.com/jaredwray/keyv/pull/569</a></li>
+<li>postgres - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/570">https://github.com/jaredwray/keyv/pull/570</a></li>
+<li>postgres - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/571">https://github.com/jaredwray/keyv/pull/571</a></li>
+<li>mysql - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/572">https://github.com/jaredwray/keyv/pull/572</a></li>
+<li>mysql - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/573">https://github.com/jaredwray/keyv/pull/573</a></li>
+<li>mysql - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/574">https://github.com/jaredwray/keyv/pull/574</a></li>
+<li>etcd - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/575">https://github.com/jaredwray/keyv/pull/575</a></li>
+<li>etcd - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/576">https://github.com/jaredwray/keyv/pull/576</a></li>
+<li>etcd - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/577">https://github.com/jaredwray/keyv/pull/577</a></li>
+<li>mono - upgrading @types/node to 18.11.9 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/578">https://github.com/jaredwray/keyv/pull/578</a></li>
+<li>etcd - upgrading webpack to 5.75.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/579">https://github.com/jaredwray/keyv/pull/579</a></li>
+<li>tiered - upgrading xo to 0.53.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/580">https://github.com/jaredwray/keyv/pull/580</a></li>
+<li>tiered - upgrading ava to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/581">https://github.com/jaredwray/keyv/pull/581</a></li>
+<li>tiered - upgrading typescript to 4.9.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/582">https://github.com/jaredwray/keyv/pull/582</a></li>
+<li>removing this module as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/583">https://github.com/jaredwray/keyv/pull/583</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@ODudek made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/557">https://github.com/jaredwray/keyv/pull/557</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-11-06...2022-11-24">https://github.com/jaredwray/keyv/compare/2022-11-06...2022-11-24</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-11-06" target="_blank" rel="noopener noreferrer">2022-11-06</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>Release Notes for 2022-11-06</h2>
+<p>We have some new updates around <code>mysql</code> and <code>postgres</code> storage adapters and a ton of maintenance updates!</p>
+<h1>Posgres - SSL Support!</h1>
+<p>We are now supporting SSL for Postgres and thanks to @wgwz for adding this feature! 🎉</p>
+<pre><code class="language-javascript">const options = {ssl: {rejectUnauthorized: false}};
+
+const keyv = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5433/keyv_test', ...options})
+</code></pre>
+<h1>MySQL - SSL Support!</h1>
+<p>We now do SSL support inside the MySQL storage adapter. Thanks to @alphmth for adding this feature! 💥</p>
+<pre><code class="language-javascript">const options = {
+	ssl: {
+		rejectUnauthorized: false,
+		ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')).toString(),
+		key: fs.readFileSync(path.join(__dirname, '/certs/client-key.pem')).toString(),
+		cert: fs.readFileSync(path.join(__dirname, '/certs/client-cert.pem')).toString(),
+	},
+};
+
+const keyv = new KeyvMysql({uri: 'mysql://root@localhost:3307/keyv_test'});
+</code></pre>
+<h2>What’s Changed</h2>
+<ul>
+<li>Getting Started Guide 🎉  by @cprendergast19 in <a href="https://github.com/jaredwray/keyv/pull/530">https://github.com/jaredwray/keyv/pull/530</a></li>
+<li>fixed ts issue by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/534">https://github.com/jaredwray/keyv/pull/534</a></li>
+<li>Created How to Implement Caching in Javascript Page by @cprendergast19 in <a href="https://github.com/jaredwray/keyv/pull/533">https://github.com/jaredwray/keyv/pull/533</a></li>
+<li>ssl configs for mysql by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/532">https://github.com/jaredwray/keyv/pull/532</a></li>
+<li>Allow passing ssl config options for @keyv/postgres by @wgwz in <a href="https://github.com/jaredwray/keyv/pull/529">https://github.com/jaredwray/keyv/pull/529</a></li>
+<li>keyv - upgrading ava to 5.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/535">https://github.com/jaredwray/keyv/pull/535</a></li>
+<li>keyv - upgrading eslint to 8.26.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/536">https://github.com/jaredwray/keyv/pull/536</a></li>
+<li>keyv - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/537">https://github.com/jaredwray/keyv/pull/537</a></li>
+<li>memcache - upgrading ava to 5.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/538">https://github.com/jaredwray/keyv/pull/538</a></li>
+<li>redis - upgrading ava to 5.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/539">https://github.com/jaredwray/keyv/pull/539</a></li>
+<li>redis - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/540">https://github.com/jaredwray/keyv/pull/540</a></li>
+<li>redis - upgrading ioredis to 5.2.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/541">https://github.com/jaredwray/keyv/pull/541</a></li>
+<li>redis - removing @types/keyv as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/542">https://github.com/jaredwray/keyv/pull/542</a></li>
+<li>test-suite - upgrading ava to 5.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/543">https://github.com/jaredwray/keyv/pull/543</a></li>
+<li>test-suite - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/544">https://github.com/jaredwray/keyv/pull/544</a></li>
+<li>offline - upgrading ava to 5.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/545">https://github.com/jaredwray/keyv/pull/545</a></li>
+<li>offline - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/546">https://github.com/jaredwray/keyv/pull/546</a></li>
+<li>compress-brotli - upgrading ava to 5.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/547">https://github.com/jaredwray/keyv/pull/547</a></li>
+<li>compress-brotli - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/548">https://github.com/jaredwray/keyv/pull/548</a></li>
+<li>compress-brotli - upgrading typescript and components to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/549">https://github.com/jaredwray/keyv/pull/549</a></li>
+<li>compress-gzip - upgrading ava to 5.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/550">https://github.com/jaredwray/keyv/pull/550</a></li>
+<li>compress-gzip - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/551">https://github.com/jaredwray/keyv/pull/551</a></li>
+<li>compress-gzip - upgrading typescript and components to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/552">https://github.com/jaredwray/keyv/pull/552</a></li>
+<li>compress-gzip - removing this as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/553">https://github.com/jaredwray/keyv/pull/553</a></li>
+<li>compress-brotli - removing this module as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/554">https://github.com/jaredwray/keyv/pull/554</a></li>
+<li>testing code coverage  by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/555">https://github.com/jaredwray/keyv/pull/555</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@cprendergast19 made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/530">https://github.com/jaredwray/keyv/pull/530</a></li>
+<li>@wgwz made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/529">https://github.com/jaredwray/keyv/pull/529</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-10-17...2022-11-06">https://github.com/jaredwray/keyv/compare/2022-10-17...2022-11-06</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-10-17" target="_blank" rel="noopener noreferrer">2022-10-17</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h1>2022-10-17 Release</h1>
+<p>There has been some bigger updates around the compression libraries and also updates to many of the packages. As always, this includes dependency updates which you can see below under <em>What’s Changed</em>. Let’s get started:</p>
+<h2>Typescript update to many of the storage adapters adding in <code>&lt;Value=any&gt;</code></h2>
+<p>This was a fix for <a href="https://github.com/jaredwray/keyv/issues/512">https://github.com/jaredwray/keyv/issues/512</a> and we have tested it but happy for any feedback on it.</p>
+<h2>Compression Packages are now more robust!</h2>
+<p>We did our initial look at how to add compression into the system and with this latest release made it much more robust. Currently supporting <code>compress-brotli</code> and <code>compress-gzip</code> each one of the packages now have type definitions and the main <code>Keyv</code> has an interface to define what these should look like:</p>
+<pre><code class="language-typescript">	interface CompressionAdapter {
+		async compress(value: any, options?: any);
+		async decompress(value: any, options?: any);
+		async serialize(value: any);
+		async deserialize(value: any);
+	}
+</code></pre>
+<p>To use these compression libraries you can do the following:</p>
+<pre><code class="language-javascript">const KeyvBrotli = require('@keyv/compress-brotli');
+const Keyv = require('keyv');
+
+const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
+</code></pre>
+<p>NOTE: when you do use compression the functions <code>serialize</code> and <code>deserialize</code> are overwritten.</p>
+<h2>What’s Changed</h2>
+<ul>
+<li>redis - removing reliance on this package by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/499">https://github.com/jaredwray/keyv/pull/499</a></li>
+<li>offline - removing this package as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/500">https://github.com/jaredwray/keyv/pull/500</a></li>
+<li>fixed namespace clear issue by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/501">https://github.com/jaredwray/keyv/pull/501</a></li>
+<li>keyv - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/503">https://github.com/jaredwray/keyv/pull/503</a></li>
+<li>Compression Updates by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/502">https://github.com/jaredwray/keyv/pull/502</a></li>
+<li>Revert “Compression Updates” by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/505">https://github.com/jaredwray/keyv/pull/505</a></li>
+<li>keyv - upgrading eslint to 8.24.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/504">https://github.com/jaredwray/keyv/pull/504</a></li>
+<li>keyv - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/506">https://github.com/jaredwray/keyv/pull/506</a></li>
+<li>keyv - upgrading xo to 0.52.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/507">https://github.com/jaredwray/keyv/pull/507</a></li>
+<li>memcache - upgrading typescript to 4.8.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/508">https://github.com/jaredwray/keyv/pull/508</a></li>
+<li>redis - upgrading typescript to 4.8.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/509">https://github.com/jaredwray/keyv/pull/509</a></li>
+<li>offline - upgrading typescript to 4.8.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/510">https://github.com/jaredwray/keyv/pull/510</a></li>
+<li>Compression updates v2 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/511">https://github.com/jaredwray/keyv/pull/511</a></li>
+<li>sqlite - upgrading sqlite3 to 5.1.2 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/514">https://github.com/jaredwray/keyv/pull/514</a></li>
+<li>sqlite - upgrading typescript to 4.8.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/515">https://github.com/jaredwray/keyv/pull/515</a></li>
+<li>sqlite - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/517">https://github.com/jaredwray/keyv/pull/517</a></li>
+<li>postgres - upgrading typescript to 4.8.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/518">https://github.com/jaredwray/keyv/pull/518</a></li>
+<li>postgres - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/519">https://github.com/jaredwray/keyv/pull/519</a></li>
+<li>mysql - upgrading typescript to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/520">https://github.com/jaredwray/keyv/pull/520</a></li>
+<li>mysql - upgrading xo to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/521">https://github.com/jaredwray/keyv/pull/521</a></li>
+<li>Etcd - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/522">https://github.com/jaredwray/keyv/pull/522</a></li>
+<li>etcd - upgrading typescript to 4.8.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/524">https://github.com/jaredwray/keyv/pull/524</a></li>
+<li>tiered - upgrading typescript to 4.8.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/525">https://github.com/jaredwray/keyv/pull/525</a></li>
+<li>tiered - upgrading xo to 0.52.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/526">https://github.com/jaredwray/keyv/pull/526</a></li>
+<li>added fix for value by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/523">https://github.com/jaredwray/keyv/pull/523</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-09-19...2022-10-17">https://github.com/jaredwray/keyv/compare/2022-09-19...2022-10-17</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-09-19" target="_blank" rel="noopener noreferrer">2022-09-19</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h1>Maintenance Release! 🧰</h1>
+<p>This release is more around maintenance after the <a href="https://github.com/jaredwray/keyv/releases/tag/2022-09-02">Compression Changes</a>. Here are some of the highlights for each package:</p>
+<ul>
+<li><em>Redis</em> - Upgraded the redis driver <code>ioredis</code> to <code>4.8.2</code></li>
+<li><em>Test-Suite</em> - Upgraded <code>ava</code>, <code>bignumber.js</code>, and <code>xo</code> to their latest</li>
+<li><em>Sqlite</em> - Upgraded the sqlite driver <code>sqlite3</code> to <code>5.1.1</code></li>
+<li><em>Postgres</em> - Upgraded the postgres driver <code>pg</code> to <code>8.8.0</code></li>
+</ul>
+<p>In addition we made the contribution templates used for issues and pull requests more simplistic. 🎉</p>
+<h2>Full Changelog</h2>
+<ul>
+<li>memcache - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/463">https://github.com/jaredwray/keyv/pull/463</a></li>
+<li>memcache - upgrading typescript to 4.8.2 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/464">https://github.com/jaredwray/keyv/pull/464</a></li>
+<li>redis - upgrading ioredis to 5.2.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/465">https://github.com/jaredwray/keyv/pull/465</a></li>
+<li>redis - upgrading xo to 0.52.3 and fixing import type on index.d.ts by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/466">https://github.com/jaredwray/keyv/pull/466</a></li>
+<li>redis - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/467">https://github.com/jaredwray/keyv/pull/467</a></li>
+<li>redis - upgrading typescript to 4.8.2 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/468">https://github.com/jaredwray/keyv/pull/468</a></li>
+<li>test-suite - upgrading bignumber.js to 9.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/469">https://github.com/jaredwray/keyv/pull/469</a></li>
+<li>test-suite - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/470">https://github.com/jaredwray/keyv/pull/470</a></li>
+<li>test-suite - upgrading xo to 0.52.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/471">https://github.com/jaredwray/keyv/pull/471</a></li>
+<li>offline - upgrading xo to 0.52.3 and readme logo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/472">https://github.com/jaredwray/keyv/pull/472</a></li>
+<li>offline - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/473">https://github.com/jaredwray/keyv/pull/473</a></li>
+<li>offline - upgrading tsd, typescript, and ts-node to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/474">https://github.com/jaredwray/keyv/pull/474</a></li>
+<li>updating readme with direct link to keyv package by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/477">https://github.com/jaredwray/keyv/pull/477</a></li>
+<li>updating contributing documentation and templates by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/478">https://github.com/jaredwray/keyv/pull/478</a></li>
+<li>sqlite - upgrading sqlite3 to 5.1.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/480">https://github.com/jaredwray/keyv/pull/480</a></li>
+<li>sqlite - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/481">https://github.com/jaredwray/keyv/pull/481</a></li>
+<li>sqlite - upgrading typescript to 4.8.3 and tsd to 0.24.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/482">https://github.com/jaredwray/keyv/pull/482</a></li>
+<li>sqlite - upgrading xo to 0.52.3 includes index.d.ts type changes by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/483">https://github.com/jaredwray/keyv/pull/483</a></li>
+<li>postgres - upgrading xo to 0.52.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/484">https://github.com/jaredwray/keyv/pull/484</a></li>
+<li>postgres - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/485">https://github.com/jaredwray/keyv/pull/485</a></li>
+<li>postgres - upgrading typescript to and tsd to 0.24.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/486">https://github.com/jaredwray/keyv/pull/486</a></li>
+<li>postgres - upgrading pg to 8.8.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/487">https://github.com/jaredwray/keyv/pull/487</a></li>
+<li>mysql - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/488">https://github.com/jaredwray/keyv/pull/488</a></li>
+<li>mysql - upgrading typescript to 4.8.3 and tsd to 0.24.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/489">https://github.com/jaredwray/keyv/pull/489</a></li>
+<li>mysql - upgrading xo to 0.52.3 and index.d.ts with types on import by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/490">https://github.com/jaredwray/keyv/pull/490</a></li>
+<li>etcd - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/491">https://github.com/jaredwray/keyv/pull/491</a></li>
+<li>etcd - upgrading xo to 0.52.3 and index.d.ts with types by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/492">https://github.com/jaredwray/keyv/pull/492</a></li>
+<li>etcd - upgrading typescript to 4.8.3 and tsd to 0.24.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/493">https://github.com/jaredwray/keyv/pull/493</a></li>
+<li>etcd - removing pify as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/494">https://github.com/jaredwray/keyv/pull/494</a></li>
+<li>tiered - upgrading ava to 4.3.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/495">https://github.com/jaredwray/keyv/pull/495</a></li>
+<li>tiered - upgrading typescript to 4.8.3 and tsd to 0.24.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/496">https://github.com/jaredwray/keyv/pull/496</a></li>
+<li>tiered - upgrading xo to 0.52.3 and index.d.ts types by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/497">https://github.com/jaredwray/keyv/pull/497</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-09-02...2022-09-19">https://github.com/jaredwray/keyv/compare/2022-09-02...2022-09-19</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-09-02" target="_blank" rel="noopener noreferrer">2022-09-02</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>Compression Adapters for Keyv <code>&gt;=4.5.0</code> (Breaking Change ⚠️ )</h2>
+<p>In the past <code>Keyv</code> had built in Brotli compression support by using the option <code>{compress: true}</code>. With this change you now need to provide the compression adapter:</p>
+<pre><code class="language-javascript">const KeyvBrotli = require('@keyv/compress-brotli');
+const Keyv = require('keyv');
+
+const keyv = new Keyv({compression: new KeyvBrotli()});
+</code></pre>
+<p>In addition we now support <code>Brotli</code> and <code>Gzip</code> via the following adapters 🎉 :</p>
+<ul>
+<li><a href="https://github.com/jaredwray/keyv/tree/main/packages/compress-brotli">brotli</a>: Brotli compression adapter</li>
+<li><a href="https://github.com/jaredwray/keyv/tree/main/packages/compress-gzip">Gzip</a>: Gzip compression adapter</li>
+</ul>
+<h2>What’s Changed</h2>
+<ul>
+<li>added-brotli by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/433">https://github.com/jaredwray/keyv/pull/433</a></li>
+<li>adding in readme for @keyv/compress-brotli by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/453">https://github.com/jaredwray/keyv/pull/453</a></li>
+<li>moving to serialize the test suites by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/454">https://github.com/jaredwray/keyv/pull/454</a></li>
+<li>updating tiered readme to have correct urls by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/456">https://github.com/jaredwray/keyv/pull/456</a></li>
+<li>Gzip compression by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/457">https://github.com/jaredwray/keyv/pull/457</a></li>
+<li>compress-brotli - adding in webpack dependency by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/459">https://github.com/jaredwray/keyv/pull/459</a></li>
+<li>compress-gzip - adding in readme by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/460">https://github.com/jaredwray/keyv/pull/460</a></li>
+<li>Readme updates to support compression packages by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/461">https://github.com/jaredwray/keyv/pull/461</a></li>
+<li>support pako by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/462">https://github.com/jaredwray/keyv/pull/462</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-08-21...2022-09-02">https://github.com/jaredwray/keyv/compare/2022-08-21...2022-09-02</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-08-21" target="_blank" rel="noopener noreferrer">2022-08-21</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>Keyv  <code>v4.4.1</code> - getMany() now will return an array of <code>undefined</code> or <code>null</code> based on the storage adapters</h2>
+<p>A major change that has been released is to fix #431 with returning <code>[]</code> instead of an array of values even if it is <code>undefined</code>. This has been implemented across all supported storage adapters (<a href="https://github.com/jaredwray/keyv#storage-adapters">https://github.com/jaredwray/keyv#storage-adapters</a>).</p>
+<p>In addition there were minor updates to some packages which you can read in <code>What's Changed</code> 👇</p>
+<h2>Redis <code>v2.5.0</code> - getMany() updates</h2>
+<ul>
+<li>Supporting the new getMany() as discussed in Keyv release</li>
+</ul>
+<h2>Sqlite <code>v3.6.0</code> - getMany() updates and new sqlite3 version! 👍</h2>
+<ul>
+<li>Supporting the new getMany() as discussed in Keyv release</li>
+<li>Sqlite3 is now on 5.0.11 with some fixes in it!</li>
+<li>minor updates to some packages which you can read in <code>What's Changed</code></li>
+</ul>
+<h2>Etcd <code>v1.1.0</code> - getMany() updates and exponential backoff on retries</h2>
+<ul>
+<li>Supporting the new getMany() as discussed in Keyv release</li>
+<li>Now with <code>cockatiel</code> we are doing exponential backoff on retries when there is a failure 🛑</li>
+<li>minor updates to some packages which you can read in <code>What's Changed</code></li>
+</ul>
+<h2>Postges <code>v1.3.0</code>, Mysql <code>v1.4.0</code>, Tiered <code>v1.0.1</code> - getMany() updates</h2>
+<p>Supporting the new getMany() as discussed in Keyv release 🎉 with some maintenance updates you can read in “What’s Changed” 👇</p>
+<h2>What’s Changed</h2>
+<ul>
+<li>fixed undefined array issue by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/432">https://github.com/jaredwray/keyv/pull/432</a></li>
+<li>keyv - upgrading ava to 4.3.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/434">https://github.com/jaredwray/keyv/pull/434</a></li>
+<li>keyv - upgrading eslint to 8.22.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/435">https://github.com/jaredwray/keyv/pull/435</a></li>
+<li>keyv - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/436">https://github.com/jaredwray/keyv/pull/436</a></li>
+<li>sqlite - upgrading sqlite3 to 5.0.11 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/437">https://github.com/jaredwray/keyv/pull/437</a></li>
+<li>sqlite - upgrading ts-node to 10.9.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/438">https://github.com/jaredwray/keyv/pull/438</a></li>
+<li>sqlite - upgrading tsd to 0.22.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/439">https://github.com/jaredwray/keyv/pull/439</a></li>
+<li>sqlite - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/440">https://github.com/jaredwray/keyv/pull/440</a></li>
+<li>postgres - upgrading ts-node to 10.9.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/441">https://github.com/jaredwray/keyv/pull/441</a></li>
+<li>postgres - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/442">https://github.com/jaredwray/keyv/pull/442</a></li>
+<li>mysql - upgrading ts-node to 10.9.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/443">https://github.com/jaredwray/keyv/pull/443</a></li>
+<li>mysql - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/444">https://github.com/jaredwray/keyv/pull/444</a></li>
+<li>etcd - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/445">https://github.com/jaredwray/keyv/pull/445</a></li>
+<li>etcd - removing webpack as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/446">https://github.com/jaredwray/keyv/pull/446</a></li>
+<li>etcd - upgrading cockatiel to 3.0.0 with exponential backoff on retry by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/447">https://github.com/jaredwray/keyv/pull/447</a></li>
+<li>tiered - upgrading ts-node to 10.9.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/449">https://github.com/jaredwray/keyv/pull/449</a></li>
+<li>tiered - updating xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/450">https://github.com/jaredwray/keyv/pull/450</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-08-08...2022-08-21">https://github.com/jaredwray/keyv/compare/2022-08-08...2022-08-21</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-08-08" target="_blank" rel="noopener noreferrer">2022-08-08</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><p>New releases including <code>@keyv/redis to v2.4.0</code> and <code>@keyv/test-suite to v1.7.5</code> 🎉 . A ton of new updates also have been released and thanks to @dylanseago, @airtoxin, and @alphmth for all the help ❤️</p>
+<h2>@keyv/redis v2.4.0</h2>
+<p>Biggest update here is the move to ioredis version 5.2.2 which has some bug fixes and updates.</p>
+<h2>@keyv/test-suite v1.7.5</h2>
+<p><code>Ava</code> and <code>Xo</code> have been upgraded to their latest and now shipped in test-suite. 🙌</p>
+<h2>What’s Changed</h2>
+<ul>
+<li>Fix Keyv.Options type incorrectly defines store option type by @dylanseago in <a href="https://github.com/jaredwray/keyv/pull/405">https://github.com/jaredwray/keyv/pull/405</a></li>
+<li>Delete console.log by @airtoxin in <a href="https://github.com/jaredwray/keyv/pull/418">https://github.com/jaredwray/keyv/pull/418</a></li>
+<li>Issue 403 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/417">https://github.com/jaredwray/keyv/pull/417</a></li>
+<li>memcache - upgrade ava to 4.3.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/420">https://github.com/jaredwray/keyv/pull/420</a></li>
+<li>memcache - upgrading ts-node to 10.9.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/422">https://github.com/jaredwray/keyv/pull/422</a></li>
+<li>redis - upgrading ioredis to 5.2.2 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/423">https://github.com/jaredwray/keyv/pull/423</a></li>
+<li>redis - upgrading ava to 4.3.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/424">https://github.com/jaredwray/keyv/pull/424</a></li>
+<li>redis - upgrading ts-node to 10.9.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/425">https://github.com/jaredwray/keyv/pull/425</a></li>
+<li>redis - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/426">https://github.com/jaredwray/keyv/pull/426</a></li>
+<li>test-suite - upgrading ava to 4.3.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/427">https://github.com/jaredwray/keyv/pull/427</a></li>
+<li>test-suite - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/428">https://github.com/jaredwray/keyv/pull/428</a></li>
+<li>offline - upgrading ava to 4.3.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/429">https://github.com/jaredwray/keyv/pull/429</a></li>
+<li>offline - upgrading xo to 0.51.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/430">https://github.com/jaredwray/keyv/pull/430</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@dylanseago made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/405">https://github.com/jaredwray/keyv/pull/405</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-07-17...2022-08-08">https://github.com/jaredwray/keyv/compare/2022-07-17...2022-08-08</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-07-17" target="_blank" rel="noopener noreferrer">2022-07-17</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><p>This release has been more maintenance and bug fixes but I wanted to call out @trevor-scheer, @alphmth, and many others who helped test and post any issues. It really helps 👏</p>
+<h2>Sqlite v3.5.3 Released</h2>
+<p>This was a maintenance release but did update <code>sqlite3</code> to the latest version which should help with some minor bug issues that were seen on that module.</p>
+<h2>Redis v2.3.8 Released</h2>
+<p>We have now fixed the Redis.Cluster issue and added in supporting documentation to go along with it. 🎉</p>
+<pre><code class="language-javascript">const KeyvRedis = require('@keyv/redis');
+const Redis = require('ioredis');
+const Keyv = require('keyv');
+
+const redis = new Redis.Cluster('redis://user:pass@localhost:6379');
+const keyvRedis = new KeyvRedis(redis);
+const keyv = new Keyv({ store: keyvRedis });
+</code></pre>
+<p><a href="https://github.com/jaredwray/keyv/blob/main/packages/redis/README.md">https://github.com/jaredwray/keyv/blob/main/packages/redis/README.md</a></p>
+<h2>Keyv v4.3.3 Released</h2>
+<p>We have updated the <code>getMany</code> type definition based on this pull request from @trevor-scheer: <a href="https://github.com/jaredwray/keyv/pull/384">https://github.com/jaredwray/keyv/pull/384</a></p>
+<h2>What’s Changed</h2>
+<ul>
+<li>Reintroduce <code>getMany</code> optional method by @trevor-scheer in <a href="https://github.com/jaredwray/keyv/pull/384">https://github.com/jaredwray/keyv/pull/384</a></li>
+<li>adding unmet peer dependency for eslint by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/402">https://github.com/jaredwray/keyv/pull/402</a></li>
+<li>fixed redis issue by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/406">https://github.com/jaredwray/keyv/pull/406</a></li>
+<li>redis - removing console.log messages from previous bug fix by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/408">https://github.com/jaredwray/keyv/pull/408</a></li>
+<li>sqlite - upgrading tsd to 0.22.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/409">https://github.com/jaredwray/keyv/pull/409</a></li>
+<li>sqlite - upgrading sqlite3 to 5.0.9 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/410">https://github.com/jaredwray/keyv/pull/410</a></li>
+<li>sqlite - upgrading ava to 4.3.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/411">https://github.com/jaredwray/keyv/pull/411</a></li>
+<li>postgres - upgrading ava to 4.3.1 and tsd to 0.22.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/412">https://github.com/jaredwray/keyv/pull/412</a></li>
+<li>mysql - upgrading ava to 4.3.1 and tsd to 0.22.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/413">https://github.com/jaredwray/keyv/pull/413</a></li>
+<li>etcd - upgrading tsd, typescript, and ava to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/414">https://github.com/jaredwray/keyv/pull/414</a></li>
+<li>tiered - upgrading tsd to 0.22.0 and ava to 4.3.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/416">https://github.com/jaredwray/keyv/pull/416</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-07-03...2022-07-17">https://github.com/jaredwray/keyv/compare/2022-07-03...2022-07-17</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-07-03" target="_blank" rel="noopener noreferrer">2022-07-03</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>revert promise return type by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/383">https://github.com/jaredwray/keyv/pull/383</a></li>
+<li>keyv - upgrading tsd to version 0.22.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/387">https://github.com/jaredwray/keyv/pull/387</a></li>
+<li>memcache - upgrading ava to version 4.3.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/388">https://github.com/jaredwray/keyv/pull/388</a></li>
+<li>memcache - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/389">https://github.com/jaredwray/keyv/pull/389</a></li>
+<li>test-suite - upgrading xo to version 0.50.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/390">https://github.com/jaredwray/keyv/pull/390</a></li>
+<li>test-suite - upgrading ava to 4.3.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/391">https://github.com/jaredwray/keyv/pull/391</a></li>
+<li>offline - upgrading xo to 0.50.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/392">https://github.com/jaredwray/keyv/pull/392</a></li>
+<li>offline - upgrading ava to 4.3.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/393">https://github.com/jaredwray/keyv/pull/393</a></li>
+<li>offline - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/394">https://github.com/jaredwray/keyv/pull/394</a></li>
+<li>redis - upgrading ioredis to 5.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/395">https://github.com/jaredwray/keyv/pull/395</a></li>
+<li>redis - upgrading xo to 0.50.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/396">https://github.com/jaredwray/keyv/pull/396</a></li>
+<li>redis - upgrading ava to 4.3.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/397">https://github.com/jaredwray/keyv/pull/397</a></li>
+<li>redis - upgrading typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/398">https://github.com/jaredwray/keyv/pull/398</a></li>
+<li>etcd - adding unmet peer webpack by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/399">https://github.com/jaredwray/keyv/pull/399</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-06-20...2022-07-03">https://github.com/jaredwray/keyv/compare/2022-06-20...2022-07-03</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-06-20" target="_blank" rel="noopener noreferrer">2022-06-20</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>keyv memcache update 337 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/345">https://github.com/jaredwray/keyv/pull/345</a></li>
+<li>adding download sheild to readme by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/346">https://github.com/jaredwray/keyv/pull/346</a></li>
+<li>Fixing yarn workspaces error by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/348">https://github.com/jaredwray/keyv/pull/348</a></li>
+<li>Added async deserialize/serialize function types by @cesarfd in <a href="https://github.com/jaredwray/keyv/pull/349">https://github.com/jaredwray/keyv/pull/349</a></li>
+<li>Moving to support Nodejs version 14, 16, and 18 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/350">https://github.com/jaredwray/keyv/pull/350</a></li>
+<li>updating codecov reporting to correct branch by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/351">https://github.com/jaredwray/keyv/pull/351</a></li>
+<li>Documentation: How to use our Mono Repo #324 by @becca-miller in <a href="https://github.com/jaredwray/keyv/pull/352">https://github.com/jaredwray/keyv/pull/352</a></li>
+<li>updating readme with iterator example by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/355">https://github.com/jaredwray/keyv/pull/355</a></li>
+<li>updating licensing and copyright by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/358">https://github.com/jaredwray/keyv/pull/358</a></li>
+<li>Add multi-key <code>get</code> typings overload by @trevor-scheer in <a href="https://github.com/jaredwray/keyv/pull/359">https://github.com/jaredwray/keyv/pull/359</a></li>
+<li>Add missing <code>getMany</code> optional method on Store interface by @trevor-scheer in <a href="https://github.com/jaredwray/keyv/pull/362">https://github.com/jaredwray/keyv/pull/362</a></li>
+<li>Fix memcache README code fencing by @trevor-scheer in <a href="https://github.com/jaredwray/keyv/pull/363">https://github.com/jaredwray/keyv/pull/363</a></li>
+<li>adding in xo support for memcache by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/364">https://github.com/jaredwray/keyv/pull/364</a></li>
+<li>Add instructions for testing locally by @trevor-scheer in <a href="https://github.com/jaredwray/keyv/pull/361">https://github.com/jaredwray/keyv/pull/361</a></li>
+<li>Revert “Add missing <code>getMany</code> optional method on Store interface” by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/365">https://github.com/jaredwray/keyv/pull/365</a></li>
+<li>upgrading ava to version 4.3.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/366">https://github.com/jaredwray/keyv/pull/366</a></li>
+<li>upgrading tsd and typescript to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/370">https://github.com/jaredwray/keyv/pull/370</a></li>
+<li>upgrading sqlite package xo to version 0.50.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/371">https://github.com/jaredwray/keyv/pull/371</a></li>
+<li>upgrading postgres package ava to version 4.3.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/373">https://github.com/jaredwray/keyv/pull/373</a></li>
+<li>upgrading postgres package xo to version 0.50.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/374">https://github.com/jaredwray/keyv/pull/374</a></li>
+<li>upgrading postgres packages typescript to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/375">https://github.com/jaredwray/keyv/pull/375</a></li>
+<li>Make iterator’s <code>namespace</code> parameter optional by @dtinth in <a href="https://github.com/jaredwray/keyv/pull/368">https://github.com/jaredwray/keyv/pull/368</a></li>
+<li>upgrading etcd packages xo and ava to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/376">https://github.com/jaredwray/keyv/pull/376</a></li>
+<li>upgrading mysql packages ava and xo to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/377">https://github.com/jaredwray/keyv/pull/377</a></li>
+<li>upgrading mysql to latest typescript version by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/378">https://github.com/jaredwray/keyv/pull/378</a></li>
+<li>upgrading tiered packages ava and xo to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/379">https://github.com/jaredwray/keyv/pull/379</a></li>
+<li>upgrading tiered packages typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/380">https://github.com/jaredwray/keyv/pull/380</a></li>
+<li>upgrading keyv packages ava and xo to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/381">https://github.com/jaredwray/keyv/pull/381</a></li>
+<li>upgrading keyv packages typescript and tsd to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/382">https://github.com/jaredwray/keyv/pull/382</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@cesarfd made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/349">https://github.com/jaredwray/keyv/pull/349</a></li>
+<li>@becca-miller made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/352">https://github.com/jaredwray/keyv/pull/352</a></li>
+<li>@trevor-scheer made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/359">https://github.com/jaredwray/keyv/pull/359</a></li>
+<li>@dtinth made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/368">https://github.com/jaredwray/keyv/pull/368</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-05-23...2022-06-20">https://github.com/jaredwray/keyv/compare/2022-05-23...2022-06-20</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-05-23" target="_blank" rel="noopener noreferrer">2022-05-23</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>Remove parameter initializer from type declarations by @theaussiepom in <a href="https://github.com/jaredwray/keyv/pull/327">https://github.com/jaredwray/keyv/pull/327</a></li>
+<li>Add disconnect to type declarations by @gafderks in <a href="https://github.com/jaredwray/keyv/pull/328">https://github.com/jaredwray/keyv/pull/328</a></li>
+<li>optional to support backward compatibilty by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/330">https://github.com/jaredwray/keyv/pull/330</a></li>
+<li>fixed instance bug by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/329">https://github.com/jaredwray/keyv/pull/329</a></li>
+<li>Remove references to lerna/bootstrap by @mcfedr in <a href="https://github.com/jaredwray/keyv/pull/332">https://github.com/jaredwray/keyv/pull/332</a></li>
+<li>Fix return of has in tiered by @mcfedr in <a href="https://github.com/jaredwray/keyv/pull/334">https://github.com/jaredwray/keyv/pull/334</a></li>
+<li>Wait for set promise in tiered by @mcfedr in <a href="https://github.com/jaredwray/keyv/pull/333">https://github.com/jaredwray/keyv/pull/333</a></li>
+<li>Add support for rediss protocol by @airtoxin in <a href="https://github.com/jaredwray/keyv/pull/331">https://github.com/jaredwray/keyv/pull/331</a></li>
+<li>added readme by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/335">https://github.com/jaredwray/keyv/pull/335</a></li>
+<li>fix memory leak by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/338">https://github.com/jaredwray/keyv/pull/338</a></li>
+<li>updating sqlite modules to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/339">https://github.com/jaredwray/keyv/pull/339</a></li>
+<li>upgrading postgres modules to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/340">https://github.com/jaredwray/keyv/pull/340</a></li>
+<li>upgrading mysql modules to latest version by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/341">https://github.com/jaredwray/keyv/pull/341</a></li>
+<li>updating etcd xo module to latest version by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/342">https://github.com/jaredwray/keyv/pull/342</a></li>
+<li>upgrading tiered modules to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/343">https://github.com/jaredwray/keyv/pull/343</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@theaussiepom made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/327">https://github.com/jaredwray/keyv/pull/327</a></li>
+<li>@gafderks made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/328">https://github.com/jaredwray/keyv/pull/328</a></li>
+<li>@mcfedr made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/332">https://github.com/jaredwray/keyv/pull/332</a></li>
+<li>@airtoxin made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/331">https://github.com/jaredwray/keyv/pull/331</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-05-09...2022-05-23">https://github.com/jaredwray/keyv/compare/2022-05-09...2022-05-23</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-05-09" target="_blank" rel="noopener noreferrer">2022-05-09</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>doc: add iterator usage document by @kennylbj in <a href="https://github.com/jaredwray/keyv/pull/295">https://github.com/jaredwray/keyv/pull/295</a></li>
+<li>Support tiered by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/291">https://github.com/jaredwray/keyv/pull/291</a></li>
+<li>moving to yarn workspaces and removing lerna by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/302">https://github.com/jaredwray/keyv/pull/302</a></li>
+<li>covered lines in test by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/305">https://github.com/jaredwray/keyv/pull/305</a></li>
+<li>Issue 300 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/306">https://github.com/jaredwray/keyv/pull/306</a></li>
+<li>close connection for redis by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/307">https://github.com/jaredwray/keyv/pull/307</a></li>
+<li>#311 🐛 Fix loadStore to support mongodb+srv:// URIs by @Otoris in <a href="https://github.com/jaredwray/keyv/pull/312">https://github.com/jaredwray/keyv/pull/312</a></li>
+<li>added pify as dependency by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/313">https://github.com/jaredwray/keyv/pull/313</a></li>
+<li>memcache maintenance upgrade with ava and typescript by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/314">https://github.com/jaredwray/keyv/pull/314</a></li>
+<li>redis upgrades of ava, ioredis, and typescript by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/315">https://github.com/jaredwray/keyv/pull/315</a></li>
+<li>mongo updates with ava, typescript, and mongodb by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/316">https://github.com/jaredwray/keyv/pull/316</a></li>
+<li>etcd - upgrading typescript to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/317">https://github.com/jaredwray/keyv/pull/317</a></li>
+<li>keyv upgrading compress-brotli, ava, and typescript to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/318">https://github.com/jaredwray/keyv/pull/318</a></li>
+<li>offline - upgrading tsd, typescript, and ava by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/319">https://github.com/jaredwray/keyv/pull/319</a></li>
+<li>test-suite upgrading ava module to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/320">https://github.com/jaredwray/keyv/pull/320</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@kennylbj made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/295">https://github.com/jaredwray/keyv/pull/295</a></li>
+<li>@Otoris made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/312">https://github.com/jaredwray/keyv/pull/312</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-04-20...2022-05-09">https://github.com/jaredwray/keyv/compare/2022-04-20...2022-05-09</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-04-20" target="_blank" rel="noopener noreferrer">2022-04-20</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>fix typescript issues (old node + previous @types/keyv compat issues) by @d-fischer in <a href="https://github.com/jaredwray/keyv/pull/267">https://github.com/jaredwray/keyv/pull/267</a></li>
+<li>added test for lines by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/273">https://github.com/jaredwray/keyv/pull/273</a></li>
+<li>Add valid constructor calls and arguments to types by @iamEAP in <a href="https://github.com/jaredwray/keyv/pull/272">https://github.com/jaredwray/keyv/pull/272</a></li>
+<li>initial commit for supporting offline by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/261">https://github.com/jaredwray/keyv/pull/261</a></li>
+<li>covered all lines by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/275">https://github.com/jaredwray/keyv/pull/275</a></li>
+<li>fixed type issue in redis by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/279">https://github.com/jaredwray/keyv/pull/279</a></li>
+<li>Bug 277 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/280">https://github.com/jaredwray/keyv/pull/280</a></li>
+<li>Bug 278 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/283">https://github.com/jaredwray/keyv/pull/283</a></li>
+<li>Bug 278 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/284">https://github.com/jaredwray/keyv/pull/284</a></li>
+<li>fixed memchache uncovered lines by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/285">https://github.com/jaredwray/keyv/pull/285</a></li>
+<li>upgrading typescript tsd and ava to latest for postgres by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/287">https://github.com/jaredwray/keyv/pull/287</a></li>
+<li>upgrading typescript tsd and ava for mysql by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/288">https://github.com/jaredwray/keyv/pull/288</a></li>
+<li>upgrading typescript, tsd, and ava for etcd by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/289">https://github.com/jaredwray/keyv/pull/289</a></li>
+<li>change better sqlite to sqlite3 by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/290">https://github.com/jaredwray/keyv/pull/290</a></li>
+<li>fixing test concurrency with lerna by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/292">https://github.com/jaredwray/keyv/pull/292</a></li>
+<li>fixing report coverage on memcache by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/293">https://github.com/jaredwray/keyv/pull/293</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@d-fischer made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/267">https://github.com/jaredwray/keyv/pull/267</a></li>
+<li>@iamEAP made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/272">https://github.com/jaredwray/keyv/pull/272</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-04-02...2022-04-20">https://github.com/jaredwray/keyv/compare/2022-04-02...2022-04-20</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-04-02" target="_blank" rel="noopener noreferrer">2022-04-02</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>etcd upgrading module xo to version 0.48.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/251">https://github.com/jaredwray/keyv/pull/251</a></li>
+<li>implement has() by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/244">https://github.com/jaredwray/keyv/pull/244</a></li>
+<li>delete all implementation by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/247">https://github.com/jaredwray/keyv/pull/247</a></li>
+<li>upgrading xo to version 0.48.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/253">https://github.com/jaredwray/keyv/pull/253</a></li>
+<li>upgrading test-suite module xo to version 0.48.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/255">https://github.com/jaredwray/keyv/pull/255</a></li>
+<li>get many by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/254">https://github.com/jaredwray/keyv/pull/254</a></li>
+<li>support typescript by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/257">https://github.com/jaredwray/keyv/pull/257</a></li>
+<li>support compress by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/259">https://github.com/jaredwray/keyv/pull/259</a></li>
+<li>Maintenance release for memcache by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/262">https://github.com/jaredwray/keyv/pull/262</a></li>
+<li>maintenance updates for redis by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/263">https://github.com/jaredwray/keyv/pull/263</a></li>
+<li>2022-04 maintenance updates for mongo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/264">https://github.com/jaredwray/keyv/pull/264</a></li>
+<li>upgrading test-suite module ava to version 4.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/265">https://github.com/jaredwray/keyv/pull/265</a></li>
+<li>2022-04 maintenance updates for keyv by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/266">https://github.com/jaredwray/keyv/pull/266</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/2022-02-19...2022-04-02">https://github.com/jaredwray/keyv/compare/2022-02-19...2022-04-02</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/2022-02-19" target="_blank" rel="noopener noreferrer">2022-02-19 Maintenance Release</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>removing codecov module as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/146">https://github.com/jaredwray/keyv/pull/146</a></li>
+<li>Mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/148">https://github.com/jaredwray/keyv/pull/148</a></li>
+<li>Import keyv sql to packages by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/149">https://github.com/jaredwray/keyv/pull/149</a></li>
+<li>Import keyv mysql into mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/150">https://github.com/jaredwray/keyv/pull/150</a></li>
+<li>moving to yarn for build script by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/151">https://github.com/jaredwray/keyv/pull/151</a></li>
+<li>sql now handing mysql value issue by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/152">https://github.com/jaredwray/keyv/pull/152</a></li>
+<li>@keyv/sql upgrading xo to version 0.46.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/153">https://github.com/jaredwray/keyv/pull/153</a></li>
+<li>Import @keyv/test suite into mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/154">https://github.com/jaredwray/keyv/pull/154</a></li>
+<li>Import @keyv/sqlite to mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/155">https://github.com/jaredwray/keyv/pull/155</a></li>
+<li>removing coveralls from test-suite by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/156">https://github.com/jaredwray/keyv/pull/156</a></li>
+<li>removing storage adapter tests as not needed in mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/157">https://github.com/jaredwray/keyv/pull/157</a></li>
+<li>removing @keyv/sql from mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/158">https://github.com/jaredwray/keyv/pull/158</a></li>
+<li>Import postgres to mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/159">https://github.com/jaredwray/keyv/pull/159</a></li>
+<li>adding in keyv official tests by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/160">https://github.com/jaredwray/keyv/pull/160</a></li>
+<li>Adding in keyv official tests for mysql by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/161">https://github.com/jaredwray/keyv/pull/161</a></li>
+<li>Import keyv mongo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/162">https://github.com/jaredwray/keyv/pull/162</a></li>
+<li>Import keyv redis by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/168">https://github.com/jaredwray/keyv/pull/168</a></li>
+<li>Redis Maintenance Release December 2021 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/169">https://github.com/jaredwray/keyv/pull/169</a></li>
+<li>upgrading sqlite with xo version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/174">https://github.com/jaredwray/keyv/pull/174</a></li>
+<li>upgrading sqlite module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/175">https://github.com/jaredwray/keyv/pull/175</a></li>
+<li>upgrading sqlite module eslint to version 1.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/176">https://github.com/jaredwray/keyv/pull/176</a></li>
+<li>upgrading requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/179">https://github.com/jaredwray/keyv/pull/179</a></li>
+<li>updating package for mono repo reference by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/180">https://github.com/jaredwray/keyv/pull/180</a></li>
+<li>upgrading mongo module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/181">https://github.com/jaredwray/keyv/pull/181</a></li>
+<li>upgrading mongo module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/182">https://github.com/jaredwray/keyv/pull/182</a></li>
+<li>upgrading mongo module requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/183">https://github.com/jaredwray/keyv/pull/183</a></li>
+<li>upgrading test-suite module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/184">https://github.com/jaredwray/keyv/pull/184</a></li>
+<li>upgrading test-suite module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/185">https://github.com/jaredwray/keyv/pull/185</a></li>
+<li>upgrading test-suite module timekeeper to version 2.2.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/186">https://github.com/jaredwray/keyv/pull/186</a></li>
+<li>upgrading test-suite module babel-cli to version 6.26.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/187">https://github.com/jaredwray/keyv/pull/187</a></li>
+<li>upgrading test-suite eslint-config-xo-lukechilds to version 1.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/188">https://github.com/jaredwray/keyv/pull/188</a></li>
+<li>Import keyv memcache by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/190">https://github.com/jaredwray/keyv/pull/190</a></li>
+<li>Added KeyV-AzureTable Adapter by @howlowck in <a href="https://github.com/jaredwray/keyv/pull/189">https://github.com/jaredwray/keyv/pull/189</a></li>
+<li>upgrading postgres module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/191">https://github.com/jaredwray/keyv/pull/191</a></li>
+<li>upgrading postgres module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/192">https://github.com/jaredwray/keyv/pull/192</a></li>
+<li>upgrading postgres module requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/193">https://github.com/jaredwray/keyv/pull/193</a></li>
+<li>upgrading mysql module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/194">https://github.com/jaredwray/keyv/pull/194</a></li>
+<li>upgrading mysql module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/195">https://github.com/jaredwray/keyv/pull/195</a></li>
+<li>upgrading mysql module requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/196">https://github.com/jaredwray/keyv/pull/196</a></li>
+<li>updating readme now that on a mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/197">https://github.com/jaredwray/keyv/pull/197</a></li>
+<li>updating to use latest of keyv packages by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/199">https://github.com/jaredwray/keyv/pull/199</a></li>
+<li>removing codecov module from memcache by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/200">https://github.com/jaredwray/keyv/pull/200</a></li>
+<li>remove sqlite dependcies by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/201">https://github.com/jaredwray/keyv/pull/201</a></li>
+<li>Cleanup of circular dependencies by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/202">https://github.com/jaredwray/keyv/pull/202</a></li>
+<li>removed from mysql package by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/203">https://github.com/jaredwray/keyv/pull/203</a></li>
+<li>removed from postgres package by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/204">https://github.com/jaredwray/keyv/pull/204</a></li>
+<li>Revert “removed from postgres package” by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/206">https://github.com/jaredwray/keyv/pull/206</a></li>
+<li>Revert “removed from postgres package (#204)” by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/207">https://github.com/jaredwray/keyv/pull/207</a></li>
+<li>Moving postgres to sql native by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/208">https://github.com/jaredwray/keyv/pull/208</a></li>
+<li>moving from build to tests in github actions by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/211">https://github.com/jaredwray/keyv/pull/211</a></li>
+<li>adding how to contribute documentation by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/212">https://github.com/jaredwray/keyv/pull/212</a></li>
+<li>move to mongodb native driver by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/209">https://github.com/jaredwray/keyv/pull/209</a></li>
+<li>replace with mysql pool by @bilalsha in <a href="https://github.com/jaredwray/keyv/pull/213">https://github.com/jaredwray/keyv/pull/213</a></li>
+<li>Convert sqlite3 to better-sqlite3 by @claabs in <a href="https://github.com/jaredwray/keyv/pull/210">https://github.com/jaredwray/keyv/pull/210</a></li>
+<li>removing sqlite3 from keyv as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/216">https://github.com/jaredwray/keyv/pull/216</a></li>
+<li>initial implementation by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/215">https://github.com/jaredwray/keyv/pull/215</a></li>
+<li>removed babel by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/217">https://github.com/jaredwray/keyv/pull/217</a></li>
+<li>support etcd by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/218">https://github.com/jaredwray/keyv/pull/218</a></li>
+<li>including etcd in code coverage by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/222">https://github.com/jaredwray/keyv/pull/222</a></li>
+<li>Etcd publish updates by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/223">https://github.com/jaredwray/keyv/pull/223</a></li>
+<li>fixed bigint and symbol by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/224">https://github.com/jaredwray/keyv/pull/224</a></li>
+<li>upgrading requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/227">https://github.com/jaredwray/keyv/pull/227</a></li>
+<li>upgrading memcache module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/228">https://github.com/jaredwray/keyv/pull/228</a></li>
+<li>upgrading redis module ioredis to version 4.28.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/229">https://github.com/jaredwray/keyv/pull/229</a></li>
+<li>upgrading keyv module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/230">https://github.com/jaredwray/keyv/pull/230</a></li>
+<li>upgrading keyv eslint plugins to latest by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/231">https://github.com/jaredwray/keyv/pull/231</a></li>
+<li>upgrading keyv module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/232">https://github.com/jaredwray/keyv/pull/232</a></li>
+<li>upgrading keyv module timekeeper to version 2.2.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/233">https://github.com/jaredwray/keyv/pull/233</a></li>
+<li>moving keyv module ava back to version 3.15.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/234">https://github.com/jaredwray/keyv/pull/234</a></li>
+<li>Expose Iterables by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/225">https://github.com/jaredwray/keyv/pull/225</a></li>
+<li>iterables for mysql by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/237">https://github.com/jaredwray/keyv/pull/237</a></li>
+<li>wait for the detele promise by @alsotang in <a href="https://github.com/jaredwray/keyv/pull/219">https://github.com/jaredwray/keyv/pull/219</a></li>
+<li>implement iterables for postgres by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/238">https://github.com/jaredwray/keyv/pull/238</a></li>
+<li>implement iterables for mongo by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/239">https://github.com/jaredwray/keyv/pull/239</a></li>
+<li>implement iterables for redis by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/240">https://github.com/jaredwray/keyv/pull/240</a></li>
+<li>upgrade ava by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/241">https://github.com/jaredwray/keyv/pull/241</a></li>
+<li>roll back changes by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/243">https://github.com/jaredwray/keyv/pull/243</a></li>
+<li>upgrading sqlite module xo to version 0.48.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/248">https://github.com/jaredwray/keyv/pull/248</a></li>
+<li>Postgres maintenance release by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/249">https://github.com/jaredwray/keyv/pull/249</a></li>
+<li>upgrading xo to version 0.48.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/250">https://github.com/jaredwray/keyv/pull/250</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@howlowck made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/189">https://github.com/jaredwray/keyv/pull/189</a></li>
+<li>@alphmth made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/201">https://github.com/jaredwray/keyv/pull/201</a></li>
+<li>@bilalsha made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/213">https://github.com/jaredwray/keyv/pull/213</a></li>
+<li>@claabs made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/210">https://github.com/jaredwray/keyv/pull/210</a></li>
+<li>@alsotang made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/219">https://github.com/jaredwray/keyv/pull/219</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.4...2022-02-19">https://github.com/jaredwray/keyv/compare/v4.0.4...2022-02-19</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/test-suite-v1.7.0" target="_blank" rel="noopener noreferrer">test-suite-v1.7.0</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>removed babel by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/217">https://github.com/jaredwray/keyv/pull/217</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@alphmth made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/201">https://github.com/jaredwray/keyv/pull/201</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.4...test-suite-v1.7.0">https://github.com/jaredwray/keyv/compare/v4.0.4...test-suite-v1.7.0</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/mongo-v2.0.0" target="_blank" rel="noopener noreferrer">mongo-v2.0.0</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>removing codecov module as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/146">https://github.com/jaredwray/keyv/pull/146</a></li>
+<li>Mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/148">https://github.com/jaredwray/keyv/pull/148</a></li>
+<li>Import keyv sql to packages by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/149">https://github.com/jaredwray/keyv/pull/149</a></li>
+<li>Import keyv mysql into mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/150">https://github.com/jaredwray/keyv/pull/150</a></li>
+<li>moving to yarn for build script by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/151">https://github.com/jaredwray/keyv/pull/151</a></li>
+<li>sql now handing mysql value issue by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/152">https://github.com/jaredwray/keyv/pull/152</a></li>
+<li>@keyv/sql upgrading xo to version 0.46.4 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/153">https://github.com/jaredwray/keyv/pull/153</a></li>
+<li>Import @keyv/test suite into mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/154">https://github.com/jaredwray/keyv/pull/154</a></li>
+<li>Import @keyv/sqlite to mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/155">https://github.com/jaredwray/keyv/pull/155</a></li>
+<li>removing coveralls from test-suite by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/156">https://github.com/jaredwray/keyv/pull/156</a></li>
+<li>removing storage adapter tests as not needed in mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/157">https://github.com/jaredwray/keyv/pull/157</a></li>
+<li>removing @keyv/sql from mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/158">https://github.com/jaredwray/keyv/pull/158</a></li>
+<li>Import postgres to mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/159">https://github.com/jaredwray/keyv/pull/159</a></li>
+<li>adding in keyv official tests by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/160">https://github.com/jaredwray/keyv/pull/160</a></li>
+<li>Adding in keyv official tests for mysql by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/161">https://github.com/jaredwray/keyv/pull/161</a></li>
+<li>Import keyv mongo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/162">https://github.com/jaredwray/keyv/pull/162</a></li>
+<li>Import keyv redis by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/168">https://github.com/jaredwray/keyv/pull/168</a></li>
+<li>Redis Maintenance Release December 2021 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/169">https://github.com/jaredwray/keyv/pull/169</a></li>
+<li>upgrading sqlite with xo version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/174">https://github.com/jaredwray/keyv/pull/174</a></li>
+<li>upgrading sqlite module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/175">https://github.com/jaredwray/keyv/pull/175</a></li>
+<li>upgrading sqlite module eslint to version 1.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/176">https://github.com/jaredwray/keyv/pull/176</a></li>
+<li>upgrading requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/179">https://github.com/jaredwray/keyv/pull/179</a></li>
+<li>updating package for mono repo reference by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/180">https://github.com/jaredwray/keyv/pull/180</a></li>
+<li>upgrading mongo module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/181">https://github.com/jaredwray/keyv/pull/181</a></li>
+<li>upgrading mongo module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/182">https://github.com/jaredwray/keyv/pull/182</a></li>
+<li>upgrading mongo module requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/183">https://github.com/jaredwray/keyv/pull/183</a></li>
+<li>upgrading test-suite module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/184">https://github.com/jaredwray/keyv/pull/184</a></li>
+<li>upgrading test-suite module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/185">https://github.com/jaredwray/keyv/pull/185</a></li>
+<li>upgrading test-suite module timekeeper to version 2.2.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/186">https://github.com/jaredwray/keyv/pull/186</a></li>
+<li>upgrading test-suite module babel-cli to version 6.26.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/187">https://github.com/jaredwray/keyv/pull/187</a></li>
+<li>upgrading test-suite eslint-config-xo-lukechilds to version 1.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/188">https://github.com/jaredwray/keyv/pull/188</a></li>
+<li>Import keyv memcache by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/190">https://github.com/jaredwray/keyv/pull/190</a></li>
+<li>Added KeyV-AzureTable Adapter by @howlowck in <a href="https://github.com/jaredwray/keyv/pull/189">https://github.com/jaredwray/keyv/pull/189</a></li>
+<li>upgrading postgres module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/191">https://github.com/jaredwray/keyv/pull/191</a></li>
+<li>upgrading postgres module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/192">https://github.com/jaredwray/keyv/pull/192</a></li>
+<li>upgrading postgres module requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/193">https://github.com/jaredwray/keyv/pull/193</a></li>
+<li>upgrading mysql module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/194">https://github.com/jaredwray/keyv/pull/194</a></li>
+<li>upgrading mysql module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/195">https://github.com/jaredwray/keyv/pull/195</a></li>
+<li>upgrading mysql module requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/196">https://github.com/jaredwray/keyv/pull/196</a></li>
+<li>updating readme now that on a mono repo by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/197">https://github.com/jaredwray/keyv/pull/197</a></li>
+<li>updating to use latest of keyv packages by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/199">https://github.com/jaredwray/keyv/pull/199</a></li>
+<li>removing codecov module from memcache by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/200">https://github.com/jaredwray/keyv/pull/200</a></li>
+<li>remove sqlite dependcies by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/201">https://github.com/jaredwray/keyv/pull/201</a></li>
+<li>Cleanup of circular dependencies by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/202">https://github.com/jaredwray/keyv/pull/202</a></li>
+<li>removed from mysql package by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/203">https://github.com/jaredwray/keyv/pull/203</a></li>
+<li>removed from postgres package by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/204">https://github.com/jaredwray/keyv/pull/204</a></li>
+<li>Revert “removed from postgres package” by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/206">https://github.com/jaredwray/keyv/pull/206</a></li>
+<li>Revert “removed from postgres package (#204)” by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/207">https://github.com/jaredwray/keyv/pull/207</a></li>
+<li>Moving postgres to sql native by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/208">https://github.com/jaredwray/keyv/pull/208</a></li>
+<li>moving from build to tests in github actions by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/211">https://github.com/jaredwray/keyv/pull/211</a></li>
+<li>adding how to contribute documentation by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/212">https://github.com/jaredwray/keyv/pull/212</a></li>
+<li>move to mongodb native driver by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/209">https://github.com/jaredwray/keyv/pull/209</a></li>
+<li>replace with mysql pool by @bilalsha in <a href="https://github.com/jaredwray/keyv/pull/213">https://github.com/jaredwray/keyv/pull/213</a></li>
+<li>Convert sqlite3 to better-sqlite3 by @claabs in <a href="https://github.com/jaredwray/keyv/pull/210">https://github.com/jaredwray/keyv/pull/210</a></li>
+<li>removing sqlite3 from keyv as no longer needed by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/216">https://github.com/jaredwray/keyv/pull/216</a></li>
+<li>initial implementation by @alphmth in <a href="https://github.com/jaredwray/keyv/pull/215">https://github.com/jaredwray/keyv/pull/215</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@howlowck made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/189">https://github.com/jaredwray/keyv/pull/189</a></li>
+<li>@alphmth made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/201">https://github.com/jaredwray/keyv/pull/201</a></li>
+<li>@bilalsha made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/213">https://github.com/jaredwray/keyv/pull/213</a></li>
+<li>@claabs made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/210">https://github.com/jaredwray/keyv/pull/210</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.4...mongo-v2.0.0">https://github.com/jaredwray/keyv/compare/v4.0.4...mongo-v2.0.0</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/sqlite-v3.0.0" target="_blank" rel="noopener noreferrer">sqlite-v3.0.0</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>Convert sqlite3 to better-sqlite3 by @claabs in <a href="https://github.com/jaredwray/keyv/pull/210">https://github.com/jaredwray/keyv/pull/210</a></li>
+</ul>
+<h2>New Contributors</h2>
+<ul>
+<li>@claabs made their first contribution in <a href="https://github.com/jaredwray/keyv/pull/210">https://github.com/jaredwray/keyv/pull/210</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.4...sqlite-v3.0.0">https://github.com/jaredwray/keyv/compare/v4.0.4...sqlite-v3.0.0</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/test-suite-v1.6.14" target="_blank" rel="noopener noreferrer">v1.6.14 test-suite maintenance release</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>upgrading test-suite module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/184">https://github.com/jaredwray/keyv/pull/184</a></li>
+<li>upgrading test-suite module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/185">https://github.com/jaredwray/keyv/pull/185</a></li>
+<li>upgrading test-suite module timekeeper to version 2.2.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/186">https://github.com/jaredwray/keyv/pull/186</a></li>
+<li>upgrading test-suite module babel-cli to version 6.26.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/187">https://github.com/jaredwray/keyv/pull/187</a></li>
+<li>upgrading test-suite eslint-config-xo-lukechilds to version 1.0.1 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/188">https://github.com/jaredwray/keyv/pull/188</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.4...test-suite-v1.6.14">https://github.com/jaredwray/keyv/compare/v4.0.4...test-suite-v1.6.14</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/mongo-v1.2.2" target="_blank" rel="noopener noreferrer">Mongo v1.2.2 - XO, Requirable, and more</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>updating package for mono repo reference by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/180">https://github.com/jaredwray/keyv/pull/180</a></li>
+<li>upgrading mongo module xo to version 0.47.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/181">https://github.com/jaredwray/keyv/pull/181</a></li>
+<li>upgrading mongo module this to version 1.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/182">https://github.com/jaredwray/keyv/pull/182</a></li>
+<li>upgrading mongo module requirable to version 1.0.5 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/183">https://github.com/jaredwray/keyv/pull/183</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.4...mongo-v1.2.2">https://github.com/jaredwray/keyv/compare/v4.0.4...mongo-v1.2.2</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/redis-v2.2.1" target="_blank" rel="noopener noreferrer">Redis v2.2.1 Maintenance Release</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>Upgraded ioredis to version 4.28.2</li>
+<li>Upgraded xo to version 0.47.0</li>
+<li>Imported into the Keyv Mono Repo</li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.4...redis-v2.2.1">https://github.com/jaredwray/keyv/compare/v4.0.4...redis-v2.2.1</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/v4.0.4" target="_blank" rel="noopener noreferrer">Supporting node 12, 14, and 16</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h2>What’s Changed</h2>
+<ul>
+<li>Updating author license and 3rd party packages by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/136">https://github.com/jaredwray/keyv/pull/136</a></li>
+<li>moving to node 16 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/138">https://github.com/jaredwray/keyv/pull/138</a></li>
+<li>Moving build and testing to GitHub actions from travis ci by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/139">https://github.com/jaredwray/keyv/pull/139</a></li>
+<li>Upgrading xo to version 0.46.3 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/140">https://github.com/jaredwray/keyv/pull/140</a></li>
+<li>moving to codecov from coveralls by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/141">https://github.com/jaredwray/keyv/pull/141</a></li>
+<li>upgrading nyc to version 15.1.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/142">https://github.com/jaredwray/keyv/pull/142</a></li>
+<li>fix: typo in README by @e0ipso in <a href="https://github.com/jaredwray/keyv/pull/144">https://github.com/jaredwray/keyv/pull/144</a></li>
+<li>Upgrading ava to version 3.15.0 by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/143">https://github.com/jaredwray/keyv/pull/143</a></li>
+<li>updating build status on readme by @jaredwray in <a href="https://github.com/jaredwray/keyv/pull/145">https://github.com/jaredwray/keyv/pull/145</a></li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v4.0.3...v4.0.4">https://github.com/jaredwray/keyv/compare/v4.0.3...v4.0.4</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/v4.0.0" target="_blank" rel="noopener noreferrer"></a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><h3>Breaking Changes</h3>
+<ul>
+<li>Remove Node.js 6.x &amp; Node.js 4.x support.</li>
+</ul>
+<h3>Features</h3>
+<ul>
+<li><a href="https://github.com/lukechilds/keyv#optionsserialize"><code>serialize</code></a>/<a href="https://github.com/lukechilds/keyv#optionsdeserialize"><code>deserialize</code></a> supports async functions (<a href="https://github.com/lukechilds/keyv/commit/122c4629edddd9ae641fdc31d34c2790f98c275f">https://github.com/lukechilds/keyv/commit/122c4629edddd9ae641fdc31d34c2790f98c275f</a>). This is a backward compatible change.</li>
+</ul>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/v3.0.0" target="_blank" rel="noopener noreferrer">v3.0.0</a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><p>The data structure is now normalized across all data stores. Previously there was a difference between how native TTL supporting stores and non TTL supporting stores stored data.</p>
+<p>This is a breaking change because if you were previously using Keyv with the Redis or MongoDB adapter, Keyv v3 won’t be able to read your data. There are zero API breaking changes though, if you clear your store, Keyv will continue to work with no code changes required.</p>
+<p>Moving forward this breaking change will allow us to add opt in changes to data structures for performance improvements in certain use cases without breaking backwards compatibility.</p>
+<p>It also makes it much easier to implement data migration tools for automatically transfering data from one Keyv store to another.</p>
+<p>More info on the data structure change here: <a href="https://github.com/lukechilds/keyv/pull/29">https://github.com/lukechilds/keyv/pull/29</a></p>
+</p>
+        
+      </div>
+    </div>
+    
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="https://github.com/jaredwray/keyv/releases/tag/v2.0.0" target="_blank" rel="noopener noreferrer"></a>
+        <span class="release-date">Invalid DateTime</span>
+      </div>
+      <div class="release-body">
+        
+          <p><p>Keyv packages (apart from Keyv itself) are now scoped to the <a href="https://www.npmjs.com/org/keyv">keyv npm organisation</a>.</p>
+<p>This is a breaking change because the old storage adapters will no longer be auto loaded. Using the official Redis storage adapter as an example, to update keyv@2, you would just need to uninstall <code>keyv-redis</code> and instead install <code>@keyv/redis</code>. Everything will then continue to work as expected.</p>
+</p>
+        
+      </div>
+    </div>
+    
+    </div>
+
+</main>
+
+<div class="search-modal" id="search-modal">
+    <div class="search-container" id="search-container">
+        <div id="search" class="search-box">
+            <span class="close-modal-btn hide-d" id="close-modal-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M376.6 84.5c11.3-13.6 9.5-33.8-4.1-45.1s-33.8-9.5-45.1 4.1L192 206 56.6 43.5C45.3 29.9 25.1 28.1 11.5 39.4S-3.9 70.9 7.4 84.5L150.3 256 7.4 427.5c-11.3 13.6-9.5 33.8 4.1 45.1s33.8 9.5 45.1-4.1L192 306 327.4 468.5c11.3 13.6 31.5 15.4 45.1 4.1s15.4-31.5 4.1-45.1L233.7 256 376.6 84.5z"/>
+                </svg>
+            </span>
+        </div>
+    </div>
+</div>
+
+<script defer>
+  const sidebar = document.querySelector('#sidebar');
+  const header = document.querySelector('#header');
+  const path = window.location.pathname;
+  const isHome = path === '/' || path === '/index.html';
+  const isDesktop  = window.innerWidth >= 992;
+
+  const handleScroll = () => {
+    const onPage = document.querySelector('#on-page');
+    if(!isHome) {
+      if (window.scrollY > 0 && window.innerWidth >= 1458) {
+        onPage.classList.remove('hidden');
+      } else {
+        onPage.classList.add('hidden');
+      }
+    }
+  };
+  window.addEventListener('scroll', handleScroll);
+
+
+  const  closeSidebar = () => {
+    const closeBtn = document.querySelector('#close-sidebar');
+    closeBtn.addEventListener('click', () => {
+      sidebar.classList.add('hidden');
+      header.classList.remove('bottom');
+    });
+  }
+
+  const openSidebar = () => {
+    const openBtn = document.querySelector('#open-sidebar');
+    openBtn.addEventListener('click', () => {
+      sidebar.classList.remove('hidden');
+      header.classList.add('bottom');
+    });
+  }
+
+  const handleMobileSidebar = () => {
+    if (!isHome && !isDesktop) {
+      openSidebar()
+      closeSidebar();
+    }
+  }
+  document.addEventListener('DOMContentLoaded', handleMobileSidebar, false)
+</script>
+
+
+<script src="/assets/css/highlight/highlight.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    hljs.highlightAll()
+  });
+</script>
+
+<link href="/_pagefind/pagefind-ui.css" rel="stylesheet">
+<script src="/_pagefind/pagefind-ui.js" type="text/javascript"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', (event) => {
+    new PagefindUI({
+      element: "#search",
+      showImages: false,
+      debounceTimeoutMs: 500
+    });
+  });
+</script>
+
+<!--pagefind UI-->
+<script>
+  const searchModal = document.querySelector('#search-modal');
+  const searchModalContainer = document.querySelector('#search-container');
+  const closeModalBtn = document.querySelector('#close-modal-btn');
+  const searchBtn = document.querySelector('#search-btn');
+
+  const closeEmptyModal = (e) => {
+    const pagefindInput = document.querySelector('.pagefind-ui__search-input');
+    if(pagefindInput) {
+      if(!pagefindInput.value ) {
+        if (pagefindInput === e.target || pagefindInput.contains(e.target)) return;
+        searchModal.classList.remove('show-modal');
+      }
+    }
+  }
+
+  const closeDesktopModal = (e) => {
+    const pagefindInput = document.querySelector('.pagefind-ui__search-input');
+    if(isDesktop && pagefindInput) {
+      if(pagefindInput.value ) {
+        if (searchModalContainer === e.target || searchModalContainer.contains(e.target)) return;
+        searchModal.classList.remove('show-modal');
+      }
+    }
+  }
+
+  searchModal.addEventListener('click', (e) => {
+    closeEmptyModal(e);
+    closeDesktopModal(e)
+  });
+
+  const autofocusInput = () => {
+    const pagefindInput = document.querySelector('.pagefind-ui__search-input');
+    if (pagefindInput) {
+      pagefindInput.focus();
+    }
+  };
+
+  const handleSearchModal = () => {
+    searchModal.classList.add('show-modal');
+    autofocusInput()
+  };
+  searchBtn.addEventListener('click', handleSearchModal);
+
+
+  if(closeModalBtn) {
+    closeModalBtn.addEventListener('click', () => {
+      searchModal.classList.remove('show-modal');
+    });
+  }
+
+
+</script>
+
+
+</body>
+</html>

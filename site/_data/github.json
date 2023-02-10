@@ -1,6 +1,46 @@
 {
   "releases": [
     {
+      "url": "https://api.github.com/repos/jaredwray/keyv/releases/91363570",
+      "assets_url": "https://api.github.com/repos/jaredwray/keyv/releases/91363570/assets",
+      "upload_url": "https://uploads.github.com/repos/jaredwray/keyv/releases/91363570/assets{?name,label}",
+      "html_url": "https://github.com/jaredwray/keyv/releases/tag/2023-02-04",
+      "id": 91363570,
+      "author": {
+        "login": "jaredwray",
+        "id": 1205481,
+        "node_id": "MDQ6VXNlcjEyMDU0ODE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1205481?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jaredwray",
+        "html_url": "https://github.com/jaredwray",
+        "followers_url": "https://api.github.com/users/jaredwray/followers",
+        "following_url": "https://api.github.com/users/jaredwray/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jaredwray/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jaredwray/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jaredwray/subscriptions",
+        "organizations_url": "https://api.github.com/users/jaredwray/orgs",
+        "repos_url": "https://api.github.com/users/jaredwray/repos",
+        "events_url": "https://api.github.com/users/jaredwray/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jaredwray/received_events",
+        "type": "User",
+        "site_admin": false
+      },
+      "node_id": "RE_kwDOBcEYis4Fchjy",
+      "tag_name": "2023-02-04",
+      "target_commitish": "main",
+      "name": "2023-02-04",
+      "draft": false,
+      "prerelease": false,
+      "created_at": "2023-02-04T21:11:58Z",
+      "published_at": "2023-02-04T21:19:05Z",
+      "assets": [],
+      "tarball_url": "https://api.github.com/repos/jaredwray/keyv/tarball/2023-02-04",
+      "zipball_url": "https://api.github.com/repos/jaredwray/keyv/zipball/2023-02-04",
+      "body": "# Redis v2.5.5\r\n\r\nUpdate released with upgraded ioredis (v5.3.0) 🎉 \r\n\r\n## What's Changed\r\n* redis-next - adding in typescript build by @jaredwray in https://github.com/jaredwray/keyv/pull/646\r\n* redis-next - setting up next testing environment by @jaredwray in https://github.com/jaredwray/keyv/pull/648\r\n* removing redis-next and moving to a branch by @jaredwray in https://github.com/jaredwray/keyv/pull/649\r\n* add website package by @cialese in https://github.com/jaredwray/keyv/pull/651\r\n* updating modules and adding docula by @jaredwray in https://github.com/jaredwray/keyv/pull/653\r\n* memcache - upgrading ava to 5.1.0 by @jaredwray in https://github.com/jaredwray/keyv/pull/654\r\n* memcache - upgrading typescript to 4.9.5 by @jaredwray in https://github.com/jaredwray/keyv/pull/655\r\n* offline - upgrading ava to 5.1.1 by @jaredwray in https://github.com/jaredwray/keyv/pull/656\r\n* offline - upgrading typescript to 4.9.5 by @jaredwray in https://github.com/jaredwray/keyv/pull/657\r\n* compress-gzip - upgrading ava to 5.1.1 by @jaredwray in https://github.com/jaredwray/keyv/pull/658\r\n* compress-gzip - upgrading typescript and eslint to latest by @jaredwray in https://github.com/jaredwray/keyv/pull/659\r\n* compress-brotli - upgrading ava to 5.1.1 by @jaredwray in https://github.com/jaredwray/keyv/pull/660\r\n* compres-brotli - upgrading typescript to 4.9.5 by @jaredwray in https://github.com/jaredwray/keyv/pull/661\r\n* redis - upgrading ava to 5.1.1 by @jaredwray in https://github.com/jaredwray/keyv/pull/662\r\n* redis - upgrading typescript to 4.9.5 by @jaredwray in https://github.com/jaredwray/keyv/pull/663\r\n* redis - upgrading ioredis to 5.3.0 by @jaredwray in https://github.com/jaredwray/keyv/pull/664\r\n* keyv - upgrading ava to 5.1.1 by @jaredwray in https://github.com/jaredwray/keyv/pull/665\r\n\r\n## New Contributors\r\n* @cialese made their first contribution in https://github.com/jaredwray/keyv/pull/651\r\n\r\n**Full Changelog**: https://github.com/jaredwray/keyv/compare/2023-01-21...2023-02-04",
+      "mentions_count": 2
+    },
+    {
       "url": "https://api.github.com/repos/jaredwray/keyv/releases/89811032",
       "assets_url": "https://api.github.com/repos/jaredwray/keyv/releases/89811032/assets",
       "upload_url": "https://uploads.github.com/repos/jaredwray/keyv/releases/89811032/assets{?name,label}",
@@ -1261,7 +1301,7 @@
       "received_events_url": "https://api.github.com/users/jaredwray/received_events",
       "type": "User",
       "site_admin": false,
-      "contributions": 487
+      "contributions": 502
     },
     {
       "login": "lukechilds",

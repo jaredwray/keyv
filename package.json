@@ -16,10 +16,10 @@
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
   "dependencies": {
-    "@types/node": "^18.11.18"
+    "@types/node": "^18.11.19"
   },
   "devDependencies": {
     "c8": "^7.12.0",
-    "docula": "^0.0.7"
+    "docula": "^0.0.9"
   }
 }

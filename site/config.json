@@ -1,6 +1,5 @@
 {
-  "originPath": "packages/website",
-  "outputPath": "packages/website/dist",
+  "outputPath": "site/dist",
   "siteUrl": "https://keyv.org",
   "plugins": [
     "github",
