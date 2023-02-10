@@ -1,0 +1,41 @@
+name: deploy-website
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  setup-build-deploy:
+    name: Deploy Website
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    # Test
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install Dependencies  
+      run: yarn
+      
+    - name: Build Website
+      run: yarn website:build
+
+    - name: Publish to Cloudflare Pages
+      uses: cloudflare/pages-action@1
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: b09b24c345713c704e71dea8bd81f713
+        projectName: keyv
+        directory: packages/website/dist
+        gitHubToken: ${{ secrets.GH_TOKEN }}
