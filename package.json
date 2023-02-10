@@ -13,15 +13,13 @@
     "test": "c8 --reporter=lcov yarn workspaces run test:ci",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
-    "website:build": "docula build",
-    "website:serve": "docula serve",
+    "website:build": "yarn workspace @keyv/website run build",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
   "dependencies": {
     "@types/node": "^18.11.19"
   },
   "devDependencies": {
-    "c8": "^7.12.0",
-    "docula": "^0.0.9"
+    "c8": "^7.12.0"
   }
 }
