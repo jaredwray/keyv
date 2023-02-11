@@ -34,6 +34,6 @@ jobs:
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: b09b24c345713c704e71dea8bd81f713
-        projectName: keyv
+        projectName: keyvorg
         directory: packages/website/dist
         gitHubToken: ${{ secrets.GH_TOKEN }}
