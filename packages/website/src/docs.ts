@@ -23,7 +23,7 @@ async function copyStorageAdapters() {
     for (const storageAdapter of storageAdapters) {
         if((filterList.indexOf(storageAdapter) > -1) !== true ) {
             console.log("Adding storage adapter: " + storageAdapter);
-            await createDoc(storageAdapter, "../../packages", "site/docs/storage-adapter");
+            await createDoc(storageAdapter, "../../packages", "site/docs/storage-adapter", "Storage Adapter");
         }
     };
 }
@@ -32,12 +32,12 @@ async function copyCompressionDocs() {
     for(const compressionAdapter of compressionAdapters) {
         if(compressionAdapter.startsWith("compress-")) {
             console.log("Adding compression adapter: " + compressionAdapter);
-            await createDoc(compressionAdapter, "../../packages", "site/docs/compression");
+            await createDoc(compressionAdapter, "../../packages", "site/docs/compression", "Compression");
         }
     }
 }
 
-async function createDoc(adapterName: string, path: string, outputPath: string) {
+async function createDoc(adapterName: string, path: string, outputPath: string, parent:string) {
     const originalFileName = "readme.md";
     const newFileName = `${adapterName}.md`;
     const packageJSONPath = `${path}/${adapterName}/package.json`;
@@ -46,7 +46,7 @@ async function createDoc(adapterName: string, path: string, outputPath: string) 
     let newFileText = "---\n";
     newFileText += `title: '${packageJSON.name}'\n`;
     newFileText += `sidebarTitle: '${packageJSON.name}'\n`;
-    newFileText += "parent: 'Storage Adapter'\n";
+    newFileText += `parent: '${parent}'\n`;
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
