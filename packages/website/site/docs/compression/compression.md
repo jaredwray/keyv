@@ -1,5 +1,4 @@
 ---
-title: Caching
+title: Compression
 permalink: false
-order: 2
 ---
