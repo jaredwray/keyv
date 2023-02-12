@@ -8,7 +8,16 @@ async function main() {
 };
 
 async function copyGettingStarted() {
-  await fs.copy("../../docs/getting-started/index.md", "site/docs/index.md");
+    const originalFileText = await fs.readFile("../../docs/getting-started/index.md", "utf8");
+    let newFileText = "---\n";
+    newFileText += `title: 'Getting Started Guide'\n`;
+    newFileText += `permalink: /docs/\n`;
+    newFileText += `order: 0\n`;
+    newFileText += "---\n";
+    newFileText += "\n";
+    newFileText += originalFileText;
+
+    await fs.writeFile("site/docs/index.md", newFileText);
 }
 
 //rename Caching to How To Use Keyv
