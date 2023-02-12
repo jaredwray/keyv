@@ -63,7 +63,8 @@ async function createDoc(adapterName: string, path: string, outputPath: string, 
 }
 
 // add in the main Keyv module
-
-// third-party storage adapters
+    // add in all the usage 
+    // add in the API
+// third-party storage adapters about section
 
 main();
