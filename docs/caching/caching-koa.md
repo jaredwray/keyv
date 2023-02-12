@@ -1,3 +1,8 @@
+---
+title: 'How to Implement Caching with Koa'
+sidebarTitle: 'Caching with Koa'
+parent: 'Caching'
+---
 
 # How to Implement Caching with Koa
 

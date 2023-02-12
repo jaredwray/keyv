@@ -1,3 +1,9 @@
+---
+title: 'How to Implement Caching with NestJS'
+sidebarTitle: 'Caching with NestJS'
+parent: 'Caching'
+---
+
 # How to Implement Caching with NestJS
 
 ## What is NestJS ?

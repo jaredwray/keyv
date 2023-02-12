@@ -1,5 +1,10 @@
+---
+title: 'How to Implement Caching in Node.js'
+sidebarTitle: 'Caching in Node.js'
+parent: 'Caching'
+---
 
-# How to Implement Caching with Node.js
+# How to Implement Caching in Node.js
 
 ## What is Node.js?
 
