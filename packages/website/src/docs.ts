@@ -32,7 +32,7 @@ async function copyStorageAdapters() {
     for (const storageAdapter of storageAdapters) {
         if((filterList.indexOf(storageAdapter) > -1) !== true ) {
             console.log("Adding storage adapter: " + storageAdapter);
-            await createDoc(storageAdapter, "../../packages", "site/docs/storage-adapter", "Storage Adapter");
+            await createDoc(storageAdapter, "../../packages", "site/docs/storage-adapters", "Storage Adapters");
         }
     };
 }

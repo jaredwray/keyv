@@ -99,7 +99,7 @@ keyv.iml
 #website
 packages/website/site/docs/caching/caching-*.md
 packages/website/site/docs/compression/compress-*.md
-packages/website/site/docs/storage-adapter/*.md
-!packages/website/site/docs/storage-adapter/storage-dapter.md
+packages/website/site/docs/storage-adapters/*.md
+!packages/website/site/docs/storage-adapters/storage-dapter.md
 packages/website/site/docs/index.md
 packages/website/site/_data/github.json
