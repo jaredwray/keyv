@@ -1,8 +1,4 @@
----
-title: 'How to Implement Caching with Node.js'
-sidebarTitle: 'NodeJs'
-parent: Caching
----
+
 # How to Implement Caching with Node.js
 
 ## What is Node.js?

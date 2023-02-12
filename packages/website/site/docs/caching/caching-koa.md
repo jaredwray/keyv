@@ -1,8 +1,4 @@
----
-title: 'How to Implement Caching with Koa'
-sidebarTitle: 'Koa'
-parent: 'Caching'
----
+
 # How to Implement Caching with Koa
 
 ## What is Koa?

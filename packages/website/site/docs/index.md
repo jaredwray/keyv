@@ -1,8 +1,3 @@
----
-title: 'Getting Started Guide'
-permalink: /docs/
-order: 0
----
 # Getting Started Guide
 
 Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. It supports TTL based expiry, making it suitable as a cache or a persistent key-value store. Follow the steps below to get you up and running.

@@ -1,8 +1,3 @@
----
-title: 'How to Implement Caching with Express'
-sidebarTitle: 'Express'
-parent: 'Caching'
----
 # How to Implement Caching with Express
 
 ## What is Express?

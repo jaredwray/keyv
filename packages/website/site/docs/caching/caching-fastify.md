@@ -1,8 +1,4 @@
----
-title: 'How to Implement Caching with Fastify'
-sidebarTitle: 'Fastify'
-parent: 'Caching'
----
+
 # How to Implement Caching with Fastify
 
 ## What is Fastify?

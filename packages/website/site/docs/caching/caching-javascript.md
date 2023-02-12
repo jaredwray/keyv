@@ -1,8 +1,3 @@
----
-title: 'How to Implement Caching with Javascript'
-sidebarTitle: 'Javascript'
-parent: Caching
----
 # How to Implement Caching with Javascript
 
 ## What is a Cache?
