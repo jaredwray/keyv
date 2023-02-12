@@ -8,7 +8,9 @@
   "private": true,
   "scripts": {
     "test:ci": "echo 'no tests needed'",
-    "build": "docula build",
+    "generate-docs": "ts-node ./src/docs.ts",
+    "build": "yarn generate-docs && docula build",
+    "build-serve": "yarn generate-docs && docula serve",
     "serve": "docula serve"
   },
   "devDependencies": {
