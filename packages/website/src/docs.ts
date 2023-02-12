@@ -5,6 +5,7 @@ async function main() {
   await copyCachingDocs();
   await copyStorageAdapters();
   await copyCompressionDocs();
+  await copyTestSuite();
 };
 
 async function copyGettingStarted() {
@@ -20,14 +21,13 @@ async function copyGettingStarted() {
     await fs.writeFile("site/docs/index.md", newFileText);
 }
 
-//rename Caching to How To Use Keyv
 async function copyCachingDocs() {
     await fs.copy("../../docs/caching/", "site/docs/caching");
 }
 
 async function copyStorageAdapters() {
     const storageAdapters = await fs.readdir("../../packages");
-    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip"];
+    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "test-suite"];
 
     for (const storageAdapter of storageAdapters) {
         if((filterList.indexOf(storageAdapter) > -1) !== true ) {
@@ -36,6 +36,21 @@ async function copyStorageAdapters() {
         }
     };
 }
+
+async function copyTestSuite() {
+    const originalFileText = await fs.readFile("../../packages/test-suite/readme.md", "utf8");
+    let newFileText = "---\n";
+    newFileText += `title: 'Test Suite'\n`;
+    newFileText += `permalink: /docs/test-suite/\n`;
+    newFileText += "---\n";
+    newFileText += "\n";
+    newFileText += originalFileText;
+
+    newFileText = cleanDocumentFromImage(newFileText);
+
+    await fs.writeFile("site/docs/test-suite/index.md", newFileText);
+}
+
 async function copyCompressionDocs() {
     const compressionAdapters = await fs.readdir("../../packages");
     for(const compressionAdapter of compressionAdapters) {
@@ -45,6 +60,11 @@ async function copyCompressionDocs() {
         }
     }
 }
+
+function cleanDocumentFromImage(document: string) {
+    document = document.replace(`[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)`, "");
+    return document;
+};
 
 async function createDoc(adapterName: string, path: string, outputPath: string, parent:string) {
     const originalFileName = "readme.md";
@@ -59,12 +79,10 @@ async function createDoc(adapterName: string, path: string, outputPath: string, 
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
+
+    newFileText = cleanDocumentFromImage(newFileText);
+
     await fs.writeFile(`${outputPath}/${newFileName}`, newFileText);
 }
-
-// add in the main Keyv module
-    // add in all the usage 
-    // add in the API
-// third-party storage adapters about section
 
 main();
