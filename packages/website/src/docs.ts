@@ -1,15 +1,21 @@
 import * as fs from "fs-extra";
 
 async function main() {
-  await copyGettingStarted();
-  await copyCachingDocs();
-  await copyStorageAdapters();
-  await copyCompressionDocs();
-  await copyTestSuite();
+
+    console.log("packages path:" + getRelativePackagePath());
+    console.log("docs path:" + getRelativeDocsPath());
+
+    await copyGettingStarted();
+    await copyCachingDocs();
+    await copyStorageAdapters();
+    await copyCompressionDocs();
+    await copyTestSuite();
 };
 
 async function copyGettingStarted() {
-    const originalFileText = await fs.readFile("../../docs/getting-started/index.md", "utf8");
+    const docsPath = getRelativeDocsPath();
+    const packagesPath = getRelativePackagePath();
+    const originalFileText = await fs.readFile(`${docsPath}/getting-started/index.md`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: 'Getting Started Guide'\n`;
     newFileText += `permalink: /docs/\n`;
@@ -19,28 +25,32 @@ async function copyGettingStarted() {
     newFileText += originalFileText;
 
     console.log("Adding Getting Started Guide");
-    await fs.writeFile("site/docs/index.md", newFileText);
+    await fs.writeFile(`${packagesPath}/website/site/docs/index.md`, newFileText);
 }
 
 async function copyCachingDocs() {
-    console.log("Adding in Caching Docs");
-    await fs.copy("../../docs/caching/", "site/docs/caching");
+    const docsPath = getRelativeDocsPath();
+    const packagesPath = getRelativePackagePath();
+    console.log("Adding Caching Docs");
+    await fs.copy(`${docsPath}/caching/`, `${packagesPath}/website/site/docs/caching`);
 }
 
 async function copyStorageAdapters() {
-    const storageAdapters = await fs.readdir("../../packages");
+    const packagesPath = getRelativePackagePath();
+    const storageAdapters = await fs.readdir(`${packagesPath}`);
     const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "test-suite"];
 
     for (const storageAdapter of storageAdapters) {
         if((filterList.indexOf(storageAdapter) > -1) !== true ) {
             console.log("Adding storage adapter: " + storageAdapter);
-            await createDoc(storageAdapter, "../../packages", "site/docs/storage-adapters", "Storage Adapters");
+            await createDoc(storageAdapter, `${packagesPath}`, `${packagesPath}/website/site/docs/storage-adapters`, "Storage Adapters");
         }
     };
 }
 
 async function copyTestSuite() {
-    const originalFileText = await fs.readFile("../../packages/test-suite/readme.md", "utf8");
+    const packagesPath = getRelativePackagePath();
+    const originalFileText = await fs.readFile(`${packagesPath}/test-suite/readme.md`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: 'Test Suite'\n`;
     newFileText += `permalink: /docs/test-suite/\n`;
@@ -50,16 +60,17 @@ async function copyTestSuite() {
 
     newFileText = cleanDocumentFromImage(newFileText);
 
-    console.log("Adding in Test Suite");
-    await fs.writeFile("site/docs/test-suite/index.md", newFileText);
+    console.log("Adding Test Suite");
+    await fs.writeFile(`${packagesPath}/website/site/docs/test-suite/index.md`, newFileText);
 }
 
 async function copyCompressionDocs() {
-    const compressionAdapters = await fs.readdir("../../packages");
+    const packagesPath = getRelativePackagePath();
+    const compressionAdapters = await fs.readdir(`${packagesPath}`);
     for(const compressionAdapter of compressionAdapters) {
         if(compressionAdapter.startsWith("compress-")) {
             console.log("Adding compression adapter: " + compressionAdapter);
-            await createDoc(compressionAdapter, "../../packages", "site/docs/compression", "Compression");
+            await createDoc(compressionAdapter, `${packagesPath}`, `${packagesPath}/website/site/docs/compression`, "Compression");
         }
     }
 }
@@ -68,6 +79,26 @@ function cleanDocumentFromImage(document: string) {
     document = document.replace(`[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)`, "");
     return document;
 };
+
+function getRelativePackagePath() {
+    if(fs.pathExistsSync("packages")) {
+        //we are in the root
+        return "packages";
+    }
+
+    //we are in the website folder
+    return "../../packages"
+}
+
+function getRelativeDocsPath() {
+    if(fs.pathExistsSync("docs")) {
+        //we are in the root
+        return "docs";
+    }
+
+    //we are in the website folder
+    return "../../docs"
+}
 
 async function createDoc(adapterName: string, path: string, outputPath: string, parent:string) {
     const originalFileName = "readme.md";
