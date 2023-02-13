@@ -50,7 +50,7 @@ async function copyStorageAdapters() {
 
 async function copyTestSuite() {
     const packagesPath = getRelativePackagePath();
-    const originalFileText = await fs.readFile(`${packagesPath}/test-suite/readme.md`, "utf8");
+    const originalFileText = await fs.readFile(`${packagesPath}/test-suite/README.md`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: 'Test Suite'\n`;
     newFileText += `permalink: /docs/test-suite/\n`;
@@ -101,7 +101,7 @@ function getRelativeDocsPath() {
 }
 
 async function createDoc(adapterName: string, path: string, outputPath: string, parent:string) {
-    const originalFileName = "readme.md";
+    const originalFileName = "README.md";
     const newFileName = `${adapterName}.md`;
     const packageJSONPath = `${path}/${adapterName}/package.json`;
     const packageJSON = await fs.readJSON(packageJSONPath);
