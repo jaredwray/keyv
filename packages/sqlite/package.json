@@ -56,8 +56,6 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@types/better-sqlite3": "^7.6.3",
-		"better-sqlite3": "^8.1.0",
 		"pify": "^5.0.0",
 		"sqlite3": "^5.1.4"
 	},

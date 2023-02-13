@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
 import {EventEmitter} from 'events';
-import type Database from 'better-sqlite3';
+import type {Database} from 'sqlite3';
 import type {Store, StoredData} from 'keyv';
 
 export = KeyvSqlite;
