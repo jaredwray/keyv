@@ -1,6 +1,7 @@
 ---
 title: 'Test Suite'
 permalink: /docs/test-suite/
+order: 4
 ---
 
 # @keyv/test-suite 
