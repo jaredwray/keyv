@@ -1,6 +1,8 @@
-const Keyv = require('keyv');
+import Keyv, {type CompressionAdapter} from 'keyv';
 
-const keyvCompressionTests = (test, compression) => {
+import type {TestFn} from 'ava';
+
+const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter) => {
 	let keyv;
 	test.beforeEach(async () => {
 		keyv = new Keyv({
@@ -52,4 +54,4 @@ const keyvCompressionTests = (test, compression) => {
 	});
 };
 
-module.exports = keyvCompressionTests;
+export default keyvCompressionTests;

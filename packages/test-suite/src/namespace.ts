@@ -1,4 +1,8 @@
-const keyvNamepsaceTests = (test, Keyv, store) => {
+import type {TestFn} from 'ava';
+import type KeyvModule from 'keyv';
+import type {KeyvStoreFn} from './types';
+
+const keyvNamepsaceTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
 		const keyv1 = new Keyv({store: store(), namespace: 'keyv1'});
 		const keyv2 = new Keyv({store: store(), namespace: 'keyv2'});
@@ -47,4 +51,4 @@ const keyvNamepsaceTests = (test, Keyv, store) => {
 	});
 };
 
-module.exports = keyvNamepsaceTests;
+export default keyvNamepsaceTests;
