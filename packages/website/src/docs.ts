@@ -18,10 +18,12 @@ async function copyGettingStarted() {
     newFileText += "\n";
     newFileText += originalFileText;
 
+    console.log("Adding Getting Started Guide");
     await fs.writeFile("site/docs/index.md", newFileText);
 }
 
 async function copyCachingDocs() {
+    console.log("Adding in Caching Docs");
     await fs.copy("../../docs/caching/", "site/docs/caching");
 }
 
@@ -48,6 +50,7 @@ async function copyTestSuite() {
 
     newFileText = cleanDocumentFromImage(newFileText);
 
+    console.log("Adding in Test Suite");
     await fs.writeFile("site/docs/test-suite/index.md", newFileText);
 }
 
