@@ -96,3 +96,10 @@ keyv.iml
 #vim
 *.swp
 
+#website
+packages/website/site/docs/caching/caching-*.md
+packages/website/site/docs/compression/compress-*.md
+packages/website/site/docs/storage-adapters/*.md
+!packages/website/site/docs/storage-adapters/storage-dapters.md
+packages/website/site/docs/index.md
+packages/website/site/_data/github.json

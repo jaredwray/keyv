@@ -8,10 +8,17 @@
   "private": true,
   "scripts": {
     "test:ci": "echo 'no tests needed'",
-    "build": "docula build",
+    "generate-docs": "ts-node ./src/docs.ts",
+    "build": "yarn generate-docs && docula build",
+    "build-serve": "yarn generate-docs && docula serve",
     "serve": "docula serve"
   },
   "devDependencies": {
-    "docula": "^0.0.9"
+    "@types/fs-extra": "^11.0.1",
+    "docula": "^0.0.9",
+    "ts-node": "^10.9.1"
+  },
+  "dependencies": {
+    "fs-extra": "^11.1.0"
   }
 }

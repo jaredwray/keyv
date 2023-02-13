@@ -1,4 +1,4 @@
-# @keyv/compress-brotli [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwray/keyv)
+# @keyv/compress-brotli [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Brotli compression for Keyv
 

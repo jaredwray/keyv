@@ -1,3 +1,9 @@
+---
+title: 'How to Implement Caching with Express'
+sidebarTitle: 'Caching with Express'
+parent: 'Caching'
+---
+
 # How to Implement Caching with Express
 
 ## What is Express?

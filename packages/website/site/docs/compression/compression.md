@@ -1,4 +1,4 @@
 ---
-title: Storage Adapter
+title: Compression
 permalink: false
 ---

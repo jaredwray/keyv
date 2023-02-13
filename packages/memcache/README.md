@@ -1,7 +1,6 @@
-[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwray/keyv)
+# @keyv/memcache [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
-# @keyv/memcache
-_Memcache storage adapter for [Keyv](https://github.com/jaredwray/keyv)_
+> Memcache storage adapter for [Keyv](https://github.com/jaredwray/keyv)
 
 
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
