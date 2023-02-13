@@ -1,4 +1,5 @@
 import * as fs from "fs-extra";
+import os from "os";
 
 async function main() {
 
@@ -19,7 +20,7 @@ async function copyGettingStarted() {
     let newFileText = "---\n";
     newFileText += `title: 'Getting Started Guide'\n`;
     newFileText += `permalink: /docs/\n`;
-    newFileText += `order: 0\n`;
+    newFileText += `order: 0` + os.EOL;
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
@@ -54,6 +55,7 @@ async function copyTestSuite() {
     let newFileText = "---\n";
     newFileText += `title: 'Test Suite'\n`;
     newFileText += `permalink: /docs/test-suite/\n`;
+    newFileText += `order: 4` + os.EOL;
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
