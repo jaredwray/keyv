@@ -114,3 +114,10 @@ test('decompression using number array with json-buffer', async t => {
 	const decompressed = await keyv.decompress(compressed);
 	t.deepEqual(decompressed, {help: [1, 2, 4]});
 });
+
+test('deserialize with an empty value', async t => {
+	const keyv = new KeyvBrotli();
+	const deserialized = await keyv.deserialize('');
+
+	t.is(deserialized, '');
+});

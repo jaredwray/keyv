@@ -19,6 +19,10 @@ class KeyvBrotli {
 	}
 
 	async deserialize(data) {
+		if (!data) {
+			return data;
+		}
+
 		const {value, expires} = this.brotli.deserialize(data);
 		return {value: await this.decompress(value), expires};
 	}
