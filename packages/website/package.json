@@ -11,6 +11,7 @@
     "generate-docs": "ts-node ./src/docs.ts",
     "build": "yarn generate-docs && docula build",
     "build-serve": "yarn generate-docs && docula serve",
+    "clean": "rm -rf ./dist",
     "serve": "docula serve"
   },
   "devDependencies": {
