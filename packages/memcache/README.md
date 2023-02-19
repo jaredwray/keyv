@@ -31,7 +31,7 @@ const keyv = new Keyv({ store: memcache });
 await keyv.set("foo","bar", 6000) //Expiring time is optional
 
 //get
-let obj = await keyv.get("foo");
+const obj = await keyv.get("foo");
 
 //delete
 await keyv.delete("foo");
@@ -56,8 +56,8 @@ await keyv1.set("foo","bar1", 6000) //Expiring time is optional
 await keyv2.set("foo","bar2", 6000) //Expiring time is optional
 
 //get
-let obj1 = await keyv1.get("foo"); //will return bar1
-let obj2 = await keyv2.get("foo"); //will return bar2
+const obj1 = await keyv1.get("foo"); //will return bar1
+const obj2 = await keyv2.get("foo"); //will return bar2
 
 ```
 
@@ -69,7 +69,7 @@ let obj2 = await keyv2.get("foo"); //will return bar2
 ```js
 
 //set the server to the correct address and port 
-let server = "localhost:11211"
+const server = "localhost:11211"
 
 const Keyv = require("keyv");
 const KeyvMemcache = require("@keyv/memcache");
@@ -86,9 +86,9 @@ const keyv = new Keyv({ store: memcache});
 ```js
 
 //best practice is to not hard code your config in code. 
-let user = ""; 
-let pass = "";
-let server = "XXX.XXX.XXX.memcachier.com:11211"
+const user = "";
+const pass = "";
+const server = "XXX.XXX.XXX.memcachier.com:11211"
 
 const Keyv = require("keyv");
 const KeyvMemcache = require("@keyv/memcache");
@@ -106,9 +106,9 @@ const keyv = new Keyv({ store: memcache});
 ```js
 
 //best practice is to not hard code your config in code. 
-let user = ""; 
-let pass = "";
-let server = "XXX.XXX.XXX.XXX.cloud.redislabs.com:XXX"
+const user = "";
+const pass = "";
+const server = "XXX.XXX.XXX.XXX.cloud.redislabs.com:XXX"
 
 const Keyv = require("keyv");
 const KeyvMemcache = require("@keyv/memcache");
