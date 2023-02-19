@@ -74,7 +74,7 @@ const server = "localhost:11211"
 const Keyv = require("keyv");
 const KeyvMemcache = require("@keyv/memcache");
 
-const memcache = new KeyvMemcache();
+const memcache = new KeyvMemcache(server);
 const keyv = new Keyv({ store: memcache});
 ```
 
