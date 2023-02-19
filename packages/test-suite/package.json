@@ -25,6 +25,9 @@
 		"type": "git",
 		"url": "git+https://github.com/jaredwray/keyv.git"
 	},
+	"files": [
+		"dist"
+	],
 	"keywords": [
 		"test",
 		"suite",
