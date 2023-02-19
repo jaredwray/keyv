@@ -37,7 +37,7 @@ const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname', {
 
 ## SSL
 
-```
+```js
 const fs = require('fs');
 const path = require('path');
 const KeyvMysql = require('@keyv/mysql');
