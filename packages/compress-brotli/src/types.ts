@@ -7,10 +7,10 @@ export type DecompressResult = Promise<ReturnType<typeof JSONBparse>>;
 export type SerializeResult = ReturnType<typeof JSONBstringify>;
 export type DeserializeResult = ReturnType<typeof JSONBparse>;
 
-type Serialize<T> = (source: InputType) => T;
-type Deserialize<T> = (source: CompressResult) => T;
+type BrotliSerialize<T> = (source: InputType) => T;
+type BrotliDeserialize<T> = (source: CompressResult) => T;
 
-export type SerializeInput = {
+export type Serialize = {
 	value: InputType;
 	expires?: number;
 };
@@ -25,8 +25,8 @@ export interface Options {
 }
 
 export interface Brotli {
-	serialize: Serialize<SerializeResult>;
-	deserialize: Deserialize<DeserializeResult>;
+	serialize: BrotliSerialize<SerializeResult>;
+	deserialize: BrotliDeserialize<DeserializeResult>;
 	compress: (data: InputType, options?: BrotliOptions) => CompressResult;
 	decompress: (data: InputType, options?: BrotliOptions) => DecompressResult;
 }

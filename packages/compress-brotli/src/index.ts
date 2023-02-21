@@ -1,13 +1,7 @@
 import type {BrotliOptions, InputType} from 'node:zlib';
 import compressBrotli from 'compress-brotli';
-import type {
-	Options,
-	Brotli,
-	SerializeResult,
-	DeserializeResult,
-	CompressResult,
-	SerializeInput,
-} from './types';
+import type {Brotli, CompressResult, Options, SerializeResult} from './types';
+import {Serialize} from './types';
 
 class KeyvBrotli {
 	private readonly brotli: Brotli;
@@ -15,27 +9,27 @@ class KeyvBrotli {
 		this.brotli = compressBrotli(options);
 	}
 
-	async compress(value: any, options?: BrotliOptions): Promise<CompressResult> {
+	async compress(value: any, options?: BrotliOptions): CompressResult {
 		return this.brotli.compress(value, options);
 	}
 
-	async decompress(data: InputType, options?: BrotliOptions): Promise<DeserializeResult> {
-		return this.brotli.decompress(data, options);
+	async decompress<T>(data: InputType, options?: BrotliOptions): Promise<T> {
+		return await this.brotli.decompress(data, options) as T;
 	}
 
-	async serialize({value, expires}: SerializeInput): Promise<SerializeResult> {
+	async serialize({value, expires}: Serialize): Promise<SerializeResult> {
 		const compressValue = await this.compress(value);
 		// @ts-expect-error - `expires` is not part of the `SerializeResult` type
 		return this.brotli.serialize({value: compressValue, expires});
 	}
 
-	async deserialize(data: CompressResult): Promise<DeserializeResult> {
+	async deserialize(data: CompressResult): Promise<Serialize> {
 		// eslint-disable-next-line @typescript-eslint/no-misused-promises
 		if (!data) {
 			return data;
 		}
 
-		const {value, expires} = this.brotli.deserialize(data);
+		const {value, expires} = this.brotli.deserialize(data) as Serialize;
 		return {value: await this.decompress(value), expires};
 	}
 }

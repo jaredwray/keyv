@@ -120,5 +120,6 @@ test('deserialize with an empty value', async t => {
 	// @ts-expect-error - Testing empty value
 	const deserialized = await keyv.deserialize('');
 
+	// @ts-expect-error - empty value
 	t.is(deserialized, '');
 });
