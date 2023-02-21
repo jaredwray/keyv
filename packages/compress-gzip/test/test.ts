@@ -1,13 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable import/extensions */
+import test from 'ava';
+import {keyvCompresstionTests} from '@keyv/test-suite';
 import KeyvGzip from '../src/index';
-
-const test = require('ava');
-const {keyvCompresstionTests} = require('@keyv/test-suite');
 
 keyvCompresstionTests(test, new KeyvGzip());
 
-test('object type compression/decompression', async (t: any) => {
+test('object type compression/decompression', async t => {
 	const keyv = new KeyvGzip();
 	const testValue = JSON.stringify({my: 'super', puper: [456, 567], awesome: 'pako'});
 	const compressed = await keyv.compress(testValue);
@@ -16,7 +14,7 @@ test('object type compression/decompression', async (t: any) => {
 });
 
 // Test options while compress
-test('options while compress', async (t: any) => {
+test('options while compress', async t => {
 	const keyv = new KeyvGzip();
 	const compressed = await keyv.compress('whatever');
 	t.not(compressed, 'whatever');
@@ -24,7 +22,7 @@ test('options while compress', async (t: any) => {
 	t.not(compressed, compressedWithoutOptions);
 });
 // Test options at class level
-test('options at class level', async (t: any) => {
+test('options at class level', async t => {
 	const keyv = new KeyvGzip({chunkSize: 32 * 1024});
 	const compressed = await keyv.compress('whatever');
 	t.not(compressed, 'whatever');
@@ -32,7 +30,7 @@ test('options at class level', async (t: any) => {
 	t.not(compressed, compressedWithoutOptions);
 });
 
-test('compression with compression options', async (t: any) => {
+test('compression with compression options', async t => {
 	const options = {};
 
 	const keyv = new KeyvGzip(options);
@@ -42,7 +40,7 @@ test('compression with compression options', async (t: any) => {
 	t.not(compressed, compressedWithoutOptions);
 });
 
-test('decompression with decompression options', async (t: any) => {
+test('decompression with decompression options', async t => {
 	const options = {};
 
 	const keyv = new KeyvGzip(options);
