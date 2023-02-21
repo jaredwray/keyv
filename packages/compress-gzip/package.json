@@ -7,8 +7,8 @@
   "scripts": {
     "build": "tsc",
     "prepare": "yarn build",
-    "test": "xo && yarn run build && c8 ava --serial",
-    "test:ci": "xo && yarn run build && ava --serial",
+    "test": "xo && c8 ava --serial",
+    "test:ci": "xo && ava --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
     "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
