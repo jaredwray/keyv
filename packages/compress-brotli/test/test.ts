@@ -1,14 +1,13 @@
-const {
-	constants: {
-		BROTLI_PARAM_MODE,
-		BROTLI_PARAM_QUALITY,
-	},
-} = require('node:zlib');
-const v8 = require('node:v8');
-const test = require('ava');
-const json = require('json-buffer');
-const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvBrotli = require('../src/index.js');
+import {constants as zlibConstants} from 'node:zlib';
+import v8 from 'node:v8';
+import test from 'ava';
+import json from 'json-buffer';
+import {keyvCompresstionTests} from '@keyv/test-suite';
+import KeyvBrotli from '../src/index';
+import type {DeserializeResult} from '../src/types';
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const {BROTLI_PARAM_MODE, BROTLI_PARAM_QUALITY} = zlibConstants;
 
 keyvCompresstionTests(test, new KeyvBrotli());
 
@@ -20,7 +19,7 @@ test('object type compression/decompression', async t => {
 		c: true,
 	};
 	const compressed = await keyv.compress(object);
-	const decompressed = await keyv.decompress(compressed, {});
+	const decompressed = await keyv.decompress(compressed);
 	t.deepEqual(decompressed, object);
 });
 
@@ -30,8 +29,9 @@ test('disable brotli compression', async t => {
 	};
 	const keyv = new KeyvBrotli(options);
 	const compressed = await keyv.compress('whatever');
+	// @ts-expect-error Testing non-compressed value
 	t.is(compressed, 'whatever');
-	const decompressed = await keyv.decompress(compressed);
+	const decompressed: DeserializeResult = await keyv.decompress(compressed);
 	t.is(decompressed, 'whatever');
 });
 
@@ -117,6 +117,7 @@ test('decompression using number array with json-buffer', async t => {
 
 test('deserialize with an empty value', async t => {
 	const keyv = new KeyvBrotli();
+	// @ts-expect-error - Testing empty value
 	const deserialized = await keyv.deserialize('');
 
 	t.is(deserialized, '');
