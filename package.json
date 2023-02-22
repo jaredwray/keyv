@@ -10,7 +10,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspace @keyv/test-suite run build",
+    "build": "yarn workspaces run build",
     "test": " yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",

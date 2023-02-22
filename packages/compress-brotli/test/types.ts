@@ -3,7 +3,7 @@ import v8 from 'node:v8';
 import test from 'ava';
 import Keyv from 'keyv';
 import json from 'json-buffer';
-import KeyvBrotli from '../src/index.js';
+import KeyvBrotli from '../src/index';
 
 type MyType = {
 	a?: string;
