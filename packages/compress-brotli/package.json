@@ -5,11 +5,11 @@
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
-		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
+		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite && rm -rf ./dist && rm -rf ./.nyc_output"
 	},
 	"xo": {
 		"rules": {
@@ -73,7 +73,7 @@
 		"node": ">= 12"
 	},
 	"files": [
-		"src"
+		"dist"
 	],
 	"ava": {
 		"extensions": [

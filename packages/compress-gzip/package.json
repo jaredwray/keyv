@@ -5,12 +5,12 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
     "test": "xo && c8 ava --serial",
     "test:ci": "xo && ava --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
+    "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf ./dist && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
     "rules": {
