@@ -1,20 +1,21 @@
 import pako from 'pako';
 import JSONB from 'json-buffer';
+import type {Options, Serialize} from './types';
 
 class KeyvGzip {
-	opts: any;
-	constructor(options?: any) {
+	opts: Options;
+	constructor(options?: Options) {
 		this.opts = {
 			to: 'string',
 			...options,
 		};
 	}
 
-	async compress(value: pako.Data | string, options?: any) {
+	async compress(value: pako.Data | string, options?: Options) {
 		return pako.deflate(value, options || this.opts);
 	}
 
-	async decompress(value: pako.Data, options?: any) {
+	async decompress(value: pako.Data, options?: Options) {
 		if (options) {
 			options.to = 'string';
 		}
@@ -22,13 +23,14 @@ class KeyvGzip {
 		return pako.inflate(value, options || this.opts);
 	}
 
-	async serialize({value, expires}: any) {
+	async serialize({value, expires}: Serialize) {
 		return JSONB.stringify({value: await this.compress(value), expires});
 	}
 
-	async deserialize(data: any) {
-		const {value, expires} = JSONB.parse(data);
-		return {value: await this.decompress(value), expires};
+	async deserialize(data: string) {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+		const {value, expires}: Serialize = JSONB.parse(data);
+		return {value: await this.decompress(value as pako.Data), expires};
 	}
 }
 

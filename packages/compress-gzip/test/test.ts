@@ -1,4 +1,4 @@
-/* eslint-disable import/extensions */
+
 import test from 'ava';
 import {keyvCompresstionTests} from '@keyv/test-suite';
 import KeyvGzip from '../src/index';
@@ -46,5 +46,6 @@ test('decompression with decompression options', async t => {
 	const keyv = new KeyvGzip(options);
 	const compressed = await keyv.compress('whatever');
 	const decompressed = await keyv.decompress(compressed, options);
+	// @ts-expect-error - TS doesn't know that decompressed is a string
 	t.is(decompressed, 'whatever');
 });

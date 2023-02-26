@@ -14,13 +14,17 @@
   },
   "xo": {
     "rules": {
-      "unicorn/prefer-module": 0,
-      "unicorn/prefer-node-protocol": 0,
-      "@typescript-eslint/no-unsafe-assignment": 0,
-      "@typescript-eslint/no-var-requires": 0,
-      "@typescript-eslint/no-require-imports": 0,
-      "@typescript-eslint/naming-convention": 0,
-      "unicorn/prefer-logical-operator-over-ternary": 0
+      "ava/no-ignored-test-files": [
+        "error",
+        {
+          "extensions": [
+            "js",
+            "ts"
+          ]
+        }
+      ],
+      "import/extensions": 0,
+      "@typescript-eslint/prefer-nullish-coalescing": 0
     }
   },
   "ava": {
