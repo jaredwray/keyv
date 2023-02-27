@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 const Redis = require('ioredis');
 
 class KeyvRedis extends EventEmitter {
-	constructor(uri, options) {
+	constructor(uri, options, bindErrorListener = true) {
 		super();
 		this.ttlSupport = true;
 		this.opts = {};
@@ -15,7 +15,8 @@ class KeyvRedis extends EventEmitter {
 			this.redis = new Redis(options.uri, options);
 		}
 
-		this.redis.on('error', error => this.emit('error', error));
+		if (bindErrorListener)
+			this.redis.on('error', error => this.emit('error', error));
 	}
 
 	_getNamespace() {
