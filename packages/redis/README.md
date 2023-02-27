@@ -68,6 +68,30 @@ const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis });
 ```
 
+*Note if you are re-using an existing Redis instance or cluster:* If you already have added listeners such as `redis.on('error', fn)` &ndash; then you will need to disable the default error listener added by passing a third argument to the constructor with `bindErrorListener` set to false (see example below).
+
+```js
+const KeyvRedis = require('@keyv/redis');
+const Redis = require('ioredis');
+const Keyv = require('keyv');
+
+const redis = new Redis('redis://user:pass@localhost:6379');
+
+redis.on('error', function(err) {
+  console.error(err);
+});
+
+const keyvRedis = new KeyvRedis(redis, null, false);
+const keyv = new Keyv({ store: keyvRedis });
+```
+
+This third argument was added for edge cases where the following error is encountered:
+
+```sh
+(node:417) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 error listeners added to [KeyvRedis]. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+``
+
 ## License
 
 MIT © Jared Wray
