@@ -7,20 +7,24 @@
   "scripts": {
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
-		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
+    "test": "xo && c8 ava --serial",
+    "test:ci": "xo && ava --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
     "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf ./dist && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
     "rules": {
-      "unicorn/prefer-module": 0,
-      "unicorn/prefer-node-protocol": 0,
-      "@typescript-eslint/no-unsafe-assignment": 0,
-      "@typescript-eslint/no-var-requires": 0,
-      "@typescript-eslint/no-require-imports": 0,
-      "@typescript-eslint/naming-convention": 0,
-      "unicorn/prefer-logical-operator-over-ternary": 0
+      "ava/no-ignored-test-files": [
+        "error",
+        {
+          "extensions": [
+            "js",
+            "ts"
+          ]
+        }
+      ],
+      "import/extensions": 0,
+      "@typescript-eslint/prefer-nullish-coalescing": 0
     }
   },
   "ava": {
