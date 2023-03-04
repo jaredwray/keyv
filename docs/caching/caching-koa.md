@@ -28,7 +28,7 @@ app.use(async ctx => {
     // this response is already cashed if `true` is returned,
     // so this middleware will automatically serve this response from cache
     if (await keyv.get(ctx.url)) {
-    return keyv.get(ctx.url);
+        return keyv.get(ctx.url);
     }
 
     // set the response body here
