@@ -16,3 +16,24 @@ A cache is a short-term, high-speed data storage layer that stores a subset of d
 Caching will work in memory by default. However, users can also install a Keyv storage adapter that is initialized with a connection string or any other storage that implements the Map API.
 
 ### Example - Add Cache Support Using Koa
+
+```js
+import keyv from 'keyv';
+
+// ...
+const cache = new Keyv();
+const cacheTTL = 1000 * 60 * 60 * 24; // 24 hours
+
+app.use(async ctx => {
+    // this response is already cashed if `true` is returned,
+    // so this middleware will automatically serve this response from cache
+    if (await keyv.get(ctx.url)) {
+    return keyv.get(ctx.url);
+    }
+
+    // set the response body here
+    ctx.body = 'hello world!';
+    // cache the response
+    await keyv.set(ctx.url, ctx.body. cacheTTL);
+});
+```
