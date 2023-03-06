@@ -17,9 +17,10 @@ class KeyvPostgres extends EventEmitter {
 					.then(data => data.rows);
 			});
 		this.opts = {table: 'keyv',
+			schema: 'public',
 			keySize: 255, ...options};
 
-		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema}.${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
 		const connected = this.opts.connect()
 			.then(query => query(createTable).then(() => query))
