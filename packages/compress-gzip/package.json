@@ -65,7 +65,7 @@
   "devDependencies": {
     "@ava/typescript": "^3.0.1",
     "@keyv/test-suite": "*",
-    "@typescript-eslint/parser": "^5.54.0",
+    "@typescript-eslint/parser": "^5.54.1",
     "ava": "^5.2.0",
     "c8": "^7.13.0",
     "eslint": "^8.35.0",
