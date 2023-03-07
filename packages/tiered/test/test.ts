@@ -1,12 +1,9 @@
-'use strict';
-
-const test = require('ava');
-const delay = require('delay');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const KeyvSqlite = require('@keyv/sqlite');
-const KeyvTiered = require('..');
+import test from 'ava';
+import delay from 'delay';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import Keyv from 'keyv';
+import KeyvSqlite from '@keyv/sqlite';
+import KeyvTiered from '../src/index';
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
@@ -20,18 +17,21 @@ const remoteStore = () => new Keyv({
 const localStore = () => new Keyv();
 const store = () => new KeyvTiered({remote: remoteStore(), local: localStore()});
 
+// @ts-expect-error - Store
 keyvTestSuite(test, Keyv, store);
 
+// @ts-expect-error - Store
 keyvIteratorTests(test, Keyv, store);
 
-test.beforeEach(() => {
+test.beforeEach(async () => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local});
-	return store.clear();
+	await store.clear();
 });
 
 test.serial('constructor on default', t => {
+	// @ts-expect-error - KeyvTiered needs constructor options
 	const store = new KeyvTiered({});
 	t.is(store.local.opts.store instanceof Map, true);
 	t.is(store.remote.opts.store instanceof Map, true);
@@ -44,7 +44,8 @@ test.serial('.set() sets to both stores', async t => {
 
 	await store.set('foo', 'bar');
 
-	const [remoteResult, localResult, storeResult] = await Promise.all([
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	const [remoteResult, localResult, storeResult]: unknown[] = await Promise.all([
 		remote.get('foo'),
 		store.get('foo'),
 		local.get('foo'),
@@ -65,6 +66,7 @@ test.serial('.has() returns boolean', async t => {
 
 test.serial('.has() checks both stores', async t => {
 	const remote = remoteStore();
+	// @ts-expect-error - KeyvTiered needs local
 	const store = new KeyvTiered({remote});
 
 	await remote.set('fizz', 'buzz');
@@ -125,7 +127,7 @@ test.serial(
 		const store = new KeyvTiered({remote, local, localOnly: true});
 
 		await store.set('fizz', 'buzz');
-		await store.delete('fizz', {localOnly: true});
+		await store.delete('fizz');
 
 		t.is(await local.get('fizz'), undefined);
 		t.is(await remote.get('fizz'), 'buzz');
@@ -149,7 +151,7 @@ test.serial('.clear({ localOnly: true }) clears local store alone', async t => {
 	const store = new KeyvTiered({remote, local, localOnly: true});
 
 	await store.set('fizz', 'buzz');
-	await store.clear({localOnly: true});
+	await store.clear();
 
 	t.is(await local.get('fizz'), undefined);
 	t.is(await remote.get('fizz'), 'buzz');
@@ -184,7 +186,8 @@ test.serial('custom validator', async t => {
 	const store = new KeyvTiered({
 		remote,
 		local,
-		validator(value) {
+		// @ts-expect-error - Validator not need params
+		validator(value: {timeSensitiveData: any}) {
 			if (value.timeSensitiveData) {
 				return false;
 			} // Fetch from remote store only
