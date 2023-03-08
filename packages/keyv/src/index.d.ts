@@ -37,7 +37,7 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 		key: string[],
 		options?: {raw?: Raw}
 	): Promise<
-	Array<(Raw extends false ? Value : Keyv.DeserializedData<Value>) | undefined>
+	Array<(Raw extends false ? Value : Keyv.DeserializedData<Value>) | undefined> | undefined
 	>;
 
 	/**
