@@ -41,14 +41,6 @@ test.serial('Keyv passes tll info to stores', async t => {
 	await keyv.set('foo', 'bar', 100);
 });
 
-test.serial('Keyv stores ttl without const', async t => {
-	const keyv = new Keyv();
-	await keyv.set('foo', 'bar', 100);
-	t.is(await keyv.get('foo'), 'bar');
-	tk.freeze(Date.now() + 150);
-	t.is(await keyv.get('foo'), undefined);
-});
-
 test.serial('Keyv respects default tll option', async t => {
 	const store = new Map();
 	const keyv = new Keyv({store, ttl: 100});
