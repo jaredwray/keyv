@@ -52,8 +52,9 @@ class KeyvRedis extends EventEmitter {
 				return this.redis.set(key, value);
 			})
 			.then(() => {
-				this.redis.sadd(this._getNamespace(), key);
-			});
+				return this.redis.sadd(this._getNamespace(), key);
+			})
+			.then(() => undefined)
 	}
 
 	delete(key) {
