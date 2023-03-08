@@ -1,16 +1,18 @@
-// @ts-ignore
-'use strict';
+import EventEmitter from 'node:events';
+import type {Store, StoredData} from 'keyv';
 
-const EventEmitter = require('node:events');
-
-class KeyvOffline extends EventEmitter {
-	constructor(keyv) {
+class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
+	proxy: any;
+	opts: any;
+	namespace: any;
+	constructor(keyv: any) {
 		super();
 		this.proxy = new Proxy(keyv, {
 			get(keyv, method) {
 				switch (method) {
 					case 'get':
-						return async (...args) => {
+					{
+						return async (...args: any) => {
 							try {
 								const value = await keyv.get(...args);
 								return value;
@@ -18,9 +20,11 @@ class KeyvOffline extends EventEmitter {
 								return undefined;
 							}
 						};
+					}
 
 					case 'getMany':
-						return async (...args) => {
+					{
+						return async (...args: any) => {
 							try {
 								const value = await keyv.getMany(...args);
 								return value;
@@ -28,9 +32,11 @@ class KeyvOffline extends EventEmitter {
 								return false;
 							}
 						};
+					}
 
 					case 'set':
-						return async (...args) => {
+					{
+						return async (...args: any) => {
 							try {
 								const value = await keyv.set(...args);
 								return value;
@@ -38,9 +44,11 @@ class KeyvOffline extends EventEmitter {
 								return false;
 							}
 						};
+					}
 
 					case 'clear':
-						return async (...args) => {
+					{
+						return async (...args: any) => {
 							try {
 								const value = await keyv.clear(...args);
 								return value;
@@ -48,9 +56,11 @@ class KeyvOffline extends EventEmitter {
 								return false;
 							}
 						};
+					}
 
 					case 'delete':
-						return async (...args) => {
+					{
+						return async (...args: any) => {
 							try {
 								const value = await keyv.delete(...args);
 								return value;
@@ -58,9 +68,11 @@ class KeyvOffline extends EventEmitter {
 								return false;
 							}
 						};
+					}
 
 					case 'has':
-						return async (...args) => {
+					{
+						return async (...args: any) => {
 							try {
 								const value = await keyv.has(...args);
 								return value;
@@ -68,9 +80,12 @@ class KeyvOffline extends EventEmitter {
 								return false;
 							}
 						};
+					}
 
 					default:
+					{
 						return Reflect.get(keyv, method);
+					}
 				}
 			},
 			set(target, prop, value) {
@@ -81,40 +96,40 @@ class KeyvOffline extends EventEmitter {
 		this.opts = keyv.opts;
 	}
 
-	set(key, value, ttl) {
+	set(key: string, value: any, ttl?: number) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.set(key, value, ttl);
 	}
 
-	get(key) {
+	get(key: string): Value {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.get(key);
 	}
 
-	getMany(keys) {
+	getMany(keys: string[]): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.getMany(keys);
 	}
 
-	delete(key) {
+	delete(key: string): boolean {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.delete(key);
 	}
 
-	deleteMany(key) {
+	deleteMany(key: string[]): boolean {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.deleteMany(key);
 	}
 
-	clear() {
+	clear(): void {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.clear();
 	}
 
-	has(key) {
+	has(key: string): boolean {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.has(key);
 	}
 }
 
-module.exports = KeyvOffline;
+export = KeyvOffline;

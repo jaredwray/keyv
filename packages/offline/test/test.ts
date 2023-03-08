@@ -1,25 +1,24 @@
-// @ts-ignore
-'use strict';
+import test from 'ava';
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
+import KeyvOffline from '../src/index';
 
-const test = require('ava');
-const Keyv = require('keyv');
-const KeyvRedis = require('@keyv/redis');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests} = require('@keyv/test-suite');
-const KeyvOffline = require('../src/index.js');
-
+// @ts-expect-error - KeyvRedis constructor is not compatible with KeyvOffline
 const keyvRedisBad = new KeyvRedis({
 	uri: 'redis://user:pass@localhost:1338',
 	maxRetriesPerRequest: 0,
 	emitErrors: false,
 });
 
-keyvRedisBad.on('error', () => console.log('Connection error'));
+keyvRedisBad.on('error', () => {
+	console.log('Connection error');
+});
 
 test('.set return true under normal behavior', async t => {
 	const store = new Map();
 	const keyv = new KeyvOffline(new Keyv({store}));
-	const result = await keyv.set('foo', 'expires in 1 second', 1000);
+	const result = await keyv.set('foo', 'expires in 1 second', 1000) as boolean;
 	t.is(result, true);
 });
 
@@ -32,36 +31,42 @@ test('.get return the expected value under normal behavior', async t => {
 
 test('.set return false if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
-	const result = await keyv.set('foo', 'expires in 1 second', 1000);
+	const result = await keyv.set('foo', 'expires in 1 second', 1000) as boolean;
 	t.is(result, false);
 });
 
 test('.set return undefined if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
-	const result = await keyv.get('foo');
+	const result = await keyv.get('foo') as unknown;
 	t.is(result, undefined);
 });
 
 test('.clear return false if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
-	t.is(await keyv.clear(), false);
+	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+	const clearStatus = await keyv.clear();
+	// @ts-expect-error - test for false return value
+	t.is(clearStatus, false);
 	t.is(typeof keyv.clear, 'function');
 });
 
 test('.delete return false if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
+	// @ts-expect-error - test for false return value
 	t.is(await keyv.delete(), false);
 	t.is(typeof keyv.delete, 'function');
 });
 
 test('.getMany return false if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
+	// @ts-expect-error - test for false return value
 	t.is(await keyv.getMany(), false);
 	t.is(typeof keyv.getMany, 'function');
 });
 
 test('.has return false if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
+	// @ts-expect-error - test for false return value
 	t.is(await keyv.has(), false);
 	t.is(typeof keyv.has, 'function');
 });
