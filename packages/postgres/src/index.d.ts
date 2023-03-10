@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/consistent-type-definitions */
+
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+/* eslint-disable @typescript-eslint/consistent-type-definitions */
 import {EventEmitter} from 'events';
 import type {Store, StoredData} from 'keyv';
 

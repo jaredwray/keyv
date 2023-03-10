@@ -20,7 +20,11 @@ class KeyvPostgres extends EventEmitter {
 			schema: 'public',
 			keySize: 255, ...options};
 
-		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema}.${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
+		let createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema}.${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
+
+		if (this.opts.schema !== 'public') {
+			createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema}; ${createTable}`;
+		}
 
 		const connected = this.opts.connect()
 			.then(query => query(createTable).then(() => query))
@@ -44,7 +48,7 @@ class KeyvPostgres extends EventEmitter {
 	}
 
 	getMany(keys) {
-		const getMany = `SELECT * FROM ${this.opts.table} WHERE key = ANY($1)`;
+		const getMany = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = ANY($1)`;
 		return this.query(getMany, [keys]).then(rows => {
 			const results = [...keys];
 			let i = 0;
@@ -65,7 +69,7 @@ class KeyvPostgres extends EventEmitter {
 	}
 
 	set(key, value) {
-		const upsert = `INSERT INTO ${this.opts.table} (key, value)
+		const upsert = `INSERT INTO ${this.opts.schema}.${this.opts.table} (key, value)
 			VALUES($1, $2) 
 			ON CONFLICT(key) 
 			DO UPDATE SET value=excluded.value;`;
@@ -73,8 +77,8 @@ class KeyvPostgres extends EventEmitter {
 	}
 
 	delete(key) {
-		const select = `SELECT * FROM ${this.opts.table} WHERE key = $1`;
-		const del = `DELETE FROM ${this.opts.table} WHERE key = $1`;
+		const select = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = $1`;
+		const del = `DELETE FROM ${this.opts.schema}.${this.opts.table} WHERE key = $1`;
 		return this.query(select, [key])
 			.then(rows => {
 				const row = rows[0];
@@ -88,8 +92,8 @@ class KeyvPostgres extends EventEmitter {
 	}
 
 	deleteMany(key) {
-		const select = `SELECT * FROM ${this.opts.table} WHERE key = ANY($1)`;
-		const del = `DELETE FROM ${this.opts.table} WHERE key = ANY($1)`;
+		const select = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = ANY($1)`;
+		const del = `DELETE FROM ${this.opts.schema}.${this.opts.table} WHERE key = ANY($1)`;
 		return this.query(select, [key])
 			.then(rows => {
 				const row = rows[0];
@@ -103,7 +107,7 @@ class KeyvPostgres extends EventEmitter {
 	}
 
 	clear() {
-		const del = `DELETE FROM ${this.opts.table} WHERE key LIKE $1`;
+		const del = `DELETE FROM ${this.opts.schema}.${this.opts.table} WHERE key LIKE $1`;
 		return this.query(del, [this.namespace ? `${this.namespace}:%` : '%'])
 			.then(() => undefined);
 	}
@@ -111,7 +115,7 @@ class KeyvPostgres extends EventEmitter {
 	async * iterator(namespace) {
 		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
 		async function * iterate(offset, options, query) {
-			const select = `SELECT * FROM ${options.table} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
+			const select = `SELECT * FROM ${options.schema}.${options.table} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
 			const enteries = await query(select, [`${namespace ? namespace + ':' : ''}%`, limit, offset]);
 			if (enteries.length === 0) {
 				return;
@@ -129,7 +133,7 @@ class KeyvPostgres extends EventEmitter {
 	}
 
 	has(key) {
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table} WHERE key = '${key}' )`;
+		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = '${key}' )`;
 		return this.query(exists).then(rows => rows[0].exists);
 	}
 

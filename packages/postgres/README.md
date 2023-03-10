@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/@keyv/postgres.svg)](https://www.npmjs.com/package/@keyv/postgres)
 [![npm](https://img.shields.io/npm/dm/@keyv/postgres)](https://npmjs.com/package/@keyv/postgres)
 
-PostgreSQL storage adapter for [Keyv](https://github.com/lukechilds/keyv).
+PostgreSQL storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant upserts. [Why?](https://stackoverflow.com/questions/17267417/how-to-upsert-merge-insert-on-duplicate-update-in-postgresql/17267423#17267423)
 
@@ -34,20 +34,26 @@ e.g:
 const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname', { table: 'cache' });
 ```
 
+You can specify the `schema` option (default is `public`).
+
+e.g:
+
+```js
+const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname', { schema: 'keyv' });
+```
+
 ## Testing
 
 When testing you can use our `docker-compose` postgresql instance by having docker installed and running. This will start a postgres server, run the tests, and stop the server:
 
+At the root of the Keyv mono repo:
 ```shell
-npm run test:db
+yarn test:services:start
 ```
 
-To run each step manually do the following to start the server, and run the tests:
-
+To just test the postgres adapter go to the postgres directory (packages/postgres) and run:
 ```shell
-npm run test:postgres:start
-npm run test
-npm run test:postgres:stop
+yarn test
 ```
 
 ## License
