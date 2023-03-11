@@ -16,9 +16,12 @@ class KeyvPostgres extends EventEmitter {
 				return (sql, values) => conn.query(sql, values)
 					.then(data => data.rows);
 			});
-		this.opts = {table: 'keyv',
+		this.opts = {
+			table: 'keyv',
 			schema: 'public',
-			keySize: 255, ...options};
+			keySize: 255,
+			...options
+		};
 
 		let createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema}.${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
@@ -35,7 +38,7 @@ class KeyvPostgres extends EventEmitter {
 	}
 
 	get(key) {
-		const select = `SELECT * FROM ${this.opts.table} WHERE key = $1`;
+		const select = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = $1`;
 		return this.query(select, [key])
 			.then(rows => {
 				const row = rows[0];
