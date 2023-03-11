@@ -20,7 +20,7 @@ class KeyvPostgres extends EventEmitter {
 			table: 'keyv',
 			schema: 'public',
 			keySize: 255,
-			...options
+			...options,
 		};
 
 		let createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema}.${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
