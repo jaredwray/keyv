@@ -2,9 +2,10 @@
 	"name": "@keyv/offline",
 	"version": "3.0.7",
 	"description": "Offline storage adapter for Keyv",
-	"main": "src/index.js",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
@@ -12,9 +13,6 @@
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-module": 0,
-			"unicorn/switch-case-braces": 0,
-			"@typescript-eslint/no-unsafe-call": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -23,16 +21,21 @@
 						"ts"
 					]
 				}
-			]
+			],
+			"import/extensions": 0,
+			"@typescript-eslint/prefer-nullish-coalescing": 0,
+			"@typescript-eslint/naming-convention": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/no-unsafe-return": 0,
+			"@typescript-eslint/await-thenable": 0
 		}
 	},
 	"ava": {
 		"require": [
-			"requirable",
 			"ts-node/register"
 		],
 		"extensions": [
-			"js",
 			"ts"
 		]
 	},
@@ -75,11 +78,10 @@
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"engines": {
 		"node": ">= 12"
 	},
 	"files": [
-		"src"
+		"dist"
 	]
 }
