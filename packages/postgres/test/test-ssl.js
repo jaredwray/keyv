@@ -5,10 +5,12 @@ const Keyv = require('keyv');
 const {endPool} = require('../src/pool.js');
 const KeyvPostgres = require('../src/index.js');
 
+const postgresUri = 'postgresql://postgres:postgres@localhost:5433/keyv_test';
+
 test.serial('throws if ssl is not used', async t => {
 	endPool();
 	try {
-		const keyv = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5433/keyv_test'});
+		const keyv = new KeyvPostgres({uri: postgresUri});
 		await keyv.get('foo');
 		t.fail();
 	} catch {
@@ -20,14 +22,14 @@ test.serial('throws if ssl is not used', async t => {
 
 const options = {ssl: {rejectUnauthorized: false}};
 
-keyvOfficialTests(test, Keyv, 'postgresql://postgres:postgres@localhost:5433/keyv_test', 'postgresql://foo', options);
+keyvOfficialTests(test, Keyv, postgresUri, 'postgresql://foo', options);
 
-const store = () => new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5433/keyv_test', iterationLimit: 2, ...options});
+const store = () => new KeyvPostgres({uri: postgresUri, iterationLimit: 2, ...options});
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
 test.serial('iterator with default namespace', async t => {
-	const keyv = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5433/keyv_test', ...options});
+	const keyv = new KeyvPostgres({uri: postgresUri, ...options});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');

@@ -4,14 +4,16 @@ const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
 const KeyvPostgres = require('../src/index.js');
 
-keyvOfficialTests(test, Keyv, 'postgresql://postgres:postgres@localhost:5432/keyv_test', 'postgresql://foo');
+const postgresUri = 'postgresql://postgres:postgres@localhost:5432/keyv_test';
 
-const store = () => new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', iterationLimit: 2});
+keyvOfficialTests(test, Keyv, postgresUri, 'postgresql://foo');
+
+const store = () => new KeyvPostgres({uri: postgresUri, iterationLimit: 2});
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
 test.serial('iterator with default namespace', async t => {
-	const keyv = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test'});
+	const keyv = new KeyvPostgres({uri: postgresUri});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
@@ -47,8 +49,8 @@ test.serial('close connection successfully', async t => {
 });
 
 test.serial('test schema as non public', async t => {
-	const keyv = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', schema: 'keyvtest1'});
-	const keyv2 = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', schema: 'keyvtest2'});
+	const keyv = new KeyvPostgres({uri: postgresUri, schema: 'keyvtest1'});
+	const keyv2 = new KeyvPostgres({uri: postgresUri, schema: 'keyvtest2'});
 	keyv.set('footest11', 'bar1');
 	keyv2.set('footest22', 'bar2');
 	t.is(await keyv.get('footest11'), 'bar1');
