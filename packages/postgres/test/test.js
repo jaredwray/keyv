@@ -52,6 +52,8 @@ test.serial('test schema as non public', async t => {
 	keyv.set('footest11', 'bar1');
 	keyv2.set('footest22', 'bar2');
 	t.is(await keyv.get('footest11'), 'bar1');
+	t.is(await keyv.get('footest22'), undefined);
+	t.is(await keyv2.get('footest11'), undefined);
 	t.is(await keyv2.get('footest22'), 'bar2');
 });
 
