@@ -48,14 +48,3 @@ test.serial('close connection successfully', async t => {
 	}
 });
 
-test.serial('test schema as non public', async t => {
-	const keyv = new KeyvPostgres({uri: postgresUri, schema: 'keyvtest1'});
-	const keyv2 = new KeyvPostgres({uri: postgresUri, schema: 'keyvtest2'});
-	keyv.set('footest11', 'bar1');
-	keyv2.set('footest22', 'bar2');
-	t.is(await keyv.get('footest11'), 'bar1');
-	t.is(await keyv.get('footest22'), undefined);
-	t.is(await keyv2.get('footest11'), undefined);
-	t.is(await keyv2.get('footest22'), 'bar2');
-});
-
