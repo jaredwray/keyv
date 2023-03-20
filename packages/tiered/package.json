@@ -1,6 +1,6 @@
 {
   "name": "@keyv/tiered",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Tiered storage adapter for Keyv",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
