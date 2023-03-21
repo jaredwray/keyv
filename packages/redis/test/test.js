@@ -1,4 +1,5 @@
 const test = require('ava');
+const tk = require('timekeeper');
 const keyvTestSuite = require('@keyv/test-suite').default;
 const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
 const Keyv = require('keyv');
@@ -107,4 +108,12 @@ test('.clear cleaned namespace', async t => {
 
 	// Memory of each key should be null
 	t.true(await redis.memory('USAGE', 'namespace:v3') === null);
+});
+
+test.serial('Keyv stores ttl without const', async t => {
+	const keyv = new Keyv(redisURI);
+	await keyv.set('foo', 'bar', 100);
+	t.is(await keyv.get('foo'), 'bar');
+	tk.freeze(Date.now() + 150);
+	t.is(await keyv.get('foo'), undefined);
 });

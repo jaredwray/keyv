@@ -29,9 +29,9 @@ Caching will work in memory by default. However, users can also install a Keyv s
 
 ### Example - Add Cache Support to a Module
 
-1. Install whichever storage adapter you will be using, `keyv-redis` in this example
+1. Install whichever storage adapter you will be using, `@keyv/redis` in this example
 ```sh
-npm install --save keyv-redis
+npm install --save @keyv/redis
 ```
 2. Declare the Module with the cache controlled by a Keyv instance
 ```js
