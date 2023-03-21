@@ -91,7 +91,7 @@ class Keyv extends EventEmitter {
 
 	_checkIterableAdaptar() {
 		return iterableAdapters.includes(this.opts.store.opts.dialect)
-			|| iterableAdapters.findIndex(element => this.opts.store.opts.url.includes(element)) >= 0;
+			|| iterableAdapters.findIndex(element => this.opts.store.opts.uri.includes(element)) >= 0;
 	}
 
 	_getKeyPrefix(key) {
