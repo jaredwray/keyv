@@ -7,12 +7,15 @@ class KeyvPostgres extends EventEmitter {
 	constructor(options) {
 		super();
 		this.ttlSupport = false;
-		options = {
-			dialect: 'postgres',
-			uri: 'postgresql://localhost:5432',
-			...options,
-		};
+		options = {dialect: 'postgres',
+			uri: 'postgresql://localhost:5432', ...options};
 
+		options.connect = () => Promise.resolve()
+			.then(() => {
+				const conn = pool(options.uri, options);
+				return (sql, values) => conn.query(sql, values)
+					.then(data => data.rows);
+			});
 		this.opts = {
 			table: 'keyv',
 			schema: 'public',
@@ -20,29 +23,18 @@ class KeyvPostgres extends EventEmitter {
 			...options,
 		};
 
-		(async () => {
-			await this.connect();
-		})();
-	}
+		let createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema}.${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
-	async connect() {
-		try {
-			const conn = pool(this.opts.uri, this.opts);
-			this.query = async (sql, values) => {
-				const {rows} = await conn.query(sql, values);
-				return rows;
-			};
-
-			let createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema}.${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
-
-			if (this.opts.schema !== 'public') {
-				createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema}; ${createTable}`;
-			}
-
-			await this.query(createTable);
-		} catch (error) {
-			this.emit('error', error);
+		if (this.opts.schema !== 'public') {
+			createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema}; ${createTable}`;
 		}
+
+		const connected = this.opts.connect()
+			.then(query => query(createTable).then(() => query))
+			.catch(error => this.emit('error', error));
+
+		this.query = (sqlString, values) => connected
+			.then(query => query(sqlString, values));
 	}
 
 	async get(key) {
