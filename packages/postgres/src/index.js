@@ -20,7 +20,9 @@ class KeyvPostgres extends EventEmitter {
 			...options,
 		};
 
-		this.connect();
+		(async () => {
+			await this.connect();
+		})();
 	}
 
 	async connect() {
