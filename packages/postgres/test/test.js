@@ -12,6 +12,15 @@ const store = () => new KeyvPostgres({uri: postgresUri, iterationLimit: 2});
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
+test.serial('test schema as non public', async t => {
+	const keyv1 = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', schema: 'keyvtest1'});
+	const keyv2 = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', schema: 'keyvtest2'});
+	await keyv1.set('footest11', 'bar1');
+	await keyv2.set('footest22', 'bar2');
+	t.is(await keyv1.get('footest11'), 'bar1');
+	t.is(await keyv2.get('footest22'), 'bar2');
+});
+
 test.serial('iterator with default namespace', async t => {
 	const keyv = new KeyvPostgres({uri: postgresUri});
 	await keyv.set('foo', 'bar');
@@ -47,4 +56,3 @@ test.serial('close connection successfully', async t => {
 		t.pass();
 	}
 });
-

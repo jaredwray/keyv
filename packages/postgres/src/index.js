@@ -37,82 +37,63 @@ class KeyvPostgres extends EventEmitter {
 			.then(query => query(sqlString, values));
 	}
 
-	get(key) {
+	async get(key) {
 		const select = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = $1`;
-		return this.query(select, [key])
-			.then(rows => {
-				const row = rows[0];
-				if (row === undefined) {
-					return undefined;
-				}
-
-				return row.value;
-			});
+		const rows = await this.query(select, [key]);
+		const row = rows[0];
+		return row === undefined ? undefined : row.value;
 	}
 
-	getMany(keys) {
+	async getMany(keys) {
 		const getMany = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = ANY($1)`;
-		return this.query(getMany, [keys]).then(rows => {
-			const results = [...keys];
-			let i = 0;
-			for (const key of keys) {
-				const rowIndex = rows.findIndex(row => row.key === key);
+		const rows = await this.query(getMany, [keys]);
+		const results = [];
 
-				if (rowIndex > -1) {
-					results[i] = rows[rowIndex].value;
-				} else {
-					results[i] = undefined;
-				}
+		for (const key of keys) {
+			const rowIndex = rows.findIndex(row => row.key === key);
+			results.push(rowIndex > -1 ? rows[rowIndex].value : undefined);
+		}
 
-				i++;
-			}
-
-			return results;
-		});
+		return results;
 	}
 
-	set(key, value) {
+	async set(key, value) {
 		const upsert = `INSERT INTO ${this.opts.schema}.${this.opts.table} (key, value)
-			VALUES($1, $2) 
-			ON CONFLICT(key) 
-			DO UPDATE SET value=excluded.value;`;
-		return this.query(upsert, [key, value]);
+      VALUES($1, $2) 
+      ON CONFLICT(key) 
+      DO UPDATE SET value=excluded.value;`;
+		await this.query(upsert, [key, value]);
 	}
 
-	delete(key) {
+	async delete(key) {
 		const select = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = $1`;
 		const del = `DELETE FROM ${this.opts.schema}.${this.opts.table} WHERE key = $1`;
-		return this.query(select, [key])
-			.then(rows => {
-				const row = rows[0];
-				if (row === undefined) {
-					return false;
-				}
+		const rows = await this.query(select, [key]);
 
-				return this.query(del, [key])
-					.then(() => true);
-			});
+		if (rows[0] === undefined) {
+			return false;
+		}
+
+		await this.query(del, [key]);
+		return true;
 	}
 
-	deleteMany(key) {
+	async deleteMany(keys) {
 		const select = `SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = ANY($1)`;
 		const del = `DELETE FROM ${this.opts.schema}.${this.opts.table} WHERE key = ANY($1)`;
-		return this.query(select, [key])
-			.then(rows => {
-				const row = rows[0];
-				if (row === undefined) {
-					return false;
-				}
+		const rows = await this.query(select, [keys]);
 
-				return this.query(del, [key])
-					.then(() => true);
-			});
+		if (rows[0] === undefined) {
+			return false;
+		}
+
+		await this.query(del, [keys]);
+		return true;
 	}
 
-	clear() {
+	async clear() {
 		const del = `DELETE FROM ${this.opts.schema}.${this.opts.table} WHERE key LIKE $1`;
-		return this.query(del, [this.namespace ? `${this.namespace}:%` : '%'])
-			.then(() => undefined);
+		await this.query(del, [this.namespace ? `${this.namespace}:%` : '%']);
 	}
 
 	async * iterator(namespace) {
@@ -135,9 +116,10 @@ class KeyvPostgres extends EventEmitter {
 		yield * iterate(0, this.opts, this.query);
 	}
 
-	has(key) {
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = '${key}' )`;
-		return this.query(exists).then(rows => rows[0].exists);
+	async has(key) {
+		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.schema}.${this.opts.table} WHERE key = $1 )`;
+		const rows = await this.query(exists, [key]);
+		return rows[0].exists;
 	}
 
 	disconnect() {
