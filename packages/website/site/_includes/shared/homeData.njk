@@ -1,0 +1,49 @@
+<section class="home-container">
+  {% if github %}
+  {% if (github.contributors) and (github.contributors.length) %}
+  <div class="content-container">
+    <h2 class="home-title">Contributors</h2>
+    <div class="facepile-container">
+      <div class="facepile">
+        {% for contributor in github.contributors %}
+        <a href="{{ contributor.html_url }}" target="_blank" title="{{ contributor.login }}" rel="noopener noreferrer">
+          <img src="{{ contributor.avatar_url }}" alt="{{ contributor.login }}" />
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if (github.releases) and (github.releases.length) %}
+  <div class="content-container">
+    <h2 class="home-title">Latest's Releases</h2>
+    {% set releasesLength = github.releases | length %}
+    {% for release in github.releases %}
+    {% if loop.index <= 3 %}
+    <div class="release">
+      <div class="release-header">
+        <a class="release-title" href="{{ release.html_url }}" target="_blank" rel="noopener noreferrer">{{ release.name }}</a>
+        <span class="release-date">{% formatDate "MMM dd, yyyy", release.published_at %}</span>
+      </div>
+      <div class="release-body">
+        {% if release.body %}
+        <p>{% parseRelease release.body %}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% if releasesLength > 5 %}
+    <a class="release-btn" href="/versions">
+      All Releases
+      <span>→</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% endif %}
+
+</section>
