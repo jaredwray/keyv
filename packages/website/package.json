@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.1",
-    "docula": "^0.0.9",
+    "docula": "^0.1.0",
     "ts-node": "^10.9.1"
   },
   "dependencies": {
