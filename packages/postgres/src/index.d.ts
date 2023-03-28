@@ -1,6 +1,4 @@
-
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-/* eslint-disable @typescript-eslint/consistent-type-definitions */
 import {EventEmitter} from 'events';
 import type {Store, StoredData} from 'keyv';
 
@@ -22,11 +20,11 @@ declare class KeyvPostgres<Value=any> extends EventEmitter implements Store<Valu
 	has?(key: string): boolean | Promise<boolean>;
 }
 declare namespace KeyvPostgres {
-	interface Options {
+	type Options = {
 		uri?: string | undefined;
 		table?: string | undefined;
 		keySize?: number | undefined;
 		schema?: string | 'public';
 		ssl?: any | undefined;
-	}
+	};
 }

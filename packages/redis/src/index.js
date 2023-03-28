@@ -76,15 +76,14 @@ class KeyvRedis extends EventEmitter {
 		const get = this.redis.mget.bind(this.redis);
 		async function * iterate(curs, pattern) {
 			const [cursor, keys] = await scan(curs, 'MATCH', pattern);
-			if (keys.length === 0) {
-				return;
-			}
 
-			const values = await get(keys);
-			for (const [i] of keys.entries()) {
-				const key = keys[i];
-				const value = values[i];
-				yield [key, value];
+			if (keys.length > 0) {
+				const values = await get(keys);
+				for (const [i] of keys.entries()) {
+					const key = keys[i];
+					const value = values[i];
+					yield [key, value];
+				}
 			}
 
 			if (cursor !== '0') {
