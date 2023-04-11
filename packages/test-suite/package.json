@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/test-suite",
-	"version": "1.9.1",
+	"version": "1.9.2",
 	"description": "Test suite for Keyv API compliancy",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -48,11 +48,11 @@
 		"bignumber.js": "^9.1.1",
 		"delay": "^5.0.0",
 		"json-bigint": "^1.0.0",
-		"sqlite3": "^5.1.4",
+		"sqlite3": "^5.1.6",
 		"timekeeper": "^2.2.0"
 	},
 	"devDependencies": {
-		"@ava/typescript": "^3.0.1",
+		"@ava/typescript": "^4.0.0",
 		"ts-node": "^10.9.1",
 		"@keyv/compress-brotli": "*",
 		"@types/json-bigint": "^1.0.1",
@@ -60,7 +60,7 @@
 		"ava": "^5.2.0",
 		"c8": "^7.13.0",
 		"keyv": "*",
-		"typescript": "^4.9.5"
+		"typescript": "^5.0.3"
 	},
 	"ava": {
 		"extensions": [
