@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
-import {Etcd3, Lease, PutBuilder, SingleRangeBuilder} from 'etcd3';
+import {Etcd3, Lease, PutBuilder} from 'etcd3';
 import { handleAll, retry, ExponentialBackoff } from 'cockatiel';
+import {Store, StoredData} from "keyv";
 
 interface KeyvEtcdOptions {
   url?: string;
@@ -8,7 +9,7 @@ interface KeyvEtcdOptions {
   ttl?: number;
 }
 
-class KeyvEtcd<Value=any> extends EventEmitter{
+class KeyvEtcd<Value=any> extends EventEmitter implements Store<Value>{
   public ttlSupport: boolean;
   public opts: KeyvEtcdOptions;
   public client: Etcd3;
@@ -56,29 +57,32 @@ class KeyvEtcd<Value=any> extends EventEmitter{
     }
   }
 
-  get(key: string) : SingleRangeBuilder {
-    return this.client.get(key);
+  get(key: string): Promise<Value> {
+    return this.client.get(key) as unknown as Promise<Value>;
   }
 
-  async getMany(keys: string[]) {
+  async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
     const promises = [];
     for (const key of keys) {
       promises.push(this.get(key));
     }
 
     const values = await Promise.allSettled(promises);
-    const data: (PromiseSettledResult<string | null> | undefined)[] = [];
+    const data = [];
     for (const value of values) {
-      if (value === null) {
+      // @ts-ignore
+      if (value.value === null) {
         data.push(undefined);
       } else {
-        data.push(value);
+        // @ts-ignore
+        data.push(value.value);
       }
     }
     return data;
   }
 
-  set(key: string, value: string | number | Buffer): PutBuilder {
+  set(key: string, value: Value): PutBuilder {
+    // @ts-ignore - value needs extends Buffer
     return this.opts.ttl ? this.lease!.put(key).value(value) : this.client.put(key).value(value);
   }
 
@@ -100,7 +104,7 @@ class KeyvEtcd<Value=any> extends EventEmitter{
       .then(values => values.every(x => x));
   }
 
-  clear() {
+  clear(): Promise<void> {
     // @ts-ignore - namespace comes from keyv
     const promise = this.namespace
       // @ts-ignore - namespace comes from keyv
@@ -117,3 +121,5 @@ class KeyvEtcd<Value=any> extends EventEmitter{
     return this.client.close();
   }
 }
+
+export = KeyvEtcd;
