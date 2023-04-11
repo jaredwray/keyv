@@ -28,6 +28,7 @@ test('enable ttl using default url', t => {
 });
 
 test('disable ttl using default url', t => {
+	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd({ttl: true});
 	t.deepEqual(store.opts, {
 		url: '127.0.0.1:2379',
