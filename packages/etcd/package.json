@@ -2,9 +2,10 @@
 	"name": "@keyv/etcd",
 	"version": "1.1.5",
 	"description": "Etcd storage adapter for Keyv",
-	"main": "src/index.js",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
@@ -16,15 +17,8 @@
 			"unicorn/no-array-reduce": 0,
 			"unicorn/prefer-object-from-entries": 0,
 			"unicorn/prefer-node-protocol": 0,
-			"ava/no-ignored-test-files": [
-				"error",
-				{
-					"extensions": [
-						"js",
-						"ts"
-					]
-				}
-			]
+			"import/extensions": 0,
+			"@typescript-eslint/no-confusing-void-expression": 0
 		}
 	},
 	"ava": {
@@ -77,8 +71,7 @@
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"files": [
-		"src"
+		"dist"
 	]
 }

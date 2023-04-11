@@ -1,14 +1,13 @@
-const test = require('ava');
-const Keyv = require('keyv');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests} = require('@keyv/test-suite');
-const KeyvEtcd = require('../src/index.js');
+import test from 'ava';
+import Keyv from 'keyv';
+import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
+import KeyvEtcd from '../src/index';
 
-const etcdURL = 'etcd://127.0.0.1:2379';
+const etcdUrl = 'etcd://127.0.0.1:2379';
 
-keyvOfficialTests(test, Keyv, etcdURL, 'etcd://foo');
+keyvOfficialTests(test, Keyv, etcdUrl, 'etcd://foo');
 
-const store = () => new KeyvEtcd({uri: etcdURL, busyTimeout: 3000});
+const store = () => new KeyvEtcd({uri: etcdUrl, busyTimeout: 3000});
 
 keyvTestSuite(test, Keyv, store);
 
@@ -47,6 +46,7 @@ test('enable ttl using url and options', t => {
 });
 
 test('disable ttl using url and options', t => {
+	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd('127.0.0.1:2379', {ttl: true});
 	t.deepEqual(store.opts, {
 		url: '127.0.0.1:2379',
@@ -55,44 +55,43 @@ test('disable ttl using url and options', t => {
 	t.is(store.ttlSupport, false);
 });
 
-function sleep(ms) {
+async function sleep(ms: number): Promise<void> {
 	return new Promise(resolve => {
 		setTimeout(resolve, ms);
 	});
 }
 
 test.serial('KeyvEtcd respects default tll option', async t => {
-	const store = new Map();
-	const keyv = new KeyvEtcd({store, ttl: 1000});
+	const keyv = new KeyvEtcd({ttl: 1000});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 	await sleep(3000);
 	t.is(await keyv.get('foo'), null);
-	t.is(store.size, 0);
 });
 
 test('.delete() with key as number', async t => {
-	const store = new KeyvEtcd(etcdURL);
+	const store = new KeyvEtcd(etcdUrl);
+	// @ts-expect-error - key needs be a string, just for test
 	t.false(await store.delete(123));
 });
 
 test('.clear() with default namespace', async t => {
-	const store = new KeyvEtcd(etcdURL);
+	const store = new KeyvEtcd(etcdUrl);
 	t.is(await store.clear(), undefined);
 });
 
 test('.clear() with namespace', async t => {
-	const store = new KeyvEtcd(etcdURL);
+	const store = new KeyvEtcd(etcdUrl);
 	store.namespace = 'key1';
-	await store.set(store.namespace + ':key', 'bar');
+	await store.set(`${store.namespace}:key`, 'bar');
 	t.is(await store.clear(), undefined);
-	t.is(await store.get(store.namespace + ':key'), null);
+	t.is(await store.get(`${store.namespace}:key`), null);
 });
 
 test.serial('close connection successfully', async t => {
-	const keyv = new KeyvEtcd(etcdURL);
+	const keyv = new KeyvEtcd(etcdUrl);
 	t.is(await keyv.get('foo'), null);
-	await keyv.disconnect();
+	keyv.disconnect();
 	try {
 		await keyv.get('foo');
 		t.fail();
