@@ -63,7 +63,7 @@ async function sleep(ms: number): Promise<void> {
 }
 
 test.serial('KeyvEtcd respects default tll option', async t => {
-	const keyv = new KeyvEtcd({ttl: 1000});
+	const keyv = new KeyvEtcd(etcdUrl, {ttl: 1000});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 	await sleep(3000);
@@ -71,7 +71,7 @@ test.serial('KeyvEtcd respects default tll option', async t => {
 });
 
 test('.delete() with key as number', async t => {
-	const store = new KeyvEtcd(etcdUrl);
+	const store = new KeyvEtcd({uri: etcdUrl});
 	// @ts-expect-error - key needs be a string, just for test
 	t.false(await store.delete(123));
 });

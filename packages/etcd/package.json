@@ -8,7 +8,7 @@
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial --timeout=2m",
+		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
