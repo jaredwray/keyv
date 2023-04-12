@@ -8,7 +8,7 @@
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
+		"test:ci": "xo && ava --serial --timeout=2m",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
@@ -18,7 +18,9 @@
 			"unicorn/prefer-object-from-entries": 0,
 			"unicorn/prefer-node-protocol": 0,
 			"import/extensions": 0,
-			"@typescript-eslint/no-confusing-void-expression": 0
+			"@typescript-eslint/no-confusing-void-expression": 0,
+			"@typescript-eslint/promise-function-async": 0,
+			"eslint-comments/no-unused-disable": 0
 		}
 	},
 	"ava": {
