@@ -15,14 +15,14 @@ declare class Keyv<Value = any, Options extends Record<string, any> = Record<str
 	Options;
 
 	/**
-     * @param opts The options object is also passed through to the storage adapter. Check your storage adapter docs for any extra options.
+     * @param options The options object is also passed through to the storage adapter. Check your storage adapter docs for any extra options.
      */
 	constructor(options?: Keyv.Options<Value> & Options);
 	/**
      * @param uri The connection string URI.
      *
      * Merged into the options object as options.uri.
-     * @param opts The options object is also passed through to the storage adapter. Check your storage adapter docs for any extra options.
+     * @param options The options object is also passed through to the storage adapter. Check your storage adapter docs for any extra options.
      */
 	constructor(uri?: string, options?: Keyv.Options<Value> & Options);
 
@@ -101,15 +101,25 @@ declare namespace Keyv {
 
 	type StoredData<Value> = DeserializedData<Value> | string | undefined;
 
+	type GetOutput<Value> = StoredData<Value> | Value | Promise<Value | undefined> | undefined;
+
+	type DeleteOutput = boolean | Promise<boolean>;
+
+	type ClearOutput = void | Promise<void>;
+
+	type HasOutput = boolean | Promise<boolean>;
+
+	type GetManyOutput<Value> = Array<GetOutput<Value>> | Promise<Array<GetOutput<Value>>> | undefined;
+
 	interface Store<Value> {
-		get(key: string): Value | Promise<Value | undefined> | undefined;
+		get(key: string): GetOutput<Value>;
 		set(key: string, value: Value, ttl?: number): any;
-		delete(key: string): boolean | Promise<boolean>;
-		clear(): void | Promise<void>;
-		has?(key: string): boolean | Promise<boolean>;
+		delete(key: string): DeleteOutput;
+		clear(): ClearOutput;
+		has?(key: string): HasOutput;
 		getMany?(
 			keys: string[]
-		): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined;
+		): GetManyOutput<Value>;
 	}
 }
 
