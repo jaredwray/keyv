@@ -1,6 +1,6 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvEtcd from '../src/index.js';
+import KeyvEtcd from '../src/index';
 
 type MyType = {
 	a: string;
