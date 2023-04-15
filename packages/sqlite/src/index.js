@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/prefer-ternary */
 'use strict';
 
 const EventEmitter = require('events');
