@@ -68,7 +68,7 @@
 		"tsd": "^0.28.1",
 		"typescript": "^5.0.4",
 		"webpack": "^5.76.2",
-		"xo": "^0.53.1"
+		"xo": "^0.54.1"
 	},
 	"tsd": {
 		"directory": "test"
