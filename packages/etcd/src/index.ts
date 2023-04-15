@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {EventEmitter} from 'events';
 import type {Lease} from 'etcd3';
 import {Etcd3} from 'etcd3';
