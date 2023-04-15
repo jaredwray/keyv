@@ -20,6 +20,7 @@
 			"unicorn/prefer-node-protocol": 0,
 			"@typescript-eslint/consistent-type-imports": 0,
 			"@typescript-eslint/consistent-type-definitions": 0,
+			"unicorn/no-typeof-undefined": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{

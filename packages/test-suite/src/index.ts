@@ -1,7 +1,6 @@
 import type KeyvModule from 'keyv';
 import type {TestFn} from 'ava';
 import type {KeyvStoreFn} from './types';
-
 import keyvApiTests from './api';
 import keyvValueTests from './values';
 import keyvNamepsaceTests from './namespace';
