@@ -4,7 +4,7 @@ const EventEmitter = require('events');
 const mysql = require('mysql2/promise');
 const {pool, endPool} = require('./pool.js');
 
-const keyvMysqlKeys = new Set(['uri', 'dialect', 'connect']);
+const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'table', 'ttl', 'uri']);
 
 class KeyvMysql extends EventEmitter {
 	constructor(options) {
