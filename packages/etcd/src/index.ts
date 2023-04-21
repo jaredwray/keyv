@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {EventEmitter} from 'events';
 import type {Lease} from 'etcd3';
 import {Etcd3} from 'etcd3';
@@ -92,7 +91,7 @@ class KeyvEtcd<Value = any> extends EventEmitter implements Store<Value> {
 						data.push(undefined);
 					} else {
 						// @ts-expect-error - value is an object
-						data.push(value.value);
+						data.push(value.value as StoredData<Value>);
 					}
 				}
 
