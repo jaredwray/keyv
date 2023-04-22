@@ -38,7 +38,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		this.client = memcache.Client.create(uri, options);
 	}
 
-	_getNamespace() {
+	_getNamespace(): string {
 		return `namespace:${this.namespace}`;
 	}
 
