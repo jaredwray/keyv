@@ -2,6 +2,7 @@ import tk from 'timekeeper';
 import type {TestFn} from 'ava';
 import type KeyvModule from 'keyv';
 import type {KeyvStoreFn} from './types';
+import assert from 'assert';
 
 const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
@@ -60,9 +61,10 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 		await keyv.set('foo2', 'bar2', ttl);
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
-		t.is(values?.[0], 'bar');
-		t.is(values?.[1], 'bar1');
-		t.is(values?.[2], 'bar2');
+		assert(values);
+		t.is(values[0], 'bar');
+		t.is(values[1], 'bar1');
+		t.is(values[2], 'bar2');
 	});
 
 	test.serial('.get([keys]) should return array value undefined when expires', async t => {
@@ -78,9 +80,10 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 		});
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
-		t.is(values?.[0], 'bar');
-		t.is(values?.[1], undefined);
-		t.is(values?.[2], 'bar2');
+		assert(values);
+		t.is(values[0], 'bar');
+		t.is(values[1], undefined);
+		t.is(values[2], 'bar2');
 	});
 
 	test.serial('.get([keys]) should return array values with undefined', async t => {
@@ -90,9 +93,10 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 		await keyv.set('foo2', 'bar2', ttl);
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
-		t.is(values?.[0], 'bar');
-		t.is(values?.[1], undefined);
-		t.is(values?.[2], 'bar2');
+		assert(values);
+		t.is(values[0], 'bar');
+		t.is(values[1], undefined);
+		t.is(values[2], 'bar2');
 	});
 
 	test.serial('.get([keys]) should return undefined array for all no existent keys', async t => {
