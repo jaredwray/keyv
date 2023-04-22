@@ -9,7 +9,10 @@ const pools = (uri, options = {}) => {
 		globalUri = uri;
 	}
 
-	pool = pool || mysql.createPool({uri, ...options});
+	const connectObject = parseConnectionString(uri);
+	const poolOptions = {...connectObject, ...options};
+
+	pool = pool || mysql.createPool(poolOptions);
 	return pool.promise();
 };
 
@@ -20,6 +23,36 @@ const endPool = () => {
 
 	globalUri = undefined;
 };
+
+function parseConnectionString(connectionString) {
+	const uriRegex = /^(\w+):\/\/(\w+)(?::(\w+))?@([\w.]+)(?::(\d+))?\/(\w+)$/;
+
+	if (!uriRegex.test(connectionString)) {
+		throw new Error('Invalid connection string format');
+	}
+
+	const [, scheme, user, password, host, port, database] = connectionString.match(uriRegex);
+
+	const poolOptions = {
+		scheme,
+		user,
+		password: password || undefined,
+		host,
+		port: port ? Number.parseInt(port, 10) : undefined,
+		database,
+	};
+
+	delete poolOptions.scheme;
+	if (poolOptions.port === undefined) {
+		delete poolOptions.port;
+	}
+
+	if (poolOptions.password === undefined) {
+		delete poolOptions.password;
+	}
+
+	return poolOptions;
+}
 
 module.exports = {
 	pool: (uri, options) => pools(uri, options),
