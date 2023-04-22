@@ -1,11 +1,10 @@
-const {promisify} = require('util');
-const test = require('ava');
-const Keyv = require('keyv');
-const kvat = require('@keyv/test-suite');
-const KeyvMemcache = require('../src/index.js');
+import { promisify } from "util";
+import test, {ExecutionContext} from "ava";
+import Keyv from "keyv";
+import {keyvApiTests, keyvValueTests} from "@keyv/test-suite";
+import KeyvMemcache from "../src/index";
 
-// eslint-disable-next-line no-promise-executor-return
-const snooze = ms => new Promise(resolve => setTimeout(resolve, ms));
+const snooze = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Handle all the tests with listeners.
 require('events').EventEmitter.prototype._maxListeners = 200;
@@ -136,11 +135,11 @@ test.serial('keyv has / false', async t => {
 	t.is(value, false);
 });
 
-const withCallback = fn => async t => {
+const withCallback = (fn: Function) => async (t: ExecutionContext<any>) => {
 	await promisify(fn)(t);
 };
 
-test('clear should emit an error', withCallback(async (t, end) => {
+test('clear should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211')});
 
 	keyv.on('error', () => {
@@ -153,7 +152,7 @@ test('clear should emit an error', withCallback(async (t, end) => {
 	} catch {}
 }));
 
-test('delete should emit an error', withCallback(async (t, end) => {
+test('delete should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
 	const options = {logger: {log() {}}};
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
@@ -167,7 +166,7 @@ test('delete should emit an error', withCallback(async (t, end) => {
 	} catch {}
 }));
 
-test('set should emit an error', withCallback(async (t, end) => {
+test('set should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
 	const options = {logger: {log() {}}};
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
@@ -181,7 +180,7 @@ test('set should emit an error', withCallback(async (t, end) => {
 	} catch {}
 }));
 
-test('get should emit an error', withCallback(async (t, end) => {
+test('get should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
 	const options = {logger: {log() {}}};
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
@@ -197,6 +196,5 @@ test('get should emit an error', withCallback(async (t, end) => {
 
 const store = () => keyvMemcache;
 
-kvat.keyvApiTests(test, Keyv, store);
-kvat.keyvValueTests(test, Keyv, store);
-
+keyvApiTests(test, Keyv, store);
+keyvValueTests(test, Keyv, store);
