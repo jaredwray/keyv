@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mysql",
-	"version": "1.6.3",
+	"version": "1.6.4",
 	"description": "MySQL/MariaDB storage adapter for Keyv",
 	"main": "src/index.js",
 	"scripts": {
@@ -59,7 +59,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mysql2": "3.2.1"
+		"mysql2": "3.2.3"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
