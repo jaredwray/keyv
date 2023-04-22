@@ -1,8 +1,8 @@
+import assert from 'assert';
 import tk from 'timekeeper';
 import type {TestFn} from 'ava';
 import type KeyvModule from 'keyv';
 import type {KeyvStoreFn} from './types';
-import assert from 'assert';
 
 const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
