@@ -1,20 +1,30 @@
-'use strict';
+import EventEmitter from 'node:events';
+import type{Buffer} from 'node:buffer';
+import memcache from 'memjs';
+import JSONB from 'json-buffer';
+import Keyv, {Store, StoredData} from 'keyv';
 
-const EventEmitter = require('events');
-const memcache = require('memjs');
-const JSONB = require('json-buffer');
+type GetOutput<Value> = Value | Promise<Value | undefined> | undefined;
 
-class KeyvMemcache extends EventEmitter {
-	constructor(uri, options) {
+type KeyvMemcacheOptions<Value> = {
+	url?: string;
+	expires?: number;
+} & memcache.ClientOptions & Keyv.Options<Value>;
+
+class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
+	public ttlSupport = true;
+	public namespace?: string;
+	public client: memcache.Client;
+	public opts: KeyvMemcacheOptions<Value>;
+	constructor(uri?: string, options?: KeyvMemcacheOptions<Value>) {
 		super();
-		this.ttlSupport = true;
 
 		options = {
-
 			...((typeof uri === 'string') ? {uri} : uri),
 			...options,
 		};
-		if (options.uri && typeof options.url === 'undefined') {
+
+		if (options.uri && options.url === undefined) {
 			options.url = options.uri;
 		}
 
@@ -29,25 +39,26 @@ class KeyvMemcache extends EventEmitter {
 		this.client = memcache.Client.create(uri, options);
 	}
 
-	_getNamespace() {
-		return `namespace:${this.namespace}`;
+	_getNamespace(): string {
+		return `namespace:${this.namespace!}`;
 	}
 
-	get(key) {
+	get(key: string): GetOutput<Value> {
 		return new Promise((resolve, reject) => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
 					this.emit('error', error);
 					reject(error);
 				} else {
-					let value_ = {};
+					let value_;
 					if (value === null) {
 						value_ = {
+							// @ts-expect-error - value is an object
 							value: undefined,
 							expires: 0,
 						};
 					} else {
-						value_ = this.opts.deserialize ? this.opts.deserialize(value) : JSONB.parse(value);
+						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) as GetOutput<Value> : JSONB.parse(value as unknown as string) as GetOutput<Value>;
 					}
 
 					resolve(value_);
@@ -56,7 +67,7 @@ class KeyvMemcache extends EventEmitter {
 		});
 	}
 
-	getMany(keys) {
+	async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
@@ -64,17 +75,18 @@ class KeyvMemcache extends EventEmitter {
 
 		return Promise.allSettled(promises)
 			.then(values => {
-				const data = [];
+				const data: Array<StoredData<Value>> = [];
 				for (const value of values) {
-					data.push(value.value);
+					// @ts-expect-error - value is an object
+					data.push(value.value as StoredData<Value>);
 				}
 
 				return data;
 			});
 	}
 
-	set(key, value, ttl) {
-		const options = {};
+	async set(key: string, value: Value, ttl: number) {
+		const options: KeyvMemcacheOptions<Value> = {};
 
 		if (ttl !== undefined) {
 			// eslint-disable-next-line no-multi-assign
@@ -82,7 +94,7 @@ class KeyvMemcache extends EventEmitter {
 		}
 
 		return new Promise((resolve, reject) => {
-			this.client.set(this.formatKey(key), value, options, (error, success) => {
+			this.client.set(this.formatKey(key), value as unknown as Buffer, options, (error, success) => {
 				if (error) {
 					this.emit('error', error);
 					reject(error);
@@ -93,30 +105,31 @@ class KeyvMemcache extends EventEmitter {
 		});
 	}
 
-	delete(key) {
+	async delete(key: string): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			this.client.delete(this.formatKey(key), (error, success) => {
 				if (error) {
 					this.emit('error', error);
 					reject(error);
 				} else {
-					resolve(success);
+					resolve(success!);
 				}
 			});
 		});
 	}
 
-	deleteMany(keys) {
+	async deleteMany(keys: string[]): Promise<boolean> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.delete(key));
 		}
 
 		return Promise.allSettled(promises)
+			// @ts-expect-error - x is an object
 			.then(values => values.every(x => x.value === true));
 	}
 
-	clear() {
+	async clear(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.client.flush(error => {
 				if (error) {
@@ -129,7 +142,7 @@ class KeyvMemcache extends EventEmitter {
 		});
 	}
 
-	formatKey(key) {
+	formatKey(key: string) {
 		let result = key;
 
 		if (this.namespace) {
@@ -139,7 +152,7 @@ class KeyvMemcache extends EventEmitter {
 		return result;
 	}
 
-	has(key) {
+	async has(key: string): Promise<boolean> {
 		return new Promise(resolve => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
@@ -152,4 +165,4 @@ class KeyvMemcache extends EventEmitter {
 	}
 }
 
-module.exports = KeyvMemcache;
+export = KeyvMemcache;

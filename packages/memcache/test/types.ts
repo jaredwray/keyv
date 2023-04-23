@@ -1,12 +1,12 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvMemcache from '../src/index.js';
+import KeyvMemcache from '../src/index';
 
 type MyType = {
 	a: string;
 };
 
-test('can specify etcd store in typescript', async t => {
+test('can specify memcached store in typescript', async t => {
 	const keyv = new Keyv<MyType>({
 		store: new KeyvMemcache('localhost:11211'),
 	});
