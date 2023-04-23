@@ -21,6 +21,9 @@
 			"unicorn/prefer-node-protocol": 0,
 			"@typescript-eslint/consistent-type-imports": 0,
 			"@typescript-eslint/consistent-type-definitions": 0,
+			"@typescript-eslint/no-empty-function": 0,
+			"import/extensions": 0,
+			"no-promise-executor-return": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{

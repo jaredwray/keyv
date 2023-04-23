@@ -1,13 +1,14 @@
-import { promisify } from "util";
-import test, {ExecutionContext} from "ava";
-import Keyv from "keyv";
-import {keyvApiTests, keyvValueTests} from "@keyv/test-suite";
-import KeyvMemcache from "../src/index";
+import {promisify} from 'util';
+import {EventEmitter} from 'events';
+import test, {ExecutionContext} from 'ava';
+import Keyv from 'keyv';
+import {keyvApiTests, keyvValueTests} from '@keyv/test-suite';
+import KeyvMemcache from '../src/index';
 
-const snooze = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const snooze = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Handle all the tests with listeners.
-require('events').EventEmitter.prototype._maxListeners = 200;
+EventEmitter.setMaxListeners(200);
 
 let uri = 'localhost:11211';
 
@@ -22,7 +23,7 @@ test.serial('keyv get / no expired', async t => {
 
 	await keyv.set('foo', 'bar');
 
-	const value = await keyv.get('foo');
+	const value = await keyv.get('foo') as string;
 
 	t.is(value, 'bar');
 });
@@ -47,7 +48,6 @@ test.serial('keyv get', async t => {
 });
 
 test('get namespace', t => {
-	// eslint-disable-next-line no-unused-vars
 	const keyv = new Keyv({store: keyvMemcache});
 	t.is(keyvMemcache._getNamespace(), 'namespace:keyv');
 });
@@ -56,8 +56,8 @@ test('format key for no namespace', t => {
 });
 
 test('format key for namespace', t => {
-	// eslint-disable-next-line no-unused-vars
-	const keyv = new Keyv({store: keyvMemcache});
+	// eslint-disable-next-line no-new
+	new Keyv({store: keyvMemcache});
 	t.is(keyvMemcache.formatKey('foo'), 'keyv:foo');
 });
 
@@ -79,7 +79,7 @@ test.serial('keyv get / should still exist', async t => {
 
 	await snooze(2000);
 
-	const value = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired') as string;
 
 	t.is(value, 'bar-expired');
 });
@@ -91,7 +91,7 @@ test.serial('keyv get / expired existing', async t => {
 
 	await snooze(3000);
 
-	const value = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired') as undefined;
 
 	t.is(value, undefined);
 });
@@ -103,7 +103,7 @@ test.serial('keyv get / expired existing with bad number', async t => {
 
 	await snooze(1000);
 
-	const value = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired') as undefined;
 
 	t.is(value, undefined);
 });
@@ -115,7 +115,7 @@ test.serial('keyv get / expired', async t => {
 
 	await snooze(1000);
 
-	const value = await keyv.get('foo-expired');
+	const value = await keyv.get('foo-expired') as undefined;
 
 	t.is(value, undefined);
 });
@@ -135,11 +135,11 @@ test.serial('keyv has / false', async t => {
 	t.is(value, false);
 });
 
-const withCallback = (fn: Function) => async (t: ExecutionContext<any>) => {
+const withCallback = (fn: (t: ExecutionContext<any>, end: () => void) => Promise<void>) => async (t: ExecutionContext<any>) => {
 	await promisify(fn)(t);
 };
 
-test('clear should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
+test('clear should emit an error', withCallback(async (t: ExecutionContext<any>, end: () => void) => {
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211')});
 
 	keyv.on('error', () => {
@@ -152,8 +152,12 @@ test('clear should emit an error', withCallback(async (t: ExecutionContext<any>,
 	} catch {}
 }));
 
-test('delete should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
-	const options = {logger: {log() {}}};
+test('delete should emit an error', withCallback(async (t: ExecutionContext<any>, end: () => void) => {
+	const options = {
+		logger: {
+			log() {},
+		},
+	};
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
 	keyv.on('error', () => {
@@ -166,8 +170,12 @@ test('delete should emit an error', withCallback(async (t: ExecutionContext<any>
 	} catch {}
 }));
 
-test('set should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
-	const options = {logger: {log() {}}};
+test('set should emit an error', withCallback(async (t: ExecutionContext<any>, end: () => void) => {
+	const options = {
+		logger: {
+			log() {},
+		},
+	};
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
 	keyv.on('error', () => {
@@ -180,8 +188,12 @@ test('set should emit an error', withCallback(async (t: ExecutionContext<any>, e
 	} catch {}
 }));
 
-test('get should emit an error', withCallback(async (t: ExecutionContext<any>, end: Function) => {
-	const options = {logger: {log() {}}};
+test('get should emit an error', withCallback(async (t: ExecutionContext<any>, end: () => void) => {
+	const options = {
+		logger: {
+			log() {},
+		},
+	};
 	const keyv = new Keyv({store: new KeyvMemcache('baduri:11211', options)});
 
 	keyv.on('error', () => {

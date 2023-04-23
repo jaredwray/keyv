@@ -1,7 +1,7 @@
-import EventEmitter from "node:events";
-import memcache from "memjs";
-import JSONB from "json-buffer";
-import Keyv, {Store, StoredData} from "keyv";
+import EventEmitter from 'node:events';
+import memcache from 'memjs';
+import JSONB from 'json-buffer';
+import Keyv, {Store, StoredData} from 'keyv';
 
 type GetOutput<Value> = Value | Promise<Value | undefined> | undefined;
 
@@ -11,7 +11,7 @@ type KeyvMemcacheOptions<Value> = {
 } & memcache.ClientOptions & Keyv.Options<Value>;
 
 class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
-	public ttlSupport: boolean = true;
+	public ttlSupport = true;
 	public namespace?: string;
 	public client: memcache.Client;
 	public opts: KeyvMemcacheOptions<Value>;
@@ -23,7 +23,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 			...options,
 		};
 
-		if (options.uri && typeof options.url === 'undefined') {
+		if (options.uri && options.url === undefined) {
 			options.url = options.uri;
 		}
 
@@ -65,7 +65,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		});
 	}
 
-	getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
+	async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
@@ -83,7 +83,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 			});
 	}
 
-	set(key: string, value: Value, ttl: number) {
+	async set(key: string, value: Value, ttl: number) {
 		const options: KeyvMemcacheOptions<Value> = {};
 
 		if (ttl !== undefined) {
@@ -103,7 +103,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		});
 	}
 
-	delete(key: string): Promise<boolean> {
+	async delete(key: string): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			this.client.delete(this.formatKey(key), (error, success) => {
 				if (error) {
@@ -116,7 +116,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		});
 	}
 
-	deleteMany(keys: string[]): Promise<boolean> {
+	async deleteMany(keys: string[]): Promise<boolean> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.delete(key));
@@ -127,7 +127,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 			.then(values => values.every(x => x.value === true));
 	}
 
-	clear(): Promise<void> {
+	async clear(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.client.flush(error => {
 				if (error) {
@@ -150,7 +150,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		return result;
 	}
 
-	has(key: string): Promise<boolean> {
+	async has(key: string): Promise<boolean> {
 		return new Promise(resolve => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
