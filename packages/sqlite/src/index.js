@@ -66,13 +66,7 @@ class KeyvSqlite extends EventEmitter {
 			let i = 0;
 			for (const key of keys) {
 				const rowIndex = rows.findIndex(row => row.key === key);
-
-				if (rowIndex > -1) {
-					results[i] = rows[rowIndex].value;
-				} else {
-					results[i] = undefined;
-				}
-
+				results[i] = rowIndex > -1 ? rows[rowIndex].value : undefined;
 				i++;
 			}
 

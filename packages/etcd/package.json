@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/etcd",
-	"version": "1.1.5",
+	"version": "1.2.0",
 	"description": "Etcd storage adapter for Keyv",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -65,9 +65,9 @@
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
-		"tsd": "^0.28.0",
-		"typescript": "^5.0.2",
-		"webpack": "^5.76.2",
+		"tsd": "^0.28.1",
+		"typescript": "^5.0.4",
+		"webpack": "^5.79.0",
 		"xo": "^0.54.1"
 	},
 	"tsd": {

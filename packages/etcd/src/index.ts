@@ -91,7 +91,7 @@ class KeyvEtcd<Value = any> extends EventEmitter implements Store<Value> {
 						data.push(undefined);
 					} else {
 						// @ts-expect-error - value is an object
-						data.push(value.value);
+						data.push(value.value as StoredData<Value>);
 					}
 				}
 

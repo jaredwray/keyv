@@ -1,5 +1,4 @@
 import tk from 'timekeeper';
-
 import type {TestFn} from 'ava';
 import type KeyvModule from 'keyv';
 import type {KeyvStoreFn} from './types';
