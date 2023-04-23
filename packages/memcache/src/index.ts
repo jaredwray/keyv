@@ -1,4 +1,5 @@
 import EventEmitter from 'node:events';
+import type{Buffer} from 'node:buffer';
 import memcache from 'memjs';
 import JSONB from 'json-buffer';
 import Keyv, {Store, StoredData} from 'keyv';
@@ -39,7 +40,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 	}
 
 	_getNamespace(): string {
-		return `namespace:${this.namespace}`;
+		return `namespace:${this.namespace!}`;
 	}
 
 	get(key: string): GetOutput<Value> {
@@ -52,11 +53,12 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 					let value_;
 					if (value === null) {
 						value_ = {
+							// @ts-expect-error - value is an object
 							value: undefined,
 							expires: 0,
 						};
 					} else {
-						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string);
+						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) as GetOutput<Value> : JSONB.parse(value as unknown as string) as GetOutput<Value>;
 					}
 
 					resolve(value_);
@@ -73,10 +75,10 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 
 		return Promise.allSettled(promises)
 			.then(values => {
-				const data = [];
+				const data: Array<StoredData<Value>> = [];
 				for (const value of values) {
 					// @ts-expect-error - value is an object
-					data.push(value.value);
+					data.push(value.value as StoredData<Value>);
 				}
 
 				return data;
