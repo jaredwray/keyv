@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
-import GridFSBucket from 'mongodb';
-import {Store, StoredData} from 'keyv';
+import type GridFSBucket from 'mongodb';
+import {type Store, type StoredData} from 'keyv';
 
 declare class KeyvMongo<Value=any> extends EventEmitter implements Store<Value> {
 	readonly ttlSupport: false;
@@ -27,7 +27,7 @@ declare class KeyvMongo<Value=any> extends EventEmitter implements Store<Value> 
 export = KeyvMongo;
 
 declare namespace KeyvMongo {
-	interface Options {
+	type Options = {
 		url?: string | undefined;
 		collection?: string | undefined;
 		namespace?: string | undefined;
@@ -36,5 +36,5 @@ declare namespace KeyvMongo {
 		useGridFS?: boolean | undefined;
 		uri?: string | undefined;
 		dialect?: string | undefined;
-	}
+	};
 }

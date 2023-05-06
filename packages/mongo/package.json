@@ -16,6 +16,7 @@
 			"unicorn/no-array-reduce": 0,
 			"unicorn/prefer-object-from-entries": 0,
 			"unicorn/prefer-node-protocol": 0,
+			"@typescript-eslint/consistent-type-imports": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -74,7 +75,7 @@
 		"ts-node": "^10.8.2",
 		"tsd": "^0.20.0",
 		"typescript": "^4.6.4",
-		"xo": "^0.48.0"
+		"xo": "^0.54.2"
 	},
 	"tsd": {
 		"directory": "test"

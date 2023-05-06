@@ -131,7 +131,7 @@ class KeyvMongo extends EventEmitter {
 					stream.on('error', () => resolve());
 
 					stream.on('end', () => {
-						resp = Buffer.concat(resp).toString('utf-8');
+						resp = Buffer.concat(resp).toString('utf8');
 						resolve(resp);
 					});
 
@@ -181,11 +181,7 @@ class KeyvMongo extends EventEmitter {
 					for (const key of keys) {
 						const rowIndex = values.findIndex(row => row.key === key);
 
-						if (rowIndex > -1) {
-							results[i] = values[rowIndex].value;
-						} else {
-							results[i] = undefined;
-						}
+						results[i] = rowIndex > -1 ? values[rowIndex].value : undefined;
 
 						i++;
 					}
