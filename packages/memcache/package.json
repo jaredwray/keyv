@@ -77,7 +77,7 @@
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
 		"tsd": "^0.28.1",
-		"typescript": "^5.0.3"
+		"typescript": "^5.0.4"
 	},
 	"tsd": {
 		"directory": "test"
