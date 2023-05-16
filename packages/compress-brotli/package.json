@@ -16,6 +16,7 @@
 			"unicorn/prefer-module": 0,
 			"@typescript-eslint/no-unsafe-call": 0,
 			"@typescript-eslint/consistent-type-definitions": 0,
+			"@typescript-eslint/no-unsafe-argument": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -44,7 +45,7 @@
 		"cache",
 		"ttl"
 	],
-	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+	"author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/jaredwray/keyv/issues"
@@ -55,16 +56,12 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^5.2.0",
 		"c8": "^7.13.0",
 		"json-buffer": "^3.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"ts-node": "^10.9.1",
 		"tsd": "^0.28.1",
-		"typescript": "^5.0.3",
-		"webpack": "^5.77.0",
-		"xo": "^0.53.1"
+		"webpack": "^5.77.0"
 	},
 	"tsd": {
 		"directory": "test"

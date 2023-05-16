@@ -14,7 +14,8 @@
 		"rules": {
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
-			"@typescript-eslint/consistent-type-definitions": 0
+			"@typescript-eslint/consistent-type-definitions": 0,
+			"unicorn/no-typeof-undefined": 0
 		}
 	},
 	"repository": {
@@ -39,15 +40,11 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^5.2.0",
-		"c8": "^7.13.0",
 		"eslint": "^8.37.0",
 		"eslint-plugin-promise": "^6.1.1",
 		"pify": "6.1.0",
 		"timekeeper": "^2.2.0",
-		"tsd": "^0.28.1",
-		"typescript": "^5.0.3",
-		"xo": "^0.53.1"
+		"tsd": "^0.28.1"
 	},
 	"tsd": {
 		"directory": "test"
