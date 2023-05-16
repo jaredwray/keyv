@@ -39,7 +39,7 @@ class KeyvRedis extends EventEmitter {
 	}
 
 	set(key, value, ttl) {
-		if (typeof value === 'undefined') {
+		if (value === undefined) {
 			return Promise.resolve(undefined);
 		}
 

@@ -8,7 +8,7 @@
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
-		"test:ci": "xo --fix && ava --serial",
+		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
@@ -22,6 +22,7 @@
 			"@typescript-eslint/no-unsafe-return": 0,
 			"@typescript-eslint/no-unsafe-argument": 0,
 			"import/extensions": 0,
+			"@typescript-eslint/consistent-type-imports": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
