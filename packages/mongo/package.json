@@ -2,12 +2,13 @@
 	"name": "@keyv/mongo",
 	"version": "2.1.8",
 	"description": "MongoDB storage adapter for Keyv",
-	"main": "src/index.js",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
+		"test:ci": "xo --fix && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
@@ -16,6 +17,11 @@
 			"unicorn/no-array-reduce": 0,
 			"unicorn/prefer-object-from-entries": 0,
 			"unicorn/prefer-node-protocol": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/no-unsafe-return": 0,
+			"@typescript-eslint/no-unsafe-argument": 0,
+			"import/extensions": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -24,16 +30,17 @@
 						"ts"
 					]
 				}
-			]
+			],
+			"@typescript-eslint/naming-convention": 0,
+			"@typescript-eslint/no-floating-promises": 0,
+			" @typescript-eslint/no-unsafe-argument": 0
 		}
 	},
 	"ava": {
 		"require": [
-			"requirable",
 			"ts-node/register"
 		],
 		"extensions": [
-			"js",
 			"ts"
 		]
 	},
@@ -65,22 +72,17 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"@types/keyv": "^3.1.4",
-		"ava": "^4.2.0",
-		"c8": "^7.12.0",
+		"@ava/typescript": "^4.0.0",
+		"@types/pify": "^5.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
-		"ts-node": "^10.8.2",
-		"tsd": "^0.20.0",
-		"typescript": "^4.6.4",
-		"xo": "^0.48.0"
+		"tsd": "^0.28.1"
 	},
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"files": [
-		"src"
+		"dist"
 	]
 }
