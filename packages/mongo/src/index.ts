@@ -265,21 +265,17 @@ class KeyvMongo<Value = any> extends EventEmitter {
 	async deleteMany(keys: string[]): DeleteManyOutput {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
-			try {
-				const connection = client.db!;
-				const bucket = new GridFSBucket(connection, {
-					bucketName: this.opts.collection,
-				});
-				const files = await bucket.find({filename: {$in: keys}}).toArray();
-				if (files.length === 0) {
-					return false;
-				}
-
-				await Promise.all(files.map(async file => client.bucket!.delete(file._id)));
-				return true;
-			} catch {
+			const connection = client.db!;
+			const bucket = new GridFSBucket(connection, {
+				bucketName: this.opts.collection,
+			});
+			const files = await bucket.find({filename: {$in: keys}}).toArray();
+			if (files.length === 0) {
 				return false;
 			}
+
+			await Promise.all(files.map(async file => client.bucket!.delete(file._id)));
+			return true;
 		}
 
 		const object = await client.store.deleteMany({key: {$in: keys}});
@@ -322,24 +318,20 @@ class KeyvMongo<Value = any> extends EventEmitter {
 			return false;
 		}
 
-		try {
-			const client = await this.connect;
-			const connection = client.db!;
-			const bucket = new GridFSBucket(connection, {
-				bucketName: this.opts.collection,
-			});
+		const client = await this.connect;
+		const connection = client.db!;
+		const bucket = new GridFSBucket(connection, {
+			bucketName: this.opts.collection,
+		});
 
-			const lastAccessedFiles = await bucket.find({
-				'metadata.lastAccessed': {
-					$lte: new Date(Date.now() - (seconds * 1000)),
-				},
-			}).toArray();
+		const lastAccessedFiles = await bucket.find({
+			'metadata.lastAccessed': {
+				$lte: new Date(Date.now() - (seconds * 1000)),
+			},
+		}).toArray();
 
-			await Promise.all(lastAccessedFiles.map(async file => client.bucket!.delete(file._id)));
-			return true;
-		} catch {
-			return false;
-		}
+		await Promise.all(lastAccessedFiles.map(async file => client.bucket!.delete(file._id)));
+		return true;
 	}
 
 	async * iterator(namespace?: string) {
