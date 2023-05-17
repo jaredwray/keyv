@@ -1,8 +1,7 @@
-const test = require('ava');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const KeyvMongo = require('../src/index.js');
+import test from 'ava';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import Keyv from 'keyv';
+import KeyvMongo from '../src/index';
 
 const options = {useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000};
 
@@ -74,11 +73,13 @@ test('Collection option merges into default options if URL is passed', t => {
 
 test('.delete() with no args doesn\'t empty the collection', async t => {
 	const store = new KeyvMongo('mongodb://foo'); // Make sure we don't actually connect
+	// @ts-expect-error - test invalid input
 	t.false(await store.delete());
 });
 
 test('.delete() with key as number', async t => {
 	const store = new KeyvMongo(mongoURL, {collection: 'foo'});
+	// @ts-expect-error - test invalid input
 	t.false(await store.delete(123));
 });
 
@@ -146,6 +147,7 @@ test.serial('Gets non-existent file and return should be undefined', async t => 
 
 test.serial('Non-string keys are not permitted in delete', async t => {
 	const store = new KeyvMongo({useGridFS: true, ...options});
+	// @ts-expect-error - test invalid input
 	const result = await store.delete({
 		ok: true,
 	});
@@ -203,12 +205,14 @@ test.serial('.getMany([keys]) using GridFS should return empty array for all no 
 
 test.serial('Clears entire cache store', async t => {
 	const store = new KeyvMongo({useGridFS: true, ...options});
+	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 	const result = await store.clear();
 	t.is(typeof result, 'undefined');
 });
 
 test.serial('Clears entire cache store with default namespace', async t => {
 	const store = new KeyvMongo({...options});
+	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 	const result = await store.clear();
 	t.is(typeof result, 'undefined');
 });
@@ -219,10 +223,14 @@ test.serial('iterator with default namespace', async t => {
 	await store.set('foo2', 'bar2');
 	const iterator = store.iterator();
 	let entry = await iterator.next();
+	// @ts-expect-error - test iterator
 	t.is(entry.value[0], 'foo');
+	// @ts-expect-error - test iterator
 	t.is(entry.value[1], 'bar');
 	entry = await iterator.next();
+	// @ts-expect-error - test iterator
 	t.is(entry.value[0], 'foo2');
+	// @ts-expect-error - test iterator
 	t.is(entry.value[1], 'bar2');
 	entry = await iterator.next();
 	t.is(entry.value, undefined);
@@ -234,10 +242,14 @@ test.serial('iterator with namespace', async t => {
 	await store.set('key1:foo2', 'bar2');
 	const iterator = store.iterator('key1');
 	let entry = await iterator.next();
+	// @ts-expect-error - test iterator
 	t.is(entry.value[0], 'key1:foo');
+	// @ts-expect-error - test iterator
 	t.is(entry.value[1], 'bar');
 	entry = await iterator.next();
+	// @ts-expect-error - test iterator
 	t.is(entry.value[0], 'key1:foo2');
+	// @ts-expect-error - test iterator
 	t.is(entry.value[1], 'bar2');
 	entry = await iterator.next();
 	t.is(entry.value, undefined);
