@@ -4,9 +4,9 @@ import KeyvRedis from '@keyv/redis';
 import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
 import KeyvOffline from '../src/index';
 
-// @ts-expect-error - KeyvRedis constructor is not compatible with KeyvOffline
 const keyvRedisBad = new KeyvRedis({
 	uri: 'redis://user:pass@localhost:1338',
+	// @ts-expect-error - maxRetriesPerRequest doesn't exist on RedisOptions
 	maxRetriesPerRequest: 0,
 	emitErrors: false,
 });
