@@ -15,10 +15,7 @@ import {
 } from './types';
 
 class KeyvRedis<Value = any> extends EventEmitter {
-	get ttlSupport() {
-		return true;
-	}
-
+	ttlSupport = true;
 	namespace?: string;
 	opts: Record<string, unknown>;
 	redis: any;
