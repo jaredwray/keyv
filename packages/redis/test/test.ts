@@ -1,12 +1,13 @@
-const test = require('ava');
-const tk = require('timekeeper');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const Redis = require('ioredis');
-const KeyvRedis = require('../src/index.js');
+import test from 'ava';
+import tk from 'timekeeper';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import Keyv from 'keyv';
+import Redis from 'ioredis';
+import KeyvRedis from '../src/index';
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const REDIS_HOST = 'localhost';
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const redisURI = `redis://${REDIS_HOST}`;
 
 keyvOfficialTests(test, Keyv, redisURI, 'redis://foo');
@@ -18,6 +19,7 @@ keyvIteratorTests(test, Keyv, store);
 
 test('reuse a redis instance', async t => {
 	const redis = new Redis(redisURI);
+	// @ts-expect-error foo doesn't exist on Redis
 	redis.foo = 'bar';
 	const keyv = new KeyvRedis(redis);
 	t.is(keyv.redis.foo, 'bar');

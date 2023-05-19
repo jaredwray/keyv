@@ -2,9 +2,10 @@
 	"name": "@keyv/redis",
 	"version": "2.5.8",
 	"description": "Redis storage adapter for Keyv",
-	"main": "src/index.js",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
@@ -15,6 +16,10 @@
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
 			"unicorn/no-typeof-undefined": 0,
+			"import/extensions": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-unsafe-return": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -71,11 +76,10 @@
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"engines": {
-		"node": ">= 12"
+		"node": ">= 14"
 	},
 	"files": [
-		"src"
+		"dist"
 	]
 }
