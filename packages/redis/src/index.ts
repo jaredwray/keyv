@@ -43,19 +43,17 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async get(key: string): GetOutput<Value> {
-		return this.redis.get(key)
-			.then((value: Value) => {
-				if (value === null) {
-					return undefined;
-				}
+		const value: Value = await this.redis.get(key);
+		if (value === null) {
+			return undefined;
+		}
 
-				return value;
-			});
+		return value;
 	}
 
 	async getMany(keys: string[]): GetManyOutput<Value> {
-		return this.redis.mget(keys)
-			.then((rows: StoredData<Value>) => rows);
+		const rows: Array<StoredData<Value>> = await this.redis.mget(keys);
+		return rows;
 	}
 
 	async set(key: string, value: Value, ttl?: number): SetOutput {
@@ -63,22 +61,15 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			return undefined;
 		}
 
-		return Promise.resolve()
-			.then(() => {
-				if (typeof ttl === 'number') {
-					return this.redis.set(key, value as Value, 'PX', ttl);
-				}
+		await (typeof ttl === 'number' ? this.redis.set(key, value as Value, 'PX', ttl) : this.redis.set(key, value as Value));
 
-				return this.redis.set(key, value as Value);
-			})
-			.then(() => this.redis.sadd(this._getNamespace(), key))
-			.then(() => undefined);
+		await this.redis.sadd(this._getNamespace(), key);
 	}
 
 	async delete(key: string): DeleteOutput {
-		return this.redis.del(key)
-			.then((items: number) => this.redis.srem(this._getNamespace(), key)
-				.then(() => items > 0));
+		const items: number = await this.redis.del(key);
+		await this.redis.srem(this._getNamespace(), key);
+		return items > 0;
 	}
 
 	async deleteMany(key: string): DeleteManyOutput {
@@ -86,9 +77,8 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async clear(): ClearOutput {
-		return this.redis.smembers(this._getNamespace())
-			.then((keys: string[]) => this.redis.del([...keys, this._getNamespace()]))
-			.then(() => undefined);
+		const keys: string[] = await this.redis.smembers(this._getNamespace());
+		await this.redis.del([...keys, this._getNamespace()]);
 	}
 
 	async * iterator(namespace?: string): IteratorOutput {
@@ -116,8 +106,8 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async has(key: string): HasOutput {
-		return this.redis.exists(key)
-			.then((value: number) => value !== 0);
+		const value: number = await this.redis.exists(key);
+		return value !== 0;
 	}
 
 	async disconnect(): DisconnectOutput {
