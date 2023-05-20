@@ -69,9 +69,6 @@ class KeyvMongo<Value = any> extends EventEmitter {
 					});
 					const store = db.collection(`${this.opts.collection!}.files`);
 					store.createIndex({
-						filename: 'hashed',
-					});
-					store.createIndex({
 						uploadDate: -1,
 					});
 					store.createIndex({
