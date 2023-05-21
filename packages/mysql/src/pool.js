@@ -25,30 +25,23 @@ const endPool = () => {
 };
 
 function parseConnectionString(connectionString) {
-	const uriRegex = /^(\w+):\/\/([\w_-]+)(?::(\w+))?@([\w.-]+)(?::(\d+))?\/(\w+)$/;
+	// Create a new URL object
+	const url = new URL(connectionString);
 
-	if (!uriRegex.test(connectionString)) {
-		throw new Error('Invalid connection string format');
-	}
-
-	const [, scheme, user, password, host, port, database] = connectionString.match(uriRegex);
-
+	// Create the poolOptions object
 	const poolOptions = {
-		scheme,
-		user,
-		password: password || undefined,
-		host,
-		port: port ? Number.parseInt(port, 10) : undefined,
-		database,
+		user: url.username,
+		password: url.password || undefined,
+		host: url.hostname,
+		port: url.port ? Number.parseInt(url.port, 10) : undefined,
+		database: url.pathname.slice(1), // Remove the leading '/'
 	};
 
-	delete poolOptions.scheme;
-	if (poolOptions.port === undefined) {
-		delete poolOptions.port;
-	}
-
-	if (poolOptions.password === undefined) {
-		delete poolOptions.password;
+	// Remove undefined properties
+	for (const key of Object.keys(poolOptions)) {
+		if (poolOptions[key] === undefined) {
+			delete poolOptions[key];
+		}
 	}
 
 	return poolOptions;
@@ -57,4 +50,5 @@ function parseConnectionString(connectionString) {
 module.exports = {
 	pool: (uri, options) => pools(uri, options),
 	endPool,
+	parseConnectionString,
 };
