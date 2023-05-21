@@ -182,11 +182,6 @@ button {
   display: flex;
 }
 
-
-.header-search {
-  overflow: hidden;
-}
-
 .header {
   height: 72px;
   position: fixed;
