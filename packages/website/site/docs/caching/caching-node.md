@@ -1,53 +1,87 @@
 ---
-title: 'How to Implement Caching in Node.js'
+title: 'Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide'
 sidebarTitle: 'Caching in Node.js'
 parent: 'Caching'
 ---
 
-# How to Implement Caching in Node.js
+# Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide
 
-## What is Node.js?
+## 1. Setting up the Project
+To start a new Node.js project, you first need to create a new directory for your project and then initialize a new Node.js project in that directory.
 
-Node.js is an async event-driven cross-platform JavaScript runtime environment for building scalable network applications. Using Node.js enables developers to write server-side scripts and command line tools and run them everywhere.
-
-As Node.js applications run in a single process, they do not create threads for each request; they use a set of async I/O primitives to prevent blocking. A single Node.js server can handle thousands of concurrent connections as it doesn't wait for responses; it resumes operations when the response comes back.
-=======
-# How to Implement Caching with Node
-
-## What is a Cache?
-A cache is a short-term, high-speed data storage layer that stores a subset of data, enabling it to be retrieved faster than accessing it from its primary storage location. Caching allows you to reuse previously retrieved data efficiently.
-
-## Caching Support in Keyv
-Caching will work in memory by default. However, users can also install a Keyv storage adapter that is initialized with a connection string or any other storage that implements the Map API.
-
-## Extend your own Module with Keyv to Add Cache Support
-- Keyv can be easily embedded into other modules to add cache support.
-- You should also set a namespace for your module to safely call `.clear()` without clearing unrelated app data.
-
->**Note**:
-> The recommended pattern is to expose a cache option in your module's options which is passed through to Keyv.
-
-### Example - Add Cache Support to a Module
-
-1. Install whichever storage adapter you will be using, `@keyv/redis` in this example
-```sh
-npm install --save @keyv/redis
+```bash
+mkdir keyv-cache-demo
+cd keyv-cache-demo
+npm init -y
 ```
-2. Declare the Module with the cache controlled by a Keyv instance
-```js
-class AwesomeModule {
-	constructor(opts) {
-		this.cache = new Keyv({
-			uri: typeof opts.cache === 'string' && opts.cache,
-			store: typeof opts.cache !== 'string' && opts.cache,
-			namespace: 'awesome-module'
-		});
-	}
+The npm init -y command will create a new package.json file in your project directory with default settings.
+
+## 2. Installing Keyv and its Dependencies
+In this step, you'll install Keyv and a Keyv storage adapter for your project. For this example, we'll use SQLite as the storage adapter.
+
+```bash
+npm install keyv @keyv/sqlite
+```
+Keyv supports a variety of storage adapters like Redis, MongoDB, PostgreSQL, etc. Feel free to choose the one that best fits your project requirements.
+
+## 3. Creating a Caching Service Example
+In this step, we'll create a simple caching service using Keyv.
+
+Create a new file named cacheService.js in your project directory and add the following code to that file.
+
+```javascript
+const Keyv = require('keyv');
+const keyv = new Keyv('sqlite://path/to/database.sqlite');
+
+class CacheService {
+  async get(key) {
+    const value = await keyv.get(key);
+    if (value) {
+      console.log('Cache hit');
+    } else {
+      console.log('Cache miss');
+    }  
+    return value;
+  }
+
+  async set(key, value, ttlInMilliseconds) {
+    await keyv.set(key, value, ttlInMilliseconds);
+  }
+
+  async delete(key) {
+    await keyv.delete(key);
+  }
+}
+
+module.exports = CacheService;
+```
+
+In this code:
+
+We're importing the Keyv library and initializing it with an SQLite database.
+
+We're creating a CacheService class with get, set, and delete methods that wrap the corresponding methods of the Keyv instance. The get method includes console logs to indicate whether the requested value was found in the cache.
+
+The set method includes an optional ttlInMilliseconds parameter, which you can use to set a time-to-live (TTL) for the cached value.
+
+Now you have a reusable CacheService that you can use to add caching to your Node.js project.
+
+Here is how you could use the CacheService:
+
+```javascript
+const CacheService = require('./cacheService');
+const cache = new CacheService();
+
+// Usage
+async function fetchData() {
+  const key = 'myData';
+  let data = await cache.get(key);
+  if (!data) {
+    data = await getMyData(); // Function that fetches your data
+    await cache.set(key, data, 10000); // Cache for 10 seconds
+  }
+  return data;
 }
 ```
 
-3. Create an Instance of the Module with caching support
-```js
-const AwesomeModule = require('awesome-module');
-const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
-```
+This is a basic example, and Keyv provides a lot of flexibility, so you can modify this service to better suit your project's needs.
