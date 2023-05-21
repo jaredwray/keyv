@@ -25,7 +25,7 @@ const endPool = () => {
 };
 
 function parseConnectionString(connectionString) {
-	const uriRegex = /^(\w+):\/\/(\w+)(?::(\w+))?@([\w.]+)(?::(\d+))?\/(\w+)$/;
+	const uriRegex = /^(\w+):\/\/([\w_-]+)(?::(\w+))?@([\w.-]+)(?::(\d+))?\/(\w+)$/;
 
 	if (!uriRegex.test(connectionString)) {
 		throw new Error('Invalid connection string format');
