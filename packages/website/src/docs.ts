@@ -6,35 +6,10 @@ async function main() {
     console.log("packages path:" + getRelativePackagePath());
     console.log("docs path:" + getRelativeDocsPath());
 
-    await copyGettingStarted();
-    await copyCachingDocs();
     await copyStorageAdapters();
     await copyCompressionDocs();
     await copyTestSuite();
 };
-
-async function copyGettingStarted() {
-    const docsPath = getRelativeDocsPath();
-    const packagesPath = getRelativePackagePath();
-    const originalFileText = await fs.readFile(`${docsPath}/getting-started/index.md`, "utf8");
-    let newFileText = "---\n";
-    newFileText += `title: 'Getting Started Guide'\n`;
-    newFileText += `permalink: /docs/\n`;
-    newFileText += `order: 0` + os.EOL;
-    newFileText += "---\n";
-    newFileText += "\n";
-    newFileText += originalFileText;
-
-    console.log("Adding Getting Started Guide");
-    await fs.writeFile(`${packagesPath}/website/site/docs/index.md`, newFileText);
-}
-
-async function copyCachingDocs() {
-    const docsPath = getRelativeDocsPath();
-    const packagesPath = getRelativePackagePath();
-    console.log("Adding Caching Docs");
-    await fs.copy(`${docsPath}/caching/`, `${packagesPath}/website/site/docs/caching`);
-}
 
 async function copyStorageAdapters() {
     const packagesPath = getRelativePackagePath();
