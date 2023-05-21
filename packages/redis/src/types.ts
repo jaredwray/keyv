@@ -1,14 +1,15 @@
 import type{StoredData} from 'keyv';
-import type{Redis, Cluster} from 'ioredis';
+import {type Cluster} from 'ioredis';
+import type Redis from 'ioredis';
 
-export type KeyvOptions = {
+export type KeyvRedisOptions = {
+	[K in keyof Redis]?: Redis[K];
+} & {
 	uri?: string;
 	dialect?: string;
 };
 
-export type KeyvRedisOptions = KeyvOptions | Redis | Cluster;
-
-export type KeyvUriOptions = string | Redis | Cluster;
+export type KeyvUriOptions = string | KeyvRedisOptions | Redis | Cluster;
 
 export type IteratorOutput = AsyncGenerator<any, void, any>;
 

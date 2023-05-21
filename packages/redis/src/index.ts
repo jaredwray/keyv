@@ -1,6 +1,5 @@
 import EventEmitter from 'events';
 import Redis from 'ioredis';
-import type {RedisOptions, Cluster} from 'ioredis';
 import {type StoredData} from 'keyv';
 import {
 	type ClearOutput,
@@ -8,7 +7,6 @@ import {
 	type DeleteOutput, type DisconnectOutput,
 	type GetManyOutput,
 	type GetOutput, type HasOutput, type IteratorOutput,
-	type KeyvOptions,
 	type KeyvRedisOptions,
 	type KeyvUriOptions,
 	type SetOutput,
@@ -24,12 +22,12 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		this.opts = {};
 		this.opts.dialect = 'redis';
 
-		// @ts-expect-error - family doesn't exist on RedisOptions
-		if ((uri.options?.family) || (uri.options && uri.isCluster)) {
-			this.redis = uri as Cluster;
+		if (uri instanceof Redis) {
+			this.redis = uri;
 		} else {
-			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvOptions), ...options};
-			this.redis = new Redis(options.uri!, options as RedisOptions);
+			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvRedisOptions), ...options};
+			// @ts-expect-error - uri is a string or RedisOptions
+			this.redis = new Redis(options.uri!, options);
 		}
 
 		this.redis.on('error', (error: Error) => this.emit('error', error));
@@ -58,7 +56,11 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			return undefined;
 		}
 
-		await (typeof ttl === 'number' ? this.redis.set(key, value as Value, 'PX', ttl) : this.redis.set(key, value as Value));
+		if (typeof ttl === 'number') {
+			await this.redis.set(key, value, 'PX', ttl);
+		} else {
+			await this.redis.set(key, value);
+		}
 
 		await this.redis.sadd(this._getNamespace(), key);
 	}

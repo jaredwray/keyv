@@ -17,7 +17,7 @@ const store = () => new KeyvRedis(redisURI);
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
-test('reuse a redis instance', async t => {
+test.serial('reuse a redis instance', async t => {
 	const redis = new Redis(redisURI);
 	// @ts-expect-error foo doesn't exist on Redis
 	redis.foo = 'bar';
@@ -30,7 +30,7 @@ test('reuse a redis instance', async t => {
 	t.true(await keyv.get('foo') === value);
 });
 
-test('set an undefined key', async t => {
+test.serial('set an undefined key', async t => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvRedis(redis);
 
@@ -61,7 +61,7 @@ test.serial('close connection successfully', async t => {
 	}
 });
 
-test('should support tls', async t => {
+test.serial('should support tls', async t => {
 	const options = {tls: {rejectUnauthorized: false}};
 	const redis = new Redis('rediss://localhost:6380', options);
 	const keyvRedis = new KeyvRedis(redis);
@@ -69,7 +69,7 @@ test('should support tls', async t => {
 	t.true(await keyvRedis.get('foo') === 'bar');
 });
 
-test('close tls connection successfully', async t => {
+test.serial('close tls connection successfully', async t => {
 	const options = {tls: {rejectUnauthorized: false}};
 	const redis = new Redis('rediss://localhost:6380', options);
 	const keyvRedis = new KeyvRedis(redis);
@@ -83,7 +83,7 @@ test('close tls connection successfully', async t => {
 	}
 });
 
-test('.clear cleaned namespace', async t => {
+test.serial('.clear cleaned namespace', async t => {
 	// Setup
 	const keyv = new Keyv(redisURI, {
 		adapter: 'redis',
@@ -118,4 +118,12 @@ test.serial('Keyv stores ttl without const', async t => {
 	t.is(await keyv.get('foo'), 'bar');
 	tk.freeze(Date.now() + 150);
 	t.is(await keyv.get('foo'), undefined);
+});
+
+test.serial('should handle KeyvOptions without uri', t => {
+	const options = {
+		isCluster: true,
+	};
+	const keyv = new KeyvRedis(options);
+	t.true(keyv.redis instanceof Redis);
 });

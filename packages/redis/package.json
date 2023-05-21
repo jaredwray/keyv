@@ -20,6 +20,7 @@
 			"@typescript-eslint/no-unsafe-call": 0,
 			"@typescript-eslint/no-unsafe-assignment": 0,
 			"@typescript-eslint/no-unsafe-return": 0,
+			"unicorn/prefer-ternary": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
