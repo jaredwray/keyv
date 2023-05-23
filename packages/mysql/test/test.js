@@ -100,6 +100,7 @@ test.serial('validate connection strings', t => {
 		t.is(parsedConnection.database, connection.database);
 	}
 });
+
 test.serial('close connection successfully', async t => {
 	const keyv = store();
 	t.is(await keyv.get('foo'), undefined);
