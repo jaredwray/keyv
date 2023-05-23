@@ -36,27 +36,69 @@ test.serial('.clear() with undefined namespace', async t => {
 	t.is(await keyv.clear(), undefined);
 });
 
+const connectionSamples = [
+	{
+		username: 'root',
+		password: 'password',
+		host: 'localhost',
+		port: 3306,
+		database: 'keyv_dbname',
+	},
+	{
+		username: 'root',
+		password: 'password',
+		host: '127.0.0.1',
+		port: 3306,
+		database: 'keyv_dbname',
+	},
+	{
+		username: 'test user',
+		password: 'very strong pass-word',
+		host: 'test-stg-cluster.cluster-hqpowufs.ap-dqhowd-1.rds.amazonaws.com',
+		port: 5006,
+		database: 'keyv_dbname',
+	},
+	{
+		// Special characters
+		username: 'John Noêl',
+		password: 'f.[;@4IWS0,vv)X-dDe FLn+Ün',
+		host: '[::1]',
+		port: 3306,
+		database: 'keyv_dbname',
+	},
+	{
+		// No password
+		username: 'nopassword',
+		host: '[::1]',
+		port: 3306,
+		database: 'keyv_dbname',
+	},
+	{
+		// No port
+		username: 'noport',
+		password: 'f.[;@4IWS0,vv)X-dDe#Ln+Ün',
+		host: '[::1]',
+		database: 'keyv_dbname',
+	},
+	{
+		// No password & no port
+		username: 'nopasswordnoport',
+		host: '[::1]',
+		database: 'tablau-èdd',
+	},
+];
+
 test.serial('validate connection strings', t => {
-	const options = parseConnectionString('mysql://root:password@localhost:3306/keyv_test');
-	t.is(options.user, 'root');
-	t.is(options.password, 'password');
-	t.is(options.host, 'localhost');
-	t.is(options.port, 3306);
-	t.is(options.database, 'keyv_test');
+	for (const connection of connectionSamples) {
+		const newConnectionString = `mysql://${connection.username}:${connection.password || ''}@${connection.host}:${connection.port || ''}/${connection.database}`;
+		const parsedConnection = parseConnectionString(newConnectionString);
 
-	const options2 = parseConnectionString('mysql://root-1:pass-1@localhost:3306/dbname');
-	t.is(options2.user, 'root-1');
-	t.is(options2.password, 'pass-1');
-	t.is(options2.host, 'localhost');
-	t.is(options2.port, 3306);
-	t.is(options2.database, 'dbname');
-
-	const options3 = parseConnectionString('mysql://test_stg:test@test-stg-cluster.cluster-hqpowufs.ap-dqhowd-1.rds.amazonaws.com:3306/test_beta');
-	t.is(options3.user, 'test_stg');
-	t.is(options3.password, 'test');
-	t.is(options3.host, 'test-stg-cluster.cluster-hqpowufs.ap-dqhowd-1.rds.amazonaws.com');
-	t.is(options3.port, 3306);
-	t.is(options3.database, 'test_beta');
+		t.is(parsedConnection.user, connection.username);
+		t.is(parsedConnection.password, connection.password);
+		t.is(parsedConnection.host, connection.host);
+		t.is(parsedConnection.port, connection.port);
+		t.is(parsedConnection.database, connection.database);
+	}
 });
 
 test.serial('close connection successfully', async t => {

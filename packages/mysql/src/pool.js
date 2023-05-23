@@ -25,16 +25,18 @@ const endPool = () => {
 };
 
 function parseConnectionString(connectionString) {
+	// Handle # character as URL breaks when it is present
+	connectionString = connectionString.replace(/#/g, '%23');
 	// Create a new URL object
 	const url = new URL(connectionString);
 
 	// Create the poolOptions object
 	const poolOptions = {
-		user: url.username,
-		password: url.password || undefined,
+		user: decodeURIComponent(url.username),
+		password: decodeURIComponent(url.password) || undefined,
 		host: url.hostname,
 		port: url.port ? Number.parseInt(url.port, 10) : undefined,
-		database: url.pathname.slice(1), // Remove the leading '/'
+		database: decodeURIComponent(url.pathname.slice(1)), // Remove the leading '/'
 	};
 
 	// Remove undefined properties
