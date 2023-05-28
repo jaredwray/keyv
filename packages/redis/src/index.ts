@@ -83,11 +83,13 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	async * iterator(namespace?: string): IteratorOutput {
 		const scan = this.redis.scan.bind(this.redis);
 		const get = this.redis.mget.bind(this.redis);
-		// @ts-expect-error - iterator
-		async function * iterate(curs, pattern) {
-			const [cursor, keys] = await scan(curs, 'MATCH', pattern);
-
+		let cursor = '0';
+		do {
+			// eslint-disable-next-line no-await-in-loop
+			const [curs, keys] = await scan(cursor, 'MATCH', `${namespace!}:*`);
+			cursor = curs;
 			if (keys.length > 0) {
+				// eslint-disable-next-line no-await-in-loop
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
 					const key = keys[i];
@@ -95,13 +97,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 					yield [key, value];
 				}
 			}
-
-			if (cursor !== '0') {
-				yield * iterate(cursor, pattern);
-			}
-		}
-
-		yield * iterate(0, `${namespace!}:*`);
+		} while (cursor !== '0');
 	}
 
 	async has(key: string): HasOutput {
