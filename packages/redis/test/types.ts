@@ -1,6 +1,6 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvRedis from '../src/index.js';
+import KeyvRedis from '../src';
 
 const redisHost = 'localhost';
 const redisUri = `redis://${redisHost}`;
