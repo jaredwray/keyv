@@ -44,13 +44,15 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		options.connect = async () => {
 			try {
 				const db = new sqlite3.Database(options.db!);
+				db.on('error', error => {
+					throw error;
+				});
 				if (options.busyTimeout) {
 					db.configure('busyTimeout', options.busyTimeout);
 				}
 
 				return {query: pify(db.all).bind(db), close: pify(db.close).bind(db)};
 			} catch (error) {
-				console.log('Error en conexion');
 				this.emit('error', error);
 				throw error;
 			}
@@ -72,25 +74,18 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 				await db.query(createTable);
 				return db;
 			} catch (error) {
-				console.log('Connected');
 				this.emit('error', error);
-				throw error;
 			}
 		};
 
 		this.query = async (sqlString, ...parameter) => {
-			try{
-				const db = await connected();
-				return db.query(sqlString, ...parameter);
-			} catch (error){
-				console.log('Query');
-				throw error;
-			}
+			const db = await connected();
+			return await db!.query(sqlString, ...parameter);
 		};
 
 		this.close = async () => {
 			const db = await connected();
-			return db.close();
+			return db!.close();
 		};
 	}
 
