@@ -1,5 +1,8 @@
 import type {StoredData} from 'keyv';
 
+export type DbQuery = (sqlString: string, ...parameter: unknown[]) => Promise<any>;
+export type DbClose = () => Promise<void>;
+
 export type KeyvSqliteOptions = {
 	dialect?: string;
 	uri?: string;
@@ -10,9 +13,14 @@ export type KeyvSqliteOptions = {
 	iterationLimit?: number | string;
 	connect?: () => Promise<
 	{
-		query: (sqlString: string, ...parameter: unknown[]) => Promise<any>;
-		close: () => Promise<void>;
+		query: DbQuery;
+		close: DbClose;
 	}>;
+};
+
+export type Db = {
+	query: DbQuery;
+	close: DbClose;
 };
 
 export type IteratorOutput = AsyncGenerator<any, void, any>;
