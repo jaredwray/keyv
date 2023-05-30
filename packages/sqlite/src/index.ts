@@ -8,7 +8,9 @@ import {
 	type DisconnectOutput,
 	type GetManyOutput,
 	type GetOutput,
-	type HasOutput, type IteratorOutput, type KeyvSqliteOptions,
+	type HasOutput,
+	type IteratorOutput,
+	type KeyvSqliteOptions,
 	type SetOutput,
 } from './types';
 
@@ -39,24 +41,23 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 			};
 		}
 
-		options.db = options.uri?.replace(/^sqlite:\/\//, '');
+		options.db = options.uri!.replace(/^sqlite:\/\//, '');
 
-		options.connect = async () => {
-			try {
-				const db = new sqlite3.Database(options.db!);
-				db.on('error', error => {
-					throw error;
-				});
-				if (options.busyTimeout) {
-					db.configure('busyTimeout', options.busyTimeout);
+		options.connect = async () => new Promise((resolve, reject) => {
+			const db = new sqlite3.Database(options.db!, error => {
+				if (error) {
+					reject(error);
+				} else {
+					if (options.busyTimeout) {
+						db.configure('busyTimeout', options.busyTimeout);
+					}
+
+					resolve(db);
 				}
-
-				return {query: pify(db.all).bind(db), close: pify(db.close).bind(db)};
-			} catch (error) {
-				this.emit('error', error);
-				throw error;
-			}
-		};
+			});
+		})
+			// @ts-expect-error - db is unknown
+			.then(db => ({query: pify(db.all).bind(db), close: pify(db.close).bind(db)}));
 
 		this.opts = {
 			table: 'keyv',
@@ -68,24 +69,20 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
-		const connected = async () => {
-			try {
-				const db = await options.connect!();
-				await db.query(createTable);
-				return db;
-			} catch (error) {
-				this.emit('error', error);
-			}
-		};
+		options.connect().then(async db => {
+			await db.query(createTable);
+		}).catch(error => {
+			this.emit('error', error);
+		});
 
 		this.query = async (sqlString, ...parameter) => {
-			const db = await connected();
-			return db!.query(sqlString, ...parameter);
+			const db = await options.connect!();
+			return db.query(sqlString, ...parameter);
 		};
 
 		this.close = async () => {
-			const db = await connected();
-			return db!.close();
+			const db = await options.connect!();
+			return db.close();
 		};
 	}
 
