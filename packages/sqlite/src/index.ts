@@ -80,7 +80,7 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 
 		this.query = async (sqlString, ...parameter) => {
 			const db = await connected();
-			return await db!.query(sqlString, ...parameter);
+			return db!.query(sqlString, ...parameter);
 		};
 
 		this.close = async () => {
