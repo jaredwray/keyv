@@ -43,22 +43,6 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 
 		options.db = options.uri!.replace(/^sqlite:\/\//, '');
 
-		options.connect = async () => new Promise((resolve, reject) => {
-			const db = new sqlite3.Database(options.db!, error => {
-				if (error) {
-					reject(error);
-				} else {
-					if (options.busyTimeout) {
-						db.configure('busyTimeout', options.busyTimeout);
-					}
-
-					resolve(db);
-				}
-			});
-		})
-			// @ts-expect-error - db is unknown
-			.then(db => ({query: pify(db.all).bind(db), close: pify(db.close).bind(db)}));
-
 		this.opts = {
 			table: 'keyv',
 			keySize: 255,
@@ -69,11 +53,22 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
 
-		options.connect().then(async db => {
-			await db.query(createTable);
-		}).catch(error => {
-			this.emit('error', error);
-		});
+		options.connect = async () => new Promise((resolve, reject) => {
+			const db = new sqlite3.Database(options.db!, error => {
+				if (error) {
+					reject(error);
+				} else {
+					if (options.busyTimeout) {
+						db.configure('busyTimeout', options.busyTimeout);
+					}
+
+					db.run(createTable);
+					resolve(db);
+				}
+			});
+		})
+			// @ts-expect-error - db is unknown
+			.then(db => ({query: pify(db.all).bind(db), close: pify(db.close).bind(db)}));
 
 		this.query = async (sqlString, ...parameter) => {
 			const db = await options.connect!();
