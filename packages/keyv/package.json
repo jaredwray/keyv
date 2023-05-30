@@ -14,7 +14,6 @@
 		"rules": {
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
-			"unicorn/no-typeof-undefined": 0,
 			"@typescript-eslint/consistent-type-definitions": 0,
 			"unicorn/no-typeof-undefined": 0
 		}
@@ -43,7 +42,7 @@
 		"@keyv/test-suite": "*",
 		"eslint": "^8.37.0",
 		"eslint-plugin-promise": "^6.1.1",
-		"pify": "6.1.0",
+		"pify": "^5.0.0",
 		"timekeeper": "^2.2.0",
 		"tsd": "^0.28.1"
 	},
