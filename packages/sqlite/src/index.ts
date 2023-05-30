@@ -62,13 +62,16 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 						db.configure('busyTimeout', options.busyTimeout);
 					}
 
-					db.run(createTable);
 					resolve(db);
 				}
 			});
 		})
 			// @ts-expect-error - db is unknown
 			.then(db => ({query: pify(db.all).bind(db), close: pify(db.close).bind(db)}));
+
+		options.connect()
+			.then(async db => db.query(createTable))
+			.catch(error => this.emit('error', error));
 
 		this.query = async (sqlString, ...parameter) => {
 			const db = await options.connect!();
