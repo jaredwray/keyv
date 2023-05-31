@@ -2,9 +2,10 @@
 	"name": "@keyv/sqlite",
 	"version": "3.6.5",
 	"description": "SQLite storage adapter for Keyv",
-	"main": "src/index.js",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
@@ -14,6 +15,11 @@
 		"rules": {
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
+			"import/extensions": 0,
+			"@typescript-eslint/no-unsafe-argument": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/no-unsafe-return": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -62,24 +68,19 @@
 		"sqlite3": "^5.1.6"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "*",
-		"ava": "^5.2.0",
-		"c8": "^7.13.0",
+		"@keyv/test-suite": "^1.9.2",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
-		"tsd": "^0.28.1",
-		"typescript": "^5.0.4",
-		"xo": "^0.54.2"
+		"tsd": "^0.28.1"
 	},
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"engines": {
-		"node": ">= 12"
+		"node": ">= 14"
 	},
 	"files": [
-		"src"
+		"dist"
 	]
 }

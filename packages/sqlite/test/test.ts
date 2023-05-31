@@ -1,8 +1,7 @@
-const test = require('ava');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests} = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const KeyvSqlite = require('../src/index.js');
+import test from 'ava';
+import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
+import Keyv from 'keyv';
+import KeyvSqlite from '../src/index';
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
@@ -11,6 +10,7 @@ const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTime
 keyvTestSuite(test, Keyv, store);
 
 test.serial('table name can be numeric, alphabet, special case', t => {
+	// @ts-expect-error - table needs to be a string
 	let keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: 3000});
 	t.is(keyv.opts.table, '_3000');
 
@@ -105,6 +105,7 @@ test.serial('close connection successfully', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
 	await keyv.clear();
 	t.is(await keyv.get('foo'), undefined);
-	keyv.set('foo', 'bar');
+	await keyv.set('foo', 'bar');
+	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 	t.is(await keyv.disconnect(), undefined);
 });

@@ -1,6 +1,6 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvSqlite from '../src/index.js';
+import KeyvSqlite from '../src/index';
 
 type MyType = {
 	a: string;
