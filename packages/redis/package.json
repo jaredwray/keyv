@@ -68,7 +68,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"delay": "^5.0.0",
+		"delay": "^6.0.0",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"timekeeper": "^2.2.0",
