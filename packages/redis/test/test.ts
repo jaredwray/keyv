@@ -127,3 +127,12 @@ test.serial('should handle KeyvOptions without uri', t => {
 	const keyv = new KeyvRedis(options);
 	t.true(keyv.redis instanceof Redis);
 });
+
+test.serial('should handle KeyvOptions with family option', t => {
+	const options = {
+		options: {},
+		family: 'IPv4',
+	};
+	const keyv = new KeyvRedis(options);
+	t.true(keyv.redis instanceof Redis);
+});
