@@ -22,7 +22,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		this.opts = {};
 		this.opts.dialect = 'redis';
 
-		if (uri instanceof Redis) {
+		if (typeof uri !== 'string' && uri.options && ('family' in uri.options || uri.isCluster)) {
 			this.redis = uri;
 		} else {
 			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvRedisOptions), ...options};
