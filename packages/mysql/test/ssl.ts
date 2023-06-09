@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import test from 'ava';
-import {endPool} from '../src/pool.js';
-import KeyvMysql from '../src/index.js';
+import {endPool} from '../src/pool';
+import KeyvMysql from '../src/index';
 
 const options = {
 	ssl: {

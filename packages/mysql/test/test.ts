@@ -1,8 +1,8 @@
 import test from 'ava';
 import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvMysql from '../src/index.js';
-import {parseConnectionString} from '../src/pool.js';
+import KeyvMysql from '../src/index';
+import {parseConnectionString} from '../src/pool';
 
 keyvOfficialTests(test, Keyv, 'mysql://root@localhost/keyv_test', 'mysql://foo');
 
