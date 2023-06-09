@@ -83,10 +83,6 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
 
-		if (row === undefined) {
-			return undefined;
-		}
-
 		return row?.value as Value;
 	}
 
