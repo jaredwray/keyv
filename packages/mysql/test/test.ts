@@ -1,9 +1,8 @@
-const test = require('ava');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const KeyvMysql = require('../src/index.js');
-const {parseConnectionString} = require('../src/pool.js');
+import test from 'ava';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import Keyv from 'keyv';
+import KeyvMysql from '../src/index';
+import {parseConnectionString} from '../src/pool';
 
 keyvOfficialTests(test, Keyv, 'mysql://root@localhost/keyv_test', 'mysql://foo');
 
@@ -90,7 +89,7 @@ const connectionSamples = [
 
 test.serial('validate connection strings', t => {
 	for (const connection of connectionSamples) {
-		const newConnectionString = `mysql://${connection.username}:${connection.password || ''}@${connection.host}:${connection.port || ''}/${connection.database}`;
+		const newConnectionString = `mysql://${connection.username}:${connection.password ?? ''}@${connection.host}:${connection.port ?? ''}/${connection.database}`;
 		const parsedConnection = parseConnectionString(newConnectionString);
 
 		t.is(parsedConnection.user, connection.username);

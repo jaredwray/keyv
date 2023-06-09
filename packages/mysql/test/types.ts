@@ -1,6 +1,6 @@
 import test from 'ava';
 import Keyv from 'keyv';
-import KeyvMysql from '../src/index.js';
+import KeyvMysql from '../src/index';
 
 type MyType = {
 	a: string;
