@@ -1,8 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const test = require('ava');
-const {endPool} = require('../src/pool.js');
-const KeyvMysql = require('../src/index.js');
+import fs from 'fs';
+import path from 'path';
+import test from 'ava';
+import {endPool} from '../src/pool.js';
+import KeyvMysql from '../src/index.js';
 
 const options = {
 	ssl: {
