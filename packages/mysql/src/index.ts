@@ -80,7 +80,7 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		const sql = `SELECT * FROM ${this.opts.table!} WHERE id = ?`;
 		const select = mysql.format(sql, [key]);
 
-		const rows = await this.query(select);
+		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
 
 		if (row === undefined) {
@@ -99,7 +99,7 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		const results = [...keys];
 		let i = 0;
 		for (const key of keys) {
-			const rowIndex = rows.findIndex(row => row.id === key);
+			const rowIndex = rows.findIndex((row: {id: string}) => row.id === key);
 			results[i] = rowIndex > -1 ? rows[rowIndex].value : undefined;
 			i++;
 		}
