@@ -13,21 +13,20 @@ import {endPool, pool} from './pool';
 
 const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'table', 'ttl', 'uri']);
 
-type QueryType<T> =
-	T extends
-	mysql.RowDataPacket[][] |
-	mysql.RowDataPacket[] |
-	mysql.OkPacket |
-	mysql.OkPacket[] |
-	mysql.ResultSetHeader
-		? T
-		: never;
+type QueryType<T> = Promise<T extends
+mysql.RowDataPacket[][] |
+mysql.RowDataPacket[] |
+mysql.OkPacket |
+mysql.OkPacket[] |
+mysql.ResultSetHeader
+	? T
+	: never>;
 
 class KeyvMysql<Value = any> extends EventEmitter {
 	ttlSupport: boolean;
 	opts: KeyvMysqlOptions;
 	namespace?: string;
-	query: <T>(sqlString: string) => Promise<QueryType<T>>;
+	query: <T>(sqlString: string) => QueryType<T>;
 	constructor(keyvOptions?: KeyvMysqlOptions | string) {
 		super();
 		this.ttlSupport = false;
@@ -150,11 +149,12 @@ class KeyvMysql<Value = any> extends EventEmitter {
 	}
 
 	async * iterator(namespace?: string): IteratorOutput {
-		const limit = Number.parseInt(this.opts.iterationLimit, 10) || 10;
-		async function * iterate(offset: number, options, query) {
+		const limit = Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
+		// @ts-expect-error - iterate
+		async function * iterate(offset: number, options: KeyvMysqlOptions, query: <T>(sqlString: string) => QueryType<T>) {
 			const sql = `SELECT * FROM ${options.table!} WHERE id LIKE ? LIMIT ? OFFSET ?`;
 			const select = mysql.format(sql, [`${namespace ? namespace + ':' : ''}%`, limit, offset]);
-			const entries = await query(select);
+			const entries: mysql.RowDataPacket[] = await query(select);
 			if (entries.length === 0) {
 				return;
 			}
@@ -177,7 +177,7 @@ class KeyvMysql<Value = any> extends EventEmitter {
 	}
 
 	async disconnect(): DisconnectOutput {
-		await endPool();
+		endPool();
 	}
 }
 

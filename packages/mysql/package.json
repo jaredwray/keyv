@@ -16,6 +16,11 @@
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
 			"import/extensions": 0,
+			"@typescript-eslint/no-unsafe-return": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/no-confusing-void-expression": 0,
+			"@typescript-eslint/no-dynamic-delete": 0,
 			"ava/no-ignored-test-files": [
 				"error",
 				{

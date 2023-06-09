@@ -6,7 +6,7 @@ export type KeyvMysqlOptions = {
 	uri?: string;
 	table?: string;
 	keySize?: number;
-	iterationLimit?: number;
+	iterationLimit?: string | number;
 } & ConnectionOptions;
 
 export type IteratorOutput = AsyncGenerator<any, void, any>;
