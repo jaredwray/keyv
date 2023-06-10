@@ -1,0 +1,80 @@
+{
+  "name": "@keyv/v5",
+  "version": "5.0.0",
+  "description": "Simple key-value storage with support for multiple backends",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.dist.json",
+    "prepare": "yarn build",
+    "test": "xo && c8 ava --serial",
+    "test:ci": "xo && ava --serial",
+    "clean": "rm -rf node_modules && rm -rf ./dist"
+  },
+  "xo": {
+    "rules": {
+      "ava/no-ignored-test-files": [
+        "error",
+        {
+          "extensions": [
+            "js",
+            "ts"
+          ]
+        }
+      ],
+      "import/extensions": 0,
+      "@typescript-eslint/prefer-nullish-coalescing": 0,
+      "@typescript-eslint/no-unsafe-argument": 0
+    }
+  },
+  "ava": {
+    "require": [
+      "ts-node/register"
+    ],
+    "extensions": [
+      "ts"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/keyv.git"
+  },
+  "keywords": [
+    "compress",
+    "gzip",
+    "keyv",
+    "storage",
+    "adapter",
+    "key",
+    "value",
+    "store",
+    "cache",
+    "ttl"
+  ],
+  "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/keyv/issues"
+  },
+  "homepage": "https://github.com/jaredwray/keyv",
+  "dependencies": {
+    "json-buffer": "^3.0.1"
+  },
+  "devDependencies": {
+    "@ava/typescript": "^4.0.0",
+    "@keyv/test-suite": "*",
+    "@typescript-eslint/parser": "^5.59.8",
+    "eslint": "^8.42.0",
+    "keyv": "*",
+    "tsd": "^0.28.1"
+  },
+  "tsd": {
+    "directory": "test"
+  },
+  "engines": {
+    "node": ">= 12"
+  },
+  "files": [
+    "dist"
+  ]
+}
