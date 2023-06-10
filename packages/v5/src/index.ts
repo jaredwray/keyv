@@ -2,7 +2,7 @@
 
 type StorageAdapterType = {
 	get<T>(key: string): Promise<T | undefined>;
-	getMany(keys: string[]): Promise<Array<string | undefined>>;
+	getMany<T>(keys: string[]): Promise<Array<T | undefined>>;
 	set(key: string, value: string): Promise<void>;
 	delete(key: string): Promise<boolean>;
 	deleteMany(keys: string[]): Promise<boolean[]>;
