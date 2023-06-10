@@ -1,14 +1,13 @@
-const test = require('ava');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const {endPool} = require('../src/pool.js');
-const KeyvPostgres = require('../src/index.js');
+import test from 'ava';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import Keyv from 'keyv';
+import {endPool} from '../src/pool';
+import KeyvPostgres from '../src/index';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5433/keyv_test';
 
 test.serial('throws if ssl is not used', async t => {
-	endPool();
+	await endPool();
 	try {
 		const keyv = new KeyvPostgres({uri: postgresUri});
 		await keyv.get('foo');
@@ -16,7 +15,7 @@ test.serial('throws if ssl is not used', async t => {
 	} catch {
 		t.pass();
 	} finally {
-		endPool();
+		await endPool();
 	}
 });
 
