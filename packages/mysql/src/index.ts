@@ -55,25 +55,29 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		delete mysqlOptions.serialize;
 		delete mysqlOptions.deserialize;
 
-		const connection = async () => Promise.resolve()
-			.then(() => pool(options.uri!, mysqlOptions))
-			.then(connection => async (sql: string) => connection.execute(sql)
-				.then(data => data[0]));
+		const connection = async () => {
+			const conn = pool(options.uri!, mysqlOptions);
+			return async (sql: string) => {
+				const data = await conn.execute(sql);
+				return data[0];
+			};
+		};
 
 		this.opts = {table: 'keyv',
 			keySize: 255, ...options};
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 
-		const connected = connection()
-			.then(async query => query(createTable).then(() => query))
-			.catch(error => this.emit('error', error));
+		const connected = connection().then(async query => {
+			await query(createTable);
+			return query;
+		}).catch(error => this.emit('error', error));
 
-		this.query = async (sqlString: string) => connected
-			.then(query =>
+		this.query = async (sqlString: string) => {
+			const query = await connected;
 			// @ts-expect-error - query is not a boolean
-				query(sqlString),
-			);
+			return query(sqlString);
+		};
 	}
 
 	async get(key: string): GetOutput<Value> {
