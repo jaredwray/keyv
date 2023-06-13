@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-extraneous-class */
 
-type StorageAdapterType = {
+export type StorageAdapterType = {
 	get<T>(key: string): Promise<T | undefined>;
 	getMany?<T>(keys: string[]): Promise<Array<T | undefined>>;
 	set(key: string, value: string): Promise<void>;
@@ -10,22 +10,31 @@ type StorageAdapterType = {
 	disconnect?(): Promise<void>;
 };
 
-type CompressionAdapterType = {
+export type StorageAdapterOrMapType = StorageAdapterType | Map<any, any>;
+
+export type CompressionAdapterType = {
 	compress(data: string): Promise<string>;
 	decompress(data: string): Promise<string>;
 };
 
-type KeyvOptionsType = {
+export type KeyvOptionsType = {
 	namespace?: string;
 	ttl?: number;
-	primaryStorage?: StorageAdapterType | MapConstructor;
+	primaryStorage?: StorageAdapterOrMapType;
 	uri?: string;
 	compression?: CompressionAdapterType;
-	secondaryStorage?: StorageAdapterType | MapConstructor;
+	secondaryStorage?: StorageAdapterOrMapType;
 	offlineMode?: boolean;
+    returnRaw?: boolean;
+    serialize?: Function;
+    deserialize?: Function;
+    //legacy
+    store?: StorageAdapterOrMapType;
+    adapter?: StorageAdapterOrMapType;
+
 };
 
-class Keyv {
+export default class Keyv {
     private _options: KeyvOptionsType = {
         namespace: 'keyv',
         ttl: undefined,
@@ -54,5 +63,3 @@ class Keyv {
     }
 
 }
-
-export = Keyv;
