@@ -58,6 +58,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
+    "eventemitter3": "^5.0.1",
     "json-buffer": "^3.0.1"
   },
   "devDependencies": {

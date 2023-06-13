@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-extraneous-class */
+import { EventEmitter } from 'events';
 
 export type StorageAdapterType = {
 	get<T>(key: string): Promise<T | undefined>;
@@ -19,13 +20,12 @@ export type CompressionAdapterType = {
 
 export type KeyvOptionsType = {
 	namespace?: string;
-	ttl?: number;
+	ttl?: number | undefined;
 	primaryStorage?: StorageAdapterOrMapType;
 	uri?: string;
-	compression?: CompressionAdapterType;
-	secondaryStorage?: StorageAdapterOrMapType;
+	compression?: CompressionAdapterType | undefined;
+	secondaryStorage?: StorageAdapterOrMapType | undefined;
 	offlineMode?: boolean;
-    returnRaw?: boolean;
     serialize?: Function;
     deserialize?: Function;
     //legacy
@@ -34,18 +34,19 @@ export type KeyvOptionsType = {
 
 };
 
-export default class Keyv {
+export default class Keyv extends EventEmitter {
     private _options: KeyvOptionsType = {
         namespace: 'keyv',
         ttl: undefined,
         primaryStorage: new Map(),
+        secondaryStorage: undefined,
         uri: undefined,
         compression: undefined,
-        secondaryStorage: undefined,
         offlineMode: false,
     };
 
     constructor(options?: KeyvOptionsType) {
+        super();
     }
 
     public get namespace(): string | undefined {
@@ -62,4 +63,64 @@ export default class Keyv {
         this._options.ttl = value;
     }
 
+    public get primaryStorage(): StorageAdapterOrMapType | undefined {
+        return this._options.primaryStorage;
+    }
+    public set primaryStorage(value: StorageAdapterOrMapType) {
+        this._options.primaryStorage = value;
+    }
+    //legacy reference of store
+    public get store(): StorageAdapterOrMapType | undefined {
+        return this._options.primaryStorage;
+    }
+    public set store(value: StorageAdapterOrMapType) {
+        this._options.primaryStorage = value;
+    }
+    public get secondaryStorage(): StorageAdapterOrMapType | undefined {
+        return this._options.secondaryStorage;
+    }
+    public set secondaryStorage(value: StorageAdapterOrMapType) {
+        this._options.secondaryStorage = value;
+    }
+
+    public get uri(): string | undefined {
+        return this._options.uri;
+    }
+    public set uri(value: string) {
+        this._options.uri = value;
+    }
+
+    public get compression(): CompressionAdapterType | undefined {
+        return this._options.compression;
+    }
+    public set compression(value: CompressionAdapterType) {
+        this._options.compression = value;
+    }
+
+    public get(key: string | string[]): Promise<any> {
+        return Promise.resolve(undefined);
+    }
+
+    public set(key: string | string[], value: any, ttl?: number): Promise<any> {
+        return Promise.resolve(undefined);
+    }
+
+    public delete(key: string | string[]): Promise<boolean> {
+        return Promise.resolve(false);
+    }
+
+    public clear(): Promise<void> {
+        return Promise.resolve(undefined);
+    }
+
+    public disconnect(): Promise<void> {
+        return Promise.resolve(undefined);
+    }
+
+    private serializeData(data: any): string {
+        return '';
+    }
+
+    private deserializeData(data: string): any {
+    }
 }
