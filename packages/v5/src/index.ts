@@ -45,7 +45,11 @@ export default class Keyv extends EventEmitter {
         offlineMode: false,
     };
 
-    constructor(options?: KeyvOptionsType) {
+    constructor();
+    constructor(options: KeyvOptionsType);
+    constructor(uri: string);
+    constructor(uri: string, options?: KeyvOptionsType);
+    constructor(storageAdapter: StorageAdapterOrMapType, options?: KeyvOptionsType) {
         super();
     }
 
