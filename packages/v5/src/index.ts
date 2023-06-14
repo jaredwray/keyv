@@ -47,7 +47,6 @@ export default class Keyv extends EventEmitter {
 
     constructor();
     constructor(options: KeyvOptionsType);
-    constructor(uri: string);
     constructor(uri: string, options?: KeyvOptionsType);
     constructor(storageAdapter: StorageAdapterOrMapType, options?: KeyvOptionsType) {
         super();
