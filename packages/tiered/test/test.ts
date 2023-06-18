@@ -1,5 +1,4 @@
 import test from 'ava';
-import delay from 'delay';
 import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvSqlite from '@keyv/sqlite';
@@ -22,6 +21,12 @@ keyvTestSuite(test, Keyv, store);
 
 // @ts-expect-error - Store
 keyvIteratorTests(test, Keyv, store);
+
+// This is a utility function that returns a promise that resolves after a specified number of milliseconds
+async function delay(ms: number): Promise<void> {
+	// eslint-disable-next-line no-promise-executor-return
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 test.beforeEach(async () => {
 	const remote = remoteStore();

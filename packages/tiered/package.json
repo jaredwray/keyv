@@ -56,9 +56,8 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "devDependencies": {
-    "delay": "^5.0.0",
-    "@keyv/test-suite": "*",
     "@keyv/sqlite": "*",
+    "@keyv/test-suite": "*",
     "ava": "^5.2.0",
     "c8": "^7.13.0",
     "eslint": "^8.43.0",
