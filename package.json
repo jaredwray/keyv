@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@types/node": "^20.2.1",
-    "webpack": "^5.83.1"
+    "webpack": "^5.87.0"
   },
   "devDependencies": {
     "ava": "^5.2.0",
