@@ -1,12 +1,14 @@
 import EventEmitter from 'events';
 import Redis from 'ioredis';
-import {type StoredData} from 'keyv';
 import {
 	type ClearOutput,
 	type DeleteManyOutput,
-	type DeleteOutput, type DisconnectOutput,
+	type DeleteOutput,
+	type DisconnectOutput,
 	type GetManyOutput,
-	type GetOutput, type HasOutput, type IteratorOutput,
+	type GetOutput,
+	type HasOutput,
+	type IteratorOutput,
 	type KeyvRedisOptions,
 	type KeyvUriOptions,
 	type SetOutput,
@@ -33,7 +35,11 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		this.redis.on('error', (error: Error) => this.emit('error', error));
 	}
 
-	_getNamespace(): string {
+	_getNamespace(key?: string): string {
+		if (key && this.opts.useRedisSets) {
+			return `namespace:sets:${key}`;
+		}
+
 		return `namespace:${this.namespace!}`;
 	}
 
@@ -47,8 +53,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async getMany(keys: string[]): GetManyOutput<Value> {
-		const rows: Array<StoredData<Value>> = await this.redis.mget(keys);
-		return rows;
+		return this.redis.mget(keys);
 	}
 
 	async set(key: string, value: Value, ttl?: number): SetOutput {
@@ -56,13 +61,17 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			return undefined;
 		}
 
-		if (typeof ttl === 'number') {
-			await this.redis.set(key, value, 'PX', ttl);
+		if (this.opts.useRedisSets) {
+			await this.redis.set(this._getNamespace(key), value);
 		} else {
-			await this.redis.set(key, value);
-		}
+			if (typeof ttl === 'number') {
+				await this.redis.set(key, value, 'PX', ttl);
+			} else {
+				await this.redis.set(key, value);
+			}
 
-		await this.redis.sadd(this._getNamespace(), key);
+			await this.redis.sadd(this._getNamespace(), key);
+		}
 	}
 
 	async delete(key: string): DeleteOutput {
@@ -76,8 +85,14 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async clear(): ClearOutput {
-		const keys: string[] = await this.redis.smembers(this._getNamespace());
-		await this.redis.del([...keys, this._getNamespace()]);
+		if (this.opts.useRedisSets) {
+			const pattern = 'namespace:sets*';
+			const keys: string[] = await this.redis.keys(pattern);
+			await this.redis.del(keys);
+		} else {
+			const keys: string[] = await this.redis.smembers(this._getNamespace());
+			await this.redis.del([...keys, this._getNamespace()]);
+		}
 	}
 
 	async * iterator(namespace?: string): IteratorOutput {
