@@ -30,20 +30,27 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvRedisOptions), ...options};
 			// @ts-expect-error - uri is a string or RedisOptions
 			this.redis = new Redis(options.uri!, options);
+			this.opts.useRedisSets = options.useRedisSets;
 		}
 
 		this.redis.on('error', (error: Error) => this.emit('error', error));
 	}
 
-	_getNamespace(key?: string): string {
-		if (key && this.opts.useRedisSets) {
-			return `namespace:sets:${key}`;
-		}
-
+	_getNamespace(): string {
 		return `namespace:${this.namespace!}`;
 	}
 
+	_getKeyName = (key: string): string => {
+		if (this.opts.useRedisSets) {
+			return `sets:${key}`;
+		}
+
+		return key;
+	};
+
 	async get(key: string): GetOutput<Value> {
+		key = this._getKeyName(key);
+
 		const value: Value = await this.redis.get(key);
 		if (value === null) {
 			return undefined;
@@ -53,6 +60,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async getMany(keys: string[]): GetManyOutput<Value> {
+		keys = keys.map(this._getKeyName);
 		return this.redis.mget(keys);
 	}
 
@@ -61,32 +69,34 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			return undefined;
 		}
 
-		if (this.opts.useRedisSets) {
-			await this.redis.set(this._getNamespace(key), value);
-		} else {
-			if (typeof ttl === 'number') {
-				await this.redis.set(key, value, 'PX', ttl);
-			} else {
-				await this.redis.set(key, value);
-			}
+		key = this._getKeyName(key);
 
+		if (typeof ttl === 'number') {
+			await this.redis.set(key, value, 'PX', ttl);
+		} else {
+			await this.redis.set(key, value);
+		}
+
+		if (!this.opts.useRedisSets) {
 			await this.redis.sadd(this._getNamespace(), key);
 		}
 	}
 
 	async delete(key: string): DeleteOutput {
+		key = this._getKeyName(key);
 		const items: number = await this.redis.del(key);
 		await this.redis.srem(this._getNamespace(), key);
 		return items > 0;
 	}
 
-	async deleteMany(key: string): DeleteManyOutput {
+	async deleteMany(keys: string): DeleteManyOutput {
+		const key = this._getKeyName(keys);
 		return this.delete(key);
 	}
 
 	async clear(): ClearOutput {
 		if (this.opts.useRedisSets) {
-			const pattern = 'namespace:sets*';
+			const pattern = 'sets:*';
 			const keys: string[] = await this.redis.keys(pattern);
 			await this.redis.del(keys);
 		} else {
