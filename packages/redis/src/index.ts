@@ -2,7 +2,6 @@ import EventEmitter from 'events';
 import Redis from 'ioredis';
 import {
 	type ClearOutput,
-	type DeleteManyOutput,
 	type DeleteOutput,
 	type DisconnectOutput,
 	type GetManyOutput,
@@ -31,7 +30,9 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvRedisOptions), ...options};
 			// @ts-expect-error - uri is a string or RedisOptions
 			this.redis = new Redis(options.uri!, options);
-			this.opts.useRedisSets = options.useRedisSets;
+			if (options.useRedisSets === false) {
+				this.opts.useRedisSets = false;
+			}
 		}
 
 		this.redis.on('error', (error: Error) => this.emit('error', error));
@@ -86,13 +87,11 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	async delete(key: string): DeleteOutput {
 		key = this._getKeyName(key);
 		const items: number = await this.redis.del(key);
-		await this.redis.srem(this._getNamespace(), key);
-		return items > 0;
-	}
+		if (this.opts.useRedisSets) {
+			await this.redis.srem(this._getNamespace(), key);
+		}
 
-	async deleteMany(keys: string): DeleteManyOutput {
-		const key = this._getKeyName(keys);
-		return this.delete(key);
+		return items > 0;
 	}
 
 	async clear(): ClearOutput {
