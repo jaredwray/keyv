@@ -94,6 +94,13 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		return items > 0;
 	}
 
+	async deleteMany(keys: string[]): DeleteOutput {
+		const deletePromises = keys.map(async key => this.delete(key));
+		const results = await Promise.allSettled(deletePromises);
+		// @ts-expect-error - results is an array of objects with status and value
+		return results.every(result => result.value);
+	}
+
 	async clear(): ClearOutput {
 		if (this.opts.useRedisSets) {
 			const keys: string[] = await this.redis.smembers(this._getNamespace());
