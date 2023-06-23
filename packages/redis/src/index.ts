@@ -96,13 +96,13 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async clear(): ClearOutput {
-		if (!this.opts.useRedisSets) {
+		if (this.opts.useRedisSets) {
+			const keys: string[] = await this.redis.smembers(this._getNamespace());
+			await this.redis.del([...keys, this._getNamespace()]);
+		} else {
 			const pattern = 'sets:*';
 			const keys: string[] = await this.redis.keys(pattern);
 			await this.redis.del(keys);
-		} else {
-			const keys: string[] = await this.redis.smembers(this._getNamespace());
-			await this.redis.del([...keys, this._getNamespace()]);
 		}
 	}
 
