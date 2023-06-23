@@ -22,6 +22,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	constructor(uri: KeyvRedisOptions | KeyvUriOptions, options?: KeyvRedisOptions) {
 		super();
 		this.opts = {};
+		this.opts.useRedisSets = true;
 		this.opts.dialect = 'redis';
 
 		if (typeof uri !== 'string' && uri.options && ('family' in uri.options || uri.isCluster)) {
@@ -41,7 +42,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	_getKeyName = (key: string): string => {
-		if (this.opts.useRedisSets) {
+		if (!this.opts.useRedisSets) {
 			return `sets:${key}`;
 		}
 
@@ -77,7 +78,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			await this.redis.set(key, value);
 		}
 
-		if (!this.opts.useRedisSets) {
+		if (this.opts.useRedisSets) {
 			await this.redis.sadd(this._getNamespace(), key);
 		}
 	}
@@ -95,7 +96,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async clear(): ClearOutput {
-		if (this.opts.useRedisSets) {
+		if (!this.opts.useRedisSets) {
 			const pattern = 'sets:*';
 			const keys: string[] = await this.redis.keys(pattern);
 			await this.redis.del(keys);
