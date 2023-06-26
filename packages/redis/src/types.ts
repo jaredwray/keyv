@@ -7,6 +7,7 @@ export type KeyvRedisOptions = {
 } & {
 	uri?: string;
 	dialect?: string;
+	useRedisSets?: boolean;
 };
 
 export type KeyvUriOptions = string | KeyvRedisOptions | Redis | Cluster;

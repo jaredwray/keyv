@@ -1,12 +1,13 @@
 import EventEmitter from 'events';
 import Redis from 'ioredis';
-import {type StoredData} from 'keyv';
 import {
 	type ClearOutput,
-	type DeleteManyOutput,
-	type DeleteOutput, type DisconnectOutput,
+	type DeleteOutput,
+	type DisconnectOutput,
 	type GetManyOutput,
-	type GetOutput, type HasOutput, type IteratorOutput,
+	type GetOutput,
+	type HasOutput,
+	type IteratorOutput,
 	type KeyvRedisOptions,
 	type KeyvUriOptions,
 	type SetOutput,
@@ -20,6 +21,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	constructor(uri: KeyvRedisOptions | KeyvUriOptions, options?: KeyvRedisOptions) {
 		super();
 		this.opts = {};
+		this.opts.useRedisSets = true;
 		this.opts.dialect = 'redis';
 
 		if (typeof uri !== 'string' && uri.options && ('family' in uri.options || uri.isCluster)) {
@@ -28,6 +30,9 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvRedisOptions), ...options};
 			// @ts-expect-error - uri is a string or RedisOptions
 			this.redis = new Redis(options.uri!, options);
+			if (options.useRedisSets === false) {
+				this.opts.useRedisSets = false;
+			}
 		}
 
 		this.redis.on('error', (error: Error) => this.emit('error', error));
@@ -37,7 +42,17 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		return `namespace:${this.namespace!}`;
 	}
 
+	_getKeyName = (key: string): string => {
+		if (!this.opts.useRedisSets) {
+			return `sets:${key}`;
+		}
+
+		return key;
+	};
+
 	async get(key: string): GetOutput<Value> {
+		key = this._getKeyName(key);
+
 		const value: Value = await this.redis.get(key);
 		if (value === null) {
 			return undefined;
@@ -47,8 +62,8 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	}
 
 	async getMany(keys: string[]): GetManyOutput<Value> {
-		const rows: Array<StoredData<Value>> = await this.redis.mget(keys);
-		return rows;
+		keys = keys.map(this._getKeyName);
+		return this.redis.mget(keys);
 	}
 
 	async set(key: string, value: Value, ttl?: number): SetOutput {
@@ -56,28 +71,45 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			return undefined;
 		}
 
+		key = this._getKeyName(key);
+
 		if (typeof ttl === 'number') {
 			await this.redis.set(key, value, 'PX', ttl);
 		} else {
 			await this.redis.set(key, value);
 		}
 
-		await this.redis.sadd(this._getNamespace(), key);
+		if (this.opts.useRedisSets) {
+			await this.redis.sadd(this._getNamespace(), key);
+		}
 	}
 
 	async delete(key: string): DeleteOutput {
+		key = this._getKeyName(key);
 		const items: number = await this.redis.del(key);
-		await this.redis.srem(this._getNamespace(), key);
+		if (this.opts.useRedisSets) {
+			await this.redis.srem(this._getNamespace(), key);
+		}
+
 		return items > 0;
 	}
 
-	async deleteMany(key: string): DeleteManyOutput {
-		return this.delete(key);
+	async deleteMany(keys: string[]): DeleteOutput {
+		const deletePromises = keys.map(async key => this.delete(key));
+		const results = await Promise.allSettled(deletePromises);
+		// @ts-expect-error - results is an array of objects with status and value
+		return results.every(result => result.value);
 	}
 
 	async clear(): ClearOutput {
-		const keys: string[] = await this.redis.smembers(this._getNamespace());
-		await this.redis.del([...keys, this._getNamespace()]);
+		if (this.opts.useRedisSets) {
+			const keys: string[] = await this.redis.smembers(this._getNamespace());
+			await this.redis.del([...keys, this._getNamespace()]);
+		} else {
+			const pattern = 'sets:*';
+			const keys: string[] = await this.redis.keys(pattern);
+			await this.redis.del(keys);
+		}
 	}
 
 	async * iterator(namespace?: string): IteratorOutput {
