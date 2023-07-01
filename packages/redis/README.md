@@ -93,7 +93,7 @@ Here's how you can use the `useRedisSets` option:
 const Keyv = require('keyv');
 
 const keyv = new Keyv('redis://user:pass@localhost:6379', { useRedisSets: false });
-
+```
 
 ## License
 
