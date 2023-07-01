@@ -57,7 +57,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"c8": "^7.14.0",
+		"c8": "^8.0.0",
 		"json-buffer": "^3.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
