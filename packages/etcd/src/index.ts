@@ -2,7 +2,8 @@ import {EventEmitter} from 'events';
 import type {Lease} from 'etcd3';
 import {Etcd3} from 'etcd3';
 import {ExponentialBackoff, handleAll, retry} from 'cockatiel';
-import type {Store, StoredData} from 'keyv';
+import type {StoredData} from 'keyv';
+import type {ClearOutput, DeleteManyOutput, DeleteOutput, GetOutput, HasOutput, SetOutput} from './types';
 
 type KeyvEtcdOptions = {
 	url?: string;
@@ -11,9 +12,7 @@ type KeyvEtcdOptions = {
 	busyTimeout?: number;
 };
 
-type GetOutput<Value> = Value | Promise<Value | undefined> | undefined;
-
-class KeyvEtcd<Value = any> extends EventEmitter implements Store<Value> {
+class KeyvEtcd<Value = any> extends EventEmitter {
 	public ttlSupport: boolean;
 	public opts: KeyvEtcdOptions;
 	public client: Etcd3;
@@ -72,11 +71,11 @@ class KeyvEtcd<Value = any> extends EventEmitter implements Store<Value> {
 		}
 	}
 
-	get(key: string): GetOutput<Value> {
+	async get(key: string): GetOutput<Value> {
 		return this.client.get(key) as unknown as GetOutput<Value>;
 	}
 
-	getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
+	async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
@@ -99,7 +98,7 @@ class KeyvEtcd<Value = any> extends EventEmitter implements Store<Value> {
 			});
 	}
 
-	set(key: string, value: Value) {
+	async set(key: string, value: Value): SetOutput {
 		let client: 'lease' | 'client' = 'client';
 
 		if (this.opts.ttl) {
@@ -110,15 +109,15 @@ class KeyvEtcd<Value = any> extends EventEmitter implements Store<Value> {
 		return this[client]!.put(key).value(value);
 	}
 
-	delete(key: string): Promise<boolean> {
+	async delete(key: string): DeleteOutput {
 		if (typeof key !== 'string') {
-			return Promise.resolve(false);
+			return false;
 		}
 
 		return this.client.delete().key(key).then(key => key.deleted !== '0');
 	}
 
-	deleteMany(keys: string[]): Promise<boolean> {
+	async deleteMany(keys: string[]): DeleteManyOutput {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.delete(key));
@@ -128,18 +127,30 @@ class KeyvEtcd<Value = any> extends EventEmitter implements Store<Value> {
 		return Promise.allSettled(promises).then(values => values.every(x => x.value === true));
 	}
 
-	clear(): Promise<void> {
+	async clear(): ClearOutput {
 		const promise = this.namespace
 			? this.client.delete().prefix(this.namespace)
 			: this.client.delete().all();
 		return promise.then(() => undefined);
 	}
 
-	has(key: string): Promise<boolean> {
+	async * iterator(namespace?: string) {
+		const iterator = await this.client
+			.getAll()
+			.prefix(namespace ? namespace + ':' : '')
+			.keys();
+
+		for await (const key of iterator) {
+			const value = await this.get(key);
+			yield [key, value];
+		}
+	}
+
+	async has(key: string): HasOutput {
 		return this.client.get(key).exists();
 	}
 
-	disconnect() {
+	async disconnect() {
 		return this.client.close();
 	}
 }
