@@ -1,7 +1,7 @@
-import delay from 'delay';
 import type {TestFn} from 'ava';
 import type KeyvModule from 'keyv';
 import type {KeyvStoreFn} from './types';
+import {delay} from './helper';
 
 const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {

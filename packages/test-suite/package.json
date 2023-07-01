@@ -47,7 +47,6 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"bignumber.js": "^9.1.1",
-		"delay": "^5.0.0",
 		"json-bigint": "^1.0.0",
 		"sqlite3": "^5.1.6",
 		"timekeeper": "^2.2.0"
