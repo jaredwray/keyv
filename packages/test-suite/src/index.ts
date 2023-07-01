@@ -21,3 +21,4 @@ export {default as keyvCompresstionTests} from './compression';
 export {default as keyvApiTests} from './api';
 export {default as keyvValueTests} from './values';
 export {default as keyvNamepsaceTests} from './namespace';
+export {delay} from './helper';
