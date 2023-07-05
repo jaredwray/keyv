@@ -163,6 +163,10 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 			});
 		});
 	}
+
+	async disconnect(): Promise<void> {
+		this.client.quit();
+	}
 }
 
 export = KeyvMemcache;
