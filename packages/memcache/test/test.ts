@@ -206,6 +206,26 @@ test('get should emit an error', withCallback(async (t: ExecutionContext<any>, e
 	} catch {}
 }));
 
+test.serial('close connection successfully', async t => {
+	const keyv = new Keyv({store: keyvMemcache});
+	t.is(await keyv.get('foo'), undefined);
+	await keyv.disconnect();
+
+	/**
+	 * Since the memjs library doesn't throw an error when trying to get or set on a closed connection,
+   * we need to set up a "fallback" error that will occur if the operation doesn't complete within a reasonable timeframe.
+	 * 
+	 * At least this way we can be sure that calling .disconnect()
+	 */
+	const delayedFailure = new Promise((_, reject) => setTimeout(() => reject(new Error('Operation timed out')), 3000));
+	try {
+		await Promise.race([keyv.get('foo'), delayedFailure]);
+		t.fail();
+	} catch {
+		t.pass();
+	}
+});
+
 const store = () => keyvMemcache;
 
 keyvApiTests(test, Keyv, store);
