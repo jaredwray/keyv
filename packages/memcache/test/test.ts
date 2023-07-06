@@ -214,10 +214,13 @@ test.serial('close connection successfully', async t => {
 	/**
 	 * Since the memjs library doesn't throw an error when trying to get or set on a closed connection,
    * we need to set up a "fallback" error that will occur if the operation doesn't complete within a reasonable timeframe.
-	 * 
+	 *
 	 * At least this way we can be sure that calling .disconnect() is really closing the connection
 	 */
-	const delayedFailure = new Promise((_, reject) => setTimeout(() => reject(new Error('Operation timed out')), 3000));
+	const delayedFailure = new Promise((_, reject) => setTimeout(() => {
+		reject(new Error('Operation timed out'));
+	}, 3000));
+
 	try {
 		await Promise.race([keyv.get('foo'), delayedFailure]);
 		t.fail();
