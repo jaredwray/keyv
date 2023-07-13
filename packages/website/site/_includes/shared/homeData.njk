@@ -17,7 +17,7 @@
 
   {% if (github.releases) and (github.releases.length) %}
   <div class="content-container">
-    <h2 class="home-title">Latest's Releases</h2>
+    <h2 class="home-title">Latest Releases</h2>
     {% set releasesLength = github.releases | length %}
     {% for release in github.releases %}
     {% if loop.index <= 3 %}
