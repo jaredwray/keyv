@@ -14,7 +14,6 @@
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": 0,
-			"@typescript-eslint/no-unsafe-argument": 0,
 			"@typescript-eslint/no-unsafe-call": 0,
 			"@typescript-eslint/consistent-type-definitions": 0,
 			"@typescript-eslint/no-unsafe-argument": 0,
