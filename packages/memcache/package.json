@@ -14,6 +14,7 @@
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": 0,
+			"unicorn/prefer-event-target": 0,
 			"unicorn/no-array-reduce": 0,
 			"n/prefer-global/process": 0,
 			"node/prefer-global/process": 0,
