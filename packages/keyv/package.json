@@ -15,7 +15,8 @@
 			"unicorn/prefer-module": 0,
 			"unicorn/prefer-node-protocol": 0,
 			"@typescript-eslint/consistent-type-definitions": 0,
-			"unicorn/no-typeof-undefined": 0
+			"unicorn/no-typeof-undefined": 0,
+			"unicorn/prefer-event-target": 0
 		}
 	},
 	"repository": {
