@@ -14,6 +14,7 @@
 	"xo": {
 		"rules": {
 			"import/extensions": "off",
+			"unicorn/prefer-event-target": "off",
 			"unicorn/prefer-module": "off",
 			"unicorn/prefer-node-protocol": "off",
 			"@typescript-eslint/no-unsafe-return": "off",
