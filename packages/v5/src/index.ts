@@ -22,7 +22,6 @@ export type KeyvOptionsType = {
 	namespace?: string;
 	ttl?: number | undefined;
 	primaryStorage?: StorageAdapterOrMapType;
-	uri?: string;
 	compression?: CompressionAdapterType | undefined;
 	secondaryStorage?: StorageAdapterOrMapType | undefined;
 	offlineMode?: boolean;
@@ -40,13 +39,16 @@ export default class Keyv extends EventEmitter {
 		ttl: undefined,
 		primaryStorage: new Map(),
 		secondaryStorage: undefined,
-		uri: undefined,
 		compression: undefined,
 		offlineMode: false,
 	};
 
 	constructor(args1?: StorageAdapterOrMapType | string | KeyvOptionsType, options?: KeyvOptionsType) {
 		super();
+
+		if (typeof args1 === 'string') {
+			console.warn('Keyv: The `uri` option is deprecated. Please use the StorageAdapter instance instead.');
+		}
 	}
 
 	public get namespace(): string | undefined {
