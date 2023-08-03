@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
-    "test": "xo && c8 ava --serial",
+    "test": "xo",
     "test:ci": "xo && ava --serial",
     "clean": "rm -rf node_modules && rm -rf ./dist"
   },
