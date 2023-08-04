@@ -136,15 +136,6 @@ export default class Keyv extends EventEmitter {
 		}
 	}
 
-	private normalize(str: string): string {
-		return str.toLowerCase().replace(/\s+/g, '');
-	}
-	  
-	private isValidHookName(name: string): boolean {
-		const normalizedName = this.normalize(name);
-		return Object.values(KeyvHooks).some(value => this.normalize(value) === normalizedName);
-	}
-
 	public async get(key: string | string[]): Promise<any> {
 		return undefined;
 	}
@@ -171,5 +162,14 @@ export default class Keyv extends EventEmitter {
 
 	private deserializeData(data: string): any {
 		return undefined;
+	}
+
+	private normalize(string_: string): string {
+		return string_.toLowerCase().replace(/\s+/g, '');
+	}
+
+	private isValidHookName(name: string): boolean {
+		const normalizedName = this.normalize(name);
+		return Object.values(KeyvHooks).some(value => this.normalize(value) === normalizedName);
 	}
 }
