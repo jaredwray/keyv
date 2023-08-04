@@ -33,6 +33,23 @@ export type KeyvOptionsType = {
 
 };
 
+export type HookFunction = (...args: any[]) => void;
+
+export enum KeyvHooks {
+	PRE_SET = 'preSet',
+	POST_SET = 'postSet',
+	PRE_SET_MANY = 'preSetMany',
+	POST_SET_MANY = 'postSetMany',
+	PRE_GET = 'preGet',
+	POST_GET = 'postGet',
+	PRE_GET_MANY = 'preGetMany',
+	POST_GET_MANY = 'postGetMany',
+	PRE_DELETE = 'preDelete',
+	POST_DELETE = 'postDelete',
+	PRE_CLEAR = 'preClear',
+	POST_CLEAR = 'postClear',
+}
+
 export default class Keyv extends EventEmitter {
 	private readonly _options: KeyvOptionsType = {
 		namespace: 'keyv',
@@ -42,6 +59,8 @@ export default class Keyv extends EventEmitter {
 		compression: undefined,
 		offlineMode: false,
 	};
+
+	private readonly _hooks = new Map<string, HookFunction>();
 
 	constructor(args1?: StorageAdapterOrMapType | string | KeyvOptionsType, options?: KeyvOptionsType) {
 		super();
@@ -92,20 +111,38 @@ export default class Keyv extends EventEmitter {
 		this._options.secondaryStorage = value;
 	}
 
-	public get uri(): string | undefined {
-		return this._options.uri;
-	}
-
-	public set uri(value: string) {
-		this._options.uri = value;
-	}
-
 	public get compression(): CompressionAdapterType | undefined {
 		return this._options.compression;
 	}
 
 	public set compression(value: CompressionAdapterType) {
 		this._options.compression = value;
+	}
+
+	public setHook(name: string, fn: HookFunction): void {
+		if (this.isValidHookName(name)) {
+			this._hooks.set(name, fn);
+		}
+	}
+
+	public deleteHook(name: string): void {
+		this._hooks.delete(name);
+	}
+
+	public triggerHook(name: string, ...args: any[]): void {
+		const hook = this._hooks.get(name);
+		if (hook) {
+			hook(...args);
+		}
+	}
+
+	private normalize(str: string): string {
+		return str.toLowerCase().replace(/\s+/g, '');
+	}
+	  
+	private isValidHookName(name: string): boolean {
+		const normalizedName = this.normalize(name);
+		return Object.values(KeyvHooks).some(value => this.normalize(value) === normalizedName);
 	}
 
 	public async get(key: string | string[]): Promise<any> {
