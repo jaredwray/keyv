@@ -1,6 +1,5 @@
-import type{StoredData} from 'keyv';
-import {type Cluster} from 'ioredis';
-import type Redis from 'ioredis';
+import type {StoredData} from 'keyv';
+import {type Redis, type Cluster} from 'ioredis';
 
 export type KeyvRedisOptions = {
 	[K in keyof Redis]?: Redis[K];
