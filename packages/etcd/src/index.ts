@@ -1,6 +1,5 @@
 import {EventEmitter} from 'events';
-import type {Lease} from 'etcd3';
-import {Etcd3} from 'etcd3';
+import {Etcd3, type Lease} from 'etcd3';
 import type {StoredData} from 'keyv';
 import type {ClearOutput, DeleteManyOutput, DeleteOutput, GetOutput, HasOutput, SetOutput} from './types';
 
