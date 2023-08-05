@@ -61,7 +61,7 @@
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"tsd": "^0.28.1",
-		"webpack": "^5.88.1"
+		"webpack": "^5.88.2"
 	},
 	"tsd": {
 		"directory": "test"
