@@ -41,7 +41,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"eslint": "^8.42.0",
+		"eslint": "^8.46.0",
 		"eslint-plugin-promise": "^6.1.1",
 		"pify": "^5.0.0",
 		"timekeeper": "^2.2.0",
