@@ -44,7 +44,7 @@
 		"eslint": "^8.46.0",
 		"eslint-plugin-promise": "^6.1.1",
 		"pify": "^5.0.0",
-		"timekeeper": "^2.2.0",
+		"timekeeper": "^2.3.1",
 		"tsd": "^0.28.1"
 	},
 	"tsd": {
