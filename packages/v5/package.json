@@ -24,7 +24,8 @@
       ],
       "import/extensions": 0,
       "@typescript-eslint/prefer-nullish-coalescing": 0,
-      "@typescript-eslint/no-unsafe-argument": 0
+      "@typescript-eslint/no-unsafe-argument": 0,
+      "unicorn/prefer-event-target": 0
     }
   },
   "ava": {
@@ -58,15 +59,15 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
+    "@keyv/test-suite": "^1.9.2",
     "eventemitter3": "^5.0.1",
     "json-buffer": "^3.0.1"
   },
   "devDependencies": {
     "@ava/typescript": "^4.0.0",
-    "@keyv/test-suite": "*",
+    "@keyv/test-suite": "^1.9.2",
     "@typescript-eslint/parser": "^5.59.8",
     "eslint": "^8.42.0",
-    "keyv": "*",
     "tsd": "^0.28.1"
   },
   "tsd": {
