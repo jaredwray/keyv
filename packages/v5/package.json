@@ -1,6 +1,6 @@
 {
   "name": "@keyv/v5",
-  "version": "5.0.0",
+  "version": "5.0.0-alpha.1",
   "description": "Simple key-value storage with support for multiple backends",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
