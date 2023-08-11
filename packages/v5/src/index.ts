@@ -156,6 +156,10 @@ export default class Keyv extends EventEmitter {
 		return undefined;
 	}
 
+	public on(event: string | symbol, listener: (...args: any[]) => void): this {
+		return super.on(event, listener);
+	}
+
 	private serializeData(data: any): string {
 		return '';
 	}
@@ -165,7 +169,7 @@ export default class Keyv extends EventEmitter {
 	}
 
 	private normalize(string_: string): string {
-		return string_.toLowerCase().replace(/\s+/g, '');
+		return string_.toLowerCase().split(/\s+/).join('');
 	}
 
 	private isValidHookName(name: string): boolean {
