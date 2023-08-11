@@ -62,7 +62,7 @@ export default class Keyv extends EventEmitter {
 
 	private readonly _hooks = new Map<string, HookFunction>();
 
-	constructor(args1?: StorageAdapterOrMapType | string | KeyvOptionsType, options?: KeyvOptionsType) {
+	constructor(args1?: StorageAdapterOrMapType | KeyvOptionsType, options?: KeyvOptionsType) {
 		super();
 
 		if (typeof args1 === 'string') {
