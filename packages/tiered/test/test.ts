@@ -1,6 +1,5 @@
 import test from 'ava';
-import delay from 'delay';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests, delay} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvSqlite from '@keyv/sqlite';
 import KeyvTiered from '../src/index';

@@ -1,8 +1,7 @@
-const test = require('ava');
-const keyvTestSuite = require('@keyv/test-suite').default;
-const {keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const Keyv = require('keyv');
-const KeyvPostgres = require('../src/index.js');
+import test from 'ava';
+import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import Keyv from 'keyv';
+import KeyvPostgres from '../src/index';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5432/keyv_test';
 

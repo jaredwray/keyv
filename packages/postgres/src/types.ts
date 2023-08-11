@@ -1,15 +1,5 @@
-import type {StoredData} from 'keyv';
-import {type Redis, type Cluster} from 'ioredis';
-
-export type KeyvRedisOptions = {
-	[K in keyof Redis]?: Redis[K];
-} & {
-	uri?: string;
-	dialect?: string;
-	useRedisSets?: boolean;
-};
-
-export type KeyvUriOptions = string | KeyvRedisOptions | Redis | Cluster;
+import {type StoredData} from 'keyv';
+import {type PoolConfig} from 'pg';
 
 export type IteratorOutput = AsyncGenerator<any, void, any>;
 
@@ -28,3 +18,15 @@ export type ClearOutput = Promise<void>;
 export type HasOutput = Promise<boolean>;
 
 export type DisconnectOutput = Promise<void>;
+
+export type KeyvPostgresOptions = {
+	uri?: string;
+	table?: string;
+	keySize?: number;
+	schema?: string;
+	ssl?: any;
+	dialect?: string;
+	iterationLimit?: number;
+} & PoolConfig;
+
+export type Query = (sqlString: string, values?: any) => Promise<any[]>;

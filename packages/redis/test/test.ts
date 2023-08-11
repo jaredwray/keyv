@@ -136,3 +136,28 @@ test.serial('should handle KeyvOptions with family option', t => {
 	const keyv = new KeyvRedis(options);
 	t.true(keyv.redis instanceof Redis);
 });
+
+test.serial('set method should use Redis sets when useRedisSets is false', async t => {
+	const options = {useRedisSets: false};
+	const keyv = new KeyvRedis(options);
+
+	await keyv.set('foo', 'bar');
+
+	const value = await keyv.get('foo');
+	t.is(value, 'bar');
+});
+
+test.serial('clear method when useRedisSets is false', async t => {
+	const options = {useRedisSets: false};
+	const keyv = new KeyvRedis(options);
+
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo2', 'bar2');
+
+	await keyv.clear();
+
+	const value = await keyv.get('demo');
+	const value2 = await keyv.get('demo2');
+	t.is(value, undefined);
+	t.is(value2, undefined);
+});

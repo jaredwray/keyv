@@ -20,7 +20,8 @@
 			"import/extensions": 0,
 			"@typescript-eslint/no-confusing-void-expression": 0,
 			"@typescript-eslint/promise-function-async": 0,
-			"eslint-comments/no-unused-disable": 0
+			"eslint-comments/no-unused-disable": 0,
+			"unicorn/prefer-event-target": 0
 		}
 	},
 	"ava": {
@@ -55,20 +56,19 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"cockatiel": "^3.1.1",
 		"etcd3": "^1.1.0"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^5.2.0",
-		"c8": "^7.13.0",
+		"ava": "^5.3.1",
+		"c8": "^8.0.0",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
 		"tsd": "^0.28.1",
-		"typescript": "^5.0.4",
-		"webpack": "^5.83.1",
-		"xo": "^0.54.2"
+		"typescript": "^5.1.6",
+		"webpack": "^5.88.1",
+		"xo": "^0.55.0"
 	},
 	"tsd": {
 		"directory": "test"

@@ -1,10 +1,11 @@
 {
 	"name": "@keyv/postgres",
-	"version": "1.4.5",
+	"version": "1.4.8",
 	"description": "PostgreSQL storage adapter for Keyv",
-	"main": "src/index.js",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
@@ -12,8 +13,12 @@
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-module": 0,
-			"unicorn/prefer-node-protocol": 0,
+			"import/extensions": "off",
+			"unicorn/prefer-event-target": "off",
+			"unicorn/prefer-module": "off",
+			"unicorn/prefer-node-protocol": "off",
+			"@typescript-eslint/no-unsafe-return": "off",
+			"@typescript-eslint/no-confusing-void-expression": "off",
 			"ava/no-ignored-test-files": [
 				"error",
 				{
@@ -59,27 +64,22 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.11.0"
+		"pg": "8.11.1"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^5.2.0",
-		"c8": "^7.13.0",
+		"@types/pg": "^8.10.2",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"ts-node": "^10.9.1",
-		"tsd": "^0.28.1",
-		"typescript": "^5.0.4",
-		"xo": "^0.54.2"
+		"tsd": "^0.28.1"
 	},
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"engines": {
-		"node": ">= 12"
+		"node": ">= 14"
 	},
 	"files": [
-		"src"
+		"dist"
 	]
 }
