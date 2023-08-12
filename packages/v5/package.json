@@ -60,7 +60,6 @@
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
     "@keyv/test-suite": "^1.9.2",
-    "eventemitter3": "^5.0.1",
     "json-buffer": "^3.0.1"
   },
   "devDependencies": {

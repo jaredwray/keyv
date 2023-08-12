@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-types */
-import {EventEmitter} from 'eventemitter3';
+import { triggerAsyncId } from "async_hooks";
 
+/* eslint-disable @typescript-eslint/ban-types */
 export type StorageAdapterType = {
 	get<T>(key: string): Promise<T | undefined>;
 	getMany?<T>(keys: string[]): Promise<Array<T | undefined>>;
@@ -21,16 +21,15 @@ export type CompressionAdapterType = {
 export type KeyvOptionsType = {
 	namespace?: string;
 	ttl?: number | undefined;
-	primaryStorage?: StorageAdapterOrMapType;
+	primaryStore?: StorageAdapterOrMapType;
 	compression?: CompressionAdapterType | undefined;
-	secondaryStorage?: StorageAdapterOrMapType | undefined;
+	secondaryStore?: StorageAdapterOrMapType | undefined;
 	offlineMode?: boolean;
 	serialize?: Function;
 	deserialize?: Function;
 	// Legacy
 	store?: StorageAdapterOrMapType;
 	adapter?: StorageAdapterOrMapType;
-
 };
 
 export type HookFunction = (...args: any[]) => void;
@@ -50,23 +49,38 @@ export enum KeyvHooks {
 	POST_CLEAR = 'postClear',
 }
 
-export default class Keyv extends EventEmitter {
+export default class Keyv extends EventTarget {
 	private readonly _options: KeyvOptionsType = {
 		namespace: 'keyv',
 		ttl: undefined,
-		primaryStorage: new Map(),
-		secondaryStorage: undefined,
+		primaryStore: new Map(),
+		secondaryStore: undefined,
 		compression: undefined,
-		offlineMode: false,
 	};
 
 	private readonly _hooks = new Map<string, HookFunction>();
 
+	// Supported constructor overloads (in order):
+	// new Keyv()
+	// new Keyv({ KeyvOptionsType... });
+	// new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
+	// new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'), { KeyvOptionsType... });
 	constructor(args1?: StorageAdapterOrMapType | KeyvOptionsType, options?: KeyvOptionsType) {
 		super();
 
-		if (typeof args1 === 'string') {
-			console.warn('Keyv: The `uri` option is deprecated. Please use the StorageAdapter instance instead.');
+		// New Keyv({ KeyvOptionsType... });
+		if (args1 !== undefined && this.isValidKeyvOptionsType(args1)) {
+			this._options = {...this._options, ...args1};
+		}
+
+		// New Keyv(new KeyvRedis());
+		// new Keyv(new KeyvRedis(), { KeyvOptionsType... });
+		if (this.isValidStorageAdapterOrMapType(args1)) {
+			this._options.primaryStore = args1;
+
+			if (this.isValidKeyvOptionsType(options)) {
+				this._options = {...this._options, ...options};
+			}
 		}
 	}
 
@@ -86,29 +100,29 @@ export default class Keyv extends EventEmitter {
 		this._options.ttl = value;
 	}
 
-	public get primaryStorage(): StorageAdapterOrMapType | undefined {
-		return this._options.primaryStorage;
+	public get primaryStore(): StorageAdapterOrMapType | undefined {
+		return this._options.primaryStore;
 	}
 
-	public set primaryStorage(value: StorageAdapterOrMapType) {
-		this._options.primaryStorage = value;
+	public set primaryStore(value: StorageAdapterOrMapType) {
+		this._options.primaryStore = value;
 	}
 
 	// Legacy reference of store
 	public get store(): StorageAdapterOrMapType | undefined {
-		return this._options.primaryStorage;
+		return this._options.primaryStore;
 	}
 
 	public set store(value: StorageAdapterOrMapType) {
-		this._options.primaryStorage = value;
+		this._options.primaryStore = value;
 	}
 
-	public get secondaryStorage(): StorageAdapterOrMapType | undefined {
-		return this._options.secondaryStorage;
+	public get secondaryStore(): StorageAdapterOrMapType | undefined {
+		return this._options.secondaryStore;
 	}
 
-	public set secondaryStorage(value: StorageAdapterOrMapType) {
-		this._options.secondaryStorage = value;
+	public set secondaryStore(value: StorageAdapterOrMapType) {
+		this._options.secondaryStore = value;
 	}
 
 	public get compression(): CompressionAdapterType | undefined {
@@ -136,12 +150,23 @@ export default class Keyv extends EventEmitter {
 		}
 	}
 
-	public async get(key: string | string[]): Promise<any> {
-		return undefined;
+	public async get<T>(key: string | string[]): Promise<T> {
+		return undefined as T;
 	}
 
-	public async set(key: string | string[], value: any, ttl?: number): Promise<any> {
-		return undefined;
+	public async set(key: string | string[], value: any, ttl?: number): Promise<Boolean> {
+		try {
+		
+			this.triggerHook(KeyvHooks.PRE_SET, key, value, ttl);
+
+			await this.primaryStore.set(key, value, ttl);
+
+			this.triggerHook(KeyvHooks.POST_SET, key, value, ttl);
+		} catch (error) {
+			return false;
+		}
+
+		return true;
 	}
 
 	public async delete(key: string | string[]): Promise<boolean> {
@@ -156,8 +181,9 @@ export default class Keyv extends EventEmitter {
 		return undefined;
 	}
 
-	public on(event: string | symbol, listener: (...args: any[]) => void): this {
-		return super.on(event, listener);
+	// Legacy support for Event Emitter
+	public on(event: string, listener: (...args: any[]) => void): void {
+		this.addEventListener(event, listener);
 	}
 
 	private serializeData(data: any): string {
@@ -175,5 +201,73 @@ export default class Keyv extends EventEmitter {
 	private isValidHookName(name: string): boolean {
 		const normalizedName = this.normalize(name);
 		return Object.values(KeyvHooks).some(value => this.normalize(value) === normalizedName);
+	}
+
+	private isValidStorageMap(store: StorageAdapterOrMapType): store is Map<any, any> {
+		return store instanceof Map;
+	}
+
+	private isValidStorageAdapter(store: StorageAdapterOrMapType): store is StorageAdapterType {
+		return typeof store === 'object' && typeof store.get === 'function';
+	}
+
+	private isValidStorageAdapterOrMapType(store: any): store is StorageAdapterOrMapType {
+		return this.isValidStorageAdapter(store) || this.isValidStorageMap(store);
+	}
+
+	private isValidCompressionAdapterType(compression: any): compression is CompressionAdapterType {
+		if (typeof compression !== 'object' || compression === null) {
+			return false;
+		}
+
+		if (typeof compression.compress !== 'function') {
+			return false;
+		}
+
+		if (typeof compression.decompress !== 'function') {
+			return false;
+		}
+
+		return true;
+	}
+
+	private isValidKeyvOptionsType(arg: any): arg is KeyvOptionsType {
+		if (typeof arg !== 'object' || arg === null) {
+			return false;
+		}
+
+		if ('namespace' in arg && typeof arg.namespace !== 'string') {
+			return false;
+		}
+
+		if ('ttl' in arg && typeof arg.ttl !== 'number') {
+			return false;
+		}
+
+		if ('primaryStorage' in arg && !this.isValidStorageAdapterOrMapType(arg.primaryStorage)) {
+			return false;
+		}
+
+		if ('compression' in arg && !this.isValidCompressionAdapterType(arg.compression)) {
+			return false;
+		}
+
+		if ('secondaryStorage' in arg && !this.isValidStorageAdapterOrMapType(arg.secondaryStorage)) {
+			return false;
+		}
+
+		if ('serialize' in arg && typeof arg.serialize !== 'function') {
+			return false;
+		}
+
+		if ('deserialize' in arg && typeof arg.deserialize !== 'function') {
+			return false;
+		}
+
+		if ('store' in arg && !this.isValidStorageAdapterOrMapType(arg.store)) {
+			return false;
+		}
+
+		return true;
 	}
 }
