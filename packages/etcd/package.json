@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/etcd",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"description": "Etcd storage adapter for Keyv",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
