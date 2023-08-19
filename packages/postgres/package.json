@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/postgres",
-	"version": "1.4.8",
+	"version": "1.4.9",
 	"description": "PostgreSQL storage adapter for Keyv",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
