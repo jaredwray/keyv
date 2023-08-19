@@ -56,7 +56,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"etcd3": "^1.1.0"
+		"etcd3": "^1.1.2"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
