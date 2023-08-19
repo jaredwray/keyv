@@ -64,7 +64,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.11.1"
+		"pg": "8.11.3"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
