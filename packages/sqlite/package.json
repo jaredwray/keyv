@@ -65,7 +65,6 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pify": "^5.0.0",
 		"sqlite3": "^5.1.6"
 	},
 	"devDependencies": {
