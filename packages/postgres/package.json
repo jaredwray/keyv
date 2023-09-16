@@ -71,7 +71,7 @@
 		"@types/pg": "^8.10.2",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"tsd": "^0.28.1"
+		"tsd": "^0.29.0"
 	},
 	"tsd": {
 		"directory": "test"
