@@ -30,9 +30,10 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvRedisOptions), ...options};
 			// @ts-expect-error - uri is a string or RedisOptions
 			this.redis = new Redis(options.uri!, options);
-			if (options.useRedisSets === false) {
-				this.opts.useRedisSets = false;
-			}
+		}
+
+		if (options !== undefined && options.useRedisSets === false) {
+			this.opts.useRedisSets = false;
 		}
 
 		this.redis.on('error', (error: Error) => this.emit('error', error));

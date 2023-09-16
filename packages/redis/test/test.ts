@@ -161,3 +161,11 @@ test.serial('clear method when useRedisSets is false', async t => {
 	t.is(value, undefined);
 	t.is(value2, undefined);
 });
+
+test.serial('when passing in ioredis set the options.useRedisSets', t => {
+	const options = {useRedisSets: false};
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvRedis(redis, options);
+
+	t.is(keyv.opts.useRedisSets, false);
+});
