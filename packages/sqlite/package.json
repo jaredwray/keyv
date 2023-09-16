@@ -69,11 +69,11 @@
 		"sqlite3": "^5.1.6"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "^1.9.2",
+		"@keyv/test-suite": "*",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
-		"tsd": "^0.28.1"
+		"tsd": "^0.29.0"
 	},
 	"tsd": {
 		"directory": "test"
