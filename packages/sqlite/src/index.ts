@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
+import {promisify} from 'util';
 import sqlite3 from 'sqlite3';
-import pify from 'pify';
 import {
 	type ClearOutput, type Db, type DbClose, type DbQuery,
 	type DeleteManyOutput,
@@ -56,7 +56,7 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 			});
 		})
 			// @ts-expect-error - db is unknown
-			.then(db => ({query: pify(db.all).bind(db), close: pify(db.close).bind(db)}));
+			.then(db => ({query: promisify(db.all).bind(db), close: promisify(db.close).bind(db)}));
 
 		this.opts = {
 			table: 'keyv',
