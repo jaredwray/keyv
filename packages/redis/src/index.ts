@@ -74,22 +74,37 @@ class KeyvRedis<Value = any> extends EventEmitter {
 
 		key = this._getKeyName(key);
 
-		if (typeof ttl === 'number') {
-			await this.redis.set(key, value, 'PX', ttl);
-		} else {
-			await this.redis.set(key, value);
-		}
+		const set = async (redis: any) => {
+			if (typeof ttl === 'number') {
+				await redis.set(key, value, 'PX', ttl);
+			} else {
+				await redis.set(key, value);
+			}
+		};
 
 		if (this.opts.useRedisSets) {
-			await this.redis.sadd(this._getNamespace(), key);
+			const trx = await this.redis.multi();
+			await set(trx);
+			await trx.sadd(this._getNamespace(), key);
+			await trx.exec();
+		} else {
+			await set(this.redis);
 		}
 	}
 
 	async delete(key: string): DeleteOutput {
 		key = this._getKeyName(key);
-		const items: number = await this.redis.del(key);
+		let items = 0;
+		const del = async (redis: any) => redis.del(key);
+
 		if (this.opts.useRedisSets) {
-			await this.redis.srem(this._getNamespace(), key);
+			const trx = this.redis.multi();
+			await del(trx);
+			await trx.srem(this._getNamespace(), key);
+			const r = await trx.exec();
+			items = r[0][1];
+		} else {
+			items = await del(this.redis);
 		}
 
 		return items > 0;
@@ -105,7 +120,12 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	async clear(): ClearOutput {
 		if (this.opts.useRedisSets) {
 			const keys: string[] = await this.redis.smembers(this._getNamespace());
-			await this.redis.del([...keys, this._getNamespace()]);
+			if (keys.length > 0) {
+				await Promise.all([
+					this.redis.del([...keys]),
+					this.redis.srem(this._getNamespace(), [...keys]),
+				]);
+			}
 		} else {
 			const pattern = 'sets:*';
 			const keys: string[] = await this.redis.keys(pattern);
