@@ -95,16 +95,16 @@ class KeyvRedis<Value = any> extends EventEmitter {
 	async delete(key: string): DeleteOutput {
 		key = this._getKeyName(key);
 		let items = 0;
-		const del = async (redis: any) => redis.del(key);
+		const unlink = async (redis: any) => redis.unlink(key);
 
 		if (this.opts.useRedisSets) {
 			const trx = this.redis.multi();
-			await del(trx);
+			await unlink(trx);
 			await trx.srem(this._getNamespace(), key);
 			const r = await trx.exec();
 			items = r[0][1];
 		} else {
-			items = await del(this.redis);
+			items = await unlink(this.redis);
 		}
 
 		return items > 0;
@@ -122,14 +122,14 @@ class KeyvRedis<Value = any> extends EventEmitter {
 			const keys: string[] = await this.redis.smembers(this._getNamespace());
 			if (keys.length > 0) {
 				await Promise.all([
-					this.redis.del([...keys]),
+					this.redis.unlink([...keys]),
 					this.redis.srem(this._getNamespace(), [...keys]),
 				]);
 			}
 		} else {
 			const pattern = 'sets:*';
 			const keys: string[] = await this.redis.keys(pattern);
-			await this.redis.del(keys);
+			await this.redis.unlink(keys);
 		}
 	}
 
