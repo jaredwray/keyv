@@ -1,7 +1,5 @@
 import {EventEmitter} from 'events';
-import type {Lease} from 'etcd3';
-import {Etcd3} from 'etcd3';
-import {ExponentialBackoff, handleAll, retry} from 'cockatiel';
+import {Etcd3, type Lease} from 'etcd3';
 import type {StoredData} from 'keyv';
 import type {ClearOutput, DeleteManyOutput, DeleteOutput, GetOutput, HasOutput, SetOutput} from './types';
 
@@ -46,19 +44,8 @@ class KeyvEtcd<Value = any> extends EventEmitter {
 
 		this.opts.url = this.opts.url!.replace(/^etcd:\/\//, '');
 
-		const policy = retry(handleAll, {backoff: new ExponentialBackoff()});
-		policy.onFailure(error => {
-			this.emit('error', error.reason);
-		});
-
 		this.client = new Etcd3({
 			hosts: this.opts.url,
-			faultHandling: {
-				// @ts-expect-error - iPolicy
-				host: () => policy,
-				// @ts-expect-error - iPolicy
-				global: policy,
-			},
 		});
 
 		// Https://github.com/microsoft/etcd3/issues/105
