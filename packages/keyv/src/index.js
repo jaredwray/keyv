@@ -153,27 +153,20 @@ class Keyv extends EventEmitter {
 				}
 
 				if (isArray) {
-					const result = [];
-
-					for (let row of data) {
+					return data.map((row, index) => {
 						if ((typeof row === 'string')) {
 							row = this.opts.deserialize(row);
 						}
 
-						if (row === undefined || row === null) {
-							result.push(undefined);
-							continue;
-						}
+						if (row === undefined || row === null) return undefined;
 
 						if (typeof row.expires === 'number' && Date.now() > row.expires) {
-							this.delete(key).then(() => undefined);
-							result.push(undefined);
+							this.delete(key[index]).then(() => undefined);
+							return undefined;
 						} else {
-							result.push((options && options.raw) ? row : row.value);
+							return (options && options.raw) ? row : row.value;
 						}
-					}
-
-					return result;
+					});
 				}
 
 				if (typeof data.expires === 'number' && Date.now() > data.expires) {
