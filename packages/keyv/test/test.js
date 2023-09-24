@@ -530,11 +530,13 @@ test.serial('close connection undefined', async t => {
 });
 
 test.serial('get keys, one key expired', async t => {
-	const keyv = new Keyv({ store: keyvMemcache });
-	await keyv.set('foo', 'bar', 10000);
+	const keyv = new Keyv({store: keyvMemcache});
+	await keyv.set('foo', 'bar', 10_000);
 	await keyv.set('fizz', 'buzz', 100);
-	await keyv.set('ping', 'pong', 10000);
-	await new Promise(r => setTimeout(r, 100));
+	await keyv.set('ping', 'pong', 10_000);
+	await new Promise(r => {
+		setTimeout(r, 100);
+	});
 	await keyv.get(['foo', 'fizz', 'ping']);
 	t.is(await keyv.get('fizz'), undefined);
 	t.is(await keyv.get('foo'), 'bar');
