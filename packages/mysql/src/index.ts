@@ -58,7 +58,7 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		const connection = async () => {
 			const conn = pool(options.uri!, mysqlOptions);
 			return async (sql: string) => {
-				const data = await conn.execute(sql);
+				const data = await conn.query(sql);
 				return data[0];
 			};
 		};
