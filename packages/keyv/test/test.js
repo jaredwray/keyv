@@ -5,7 +5,10 @@ const KeyvSqlite = require('@keyv/sqlite');
 const KeyvMongo = require('@keyv/mongo');
 const KeyvBrotli = require('@keyv/compress-brotli');
 const KeyvGzip = require('@keyv/compress-gzip');
+const KeyvMemcache = require('@keyv/memcache');
 const Keyv = require('../src/index.js');
+
+const keyvMemcache = new KeyvMemcache('localhost:11211');
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
@@ -524,4 +527,18 @@ test.serial('close connection undefined', async t => {
 	const store = new Map();
 	const keyv = new Keyv({store});
 	t.is(await keyv.disconnect(), undefined);
+});
+
+test.serial('get keys, one key expired', async t => {
+	const keyv = new Keyv({store: keyvMemcache});
+	await keyv.set('foo', 'bar', 10_000);
+	await keyv.set('fizz', 'buzz', 100);
+	await keyv.set('ping', 'pong', 10_000);
+	await new Promise(r => {
+		setTimeout(r, 100);
+	});
+	await keyv.get(['foo', 'fizz', 'ping']);
+	t.is(await keyv.get('fizz'), undefined);
+	t.is(await keyv.get('foo'), 'bar');
+	t.is(await keyv.get('ping'), 'pong');
 });
