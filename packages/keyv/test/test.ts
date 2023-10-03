@@ -1,12 +1,13 @@
-const test = require('ava');
-const {default: keyvTestSuite, keyvOfficialTests, keyvIteratorTests} = require('@keyv/test-suite');
-const tk = require('timekeeper');
-const KeyvSqlite = require('@keyv/sqlite');
-const KeyvMongo = require('@keyv/mongo');
-const KeyvBrotli = require('@keyv/compress-brotli');
-const KeyvGzip = require('@keyv/compress-gzip');
-const KeyvMemcache = require('@keyv/memcache');
-const Keyv = require('../src/index.js');
+import test from "ava";
+import keyvTestSuite, {keyvIteratorTests, keyvOfficialTests} from "@keyv/test-suite";
+import tk from "timekeeper";
+import KeyvSqlite from "@keyv/sqlite";
+import KeyvMongo from "@keyv/mongo";
+import KeyvBrotli from "@keyv/compress-brotli";
+import KeyvGzip from "@keyv/compress-gzip";
+import KeyvMemcache from "@keyv/memcache";
+
+import Keyv from "../src";
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 

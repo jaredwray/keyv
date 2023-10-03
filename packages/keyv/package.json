@@ -2,9 +2,10 @@
 	"name": "keyv",
 	"version": "4.5.3",
 	"description": "Simple key-value storage with support for multiple backends",
-	"main": "src/index.js",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
 		"test": "xo && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
@@ -41,7 +42,6 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"eslint": "^8.46.0",
 		"eslint-plugin-promise": "^6.1.1",
 		"pify": "^5.0.0",
 		"timekeeper": "^2.3.1",
@@ -50,8 +50,7 @@
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"files": [
-		"src"
+		"dist"
 	]
 }
