@@ -6,7 +6,7 @@ interface IteratorFunction {
 	(arg: any): AsyncGenerator<any, void, unknown>;
 }
 
-const loadStore = <Value> (options: Options<Value>): Store<Value> => {
+const loadStore = <Value> (options: Options<Value>): Map<any, any> => {
 	const adapters: { [key: string]: string; } = {
 		redis: '@keyv/redis',
 		rediss: '@keyv/redis',
@@ -66,17 +66,17 @@ class Keyv<Value = any> extends EventEmitter {
 			this.opts.deserialize = compression.deserialize!.bind(compression);
 		}
 
-		if (typeof this.opts.store.on === 'function') {
-			this.opts.store.on('error', (error: any) => this.emit('error', error));
+		if (typeof this.opts.store!.on === 'function') {
+			this.opts.store!.on('error', (error: any) => this.emit('error', error));
 		}
 
-		this.opts.store.namespace = this.opts.namespace;
+		this.opts.store!.namespace = this.opts.namespace;
 
 		// Attach iterators
-		if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
+		if (typeof this.opts.store![Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
 			// @ts-ignore
 			this.iterator = this.generateIterator(this.opts.store);
-		} else if (this.opts.store.iterator && this.opts.store.opts && this._checkIterableAdaptar()) {
+		} else if (this.opts.store!.iterator && this.opts.store!.opts && this._checkIterableAdaptar()) {
 			// @ts-ignore
 			this.iterator = this.generateIterator(this.opts.store.iterator.bind(this.opts.store));
 		}
