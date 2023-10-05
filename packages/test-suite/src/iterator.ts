@@ -102,6 +102,35 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 			t.is(entry.value, undefined);
 		},
 	);
+
+	test.serial(
+		'iterator() handles : in keys X',
+		async t => {
+			const keyvStore = store();
+
+			const keyv1 = new Keyv({store: keyvStore, namespace: 'keyv1:testv1'});
+			const map1 = new Map(
+				Array.from({length: 5})
+					.fill(0)
+					.map((_x, i) => [String(i) + ":" +	String(i), String(i + 10)]),
+			);
+			const toResolve = [];
+			for (const [key, value] of map1) {
+				toResolve.push(keyv1.set(key, value));
+			}
+
+			await Promise.all(toResolve);
+
+			t.plan(map1.size);
+			for await (const [key, value] of keyv1.iterator()) {
+			 	console.log("key", key, "value", value);
+				const doesKeyExist = map1.has(key);
+				const isValueSame = map1.get(key) === value;
+				t.true(doesKeyExist && isValueSame);
+			}
+		},
+	);
+
 };
 
 export default keyvIteratorTests;
