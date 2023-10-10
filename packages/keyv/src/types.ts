@@ -15,16 +15,16 @@ export type StoredData<Value> = DeserializedData<Value> | string | undefined;
 
 export interface Store<Value> extends EventEmitter{
 	namespace?: string;
-	get(key: string): Promise<Value | undefined>;
+	get(key: string): Promise<StoredData<Value> | undefined>;
 	set(key: string, value: Value, ttl?: number): any;
-	delete(key: string): boolean | Promise<boolean>;
-	clear(): void | Promise<void>;
-	has?(key: string): boolean | Promise<boolean>;
+	delete(key: string): Promise<boolean>;
+	clear(): Promise<void>;
+	has?(key: string): Promise<boolean>;
 	getMany?(
 		keys: string[]
-	): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined;
+	): Promise<StoredData<Value>[] | Promise<StoredData<Value>[]> | undefined>
 	disconnect?(): Promise<void>
-	deleteMany?(key: string[]): Promise<boolean[] | undefined>;
+	deleteMany?(key: string[]): Promise<boolean>;
 	iterator?(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
 	opts: Record<string, Record<string, unknown>>
 }
