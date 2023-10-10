@@ -2,8 +2,8 @@
 	"name": "keyv",
 	"version": "4.5.3",
 	"description": "Simple key-value storage with support for multiple backends",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/types.d.ts",
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",

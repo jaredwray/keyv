@@ -11,10 +11,11 @@ export interface CompressionAdapter<Value> {
 	deserialize: ((data: string) => DeserializedData<Value> | undefined) | undefined;
 }
 
-type StoredData<Value> = DeserializedData<Value> | string | undefined;
+export type StoredData<Value> = DeserializedData<Value> | string | undefined;
 
 export interface Store<Value> extends EventEmitter{
-	get(key: string): Value | Promise<Value | undefined> | undefined;
+	namespace?: string;
+	get(key: string): Promise<Value | undefined>;
 	set(key: string, value: Value, ttl?: number): any;
 	delete(key: string): boolean | Promise<boolean>;
 	clear(): void | Promise<void>;
@@ -24,6 +25,8 @@ export interface Store<Value> extends EventEmitter{
 	): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined;
 	disconnect?(): Promise<void>
 	deleteMany?(key: string[]): Promise<boolean[] | undefined>;
+	iterator?(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
+	opts: Record<string, Record<string, unknown>>
 }
 
 export interface Options<Value> {
