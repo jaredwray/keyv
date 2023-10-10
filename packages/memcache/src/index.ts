@@ -1,10 +1,8 @@
 import EventEmitter from 'node:events';
-import type{Buffer} from 'node:buffer';
+import type {Buffer} from 'node:buffer';
 import memcache from 'memjs';
 import JSONB from 'json-buffer';
 import Keyv, {Store, StoredData} from 'keyv';
-
-type GetOutput<Value> = Value | Promise<Value | undefined> | undefined;
 
 type KeyvMemcacheOptions<Value> = {
 	url?: string;
@@ -30,7 +28,6 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 
 		if (uri === undefined) {
 			uri = 'localhost:11211';
-			// eslint-disable-next-line no-multi-assign
 			options.url = options.uri = uri;
 		}
 
@@ -43,7 +40,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		return `namespace:${this.namespace!}`;
 	}
 
-	get(key: string): GetOutput<Value> {
+	get(key: string): Promise<StoredData<Value>> {
 		return new Promise((resolve, reject) => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
@@ -53,12 +50,11 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 					let value_;
 					if (value === null) {
 						value_ = {
-							// @ts-expect-error - value is an object
 							value: undefined,
 							expires: 0,
 						};
 					} else {
-						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) as GetOutput<Value> : JSONB.parse(value as unknown as string) as GetOutput<Value>;
+						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string);
 					}
 
 					resolve(value_);
@@ -118,15 +114,11 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		});
 	}
 
-	async deleteMany(keys: string[]): Promise<boolean> {
-		const promises = [];
-		for (const key of keys) {
-			promises.push(this.delete(key));
-		}
-
-		return Promise.allSettled(promises)
-			// @ts-expect-error - x is an object
-			.then(values => values.every(x => x.value === true));
+	async deleteMany(keys: string[]) {
+		const promises = keys.map(key => this.delete(key));
+		const results = await Promise.allSettled(promises);
+		// @ts-expect-error - x is an object
+		return results.every(x => x.value === true);
 	}
 
 	async clear(): Promise<void> {
