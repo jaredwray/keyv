@@ -1,50 +1,51 @@
 import EventEmitter from "events";
 
-export interface DeserializedData<Value> {
-	value: Value; expires: number | undefined;
-}
+export type DeserializedData<Value> = {
+	value: Value;
+	expires?: number;
+};
 
-export interface CompressionAdapter<Value> {
+export interface CompressionAdapter {
 	compress(value: any, options?: any): Promise<any>;
 	decompress(value: any, options?: any): Promise<any>;
-	serialize: ((data: DeserializedData<Value>) => string) | undefined;
-	deserialize: ((data: string) => DeserializedData<Value> | undefined) | undefined;
+	serialize: (<Value>(data: DeserializedData<Value>) => string) | undefined;
+	deserialize: (<Value>(data: string) => DeserializedData<Value> | undefined) | undefined;
 }
 
 export type StoredData<Value> = DeserializedData<Value> | string | Value | undefined;
 
-export interface Store<Value> extends EventEmitter{
+export interface KeyvStoreAdapter extends EventEmitter{
 	namespace?: string;
-	get(key: string): Promise<StoredData<Value> | undefined>;
-	set(key: string, value: Value, ttl?: number): any;
+	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
+	set(key: string, value: any, ttl?: number): any;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
-	getMany?(
+	getMany?<Value>(
 		keys: string[]
 	): Promise<StoredData<Value>[] |  undefined>
 	disconnect?(): Promise<void>
 	deleteMany?(key: string[]): Promise<boolean>;
-	iterator?(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
+	iterator?<Value>(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
 	opts: Record<string, Record<string, unknown>>
 }
 
-export interface Options<Value> {
+export interface Options {
 	[key: string]: any;
 	/** Namespace for the current instance. */
-	namespace?: string | undefined;
+	namespace?: string;
 	/** A custom serialization function. */
-	serialize?: ((data: DeserializedData<Value>) => string) | undefined;
+	serialize?: (<Value>(data: DeserializedData<Value>) => string);
 	/** A custom deserialization function. */
-	deserialize?: ((data: string) => DeserializedData<Value> | undefined) | undefined;
+	deserialize?: (<Value>(data: string) => DeserializedData<Value> | undefined);
 	/** The connection string URI. */
-	uri?: string | undefined;
+	uri?: string;
 	/** The storage adapter instance to be used by Keyv. */
-	store?: Store<Value>;
+	store?: KeyvStoreAdapter;
 	/** Default TTL. Can be overridden by specififying a TTL on `.set()`. */
-	ttl?: number | undefined;
+	ttl?: number;
 	/** Enable compression option **/
-	compression?: CompressionAdapter<Value> | undefined;
+	compression?: CompressionAdapter;
 	/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
 	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql' | undefined;
 }
@@ -52,20 +53,23 @@ export interface Options<Value> {
 interface IteratorFunction {
 	(arg: any): AsyncGenerator<any, void, unknown>;
 }
-declare class Keyv<Value = any> extends EventEmitter {
-	opts: Options<Value>;
+declare class Keyv extends EventEmitter {
+	opts: Options;
 	iterator?: IteratorFunction;
-	constructor(uri?: string | Options<Value>, opts?: Options<Value>);
+	constructor(uri?: string | Options, opts?: Options);
 	generateIterator(iterator: IteratorFunction): IteratorFunction;
 	_checkIterableAdapter(): boolean;
 	_getKeyPrefix(key: string): string;
 	_getKeyPrefixArray(keys: string[]): string[];
 	_getKeyUnprefix(key: string): string;
-	get(key: string | string[], options?: {
+	get<Value>(key: string, options?: {
 		raw: boolean;
-	}): Promise<StoredData<Value> | StoredData<Value>[] >;
+	}): Promise<StoredData<Value>>;
+	get<Value>(key: string[], options?: {
+		raw: boolean;
+	}): Promise<StoredData<Value>[]>;
 	set(key: string, value: any, ttl?: number): Promise<boolean>;
-	delete(key: string | string[]): Promise<boolean | undefined>;
+	delete(key: string | string[]): Promise<boolean | undefined | boolean[]>;
 	clear(): Promise<void>;
 	has(key: string): Promise<boolean>;
 	disconnect(): Promise<void>;

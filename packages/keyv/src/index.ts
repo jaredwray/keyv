@@ -1,12 +1,13 @@
 import EventEmitter from 'events';
 import JSONB from 'json-buffer';
 import type {DeserializedData, Options, StoredData} from "./types";
+import type keyvModule from './types';
 
 interface IteratorFunction {
 	(arg: any): AsyncGenerator<any, void, unknown>;
 }
 
-const loadStore = <Value> (options: Options<Value>) => {
+const loadStore = (options: Options) => {
 	const adapters: { [key: string]: string; } = {
 		redis: '@keyv/redis',
 		rediss: '@keyv/redis',
@@ -23,7 +24,7 @@ const loadStore = <Value> (options: Options<Value>) => {
 	let adapter = options.adapter;
 	if (!adapter && options.uri) {
 		const matchResult = /^[^:+]*/.exec(options.uri);
-		adapter = (matchResult ? matchResult[0] : undefined) as unknown as Options<Value>['adapter'];
+		adapter = (matchResult ? matchResult[0] : undefined) as unknown as Options['adapter'];
 	}
 	if (adapter) {
 		return new (require(adapters[adapter]))(options);
@@ -40,11 +41,12 @@ const iterableAdapters = [
 	'tiered',
 ];
 
-class Keyv<Value = any> extends EventEmitter {
-	opts: Options<Value>;
+class Keyv extends EventEmitter implements keyvModule{
+	opts: Options;
 	iterator?: IteratorFunction;
-	constructor(uri?: string | Options<Value>, opts: Options<Value> = {}) {
+	constructor(uri?: string | Options, opts?: Options) {
 		super();
+		opts = opts || {};
 		const options = {
 			...((typeof uri === 'string') ? {uri} : uri),
 			...opts,
@@ -124,7 +126,7 @@ class Keyv<Value = any> extends EventEmitter {
 			.join(':');
 	}
 
-	async get(key: string | string[], options?: {raw: boolean}) {
+	async get<Value>(key: string | string[], options?: {raw: boolean}) {
 		const {store} = this.opts;
 		const isArray = Array.isArray(key);
 		const keyPrefixed = isArray ? this._getKeyPrefixArray(key as string[]) : this._getKeyPrefix(key as string);
@@ -133,13 +135,13 @@ class Keyv<Value = any> extends EventEmitter {
 			return typeof data.expires === 'number' && Date.now() > data.expires;
 		};
 
-		if (isArray && store!.getMany === undefined) {
+		if (isArray && store?.getMany === undefined) {
 			const results = [];
 			for (const k of keyPrefixed) {
 				try {
-					const storeData = <Value>await store!.get(k);
-					const shouldDeserialize = typeof storeData === 'string' || this.opts.compression;
-					const data = shouldDeserialize ? this.opts.deserialize!(storeData as string) : storeData;
+					const storeData = await store!.get<Value>(k);
+					const shouldDeserialize = typeof storeData === 'string' || !!this.opts.compression;
+					const data = shouldDeserialize ? this.opts.deserialize!<Value>(storeData as string) : storeData;
 
 					if(data === undefined || data === null){
 						results.push(undefined);
