@@ -65,8 +65,6 @@
 	"devDependencies": {
 		"@keyv/redis": "*",
 		"@keyv/test-suite": "*",
-		"@types/keyv": "^3.1.4",
-		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",

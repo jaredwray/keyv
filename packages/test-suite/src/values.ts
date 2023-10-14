@@ -12,7 +12,7 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 	});
 
 	test.serial('value can be false', async t => {
-		const keyv = new Keyv({store: store()});
+		const keyv = new Keyv<boolean>({store: store()});
 		await keyv.set('foo', false);
 		t.is(await keyv.get('foo'), false);
 	});

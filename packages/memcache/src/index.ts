@@ -2,12 +2,12 @@ import EventEmitter from 'node:events';
 import type {Buffer} from 'node:buffer';
 import memcache from 'memjs';
 import JSONB from 'json-buffer';
-import Keyv, {Store, StoredData} from 'keyv';
+import {Options, Store, StoredData} from 'keyv';
 
 type KeyvMemcacheOptions<Value> = {
 	url?: string;
 	expires?: number;
-} & memcache.ClientOptions & Keyv.Options<Value>;
+} & memcache.ClientOptions & Options<Value>;
 
 class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 	public ttlSupport = true;

@@ -1,10 +1,12 @@
 import Keyv, {type CompressionAdapter} from 'keyv';
 import type {TestFn} from 'ava';
 
-const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter) => {
+
+const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter<any>) => {
 	let keyv;
 	test.beforeEach(async () => {
 		keyv = new Keyv({
+			// @ts-ignore
 			store: new Map(),
 			compression,
 		});
@@ -35,18 +37,25 @@ const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter) => 
 
 	// Test serialize compression
 	test('serialize compression', async t => {
-		const json = await compression.serialize({value: 'whatever'});
+		const json = compression.serialize!({
+			value: 'whatever',
+			expires: undefined
+		});
 		t.not(JSON.parse(json).value, 'whatever');
 	});
 
 	// Test deserialize compression
 	test('deserialize compression', async t => {
-		const json = await compression.serialize({value: 'whatever'});
-		const djson = await compression.deserialize(json);
+		const json = compression.serialize!({
+			value: 'whatever',
+			expires: undefined
+		});
+		const djson = compression.deserialize!(json);
 		t.deepEqual(djson, {expires: undefined, value: 'whatever'});
 	});
 
 	test('compress/decompress with main keyv', async t => {
+		// @ts-ignore
 		const keyv = new Keyv({store: new Map(), compression});
 		await keyv.set('foo', 'bar');
 		t.is(await keyv.get('foo'), 'bar');

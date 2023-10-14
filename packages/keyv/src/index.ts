@@ -77,7 +77,7 @@ class Keyv<Value = any> extends EventEmitter {
 		// @ts-ignore
 		if (typeof this.opts.store![Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
 			this.iterator = this.generateIterator(<IteratorFunction><unknown>this.opts.store);
-		} else if (this.opts.store!.iterator && this.opts.store!.opts && this._checkIterableAdaptar()) {
+		} else if (this.opts.store!.iterator && this.opts.store!.opts && this._checkIterableAdapter()) {
 			// @ts-ignore
 			this.iterator = this.generateIterator(this.opts.store.iterator.bind(this.opts.store));
 		}
@@ -104,7 +104,7 @@ class Keyv<Value = any> extends EventEmitter {
 		return func.bind(this);
 	}
 
-	_checkIterableAdaptar() {
+	_checkIterableAdapter() {
 		return iterableAdapters.includes(<string><unknown>this.opts.store?.opts.dialect)
 			|| iterableAdapters.findIndex(element => (<string><unknown>this.opts.store?.opts!.url).includes(element)) >= 0;
 	}
@@ -178,7 +178,7 @@ class Keyv<Value = any> extends EventEmitter {
 			if (isArray) {
 				return (data as StoredData<Value>[]).map(async (row, index: number) => {
 					if (row === 'string') {
-						row = this.opts.deserialize!(row);
+						row = this.opts.deserialize!(row as string);
 					}
 
 					if (row === undefined || row === null) {
@@ -230,7 +230,7 @@ class Keyv<Value = any> extends EventEmitter {
 		return true;
 	}
 
-	async delete(key: string) {
+	async delete(key: string | string[]) {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
 			const keyPrefixed = this._getKeyPrefixArray(key as string[]);
@@ -247,7 +247,7 @@ class Keyv<Value = any> extends EventEmitter {
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		await store!.delete(keyPrefixed);
+		return store!.delete(keyPrefixed);
 	}
 
 	async clear() {

@@ -58,7 +58,7 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 		await keyv.set('foo', 'bar', ttl);
 		await keyv.set('foo1', 'bar1', ttl);
 		await keyv.set('foo2', 'bar2', ttl);
-		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		const values = <string[]>await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
 		t.is(values[0], 'bar');
 		t.is(values[1], 'bar1');
@@ -66,6 +66,7 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 	});
 
 	test.serial('.get([keys]) should return array value undefined when expires', async t => {
+		// @ts-ignore
 		const keyv = new Keyv({store: new Map()});
 		await keyv.set('foo', 'bar');
 		await keyv.set('foo1', 'bar1', 1);
@@ -88,7 +89,7 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 		const ttl = 3000;
 		await keyv.set('foo', 'bar', ttl);
 		await keyv.set('foo2', 'bar2', ttl);
-		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		const values = <string[] | undefined[]>await keyv.get(['foo', 'foo1', 'foo2']);
 		t.is(Array.isArray(values), true);
 		t.is(values[0], 'bar');
 		t.is(values[1], undefined);

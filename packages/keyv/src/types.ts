@@ -11,7 +11,7 @@ export interface CompressionAdapter<Value> {
 	deserialize: ((data: string) => DeserializedData<Value> | undefined) | undefined;
 }
 
-export type StoredData<Value> = DeserializedData<Value> | string | undefined;
+export type StoredData<Value> = DeserializedData<Value> | string | Value | undefined;
 
 export interface Store<Value> extends EventEmitter{
 	namespace?: string;
@@ -22,7 +22,7 @@ export interface Store<Value> extends EventEmitter{
 	has?(key: string): Promise<boolean>;
 	getMany?(
 		keys: string[]
-	): Promise<StoredData<Value>[] | Promise<StoredData<Value>[]> | undefined>
+	): Promise<StoredData<Value>[] |  undefined>
 	disconnect?(): Promise<void>
 	deleteMany?(key: string[]): Promise<boolean>;
 	iterator?(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
@@ -48,3 +48,26 @@ export interface Options<Value> {
 	/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
 	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql' | undefined;
 }
+
+interface IteratorFunction {
+	(arg: any): AsyncGenerator<any, void, unknown>;
+}
+declare class Keyv<Value = any> extends EventEmitter {
+	opts: Options<Value>;
+	iterator?: IteratorFunction;
+	constructor(uri?: string | Options<Value>, opts?: Options<Value>);
+	generateIterator(iterator: IteratorFunction): IteratorFunction;
+	_checkIterableAdapter(): boolean;
+	_getKeyPrefix(key: string): string;
+	_getKeyPrefixArray(keys: string[]): string[];
+	_getKeyUnprefix(key: string): string;
+	get(key: string | string[], options?: {
+		raw: boolean;
+	}): Promise<StoredData<Value> | StoredData<Value>[] >;
+	set(key: string, value: any, ttl?: number): Promise<boolean>;
+	delete(key: string | string[]): Promise<boolean | undefined>;
+	clear(): Promise<void>;
+	has(key: string): Promise<boolean>;
+	disconnect(): Promise<void>;
+}
+export default Keyv;
