@@ -2,19 +2,19 @@ import EventEmitter from 'node:events';
 import type {Buffer} from 'node:buffer';
 import memcache from 'memjs';
 import JSONB from 'json-buffer';
-import {Options, Store, StoredData} from 'keyv';
+import {Options, KeyvStoreAdapter, StoredData, type DeserializedData} from 'keyv';
 
-type KeyvMemcacheOptions<Value> = {
+type KeyvMemcacheOptions = {
 	url?: string;
 	expires?: number;
-} & memcache.ClientOptions & Options<Value>;
+} & memcache.ClientOptions & Options;
 
-class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
+class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	public ttlSupport = true;
 	public namespace?: string;
 	public client: memcache.Client;
-	public opts: KeyvMemcacheOptions<Value>;
-	constructor(uri?: string, options?: KeyvMemcacheOptions<Value>) {
+	public opts: KeyvMemcacheOptions;
+	constructor(uri?: string, options?: KeyvMemcacheOptions) {
 		super();
 
 		options = {
@@ -40,15 +40,16 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		return `namespace:${this.namespace!}`;
 	}
 
-	get(key: string): Promise<StoredData<Value>> {
+	get<Value>(key: string): Promise<StoredData<Value>> {
 		return new Promise((resolve, reject) => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
 					this.emit('error', error);
 					reject(error);
 				} else {
-					let value_;
+					let value_: StoredData<Value>;
 					if (value === null) {
+						// @ts-ignore
 						value_ = {
 							value: undefined,
 							expires: 0,
@@ -57,13 +58,13 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string);
 					}
 
-					resolve(value_);
+					resolve(value_ as StoredData<Value>);
 				}
 			});
 		});
 	}
 
-	async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
+	async getMany<Value>(keys: string[]) {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
@@ -81,8 +82,8 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 			});
 	}
 
-	async set(key: string, value: Value, ttl: number) {
-		const options: KeyvMemcacheOptions<Value> = {};
+	async set(key: string, value: any, ttl?: number) {
+		const options: KeyvMemcacheOptions = {};
 
 		if (ttl !== undefined) {
 			// eslint-disable-next-line no-multi-assign
@@ -108,7 +109,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 					this.emit('error', error);
 					reject(error);
 				} else {
-					resolve(success!);
+					resolve(!!success);
 				}
 			});
 		});
