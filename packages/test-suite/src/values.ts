@@ -12,7 +12,7 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 	});
 
 	test.serial('value can be false', async t => {
-		const keyv = new Keyv<boolean>({store: store()});
+		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', false);
 		t.is(await keyv.get('foo'), false);
 	});
@@ -46,7 +46,7 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 		const keyv = new Keyv({store: store()});
 		const buf = Buffer.from('bar');
 		await keyv.set('foo', buf);
-		t.true(buf.equals(await keyv.get('foo')));
+		t.true(buf.equals(<Buffer>await keyv.get('foo')));
 	});
 
 	test.serial('value can be an object containing a buffer', async t => {

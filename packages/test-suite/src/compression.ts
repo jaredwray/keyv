@@ -2,7 +2,7 @@ import Keyv, {type CompressionAdapter} from 'keyv';
 import type {TestFn} from 'ava';
 
 
-const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter<any>) => {
+const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter) => {
 	let keyv;
 	test.beforeEach(async () => {
 		keyv = new Keyv({
