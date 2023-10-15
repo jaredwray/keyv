@@ -9,8 +9,8 @@ export type DeserializedData<Value> = {
 export interface CompressionAdapter {
 	compress(value: any, options?: any): Promise<any>;
 	decompress(value: any, options?: any): Promise<any>;
-	serialize: (<Value>(data: DeserializedData<Value>) => string) | undefined;
-	deserialize: (<Value>(data: string) => DeserializedData<Value> | undefined) | undefined;
+	serialize<Value>(data: DeserializedData<Value>): Promise<string> | string;
+	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
 }
 
 export type StoredDataNoRaw<Value> = Value  | undefined;
@@ -40,9 +40,9 @@ export interface Options {
 	/** Namespace for the current instance. */
 	namespace?: string;
 	/** A custom serialization function. */
-	serialize?: (<Value>(data: DeserializedData<Value>) => string);
+	serialize?: CompressionAdapter['serialize'];
 	/** A custom deserialization function. */
-	deserialize?: (<Value>(data: string) => DeserializedData<Value> | undefined);
+	deserialize?: CompressionAdapter['deserialize']
 	/** The connection string URI. */
 	uri?: string;
 	/** The storage adapter instance to be used by Keyv. */
@@ -194,7 +194,7 @@ class Keyv extends EventEmitter{
 			if(store?.getMany === undefined) {
 				const promises = (keyPrefixed as string[]).map(async (key) => {
 					const rawData = await store!.get<Value>(key);
-					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? this.opts.deserialize!<Value>(rawData as string) : rawData;
+					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
 					if(deserializedRow === undefined || deserializedRow === null){
 						return undefined;
@@ -219,7 +219,7 @@ class Keyv extends EventEmitter{
 				let row = rawData[index];
 
 				if ((typeof row === 'string')) {
-					row = this.opts.deserialize!<Value>(row);
+					row = await this.opts.deserialize!<Value>(row);
 				}
 
 				if (row === undefined || row === null) {
@@ -240,7 +240,7 @@ class Keyv extends EventEmitter{
 		}
 
 		const rawData = await store!.get<Value>(keyPrefixed as string);
-		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? this.opts.deserialize!<Value>(rawData as string) : rawData;
+		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
 			return undefined;
@@ -269,9 +269,14 @@ class Keyv extends EventEmitter{
 		const {store} = this.opts;
 
 		const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
+
+		if (typeof value === 'symbol') {
+			this.emit('error', 'symbol cannot be serialized');
+		}
+
 		value = {value, expires};
 
-		value = this.opts!.serialize!(value);
+		value = await this.opts!.serialize!(value);
 		await store!.set(keyPrefixed, value, ttl)
 
 		return true;
@@ -321,3 +326,4 @@ class Keyv extends EventEmitter{
 }
 
 export default Keyv;
+module.exports = Keyv;

@@ -11,7 +11,7 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 
 	test.serial('.iterator() returns an asyncIterator', t => {
 		const keyv = new Keyv({store: store()});
-		// @ts-ignore
+		// @ts-expect-error - iterator
 		t.true(typeof keyv.iterator()[Symbol.asyncIterator] === 'function');
 	});
 
@@ -29,7 +29,7 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 
 		await Promise.all(toResolve);
 		t.plan(map.size);
-		// @ts-ignore
+		// @ts-expect-error - iterator
 		for await (const [key, value] of keyv.iterator()) {
 			const doesKeyExist = map.has(key);
 			const isValueSame = map.get(key) === value;
@@ -69,7 +69,7 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 			await Promise.all(toResolve);
 
 			t.plan(map2.size);
-			// @ts-ignore
+			// @ts-expect-error - iterator
 			for await (const [key, value] of keyv2.iterator()) {
 				const doesKeyExist = map2.has(key);
 				const isValueSame = map2.get(key) === value;
@@ -96,7 +96,7 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 
 			await Promise.all(toResolve);
 			await delay(250);
-			// @ts-ignore
+			// @ts-expect-error - iterator
 			const iterator = keyv.iterator();
 			let entry = await iterator.next();
 			const [k, v] = entry.value;
