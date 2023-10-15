@@ -198,13 +198,13 @@ class KeyvMongo<Value = any> extends EventEmitter {
 		for (const key of keys) {
 			const rowIndex = values.findIndex((row: {key: string; value: unknown}) => row.key === key);
 
-			// @ts-ignore
+			// @ts-expect-error - results type
 			results[i] = rowIndex > -1 ? values[rowIndex].value : undefined;
 
 			i++;
 		}
 
-		return results as StoredData<Value>[];
+		return results as Array<StoredData<Value>>;
 	}
 
 	async set(key: string, value: Value, ttl?: number): SetOutput {
