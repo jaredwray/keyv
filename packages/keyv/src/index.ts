@@ -13,13 +13,14 @@ export interface CompressionAdapter {
 	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
 }
 
-export type StoredDataNoRaw<Value> = Value  | undefined;
+export type StoredDataNoRaw<Value> = Value | undefined;
 
-export type StoredDataRaw<Value> = DeserializedData<Value> | undefined
+export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
-export interface KeyvStoreAdapter extends EventEmitter{
+export interface KeyvStoreAdapter extends EventEmitter {
+	opts: any;
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	set(key: string, value: any, ttl?: number): any;
@@ -28,11 +29,10 @@ export interface KeyvStoreAdapter extends EventEmitter{
 	has?(key: string): Promise<boolean>;
 	getMany?<Value>(
 		keys: string[]
-	): Promise<StoredData<Value | undefined>[]>
-	disconnect?(): Promise<void>
+	): Promise<Array<StoredData<Value | undefined>>>;
+	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
-	iterator?<Value>(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
-	opts: any
+	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 }
 
 export interface Options {
@@ -42,7 +42,7 @@ export interface Options {
 	/** A custom serialization function. */
 	serialize?: CompressionAdapter['serialize'];
 	/** A custom deserialization function. */
-	deserialize?: CompressionAdapter['deserialize']
+	deserialize?: CompressionAdapter['deserialize'];
 	/** The connection string URI. */
 	uri?: string;
 	/** The storage adapter instance to be used by Keyv. */
@@ -55,12 +55,10 @@ export interface Options {
 	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql' | undefined;
 }
 
-interface IteratorFunction {
-	(arg: any): AsyncGenerator<any, void, unknown>;
-}
+type IteratorFunction = (arg: any) => AsyncGenerator<any, void>;
 
 const loadStore = (options: Options) => {
-	const adapters: { [key: string]: string; } = {
+	const adapters: Record<string, string> = {
 		redis: '@keyv/redis',
 		rediss: '@keyv/redis',
 		mongodb: '@keyv/mongo',
@@ -78,9 +76,12 @@ const loadStore = (options: Options) => {
 		const matchResult = /^[^:+]*/.exec(options.uri);
 		adapter = (matchResult ? matchResult[0] : undefined) as unknown as Options['adapter'];
 	}
+
 	if (adapter) {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		return new (require(adapters[adapter]))(options);
 	}
+
 	return new Map();
 };
 
@@ -93,15 +94,15 @@ const iterableAdapters = [
 	'tiered',
 ];
 
-class Keyv extends EventEmitter{
+class Keyv extends EventEmitter {
 	opts: Options;
 	iterator?: IteratorFunction;
-	constructor(uri?: string | Options, opts?: Options) {
+	constructor(uri?: string | Options, options_?: Options) {
 		super();
-		opts = opts || {};
+		options_ = options_ ?? {};
 		const options = {
 			...((typeof uri === 'string') ? {uri} : uri),
-			...opts,
+			...options_,
 		};
 		this.opts = {
 			namespace: 'keyv',
@@ -117,8 +118,8 @@ class Keyv extends EventEmitter{
 
 		if (this.opts.compression) {
 			const compression = this.opts.compression;
-			this.opts.serialize = compression.serialize!.bind(compression);
-			this.opts.deserialize = compression.deserialize!.bind(compression);
+			this.opts.serialize = compression.serialize.bind(compression);
+			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
 		if (typeof this.opts.store!.on === 'function') {
@@ -128,17 +129,17 @@ class Keyv extends EventEmitter{
 		this.opts.store!.namespace = this.opts.namespace;
 
 		// Attach iterators
-		// @ts-ignore
+		// @ts-expect-error
 		if (typeof this.opts.store![Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
-			this.iterator = this.generateIterator(<IteratorFunction><unknown>this.opts.store);
+			this.iterator = this.generateIterator(((this.opts.store as unknown) as IteratorFunction));
 		} else if (this.opts.store!.iterator && this.opts.store!.opts && this._checkIterableAdapter()) {
-			// @ts-ignore
+			// @ts-expect-error
 			this.iterator = this.generateIterator(this.opts.store.iterator.bind(this.opts.store));
 		}
 	}
 
-	generateIterator(iterator: IteratorFunction): IteratorFunction  {
-		const func : IteratorFunction = async function * (this: any) {
+	generateIterator(iterator: IteratorFunction): IteratorFunction {
+		const func: IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'
 				? iterator(this.opts.store.namespace)
 				: iterator)) {
@@ -155,12 +156,13 @@ class Keyv extends EventEmitter{
 				yield [this._getKeyUnprefix(key), data.value];
 			}
 		};
+
 		return func.bind(this);
 	}
 
 	_checkIterableAdapter(): boolean {
-		return iterableAdapters.includes(<string><unknown>this.opts.store?.opts.dialect)
-			|| iterableAdapters.findIndex(element => (<string><unknown>this.opts.store?.opts!.url).includes(element)) >= 0;
+		return iterableAdapters.includes(((this.opts.store?.opts.dialect as unknown) as string))
+			|| iterableAdapters.findIndex(element => ((this.opts.store?.opts.url as unknown) as string).includes(element)) >= 0;
 	}
 
 	_getKeyPrefix(key: string): string {
@@ -177,45 +179,44 @@ class Keyv extends EventEmitter{
 			.splice(1)
 			.join(':');
 	}
-	async get<Value>(key: string, options?: { raw: false }): Promise<StoredDataNoRaw<Value>>;
-	async get<Value>(key: string, options?: { raw: true }): Promise<StoredDataRaw<Value>>;
-	async get<Value>(key: string[], options?: { raw: false }): Promise<StoredDataNoRaw<Value>[]>;
-	async get<Value>(key: string[], options?: { raw: true }): Promise<StoredDataRaw<Value>[]>;
-	async get<Value>(key: string | string[], options?: {raw: boolean}): Promise<StoredDataNoRaw<Value> | StoredDataNoRaw<Value>[] | StoredDataRaw<Value> | StoredDataRaw<Value>[]> {
+
+	async get<Value>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;
+	async get<Value>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
+	async get<Value>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
+	async get<Value>(key: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
+	async get<Value>(key: string | string[], options?: {raw: boolean}): Promise<StoredDataNoRaw<Value> | Array<StoredDataNoRaw<Value>> | StoredDataRaw<Value> | Array<StoredDataRaw<Value>>> {
 		const {store} = this.opts;
 		const isArray = Array.isArray(key);
 		const keyPrefixed = isArray ? this._getKeyPrefixArray(key) : this._getKeyPrefix(key);
 
-		const isDataExpired = (data: DeserializedData<Value>): boolean => {
-			return typeof data.expires === 'number' && Date.now() > data.expires;
-		};
+		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
 
-		if(isArray) {
-			if(store?.getMany === undefined) {
-				const promises = (keyPrefixed as string[]).map(async (key) => {
+		if (isArray) {
+			if (store?.getMany === undefined) {
+				const promises = (keyPrefixed as string[]).map(async key => {
 					const rawData = await store!.get<Value>(key);
 					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
-					if(deserializedRow === undefined || deserializedRow === null){
+					if (deserializedRow === undefined || deserializedRow === null) {
 						return undefined;
 					}
 
-					if(isDataExpired(deserializedRow as DeserializedData<Value>)){
+					if (isDataExpired(deserializedRow as DeserializedData<Value>)) {
 						await this.delete(key);
 						return undefined;
 					}
 
 					return (options && options.raw) ? deserializedRow as StoredDataRaw<Value> : (deserializedRow as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
-				})
+				});
 
 				const deserializedRows = await Promise.allSettled(promises);
-				return deserializedRows.map((row) => (row as PromiseFulfilledResult<any>).value)
+				return deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
 			}
 
 			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
 
 			const result = [];
-			for (let index in rawData) {
+			for (const index in rawData) {
 				let row = rawData[index];
 
 				if ((typeof row === 'string')) {
@@ -227,16 +228,17 @@ class Keyv extends EventEmitter{
 					continue;
 				}
 
-				if(isDataExpired(row as DeserializedData<Value>)){
+				if (isDataExpired(row as DeserializedData<Value>)) {
 					await this.delete(key[index]);
 					result.push(undefined);
 					continue;
 				}
 
-				const value = (options && options.raw) ? row as StoredDataRaw<Value>: (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+				const value = (options && options.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
 				result.push(value);
 			}
-			return result as (StoredDataNoRaw<Value>[] | StoredDataRaw<Value>[]);
+
+			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
 
 		const rawData = await store!.get<Value>(keyPrefixed as string);
@@ -246,15 +248,13 @@ class Keyv extends EventEmitter{
 			return undefined;
 		}
 
-		if(isDataExpired(deserializedData as DeserializedData<Value>)){
+		if (isDataExpired(deserializedData as DeserializedData<Value>)) {
 			await this.delete(key);
 			return undefined;
 		}
 
-		return (options && options.raw) ? deserializedData: (deserializedData as DeserializedData<Value>).value;
-
+		return (options && options.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
-
 
 	async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefixed = this._getKeyPrefix(key);
@@ -276,8 +276,8 @@ class Keyv extends EventEmitter{
 
 		value = {value, expires};
 
-		value = await this.opts!.serialize!(value);
-		await store!.set(keyPrefixed, value, ttl)
+		value = await this.opts.serialize!(value);
+		await store!.set(keyPrefixed, value, ttl);
 
 		return true;
 	}
@@ -285,17 +285,15 @@ class Keyv extends EventEmitter{
 	async delete(key: string | string[]): Promise<boolean> {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
-			const keyPrefixed = this._getKeyPrefixArray(key as string[]);
+			const keyPrefixed = this._getKeyPrefixArray(key);
 			if (store!.deleteMany !== undefined) {
-				return await store!.deleteMany(keyPrefixed);
+				return store!.deleteMany(keyPrefixed);
 			}
 
-			const promises = keyPrefixed.map(async (key) => {
-				return await store!.delete(key)
-			})
+			const promises = keyPrefixed.map(async key => store!.delete(key));
 
-			const results =  await Promise.allSettled(promises);
-			return results.every(x => (x as PromiseFulfilledResult<any>).value === true)
+			const results = await Promise.allSettled(promises);
+			return results.every(x => (x as PromiseFulfilledResult<any>).value === true);
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
@@ -313,6 +311,7 @@ class Keyv extends EventEmitter{
 		if (typeof store!.has === 'function') {
 			return store!.has(keyPrefixed);
 		}
+
 		const value = await store!.get(keyPrefixed);
 		return value !== undefined;
 	}
