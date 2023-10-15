@@ -7,8 +7,10 @@ import {parseConnectionString} from '../src/pool';
 keyvOfficialTests(test, Keyv, 'mysql://root@localhost/keyv_test', 'mysql://foo');
 
 const store = () => new KeyvMysql('mysql://root@localhost/keyv_test');
+// @ts-expect-error - store temporary issue
 keyvTestSuite(test, Keyv, store);
 const iteratorStore = () => new KeyvMysql({uri: 'mysql://root@localhost/keyv_test', iterationLimit: 2});
+// @ts-expect-error - store temporary issue
 keyvIteratorTests(test, Keyv, iteratorStore);
 
 test.serial('iterator with default namespace', async t => {
