@@ -28,6 +28,7 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 
 		if (uri === undefined) {
 			uri = 'localhost:11211';
+			// eslint-disable-next-line no-multi-assign
 			options.url = options.uri = uri;
 		}
 
@@ -40,7 +41,7 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		return `namespace:${this.namespace!}`;
 	}
 
-	get<Value>(key: string): Promise<StoredData<Value>> {
+	async get<Value>(key: string): Promise<StoredData<Value>> {
 		return new Promise((resolve, reject) => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
@@ -49,16 +50,15 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 				} else {
 					let value_: StoredData<Value>;
 					if (value === null) {
-						// @ts-ignore
 						value_ = {
 							value: undefined,
 							expires: 0,
 						};
 					} else {
-						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string);
+						value_ = (this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string)) as StoredData<Value>;
 					}
 
-					resolve(value_ as StoredData<Value>);
+					resolve(value_);
 				}
 			});
 		});
@@ -109,14 +109,14 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 					this.emit('error', error);
 					reject(error);
 				} else {
-					resolve(!!success);
+					resolve(Boolean(success));
 				}
 			});
 		});
 	}
 
 	async deleteMany(keys: string[]) {
-		const promises = keys.map(key => this.delete(key));
+		const promises = keys.map(async key => this.delete(key));
 		const results = await Promise.allSettled(promises);
 		// @ts-expect-error - x is an object
 		return results.every(x => x.value === true);

@@ -23,7 +23,7 @@ test.serial('keyv get / no expired', async t => {
 
 	await keyv.set('foo', 'bar');
 
-	const value = await keyv.get('foo') as string;
+	const value = (await keyv.get('foo'))!;
 
 	t.is(value, 'bar');
 });
@@ -79,7 +79,7 @@ test.serial('keyv get / should still exist', async t => {
 
 	await snooze(2000);
 
-	const value = await keyv.get('foo-expired') as string;
+	const value = (await keyv.get('foo-expired'))!;
 
 	t.is(value, 'bar-expired');
 });
@@ -91,7 +91,7 @@ test.serial('keyv get / expired existing', async t => {
 
 	await snooze(3000);
 
-	const value = await keyv.get('foo-expired') as undefined;
+	const value = await keyv.get('foo-expired');
 
 	t.is(value, undefined);
 });
@@ -103,7 +103,7 @@ test.serial('keyv get / expired existing with bad number', async t => {
 
 	await snooze(1000);
 
-	const value = await keyv.get('foo-expired') as undefined;
+	const value = await keyv.get('foo-expired');
 
 	t.is(value, undefined);
 });
@@ -115,7 +115,7 @@ test.serial('keyv get / expired', async t => {
 
 	await snooze(1000);
 
-	const value = await keyv.get('foo-expired') as undefined;
+	const value = await keyv.get('foo-expired');
 
 	t.is(value, undefined);
 });
