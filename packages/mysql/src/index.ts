@@ -104,7 +104,7 @@ class KeyvMysql<Value = any> extends EventEmitter {
 			i++;
 		}
 
-		return results;
+		return results as unknown as GetManyOutput<Value>;
 	}
 
 	async set(key: string, value: Value): SetOutput {

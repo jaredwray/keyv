@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import JSONB from 'json-buffer';
-import type {DeserializedData, Options, StoredData} from "./types";
+import type {DeserializedData, Options, StoredData, StoredDataRaw, StoredDataNoRaw} from "./types";
 import type keyvModule from './types';
 
 interface IteratorFunction {
@@ -115,7 +115,7 @@ class Keyv extends EventEmitter implements keyvModule{
 		return `${this.opts.namespace}:${key}`;
 	}
 
-	_getKeyPrefixArray(keys: Array<string>) {
+	_getKeyPrefixArray(keys: string[]) {
 		return keys.map(key => `${this.opts.namespace}:${key}`);
 	}
 
@@ -129,87 +129,77 @@ class Keyv extends EventEmitter implements keyvModule{
 	async get<Value>(key: string | string[], options?: {raw: boolean}) {
 		const {store} = this.opts;
 		const isArray = Array.isArray(key);
-		const keyPrefixed = isArray ? this._getKeyPrefixArray(key as string[]) : this._getKeyPrefix(key as string);
+		const keyPrefixed = isArray ? this._getKeyPrefixArray(key) : this._getKeyPrefix(key);
 
 		const isDataExpired = (data: DeserializedData<Value>): boolean => {
 			return typeof data.expires === 'number' && Date.now() > data.expires;
 		};
 
-		if (isArray && store?.getMany === undefined) {
-			const results = [];
-			for (const k of keyPrefixed) {
-				try {
-					const storeData = await store!.get<Value>(k);
-					const shouldDeserialize = typeof storeData === 'string' || !!this.opts.compression;
-					const data = shouldDeserialize ? this.opts.deserialize!<Value>(storeData as string) : storeData;
+		if(isArray) {
+			if(store?.getMany === undefined) {
+				const promises = (keyPrefixed as string[]).map(async (key) => {
+					const rawData = await store!.get<Value>(key);
+					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? this.opts.deserialize!<Value>(rawData as string) : rawData;
 
-					if(data === undefined || data === null){
-						results.push(undefined);
-						continue;
+					if(deserializedRow === undefined || deserializedRow === null){
+						return undefined;
 					}
 
-					if (isDataExpired(data as DeserializedData<Value>)) {
-						await this.delete(k);
-						results.push(undefined);
-						continue;
+					if(isDataExpired(deserializedRow as DeserializedData<Value>)){
+						await this.delete(key);
+						return undefined;
 					}
 
-					if(options?.raw) {
-						results.push(data)
-						continue;
-					}
+					return (options && options.raw) ? deserializedRow as StoredDataRaw<Value> : (deserializedRow as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+				})
 
-					results.push((data as DeserializedData<Value>).value as Value)
-
-				} catch (error) {
-					results.push(undefined);
-				}
+				const deserializedRows = await Promise.allSettled(promises);
+				return deserializedRows.map((row) => (row as PromiseFulfilledResult<StoredData<Value>>).value)
 			}
-			return results;
+
+			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
+
+			const result = [];
+			for (let index in rawData) {
+				let row = rawData[index];
+
+				if ((typeof row === 'string')) {
+					row = this.opts.deserialize!<Value>(row);
+				}
+
+				if (row === undefined || row === null) {
+					result.push(undefined);
+					continue;
+				}
+
+				if(isDataExpired(row as DeserializedData<Value>)){
+					await this.delete(key[index]);
+					result.push(undefined);
+					continue;
+				}
+
+				const value = (options && options.raw) ? row: (row as DeserializedData<Value>).value;
+				result.push(value);
+			}
+			return result;
 		}
 
-		try {
-			const storeData = isArray ? await store!.getMany!<Value>(keyPrefixed as string[]) : await store!.get<Value>(keyPrefixed as string);
-			const shouldDeserialize = typeof storeData === 'string' || this.opts.compression;
-			const data = shouldDeserialize ? this.opts.deserialize!<Value>(storeData as string) : storeData;
+		const rawData = await store!.get<Value>(keyPrefixed as string);
+		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? this.opts.deserialize!<Value>(rawData as string) : rawData;
 
-			if (data === undefined || data === null) {
-				return undefined;
-			}
-
-			if (isArray) {
-				return (data as StoredData<Value>[]).map(async (row, index: number) => {
-					if (row === 'string') {
-						row = this.opts.deserialize!<Value>(row as string);
-					}
-
-					if (row === undefined || row === null) {
-						return undefined;
-					}
-
-					if (isDataExpired(row as DeserializedData<Value>)) {
-						await this.delete((key as string[])[index]);
-						return undefined;
-					}
-
-					if(options?.raw) return row;
-
-					return (row as DeserializedData<Value>)!.value
-				});
-			}
-
-			if (isDataExpired(data as DeserializedData<Value>)) {
-				await this.delete(key);
-				return undefined;
-			}
-
-			if(options?.raw) return data;
-
-			return (data as DeserializedData<Value>)!.value
-		} catch (error) {
+		if (deserializedData === undefined || deserializedData === null) {
 			return undefined;
 		}
+
+		if(isDataExpired(deserializedData as DeserializedData<Value>)){
+			await this.delete(key);
+			return undefined;
+		}
+
+		return (options && options.raw) ? deserializedData: (deserializedData as DeserializedData<Value>).value;
+
 	}
+
 
 	async set(key: string, value: any, ttl?: number) {
 		const keyPrefixed = this._getKeyPrefix(key);

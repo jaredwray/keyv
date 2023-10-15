@@ -1,11 +1,8 @@
 import EventEmitter from 'events';
 import {promisify} from 'util';
 import sqlite3 from 'sqlite3';
-import {
-	type Db, type DbClose, type DbQuery,
-	type KeyvSqliteOptions,
-} from './types';
-import {KeyvStoreAdapter} from "keyv";
+import {type Db, type DbClose, type DbQuery, type KeyvSqliteOptions,} from './types';
+import {KeyvStoreAdapter, StoredData} from "keyv";
 
 const toString = (input: string) => String(input).search(/^[a-zA-Z]+$/) < 0 ? '_' + input : input;
 
@@ -86,15 +83,11 @@ class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter{
 	async getMany<Value>(keys: string[]) {
 		const select = `SELECT * FROM ${this.opts.table!} WHERE key IN (SELECT value FROM json_each(?))`;
 		const rows = await this.query(select, JSON.stringify(keys));
-		const results = [...keys];
-		let i = 0;
-		for (const key of keys) {
-			const rowIndex = rows.findIndex((row: {key: string; value: Value}) => row.key === key);
-			results[i] = rowIndex > -1 ? rows[rowIndex].value : undefined;
-			i++;
-		}
 
-		return results;
+		return keys.map(key => {
+			const row = rows.find((row: { key: string; value: Value }) => row.key === key);
+			return (row ? row.value : undefined) as StoredData<Value | undefined>;
+		});
 	}
 
 	async set(key: string, value: any) {

@@ -27,7 +27,7 @@ export type PifyFunction = (...args: any[]) => any;
 
 export type GetOutput<Value> = Promise<Value | undefined>;
 
-export type GetManyOutput<Value> = Promise<Array<StoredData<Value | undefined>>>;
+export type GetManyOutput<Value> = Promise<StoredData<Value | undefined>[]>;
 
 export type SetOutput = Promise<any>;
 

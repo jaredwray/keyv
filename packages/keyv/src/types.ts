@@ -12,9 +12,9 @@ export interface CompressionAdapter {
 	deserialize: (<Value>(data: string) => DeserializedData<Value> | undefined) | undefined;
 }
 
-export type StoredDataNoRaw<Value> = Value | string | undefined;
+export type StoredDataNoRaw<Value> = Value  | undefined;
 
-export type StoredDataRaw<Value> = DeserializedData<Value> | string | undefined
+export type StoredDataRaw<Value> = DeserializedData<Value> | undefined
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
@@ -27,7 +27,7 @@ export interface KeyvStoreAdapter extends EventEmitter{
 	has?(key: string): Promise<boolean>;
 	getMany?<Value>(
 		keys: string[]
-	): Promise<StoredData<Value>[] |  undefined>
+	): Promise<StoredData<Value | undefined>[]>
 	disconnect?(): Promise<void>
 	deleteMany?(key: string[]): Promise<boolean>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
