@@ -14,7 +14,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 					{
 						return async (...args: any) => {
 							try {
-								return await keyv.get(...args);
+								return keyv.get(...args);
 							} catch {
 								return undefined;
 							}
@@ -25,7 +25,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 					{
 						return async (...args: any) => {
 							try {
-								return await keyv.getMany(...args);
+								return keyv.getMany(...args);
 							} catch {
 								return false;
 							}
@@ -36,7 +36,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 					{
 						return async (...args: any) => {
 							try {
-								return await keyv.set(...args);
+								return keyv.set(...args);
 							} catch {
 								return false;
 							}
@@ -47,7 +47,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 					{
 						return async (...args: any) => {
 							try {
-								return await keyv.clear(...args);
+								return keyv.clear(...args);
 							} catch {
 								return false;
 							}
@@ -58,7 +58,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 					{
 						return async (...args: any) => {
 							try {
-								return await keyv.delete(...args);
+								return keyv.delete(...args);
 							} catch {
 								return false;
 							}
@@ -69,7 +69,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 					{
 						return async (...args: any) => {
 							try {
-								return await keyv.has(...args);
+								return keyv.has(...args);
 							} catch {
 								return false;
 							}
@@ -100,7 +100,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 		return this.proxy.get(key);
 	}
 
-	getMany(keys: string[]){
+	getMany(keys: string[]) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.getMany(keys);
 	}
@@ -110,7 +110,7 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 		return this.proxy.delete(key);
 	}
 
-	deleteMany(key: string[]){
+	deleteMany(key: string[]) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.deleteMany(key);
 	}

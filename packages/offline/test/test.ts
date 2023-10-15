@@ -1,5 +1,5 @@
 import test from 'ava';
-import Keyv from 'keyv';
+import Keyv, {type KeyvStoreAdapter} from 'keyv';
 import KeyvRedis from '@keyv/redis';
 import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
 import KeyvOffline from '../src/index';
@@ -16,14 +16,14 @@ keyvRedisBad.on('error', () => {
 });
 
 test('.set return true under normal behavior', async t => {
-	const store = new Map();
+	const store = new Map() as unknown as KeyvStoreAdapter;
 	const keyv = new KeyvOffline(new Keyv({store}));
 	const result = await keyv.set('foo', 'expires in 1 second', 1000) as boolean;
 	t.is(result, true);
 });
 
 test('.get return the expected value under normal behavior', async t => {
-	const store = new Map();
+	const store = new Map() as unknown as KeyvStoreAdapter;
 	const keyv = new KeyvOffline(new Keyv({store}));
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
@@ -37,15 +37,14 @@ test('.set return false if store is unreachable', async t => {
 
 test('.set return undefined if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
-	const result = await keyv.get('foo') as unknown;
+	const result = await keyv.get('foo');
 	t.is(result, undefined);
 });
 
 test('.clear return false if store is unreachable', async t => {
 	const keyv = new KeyvOffline(keyvRedisBad);
-	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+
 	const clearStatus = await keyv.clear();
-	// @ts-expect-error - test for false return value
 	t.is(clearStatus, false);
 	t.is(typeof keyv.clear, 'function');
 });
