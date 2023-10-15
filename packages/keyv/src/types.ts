@@ -12,7 +12,11 @@ export interface CompressionAdapter {
 	deserialize: (<Value>(data: string) => DeserializedData<Value> | undefined) | undefined;
 }
 
-export type StoredData<Value> = DeserializedData<Value> | string | Value | undefined;
+export type StoredDataNoRaw<Value> = Value | string | undefined;
+
+export type StoredDataRaw<Value> = DeserializedData<Value> | string | undefined
+
+export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
 export interface KeyvStoreAdapter extends EventEmitter{
 	namespace?: string;
@@ -27,7 +31,7 @@ export interface KeyvStoreAdapter extends EventEmitter{
 	disconnect?(): Promise<void>
 	deleteMany?(key: string[]): Promise<boolean>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
-	opts: Record<string, Record<string, unknown>>
+	opts: any
 }
 
 export interface Options {
@@ -63,11 +67,17 @@ declare class Keyv extends EventEmitter {
 	_getKeyPrefixArray(keys: string[]): string[];
 	_getKeyUnprefix(key: string): string;
 	get<Value>(key: string, options?: {
-		raw: boolean;
-	}): Promise<StoredData<Value>>;
+		raw: false;
+	}): Promise<StoredDataNoRaw<Value>>;
+	get<Value>(key: string, options?: {
+		raw: true;
+	}): Promise<StoredDataRaw<Value>>;
 	get<Value>(key: string[], options?: {
-		raw: boolean;
-	}): Promise<StoredData<Value>[]>;
+		raw: false;
+	}): Promise<StoredDataNoRaw<Value>[]>;
+	get<Value>(key: string[], options?: {
+		raw: true;
+	}): Promise<StoredDataRaw<Value>[]>;
 	set(key: string, value: any, ttl?: number): Promise<boolean>;
 	delete(key: string | string[]): Promise<boolean | undefined | boolean[]>;
 	clear(): Promise<void>;

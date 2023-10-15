@@ -2,21 +2,14 @@ import EventEmitter from 'events';
 import {promisify} from 'util';
 import sqlite3 from 'sqlite3';
 import {
-	type ClearOutput, type Db, type DbClose, type DbQuery,
-	type DeleteManyOutput,
-	type DeleteOutput,
-	type DisconnectOutput,
-	type GetManyOutput,
-	type GetOutput,
-	type HasOutput,
-	type IteratorOutput,
+	type Db, type DbClose, type DbQuery,
 	type KeyvSqliteOptions,
-	type SetOutput,
 } from './types';
+import {KeyvStoreAdapter} from "keyv";
 
 const toString = (input: string) => String(input).search(/^[a-zA-Z]+$/) < 0 ? '_' + input : input;
 
-class KeyvSqlite<Value = any> extends EventEmitter {
+class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter{
 	ttlSupport: boolean;
 	opts: KeyvSqliteOptions;
 	namespace?: string;
@@ -79,7 +72,7 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		this.close = async () => connected.then(db => db.close);
 	}
 
-	async get(key: string): GetOutput<Value> {
+	async get<Value>(key: string) {
 		const select = `SELECT * FROM ${this.opts.table!} WHERE key = ?`;
 		const rows = await this.query(select, key);
 		const row = rows[0];
@@ -90,7 +83,7 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		return row.value as Value;
 	}
 
-	async getMany(keys: string[]): GetManyOutput<Value> {
+	async getMany<Value>(keys: string[]) {
 		const select = `SELECT * FROM ${this.opts.table!} WHERE key IN (SELECT value FROM json_each(?))`;
 		const rows = await this.query(select, JSON.stringify(keys));
 		const results = [...keys];
@@ -104,7 +97,7 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		return results;
 	}
 
-	async set(key: string, value: Value): SetOutput {
+	async set(key: string, value: any) {
 		const upsert = `INSERT INTO ${this.opts.table!} (key, value)
 			VALUES(?, ?) 
 			ON CONFLICT(key) 
@@ -112,7 +105,7 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		return this.query(upsert, key, value);
 	}
 
-	async delete(key: string): DeleteOutput {
+	async delete(key: string) {
 		const select = `SELECT * FROM ${this.opts.table!} WHERE key = ?`;
 		const del = `DELETE FROM ${this.opts.table!} WHERE key = ?`;
 
@@ -126,7 +119,7 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		return true;
 	}
 
-	async deleteMany(keys: string[]): DeleteManyOutput {
+	async deleteMany(keys: string[]) {
 		const del = `DELETE FROM ${this.opts.table!} WHERE key IN (SELECT value FROM json_each(?))`;
 
 		const results = await this.getMany(keys);
@@ -138,12 +131,12 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		return true;
 	}
 
-	async clear(): ClearOutput {
+	async clear() {
 		const del = `DELETE FROM ${this.opts.table!} WHERE key LIKE ?`;
 		await this.query(del, this.namespace ? `${this.namespace}:%` : '%');
 	}
 
-	async * iterator(namespace?: string): IteratorOutput {
+	async * iterator(namespace?: string) {
 		const limit = Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
 
 		// @ts-expect-error - iterate
@@ -166,13 +159,13 @@ class KeyvSqlite<Value = any> extends EventEmitter {
 		yield * iterate(0, this.opts, this.query);
 	}
 
-	async has(key: string): HasOutput {
+	async has(key: string) {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table!} WHERE key = ? )`;
 		const result = await this.query(exists, key);
 		return Object.values(result[0])[0] === 1;
 	}
 
-	async disconnect(): DisconnectOutput {
+	async disconnect() {
 		await this.close();
 	}
 }

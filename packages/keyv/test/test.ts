@@ -18,12 +18,14 @@ keyvIteratorTests(test, Keyv, store);
 
 test.serial('Keyv is a class', t => {
 	t.is(typeof Keyv, 'function');
+	// @ts-ignore
 	t.throws(() => Keyv()); // eslint-disable-line new-cap
 	t.notThrows(() => new Keyv());
 });
 
 test.serial('Keyv accepts storage adapters', async t => {
 	const store = new Map();
+	// @ts-ignore
 	const keyv = new Keyv({store});
 	t.is(store.size, 0);
 	await keyv.set('foo', 'bar');
@@ -36,17 +38,21 @@ test.serial('Keyv passes tll info to stores', async t => {
 	t.plan(1);
 	const store = new Map();
 	const storeSet = store.set;
+	// @ts-ignore
 	store.set = (key, value, ttl) => {
 		t.is(ttl, 100);
+		// @ts-ignore
 		storeSet.call(store, key, value, ttl);
 	};
 
+	// @ts-ignore
 	const keyv = new Keyv({store});
 	await keyv.set('foo', 'bar', 100);
 });
 
 test.serial('Keyv respects default tll option', async t => {
 	const store = new Map();
+	// @ts-ignore
 	const keyv = new Keyv({store, ttl: 100});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
@@ -60,6 +66,7 @@ test.serial('.set(key, val, ttl) overwrites default tll option', async t => {
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
+	// @ts-ignore
 	const keyv = new Keyv({store, ttl: 200});
 	await keyv.set('foo', 'bar');
 	await keyv.set('fizz', 'buzz', 100);
@@ -83,6 +90,7 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
+	// @ts-ignore
 	const keyv = new Keyv({store, ttl: 200});
 	await keyv.set('foo', 'bar', 0);
 	t.is(await keyv.get('foo'), 'bar');
@@ -93,10 +101,11 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 
 test.serial('.get(key, {raw: true}) returns the raw object instead of the value', async t => {
 	const store = new Map();
+	// @ts-ignore
 	const keyv = new Keyv({store});
 	await keyv.set('foo', 'bar');
-	const value = await keyv.get('foo');
-	const rawObject = await keyv.get('foo', {raw: true});
+	const value = await keyv.get<string>('foo');
+	const rawObject = await keyv.get<string>('foo', {raw: true});
 	t.is(value, 'bar');
 	t.is(rawObject.value, 'bar');
 });

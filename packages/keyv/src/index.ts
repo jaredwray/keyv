@@ -159,7 +159,7 @@ class Keyv extends EventEmitter implements keyvModule{
 						continue;
 					}
 
-					results.push((data as DeserializedData<Value>).value)
+					results.push((data as DeserializedData<Value>).value as Value)
 
 				} catch (error) {
 					results.push(undefined);
@@ -169,9 +169,9 @@ class Keyv extends EventEmitter implements keyvModule{
 		}
 
 		try {
-			const storeData = isArray ? await store!.getMany!(keyPrefixed as string[]) : await store!.get(keyPrefixed as string);
+			const storeData = isArray ? await store!.getMany!<Value>(keyPrefixed as string[]) : await store!.get<Value>(keyPrefixed as string);
 			const shouldDeserialize = typeof storeData === 'string' || this.opts.compression;
-			const data = shouldDeserialize ? this.opts.deserialize!(storeData as string) : storeData;
+			const data = shouldDeserialize ? this.opts.deserialize!<Value>(storeData as string) : storeData;
 
 			if (data === undefined || data === null) {
 				return undefined;
@@ -180,7 +180,7 @@ class Keyv extends EventEmitter implements keyvModule{
 			if (isArray) {
 				return (data as StoredData<Value>[]).map(async (row, index: number) => {
 					if (row === 'string') {
-						row = this.opts.deserialize!(row as string);
+						row = this.opts.deserialize!<Value>(row as string);
 					}
 
 					if (row === undefined || row === null) {
