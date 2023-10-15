@@ -1,7 +1,59 @@
 import EventEmitter from 'events';
 import JSONB from 'json-buffer';
-import type {DeserializedData, Options, StoredData, StoredDataRaw, StoredDataNoRaw} from "./types";
-import type keyvModule from './types';
+
+export type DeserializedData<Value> = {
+	value?: Value;
+	expires?: number;
+};
+
+export interface CompressionAdapter {
+	compress(value: any, options?: any): Promise<any>;
+	decompress(value: any, options?: any): Promise<any>;
+	serialize: (<Value>(data: DeserializedData<Value>) => string) | undefined;
+	deserialize: (<Value>(data: string) => DeserializedData<Value> | undefined) | undefined;
+}
+
+export type StoredDataNoRaw<Value> = Value  | undefined;
+
+export type StoredDataRaw<Value> = DeserializedData<Value> | undefined
+
+export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
+
+export interface KeyvStoreAdapter extends EventEmitter{
+	namespace?: string;
+	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
+	set(key: string, value: any, ttl?: number): any;
+	delete(key: string): Promise<boolean>;
+	clear(): Promise<void>;
+	has?(key: string): Promise<boolean>;
+	getMany?<Value>(
+		keys: string[]
+	): Promise<StoredData<Value | undefined>[]>
+	disconnect?(): Promise<void>
+	deleteMany?(key: string[]): Promise<boolean>;
+	iterator?<Value>(namespace?: string): AsyncGenerator<(string | Awaited<Value> | undefined)[], void, unknown>;
+	opts: any
+}
+
+export interface Options {
+	[key: string]: any;
+	/** Namespace for the current instance. */
+	namespace?: string;
+	/** A custom serialization function. */
+	serialize?: (<Value>(data: DeserializedData<Value>) => string);
+	/** A custom deserialization function. */
+	deserialize?: (<Value>(data: string) => DeserializedData<Value> | undefined);
+	/** The connection string URI. */
+	uri?: string;
+	/** The storage adapter instance to be used by Keyv. */
+	store?: KeyvStoreAdapter;
+	/** Default TTL. Can be overridden by specififying a TTL on `.set()`. */
+	ttl?: number;
+	/** Enable compression option **/
+	compression?: CompressionAdapter;
+	/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
+	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql' | undefined;
+}
 
 interface IteratorFunction {
 	(arg: any): AsyncGenerator<any, void, unknown>;
@@ -41,7 +93,7 @@ const iterableAdapters = [
 	'tiered',
 ];
 
-class Keyv extends EventEmitter implements keyvModule{
+class Keyv extends EventEmitter{
 	opts: Options;
 	iterator?: IteratorFunction;
 	constructor(uri?: string | Options, opts?: Options) {
@@ -85,7 +137,7 @@ class Keyv extends EventEmitter implements keyvModule{
 		}
 	}
 
-	generateIterator(iterator: IteratorFunction)  {
+	generateIterator(iterator: IteratorFunction): IteratorFunction  {
 		const func : IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'
 				? iterator(this.opts.store.namespace)
@@ -106,27 +158,30 @@ class Keyv extends EventEmitter implements keyvModule{
 		return func.bind(this);
 	}
 
-	_checkIterableAdapter() {
+	_checkIterableAdapter(): boolean {
 		return iterableAdapters.includes(<string><unknown>this.opts.store?.opts.dialect)
 			|| iterableAdapters.findIndex(element => (<string><unknown>this.opts.store?.opts!.url).includes(element)) >= 0;
 	}
 
-	_getKeyPrefix(key: string) {
+	_getKeyPrefix(key: string): string {
 		return `${this.opts.namespace}:${key}`;
 	}
 
-	_getKeyPrefixArray(keys: string[]) {
+	_getKeyPrefixArray(keys: string[]): string[] {
 		return keys.map(key => `${this.opts.namespace}:${key}`);
 	}
 
-	_getKeyUnprefix(key: string) {
+	_getKeyUnprefix(key: string): string {
 		return key
 			.split(':')
 			.splice(1)
 			.join(':');
 	}
-
-	async get<Value>(key: string | string[], options?: {raw: boolean}) {
+	async get<Value>(key: string, options?: { raw: false }): Promise<StoredDataNoRaw<Value>>;
+	async get<Value>(key: string, options?: { raw: true }): Promise<StoredDataRaw<Value>>;
+	async get<Value>(key: string[], options?: { raw: false }): Promise<StoredDataNoRaw<Value>[]>;
+	async get<Value>(key: string[], options?: { raw: true }): Promise<StoredDataRaw<Value>[]>;
+	async get<Value>(key: string | string[], options?: {raw: boolean}): Promise<StoredDataNoRaw<Value> | StoredDataNoRaw<Value>[] | StoredDataRaw<Value> | StoredDataRaw<Value>[]> {
 		const {store} = this.opts;
 		const isArray = Array.isArray(key);
 		const keyPrefixed = isArray ? this._getKeyPrefixArray(key) : this._getKeyPrefix(key);
@@ -154,7 +209,7 @@ class Keyv extends EventEmitter implements keyvModule{
 				})
 
 				const deserializedRows = await Promise.allSettled(promises);
-				return deserializedRows.map((row) => (row as PromiseFulfilledResult<StoredData<Value>>).value)
+				return deserializedRows.map((row) => (row as PromiseFulfilledResult<any>).value)
 			}
 
 			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
@@ -178,10 +233,10 @@ class Keyv extends EventEmitter implements keyvModule{
 					continue;
 				}
 
-				const value = (options && options.raw) ? row: (row as DeserializedData<Value>).value;
+				const value = (options && options.raw) ? row as StoredDataRaw<Value>: (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
 				result.push(value);
 			}
-			return result;
+			return result as (StoredDataNoRaw<Value>[] | StoredDataRaw<Value>[]);
 		}
 
 		const rawData = await store!.get<Value>(keyPrefixed as string);
@@ -201,7 +256,7 @@ class Keyv extends EventEmitter implements keyvModule{
 	}
 
 
-	async set(key: string, value: any, ttl?: number) {
+	async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (typeof ttl === 'undefined') {
 			ttl = this.opts.ttl;
@@ -222,32 +277,32 @@ class Keyv extends EventEmitter implements keyvModule{
 		return true;
 	}
 
-	async delete(key: string | string[]) {
+	async delete(key: string | string[]): Promise<boolean> {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
 			const keyPrefixed = this._getKeyPrefixArray(key as string[]);
 			if (store!.deleteMany !== undefined) {
-				await store!.deleteMany(keyPrefixed);
-				return;
+				return await store!.deleteMany(keyPrefixed);
 			}
 
-			const results = [];
-			for (const k of keyPrefixed) {
-				results.push(await store!.delete(k));
-			}
-			return results;
+			const promises = keyPrefixed.map(async (key) => {
+				return await store!.delete(key)
+			})
+
+			const results =  await Promise.allSettled(promises);
+			return results.every(x => (x as PromiseFulfilledResult<any>).value === true)
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
 		return store!.delete(keyPrefixed);
 	}
 
-	async clear() {
+	async clear(): Promise<void> {
 		const {store} = this.opts;
 		await store!.clear();
 	}
 
-	async has(key: string) {
+	async has(key: string): Promise<boolean> {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const {store} = this.opts;
 		if (typeof store!.has === 'function') {
@@ -257,7 +312,7 @@ class Keyv extends EventEmitter implements keyvModule{
 		return value !== undefined;
 	}
 
-	async disconnect() {
+	async disconnect(): Promise<void> {
 		const {store} = this.opts;
 		if (typeof store!.disconnect === 'function') {
 			return store!.disconnect();
