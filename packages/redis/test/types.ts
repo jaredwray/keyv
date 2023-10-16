@@ -10,10 +10,12 @@ type MyType = {
 };
 
 test('can specify redis store in typescript', async t => {
-	const keyv = new Keyv<MyType>({
+	const keyv = new Keyv({
 		store: new KeyvRedis(redisUri),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get('testkey'), {a: 'testvalue'});
+	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
+	await keyv.clear();
+	t.pass();
 });
