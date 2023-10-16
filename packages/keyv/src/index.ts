@@ -37,6 +37,8 @@ export interface KeyvStoreAdapter extends EventEmitter {
 
 export interface Options {
 	[key: string]: any;
+	/** Emit errors */
+	emitErrors?: boolean;
 	/** Namespace for the current instance. */
 	namespace?: string;
 	/** A custom serialization function. */
@@ -52,13 +54,13 @@ export interface Options {
 	/** Enable compression option **/
 	compression?: CompressionAdapter;
 	/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
-	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql' | undefined;
+	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql';
 }
 
 type IteratorFunction = (arg: any) => AsyncGenerator<any, void>;
 
 const loadStore = (options: Options) => {
-	const adapters: Record<string, string> = {
+	const adapters = {
 		redis: '@keyv/redis',
 		rediss: '@keyv/redis',
 		mongodb: '@keyv/mongo',
@@ -71,15 +73,12 @@ const loadStore = (options: Options) => {
 		offline: '@keyv/offline',
 		tiered: '@keyv/tiered',
 	};
-	let adapter = options.adapter;
-	if (!adapter && options.uri) {
-		const matchResult = /^[^:+]*/.exec(options.uri);
-		adapter = (matchResult ? matchResult[0] : undefined) as unknown as Options['adapter'];
-	}
+	if (options.adapter ?? options.uri) {
+		const matchResult = /^[^:+]*/.exec(options.uri!);
 
-	if (adapter) {
+		const adapter = (options.adapter ?? /^[^:+]*/.exec(options.uri!)![0]) as Options['adapter'];
 		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		return new (require(adapters[adapter]))(options);
+		return new (require(adapters[adapter!]))(options);
 	}
 
 	return new Map();
@@ -108,6 +107,7 @@ class Keyv extends EventEmitter {
 			namespace: 'keyv',
 			serialize: JSONB.stringify,
 			deserialize: JSONB.parse,
+			emitErrors: true,
 			...options,
 		};
 
@@ -122,8 +122,8 @@ class Keyv extends EventEmitter {
 			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
-		if (typeof this.opts.store!.on === 'function') {
-			this.opts.store!.on('error', (error: any) => this.emit('error', error));
+		if (typeof this.opts.store?.on === 'function' && this.opts.emitErrors) {
+			this.opts.store.on('error', (error: any) => this.emit('error', error));
 		}
 
 		this.opts.store!.namespace = this.opts.namespace;
@@ -131,7 +131,7 @@ class Keyv extends EventEmitter {
 		// Attach iterators
 		// @ts-expect-error
 		if (typeof this.opts.store![Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
-			this.iterator = this.generateIterator(((this.opts.store as unknown) as IteratorFunction));
+			this.iterator = this.generateIterator((this.opts.store as unknown as IteratorFunction));
 		} else if (this.opts.store!.iterator && this.opts.store!.opts && this._checkIterableAdapter()) {
 			// @ts-expect-error
 			this.iterator = this.generateIterator(this.opts.store.iterator.bind(this.opts.store));
