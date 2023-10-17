@@ -1,13 +1,8 @@
 import EventEmitter from 'events';
 import mysql from 'mysql2';
+import type {KeyvStoreAdapter, StoredData} from 'keyv';
 import {
-	type ClearOutput,
-	type DeleteManyOutput,
-	type DeleteOutput, type DisconnectOutput,
-	type GetManyOutput,
-	type GetOutput, type HasOutput, type IteratorOutput,
 	type KeyvMysqlOptions,
-	type SetOutput,
 } from './types';
 import {endPool, pool} from './pool';
 
@@ -22,7 +17,7 @@ mysql.ResultSetHeader
 	? T
 	: never>;
 
-class KeyvMysql<Value = any> extends EventEmitter {
+class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvMysqlOptions;
 	namespace?: string;
@@ -80,34 +75,33 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		};
 	}
 
-	async get(key: string): GetOutput<Value> {
+	async get<Value>(key: string) {
 		const sql = `SELECT * FROM ${this.opts.table!} WHERE id = ?`;
 		const select = mysql.format(sql, [key]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
 
-		return row?.value as Value;
+		return row?.value as StoredData<Value>;
 	}
 
-	async getMany(keys: string[]): GetManyOutput<Value> {
+	async getMany<Value>(keys: string[]) {
 		const sql = `SELECT * FROM ${this.opts.table!} WHERE id IN (?)`;
 		const select = mysql.format(sql, [keys]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
 
-		const results = [...keys];
-		let i = 0;
+		const results: Array<StoredData<Value>> = [];
+
 		for (const key of keys) {
 			const rowIndex = rows.findIndex((row: {id: string}) => row.id === key);
-			results[i] = rowIndex > -1 ? rows[rowIndex].value : undefined;
-			i++;
+			results.push(rowIndex > -1 ? rows[rowIndex].value as StoredData<Value> : undefined);
 		}
 
-		return results as unknown as GetManyOutput<Value>;
+		return results;
 	}
 
-	async set(key: string, value: Value): SetOutput {
+	async set(key: string, value: any) {
 		const sql = `INSERT INTO ${this.opts.table!} (id, value)
 			VALUES(?, ?) 
 			ON DUPLICATE KEY UPDATE value=?;`;
@@ -116,7 +110,7 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		return this.query(upsert);
 	}
 
-	async delete(key: string): DeleteOutput {
+	async delete(key: string) {
 		const sql = `SELECT * FROM ${this.opts.table!} WHERE id = ?`;
 		const select = mysql.format(sql, [key]);
 		const delSql = `DELETE FROM ${this.opts.table!} WHERE id = ?`;
@@ -133,7 +127,8 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		return true;
 	}
 
-	async deleteMany(key: string): DeleteManyOutput {
+	// @ts-expect-error - deleteMany needs an array
+	async deleteMany(key: string) {
 		const sql = `DELETE FROM ${this.opts.table!} WHERE id IN (?)`;
 		const del = mysql.format(sql, [key]);
 
@@ -141,14 +136,14 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		return result.affectedRows !== 0;
 	}
 
-	async clear(): ClearOutput {
+	async clear() {
 		const sql = `DELETE FROM ${this.opts.table!} WHERE id LIKE ?`;
 		const del = mysql.format(sql, [this.namespace ? `${this.namespace}:%` : '%']);
 
 		await this.query(del);
 	}
 
-	async * iterator(namespace?: string): IteratorOutput {
+	async * iterator(namespace?: string) {
 		const limit = Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
 		// @ts-expect-error - iterate
 		async function * iterate(offset: number, options: KeyvMysqlOptions, query: <T>(sqlString: string) => QueryType<T>) {
@@ -170,13 +165,13 @@ class KeyvMysql<Value = any> extends EventEmitter {
 		yield * iterate(0, this.opts, this.query);
 	}
 
-	async has(key: string): HasOutput {
+	async has(key: string) {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table!} WHERE id = '${key}' )`;
 		const rows = await this.query(exists);
 		return Object.values(rows[0])[0] === 1;
 	}
 
-	async disconnect(): DisconnectOutput {
+	async disconnect() {
 		endPool();
 	}
 }

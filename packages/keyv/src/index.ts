@@ -74,8 +74,6 @@ const loadStore = (options: Options) => {
 		tiered: '@keyv/tiered',
 	};
 	if (options.adapter ?? options.uri) {
-		const matchResult = /^[^:+]*/.exec(options.uri!);
-
 		const adapter = (options.adapter ?? /^[^:+]*/.exec(options.uri!)![0]) as Options['adapter'];
 		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		return new (require(adapters[adapter!]))(options);
