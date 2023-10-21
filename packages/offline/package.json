@@ -29,7 +29,8 @@
 			"@typescript-eslint/no-unsafe-assignment": 0,
 			"@typescript-eslint/no-unsafe-call": 0,
 			"@typescript-eslint/no-unsafe-return": 0,
-			"@typescript-eslint/await-thenable": 0
+			"@typescript-eslint/await-thenable": 0,
+			"@typescript-eslint/return-await": "off"
 		}
 	},
 	"ava": {
