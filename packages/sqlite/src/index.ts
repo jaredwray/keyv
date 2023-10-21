@@ -1,12 +1,12 @@
 import EventEmitter from 'events';
 import {promisify} from 'util';
 import sqlite3 from 'sqlite3';
-import {type Db, type DbClose, type DbQuery, type KeyvSqliteOptions,} from './types';
-import {KeyvStoreAdapter, StoredData} from "keyv";
+import {type KeyvStoreAdapter, type StoredData} from 'keyv';
+import {type Db, type DbClose, type DbQuery, type KeyvSqliteOptions} from './types';
 
 const toString = (input: string) => String(input).search(/^[a-zA-Z]+$/) < 0 ? '_' + input : input;
 
-class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter{
+class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvSqliteOptions;
 	namespace?: string;
@@ -85,7 +85,7 @@ class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter{
 		const rows = await this.query(select, JSON.stringify(keys));
 
 		return keys.map(key => {
-			const row = rows.find((row: { key: string; value: Value }) => row.key === key);
+			const row = rows.find((row: {key: string; value: Value}) => row.key === key);
 			return (row ? row.value : undefined) as StoredData<Value | undefined>;
 		});
 	}
