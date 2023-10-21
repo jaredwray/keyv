@@ -89,9 +89,12 @@ dist
 #etcd files
 default.etcd
 
-#intellij
+#IDES
 .idea
 keyv.iml
+.vscode
+.fleet
+.sublime
 
 #vim
 *.swp
