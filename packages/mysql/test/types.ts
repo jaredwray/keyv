@@ -8,7 +8,6 @@ type MyType = {
 
 test('can specify mysql store in typescript', async t => {
 	const keyv = new Keyv({
-		// @ts-expect-error - store temporary issue
 		store: new KeyvMysql('mysql://root@localhost/keyv_test'),
 	});
 

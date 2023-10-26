@@ -1,12 +1,12 @@
 import EventEmitter from 'events';
+import {type KeyvStoreAdapter} from 'keyv';
 import {endPool, pool} from './pool';
 import {
 	type KeyvPostgresOptions,
 	type Query,
 } from './types';
-import {KeyvStoreAdapter} from "keyv";
 
-class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter{
+class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvPostgresOptions;
 	query: Query;

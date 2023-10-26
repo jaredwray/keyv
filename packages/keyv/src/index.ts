@@ -48,7 +48,7 @@ export interface Options {
 	/** The connection string URI. */
 	uri?: string;
 	/** The storage adapter instance to be used by Keyv. */
-	store?: KeyvStoreAdapter;
+	store: KeyvStoreAdapter;
 	/** Default TTL. Can be overridden by specififying a TTL on `.set()`. */
 	ttl?: number;
 	/** Enable compression option **/
@@ -75,8 +75,12 @@ const loadStore = (options: Options) => {
 	};
 	if (options.adapter ?? options.uri) {
 		const adapter = (options.adapter ?? /^[^:+]*/.exec(options.uri!)![0]) as Options['adapter'];
+		if (!adapter || !adapters[adapter]) {
+			throw new Error(`Adapter ${adapter} is not allowed`);
+		}
+
 		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		return new (require(adapters[adapter!]))(options);
+		return new (require(adapters[adapter]))(options);
 	}
 
 	return new Map();
@@ -94,13 +98,14 @@ const iterableAdapters = [
 class Keyv extends EventEmitter {
 	opts: Options;
 	iterator?: IteratorFunction;
-	constructor(uri?: string | Options, options_?: Options) {
+	constructor(uri?: string | Omit<Options, 'store'>, options_?: Omit<Options, 'store'>) {
 		super();
 		options_ = options_ ?? {};
 		const options = {
 			...((typeof uri === 'string') ? {uri} : uri),
 			...options_,
 		};
+		// @ts-expect-error - store is being added in the next step
 		this.opts = {
 			namespace: 'keyv',
 			serialize: JSONB.stringify,
@@ -120,19 +125,20 @@ class Keyv extends EventEmitter {
 			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
-		if (typeof this.opts.store?.on === 'function' && this.opts.emitErrors) {
-			this.opts.store.on('error', (error: any) => this.emit('error', error));
-		}
+		if (this.opts.store) {
+			if (typeof this.opts.store.on === 'function' && this.opts.emitErrors) {
+				this.opts.store.on('error', (error: any) => this.emit('error', error));
+			}
 
-		this.opts.store!.namespace = this.opts.namespace;
+			this.opts.store.namespace = this.opts.namespace;
 
-		// Attach iterators
-		// @ts-expect-error
-		if (typeof this.opts.store![Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
-			this.iterator = this.generateIterator((this.opts.store as unknown as IteratorFunction));
-		} else if (this.opts.store!.iterator && this.opts.store!.opts && this._checkIterableAdapter()) {
+			// Attach iterators
 			// @ts-expect-error
-			this.iterator = this.generateIterator(this.opts.store.iterator.bind(this.opts.store));
+			if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
+				this.iterator = this.generateIterator((this.opts.store as unknown as IteratorFunction));
+			} else if (this.opts.store.iterator && this.opts.store.opts && this._checkIterableAdapter()) {
+				this.iterator = this.generateIterator(this.opts.store.iterator.bind(this.opts.store));
+			}
 		}
 	}
 
@@ -159,8 +165,8 @@ class Keyv extends EventEmitter {
 	}
 
 	_checkIterableAdapter(): boolean {
-		return iterableAdapters.includes(((this.opts.store?.opts.dialect as unknown) as string))
-			|| iterableAdapters.findIndex(element => ((this.opts.store?.opts.url as unknown) as string).includes(element)) >= 0;
+		return iterableAdapters.includes((this.opts.store.opts.dialect as string))
+			|| iterableAdapters.findIndex(element => (this.opts.store.opts.url as string).includes(element)) >= 0;
 	}
 
 	_getKeyPrefix(key: string): string {
@@ -190,9 +196,9 @@ class Keyv extends EventEmitter {
 		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
 
 		if (isArray) {
-			if (store?.getMany === undefined) {
+			if (store.getMany === undefined) {
 				const promises = (keyPrefixed as string[]).map(async key => {
-					const rawData = await store!.get<Value>(key);
+					const rawData = await store.get<Value>(key);
 					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
 					if (deserializedRow === undefined || deserializedRow === null) {
@@ -239,7 +245,7 @@ class Keyv extends EventEmitter {
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
 
-		const rawData = await store!.get<Value>(keyPrefixed as string);
+		const rawData = await store.get<Value>(keyPrefixed as string);
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
@@ -275,7 +281,7 @@ class Keyv extends EventEmitter {
 		value = {value, expires};
 
 		value = await this.opts.serialize!(value);
-		await store!.set(keyPrefixed, value, ttl);
+		await store.set(keyPrefixed, value, ttl);
 
 		return true;
 	}
@@ -284,40 +290,40 @@ class Keyv extends EventEmitter {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
 			const keyPrefixed = this._getKeyPrefixArray(key);
-			if (store!.deleteMany !== undefined) {
-				return store!.deleteMany(keyPrefixed);
+			if (store.deleteMany !== undefined) {
+				return store.deleteMany(keyPrefixed);
 			}
 
-			const promises = keyPrefixed.map(async key => store!.delete(key));
+			const promises = keyPrefixed.map(async key => store.delete(key));
 
 			const results = await Promise.allSettled(promises);
 			return results.every(x => (x as PromiseFulfilledResult<any>).value === true);
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		return store!.delete(keyPrefixed);
+		return store.delete(keyPrefixed);
 	}
 
 	async clear(): Promise<void> {
 		const {store} = this.opts;
-		await store!.clear();
+		await store.clear();
 	}
 
 	async has(key: string): Promise<boolean> {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const {store} = this.opts;
-		if (typeof store!.has === 'function') {
-			return store!.has(keyPrefixed);
+		if (typeof store.has === 'function') {
+			return store.has(keyPrefixed);
 		}
 
-		const value = await store!.get(keyPrefixed);
+		const value = await store.get(keyPrefixed);
 		return value !== undefined;
 	}
 
 	async disconnect(): Promise<void> {
 		const {store} = this.opts;
-		if (typeof store!.disconnect === 'function') {
-			return store!.disconnect();
+		if (typeof store.disconnect === 'function') {
+			return store.disconnect();
 		}
 	}
 }

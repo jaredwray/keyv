@@ -53,7 +53,6 @@ const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter) => 
 	});
 
 	test('compress/decompress with main keyv', async t => {
-		// @ts-expect-error - compression
 		const keyv = new Keyv({store: new Map(), compression});
 		await keyv.set('foo', 'bar');
 		t.is(await keyv.get('foo'), 'bar');

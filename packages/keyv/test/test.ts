@@ -25,13 +25,17 @@ test.serial('Keyv is a class', t => {
 
 test.serial('Keyv accepts storage adapters', async t => {
 	const store = new Map();
-	// @ts-expect-error
 	const keyv = new Keyv({store});
 	t.is(store.size, 0);
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 	t.deepEqual(await keyv.get('foo', {raw: true}), {value: 'bar', expires: null});
 	t.is(store.size, 1);
+});
+
+test.serial('Keyv.loadStore throws error if adapter doesnt exist', t => {
+	const options = {adapter: 'nonexistent', url: 'noexistent://localhost'};
+	t.throws(() => new Keyv(options));
 });
 
 test.serial('Keyv passes tll info to stores', async t => {
@@ -45,14 +49,12 @@ test.serial('Keyv passes tll info to stores', async t => {
 		storeSet.call(store, key, value, ttl);
 	};
 
-	// @ts-expect-error
 	const keyv = new Keyv({store});
 	await keyv.set('foo', 'bar', 100);
 });
 
 test.serial('Keyv respects default tll option', async t => {
 	const store = new Map();
-	// @ts-expect-error
 	const keyv = new Keyv({store, ttl: 100});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
@@ -66,7 +68,6 @@ test.serial('.set(key, val, ttl) overwrites default tll option', async t => {
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
-	// @ts-expect-error
 	const keyv = new Keyv({store, ttl: 200});
 	await keyv.set('foo', 'bar');
 	await keyv.set('fizz', 'buzz', 100);
@@ -90,7 +91,6 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
-	// @ts-expect-error
 	const keyv = new Keyv({store, ttl: 200});
 	await keyv.set('foo', 'bar', 0);
 	t.is(await keyv.get('foo'), 'bar');
@@ -101,7 +101,6 @@ test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option 
 
 test.serial('.get(key, {raw: true}) returns the raw object instead of the value', async t => {
 	const store = new Map();
-	// @ts-expect-error
 	const keyv = new Keyv({store});
 	await keyv.set('foo', 'bar');
 	const value = await keyv.get<string>('foo');
@@ -123,7 +122,6 @@ test.serial('Keyv uses custom serializer when provided instead of json-buffer', 
 		return JSON.parse(data);
 	};
 
-	// @ts-expect-error
 	const keyv = new Keyv({store, serialize, deserialize});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
@@ -143,7 +141,6 @@ test.serial('Keyv supports async serializer/deserializer', async t => {
 		return JSON.parse(data);
 	};
 
-	// @ts-expect-error
 	const keyv = new Keyv({store, serialize, deserialize});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
@@ -201,7 +198,7 @@ test.serial('Keyv should wait for the expired get', async t => {
 
 test.serial('Keyv has should return if adapter does not support has', async t => {
 	const keyv = new Keyv({store: store()});
-	keyv.opts.store!.has = undefined;
+	keyv.opts.store.has = undefined;
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.has('foo'), true);
 	t.is(await keyv.has('fizz'), false);
@@ -343,14 +340,12 @@ test.serial('keyv.get([keys]) should return undefined array for all no existent 
 });
 
 test('pass compress options', async t => {
-	// @ts-expect-error
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvBrotli()});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
 });
 
 test('compress/decompress with gzip', async t => {
-	// @ts-expect-error
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvGzip()});
 	await keyv.set('foo', 'bar');
 	t.is(await keyv.get('foo'), 'bar');
@@ -366,7 +361,6 @@ test.serial(
 	async t => {
 		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
 
-		// @ts-expect-error
 		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -380,7 +374,6 @@ test.serial(
 
 		await Promise.all(toResolve);
 
-		// @ts-expect-error
 		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
 		const map2 = new Map(
 			Array.from({length: 5})
@@ -499,7 +492,6 @@ test.serial(
 
 		const deserialize = (data: string) => JSON.parse(data);
 
-		// @ts-expect-error
 		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})

@@ -129,7 +129,7 @@ class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 
 	async deleteMany(key: string[]) {
 		const sql = `DELETE FROM ${this.opts.table!} WHERE id IN (?)`;
-		const del = mysql.format(sql, key);
+		const del = mysql.format(sql, [key]);
 
 		const result: mysql.ResultSetHeader = await this.query(del);
 		return result.affectedRows !== 0;
