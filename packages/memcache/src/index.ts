@@ -2,12 +2,12 @@ import EventEmitter from 'node:events';
 import type {Buffer} from 'node:buffer';
 import memcache from 'memjs';
 import JSONB from 'json-buffer';
-import {Options, KeyvStoreAdapter, StoredData, type DeserializedData} from 'keyv';
+import {KeyvStoreAdapter, StoredData} from 'keyv';
 
 type KeyvMemcacheOptions = {
 	url?: string;
 	expires?: number;
-} & memcache.ClientOptions & Options;
+} & memcache.ClientOptions & Record<string, any>;
 
 class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	public ttlSupport = true;
@@ -23,6 +23,7 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		};
 
 		if (options.uri && options.url === undefined) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			options.url = options.uri;
 		}
 
@@ -55,6 +56,7 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 							expires: 0,
 						};
 					} else {
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 						value_ = (this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string)) as StoredData<Value>;
 					}
 
