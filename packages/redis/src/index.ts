@@ -1,19 +1,12 @@
 import EventEmitter from 'events';
 import Redis from 'ioredis';
+import {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
-	type ClearOutput,
-	type DeleteOutput,
-	type DisconnectOutput,
-	type GetManyOutput,
-	type GetOutput,
-	type HasOutput,
-	type IteratorOutput,
 	type KeyvRedisOptions,
 	type KeyvUriOptions,
-	type SetOutput,
 } from './types';
 
-class KeyvRedis<Value = any> extends EventEmitter {
+class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = true;
 	namespace?: string;
 	opts: Record<string, unknown>;
@@ -51,10 +44,10 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		return key;
 	};
 
-	async get(key: string): GetOutput<Value> {
+	async get<Value>(key: string): Promise<StoredData<Value> | undefined> {
 		key = this._getKeyName(key);
 
-		const value: Value = await this.redis.get(key);
+		const value = await this.redis.get(key);
 		if (value === null) {
 			return undefined;
 		}
@@ -62,12 +55,12 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		return value;
 	}
 
-	async getMany(keys: string[]): GetManyOutput<Value> {
+	async getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>> {
 		keys = keys.map(this._getKeyName);
 		return this.redis.mget(keys);
 	}
 
-	async set(key: string, value: Value, ttl?: number): SetOutput {
+	async set(key: string, value: any, ttl?: number) {
 		if (value === undefined) {
 			return undefined;
 		}
@@ -92,7 +85,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		}
 	}
 
-	async delete(key: string): DeleteOutput {
+	async delete(key: string) {
 		key = this._getKeyName(key);
 		let items = 0;
 		const unlink = async (redis: any) => redis.unlink(key);
@@ -110,14 +103,14 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		return items > 0;
 	}
 
-	async deleteMany(keys: string[]): DeleteOutput {
+	async deleteMany(keys: string[]) {
 		const deletePromises = keys.map(async key => this.delete(key));
 		const results = await Promise.allSettled(deletePromises);
 		// @ts-expect-error - results is an array of objects with status and value
 		return results.every(result => result.value);
 	}
 
-	async clear(): ClearOutput {
+	async clear() {
 		if (this.opts.useRedisSets) {
 			const keys: string[] = await this.redis.smembers(this._getNamespace());
 			if (keys.length > 0) {
@@ -133,7 +126,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		}
 	}
 
-	async * iterator(namespace?: string): IteratorOutput {
+	async * iterator(namespace?: string) {
 		const scan = this.redis.scan.bind(this.redis);
 		const get = this.redis.mget.bind(this.redis);
 		let cursor = '0';
@@ -153,12 +146,12 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		} while (cursor !== '0');
 	}
 
-	async has(key: string): HasOutput {
+	async has(key: string) {
 		const value: number = await this.redis.exists(key);
 		return value !== 0;
 	}
 
-	async disconnect(): DisconnectOutput {
+	async disconnect() {
 		return this.redis.disconnect();
 	}
 }

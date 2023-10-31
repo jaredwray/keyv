@@ -46,7 +46,7 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 		const keyv = new Keyv({store: store()});
 		const buf = Buffer.from('bar');
 		await keyv.set('foo', buf);
-		t.true(buf.equals(await keyv.get('foo')));
+		t.true(buf.equals(((await keyv.get('foo'))!)));
 	});
 
 	test.serial('value can be an object containing a buffer', async t => {
@@ -82,7 +82,6 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 	});
 
 	test.serial('value can be BigInt using other serializer/deserializer', async t => {
-		// @ts-expect-error TS doesn't know that store().opts is a KeyvStoreOpts
 		store().opts.deserialize = JSONbig.parse;
 		const keyv = new Keyv({store: store(),
 			serialize: JSONbig.stringify,

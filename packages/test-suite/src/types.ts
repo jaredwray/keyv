@@ -1,3 +1,3 @@
-import type {Store} from 'keyv';
+import type {KeyvStoreAdapter} from 'keyv';
 
-export type KeyvStoreFn = () => Store<string | undefined>;
+export type KeyvStoreFn = () => KeyvStoreAdapter;

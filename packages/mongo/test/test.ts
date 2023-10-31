@@ -1,17 +1,15 @@
 import test from 'ava';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests, keyvOfficialTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMongo from '../src/index';
 
 const options = {useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000};
-
 const mongoURL = 'mongodb://127.0.0.1:27017';
-
-keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo', options);
-
 const store = () => new KeyvMongo(mongoURL, options);
+
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
+keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo', options);
 
 test.after.always(async () => {
 	let keyv = new KeyvMongo({...options});
@@ -87,7 +85,7 @@ test.serial('Stores value in GridFS', async t => {
 	const store = new KeyvMongo({useGridFS: true, ...options});
 	const result = await store.set('key1', 'keyv1', 0);
 	const get = await store.get('key1');
-	t.is(result.filename, 'key1');
+	t.is((result as any).filename, 'key1');
 	t.is(get, 'keyv1');
 });
 
@@ -112,7 +110,7 @@ test.serial('Deletes non existent value from GridFS', async t => {
 test.serial('Stores value with TTL in GridFS', async t => {
 	const store = new KeyvMongo({useGridFS: true, ...options});
 	const result = await store.set('key1', 'keyv1', 0);
-	t.is(result.filename, 'key1');
+	t.is((result as any).filename, 'key1');
 });
 
 test.serial('Clears expired value from GridFS', async t => {
@@ -176,7 +174,7 @@ test.serial('.getMany([keys]) using GridFS should return array values', async t 
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
-	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	const values = await keyv.getMany<string>(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
 	t.is(values[0], 'bar');
 	t.is(values[1], 'bar1');
@@ -188,7 +186,7 @@ test.serial('.getMany([keys]) using GridFS should return array values with undef
 	await keyv.clearUnusedFor(0);
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo2', 'bar2');
-	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	const values = await keyv.getMany<string>(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
 	t.is(values[0], 'bar');
 	t.is(values[1], undefined);
@@ -198,7 +196,7 @@ test.serial('.getMany([keys]) using GridFS should return array values with undef
 test.serial('.getMany([keys]) using GridFS should return empty array for all no existent keys', async t => {
 	const keyv = new KeyvMongo({useGridFS: true, ...options});
 	await keyv.clearUnusedFor(0);
-	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
+	const values = await keyv.getMany<string>(['foo', 'foo1', 'foo2']);
 	t.is(Array.isArray(values), true);
 	t.deepEqual(values, [undefined, undefined, undefined]);
 });

@@ -8,11 +8,10 @@ type MyType = {
 };
 
 test('can specify etcd store in typescript', async t => {
-	// @ts-expect-error - KeyvRedis constructor is not compatible with KeyvOffline
-	const keyv = new Keyv<MyType>({
+	const keyv = new Keyv({
 		store: new KeyvOffline(new KeyvRedis('redis://localhost')),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get('testkey'), {a: 'testvalue'});
+	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
 });

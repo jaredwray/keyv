@@ -1,7 +1,7 @@
 import EventEmitter from 'node:events';
-import type {Store, StoredData} from 'keyv';
+import type {KeyvStoreAdapter} from 'keyv';
 
-class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
+class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 	proxy: any;
 	opts: any;
 	namespace: any;
@@ -14,8 +14,7 @@ class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 					{
 						return async (...args: any) => {
 							try {
-								const value = await keyv.get(...args);
-								return value;
+								return await keyv.get(...args);
 							} catch {
 								return undefined;
 							}
@@ -26,8 +25,7 @@ class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 					{
 						return async (...args: any) => {
 							try {
-								const value = await keyv.getMany(...args);
-								return value;
+								return await keyv.getMany(...args);
 							} catch {
 								return false;
 							}
@@ -38,8 +36,7 @@ class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 					{
 						return async (...args: any) => {
 							try {
-								const value = await keyv.set(...args);
-								return value;
+								return await keyv.set(...args);
 							} catch {
 								return false;
 							}
@@ -50,8 +47,7 @@ class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 					{
 						return async (...args: any) => {
 							try {
-								const value = await keyv.clear(...args);
-								return value;
+								return await keyv.clear(...args);
 							} catch {
 								return false;
 							}
@@ -62,8 +58,7 @@ class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 					{
 						return async (...args: any) => {
 							try {
-								const value = await keyv.delete(...args);
-								return value;
+								return await keyv.delete(...args);
 							} catch {
 								return false;
 							}
@@ -74,8 +69,7 @@ class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 					{
 						return async (...args: any) => {
 							try {
-								const value = await keyv.has(...args);
-								return value;
+								return await keyv.has(...args);
 							} catch {
 								return false;
 							}
@@ -101,32 +95,32 @@ class KeyvOffline<Value=any> extends EventEmitter implements Store<Value> {
 		return this.proxy.set(key, value, ttl);
 	}
 
-	get(key: string): Value {
+	get(key: string) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.get(key);
 	}
 
-	getMany(keys: string[]): Array<StoredData<Value>> | Promise<Array<StoredData<Value>>> | undefined {
+	getMany(keys: string[]) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.getMany(keys);
 	}
 
-	delete(key: string): boolean {
+	delete(key: string) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.delete(key);
 	}
 
-	deleteMany(key: string[]): boolean {
+	deleteMany(key: string[]) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.deleteMany(key);
 	}
 
-	clear(): void {
+	clear() {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.clear();
 	}
 
-	has(key: string): boolean {
+	has(key: string) {
 		this.proxy.namespace = this.namespace;
 		return this.proxy.has(key);
 	}

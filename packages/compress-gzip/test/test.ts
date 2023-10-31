@@ -3,6 +3,7 @@ import test from 'ava';
 import {keyvCompresstionTests} from '@keyv/test-suite';
 import KeyvGzip from '../src/index';
 
+// @ts-expect-error - KeyvGzip type
 keyvCompresstionTests(test, new KeyvGzip());
 
 test('object type compression/decompression', async t => {

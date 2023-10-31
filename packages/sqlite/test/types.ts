@@ -7,10 +7,10 @@ type MyType = {
 };
 
 test('can specify sqlite store in typescript', async t => {
-	const keyv = new Keyv<MyType>({
+	const keyv = new Keyv({
 		store: new KeyvSqlite('sqlite://test/testdb.sqlite'),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get('testkey'), {a: 'testvalue'});
+	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
 });

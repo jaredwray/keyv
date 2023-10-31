@@ -29,7 +29,8 @@
 			"@typescript-eslint/no-unsafe-assignment": 0,
 			"@typescript-eslint/no-unsafe-call": 0,
 			"@typescript-eslint/no-unsafe-return": 0,
-			"@typescript-eslint/await-thenable": 0
+			"@typescript-eslint/await-thenable": 0,
+			"@typescript-eslint/return-await": "off"
 		}
 	},
 	"ava": {
@@ -65,8 +66,6 @@
 	"devDependencies": {
 		"@keyv/redis": "*",
 		"@keyv/test-suite": "*",
-		"@types/keyv": "^3.1.4",
-		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",

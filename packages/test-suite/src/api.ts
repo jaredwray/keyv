@@ -1,6 +1,7 @@
 import tk from 'timekeeper';
 import type {TestFn} from 'ava';
 import type KeyvModule from 'keyv';
+import {type KeyvStoreAdapter} from 'keyv';
 import type {KeyvStoreFn} from './types';
 
 const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
@@ -58,7 +59,7 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 		await keyv.set('foo', 'bar', ttl);
 		await keyv.set('foo1', 'bar1', ttl);
 		await keyv.set('foo2', 'bar2', ttl);
-		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		const values = await keyv.get(['foo', 'foo1', 'foo2']) as string[];
 		t.is(Array.isArray(values), true);
 		t.is(values[0], 'bar');
 		t.is(values[1], 'bar1');
@@ -66,7 +67,7 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 	});
 
 	test.serial('.get([keys]) should return array value undefined when expires', async t => {
-		const keyv = new Keyv({store: new Map()});
+		const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
 		await keyv.set('foo', 'bar');
 		await keyv.set('foo1', 'bar1', 1);
 		await keyv.set('foo2', 'bar2');
@@ -88,7 +89,7 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 		const ttl = 3000;
 		await keyv.set('foo', 'bar', ttl);
 		await keyv.set('foo2', 'bar2', ttl);
-		const values = await keyv.get(['foo', 'foo1', 'foo2']);
+		const values = await keyv.get(['foo', 'foo1', 'foo2']) as string[] | undefined[];
 		t.is(Array.isArray(values), true);
 		t.is(values[0], 'bar');
 		t.is(values[1], undefined);
