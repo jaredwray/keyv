@@ -15,6 +15,8 @@
     "test": " yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
+    "test:services-arm64:start": "docker-compose -f ./docker-compose-arm64.yaml up -d",
+    "test:services-arm64:stop": "docker-compose -f ./docker-compose-arm64.yaml down -v",
     "website:build": "yarn workspace @keyv/website run build",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
