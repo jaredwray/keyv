@@ -13,6 +13,23 @@ export interface CompressionAdapter {
 	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
 }
 
+export enum KeyvHooks {
+	PRE_SET = 'preSet',
+	POST_SET = 'postSet',
+	PRE_SET_MANY = 'preSetMany',
+	POST_SET_MANY = 'postSetMany',
+	PRE_GET = 'preGet',
+	POST_GET = 'postGet',
+	PRE_GET_MANY = 'preGetMany',
+	POST_GET_MANY = 'postGetMany',
+	PRE_DELETE = 'preDelete',
+	POST_DELETE = 'postDelete',
+	PRE_CLEAR = 'preClear',
+	POST_CLEAR = 'postClear',
+}
+
+type KeyvHookFunction = (key: string, value: any, ttl?: number) => Promise<void>;
+
 export type StoredDataNoRaw<Value> = Value | undefined;
 
 export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
@@ -98,6 +115,7 @@ const iterableAdapters = [
 class Keyv extends EventEmitter {
 	opts: Options;
 	iterator?: IteratorFunction;
+	hooks = new Map<KeyvHooks, (KeyvHookFunction)[]>();
 	constructor(uri?: string | Omit<Options, 'store'>, options_?: Omit<Options, 'store'>) {
 		super();
 		options_ = options_ ?? {};
@@ -319,6 +337,29 @@ class Keyv extends EventEmitter {
 		const {store} = this.opts;
 		if (typeof store.disconnect === 'function') {
 			return store.disconnect();
+		}
+	}
+
+	setHook(hook: KeyvHooks, fn: KeyvHookFunction): void {
+		const hooks = this.hooks.get(hook) ?? [];
+		hooks.push(fn);
+		this.hooks.set(hook, hooks);
+	}
+
+	deleteHook(hook: KeyvHooks, fn: KeyvHookFunction): void {
+		const hooks = this.hooks.get(hook) ?? [];
+		const index = hooks.indexOf(fn);
+		if (index > -1) {
+			hooks.splice(index, 1);
+		}
+
+		this.hooks.set(hook, hooks);
+	}
+
+	async _runHooks(hook: KeyvHooks, key: string, value: Record<string, unknown>, ttl?: number): Promise<void> {
+		const hooks = this.hooks.get(hook) ?? [];
+		for (const fn of hooks) {
+			await fn(key, value, ttl);
 		}
 	}
 }
