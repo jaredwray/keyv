@@ -312,7 +312,7 @@ class Keyv extends EventEmitter {
 	async has(key: string): Promise<boolean> {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const {store} = this.opts;
-		return typeof store.has === 'function' ? store.has(keyPrefixed) : (await store.get(keyPrefixed)) !== undefined;
+		return typeof store.has === 'function' ? (await this.get(key)) !== undefined : (await store.get(keyPrefixed)) !== undefined;
 	}
 
 	async disconnect(): Promise<void> {
