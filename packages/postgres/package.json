@@ -68,7 +68,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"@types/pg": "^8.10.2",
+		"@types/pg": "^8.10.9",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"tsd": "^0.29.0"
