@@ -61,7 +61,7 @@
     "@keyv/test-suite": "*",
     "ava": "^5.3.1",
     "c8": "^8.0.1",
-    "eslint": "^8.49.0",
+    "eslint": "^8.54.0",
     "keyv": "*",
     "requirable": "^1.0.5",
     "ts-node": "^10.9.1",
