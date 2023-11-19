@@ -21,7 +21,7 @@
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
   "dependencies": {
-    "@types/node": "^20.9.0",
+    "@types/node": "^20.9.2",
     "webpack": "^5.89.0"
   },
   "devDependencies": {
