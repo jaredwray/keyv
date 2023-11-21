@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/postgres",
-	"version": "1.4.8",
+	"version": "1.4.9",
 	"description": "PostgreSQL storage adapter for Keyv",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -64,14 +64,14 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.11.1"
+		"pg": "8.11.3"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"@types/pg": "^8.10.2",
+		"@types/pg": "^8.10.9",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"tsd": "^0.28.1"
+		"tsd": "^0.29.0"
 	},
 	"tsd": {
 		"directory": "test"

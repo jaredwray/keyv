@@ -7,10 +7,10 @@ type MyType = {
 };
 
 test('can specify postgres store in typescript', async t => {
-	const keyv = new Keyv<MyType>({
+	const keyv = new Keyv({
 		store: new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test'}),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get('testkey'), {a: 'testvalue'});
+	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
 });

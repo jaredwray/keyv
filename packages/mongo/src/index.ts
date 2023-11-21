@@ -2,22 +2,16 @@ import EventEmitter from 'events';
 import {Buffer} from 'buffer';
 import {MongoClient as mongoClient, GridFSBucket, type WithId, type Document} from 'mongodb';
 import pify from 'pify';
-import {type StoredData} from 'keyv';
+import {KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
-	type ClearExpiredOutput,
-	type ClearOutput,
-	type ClearUnusedForOutput, type DeleteManyOutput,
-	type DeleteOutput,
-	type GetManyOutput,
-	type GetOutput, type HasOutput,
 	type KeyvMongoConnect,
 	type KeyvMongoOptions,
 	type Options,
-	type PifyFunction, type SetOutput,
+	type PifyFunction,
 } from './types';
 
 const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect']);
-class KeyvMongo<Value = any> extends EventEmitter {
+class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = false;
 	opts: Options;
 	connect: Promise<KeyvMongoConnect>;
@@ -41,6 +35,8 @@ class KeyvMongo<Value = any> extends EventEmitter {
 			...options,
 		};
 
+		delete this.opts.emitErrors;
+
 		const mongoOptions = Object.fromEntries(
 			Object.entries(this.opts).filter(
 				([k]) => !keyvMongoKeys.has(k),
@@ -55,83 +51,88 @@ class KeyvMongo<Value = any> extends EventEmitter {
 
 		// Implementation from sql by lukechilds,
 		this.connect = new Promise(resolve => {
-			mongoClient.connect(this.opts.url!, mongoOptions, (error, client) => {
-				if (error) {
-					return this.emit('error', error);
-				}
-
-				const db = client!.db(this.opts.db);
-
-				if (this.opts.useGridFS) {
-					const bucket = new GridFSBucket(db, {
-						readPreference: this.opts.readPreference,
-						bucketName: this.opts.collection,
-					});
-					const store = db.collection(`${this.opts.collection!}.files`);
-					store.createIndex({
-						uploadDate: -1,
-					});
-					store.createIndex({
-						'metadata.expiresAt': 1,
-					});
-					store.createIndex({
-						'metadata.lastAccessed': 1,
-					});
-
-					for (const method of [
-						'updateOne',
-						'count',
-					]) {
-						// @ts-expect-error - method needs to be a string
-						store[method] = pify(store[method].bind(store) as PifyFunction);
+			mongoClient.connect(this.opts.url!, mongoOptions, async (error, client) => {
+				try {
+					if (error) {
+						this.emit('error', error);
 					}
 
-					for (const method of [
-						'find',
-						'drop',
-					]) {
-						// @ts-expect-error - method needs to be a string
-						bucket[method] = pify(bucket[method].bind(bucket) as PifyFunction);
+					const db = client!.db(this.opts.db);
+
+					if (this.opts.useGridFS) {
+						const bucket = new GridFSBucket(db, {
+							readPreference: this.opts.readPreference,
+							bucketName: this.opts.collection,
+						});
+						const store = db.collection(`${this.opts.collection!}.files`);
+						await store.createIndex({
+							uploadDate: -1,
+						});
+						await store.createIndex({
+							'metadata.expiresAt': 1,
+						});
+						await store.createIndex({
+							'metadata.lastAccessed': 1,
+						});
+
+						for (const method of [
+							'updateOne',
+							'count',
+						]) {
+							// @ts-expect-error - method needs to be a string
+							store[method] = pify(store[method].bind(store) as PifyFunction);
+						}
+
+						for (const method of [
+							'find',
+							'drop',
+						]) {
+							// @ts-expect-error - method needs to be a string
+							bucket[method] = pify(bucket[method].bind(bucket) as PifyFunction);
+						}
+
+						resolve({bucket, store, db});
+					} else {
+						const store = db.collection(this.opts.collection!);
+						await store.createIndex(
+							{key: 1},
+							{
+								unique: true,
+								background: true,
+							},
+						);
+						await store.createIndex(
+							{expiresAt: 1},
+							{
+								expireAfterSeconds: 0,
+								background: true,
+							},
+						);
+
+						for (const method of [
+							'updateOne',
+							'findOne',
+							'deleteOne',
+							'deleteMany',
+							'count',
+						]) {
+							// @ts-expect-error - method needs to be a string
+							store[method] = pify(store[method].bind(store) as PifyFunction);
+						}
+
+						resolve({store});
 					}
-
-					resolve({bucket, store, db});
-				} else {
-					const store = db.collection(this.opts.collection!);
-					store.createIndex(
-						{key: 1},
-						{
-							unique: true,
-							background: true,
-						},
-					);
-					store.createIndex(
-						{expiresAt: 1},
-						{
-							expireAfterSeconds: 0,
-							background: true,
-						},
-					);
-
-					for (const method of [
-						'updateOne',
-						'findOne',
-						'deleteOne',
-						'deleteMany',
-						'count',
-					]) {
-						// @ts-expect-error - method needs to be a string
-						store[method] = pify(store[method].bind(store) as PifyFunction);
-					}
-
-					resolve({store});
+				} catch (error: unknown) {
+					this.emit('error', error);
 				}
 			});
 		});
 	}
 
-	async get(key: string): GetOutput<Value> {
+	async get<Value>(key: string): Promise<StoredData<Value>> {
+		const client = await this.connect;
+
 		if (this.opts.useGridFS) {
-			const client = await this.connect;
 			await client.store.updateOne({
 				filename: key,
 			}, {
@@ -150,7 +151,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 
 				stream.on('end', () => {
 					const data = Buffer.concat(resp).toString('utf8');
-					resolve(data as Value);
+					resolve(data as StoredData<Value>);
 				});
 
 				stream.on('data', chunk => {
@@ -159,17 +160,16 @@ class KeyvMongo<Value = any> extends EventEmitter {
 			});
 		}
 
-		const connect = await this.connect;
-		const doc = await connect.store.findOne({key: {$eq: key}});
+		const doc = await client.store.findOne({key: {$eq: key}});
 
 		if (!doc) {
 			return undefined;
 		}
 
-		return doc.value as Value;
+		return doc.value as StoredData<Value>;
 	}
 
-	async getMany(keys: string[]): GetManyOutput<Value> {
+	async getMany<Value>(keys: string[]) {
 		if (this.opts.useGridFS) {
 			const promises = [];
 			for (const key of keys) {
@@ -193,20 +193,21 @@ class KeyvMongo<Value = any> extends EventEmitter {
 			.project({_id: 0, value: 1, key: 1})
 			.toArray();
 
-		const results: Array<StoredData<Value>> = [...keys];
+		const results = [...keys];
 		let i = 0;
 		for (const key of keys) {
 			const rowIndex = values.findIndex((row: {key: string; value: unknown}) => row.key === key);
 
+			// @ts-expect-error - results type
 			results[i] = rowIndex > -1 ? values[rowIndex].value : undefined;
 
 			i++;
 		}
 
-		return results;
+		return results as Array<StoredData<Value>>;
 	}
 
-	async set(key: string, value: Value, ttl?: number): SetOutput {
+	async set(key: string, value: any, ttl?: number) {
 		const expiresAt = typeof ttl === 'number' ? new Date(Date.now() + ttl) : null;
 
 		if (this.opts.useGridFS) {
@@ -222,7 +223,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 				stream.on('finish', () => {
 					resolve(stream);
 				});
-				stream.end(value as any);
+				stream.end(value);
 			});
 		}
 
@@ -234,7 +235,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 		);
 	}
 
-	async delete(key: string): DeleteOutput {
+	async delete(key: string) {
 		if (typeof key !== 'string') {
 			return false;
 		}
@@ -259,7 +260,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 		return object.deletedCount > 0;
 	}
 
-	async deleteMany(keys: string[]): DeleteManyOutput {
+	async deleteMany(keys: string[]) {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
 			const connection = client.db!;
@@ -279,7 +280,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 		return object.deletedCount > 0;
 	}
 
-	async clear(): ClearOutput {
+	async clear() {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
 			await client.bucket!.drop();
@@ -290,7 +291,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 		});
 	}
 
-	async clearExpired(): ClearExpiredOutput {
+	async clearExpired(): Promise<boolean> {
 		if (!this.opts.useGridFS) {
 			return false;
 		}
@@ -310,7 +311,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 		});
 	}
 
-	async clearUnusedFor(seconds: number): ClearUnusedForOutput {
+	async clearUnusedFor(seconds: number): Promise<boolean> {
 		if (!this.opts.useGridFS) {
 			return false;
 		}
@@ -342,7 +343,7 @@ class KeyvMongo<Value = any> extends EventEmitter {
 		yield * iterator;
 	}
 
-	async has(key: string): HasOutput {
+	async has(key: string) {
 		const client = await this.connect;
 		const filter = {[this.opts.useGridFS ? 'filename' : 'key']: {$eq: key}};
 		const doc = await client.store.count(filter);

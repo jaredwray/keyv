@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/etcd",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"description": "Etcd storage adapter for Keyv",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -56,20 +56,19 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"cockatiel": "^3.1.1",
-		"etcd3": "^1.1.0"
+		"etcd3": "^1.1.2"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"ava": "^5.3.1",
-		"c8": "^8.0.0",
+		"c8": "^8.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
-		"tsd": "^0.28.1",
-		"typescript": "^5.1.6",
-		"webpack": "^5.88.1",
-		"xo": "^0.55.0"
+		"tsd": "^0.29.0",
+		"typescript": "^5.2.2",
+		"webpack": "^5.89.0",
+		"xo": "^0.56.0"
 	},
 	"tsd": {
 		"directory": "test"

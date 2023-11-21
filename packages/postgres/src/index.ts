@@ -1,33 +1,24 @@
 import EventEmitter from 'events';
-import Keyv from 'keyv';
+import {type KeyvStoreAdapter} from 'keyv';
 import {endPool, pool} from './pool';
 import {
-	type ClearOutput,
-	type DeleteManyOutput,
-	type DeleteOutput,
-	type DisconnectOutput,
-	type GetManyOutput,
-	type GetOutput,
-	type HasOutput,
-	type IteratorOutput,
 	type KeyvPostgresOptions,
 	type Query,
-	type SetOutput,
 } from './types';
 
-class KeyvPostgres<Value = any> extends EventEmitter {
+class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvPostgresOptions;
 	query: Query;
 	namespace?: string;
-	constructor(options: KeyvPostgresOptions) {
+	constructor(options?: KeyvPostgresOptions) {
 		super();
 		this.ttlSupport = false;
 		options = {dialect: 'postgres',
 			uri: 'postgresql://localhost:5432', ...options};
 
 		const connect = async () => {
-			const conn = pool(options.uri!, options);
+			const conn = pool(options!.uri!, options);
 			return async (sql: string, values?: any) => {
 				const data = await conn.query(sql, values);
 				return data.rows;
@@ -58,7 +49,7 @@ class KeyvPostgres<Value = any> extends EventEmitter {
 			.then(query => query(sqlString, values));
 	}
 
-	async get(key: string): GetOutput<Value> {
+	async get(key: string) {
 		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -66,7 +57,7 @@ class KeyvPostgres<Value = any> extends EventEmitter {
 		return row === undefined ? undefined : row.value;
 	}
 
-	async getMany(keys: string[]): GetManyOutput<Value> {
+	async getMany(keys: string[]) {
 		const getMany = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
 		const rows = await this.query(getMany, [keys]);
 		const results = [];
@@ -79,7 +70,7 @@ class KeyvPostgres<Value = any> extends EventEmitter {
 		return results;
 	}
 
-	async set(key: string, value: Value): SetOutput {
+	async set(key: string, value: any) {
 		const upsert = `INSERT INTO ${this.opts.schema!}.${this.opts.table!} (key, value)
       VALUES($1, $2) 
       ON CONFLICT(key) 
@@ -87,7 +78,7 @@ class KeyvPostgres<Value = any> extends EventEmitter {
 		await this.query(upsert, [key, value]);
 	}
 
-	async delete(key: string): DeleteOutput {
+	async delete(key: string) {
 		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
 		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
@@ -100,7 +91,7 @@ class KeyvPostgres<Value = any> extends EventEmitter {
 		return true;
 	}
 
-	async deleteMany(keys: string[]): DeleteManyOutput {
+	async deleteMany(keys: string[]) {
 		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
 		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
@@ -113,12 +104,12 @@ class KeyvPostgres<Value = any> extends EventEmitter {
 		return true;
 	}
 
-	async clear(): ClearOutput {
+	async clear() {
 		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key LIKE $1`;
 		await this.query(del, [this.namespace ? `${this.namespace}:%` : '%']);
 	}
 
-	async * iterator(namespace?: string): IteratorOutput {
+	async * iterator(namespace?: string) {
 		const limit = Number.parseInt(String(this.opts.iterationLimit!), 10) || 10;
 		// @ts-expect-error - iterate
 		async function * iterate(offset: number, options: KeyvPostgresOptions, query: Query) {
@@ -139,13 +130,13 @@ class KeyvPostgres<Value = any> extends EventEmitter {
 		yield * iterate(0, this.opts, this.query);
 	}
 
-	async has(key: string): HasOutput {
+	async has(key: string) {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1 )`;
 		const rows = await this.query(exists, [key]);
 		return rows[0].exists;
 	}
 
-	async disconnect(): DisconnectOutput {
+	async disconnect() {
 		await endPool();
 	}
 }

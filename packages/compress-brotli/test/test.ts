@@ -9,6 +9,7 @@ import type {DeserializeResult} from '../src/types';
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const {BROTLI_PARAM_MODE, BROTLI_PARAM_QUALITY} = zlibConstants;
 
+// @ts-expect-error - KeyvBrotli type
 keyvCompresstionTests(test, new KeyvBrotli());
 
 test('object type compression/decompression', async t => {

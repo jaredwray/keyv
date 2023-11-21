@@ -1,12 +1,13 @@
 {
 	"name": "keyv",
-	"version": "4.5.3",
+	"version": "4.5.4",
 	"description": "Simple key-value storage with support for multiple backends",
-	"main": "src/index.js",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "echo 'No build step required.'",
+		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo && c8 ava --serial",
+		"test": "c8 ava --serial",
 		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
 	},
@@ -16,7 +17,21 @@
 			"unicorn/prefer-node-protocol": 0,
 			"@typescript-eslint/consistent-type-definitions": 0,
 			"unicorn/no-typeof-undefined": 0,
-			"unicorn/prefer-event-target": 0
+			"unicorn/prefer-event-target": 0,
+			"import/no-extraneous-dependencies": "off",
+			"import/extensions": "off",
+			"@typescript-eslint/ban-ts-comment": "off",
+			"@typescript-eslint/no-unsafe-call": "off",
+			"@typescript-eslint/no-for-in-array": "off",
+			"guard-for-in": "off",
+			"no-await-in-loop": "off",
+			"@typescript-eslint/no-unsafe-return": "off",
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-unsafe-argument": "off",
+			"@typescript-eslint/naming-convention": "off",
+			"@typescript-eslint/consistent-type-assertions": "off",
+			"@typescript-eslint/no-confusing-void-expression": "off",
+			"@typescript-eslint/no-var-requires": "off"
 		}
 	},
 	"repository": {
@@ -41,17 +56,25 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"eslint": "^8.42.0",
 		"eslint-plugin-promise": "^6.1.1",
 		"pify": "^5.0.0",
-		"timekeeper": "^2.2.0",
-		"tsd": "^0.28.1"
+		"timekeeper": "^2.3.1",
+		"tsd": "^0.29.0"
+	},
+	"ava": {
+		"require": [
+			"requirable",
+			"ts-node/register"
+		],
+		"extensions": [
+			"js",
+			"ts"
+		]
 	},
 	"tsd": {
 		"directory": "test"
 	},
-	"types": "./src/index.d.ts",
 	"files": [
-		"src"
+		"dist"
 	]
 }

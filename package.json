@@ -10,22 +10,25 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspaces run build",
+    "build:keyv": "cd packages/keyv && yarn build",
+    "build": "yarn build:keyv && yarn workspaces run build",
     "test": " yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
+    "test:services-arm64:start": "docker-compose -f ./docker-compose-arm64.yaml up -d",
+    "test:services-arm64:stop": "docker-compose -f ./docker-compose-arm64.yaml down -v",
     "website:build": "yarn workspace @keyv/website run build",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
   "dependencies": {
-    "@types/node": "^20.4.2",
-    "webpack": "^5.88.1"
+    "@types/node": "^20.9.2",
+    "webpack": "^5.89.0"
   },
   "devDependencies": {
     "ava": "^5.3.1",
-    "c8": "^8.0.0",
-    "xo": "^0.55.0",
+    "c8": "^8.0.1",
+    "xo": "^0.56.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.2.2"
   }
 }

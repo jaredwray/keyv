@@ -1,7 +1,6 @@
 import {Buffer} from 'buffer';
 import type {TestFn} from 'ava';
 import type KeyvModule from 'keyv';
-import type bigNumber from 'bignumber.js';
 import JSONbig from 'json-bigint';
 import {BigNumber} from 'bignumber.js';
 import type {KeyvStoreFn} from './types';
@@ -47,7 +46,7 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 		const keyv = new Keyv({store: store()});
 		const buf = Buffer.from('bar');
 		await keyv.set('foo', buf);
-		t.true(buf.equals(await keyv.get('foo')));
+		t.true(buf.equals(((await keyv.get('foo'))!)));
 	});
 
 	test.serial('value can be an object containing a buffer', async t => {
@@ -83,12 +82,11 @@ const keyvValueTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreF
 	});
 
 	test.serial('value can be BigInt using other serializer/deserializer', async t => {
-		// @ts-expect-error TS doesn't know that store().opts is a KeyvStoreOpts
 		store().opts.deserialize = JSONbig.parse;
 		const keyv = new Keyv({store: store(),
 			serialize: JSONbig.stringify,
 			deserialize: JSONbig.parse});
-		const value = BigInt('9223372036854775807') as unknown as bigNumber.Value;
+		const value = BigInt('9223372036854775807') as unknown as BigNumber.Value;
 		await keyv.set('foo', value);
 		// eslint-disable-next-line new-cap
 		t.deepEqual(await keyv.get('foo'), BigNumber(value));

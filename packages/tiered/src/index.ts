@@ -108,9 +108,8 @@ class KeyvTiered extends EventEmitter {
 	}
 
 	async * iterator(namespace?: string): AsyncGenerator<any, void, any> {
-		const limit = Number.parseInt(this.iterationLimit as string, 10) || 10;
-		this.remote.opts.iterationLimit = limit;
-		for await (const entries of this.remote.iterator(namespace)) {
+		this.remote.opts.iterationLimit = Number.parseInt(this.iterationLimit as string, 10) || 10;
+		for await (const entries of this.remote.iterator!(namespace)) {
 			yield entries;
 		}
 	}

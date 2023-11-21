@@ -59,18 +59,18 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "@types/pako": "^2.0.0",
+    "@types/pako": "^2.0.1",
     "json-buffer": "^3.0.1",
     "pako": "^2.1.0"
   },
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
     "@keyv/test-suite": "*",
-    "@typescript-eslint/parser": "^5.60.1",
-    "eslint": "^8.44.0",
+    "@typescript-eslint/parser": "^6.7.4",
+    "eslint": "^8.51.0",
     "keyv": "*",
     "requirable": "^1.0.5",
-    "tsd": "^0.28.1"
+    "tsd": "^0.29.0"
   },
   "tsd": {
     "directory": "test"

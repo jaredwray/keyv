@@ -1,22 +1,20 @@
 import EventEmitter from 'node:events';
-import type{Buffer} from 'node:buffer';
+import type {Buffer} from 'node:buffer';
 import memcache from 'memjs';
 import JSONB from 'json-buffer';
-import Keyv, {Store, StoredData} from 'keyv';
+import {KeyvStoreAdapter, StoredData} from 'keyv';
 
-type GetOutput<Value> = Value | Promise<Value | undefined> | undefined;
-
-type KeyvMemcacheOptions<Value> = {
+type KeyvMemcacheOptions = {
 	url?: string;
 	expires?: number;
-} & memcache.ClientOptions & Keyv.Options<Value>;
+} & memcache.ClientOptions & Record<string, any>;
 
-class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
+class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	public ttlSupport = true;
 	public namespace?: string;
 	public client: memcache.Client;
-	public opts: KeyvMemcacheOptions<Value>;
-	constructor(uri?: string, options?: KeyvMemcacheOptions<Value>) {
+	public opts: KeyvMemcacheOptions;
+	constructor(uri?: string, options?: KeyvMemcacheOptions) {
 		super();
 
 		options = {
@@ -25,6 +23,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		};
 
 		if (options.uri && options.url === undefined) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			options.url = options.uri;
 		}
 
@@ -43,22 +42,22 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		return `namespace:${this.namespace!}`;
 	}
 
-	get(key: string): GetOutput<Value> {
+	async get<Value>(key: string): Promise<StoredData<Value>> {
 		return new Promise((resolve, reject) => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
 					this.emit('error', error);
 					reject(error);
 				} else {
-					let value_;
+					let value_: StoredData<Value>;
 					if (value === null) {
 						value_ = {
-							// @ts-expect-error - value is an object
 							value: undefined,
 							expires: 0,
 						};
 					} else {
-						value_ = this.opts.deserialize ? this.opts.deserialize(value as unknown as string) as GetOutput<Value> : JSONB.parse(value as unknown as string) as GetOutput<Value>;
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+						value_ = (this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string)) as StoredData<Value>;
 					}
 
 					resolve(value_);
@@ -67,7 +66,7 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 		});
 	}
 
-	async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
+	async getMany<Value>(keys: string[]) {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
@@ -85,8 +84,8 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 			});
 	}
 
-	async set(key: string, value: Value, ttl: number) {
-		const options: KeyvMemcacheOptions<Value> = {};
+	async set(key: string, value: any, ttl?: number) {
+		const options: KeyvMemcacheOptions = {};
 
 		if (ttl !== undefined) {
 			// eslint-disable-next-line no-multi-assign
@@ -112,21 +111,17 @@ class KeyvMemcache<Value = any> extends EventEmitter implements Store<Value> {
 					this.emit('error', error);
 					reject(error);
 				} else {
-					resolve(success!);
+					resolve(Boolean(success));
 				}
 			});
 		});
 	}
 
-	async deleteMany(keys: string[]): Promise<boolean> {
-		const promises = [];
-		for (const key of keys) {
-			promises.push(this.delete(key));
-		}
-
-		return Promise.allSettled(promises)
-			// @ts-expect-error - x is an object
-			.then(values => values.every(x => x.value === true));
+	async deleteMany(keys: string[]) {
+		const promises = keys.map(async key => this.delete(key));
+		const results = await Promise.allSettled(promises);
+		// @ts-expect-error - x is an object
+		return results.every(x => x.value === true);
 	}
 
 	async clear(): Promise<void> {

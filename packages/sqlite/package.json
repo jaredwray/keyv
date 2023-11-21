@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/sqlite",
-	"version": "3.6.5",
+	"version": "3.6.6",
 	"description": "SQLite storage adapter for Keyv",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -65,15 +65,14 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pify": "^5.0.0",
 		"sqlite3": "^5.1.6"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "^1.9.2",
+		"@keyv/test-suite": "*",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
-		"tsd": "^0.28.1"
+		"tsd": "^0.29.0"
 	},
 	"tsd": {
 		"directory": "test"

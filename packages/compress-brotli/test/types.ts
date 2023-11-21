@@ -1,7 +1,7 @@
 import zlib from 'node:zlib';
 import v8 from 'node:v8';
 import test from 'ava';
-import Keyv from 'keyv';
+import Keyv, {type KeyvStoreAdapter} from 'keyv';
 import json from 'json-buffer';
 import KeyvBrotli from '../src/index';
 
@@ -11,13 +11,13 @@ type MyType = {
 };
 
 test('default options', async t => {
-	const keyv = new Keyv<MyType>({
-		store: new Map(),
+	const keyv = new Keyv({
+		store: new Map() as unknown as KeyvStoreAdapter,
 		compression: new KeyvBrotli(),
 	});
 
 	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get('testkey'), {a: 'testvalue'});
+	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
 });
 
 test('compression user defined options', async t => {
@@ -30,8 +30,8 @@ test('compression user defined options', async t => {
 		},
 	};
 
-	const keyv = new Keyv<MyType>({
-		store: new Map(),
+	const keyv = new Keyv({
+		store: new Map() as unknown as KeyvStoreAdapter,
 		compression: new KeyvBrotli(options),
 	});
 
@@ -49,8 +49,8 @@ test('user defined options', async t => {
 		},
 	};
 
-	const keyv = new Keyv<MyType>({
-		store: new Map(),
+	const keyv = new Keyv({
+		store: new Map() as unknown as KeyvStoreAdapter,
 		compression: new KeyvBrotli(options),
 	});
 
@@ -70,9 +70,9 @@ test('using number array with v8', async t => {
 		deserialize: v8.deserialize,
 	};
 
-	const map = new Map();
+	const map = new Map() as unknown as KeyvStoreAdapter;
 
-	const keyv = new Keyv<MyType>({
+	const keyv = new Keyv({
 		store: map,
 		compression: new KeyvBrotli(options),
 	});
@@ -87,9 +87,9 @@ test('decompression using number array with json-buffer', async t => {
 		deserialize: json.parse,
 	};
 
-	const map = new Map();
+	const map = new Map() as unknown as KeyvStoreAdapter;
 
-	const keyv = new Keyv<MyType>({
+	const keyv = new Keyv({
 		store: map,
 		compression: new KeyvBrotli(options),
 	});
