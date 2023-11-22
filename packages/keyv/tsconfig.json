@@ -23,7 +23,7 @@
         /* Completeness */
         "skipLibCheck": true,                     /* Skip type checking all .d.ts files. */
         "lib": [
-            "es2016"
+            "es2016", "DOM"
         ]
     }
 }
