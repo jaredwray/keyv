@@ -1,7 +1,7 @@
 import test from 'ava';
-import {HooksManager} from '../src/hooks-manager';
+import HooksManager from '../src/hooks-manager';
 
-test('HooksManager: add and trigger handler', t => {
+test('add and trigger handler', t => {
 	const hooksManager = new HooksManager();
 	let testData = 'foo';
 
@@ -13,7 +13,7 @@ test('HooksManager: add and trigger handler', t => {
 	t.is(testData, 'testData');
 });
 
-test('HooksManager: remove handler', t => {
+test('remove handler', t => {
 	const hooksManager = new HooksManager();
 	let testData = 0;
 
@@ -29,7 +29,7 @@ test('HooksManager: remove handler', t => {
 	t.is(testData, 1);
 });
 
-test('HooksManager: handlers getter', t => {
+test('handlers getter', t => {
 	const hooksManager = new HooksManager();
 	const testData = 0;
 	hooksManager.addHandler('testEvent', (data: number) => {
@@ -40,7 +40,7 @@ test('HooksManager: handlers getter', t => {
 	t.is(hooksManager.handlers.get('testEvent')?.length, 1);
 });
 
-test('HooksManager: emit an error', t => {
+test('emit an error', t => {
 	const hooksManager = new HooksManager();
 
 	hooksManager.addHandler('testEvent', message => {

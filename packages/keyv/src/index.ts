@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import JSONB from 'json-buffer';
-import {HooksManager} from './hooks-manager';
+import HooksManager from './hooks-manager';
 
 export type DeserializedData<Value> = {
 	value?: Value;

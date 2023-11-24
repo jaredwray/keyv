@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import test from 'ava';
-import {EventManager, type EventListener} from '../src/event-manager';
+import EventManager from '../src/event-manager';
 
-test('EventManager: remove event listener', t => {
+test('remove event listener', t => {
 	const emitter = new EventManager();
 	let dataReceived = 0;
 
@@ -18,7 +18,12 @@ test('EventManager: remove event listener', t => {
 	t.is(dataReceived, 1);
 });
 
-test('EventManager: remove all event listeners', t => {
+test('get max listeners', t => {
+	const emitter = new EventManager();
+	t.is(emitter.maxListeners(), 100);
+});
+
+test('remove all event listeners', t => {
 	const emitter = new EventManager();
 	let dataReceived = 0;
 
@@ -40,7 +45,7 @@ test('EventManager: remove all event listeners', t => {
 	t.is(emitter.listeners('test-event2').length, 0);
 });
 
-test('EventManager: set max listeners and check warning', t => {
+test('set max listeners and check warning', t => {
 	const emitter = new EventManager();
 	emitter.setMaxListeners(1);
 
@@ -62,7 +67,7 @@ test('EventManager: set max listeners and check warning', t => {
 	t.regex(capturedWarning, /MaxListenersExceededWarning/);
 });
 
-test('EventManager: remove all listeners', t => {
+test('remove all listeners', t => {
 	const emitter = new EventManager();
 	const listener: EventListener = () => {};
 
@@ -73,7 +78,7 @@ test('EventManager: remove all listeners', t => {
 	t.deepEqual(emitter.listeners('test-event'), []);
 });
 
-test('EventManager: listeners method', t => {
+test('listeners method', t => {
 	const emitter = new EventManager();
 	const listener: EventListener = () => {};
 
