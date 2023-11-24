@@ -1,4 +1,4 @@
-import {EventManager} from './event-manager';
+import { EventManager } from '../src/event-manager';
 
 export type HookHandler = (...args: any[]) => void;
 

@@ -42,15 +42,14 @@ test('HooksManager: handlers getter', t => {
 
 test('HooksManager: emit an error', t => {
 	const hooksManager = new HooksManager();
-	
-	hooksManager.addHandler('testEvent', (message) => {
+
+	hooksManager.addHandler('testEvent', message => {
 		throw new Error(message);
 	});
 
-	hooksManager.on('error', (error) => {
+	hooksManager.on('error', error => {
 		t.is(error.message, 'Error in hook handler for event "testEvent": testMessage');
 	});
 
 	hooksManager.trigger('testEvent', 'testMessage');
-
 });
