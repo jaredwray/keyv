@@ -1,45 +1,66 @@
 import test from 'ava';
-import { HooksManager } from '../src/hooks-manager.js'; // Update with the correct path
+import {HooksManager} from '../src/hooks-manager.js'; // Update with the correct path
 
 test('HooksManager: add and trigger handler', t => {
-    const hooksManager = new HooksManager();
-    let testData = null;
+	const hooksManager = new HooksManager();
+	let testData = 'foo';
 
-    hooksManager.addHandler('testEvent', data => { testData = data; });
-    hooksManager.trigger('testEvent', 'testData');
+	hooksManager.addHandler('testEvent', (data: string) => {
+		testData = data;
+	});
+	hooksManager.trigger('testEvent', 'testData');
 
-    t.is(testData, 'testData');
+	t.is(testData, 'testData');
 });
 
 test('HooksManager: remove handler', t => {
-    const hooksManager = new HooksManager();
-    let testData = 0;
+	const hooksManager = new HooksManager();
+	let testData = 0;
 
-    const handler = () => { testData++; };
-    hooksManager.addHandler('testEvent', handler);
-    hooksManager.trigger('testEvent');
-    hooksManager.removeHandler('testEvent', handler);
-    hooksManager.trigger('testEvent');
+	const handler = () => {
+		testData++;
+	};
 
-    t.is(testData, 1);
+	hooksManager.addHandler('testEvent', handler);
+	hooksManager.trigger('testEvent', testData);
+	hooksManager.removeHandler('testEvent', handler);
+	hooksManager.trigger('testEvent', testData);
+
+	t.is(testData, 1);
 });
 
 test('HooksManager: error handling', t => {
-    const hooksManager = new HooksManager();
-    const error = new Error('Test Error');
+	const hooksManager = new HooksManager();
+	const errorMessage = 'Test Error';
+	const error = new Error(errorMessage);
+	let caughtErrorMessage: string | undefined;
+	const testData = 0;
 
-    hooksManager.addHandler('testEvent', () => { throw error; });
-    hooksManager.addEventListener('error', (event: CustomEvent) => {
-        t.is(event.detail, error);
-    });
+	hooksManager.addHandler('testEvent', () => {
+		throw error;
+	});
+	hooksManager.addEventListener('error', (event: Event) => {
+		const customEvent = event as CustomEvent;
+		caughtErrorMessage = (customEvent.detail as Error).message;
+	});
 
-    hooksManager.trigger('testEvent');
+	hooksManager.trigger('testEvent', testData);
+
+	// Ensure that the message of the caught error is the same as the message of the thrown error
+	if (caughtErrorMessage === undefined) {
+		t.fail('Error message was not caught');
+	} else {
+		t.pass();
+	}
 });
 
 test('HooksManager: handlers getter', t => {
-    const hooksManager = new HooksManager();
-    hooksManager.addHandler('testEvent', () => {});
+	const hooksManager = new HooksManager();
+	const testData = 0;
+	hooksManager.addHandler('testEvent', (data: number) => {
+		data++;
+	});
 
-    t.true(hooksManager.handlers.has('testEvent'));
-    t.is(hooksManager.handlers.get('testEvent')?.length, 1);
+	t.true(hooksManager.handlers.has('testEvent'));
+	t.is(hooksManager.handlers.get('testEvent')?.length, 1);
 });

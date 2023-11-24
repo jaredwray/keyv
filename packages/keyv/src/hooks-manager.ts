@@ -1,5 +1,6 @@
 export class HooksManager extends EventTarget {
-	private _handlers: Map<string, Function[]>;
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	private readonly _handlers: Map<string, Function[]>;
 
 	constructor() {
 		super();
@@ -7,14 +8,17 @@ export class HooksManager extends EventTarget {
 	}
 
 	// Adds a handler function for a specific event
+	// eslint-disable-next-line @typescript-eslint/ban-types
 	addHandler(event: string, handler: Function) {
 		if (!this.handlers.has(event)) {
 			this._handlers.set(event, []);
 		}
+
 		this._handlers.get(event)?.push(handler);
 	}
 
 	// Removes a specific handler function for a specific event
+	// eslint-disable-next-line @typescript-eslint/ban-types
 	removeHandler(event: string, handler: Function) {
 		const eventHandlers = this._handlers.get(event);
 		if (eventHandlers) {
@@ -29,13 +33,13 @@ export class HooksManager extends EventTarget {
 	trigger(event: string, data: any) {
 		const eventHandlers = this._handlers.get(event);
 		if (eventHandlers) {
-			eventHandlers.forEach(handler => {
+			for (const handler of eventHandlers) {
 				try {
 					handler(data);
 				} catch (error) {
-					this.dispatchEvent(new CustomEvent('error', { detail: error }));
+					this.dispatchEvent(new CustomEvent('error', {detail: error}));
 				}
-			});
+			}
 		}
 	}
 
