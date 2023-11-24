@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import { HooksManager } from './hooks-manager';
+import {HooksManager} from './hooks-manager';
 import JSONB from 'json-buffer';
 
 export type DeserializedData<Value> = {
@@ -114,6 +114,7 @@ const iterableAdapters = [
 class Keyv extends EventEmitter {
 	opts: Options;
 	iterator?: IteratorFunction;
+	hooks = new HooksManager();
 	constructor(uri?: string | Omit<Options, 'store'>, options_?: Omit<Options, 'store'>) {
 		super();
 		options_ = options_ ?? {};
