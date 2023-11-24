@@ -555,3 +555,13 @@ test.serial('get keys, one key expired', async t => {
 	t.is(await keyv.get('foo'), 'bar');
 	t.is(await keyv.get('ping'), 'pong');
 });
+
+test.serial('has ttl expire, in-memory store', async t => {
+    const keyv = new Keyv();
+    await keyv.set('foo', 'bar', 100);
+    t.is(await keyv.has('foo'), true);
+    await new Promise(r => {
+        setTimeout(r, 1000);
+    });
+    t.is(await keyv.has('foo'), false);
+});
