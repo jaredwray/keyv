@@ -9,7 +9,7 @@
 		"prepare": "yarn build",
 		"test": "c8 ava --serial",
 		"test:ci": "xo && ava --serial",
-		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
+		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite && rm -rf ./dist"
 	},
 	"xo": {
 		"rules": {
