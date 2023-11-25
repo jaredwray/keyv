@@ -12,11 +12,12 @@ class HooksManager extends EventManager {
 
 	// Adds a handler function for a specific event
 	addHandler(event: string, handler: HookHandler) {
-		if (!this.handlers.has(event)) {
-			this._hookHandlers.set(event, []);
+		const eventHandlers = this._hookHandlers.get(event);
+		if (eventHandlers) {
+			eventHandlers.push(handler);
+		} else {
+			this._hookHandlers.set(event, [handler]);
 		}
-
-		this._hookHandlers.get(event)?.push(handler);
 	}
 
 	// Removes a specific handler function for a specific event

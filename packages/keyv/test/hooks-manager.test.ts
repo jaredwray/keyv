@@ -13,6 +13,39 @@ test('add and trigger handler', t => {
 	t.is(testData, 'testData');
 });
 
+test('addHandler adds a handler for an event', t => {
+	const hooksManager = new HooksManager();
+	let called = false;
+	const handler = () => {
+		called = true;
+	};
+
+	hooksManager.addHandler('testEvent', handler);
+
+	// Trigger the event
+	hooksManager.trigger('testEvent', 'testData');
+	t.true(called);
+});
+
+test('addHandler allows multiple handlers for the same event', t => {
+	const hooksManager = new HooksManager();
+	let callCount = 0;
+	const handler1 = () => {
+		callCount++;
+	};
+
+	const handler2 = () => {
+		callCount++;
+	};
+
+	hooksManager.addHandler('testEvent', handler1);
+	hooksManager.addHandler('testEvent', handler2);
+
+	// Trigger the event
+	hooksManager.trigger('testEvent', 'testData');
+	t.is(callCount, 2);
+});
+
 test('remove handler', t => {
 	const hooksManager = new HooksManager();
 	let testData = 0;
