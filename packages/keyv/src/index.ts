@@ -1,4 +1,3 @@
-import type EventEmitter from 'events';
 import JSONB from 'json-buffer';
 import HooksManager from './hooks-manager';
 import EventManager from './event-manager';
@@ -36,7 +35,11 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
-export interface KeyvStoreAdapter extends EventEmitter {
+export interface IEventEmitter {
+	on(event: string, listener: (...args: any[]) => void): this;
+}
+
+export interface KeyvStoreAdapter extends IEventEmitter {
 	opts: any;
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
@@ -279,6 +282,7 @@ class Keyv extends EventManager {
 	}
 
 	async set(key: string, value: any, ttl?: number): Promise<boolean> {
+		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (typeof ttl === 'undefined') {
 			ttl = this.opts.ttl;
@@ -300,7 +304,7 @@ class Keyv extends EventManager {
 
 		value = await this.opts.serialize!(value);
 		await store.set(keyPrefixed, value, ttl);
-
+		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value, ttl});
 		return true;
 	}
 
@@ -343,3 +347,4 @@ class Keyv extends EventManager {
 
 export default Keyv;
 module.exports = Keyv;
+module.exports.KeyvHooks = KeyvHooks;
