@@ -1,6 +1,7 @@
-import EventEmitter from 'events';
+import type EventEmitter from 'events';
 import JSONB from 'json-buffer';
 import HooksManager from './hooks-manager';
+import EventManager from './event-manager';
 
 export type DeserializedData<Value> = {
 	value?: Value;
@@ -111,7 +112,7 @@ const iterableAdapters = [
 	'tiered',
 ];
 
-class Keyv extends EventEmitter {
+class Keyv extends EventManager {
 	opts: Options;
 	iterator?: IteratorFunction;
 	hooks = new HooksManager();

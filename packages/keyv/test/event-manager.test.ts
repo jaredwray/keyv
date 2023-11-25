@@ -23,6 +23,36 @@ test('get max listeners', t => {
 	t.is(emitter.maxListeners(), 100);
 });
 
+test('add event listener', t => {
+	const emitter = new EventManager();
+	emitter.addListener('test-event', () => {});
+	t.is(emitter.listeners('test-event').length, 1);
+});
+
+test('remove event listener handler', t => {
+	const emitter = new EventManager();
+	const listener: EventListener = data => {
+		console.log(data);
+	};
+
+	emitter.addListener('test-event8', listener);
+	t.is(emitter.listeners('test-event8').length, 1);
+	emitter.removeListener('test-event8', listener);
+	t.is(emitter.listeners('test-event8').length, 0);
+});
+
+test('remove event listener handler when never existed', t => {
+	const emitter = new EventManager();
+	const listener: EventListener = () => {};
+	emitter.removeListener('test-event8', listener);
+	t.is(emitter.listeners('test-event8').length, 0);
+	emitter.on('test-event8', listener);
+	emitter.removeListener('test-event8', () => {});
+	t.is(emitter.listeners('test-event8').length, 1);
+	emitter.removeListener('test-event8', listener);
+	t.is(emitter.listeners('test-event8').length, 0);
+});
+
 test('remove all event listeners', t => {
 	const emitter = new EventManager();
 	let dataReceived = 0;
@@ -85,4 +115,12 @@ test('listeners method', t => {
 	emitter.on('test-event', listener);
 
 	t.deepEqual(emitter.listeners('test-event'), [listener]);
+});
+
+test('if it is an error with no listeners throw error', t => {
+	const emitter = new EventManager();
+
+	t.throws(() => {
+		emitter.emit('error', new Error('test'));
+	}, {instanceOf: Error});
 });
