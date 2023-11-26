@@ -263,6 +263,7 @@ class Keyv extends EventManager {
 
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
+
 		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
 		const rawData = await store.get<Value>(keyPrefixed as string);
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
