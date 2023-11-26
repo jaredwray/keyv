@@ -17,8 +17,6 @@ export interface CompressionAdapter {
 export enum KeyvHooks {
 	PRE_SET = 'preSet',
 	POST_SET = 'postSet',
-	PRE_SET_MANY = 'preSetMany',
-	POST_SET_MANY = 'postSetMany',
 	PRE_GET = 'preGet',
 	POST_GET = 'postGet',
 	PRE_GET_MANY = 'preGetMany',
@@ -265,7 +263,7 @@ class Keyv extends EventManager {
 
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
-
+		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
 		const rawData = await store.get<Value>(keyPrefixed as string);
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
@@ -278,6 +276,7 @@ class Keyv extends EventManager {
 			return undefined;
 		}
 
+		this.hooks.trigger(KeyvHooks.POST_GET, {key: keyPrefixed, value: deserializedData});
 		return (options && options.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
