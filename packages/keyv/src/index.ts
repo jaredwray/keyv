@@ -215,6 +215,7 @@ class Keyv extends EventManager {
 		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
 
 		if (isArray) {
+			this.hooks.trigger(KeyvHooks.PRE_GET_MANY, {keys: keyPrefixed});
 			if (store.getMany === undefined) {
 				const promises = (keyPrefixed as string[]).map(async key => {
 					const rawData = await store.get<Value>(key);
@@ -233,7 +234,9 @@ class Keyv extends EventManager {
 				});
 
 				const deserializedRows = await Promise.allSettled(promises);
-				return deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+				const result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+				this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+				return result;
 			}
 
 			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
@@ -260,7 +263,7 @@ class Keyv extends EventManager {
 				const value = (options && options.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
 				result.push(value);
 			}
-
+			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result)
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
 
