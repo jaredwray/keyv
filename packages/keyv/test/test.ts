@@ -555,3 +555,19 @@ test.serial('get keys, one key expired', async t => {
 	t.is(await keyv.get('foo'), 'bar');
 	t.is(await keyv.get('ping'), 'pong');
 });
+
+test.serial('emit clear event', async t => {
+	const keyv = new Keyv();
+	keyv.on('clear', () => {
+		t.pass();
+	});
+	await keyv.clear();
+});
+
+test.serial('emit disconnect event', async t => {
+	const keyv = new Keyv();
+	keyv.on('disconnect', () => {
+		t.pass();
+	});
+	await keyv.disconnect();
+});

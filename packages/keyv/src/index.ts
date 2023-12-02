@@ -23,8 +23,6 @@ export enum KeyvHooks {
 	POST_GET_MANY = 'postGetMany',
 	PRE_DELETE = 'preDelete',
 	POST_DELETE = 'postDelete',
-	PRE_CLEAR = 'preClear',
-	POST_CLEAR = 'postClear',
 }
 
 export type StoredDataNoRaw<Value> = Value | undefined;
@@ -336,6 +334,7 @@ class Keyv extends EventManager {
 	}
 
 	async clear(): Promise<void> {
+		this.emit('clear');
 		const {store} = this.opts;
 		await store.clear();
 	}
@@ -348,6 +347,7 @@ class Keyv extends EventManager {
 
 	async disconnect(): Promise<void> {
 		const {store} = this.opts;
+		this.emit('disconnect');
 		if (typeof store.disconnect === 'function') {
 			return store.disconnect();
 		}
