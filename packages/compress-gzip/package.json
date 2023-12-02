@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
-    "test": "xo && c8 ava --serial",
+    "test": "xo --fix && c8 ava --serial",
     "test:ci": "xo && ava --serial",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
     "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf ./dist && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
@@ -59,15 +59,15 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "@types/pako": "^2.0.1",
+    "@types/pako": "^2.0.3",
     "json-buffer": "^3.0.1",
     "pako": "^2.1.0"
   },
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
     "@keyv/test-suite": "*",
-    "@typescript-eslint/parser": "^6.7.4",
-    "eslint": "^8.51.0",
+    "@typescript-eslint/parser": "^6.13.1",
+    "eslint": "^8.55.0",
     "keyv": "*",
     "requirable": "^1.0.5",
     "tsd": "^0.29.0"
