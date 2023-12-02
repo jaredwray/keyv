@@ -1,5 +1,6 @@
-import EventEmitter from 'events';
 import JSONB from 'json-buffer';
+import HooksManager from './hooks-manager';
+import EventManager from './event-manager';
 
 export type DeserializedData<Value> = {
 	value?: Value;
@@ -13,13 +14,28 @@ export interface CompressionAdapter {
 	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
 }
 
+export enum KeyvHooks {
+	PRE_SET = 'preSet',
+	POST_SET = 'postSet',
+	PRE_GET = 'preGet',
+	POST_GET = 'postGet',
+	PRE_GET_MANY = 'preGetMany',
+	POST_GET_MANY = 'postGetMany',
+	PRE_DELETE = 'preDelete',
+	POST_DELETE = 'postDelete',
+}
+
 export type StoredDataNoRaw<Value> = Value | undefined;
 
 export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
-export interface KeyvStoreAdapter extends EventEmitter {
+export interface IEventEmitter {
+	on(event: string, listener: (...args: any[]) => void): this;
+}
+
+export interface KeyvStoreAdapter extends IEventEmitter {
 	opts: any;
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
@@ -95,9 +111,10 @@ const iterableAdapters = [
 	'tiered',
 ];
 
-class Keyv extends EventEmitter {
+class Keyv extends EventManager {
 	opts: Options;
 	iterator?: IteratorFunction;
+	hooks = new HooksManager();
 	constructor(uri?: string | Omit<Options, 'store'>, options_?: Omit<Options, 'store'>) {
 		super();
 		options_ = options_ ?? {};
@@ -196,6 +213,7 @@ class Keyv extends EventEmitter {
 		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
 
 		if (isArray) {
+			this.hooks.trigger(KeyvHooks.PRE_GET_MANY, {keys: keyPrefixed});
 			if (store.getMany === undefined) {
 				const promises = (keyPrefixed as string[]).map(async key => {
 					const rawData = await store.get<Value>(key);
@@ -214,7 +232,9 @@ class Keyv extends EventEmitter {
 				});
 
 				const deserializedRows = await Promise.allSettled(promises);
-				return deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+				const result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+				this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+				return result;
 			}
 
 			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
@@ -242,9 +262,11 @@ class Keyv extends EventEmitter {
 				result.push(value);
 			}
 
+			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
 
+		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
 		const rawData = await store.get<Value>(keyPrefixed as string);
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
@@ -257,10 +279,12 @@ class Keyv extends EventEmitter {
 			return undefined;
 		}
 
+		this.hooks.trigger(KeyvHooks.POST_GET, {key: keyPrefixed, value: deserializedData});
 		return (options && options.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
 	async set(key: string, value: any, ttl?: number): Promise<boolean> {
+		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (typeof ttl === 'undefined') {
 			ttl = this.opts.ttl;
@@ -282,7 +306,7 @@ class Keyv extends EventEmitter {
 
 		value = await this.opts.serialize!(value);
 		await store.set(keyPrefixed, value, ttl);
-
+		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value, ttl});
 		return true;
 	}
 
@@ -290,6 +314,7 @@ class Keyv extends EventEmitter {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
 			const keyPrefixed = this._getKeyPrefixArray(key);
+			this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
 			if (store.deleteMany !== undefined) {
 				return store.deleteMany(keyPrefixed);
 			}
@@ -297,14 +322,19 @@ class Keyv extends EventEmitter {
 			const promises = keyPrefixed.map(async key => store.delete(key));
 
 			const results = await Promise.allSettled(promises);
-			return results.every(x => (x as PromiseFulfilledResult<any>).value === true);
+			const returnResult = results.every(x => (x as PromiseFulfilledResult<any>).value === true);
+			this.hooks.trigger(KeyvHooks.POST_DELETE, returnResult);
+			return returnResult;
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		return store.delete(keyPrefixed);
+		const result = store.delete(keyPrefixed);
+		this.hooks.trigger(KeyvHooks.POST_DELETE, result);
+		return result;
 	}
 
 	async clear(): Promise<void> {
+		this.emit('clear');
 		const {store} = this.opts;
 		await store.clear();
 	}
@@ -317,6 +347,7 @@ class Keyv extends EventEmitter {
 
 	async disconnect(): Promise<void> {
 		const {store} = this.opts;
+		this.emit('disconnect');
 		if (typeof store.disconnect === 'function') {
 			return store.disconnect();
 		}
@@ -325,3 +356,4 @@ class Keyv extends EventEmitter {
 
 export default Keyv;
 module.exports = Keyv;
+module.exports.KeyvHooks = KeyvHooks;

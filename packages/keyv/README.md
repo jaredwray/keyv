@@ -88,6 +88,67 @@ await users.get('foo'); // undefined
 await cache.get('foo'); // 'cache'
 ```
 
+### Events
+
+Keyv is a custom `EventEmitter` and will emit an `'error'` event if there is an error. In addition it will emit a `clear` and `disconnect` event when the corresponding methods are called.
+
+```js
+const keyv = new Keyv();
+const handleConnectionError = err => console.log('Connection Error', err);
+const handleClear = () => console.log('Cache Cleared');
+const handleDisconnect = () => console.log('Disconnected');
+
+keyv.on('error', handleConnectionError);
+keyv.on('clear', handleClear);
+keyv.on('disconnect', handleDisconnect);
+```
+
+### Hooks
+
+Keyv supports hooks for `get`, `set`, and `delete` methods. Hooks are useful for logging, debugging, and other custom functionality. Here is a list of all the hooks:
+
+```
+PRE_GET
+POST_GET
+PRE_GET_MANY
+POST_GET_MANY
+PRE_SET
+POST_SET
+PRE_DELETE
+POST_DELETE
+```
+
+You can access this by importing `KeyvHooks` from the main Keyv package.
+
+```js
+import Keyv, { KeyvHooks } from 'keyv';
+```
+
+```js
+//PRE_SET hook
+const keyv = new Keyv();
+keyv.hooks.addListener(KeyvHooks.PRE_SET, (key, value) => console.log(`Setting key ${key} to ${value}`));
+
+//POST_SET hook
+const keyv = new Keyv();
+keyv.hooks.addListener(KeyvHooks.POST_SET, (key, value) => console.log(`Set key ${key} to ${value}`));
+```
+
+In these examples you can also manipulate the value before it is set. For example, you could add a prefix to all keys.
+
+```js
+const keyv = new Keyv();
+keyv.hooks.addListener(KeyvHooks.PRE_SET, (key, value) => {
+  console.log(`Setting key ${key} to ${value}`);
+  key = `prefix-${key}`;
+});
+```
+
+Now this key will have prefix- added to it before it is set.
+
+In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an `Array`. This is based on the fact that `delete` can accept a single key or an `Array` of keys.
+
+
 ### Custom Serializers
 
 Keyv uses [`json-buffer`](https://github.com/dominictarr/json-buffer) for data serialization to ensure consistency across different backends.
