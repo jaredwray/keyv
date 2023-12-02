@@ -2,7 +2,7 @@ import test from 'ava';
 import KeyvSqlite from '@keyv/sqlite';
 import Keyv, {KeyvHooks} from '../src';
 
-test('keyv hooks PRE_SET', async t => {
+test('PRE_SET hook', async t => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.PRE_SET, data => {
 		t.is(data.key, 'foo');
@@ -12,7 +12,7 @@ test('keyv hooks PRE_SET', async t => {
 	await keyv.set('foo', 'bar');
 });
 
-test('keyv hooks POST_SET', async t => {
+test('POST_SET hook', async t => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.POST_SET, data => {
 		t.is(data.key, 'keyv:foo');
@@ -22,7 +22,7 @@ test('keyv hooks POST_SET', async t => {
 	await keyv.set('foo', 'bar');
 });
 
-test('keyv hooks PRE_GET_MANY', async t => {
+test('PRE_GET_MANY hook', async t => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	keyv.hooks.addHandler(KeyvHooks.PRE_GET_MANY, data => {
@@ -33,7 +33,7 @@ test('keyv hooks PRE_GET_MANY', async t => {
 	await keyv.get(keys);
 });
 
-test('keyv hooks PRE_GET_MANY with manipulation', async t => {
+test('PRE_GET_MANY with manipulation', async t => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	keyv.hooks.addHandler(KeyvHooks.PRE_GET_MANY, data => {
@@ -47,7 +47,7 @@ test('keyv hooks PRE_GET_MANY with manipulation', async t => {
 	t.is(values[0], undefined);
 });
 
-test('keyv hooks POST_GET_MANY with no getMany function', async t => {
+test('POST_GET_MANY with no getMany function', async t => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	await keyv.set('foo', 'bar');
@@ -60,7 +60,7 @@ test('keyv hooks POST_GET_MANY with no getMany function', async t => {
 	await keyv.get(keys);
 });
 
-test('keyv hooks POST_GET_MANY with manipulation', async t => {
+test('POST_GET_MANY with manipulation', async t => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	await keyv.set('foo', 'bar');
@@ -75,7 +75,7 @@ test('keyv hooks POST_GET_MANY with manipulation', async t => {
 	t.is(values[1], 'fake');
 });
 
-test('keyv hooks POST_GET_MANY with getMany function', async t => {
+test('POST_GET_MANY with getMany function', async t => {
 	const keyvSqlite = new KeyvSqlite({uri: 'sqlite://test.db'});
 	const keyv = new Keyv({store: keyvSqlite});
 	const keys = ['foo', 'foo1'];
@@ -89,7 +89,7 @@ test('keyv hooks POST_GET_MANY with getMany function', async t => {
 	await keyv.get(keys);
 });
 
-test('keyv hooks PRE_DELETE', async t => {
+test('PRE_DELETE hook', async t => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.PRE_DELETE, data => {
 		t.is(data.key, 'foo');
@@ -99,7 +99,7 @@ test('keyv hooks PRE_DELETE', async t => {
 	await keyv.delete('foo');
 });
 
-test('keyv hooks POST_DELETE', async t => {
+test('POST_DELETE hook', async t => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.POST_DELETE, data => {
 		t.is(data, true);
