@@ -263,7 +263,8 @@ class Keyv extends EventManager {
 				const value = (options && options.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
 				result.push(value);
 			}
-			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result)
+
+			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
 
@@ -315,6 +316,7 @@ class Keyv extends EventManager {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
 			const keyPrefixed = this._getKeyPrefixArray(key);
+			this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
 			if (store.deleteMany !== undefined) {
 				return store.deleteMany(keyPrefixed);
 			}
@@ -322,11 +324,15 @@ class Keyv extends EventManager {
 			const promises = keyPrefixed.map(async key => store.delete(key));
 
 			const results = await Promise.allSettled(promises);
-			return results.every(x => (x as PromiseFulfilledResult<any>).value === true);
+			const returnResult = results.every(x => (x as PromiseFulfilledResult<any>).value === true);
+			this.hooks.trigger(KeyvHooks.POST_DELETE, returnResult);
+			return returnResult;
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		return store.delete(keyPrefixed);
+		const result = store.delete(keyPrefixed);
+		this.hooks.trigger(KeyvHooks.POST_DELETE, result);
+		return result;
 	}
 
 	async clear(): Promise<void> {
