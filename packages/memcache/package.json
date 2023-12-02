@@ -7,7 +7,7 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo && c8 ava --serial",
+		"test": "xo --fix && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
@@ -78,7 +78,7 @@
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
 		"tsd": "^0.29.0",
-		"typescript": "^5.2.2"
+		"typescript": "^5.3.2"
 	},
 	"tsd": {
 		"directory": "test"
