@@ -83,6 +83,12 @@ test.serial('close tls connection successfully', async t => {
 	}
 });
 
+test.serial('clear method with empty keys should not error', async t => {
+	const keyv = new KeyvRedis(redisURI);
+
+	await t.notThrowsAsync(keyv.clear());
+});
+
 test.serial('.clear cleaned namespace', async t => {
 	// Setup
 	const keyv = new Keyv(redisURI, {
@@ -160,6 +166,13 @@ test.serial('clear method when useRedisSets is false', async t => {
 	const value2 = await keyv.get('demo2');
 	t.is(value, undefined);
 	t.is(value2, undefined);
+});
+
+test.serial('clear method when useRedisSets is false and empty keys should not error', async t => {
+	const options = {useRedisSets: false};
+	const keyv = new KeyvRedis(options);
+
+	await t.notThrowsAsync(keyv.clear());
 });
 
 test.serial('when passing in ioredis set the options.useRedisSets', t => {
