@@ -122,7 +122,9 @@ class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 		} else {
 			const pattern = `sets:${this._getNamespace()}:*`;
 			const keys: string[] = await this.redis.keys(pattern);
-			await this.redis.unlink(keys);
+			if (keys.length > 0) {
+				await this.redis.unlink(keys);
+			}
 		}
 	}
 
