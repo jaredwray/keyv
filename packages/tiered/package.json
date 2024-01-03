@@ -72,9 +72,6 @@
   "tsd": {
     "directory": "test"
   },
-  "engines": {
-    "node": ">= 12"
-  },
   "files": [
     "dist"
   ]
