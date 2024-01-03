@@ -1,0 +1,54 @@
+<script defer>
+  const sidebar = document.querySelector('#sidebar');
+  const header = document.querySelector('#header');
+  const path = window.location.pathname;
+  const isHome = path === '/' || path === '/index.html';
+  const isDesktop  = window.innerWidth >= 992;
+
+  const handleScroll = () => {
+    const onPage = document.querySelector('#on-page');
+    if(!isHome) {
+      if (window.scrollY > 250 && window.innerWidth >= 1458) {
+        onPage.style.display = 'block';
+        onPage.classList.add('on-page-fixed');
+      } else {
+        onPage.classList.remove('on-page-fixed');
+        onPage.style.display = 'none';
+      }
+    }
+  };
+  window.addEventListener('scroll', handleScroll);
+
+
+  const  closeSidebar = () => {
+    const closeBtn = document.querySelector('#close-sidebar');
+    closeBtn.addEventListener('click', () => {
+      sidebar.classList.add('hidden');
+      header.classList.remove('bottom');
+    });
+  }
+
+  const openSidebar = () => {
+    const openBtn = document.querySelector('#open-sidebar');
+    openBtn.addEventListener('click', () => {
+      sidebar.classList.remove('hidden');
+      header.classList.add('bottom');
+    });
+  }
+
+  const handleMobileSidebar = () => {
+    if (!isHome && !isDesktop) {
+      openSidebar()
+      closeSidebar();
+    }
+  }
+  document.addEventListener('DOMContentLoaded', handleMobileSidebar, false)
+</script>
+
+
+<script src="/assets/css/highlight/highlight.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    hljs.highlightAll()
+  });
+</script>

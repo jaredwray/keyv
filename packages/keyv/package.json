@@ -40,11 +40,6 @@
 		"json-buffer": "3.0.1"
 	},
 	"devDependencies": {
-		"@keyv/compress-brotli": "^1.1.5",
-		"@keyv/compress-gzip": "^1.2.3",
-		"@keyv/memcache": "^1.4.0",
-		"@keyv/mongo": "^2.2.8",
-		"@keyv/sqlite": "^3.6.6",
 		"@keyv/test-suite": "*",
 		"eslint": "^8.51.0",
 		"eslint-plugin-promise": "^6.1.1",

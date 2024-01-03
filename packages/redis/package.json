@@ -1,0 +1,87 @@
+{
+	"name": "@keyv/redis",
+	"version": "2.8.0",
+	"description": "Redis storage adapter for Keyv",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc --project tsconfig.dist.json",
+		"prepare": "yarn build",
+		"test": "xo && c8 ava --serial",
+		"test:ci": "xo && ava --serial",
+		"clean": "rm -rf node_modules && rm -rf ./coverage"
+	},
+	"xo": {
+		"rules": {
+			"unicorn/prefer-module": 0,
+			"unicorn/prefer-event-target": 0,
+			"unicorn/prefer-node-protocol": 0,
+			"unicorn/no-typeof-undefined": 0,
+			"import/extensions": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-unsafe-return": 0,
+			"unicorn/prefer-ternary": 0,
+			"unicorn/no-array-callback-reference": 0,
+			"ava/no-ignored-test-files": [
+				"error",
+				{
+					"extensions": [
+						"js",
+						"ts"
+					]
+				}
+			]
+		}
+	},
+	"ava": {
+		"require": [
+			"requirable",
+			"ts-node/register"
+		],
+		"extensions": [
+			"js",
+			"ts"
+		]
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"redis",
+		"keyv",
+		"storage",
+		"adapter",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+		"ioredis": "^5.3.2"
+	},
+	"devDependencies": {
+		"@keyv/test-suite": "*",
+		"keyv": "*",
+		"requirable": "^1.0.5",
+		"timekeeper": "^2.3.1",
+		"tsd": "^0.29.0"
+	},
+	"tsd": {
+		"directory": "test"
+	},
+	"engines": {
+		"node": ">= 14"
+	},
+	"files": [
+		"dist"
+	]
+}

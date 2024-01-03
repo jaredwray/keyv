@@ -1,0 +1,305 @@
+.header-logo {
+  margin-right: 30px;
+}
+
+.home-header {
+  position: sticky;
+  background-color: var(--home-background);
+  border-bottom: 1px solid var(--border);
+}
+
+.home-hero {
+  padding: 56px 0 72px;
+  background-color: var(--home-background)
+}
+
+.home-container {
+  margin: 32px 32px 48px;
+  color: var(--color-text);
+}
+
+.home-container h1 {
+  font-weight: 500;
+  font-size: 28px;
+}
+
+.home-title {
+  text-align: center;
+  margin-bottom: 32px;
+  font-size: 30px;
+  background: linear-gradient(30deg, var(--color-primary) 40%, var(--color-secondary-dark) 70%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.home-docs-button {
+  padding: 12px 24px;
+  border: 2px solid var(--color-secondary-dark);
+  border-radius: 8px;
+  color: var(--color-secondary-dark);
+  font-weight: 600;
+}
+
+.home-hero {
+  text-align: center;
+}
+
+.home-hero img {
+  width: 100%;
+  max-width: 120px;
+}
+
+.content-container {
+  margin: 96px 0;
+}
+
+.facepile-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.facepile {
+  line-height: 2;
+  padding: 0 0 0 25px;
+}
+
+.facepile > a {
+  display: inline-block;
+  margin-left: -25px;
+  transition: opacity .3s;
+  opacity: .9;
+  color: var(--background);
+}
+
+.facepile img {
+  border-radius: 50%;
+  width: calc(30px + 5vw);
+  height: calc(30px + 5vw);
+  max-width: 60px;
+  max-height: 60px;
+  margin-bottom: 6px;
+  background-color: #ffffff;
+  border: 2px solid;
+  transition: border .3s;
+  object-fit: cover;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+
+.facepile > a:hover {
+  opacity: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.release {
+  overflow: hidden;
+  width: 100%;
+  line-break: anywhere;
+  margin-top: 32px;
+  color: var(--color-text);
+}
+
+.release-header {
+  margin-bottom: 16px;
+}
+
+.release-title {
+  font-size: 22px;
+  color: var(--color-primary);
+  font-weight: 700;
+  transition: color .3s;
+  display: block;
+}
+
+.release-title:hover {
+  color: var(--color-secondary-dark);
+}
+
+.release-date {
+  font-size: 12px;
+}
+
+.release-btn {
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid var(--color-secondary);
+  color: var(--color-secondary);
+  width: fit-content;
+  margin-top: 32px;
+  display: block;
+}
+
+.release-btn span {
+  margin-left: 8px;
+  font-size: 12px;
+  transition: margin-left .3s;
+}
+
+.release-btn:hover span {
+  margin-left: 16px;
+}
+
+.release-body p {
+  margin: 8px 0;
+}
+
+.release-body pre {
+  margin-bottom: 32px;
+}
+
+.release-body h1 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.release-body h2 {
+  font-size: 18px;
+  margin-top: 28px;
+  margin-bottom: 16px;
+}
+
+.release-body ul {
+  padding-left: 16px;
+}
+
+.release-body ul > li {
+  margin-bottom: 12px;
+}
+
+.release-body ul > li a {
+  text-decoration: underline;
+}
+
+footer {
+  height: 64px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid var(--border);
+}
+
+footer img {
+  margin-left: 8px;
+  margin-top: 4px;
+}
+
+@media screen and (min-width: 640px) {
+  .home-hero {
+    padding: 64px 0 72px;
+  }
+
+  .home-container {
+    margin-left: 64px;
+    margin-right: 64px;
+  }
+}
+
+
+@media screen and (min-width: 768px) {
+  .home-hero {
+    padding: 72px 0;
+  }
+
+  .header-logo {
+    margin-right: 56px;
+  }
+
+  .home-hero img {
+    max-width: 180px;
+  }
+
+  .content-container {
+    margin: 96px 0;
+  }
+
+  .versions-container {
+    margin: 72px 0;
+  }
+
+  .release {
+    margin-bottom: 64px;
+  }
+}
+
+
+@media screen and (min-width: 992px) {
+  .home-container {
+    margin: 72px auto 56px;
+    max-width: 70%;
+  }
+
+  .home-container h1 {
+    font-size: 32px;
+  }
+
+  .home-docs-button {
+    font-size: 24px;
+  }
+
+  .home-hero {
+    padding: 120px 0;
+  }
+
+  .nav {
+    padding-right: 56px;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .header-content {
+    height: 72px;
+  }
+
+  .home-hero img {
+    max-width: 250px;
+  }
+
+  .home-title {
+    margin-bottom: 64px;
+    font-size: 48px;
+  }
+
+  .content-container {
+    margin: 120px 0;
+  }
+
+  .release-btn {
+    margin-top: 0;
+  }
+
+  footer {
+    height: 76px;
+  }
+
+  footer img {
+    height: 40px;
+    width: auto;
+  }
+}
+
+@media screen and (min-width: 1200px) {
+  .home-container {
+    max-width: 950px;
+  }
+
+  .content-container {
+    margin: 160px 0;
+  }
+
+  .versions-container {
+    margin: 120px 0;
+  }
+
+  .facepile > a {
+    margin-left: -30px;
+  }
+
+  .facepile img {
+    max-width: 70px;
+    max-height: 70px;
+  }
+}

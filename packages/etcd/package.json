@@ -1,0 +1,79 @@
+{
+	"name": "@keyv/etcd",
+	"version": "1.2.1",
+	"description": "Etcd storage adapter for Keyv",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc --project tsconfig.dist.json",
+		"prepare": "yarn build",
+		"test": "xo && c8 ava --serial",
+		"test:ci": "xo && ava --serial",
+		"clean": "rm -rf node_modules && rm -rf ./coverage"
+	},
+	"xo": {
+		"rules": {
+			"unicorn/prefer-module": 0,
+			"unicorn/no-array-reduce": 0,
+			"unicorn/prefer-object-from-entries": 0,
+			"unicorn/prefer-node-protocol": 0,
+			"import/extensions": 0,
+			"@typescript-eslint/no-confusing-void-expression": 0,
+			"@typescript-eslint/promise-function-async": 0,
+			"eslint-comments/no-unused-disable": 0,
+			"unicorn/prefer-event-target": 0
+		}
+	},
+	"ava": {
+		"require": [
+			"requirable",
+			"ts-node/register"
+		],
+		"extensions": [
+			"js",
+			"ts"
+		]
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"etcd",
+		"keyv",
+		"storage",
+		"adapter",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+		"etcd3": "^1.1.2"
+	},
+	"devDependencies": {
+		"@keyv/test-suite": "*",
+		"ava": "^5.3.1",
+		"c8": "^8.0.1",
+		"keyv": "*",
+		"requirable": "^1.0.5",
+		"ts-node": "^10.9.1",
+		"tsd": "^0.29.0",
+		"typescript": "^5.2.2",
+		"webpack": "^5.88.2",
+		"xo": "^0.56.0"
+	},
+	"tsd": {
+		"directory": "test"
+	},
+	"files": [
+		"dist"
+	]
+}

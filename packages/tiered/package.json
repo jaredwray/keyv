@@ -1,0 +1,81 @@
+{
+  "name": "@keyv/tiered",
+  "version": "1.0.6",
+  "description": "Tiered storage adapter for Keyv",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.dist.json",
+    "prepare": "yarn build",
+    "test": "xo && c8 ava --serial",
+    "test:ci": "xo && ava --serial",
+    "clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
+  },
+  "xo": {
+    "rules": {
+      "unicorn/prefer-event-target": 0,
+      "ava/no-ignored-test-files": [
+        "error",
+        {
+          "extensions": [
+            "js",
+            "ts"
+          ]
+        }
+      ],
+      "import/extensions": 0
+    }
+  },
+  "ava": {
+    "require": [
+      "ts-node/register"
+    ],
+    "extensions": [
+      "ts"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/keyv.git"
+  },
+  "keywords": [
+    "tiered",
+    "mulit",
+    "keyv",
+    "storage",
+    "adapter",
+    "key",
+    "value",
+    "store",
+    "cache",
+    "ttl"
+  ],
+  "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/keyv/issues"
+  },
+  "homepage": "https://github.com/jaredwray/keyv",
+  "devDependencies": {
+    "@keyv/sqlite": "*",
+    "@keyv/test-suite": "*",
+    "ava": "^5.3.1",
+    "c8": "^8.0.1",
+    "eslint": "^8.49.0",
+    "keyv": "*",
+    "requirable": "^1.0.5",
+    "ts-node": "^10.9.1",
+    "tsd": "^0.29.0",
+    "typescript": "^5.2.2",
+    "xo": "^0.56.0"
+  },
+  "tsd": {
+    "directory": "test"
+  },
+  "engines": {
+    "node": ">= 12"
+  },
+  "files": [
+    "dist"
+  ]
+}

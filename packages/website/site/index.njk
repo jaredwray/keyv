@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include "shared/head.njk" %}
+  <title>{{ site.name }}</title>
+</head>
+
+<body>
+  {% include "shared/homeHeader.njk" %}
+  <a class="github-fork-ribbon" href="https://github.com/jaredwray/keyv" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
+  <main class="home">
+    <div class="home-hero">
+      <img src="/../assets/images/logo.svg" alt="logo" />
+      <div class="home-container">
+        <h1>{{ site.homeTitle }}</h1>
+      </div>
+      <a href="/docs" class="home-docs-button">Documentation</a>
+    </div>
+
+  {% include "shared/homeData.njk" %}
+  </main>
+
+  {% include "shared/footer.njk" %}
+
+  {% include "shared/searchModal.njk" %}
+  {% include "shared/scripts.njk" %}
+  {% include "shared/searchEngine.njk" %}
+
+</body>
+</html>

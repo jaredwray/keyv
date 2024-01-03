@@ -1,0 +1,60 @@
+.pagefind-ui__search-input {
+  border-radius: 0 !important;
+  border-bottom: 1px solid var(--border);
+}
+
+.pagefind-ui__result, .pagefind-ui__message {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+.pagefind-ui__results-area {
+  overflow-y: auto !important;
+  margin-top: 0 !important;
+  height: calc(100vh - 72px) !important;
+}
+
+.pagefind-ui__result-link {
+  color: var(--color-primary) !important;
+}
+
+.pagefind-ui__result-link:hover {
+  color: var(--color-secondary) !important;
+}
+
+.pagefind-ui__button {
+  margin-top: 0 !important;
+  border-top: none !important;
+  border-top-right-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border: 1px solid var(--border) !important;
+}
+
+.pagefind-ui__button {
+  background-color: var(--search-input-background) !important;
+}
+
+.pagefind-ui__result-excerpt {
+  line-height: 1.5 !important;
+}
+
+.pagefind-ui__result-excerpt > mark {
+  background-color: var(--background-search-highlight) !important;
+  color: var(--color-search-highlight) !important;
+}
+
+.pagefind-ui__form::before {
+  top: 28px !important;
+}
+
+.pagefind-ui__drawer {
+  background-color: var(--search-input-background) !important;
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+@media screen and (min-width: 992px) {
+  .pagefind-ui__results-area {
+    max-height: 504px !important;
+  }
+}
