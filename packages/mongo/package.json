@@ -1,0 +1,90 @@
+{
+	"name": "@keyv/mongo",
+	"version": "2.2.8",
+	"description": "MongoDB storage adapter for Keyv",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc --project tsconfig.dist.json",
+		"prepare": "yarn build",
+		"test": "xo && c8 ava --serial",
+		"test:ci": "xo && ava --serial",
+		"clean": "rm -rf node_modules && rm -rf ./coverage"
+	},
+	"xo": {
+		"rules": {
+			"unicorn/prefer-module": 0,
+			"unicorn/prefer-event-target": 0,
+			"unicorn/no-array-reduce": 0,
+			"unicorn/prefer-object-from-entries": 0,
+			"unicorn/prefer-node-protocol": 0,
+			"@typescript-eslint/no-unsafe-assignment": 0,
+			"@typescript-eslint/no-unsafe-call": 0,
+			"@typescript-eslint/no-unsafe-return": 0,
+			"@typescript-eslint/no-unsafe-argument": 0,
+			"import/extensions": 0,
+			"@typescript-eslint/consistent-type-imports": 0,
+			"ava/no-ignored-test-files": [
+				"error",
+				{
+					"extensions": [
+						"js",
+						"ts"
+					]
+				}
+			],
+			"@typescript-eslint/naming-convention": 0,
+			"@typescript-eslint/no-floating-promises": 0,
+			" @typescript-eslint/no-unsafe-argument": 0
+		}
+	},
+	"ava": {
+		"require": [
+			"ts-node/register"
+		],
+		"extensions": [
+			"ts"
+		]
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"mongo",
+		"mongodb",
+		"keyv",
+		"storage",
+		"adapter",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+		"mongodb": "^4.5.0",
+		"pify": "^5.0.0"
+	},
+	"devDependencies": {
+		"@keyv/test-suite": "*",
+		"@ava/typescript": "^4.0.0",
+		"@types/pify": "^5.0.1",
+		"keyv": "*",
+		"requirable": "^1.0.5",
+		"this": "^1.1.0",
+		"tsd": "^0.28.1"
+	},
+	"tsd": {
+		"directory": "test"
+	},
+	"files": [
+		"dist"
+	]
+}

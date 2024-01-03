@@ -1,0 +1,14 @@
+{
+  "siteUrl": "https://keyv.org",
+  "searchEngine": "pagefind",
+  "plugins": [
+    "github",
+    "robots",
+    "sitemap",
+    "pagefind"
+  ],
+  "github": {
+    "author": "jaredwray",
+    "repo": "keyv"
+  }
+}

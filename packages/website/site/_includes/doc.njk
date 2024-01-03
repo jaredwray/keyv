@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "shared/head.njk" %}
+    <title>{{site.name}} - {{ title }}</title>
+</head>
+
+<body>
+<a class="github-fork-ribbon" href="https://github.com/jaredwray/keyv" data-ribbon="Fork me on GitHub" title="Fork me on GitHub">Fork me on GitHub</a>
+<div class="layout">
+    {% include "shared/header.njk" %}
+    {% include "shared/sidebar.njk" %}
+    {% include "shared/main.njk" %}
+    {% include "shared/searchModal.njk" %}
+</div>
+
+{% include "shared/searchEngine.njk" %}
+{% include "shared/scripts.njk" %}
+
+
+</body>
+</html>
