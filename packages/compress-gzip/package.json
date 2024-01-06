@@ -59,7 +59,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "@types/pako": "^2.0.2",
+    "@types/pako": "^2.0.3",
     "json-buffer": "^3.0.1",
     "pako": "^2.1.0"
   },
@@ -70,7 +70,7 @@
     "eslint": "^8.56.0",
     "keyv": "*",
     "requirable": "^1.0.5",
-    "tsd": "^0.29.0"
+    "tsd": "^0.30.3"
   },
   "tsd": {
     "directory": "test"
