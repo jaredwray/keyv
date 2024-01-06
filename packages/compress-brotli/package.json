@@ -56,11 +56,11 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"c8": "^8.0.1",
+		"c8": "^9.0.0",
 		"json-buffer": "^3.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"tsd": "^0.29.0",
+		"tsd": "^0.30.3",
 		"webpack": "^5.89.0"
 	},
 	"tsd": {
