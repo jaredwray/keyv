@@ -69,8 +69,8 @@
 		"eslint-config-xo-lukechilds": "^1.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"ts-node": "^10.9.1",
-		"tsd": "^0.29.0"
+		"ts-node": "^10.9.2",
+		"tsd": "^0.30.3"
 	},
 	"tsd": {
 		"directory": "test"
