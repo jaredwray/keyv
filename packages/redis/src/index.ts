@@ -129,7 +129,9 @@ class KeyvRedis<Value = any> extends EventEmitter {
 		} else {
 			const pattern = 'sets:*';
 			const keys: string[] = await this.redis.keys(pattern);
-			await this.redis.unlink(keys);
+			if (keys.length > 0) {
+				await this.redis.unlink(keys);
+			}
 		}
 	}
 
