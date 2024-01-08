@@ -183,3 +183,16 @@ test.serial('del should work when not using useRedisSets', async t => {
 
 	t.is(value, undefined);
 });
+
+test.serial('clear method with empty keys should not error', async t => {
+	const keyv = new KeyvRedis(redisURI);
+
+	await t.notThrowsAsync(keyv.clear());
+});
+
+test.serial('clear method when useRedisSets is false and empty keys should not error', async t => {
+	const options = {useRedisSets: false};
+	const keyv = new KeyvRedis(options);
+
+	await t.notThrowsAsync(keyv.clear());
+});
