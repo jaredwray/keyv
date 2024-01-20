@@ -65,7 +65,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"sqlite3": "^5.1.6"
+		"sqlite3": "^5.1.7"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
