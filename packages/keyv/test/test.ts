@@ -11,6 +11,9 @@ import type {KeyvStoreAdapter, StoredDataNoRaw} from '../src';
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 
+// eslint-disable-next-line no-promise-executor-return
+const snooze = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 keyvTestSuite(test, Keyv, store);
@@ -194,14 +197,6 @@ test.serial('Keyv should wait for the expired get', async t => {
 	});
 	const v4 = await keyv.get('foo');
 	t.is(v4, 'bar');
-});
-
-test.serial('Keyv has should return if adapter does not support has', async t => {
-	const keyv = new Keyv({store: store()});
-	keyv.opts.store.has = undefined;
-	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
 });
 
 test.serial('.delete([keys]) should delete multiple key for storage adapter not supporting deleteMany', async t => {
@@ -570,4 +565,30 @@ test.serial('emit disconnect event', async t => {
 		t.pass();
 	});
 	await keyv.disconnect();
+});
+
+test.serial('Keyv has should return if adapter does not support has', async t => {
+	const keyv = new Keyv();
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.has('foo'), true);
+	t.is(await keyv.has('fizz'), false);
+});
+
+test.serial('Keyv has should return if adapter does not support has on expired', async t => {
+	const keyv = new Keyv({store: new Map()});
+	await keyv.set('foo', 'bar', 1000);
+	t.is(await keyv.has('foo'), true);
+	await snooze(1100);
+	t.is(await keyv.has('foo'), false);
+});
+
+test.serial('keyv memcache has should return false on expired', async t => {
+	const keyv = new Keyv({store: keyvMemcache});
+	const keyName = 'memcache-expired';
+	await keyv.set(keyName, 'bar', 1000);
+	await snooze(1100);
+	const value = await keyv.get(keyName);
+	const exists = await keyv.has(keyName);
+	t.is(value, undefined);
+	t.is(exists, false);
 });

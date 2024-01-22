@@ -120,6 +120,18 @@ test.serial('keyv get / expired', async t => {
 	t.is(value, undefined);
 });
 
+test.serial('keyv has / expired', async t => {
+	const keyv = new Keyv({store: keyvMemcache});
+
+	await keyv.set('foo-expired', 'bar-expired', 1000);
+
+	await snooze(1000);
+
+	const value = await keyv.has('foo-expired');
+
+	t.is(value, false);
+});
+
 test.serial('keyvMemcache getMany', async t => {
 	const value = await keyvMemcache.getMany(['foo0', 'Foo1']);
 	t.is(Array.isArray(value), true);
