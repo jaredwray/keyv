@@ -574,15 +574,23 @@ test.serial('Keyv has should return if adapter does not support has', async t =>
 	t.is(await keyv.has('fizz'), false);
 });
 
+test.serial('Keyv has should return if Map and undefined expires', async t => {
+	const keyv = new Keyv();
+	await keyv.set('foo', 'bar');
+	t.is(await keyv.has('foo'), true);
+	t.is(await keyv.has('fizz'), false);
+});
+
 test.serial('Keyv has should return if adapter does not support has on expired', async t => {
 	const keyv = new Keyv({store: new Map()});
+	keyv.opts.store.has = undefined;
 	await keyv.set('foo', 'bar', 1000);
 	t.is(await keyv.has('foo'), true);
 	await snooze(1100);
 	t.is(await keyv.has('foo'), false);
 });
 
-test.serial('keyv memcache has should return false on expired', async t => {
+test.serial('Keyv memcache has should return false on expired', async t => {
 	const keyv = new Keyv({store: keyvMemcache});
 	const keyName = 'memcache-expired';
 	await keyv.set(keyName, 'bar', 1000);
@@ -591,4 +599,12 @@ test.serial('keyv memcache has should return false on expired', async t => {
 	const exists = await keyv.has(keyName);
 	t.is(value, undefined);
 	t.is(exists, false);
+});
+
+test.serial('Keyv has should return true or false on Map', async t => {
+	const keyv = new Keyv({store: new Map()});
+	await keyv.set('foo', 'bar', 1000);
+	t.is(await keyv.has('foo'), true);
+	await snooze(1100);
+	t.is(await keyv.has('foo'), false);
 });
