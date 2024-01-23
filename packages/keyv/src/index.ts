@@ -342,7 +342,23 @@ class Keyv extends EventManager {
 	async has(key: string): Promise<boolean> {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const {store} = this.opts;
-		return typeof store.has === 'function' ? store.has(keyPrefixed) : (await store.get(keyPrefixed)) !== undefined;
+		if (store.has !== undefined && !(store instanceof Map)) {
+			return store.has(keyPrefixed);
+		}
+
+		const rawData = await store.get(keyPrefixed) as any;
+		if (rawData) {
+			const data = this.opts.deserialize!(rawData) as any;
+			if (data) {
+				if (data.expires === undefined || data.expires === null) {
+					return true;
+				}
+
+				return data.expires > Date.now();
+			}
+		}
+
+		return false;
 	}
 
 	async disconnect(): Promise<void> {
