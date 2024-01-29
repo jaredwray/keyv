@@ -45,7 +45,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 
 	_getKeyName = (key: string): string => {
 		if (!this.opts.useRedisSets) {
-			return `sets:${key}`;
+			return `sets:${this._getNamespace()}:${key}`;
 		}
 
 		return key;
@@ -127,7 +127,7 @@ class KeyvRedis<Value = any> extends EventEmitter {
 				]);
 			}
 		} else {
-			const pattern = 'sets:*';
+			const pattern = `sets:${this._getNamespace()}:*`;
 			const keys: string[] = await this.redis.keys(pattern);
 			if (keys.length > 0) {
 				await this.redis.unlink(keys);
