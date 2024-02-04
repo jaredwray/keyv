@@ -66,11 +66,11 @@
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
     "@keyv/test-suite": "*",
-    "@typescript-eslint/parser": "^6.18.0",
+    "@typescript-eslint/parser": "^6.20.0",
     "eslint": "^8.56.0",
     "keyv": "*",
     "requirable": "^1.0.5",
-    "tsd": "^0.30.3"
+    "tsd": "^0.30.4"
   },
   "tsd": {
     "directory": "test"
