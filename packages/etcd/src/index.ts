@@ -1,6 +1,7 @@
 import {EventEmitter} from 'events';
 import {Etcd3, type Lease} from 'etcd3';
 import type {StoredData} from 'keyv';
+// eslint-disable-next-line object-curly-newline
 import type {ClearOutput, DeleteManyOutput, DeleteOutput, GetOutput, HasOutput, SetOutput} from './types';
 
 type KeyvEtcdOptions = {
@@ -22,7 +23,7 @@ class KeyvEtcd<Value = any> extends EventEmitter {
 
 		this.ttlSupport = typeof options?.ttl === 'number';
 
-		url = url ?? {};
+		url ??= {};
 
 		if (typeof url === 'string') {
 			url = {url};
