@@ -72,7 +72,7 @@ export interface Options {
 	compression?: CompressionAdapter;
 	/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
 	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql';
-	/** Enable Statistics */
+	/** Enable or disable statistics (default is false) */
 	stats?: boolean;
 }
 
@@ -242,9 +242,6 @@ class Keyv extends EventManager {
 				const deserializedRows = await Promise.allSettled(promises);
 				const result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
 				this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
-				if (result.length > 0) {
-					this.stats.hit();
-				}
 
 				return result;
 			}
@@ -275,9 +272,6 @@ class Keyv extends EventManager {
 			}
 
 			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
-			if (result.length > 0) {
-				this.stats.hit();
-			}
 
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
@@ -287,24 +281,20 @@ class Keyv extends EventManager {
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
-			this.stats.miss();
 			return undefined;
 		}
 
 		if (isDataExpired(deserializedData as DeserializedData<Value>)) {
 			await this.delete(key);
-			this.stats.miss();
 			return undefined;
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_GET, {key: keyPrefixed, value: deserializedData});
-		this.stats.hit();
 		return (options && options.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
 	async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
-		this.stats.set();
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (typeof ttl === 'undefined') {
 			ttl = this.opts.ttl;
@@ -350,7 +340,6 @@ class Keyv extends EventManager {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const result = store.delete(keyPrefixed);
 		this.hooks.trigger(KeyvHooks.POST_DELETE, result);
-		this.stats.delete();
 		return result;
 	}
 
