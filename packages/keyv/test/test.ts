@@ -608,3 +608,30 @@ test.serial('Keyv has should return true or false on Map', async t => {
 	await snooze(1100);
 	t.is(await keyv.has('foo'), false);
 });
+
+test.serial('Keyv should return stats based on get, set, delete, and miss', async t => {
+	const keyv = new Keyv();
+	keyv.stats.enabled = true;
+	await keyv.set('foo', 'bar');
+	await keyv.get('foo');
+	await keyv.delete('foo');
+	await keyv.get('foo');
+	const stats = keyv.stats;
+	t.is(stats.data.hits, 1);
+	t.is(stats.data.misses, 1);
+	t.is(stats.data.sets, 1);
+	t.is(stats.data.deletes, 1);
+});
+
+test.serial('Keyv should return stats based on get, set, delete, and miss with opts of stats', async t => {
+	const keyv = new Keyv({stats: true});
+	await keyv.set('foo', 'bar');
+	await keyv.get('foo');
+	await keyv.delete('foo');
+	await keyv.get('foo');
+	const stats = keyv.stats;
+	t.is(stats.data.hits, 1);
+	t.is(stats.data.misses, 1);
+	t.is(stats.data.sets, 1);
+	t.is(stats.data.deletes, 1);
+});
