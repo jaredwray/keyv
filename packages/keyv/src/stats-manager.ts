@@ -1,3 +1,5 @@
+import EventManager from './event-manager';
+
 type StatsData = {
 	hits: number;
 	misses: number;
@@ -6,12 +8,19 @@ type StatsData = {
 	errors: number;
 };
 
-class StatsManager {
-	public data: StatsData = this.createData();
+class StatsManager extends EventManager {
+	public data: StatsData = {
+		hits: 0,
+		misses: 0,
+		sets: 0,
+		deletes: 0,
+		errors: 0,
+	};
 
 	public enabled = true;
 
 	constructor(enabled?: boolean) {
+		super();
 		if (enabled !== undefined) {
 			this.enabled = enabled;
 		}
@@ -45,18 +54,14 @@ class StatsManager {
 
 	reset() {
 		if (this.enabled) {
-			this.data = this.createData();
+			this.data = {
+				hits: 0,
+				misses: 0,
+				sets: 0,
+				deletes: 0,
+				errors: 0,
+			};
 		}
-	}
-
-	private createData() {
-		return {
-			hits: 0,
-			misses: 0,
-			sets: 0,
-			deletes: 0,
-			errors: 0,
-		};
 	}
 }
 

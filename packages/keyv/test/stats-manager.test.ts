@@ -1,37 +1,37 @@
 import test from 'ava';
-import StatsManager from '../src/stats-manager';
+import KeyvStatsManager from '../src/stats-manager';
 
 test('will initialize with correct stats at zero', t => {
-	const stats = new StatsManager();
+	const stats = new KeyvStatsManager();
 	t.is(stats.data.hits, 0);
 });
 
 test('will increment hits', t => {
-	const stats = new StatsManager();
+	const stats = new KeyvStatsManager();
 	stats.hit();
 	t.is(stats.data.hits, 1);
 });
 
 test('will increment misses', t => {
-	const stats = new StatsManager();
+	const stats = new KeyvStatsManager();
 	stats.miss();
 	t.is(stats.data.misses, 1);
 });
 
 test('will increment sets', t => {
-	const stats = new StatsManager();
+	const stats = new KeyvStatsManager();
 	stats.set();
 	t.is(stats.data.sets, 1);
 });
 
 test('will increment deletes', t => {
-	const stats = new StatsManager();
+	const stats = new KeyvStatsManager();
 	stats.delete();
 	t.is(stats.data.deletes, 1);
 });
 
 test('will reset stats', t => {
-	const stats = new StatsManager();
+	const stats = new KeyvStatsManager();
 	stats.hit();
 	stats.miss();
 	stats.set();
@@ -48,7 +48,7 @@ test('will reset stats', t => {
 });
 
 test('will not increment hits if disabled', t => {
-	const stats = new StatsManager(false);
+	const stats = new KeyvStatsManager(false);
 	stats.hit();
 	t.is(stats.data.hits, 0);
 });

@@ -163,7 +163,7 @@ class Keyv extends EventManager {
 		}
 
 		if (this.opts.stats) {
-			this.stats.enabled = true;
+			this.stats.enabled = this.opts.stats;
 		}
 	}
 

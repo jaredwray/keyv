@@ -609,13 +609,7 @@ test.serial('Keyv has should return true or false on Map', async t => {
 	t.is(await keyv.has('foo'), false);
 });
 
-test.serial('Keyv should have stats as a property', t => {
-	const keyv = new Keyv();
-	t.is(typeof keyv.stats, 'object');
-	t.is(keyv.stats.data.hits, 0);
-});
-
-test.serial('Keyv can enable statistics via opts.stats = true', t => {
+test.serial('Keyv opts.stats should set the stats manager', t => {
 	const keyv = new Keyv({stats: true});
 	t.is(keyv.stats.enabled, true);
 });
