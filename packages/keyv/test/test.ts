@@ -613,3 +613,15 @@ test.serial('Keyv opts.stats should set the stats manager', t => {
 	const keyv = new Keyv({stats: true});
 	t.is(keyv.stats.enabled, true);
 });
+
+test.serial('Keyv stats enabled should create counts', async t => {
+	const keyv = new Keyv({stats: true});
+	await keyv.set('foo', 'bar');
+	await keyv.get('foo');
+	await keyv.get('foo1');
+	await keyv.delete('foo');
+	t.is(keyv.stats.hits, 1);
+	t.is(keyv.stats.misses, 1);
+	t.is(keyv.stats.deletes, 1);
+	t.is(keyv.stats.sets, 1);
+});

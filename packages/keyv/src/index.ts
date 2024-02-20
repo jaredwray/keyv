@@ -242,6 +242,9 @@ class Keyv extends EventManager {
 				const deserializedRows = await Promise.allSettled(promises);
 				const result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
 				this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+				if (result.length > 0) {
+					this.stats.hit();
+				}
 
 				return result;
 			}
@@ -272,6 +275,9 @@ class Keyv extends EventManager {
 			}
 
 			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+			if (result.length > 0) {
+				this.stats.hit();
+			}
 
 			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 		}
@@ -281,15 +287,18 @@ class Keyv extends EventManager {
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
+			this.stats.miss();
 			return undefined;
 		}
 
 		if (isDataExpired(deserializedData as DeserializedData<Value>)) {
 			await this.delete(key);
+			this.stats.miss();
 			return undefined;
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_GET, {key: keyPrefixed, value: deserializedData});
+		this.stats.hit();
 		return (options && options.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
@@ -317,6 +326,7 @@ class Keyv extends EventManager {
 		value = await this.opts.serialize!(value);
 		await store.set(keyPrefixed, value, ttl);
 		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value, ttl});
+		this.stats.set();
 		return true;
 	}
 
@@ -340,6 +350,7 @@ class Keyv extends EventManager {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const result = store.delete(keyPrefixed);
 		this.hooks.trigger(KeyvHooks.POST_DELETE, result);
+		this.stats.delete();
 		return result;
 	}
 
