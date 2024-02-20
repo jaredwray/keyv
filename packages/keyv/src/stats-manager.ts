@@ -1,23 +1,13 @@
 import EventManager from './event-manager';
 
-type StatsData = {
-	hits: number;
-	misses: number;
-	sets: number;
-	deletes: number;
-	errors: number;
-};
-
 class StatsManager extends EventManager {
-	public data: StatsData = {
-		hits: 0,
-		misses: 0,
-		sets: 0,
-		deletes: 0,
-		errors: 0,
-	};
-
 	public enabled = true;
+
+	public hits = 0;
+	public misses = 0;
+	public sets = 0;
+	public deletes = 0;
+	public errors = 0;
 
 	constructor(enabled?: boolean) {
 		super();
@@ -30,38 +20,34 @@ class StatsManager extends EventManager {
 
 	hit() {
 		if (this.enabled) {
-			this.data.hits++;
+			this.hits++;
 		}
 	}
 
 	miss() {
 		if (this.enabled) {
-			this.data.misses++;
+			this.misses++;
 		}
 	}
 
 	set() {
 		if (this.enabled) {
-			this.data.sets++;
+			this.sets++;
 		}
 	}
 
 	delete() {
 		if (this.enabled) {
-			this.data.deletes++;
+			this.deletes++;
 		}
 	}
 
 	reset() {
-		if (this.enabled) {
-			this.data = {
-				hits: 0,
-				misses: 0,
-				sets: 0,
-				deletes: 0,
-				errors: 0,
-			};
-		}
+		this.hits = 0;
+		this.misses = 0;
+		this.sets = 0;
+		this.deletes = 0;
+		this.errors = 0;
 	}
 }
 
