@@ -60,8 +60,8 @@
 		"json-buffer": "^3.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"tsd": "^0.30.4",
-		"webpack": "^5.90.1"
+		"tsd": "^0.30.7",
+		"webpack": "^5.90.3"
 	},
 	"tsd": {
 		"directory": "test"
