@@ -18,6 +18,7 @@ class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			uri: 'postgresql://localhost:5432', ...options};
 
 		const connect = async () => {
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 			const conn = pool(options!.uri!, options);
 			return async (sql: string, values?: any) => {
 				const data = await conn.query(sql, values);
