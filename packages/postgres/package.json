@@ -68,10 +68,10 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"@types/pg": "^8.11.0",
+		"@types/pg": "^8.11.2",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"tsd": "^0.30.4"
+		"tsd": "^0.30.7"
 	},
 	"tsd": {
 		"directory": "test"
