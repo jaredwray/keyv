@@ -60,7 +60,7 @@
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
     "ava": "^5.3.1",
-    "c8": "^8.0.1",
+    "c8": "^9.1.0",
     "eslint": "^8.56.0",
     "keyv": "*",
     "requirable": "^1.0.5",
