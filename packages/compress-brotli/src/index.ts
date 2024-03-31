@@ -1,6 +1,8 @@
 import type {BrotliOptions, InputType} from 'node:zlib';
 import compressBrotli from 'compress-brotli';
-import type {Brotli, CompressResult, Options, SerializeResult, Serialize} from './types';
+import type {
+	Brotli, CompressResult, Options, SerializeResult, Serialize,
+} from './types';
 
 class KeyvBrotli {
 	private readonly brotli: Brotli;
