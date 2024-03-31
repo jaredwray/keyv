@@ -9,7 +9,6 @@
     "prepare": "yarn build",
     "test": "xo --fix && c8 ava --serial",
     "test:ci": "xo && ava --serial",
-    "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
     "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf ./dist && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
@@ -66,11 +65,12 @@
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
     "@keyv/test-suite": "*",
-    "@typescript-eslint/parser": "^6.13.1",
-    "eslint": "^8.55.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "eslint": "^8.57.0",
     "keyv": "*",
     "requirable": "^1.0.5",
-    "tsd": "^0.29.0"
+    "tsd": "^0.31.0",
+    "xo": "^0.58.0"
   },
   "tsd": {
     "directory": "test"
