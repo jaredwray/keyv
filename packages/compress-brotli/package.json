@@ -7,7 +7,7 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo && c8 ava --serial",
+		"test": "xo --fix && c8 ava --serial",
 		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite && rm -rf ./dist && rm -rf ./.nyc_output"
 	},
@@ -56,12 +56,13 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"c8": "^8.0.1",
+		"c8": "^9.1.0",
 		"json-buffer": "^3.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"tsd": "^0.29.0",
-		"webpack": "^5.89.0"
+		"tsd": "^0.31.0",
+		"webpack": "^5.91.0",
+		"xo": "^0.58.0"
 	},
 	"tsd": {
 		"directory": "test"
