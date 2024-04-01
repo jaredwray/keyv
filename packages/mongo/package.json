@@ -74,12 +74,12 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"@ava/typescript": "^4.0.0",
+		"@ava/typescript": "^4.1.0",
 		"@types/pify": "^5.0.1",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"this": "^1.1.0",
-		"tsd": "^0.28.1"
+		"tsd": "^0.31.0"
 	},
 	"tsd": {
 		"directory": "test"
