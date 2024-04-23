@@ -64,14 +64,14 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.11.3"
+		"pg": "8.11.5"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"@types/pg": "^8.11.2",
+		"@types/pg": "^8.11.5",
 		"keyv": "*",
 		"requirable": "^1.0.5",
-		"tsd": "^0.30.7"
+		"tsd": "^0.31.0"
 	},
 	"tsd": {
 		"directory": "test"
