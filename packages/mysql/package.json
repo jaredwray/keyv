@@ -68,14 +68,14 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mysql2": "3.9.2"
+		"mysql2": "3.9.7"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.2",
-		"tsd": "^0.30.7"
+		"tsd": "^0.31.0"
 	},
 	"tsd": {
 		"directory": "test"
