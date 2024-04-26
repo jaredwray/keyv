@@ -1,7 +1,6 @@
 import {constants as zlibConstants} from 'node:zlib';
 import v8 from 'node:v8';
 import test from 'ava';
-import json from 'json-buffer';
 import {keyvCompresstionTests} from '@keyv/test-suite';
 import KeyvBrotli from '../src/index';
 import type {DeserializeResult} from '../src/types';
@@ -104,23 +103,3 @@ test('decompression using number array with v8', async t => {
 	t.deepEqual(decompressed, {help: [1, 2, 4]});
 });
 
-test('decompression using number array with json-buffer', async t => {
-	const options = {
-		serialize: json.stringify,
-		deserialize: json.parse,
-	};
-
-	const keyv = new KeyvBrotli(options);
-	const compressed = await keyv.compress({help: [1, 2, 4]});
-	const decompressed = await keyv.decompress(compressed);
-	t.deepEqual(decompressed, {help: [1, 2, 4]});
-});
-
-test('deserialize with an empty value', async t => {
-	const keyv = new KeyvBrotli();
-	// @ts-expect-error - Testing empty value
-	const deserialized = await keyv.deserialize('');
-
-	// @ts-expect-error - empty value
-	t.is(deserialized, '');
-});

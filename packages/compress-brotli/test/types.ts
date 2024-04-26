@@ -2,7 +2,6 @@ import zlib from 'node:zlib';
 import v8 from 'node:v8';
 import test from 'ava';
 import Keyv, {type KeyvStoreAdapter} from 'keyv';
-import json from 'json-buffer';
 import KeyvBrotli from '../src/index';
 
 type MyType = {
@@ -81,18 +80,3 @@ test('using number array with v8', async t => {
 	t.deepEqual(await keyv.get('testkey'), {b: [1, 2, 3]});
 });
 
-test('decompression using number array with json-buffer', async t => {
-	const options = {
-		serialize: json.stringify,
-		deserialize: json.parse,
-	};
-
-	const map = new Map() as unknown as KeyvStoreAdapter;
-
-	const keyv = new Keyv({
-		store: map,
-		compression: new KeyvBrotli(options),
-	});
-	t.true(await keyv.set('testkey', {b: [1, 2, 3]}));
-	t.deepEqual(await keyv.get('testkey'), {b: [1, 2, 3]});
-});

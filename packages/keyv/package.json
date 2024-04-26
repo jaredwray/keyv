@@ -52,7 +52,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"json-buffer": "3.0.1"
+		"@keyv/serialize": "*"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",

@@ -1,8 +1,8 @@
 import EventEmitter from 'node:events';
-import type {Buffer} from 'node:buffer';
+import {Buffer} from 'buffer';
 import memcache from 'memjs';
-import JSONB from 'json-buffer';
 import {KeyvStoreAdapter, StoredData} from 'keyv';
+import {defaultDeserialize} from '@keyv/serialize';
 
 type KeyvMemcacheOptions = {
 	url?: string;
@@ -56,8 +56,8 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 							expires: 0,
 						};
 					} else {
-						// eslint-disable-next-line @typescript-eslint/no-unsafe-call
-						value_ = (this.opts.deserialize ? this.opts.deserialize(value as unknown as string) : JSONB.parse(value as unknown as string)) as StoredData<Value>;
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+						value_ = (this.opts.deserialize ? this.opts.deserialize(value) : defaultDeserialize(value));
 					}
 
 					resolve(value_);

@@ -112,7 +112,7 @@ test.serial('.get(key, {raw: true}) returns the raw object instead of the value'
 	t.is((rawObject!).value, 'bar');
 });
 
-test.serial('Keyv uses custom serializer when provided instead of json-buffer', async t => {
+test.serial('Keyv uses custom serializer when provided instead of default', async t => {
 	t.plan(3);
 	const store = new Map();
 	const serialize = (data: Record<string, unknown>) => {
