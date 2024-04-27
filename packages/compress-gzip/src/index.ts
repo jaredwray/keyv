@@ -1,5 +1,5 @@
 import pako from 'pako';
-import JSONB from 'json-buffer';
+import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
 import type {Options, Serialize} from './types';
 
 class KeyvGzip {
@@ -24,12 +24,15 @@ class KeyvGzip {
 	}
 
 	async serialize({value, expires}: Serialize) {
-		return JSONB.stringify({value: await this.compress(value), expires});
+		return defaultSerialize({value: await this.compress(value), expires});
 	}
 
 	async deserialize(data: string) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		const {value, expires}: Serialize = JSONB.parse(data);
+		if (!data) {
+			return data;
+		}
+
+		const {value, expires}: Serialize = defaultDeserialize(data);
 		return {value: await this.decompress(value as pako.Data), expires};
 	}
 }

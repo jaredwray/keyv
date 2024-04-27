@@ -151,7 +151,7 @@ In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an 
 
 ### Custom Serializers
 
-Keyv uses [`json-buffer`](https://github.com/dominictarr/json-buffer) for data serialization to ensure consistency across different backends.
+Keyv uses [`buffer`](https://github.com/feross/buffer) for data serialization to ensure consistency across different backends.
 
 You can optionally provide your own serialization functions to support extra data types or to serialize to something other than JSON.
 

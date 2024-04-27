@@ -1,4 +1,4 @@
-import JSONB from 'json-buffer';
+import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
 import HooksManager from './hooks-manager';
 import EventManager from './event-manager';
 import StatsManager from './stats-manager';
@@ -129,8 +129,8 @@ class Keyv extends EventManager {
 		// @ts-expect-error - store is being added in the next step
 		this.opts = {
 			namespace: 'keyv',
-			serialize: JSONB.stringify,
-			deserialize: JSONB.parse,
+			serialize: defaultSerialize,
+			deserialize: defaultDeserialize,
 			emitErrors: true,
 			...options,
 		};

@@ -1,11 +1,10 @@
 import type {BrotliOptions, CompressCallback, InputType} from 'node:zlib';
-import type {parse as JSONBparse, stringify as JSONBstringify} from 'json-buffer';
 
 export type CompressResult = Promise<Parameters<CompressCallback>[1]>;
-export type DecompressResult = Promise<ReturnType<typeof JSONBparse>>;
+export type DecompressResult = Promise<any>;
 
-export type SerializeResult = ReturnType<typeof JSONBstringify>;
-export type DeserializeResult = ReturnType<typeof JSONBparse>;
+export type SerializeResult = string;
+export type DeserializeResult = any;
 
 type BrotliSerialize<T> = (source: InputType) => T;
 type BrotliDeserialize<T> = (source: CompressResult) => T;

@@ -1,5 +1,6 @@
 import type {BrotliOptions, InputType} from 'node:zlib';
 import compressBrotli from 'compress-brotli';
+import {defaultDeserialize, defaultSerialize} from '@keyv/serialize';
 import type {
 	Brotli, CompressResult, Options, SerializeResult, Serialize,
 } from './types';
@@ -19,9 +20,7 @@ class KeyvBrotli {
 	}
 
 	async serialize({value, expires}: Serialize): Promise<SerializeResult> {
-		const compressValue = await this.compress(value);
-		// @ts-expect-error - `expires` is not part of the `SerializeResult` type
-		return this.brotli.serialize({value: compressValue, expires});
+		return defaultSerialize({value: await this.compress(value), expires});
 	}
 
 	async deserialize(data: CompressResult): Promise<Serialize> {
@@ -30,7 +29,7 @@ class KeyvBrotli {
 			return data;
 		}
 
-		const {value, expires} = this.brotli.deserialize(data) as Serialize;
+		const {value, expires}: Serialize = defaultDeserialize(data);
 		return {value: await this.decompress(value), expires};
 	}
 }
