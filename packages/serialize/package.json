@@ -64,14 +64,14 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "buffer": "^6.0.1"
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
     "keyv": "*",
     "ts-node": "^10.9.2",
     "tsd": "^0.31.0",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.5"
   },
   "tsd": {
     "directory": "test"
