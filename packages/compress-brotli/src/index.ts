@@ -24,11 +24,6 @@ class KeyvBrotli {
 	}
 
 	async deserialize(data: CompressResult): Promise<Serialize> {
-		// eslint-disable-next-line @typescript-eslint/no-misused-promises
-		if (!data) {
-			return data;
-		}
-
 		const {value, expires}: Serialize = defaultDeserialize(data);
 		return {value: await this.decompress(value), expires};
 	}
