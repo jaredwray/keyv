@@ -1,28 +1,23 @@
-import {promisify} from 'util';
-import type {ExecutionContext, TestFn} from 'ava';
+import type Vitest from 'vitest';
 import type KeyvModule from 'keyv';
 
-const keyvOfficialTests = (test: TestFn, Keyv: typeof KeyvModule, goodUri: string, badUri: string, options = {}) => { // eslint-disable-line max-params
-	test.serial('connection string automatically requires storage adapter', async t => {
+const keyvOfficialTests = (test: typeof Vitest, Keyv: typeof KeyvModule, goodUri: string, badUri: string, options = {}) => {
+	test.it('connection string automatically requires storage adapter', async t => {
 		const keyv = new Keyv(goodUri, options);
 		await keyv.clear();
-		t.is(await keyv.get('foo'), undefined);
+		t.expect(await keyv.get('foo')).toBeUndefined();
 		await keyv.set('foo', 'bar');
-		t.is(await keyv.get('foo'), 'bar');
+		t.expect(await keyv.get('foo')).toBe('bar');
 		await keyv.clear();
 	});
 
-	const withCallback = (fn: (t: ExecutionContext, end: () => void) => void) => async (t: ExecutionContext) => {
-		await promisify(fn)(t);
-	};
-
-	test.serial('connection errors are emitted', withCallback((t: ExecutionContext, end) => {
+	test.it('connection errors are emitted', async t => {
 		const keyv = new Keyv(badUri, options);
-		keyv.on('error', () => {
-			t.pass();
-			end();
-		});
-	}));
+		await new Promise<void>(resolve => keyv.on('error', () => {
+			t.skip();
+			resolve();
+		}));
+	});
 };
 
 export default keyvOfficialTests;

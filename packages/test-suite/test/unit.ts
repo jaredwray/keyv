@@ -1,4 +1,4 @@
-import test from 'ava';
+import * as test from 'vitest';
 import Keyv from 'keyv';
 import KeyvBrotli from '@keyv/compress-brotli';
 import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests, keyvCompresstionTests} from '../src/index';
