@@ -7,7 +7,9 @@ type MyType = {
 };
 
 test.beforeEach(async () => {
-	const keyv = new KeyvEtcd();
+	const keyv = new Keyv({
+		store: new KeyvEtcd({uri: 'etcd://127.0.0.1:2379'}),
+	});
 	await keyv.clear();
 });
 
