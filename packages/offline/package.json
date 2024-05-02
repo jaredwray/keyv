@@ -7,39 +7,23 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo && c8 ava --serial",
+		"test": "vitest",
 		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {
 		"rules": {
-			"ava/no-ignored-test-files": [
-				"error",
-				{
-					"extensions": [
-						"js",
-						"ts"
-					]
-				}
-			],
-			"import/extensions": 0,
-			"unicorn/prefer-event-target": 0,
-			"@typescript-eslint/prefer-nullish-coalescing": 0,
-			"@typescript-eslint/naming-convention": 0,
-			"@typescript-eslint/no-unsafe-assignment": 0,
-			"@typescript-eslint/no-unsafe-call": 0,
-			"@typescript-eslint/no-unsafe-return": 0,
-			"@typescript-eslint/await-thenable": 0,
-			"@typescript-eslint/return-await": "off"
+			"import/extensions": "off",
+			"unicorn/prefer-event-target": "off",
+			"@typescript-eslint/prefer-nullish-coalescing": "off",
+			"@typescript-eslint/naming-convention": "off",
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-unsafe-call": "off",
+			"@typescript-eslint/no-unsafe-return": "off",
+			"@typescript-eslint/await-thenable": "off",
+			"@typescript-eslint/return-await": "off",
+			"import/no-extraneous-dependencies": "off"
 		}
-	},
-	"ava": {
-		"require": [
-			"ts-node/register"
-		],
-		"extensions": [
-			"ts"
-		]
 	},
 	"repository": {
 		"type": "git",
@@ -67,7 +51,6 @@
 		"@keyv/redis": "*",
 		"@keyv/test-suite": "*",
 		"keyv": "*",
-		"requirable": "^1.0.5",
 		"ts-node": "^10.9.1",
 		"tsd": "^0.29.0"
 	},
