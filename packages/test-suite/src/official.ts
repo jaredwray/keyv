@@ -14,7 +14,7 @@ const keyvOfficialTests = (test: typeof Vitest, Keyv: typeof KeyvModule, goodUri
 	test.it('connection errors are emitted', async t => {
 		const keyv = new Keyv(badUri, options);
 		await new Promise<void>(resolve => keyv.on('error', () => {
-			t.skip();
+			t.expect(true).toBeTruthy();
 			resolve();
 		}));
 	});
