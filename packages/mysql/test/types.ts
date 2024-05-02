@@ -6,6 +6,11 @@ type MyType = {
 	a: string;
 };
 
+test.beforeEach(async () => {
+	const keyv = new KeyvMysql('mysql://root@localhost/keyv_test');
+	await keyv.clear();
+});
+
 test.it('can specify mysql store in typescript', async t => {
 	const keyv = new Keyv({
 		store: new KeyvMysql('mysql://root@localhost/keyv_test'),

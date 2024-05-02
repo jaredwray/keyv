@@ -6,6 +6,11 @@ import KeyvPostgres from '../src/index';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5433/keyv_test';
 
+test.beforeEach(async () => {
+	const keyv = new KeyvPostgres({uri: postgresUri});
+	await keyv.clear();
+});
+
 test.it('throws if ssl is not used', async t => {
 	await endPool();
 	try {

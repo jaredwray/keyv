@@ -11,6 +11,11 @@ keyvTestSuite(test, Keyv, store);
 const iteratorStore = () => new KeyvMysql({uri: 'mysql://root@localhost/keyv_test', iterationLimit: 2});
 keyvIteratorTests(test, Keyv, iteratorStore);
 
+test.beforeEach(async () => {
+	const keyv = store();
+	await keyv.clear();
+});
+
 test.it('iterator with default namespace', async t => {
 	const keyv = new KeyvMysql({uri: 'mysql://root@localhost/keyv_test'});
 	await keyv.set('foo', 'bar');

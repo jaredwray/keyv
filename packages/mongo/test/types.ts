@@ -6,6 +6,11 @@ type MyType = {
 	a: string;
 };
 
+test.beforeEach(async () => {
+	const keyv = new KeyvMongo('mongodb://127.0.0.1:27017');
+	await keyv.clear();
+});
+
 test.it('can specify mongo store in typescript', async t => {
 	const keyv = new Keyv({
 		store: new KeyvMongo('mongodb://127.0.0.1:27017'),

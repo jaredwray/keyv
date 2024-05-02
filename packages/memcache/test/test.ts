@@ -17,6 +17,10 @@ if (process.env.URI) {
 
 const keyvMemcache = new KeyvMemcache(uri);
 
+test.beforeEach(async () => {
+	await keyvMemcache.clear();
+});
+
 test.it('keyv get / no expired', async t => {
 	const keyv = new Keyv({store: keyvMemcache});
 
@@ -47,7 +51,6 @@ test.it('keyv get', async t => {
 });
 
 test.it('get namespace', t => {
-	const keyv = new Keyv({store: keyvMemcache});
 	t.expect(keyvMemcache._getNamespace()).toBe('namespace:keyv');
 });
 

@@ -13,6 +13,11 @@ const options = {
 	},
 };
 
+test.beforeEach(async () => {
+	const keyv = new KeyvMysql({uri: 'mysql://root@localhost:3307/keyv_test'});
+	await keyv.clear();
+})
+
 test.it('throws if ssl is not used', async t => {
 	try {
 		const keyv = new KeyvMysql({uri: 'mysql://root@localhost:3307/keyv_test'});
