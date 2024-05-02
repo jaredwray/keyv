@@ -7,32 +7,17 @@
   "scripts": {
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
-    "test": "xo && c8 ava --serial",
+    "test": "vitest",
     "test:ci": "xo && ava --serial",
     "clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
     "rules": {
-      "unicorn/prefer-event-target": 0,
-      "ava/no-ignored-test-files": [
-        "error",
-        {
-          "extensions": [
-            "js",
-            "ts"
-          ]
-        }
-      ],
-      "import/extensions": 0
+      "unicorn/prefer-event-target": "off",
+      "import/extensions": "off",
+      "import/no-extraneous-dependencies": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off"
     }
-  },
-  "ava": {
-    "require": [
-      "ts-node/register"
-    ],
-    "extensions": [
-      "ts"
-    ]
   },
   "repository": {
     "type": "git",
@@ -59,12 +44,9 @@
   "devDependencies": {
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
-    "ava": "^5.3.1",
     "c8": "^8.0.1",
     "eslint": "^8.54.0",
     "keyv": "*",
-    "requirable": "^1.0.5",
-    "ts-node": "^10.9.1",
     "tsd": "^0.29.0",
     "typescript": "^5.2.2",
     "xo": "^0.56.0"
