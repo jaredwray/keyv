@@ -1,4 +1,4 @@
-import test from 'ava';
+import * as test from 'vitest';
 import Keyv from 'keyv';
 import KeyvMemcache from '../src/index';
 
@@ -6,11 +6,11 @@ type MyType = {
 	a: string;
 };
 
-test('can specify memcached store in typescript', async t => {
+test.it('can specify memcached store in typescript', async t => {
 	const keyv = new Keyv({
 		store: new KeyvMemcache('localhost:11211'),
 	});
 
-	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
+	t.expect(await keyv.set('typeskey', {a: 'testvalue'})).toBeTruthy();
+	t.expect(await keyv.get<MyType>('typeskey')).toEqual({a: 'testvalue'});
 });
