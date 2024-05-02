@@ -1,4 +1,4 @@
-import test from 'ava';
+import * as test from 'vitest';
 import Keyv from 'keyv';
 import KeyvMysql from '../src/index';
 
@@ -6,11 +6,11 @@ type MyType = {
 	a: string;
 };
 
-test('can specify mysql store in typescript', async t => {
+test.it('can specify mysql store in typescript', async t => {
 	const keyv = new Keyv({
 		store: new KeyvMysql('mysql://root@localhost/keyv_test'),
 	});
 
-	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
+	t.expect(await keyv.set('testkey', {a: 'testvalue'})).toBeTruthy();
+	t.expect(await keyv.get<MyType>('testkey')).toStrictEqual({a: 'testvalue'});
 });

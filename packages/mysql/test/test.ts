@@ -1,4 +1,4 @@
-import test from 'ava';
+import * as test from 'vitest';
 import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMysql from '../src/index';
@@ -11,28 +11,28 @@ keyvTestSuite(test, Keyv, store);
 const iteratorStore = () => new KeyvMysql({uri: 'mysql://root@localhost/keyv_test', iterationLimit: 2});
 keyvIteratorTests(test, Keyv, iteratorStore);
 
-test.serial('iterator with default namespace', async t => {
+test.it('iterator with default namespace', async t => {
 	const keyv = new KeyvMysql({uri: 'mysql://root@localhost/keyv_test'});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
 	const iterator = keyv.iterator();
 	let entry = await iterator.next();
-	t.is(entry.value[0], 'foo');
-	t.is(entry.value[1], 'bar');
+	t.expect(entry.value[0]).toBe('foo');
+	t.expect(entry.value[1]).toBe('bar');
 	entry = await iterator.next();
-	t.is(entry.value[0], 'foo1');
-	t.is(entry.value[1], 'bar1');
+	t.expect(entry.value[0]).toBe('foo1');
+	t.expect(entry.value[1]).toBe('bar1');
 	entry = await iterator.next();
-	t.is(entry.value[0], 'foo2');
-	t.is(entry.value[1], 'bar2');
+	t.expect(entry.value[0]).toBe('foo2');
+	t.expect(entry.value[1]).toBe('bar2');
 	entry = await iterator.next();
-	t.is(entry.value, undefined);
+	t.expect(entry.value).toBeUndefined();
 });
 
-test.serial('.clear() with undefined namespace', async t => {
+test.it('.clear() with undefined namespace', async t => {
 	const keyv = store();
-	t.is(await keyv.clear(), undefined);
+	t.expect(await keyv.clear()).toBeUndefined();
 });
 
 const connectionSamples = [
@@ -87,27 +87,27 @@ const connectionSamples = [
 	},
 ];
 
-test.serial('validate connection strings', t => {
+test.it('validate connection strings', t => {
 	for (const connection of connectionSamples) {
 		const newConnectionString = `mysql://${connection.username}:${connection.password ?? ''}@${connection.host}:${connection.port ?? ''}/${connection.database}`;
 		const parsedConnection = parseConnectionString(newConnectionString);
 
-		t.is(parsedConnection.user, connection.username);
-		t.is(parsedConnection.password, connection.password);
-		t.is(parsedConnection.host, connection.host);
-		t.is(parsedConnection.port, connection.port);
-		t.is(parsedConnection.database, connection.database);
+		t.expect(parsedConnection.user).toBe(connection.username);
+		t.expect(parsedConnection.password).toBe(connection.password);
+		t.expect(parsedConnection.host).toBe(connection.host);
+		t.expect(parsedConnection.port).toBe(connection.port);
+		t.expect(parsedConnection.database).toBe(connection.database);
 	}
 });
 
-test.serial('close connection successfully', async t => {
+test.it('close connection successfully', async t => {
 	const keyv = store();
-	t.is(await keyv.get('foo'), undefined);
+	t.expect(await keyv.get('foo')).toBeUndefined();
 	await keyv.disconnect();
 	try {
 		await keyv.get('foo');
-		t.fail();
+		t.expect.fail();
 	} catch {
-		t.pass();
+		t.expect(true).toBeTruthy();
 	}
 });

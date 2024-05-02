@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import test from 'ava';
+import * as test from 'vitest';
 import {endPool} from '../src/pool';
 import KeyvMysql from '../src/index';
 
@@ -13,20 +13,20 @@ const options = {
 	},
 };
 
-test.serial('throws if ssl is not used', async t => {
+test.it('throws if ssl is not used', async t => {
 	try {
 		const keyv = new KeyvMysql({uri: 'mysql://root@localhost:3307/keyv_test'});
 		await keyv.get('foo');
-		t.fail();
+		t.expect.fail();
 	} catch {
-		t.pass();
+		t.expect(true).toBeTruthy();
 	} finally {
 		endPool();
 	}
 });
 
-test.serial('set with ssl ', async t => {
+test.it('set with ssl ', async t => {
 	const keyv = new KeyvMysql({uri: 'mysql://root@localhost:3307/keyv_test', ...options});
 	await keyv.set('key', 'value');
-	t.is(await keyv.get('key'), 'value');
+	t.expect(await keyv.get('key')).toBe('value');
 });
