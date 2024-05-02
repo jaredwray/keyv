@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
-    "test": "xo --fix && c8 ava --serial",
+    "test": "vitest",
     "test:ci": "xo && ava --serial",
     "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf ./dist && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
