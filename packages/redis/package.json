@@ -7,42 +7,25 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo --fix && c8 ava --serial",
+		"test": "vitest",
 		"test:ci": "xo && ava --serial",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-module": 0,
-			"unicorn/prefer-event-target": 0,
-			"unicorn/prefer-node-protocol": 0,
-			"unicorn/no-typeof-undefined": 0,
-			"import/extensions": 0,
-			"@typescript-eslint/no-unsafe-call": 0,
-			"@typescript-eslint/no-unsafe-assignment": 0,
-			"@typescript-eslint/no-unsafe-return": 0,
-			"unicorn/prefer-ternary": 0,
-			"unicorn/no-array-callback-reference": 0,
-			"ava/no-ignored-test-files": [
-				"error",
-				{
-					"extensions": [
-						"js",
-						"ts"
-					]
-				}
-			]
+			"unicorn/prefer-module": "off",
+			"unicorn/prefer-event-target": "off",
+			"unicorn/prefer-node-protocol": "off",
+			"unicorn/no-typeof-undefined": "off",
+			"import/extensions": "off",
+			"@typescript-eslint/no-unsafe-call": "off",
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-unsafe-return": "off",
+			"unicorn/prefer-ternary": "off",
+			"unicorn/no-array-callback-reference": "off",
+			"import/no-extraneous-dependencies": "off",
+			"@typescript-eslint/no-confusing-void-expression": "off"
 		}
-	},
-	"ava": {
-		"require": [
-			"requirable",
-			"ts-node/register"
-		],
-		"extensions": [
-			"js",
-			"ts"
-		]
 	},
 	"repository": {
 		"type": "git",
@@ -71,7 +54,6 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"keyv": "*",
-		"requirable": "^1.0.5",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.29.0"
 	},
