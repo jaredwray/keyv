@@ -1,6 +1,6 @@
 import zlib from 'node:zlib';
 import v8 from 'node:v8';
-import test from 'ava';
+import * as test from 'vitest';
 import Keyv, {type KeyvStoreAdapter} from 'keyv';
 import KeyvBrotli from '../src/index';
 
@@ -9,17 +9,17 @@ type MyType = {
 	b?: number[];
 };
 
-test('default options', async t => {
+test.it('default options', async t => {
 	const keyv = new Keyv({
 		store: new Map() as unknown as KeyvStoreAdapter,
 		compression: new KeyvBrotli(),
 	});
 
-	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get<MyType>('testkey'), {a: 'testvalue'});
+	t.expect(await keyv.set('testkey', {a: 'testvalue'})).toBe(true);
+	t.expect(await keyv.get<MyType>('testkey')).toEqual({a: 'testvalue'});
 });
 
-test('compression user defined options', async t => {
+test.it('compression user defined options', async t => {
 	const options = {
 		compressOptions: {
 			chunkSize: 1024,
@@ -34,11 +34,11 @@ test('compression user defined options', async t => {
 		compression: new KeyvBrotli(options),
 	});
 
-	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get('testkey'), {a: 'testvalue'});
+	t.expect(await keyv.set('testkey', {a: 'testvalue'})).toBe(true);
+	t.expect(await keyv.get<MyType>('testkey')).toEqual({a: 'testvalue'});
 });
 
-test('user defined options', async t => {
+test.it('user defined options', async t => {
 	const options = {
 		decompressOptions: {
 			chunkSize: 1024,
@@ -53,11 +53,11 @@ test('user defined options', async t => {
 		compression: new KeyvBrotli(options),
 	});
 
-	t.true(await keyv.set('testkey', {a: 'testvalue'}));
-	t.deepEqual(await keyv.get('testkey'), {a: 'testvalue'});
+	t.expect(await keyv.set('testkey', {a: 'testvalue'})).toBe(true);
+	t.expect(await keyv.get<MyType>('testkey')).toEqual({a: 'testvalue'});
 });
 
-test('using number array with v8', async t => {
+test.it('using number array with v8', async t => {
 	const options = {
 		decompressOptions: {
 			chunkSize: 1024,
@@ -76,7 +76,7 @@ test('using number array with v8', async t => {
 		compression: new KeyvBrotli(options),
 	});
 
-	t.true(await keyv.set('testkey', {b: [1, 2, 3]}));
-	t.deepEqual(await keyv.get('testkey'), {b: [1, 2, 3]});
+	t.expect(await keyv.set('testkey', {b: [1, 2, 3]})).toBe(true);
+	t.expect(await keyv.get<MyType>('testkey')).toEqual({b: [1, 2, 3]});
 });
 
