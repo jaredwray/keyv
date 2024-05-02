@@ -1,4 +1,4 @@
-import test from 'ava';
+import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests, keyvOfficialTests} from '@keyv/test-suite';
 import tk from 'timekeeper';
 import KeyvSqlite from '@keyv/sqlite';
@@ -19,35 +19,35 @@ const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTime
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
-test.serial('Keyv is a class', t => {
-	t.is(typeof Keyv, 'function');
+test.it('Keyv is a class', t => {
+	t.expect(typeof Keyv).toBe('function');
 	// @ts-expect-error
-	t.throws(() => Keyv()); // eslint-disable-line new-cap
-	t.notThrows(() => new Keyv());
+	t.expect(() => Keyv()).toThrow(); // eslint-disable-line new-cap
+	t.expect(() => new Keyv()).not.toThrow();
 });
 
-test.serial('Keyv accepts storage adapters', async t => {
+test.it('Keyv accepts storage adapters', async t => {
 	const store = new Map();
 	const keyv = new Keyv({store});
-	t.is(store.size, 0);
+	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
-	t.deepEqual(await keyv.get('foo', {raw: true}), {value: 'bar', expires: null});
-	t.is(store.size, 1);
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(store.size).toBe(1);
 });
 
-test.serial('Keyv.loadStore throws error if adapter doesnt exist', t => {
+test.it('Keyv.loadStore throws error if adapter doesnt exist', async t => {
 	const options = {adapter: 'nonexistent', url: 'noexistent://localhost'};
-	t.throws(() => new Keyv(options));
+	t.expect(() => new Keyv(options)).toThrow();
 });
 
-test.serial('Keyv passes tll info to stores', async t => {
-	t.plan(1);
+test.it('Keyv passes ttl info to stores', async t => {
+	t.expect.assertions(1);
 	const store = new Map();
 	const storeSet = store.set;
 	// @ts-expect-error
 	store.set = (key, value, ttl) => {
-		t.is(ttl, 100);
+		t.expect(ttl).toBe(100);
 		// @ts-expect-error
 		storeSet.call(store, key, value, ttl);
 	};
@@ -56,18 +56,18 @@ test.serial('Keyv passes tll info to stores', async t => {
 	await keyv.set('foo', 'bar', 100);
 });
 
-test.serial('Keyv respects default tll option', async t => {
+test.it('Keyv respects default ttl option', async t => {
 	const store = new Map();
 	const keyv = new Keyv({store, ttl: 100});
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 	tk.freeze(Date.now() + 150);
-	t.is(await keyv.get('foo'), undefined);
-	t.is(store.size, 0);
+	t.expect(await keyv.get('foo')).toBeUndefined();
+	t.expect(store.size).toBe(0);
 	tk.reset();
 });
 
-test.serial('.set(key, val, ttl) overwrites default tll option', async t => {
+test.it('.set(key, val, ttl) overwrites default ttl option', async t => {
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
@@ -75,81 +75,82 @@ test.serial('.set(key, val, ttl) overwrites default tll option', async t => {
 	await keyv.set('foo', 'bar');
 	await keyv.set('fizz', 'buzz', 100);
 	await keyv.set('ping', 'pong', 300);
-	t.is(await keyv.get('foo'), 'bar');
-	t.is(await keyv.get('fizz'), 'buzz');
-	t.is(await keyv.get('ping'), 'pong');
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('fizz')).toBe('buzz');
+	t.expect(await keyv.get('ping')).toBe('pong');
 	tk.freeze(startTime + 150);
-	t.is(await keyv.get('foo'), 'bar');
-	t.is(await keyv.get('fizz'), undefined);
-	t.is(await keyv.get('ping'), 'pong');
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('fizz')).toBeUndefined();
+	t.expect(await keyv.get('ping')).toBe('pong');
 	tk.freeze(startTime + 250);
-	t.is(await keyv.get('foo'), undefined);
-	t.is(await keyv.get('ping'), 'pong');
+	t.expect(await keyv.get('foo')).toBeUndefined();
+	t.expect(await keyv.get('ping')).toBe('pong');
 	tk.freeze(startTime + 350);
-	t.is(await keyv.get('ping'), undefined);
+	t.expect(await keyv.get('ping')).toBeUndefined();
 	tk.reset();
 });
 
-test.serial('.set(key, val, ttl) where ttl is "0" overwrites default tll option and sets key to never expire', async t => {
+test.it('.set(key, val, ttl) where ttl is "0" overwrites default ttl option and sets key to never expire', async t => {
 	const startTime = Date.now();
 	tk.freeze(startTime);
 	const store = new Map();
 	const keyv = new Keyv({store, ttl: 200});
 	await keyv.set('foo', 'bar', 0);
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 	tk.freeze(startTime + 250);
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 	tk.reset();
 });
 
-test.serial('.get(key, {raw: true}) returns the raw object instead of the value', async t => {
+test.it('.get(key, {raw: true}) returns the raw object instead of the value', async t => {
 	const store = new Map();
 	const keyv = new Keyv({store});
 	await keyv.set('foo', 'bar');
-	const value = await keyv.get<string>('foo');
-	const rawObject = await keyv.get<string>('foo', {raw: true});
-	t.is(value, 'bar');
-	t.is((rawObject!).value, 'bar');
+	const value = await keyv.get('foo');
+	const rawObject = await keyv.get('foo', {raw: true});
+	t.expect(value).toBe('bar');
+	t.expect(rawObject!.value).toBe('bar');
 });
 
-test.serial('Keyv uses custom serializer when provided instead of default', async t => {
-	t.plan(3);
+test.it('Keyv uses custom serializer when provided instead of default', async t => {
+	t.expect.assertions(3);
 	const store = new Map();
 	const serialize = (data: Record<string, unknown>) => {
-		t.pass();
+		t.expect(true).toBeTruthy();
 		return JSON.stringify(data);
 	};
 
 	const deserialize = (data: string) => {
-		t.pass();
+		t.expect(true).toBeTruthy();
 		return JSON.parse(data);
 	};
 
 	const keyv = new Keyv({store, serialize, deserialize});
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
-test.serial('Keyv supports async serializer/deserializer', async t => {
-	t.plan(3);
+test.it('Keyv supports async serializer/deserializer', async t => {
+	t.expect.assertions(3);
 	const store = new Map();
 
 	const serialize = (data: Record<string, unknown>) => {
-		t.pass();
+		t.expect(true).toBeTruthy();
 		return JSON.stringify(data);
 	};
 
 	const deserialize = (data: string) => {
-		t.pass();
+		t.expect(true).toBeTruthy();
 		return JSON.parse(data);
 	};
 
 	const keyv = new Keyv({store, serialize, deserialize});
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
-test.serial('Keyv should wait for the expired get', async t => {
+test.it('Keyv should wait for the expired get', async t => {
+	t.expect.assertions(4);
 	const _store = new Map() as unknown as KeyvStoreAdapter;
 	const store = {
 		get: async (key: string) => _store.get(key),
@@ -171,11 +172,11 @@ test.serial('Keyv should wait for the expired get', async t => {
 
 	// Round 1
 	const v1 = await keyv.get('foo');
-	t.is(v1, undefined);
+	t.expect(v1).toBeUndefined();
 
 	await keyv.set('foo', 'bar', 1000);
 	const v2 = await keyv.get('foo');
-	t.is(v2, 'bar');
+	t.expect(v2).toBe('bar');
 
 	await new Promise<void>(resolve => {
 		setTimeout(() => {
@@ -186,7 +187,7 @@ test.serial('Keyv should wait for the expired get', async t => {
 
 	// Round 2
 	const v3 = await keyv.get('foo');
-	t.is(v3, undefined);
+	t.expect(v3).toBeUndefined();
 
 	await keyv.set('foo', 'bar', 1000);
 	await new Promise<void>(resolve => {
@@ -196,44 +197,44 @@ test.serial('Keyv should wait for the expired get', async t => {
 		}, 30);
 	});
 	const v4 = await keyv.get('foo');
-	t.is(v4, 'bar');
+	t.expect(v4).toBe('bar');
 });
 
-test.serial('.delete([keys]) should delete multiple key for storage adapter not supporting deleteMany', async t => {
+test.it('.delete([keys]) should delete multiple keys for storage adapter not supporting deleteMany', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
-	t.is(await keyv.delete(['foo', 'foo1', 'foo2']), true);
-	t.is(await keyv.get('foo'), undefined);
-	t.is(await keyv.get('foo1'), undefined);
-	t.is(await keyv.get('foo2'), undefined);
+	t.expect(await keyv.delete(['foo', 'foo1', 'foo2'])).toBeTruthy();
+	t.expect(await keyv.get('foo')).toBeUndefined();
+	t.expect(await keyv.get('foo1')).toBeUndefined();
+	t.expect(await keyv.get('foo2')).toBeUndefined();
 });
 
-test.serial('.delete([keys]) with nonexistent keys resolves to false for storage adapter not supporting deleteMany', async t => {
+test.it('.delete([keys]) with nonexistent keys resolves to false for storage adapter not supporting deleteMany', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
-	t.is(await keyv.delete(['foo', 'foo1', 'foo2']), false);
+	t.expect(await keyv.delete(['foo', 'foo1', 'foo2'])).toBe(false);
 });
 
-test.serial('keyv.get([keys]) should return array values', async t => {
+test.it('keyv.get([keys]) should return array values', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
 	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']) as string[];
-	t.is(Array.isArray(values), true);
-	t.is(values[0], 'bar');
-	t.is(values[1], 'bar1');
-	t.is(values[2], 'bar2');
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values[0]).toBe('bar');
+	t.expect(values[1]).toBe('bar1');
+	t.expect(values[2]).toBe('bar2');
 
 	const rawValues = await keyv.get<string>(['foo', 'foo1', 'foo2'], {raw: true});
-	t.is(Array.isArray(rawValues), true);
-	t.deepEqual(rawValues[0], {value: 'bar', expires: null});
-	t.deepEqual(rawValues[1], {value: 'bar1', expires: null});
-	t.deepEqual(rawValues[2], {value: 'bar2', expires: null});
+	t.expect(Array.isArray(rawValues)).toBeTruthy();
+	t.expect(rawValues[0]).toEqual({value: 'bar', expires: null});
+	t.expect(rawValues[1]).toEqual({value: 'bar1', expires: null});
+	t.expect(rawValues[2]).toEqual({value: 'bar2', expires: null});
 });
 
-test.serial('keyv.get([keys]) should return array value undefined when expires', async t => {
+test.it('keyv.get([keys]) should return array value undefined when expires', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1', 1);
@@ -245,13 +246,13 @@ test.serial('keyv.get([keys]) should return array value undefined when expires',
 		}, 30);
 	});
 	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']);
-	t.is(Array.isArray(values), true);
-	t.is(values[0], 'bar');
-	t.is(values[1], undefined);
-	t.is(values[2], 'bar2');
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values[0]).toBe('bar');
+	t.expect(values[1]).toBeUndefined();
+	t.expect(values[2]).toBe('bar2');
 });
 
-test.serial('keyv.get([keys]) should return array value undefined when expires sqlite', async t => {
+test.it('keyv.get([keys]) should return array value undefined when expires sqlite', async t => {
 	const keyv = new Keyv({store: store()});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
@@ -259,18 +260,17 @@ test.serial('keyv.get([keys]) should return array value undefined when expires s
 	await keyv.set('foo2', 'bar2');
 	await new Promise<void>(resolve => {
 		setTimeout(() => {
-			// Simulate database latency
 			resolve();
 		}, 30);
 	});
 	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']);
-	t.is(Array.isArray(values), true);
-	t.is(values[0], 'bar');
-	t.is(values[1], undefined);
-	t.is(values[2], 'bar2');
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values[0]).toBe('bar');
+	t.expect(values[1]).toBeUndefined();
+	t.expect(values[2]).toBe('bar2');
 });
 
-test.serial('keyv.get([keys]) should return empty array when expires sqlite', async t => {
+test.it('keyv.get([keys]) should return empty array when expires sqlite', async t => {
 	const keyv = new Keyv({store: store()});
 	await keyv.clear();
 	await keyv.set('foo', 'bar', 1);
@@ -278,80 +278,79 @@ test.serial('keyv.get([keys]) should return empty array when expires sqlite', as
 	await keyv.set('foo2', 'bar2', 1);
 	await new Promise<void>(resolve => {
 		setTimeout(() => {
-			// Simulate database latency
 			resolve();
 		}, 30);
 	});
 	const values = await keyv.get(['foo', 'foo1', 'foo2']);
-	t.is(Array.isArray(values), true);
-	t.is(values.length, 3);
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values.length).toBe(3);
 });
 
-test.serial('keyv.get([keys]) should return array raw values sqlite', async t => {
+test.it('keyv.get([keys]) should return array raw values sqlite', async t => {
 	const keyv = new Keyv({store: store()});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	const values = await keyv.get<string>(['foo', 'foo1'], {raw: true}) as Array<StoredDataNoRaw<string>>;
-	t.is(Array.isArray(values), true);
-	t.deepEqual(values[0], {value: 'bar', expires: null});
-	t.deepEqual(values[1], {value: 'bar1', expires: null});
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values[0]).toEqual({value: 'bar', expires: null});
+	t.expect(values[1]).toEqual({value: 'bar1', expires: null});
 });
 
-test.serial('keyv.get([keys]) should return array raw values undefined sqlite', async t => {
+test.it('keyv.get([keys]) should return array raw values undefined sqlite', async t => {
 	const keyv = new Keyv({store: store()});
 	await keyv.clear();
 	const values = await keyv.get<string>(['foo', 'foo1'], {raw: true});
-	t.is(Array.isArray(values), true);
-	t.is(values[0], undefined);
-	t.is(values[1], undefined);
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values[0]).toBeUndefined();
+	t.expect(values[1]).toBeUndefined();
 });
 
-test.serial('keyv.get([keys]) should return array values with undefined', async t => {
+test.it('keyv.get([keys]) should return array values with undefined', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo2', 'bar2');
 	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']);
-	t.is(Array.isArray(values), true);
-	t.is(values[0], 'bar');
-	t.is(values[1], undefined);
-	t.is(values[2], 'bar2');
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values[0]).toBe('bar');
+	t.expect(values[1]).toBeUndefined();
+	t.expect(values[2]).toBe('bar2');
 });
 
-test.serial('keyv.get([keys]) should return array values with all undefined using storage adapter', async t => {
+test.it('keyv.get([keys]) should return array values with all undefined using storage adapter', async t => {
 	const keyv = new Keyv({store: store()});
 	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']);
-	t.is(Array.isArray(values), true);
-	t.is(values[0], undefined);
-	t.is(values[1], undefined);
-	t.is(values[2], undefined);
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values[0]).toBeUndefined();
+	t.expect(values[1]).toBeUndefined();
+	t.expect(values[2]).toBeUndefined();
 });
 
-test.serial('keyv.get([keys]) should return undefined array for all no existent keys', async t => {
+test.it('keyv.get([keys]) should return undefined array for all no existent keys', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
 	const values = await keyv.get(['foo', 'foo1', 'foo2']);
-	t.is(Array.isArray(values), true);
-	t.deepEqual(values, [undefined, undefined, undefined]);
+	t.expect(Array.isArray(values)).toBeTruthy();
+	t.expect(values).toEqual([undefined, undefined, undefined]);
 });
 
-test('pass compress options', async t => {
+test.it('pass compress options', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvBrotli()});
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
-test('compress/decompress with gzip', async t => {
+test.it('compress/decompress with gzip', async t => {
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvGzip()});
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
-test('iterator should exists with url', t => {
+test.it('iterator should exists with url', t => {
 	const store = new Keyv({store: new KeyvMongo({url: 'mongodb://127.0.0.1:27017'})});
-	t.is(typeof store.iterator, 'function');
+	t.expect(typeof store.iterator).toBe('function');
 });
 
-test.serial(
+test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with compression',
 	async t => {
 		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
@@ -382,17 +381,17 @@ test.serial(
 
 		await Promise.all(toResolve);
 
-		t.plan(map2.size);
+		t.expect.assertions(map2.size);
 		// @ts-expect-error
 		for await (const [key, value] of keyv2.iterator()) {
 			const doesKeyExist = map2.has(key);
 			const isValueSame = map2.get(key) === value;
-			t.true(doesKeyExist && isValueSame);
+			t.expect(doesKeyExist && isValueSame).toBeTruthy();
 		}
 	},
 );
 
-test.serial(
+test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces',
 	async t => {
 		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
@@ -423,17 +422,17 @@ test.serial(
 
 		await Promise.all(toResolve);
 
-		t.plan(map2.size);
+		t.expect.assertions(map2.size);
 		// @ts-expect-error
 		for await (const [key, value] of keyv2.iterator()) {
 			const doesKeyExist = map2.has(key);
 			const isValueSame = map2.get(key) === value;
-			t.true(doesKeyExist && isValueSame);
+			t.expect(doesKeyExist && isValueSame).toBeTruthy();
 		}
 	},
 );
 
-test.serial(
+test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer',
 	async t => {
 		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
@@ -468,23 +467,22 @@ test.serial(
 
 		await Promise.all(toResolve);
 
-		t.plan(map2.size);
+		t.expect.assertions(map2.size);
 		// @ts-expect-error
 		for await (const [key, value] of keyv2.iterator()) {
 			const doesKeyExist = map2.has(key);
 			const isValueSame = map2.get(key) === value;
-			t.true(doesKeyExist && isValueSame);
+			t.expect(doesKeyExist && isValueSame).toBeTruthy();
 		}
 	},
 );
 
-test.serial(
+test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer and compression',
 	async t => {
 		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
 
 		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
-
 		const deserialize = (data: string) => JSON.parse(data);
 
 		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip()});
@@ -513,115 +511,113 @@ test.serial(
 
 		await Promise.all(toResolve);
 
-		t.plan(map2.size);
+		t.expect.assertions(map2.size);
 		// @ts-expect-error
 		for await (const [key, value] of keyv2.iterator()) {
 			const doesKeyExist = map2.has(key);
 			const isValueSame = map2.get(key) === value;
-			t.true(doesKeyExist && isValueSame);
+			t.expect(doesKeyExist && isValueSame).toBeTruthy();
 		}
 	},
 );
 
-test.serial('close connection successfully', async t => {
+test.it('close connection successfully', async t => {
 	const keyv = new Keyv({store: store()});
 	await keyv.clear();
-	t.is(await keyv.get('foo'), undefined);
+	t.expect(await keyv.get('foo')).toBeUndefined();
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.disconnect(), undefined);
+	t.expect(await keyv.disconnect()).toBeUndefined();
 });
 
-test.serial('close connection undefined', async t => {
+test.it('close connection undefined', async t => {
 	const store = new Map() as unknown as KeyvStoreAdapter;
 	const keyv = new Keyv({store});
-	t.is(await keyv.disconnect(), undefined);
+	t.expect(await keyv.disconnect()).toBeUndefined();
 });
 
-test.serial('get keys, one key expired', async t => {
+test.it('get keys, one key expired', async t => {
 	const keyv = new Keyv({store: keyvMemcache});
 	await keyv.set('foo', 'bar', 10_000);
 	await keyv.set('fizz', 'buzz', 100);
 	await keyv.set('ping', 'pong', 10_000);
-	await new Promise(r => {
-		setTimeout(r, 100);
-	});
+	await snooze(100);
 	await keyv.get(['foo', 'fizz', 'ping']);
-	t.is(await keyv.get('fizz'), undefined);
-	t.is(await keyv.get('foo'), 'bar');
-	t.is(await keyv.get('ping'), 'pong');
+	t.expect(await keyv.get('fizz')).toBeUndefined();
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('ping')).toBe('pong');
 });
 
-test.serial('emit clear event', async t => {
+test.it('emit clear event', async t => {
 	const keyv = new Keyv();
 	keyv.on('clear', () => {
-		t.pass();
+		t.expect(true).toBeTruthy();
 	});
 	await keyv.clear();
 });
 
-test.serial('emit disconnect event', async t => {
+test.it('emit disconnect event', async t => {
 	const keyv = new Keyv();
 	keyv.on('disconnect', () => {
-		t.pass();
+		t.expect(true).toBeTruthy();
 	});
 	await keyv.disconnect();
 });
 
-test.serial('Keyv has should return if adapter does not support has', async t => {
+test.it('Keyv has should return if adapter does not support has', async t => {
 	const keyv = new Keyv();
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
+	t.expect(await keyv.has('foo')).toBe(true);
+	t.expect(await keyv.has('fizz')).toBe(false);
 });
 
-test.serial('Keyv has should return if Map and undefined expires', async t => {
+test.it('Keyv has should return if Map and undefined expires', async t => {
 	const keyv = new Keyv();
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.has('foo'), true);
-	t.is(await keyv.has('fizz'), false);
+	t.expect(await keyv.has('foo')).toBe(true);
+	t.expect(await keyv.has('fizz')).toBe(false);
 });
 
-test.serial('Keyv has should return if adapter does not support has on expired', async t => {
+test.it('Keyv has should return if adapter does not support has on expired', async t => {
 	const keyv = new Keyv({store: new Map()});
 	keyv.opts.store.has = undefined;
 	await keyv.set('foo', 'bar', 1000);
-	t.is(await keyv.has('foo'), true);
+	t.expect(await keyv.has('foo')).toBe(true);
 	await snooze(1100);
-	t.is(await keyv.has('foo'), false);
+	t.expect(await keyv.has('foo')).toBe(false);
 });
 
-test.serial('Keyv memcache has should return false on expired', async t => {
+test.it('Keyv memcache has should return false on expired', async t => {
 	const keyv = new Keyv({store: keyvMemcache});
 	const keyName = 'memcache-expired';
 	await keyv.set(keyName, 'bar', 1000);
 	await snooze(1100);
 	const value = await keyv.get(keyName);
 	const exists = await keyv.has(keyName);
-	t.is(value, undefined);
-	t.is(exists, false);
+	t.expect(value).toBeUndefined();
+	t.expect(exists).toBe(false);
 });
 
-test.serial('Keyv has should return true or false on Map', async t => {
+test.it('Keyv has should return true or false on Map', async t => {
 	const keyv = new Keyv({store: new Map()});
 	await keyv.set('foo', 'bar', 1000);
-	t.is(await keyv.has('foo'), true);
+	t.expect(await keyv.has('foo')).toBe(true);
 	await snooze(1100);
-	t.is(await keyv.has('foo'), false);
+	t.expect(await keyv.has('foo')).toBe(false);
 });
 
-test.serial('Keyv opts.stats should set the stats manager', t => {
+test.it('Keyv opts.stats should set the stats manager', t => {
 	const keyv = new Keyv({stats: true});
-	t.is(keyv.stats.enabled, true);
+	t.expect(keyv.stats.enabled).toBe(true);
 });
 
-test.serial('Keyv stats enabled should create counts', async t => {
+test.it('Keyv stats enabled should create counts', async t => {
 	const keyv = new Keyv({stats: true});
 	await keyv.set('foo', 'bar');
 	await keyv.get('foo');
 	await keyv.get('foo1');
 	await keyv.delete('foo');
-	t.is(keyv.stats.hits, 1);
-	t.is(keyv.stats.misses, 1);
-	t.is(keyv.stats.deletes, 1);
-	t.is(keyv.stats.sets, 1);
+	t.expect(keyv.stats.hits).toBe(1);
+	t.expect(keyv.stats.misses).toBe(1);
+	t.expect(keyv.stats.deletes).toBe(1);
+	t.expect(keyv.stats.sets).toBe(1);
 });
