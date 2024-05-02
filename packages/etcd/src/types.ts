@@ -4,7 +4,7 @@ export type GetOutput<Value> = Promise<Value | undefined>;
 
 export type GetManyOutput<Value> = Promise<Array<StoredData<Value | undefined> | undefined>>;
 
-export type SetOutput = Promise<any>;
+export type SetOutput = Promise<void>;
 
 export type DeleteOutput = Promise<boolean>;
 

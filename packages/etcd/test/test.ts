@@ -1,4 +1,4 @@
-import test from 'ava';
+import * as test from 'vitest';
 import Keyv from 'keyv';
 import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
 import KeyvEtcd from '../src/index';
@@ -11,49 +11,54 @@ const store = () => new KeyvEtcd({uri: etcdUrl, busyTimeout: 3000});
 
 keyvTestSuite(test, Keyv, store);
 
-test.serial('default options', t => {
+test.beforeEach(async () => {
+	const keyv = new KeyvEtcd(etcdUrl);
+	await keyv.clear();
+});
+
+test.it('default options', t => {
 	const store = new KeyvEtcd();
-	t.deepEqual(store.opts, {
+	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 	});
 });
 
-test.serial('enable ttl using default url', t => {
+test.it('enable ttl using default url', t => {
 	const store = new KeyvEtcd({ttl: 1000});
-	t.deepEqual(store.opts, {
+	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: 1000,
 	});
-	t.is(store.ttlSupport, true);
+	t.expect(store.ttlSupport).toBeTruthy();
 });
 
-test.serial('disable ttl using default url', t => {
+test.it('disable ttl using default url', t => {
 	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd({ttl: true});
-	t.deepEqual(store.opts, {
+	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: true,
 	});
-	t.is(store.ttlSupport, false);
+	t.expect(store.ttlSupport).toBeFalsy();
 });
 
-test.serial('enable ttl using url and options', t => {
+test.it('enable ttl using url and options', t => {
 	const store = new KeyvEtcd('127.0.0.1:2379', {ttl: 1000});
-	t.deepEqual(store.opts, {
+	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: 1000,
 	});
-	t.is(store.ttlSupport, true);
+	t.expect(store.ttlSupport).toBeTruthy();
 });
 
-test.serial('disable ttl using url and options', t => {
+test.it('disable ttl using url and options', t => {
 	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd('127.0.0.1:2379', {ttl: true});
-	t.deepEqual(store.opts, {
+	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: true,
 	});
-	t.is(store.ttlSupport, false);
+	t.expect(store.ttlSupport).toBeFalsy();
 });
 
 async function sleep(ms: number): Promise<void> {
@@ -62,46 +67,46 @@ async function sleep(ms: number): Promise<void> {
 	});
 }
 
-test.serial('KeyvEtcd respects default tll option', async t => {
+test.it('KeyvEtcd respects default tll option', async t => {
 	const keyv = new KeyvEtcd(etcdUrl, {ttl: 1000});
 	await keyv.set('foo', 'bar');
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 	await sleep(3000);
-	t.is(await keyv.get('foo'), null);
+	t.expect(await keyv.get('foo')).toBe(null);
 });
 
-test.serial('.delete() with key as number', async t => {
+test.it('.delete() with key as number', async t => {
 	const store = new KeyvEtcd({uri: etcdUrl});
 	// @ts-expect-error - key needs be a string, just for test
-	t.false(await store.delete(123));
+	t.expect(await store.delete(123)).toBeFalsy();
 });
 
-test.serial('.clear() with default namespace', async t => {
+test.it('.clear() with default namespace', async t => {
 	const store = new KeyvEtcd(etcdUrl);
-	t.is(await store.clear(), undefined);
+	t.expect(await store.set('foo', 'bar')).toBe(undefined);
 });
 
-test.serial('.clear() with namespace', async t => {
+test.it('.clear() with namespace', async t => {
 	const store = new KeyvEtcd(etcdUrl);
 	store.namespace = 'key1';
 	await store.set(`${store.namespace}:key`, 'bar');
-	t.is(await store.clear(), undefined);
-	t.is(await store.get(`${store.namespace}:key`), null);
+	t.expect(await store.clear()).toBeUndefined();
+	t.expect(await store.get(`${store.namespace}:key`)).toBe(null);
 });
 
-test.serial('close connection successfully', async t => {
+test.it('close connection successfully', async t => {
 	const keyv = new KeyvEtcd(etcdUrl);
-	t.is(await keyv.get('foo'), null);
+	t.expect(await keyv.get('foo')).toBe(null);
 	await keyv.disconnect();
 	try {
 		await keyv.get('foo');
-		t.fail();
+		t.expect.fail();
 	} catch {
-		t.pass();
+		t.expect(true).toBeTruthy();
 	}
 });
 
-test.serial('iterator with namespace', async t => {
+test.it('iterator with namespace', async t => {
 	const store = new KeyvEtcd(etcdUrl);
 	store.namespace = 'key1';
 	await store.set('key1:foo', 'bar');
@@ -109,26 +114,25 @@ test.serial('iterator with namespace', async t => {
 	const iterator = store.iterator('key1');
 	let entry = await iterator.next();
 	// @ts-expect-error - test iterator
-	t.is(entry.value[0], 'key1:foo');
+	t.expect(entry.value[0]).toBe('key1:foo');
 	// @ts-expect-error - test iterator
-	t.is(entry.value[1], 'bar');
+	t.expect(entry.value[1]).toBe('bar');
 	entry = await iterator.next();
 	// @ts-expect-error - test iterator
-	t.is(entry.value[0], 'key1:foo2');
+	t.expect(entry.value[0]).toBe('key1:foo2');
 	// @ts-expect-error - test iterator
-	t.is(entry.value[1], 'bar2');
+	t.expect(entry.value[1]).toBe('bar2');
 	entry = await iterator.next();
-	t.is(entry.value, undefined);
+	t.expect(entry.value).toBeUndefined();
 });
 
-test.serial('iterator without namespace', async t => {
+test.it('iterator without namespace', async t => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.set('foo', 'bar');
 	const iterator = store.iterator();
 	const entry = await iterator.next();
 	// @ts-expect-error - test iterator
-	t.is(entry.value[0], 'foo');
+	t.expect(entry.value[0]).toBe('foo');
 	// @ts-expect-error - test iterator
-	t.is(entry.value[1], 'bar');
+	t.expect(entry.value[1]).toBe('bar');
 });
-
