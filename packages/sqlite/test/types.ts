@@ -7,7 +7,9 @@ type MyType = {
 };
 
 test.beforeEach(async () => {
-	const keyv = new KeyvSqlite('sqlite://test/testdb.sqlite');
+	const keyv = new Keyv({
+		store: new KeyvSqlite('sqlite://test/testdb.sqlite'),
+	});
 	await keyv.clear();
 });
 

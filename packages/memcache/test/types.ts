@@ -6,6 +6,14 @@ type MyType = {
 	a: string;
 };
 
+test.beforeEach(async () => {
+	const keyv = new Keyv({
+		store: new KeyvMemcache('localhost:11211'),
+	});
+
+	await keyv.clear();
+});
+
 test.it('can specify memcached store in typescript', async t => {
 	const keyv = new Keyv({
 		store: new KeyvMemcache('localhost:11211'),
