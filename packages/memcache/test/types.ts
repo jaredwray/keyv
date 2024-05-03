@@ -7,9 +7,7 @@ type MyType = {
 };
 
 test.beforeEach(async () => {
-	const keyv = new Keyv({
-		store: new KeyvMemcache('localhost:11211'),
-	});
+	const keyv = new KeyvMemcache('localhost:11211')
 
 	await keyv.clear();
 });
