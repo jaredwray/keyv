@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import * as test from 'vitest';
-import {endPool} from '../src/pool';
 import KeyvMysql from '../src/index';
 
 const options = {
@@ -20,11 +19,9 @@ test.beforeEach(async () => {
 
 test.it('throws if ssl is not used', async t => {
 	try {
-		const keyv = new KeyvMysql({uri: 'mysql://root@localhost:3307/keyv_test'});
+		new KeyvMysql({uri: 'mysql://root@localhost:3307/keyv_test'});
 	} catch {
 		t.expect(true).toBeTruthy();
-	} finally {
-		endPool();
 	}
 });
 
