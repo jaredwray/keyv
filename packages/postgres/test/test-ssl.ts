@@ -6,8 +6,16 @@ import KeyvPostgres from '../src/index';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5433/keyv_test';
 
+const options = {ssl: {rejectUnauthorized: false}};
+
+keyvOfficialTests(test, Keyv, postgresUri, 'postgresql://foo', options);
+
+const store = () => new KeyvPostgres({uri: postgresUri, iterationLimit: 2, ...options});
+keyvTestSuite(test, Keyv, store);
+keyvIteratorTests(test, Keyv, store);
+
 test.beforeEach(async () => {
-	const keyv = new KeyvPostgres({uri: postgresUri});
+	const keyv = new KeyvPostgres({uri: postgresUri, ...options});
 	await keyv.clear();
 });
 
@@ -23,14 +31,6 @@ test.it('throws if ssl is not used', async t => {
 		await endPool();
 	}
 });
-
-const options = {ssl: {rejectUnauthorized: false}};
-
-keyvOfficialTests(test, Keyv, postgresUri, 'postgresql://foo', options);
-
-const store = () => new KeyvPostgres({uri: postgresUri, iterationLimit: 2, ...options});
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
 
 test.it('iterator with default namespace', async t => {
 	const keyv = new KeyvPostgres({uri: postgresUri, ...options});
