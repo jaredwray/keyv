@@ -77,8 +77,8 @@
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.2",
-		"tsd": "^0.30.7",
-		"typescript": "^5.3.3"
+		"tsd": "^0.31.0",
+		"typescript": "^5.4.5"
 	},
 	"tsd": {
 		"directory": "test"
