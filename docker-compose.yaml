@@ -21,8 +21,12 @@ services:
     ports:
     - 5433:5432/tcp
   keyv_mysql:
-    image: mysql:latest
-    command: --default-authentication-plugin=mysql_native_password
+    image: mysql/mysql-server:latest
+    command: [ "mysqld",
+                "--character-set-server=utf8mb4",
+                "--collation-server=utf8mb4_unicode_ci",
+                "--bind-address=0.0.0.0",
+                "--default_authentication_plugin=mysql_native_password" ]
     restart: always
     ports:
       - 3306:3306
@@ -30,8 +34,9 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
       MYSQL_DATABASE: keyv_test
       MYSQL_USER: mysql
+      MYSQL_ROOT_HOST: '%'
   keyv_mysql_1:
-        image: "mysql/mysql-server:8.0.17"
+        image: "mysql/mysql-server:latest"
         command: [ "mysqld",
                     "--character-set-server=utf8mb4",
                     "--collation-server=utf8mb4_unicode_ci",
