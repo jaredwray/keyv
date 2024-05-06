@@ -2,7 +2,7 @@ version: '3.8'
 services:
   keyv_postgres:
     image: postgres:latest
-    command: postgres -c 'max_connections=200' -c 'enable_parallel_hash=on'
+    command: postgres -c 'max_connections=200'
     environment:
       POSTGRES_DB: keyv_test
       POSTGRES_PASSWORD: postgres
@@ -13,7 +13,7 @@ services:
     build:
       context: packages/postgres
       dockerfile: Dockerfile.ssl
-    command: postgres -c 'max_connections=200' -c 'ssl=on' -c 'ssl_cert_file=/keyv_postgres_ssl/server.crt' -c 'ssl_key_file=/keyv_postgres_ssl/server.key' -c 'hba_file=/keyv_postgres_ssl/pg_hba.conf' -c "listen_addresses=*" -c 'enable_parallel_hash=on'
+    command: postgres -c 'max_connections=200' -c 'ssl=on' -c 'ssl_cert_file=/keyv_postgres_ssl/server.crt' -c 'ssl_key_file=/keyv_postgres_ssl/server.key' -c 'hba_file=/keyv_postgres_ssl/pg_hba.conf' -c "listen_addresses=*"
     environment:
       POSTGRES_DB: keyv_test
       POSTGRES_PASSWORD: postgres
