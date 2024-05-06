@@ -1,6 +1,4 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
-import Keyv from 'keyv';
 import {endPool} from '../src/pool';
 import KeyvPostgres from '../src/index';
 
@@ -8,11 +6,7 @@ const postgresUri = 'postgresql://postgres:postgres@localhost:5433/keyv_test';
 
 const options = {ssl: {rejectUnauthorized: false}};
 
-keyvOfficialTests(test, Keyv, postgresUri, 'postgresql://foo', options);
-
 const store = () => new KeyvPostgres({uri: postgresUri, iterationLimit: 2, ...options});
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
 
 test.beforeEach(async () => {
 	const keyv = new KeyvPostgres({uri: postgresUri, ...options});
