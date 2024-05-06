@@ -23,14 +23,8 @@ jobs:
       - name: Start Services
         run: yarn test:services:start
 
-      - name: List docker images
-        run: docker ps -a
-
       - name: Install Dependencies  
         run: yarn
-
-      - name: List docker images
-        run: docker ps -a
         
       - name: Test Packages
         run: yarn test
