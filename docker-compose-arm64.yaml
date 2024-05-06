@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   keyv_postgres:
     image: postgres:latest
@@ -8,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
     ports:
-    - 5432:5432/tcp
+      - 5432:5432/tcp
   keyv_postgres_1:
     build:
       context: packages/postgres
@@ -19,10 +18,14 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
     ports:
-    - 5433:5432/tcp
+      - 5433:5432/tcp
   keyv_mysql:
-    image: mysql:latest
-    command: --default-authentication-plugin=mysql_native_password
+    image: mysql/mysql-server:latest
+    command: [ "mysqld",
+               "--character-set-server=utf8mb4",
+               "--collation-server=utf8mb4_unicode_ci",
+               "--bind-address=0.0.0.0",
+               "--default_authentication_plugin=mysql_native_password" ]
     restart: always
     ports:
       - 3306:3306
@@ -32,27 +35,27 @@ services:
       MYSQL_USER: mysql
       MYSQL_ROOT_HOST: '%'
   keyv_mysql_1:
-        image: "mysql/mysql-server:8.0.17"
-        command: [ "mysqld",
-                    "--character-set-server=utf8mb4",
-                    "--collation-server=utf8mb4_unicode_ci",
-                    "--require_secure_transport=ON",
-                    "--bind-address=0.0.0.0",
-                    "--ssl-ca=/etc/certs/ca.pem",
-                    "--ssl-cert=/etc/certs/server-cert.pem",
-                    "--ssl-key=/etc/certs/server-key.pem",
-                    "--default_authentication_plugin=mysql_native_password" ]
-        ports:
-          - "3307:3306"
-        volumes:
-          - type: bind
-            source: ./packages/mysql/test/certs
-            target: /etc/certs/
-        restart: always
-        environment:
-          MYSQL_ALLOW_EMPTY_PASSWORD: 1
-          MYSQL_DATABASE: keyv_test
-          MYSQL_ROOT_HOST: '%'
+    image: "mysql/mysql-server:latest"
+    command: [ "mysqld",
+               "--character-set-server=utf8mb4",
+               "--collation-server=utf8mb4_unicode_ci",
+               "--require_secure_transport=ON",
+               "--bind-address=0.0.0.0",
+               "--ssl-ca=/etc/certs/ca.pem",
+               "--ssl-cert=/etc/certs/server-cert.pem",
+               "--ssl-key=/etc/certs/server-key.pem",
+               "--default_authentication_plugin=mysql_native_password" ]
+    ports:
+      - "3307:3306"
+    volumes:
+      - type: bind
+        source: ./packages/mysql/test/certs
+        target: /etc/certs/
+    restart: always
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      MYSQL_DATABASE: keyv_test
+      MYSQL_ROOT_HOST: '%'
   keyv_redis:
     image: redis:latest
     environment:
@@ -76,12 +79,12 @@ services:
   keyv_memcached:
     image: memcached:latest
     ports:
-        - "11211:11211"
+      - "11211:11211"
   keyv_etcd:
     image: bitnami/etcd:latest
-    platform: linux/arm64
+    platform: linux/arm64/v8
     environment:
       - ALLOW_NONE_AUTHENTICATION=yes
     ports:
-        - 2379:2379
-        - 2380:2380
+      - 2379:2379
+      - 2380:2380
