@@ -4,11 +4,13 @@ import Keyv from 'keyv';
 import KeyvMysql from '../src/index';
 import {parseConnectionString} from '../src/pool';
 
-keyvOfficialTests(test, Keyv, 'mysql://root@localhost/keyv_test', 'mysql://foo');
+const uri = 'mysql://root@localhost:3306/keyv_test';
 
-const store = () => new KeyvMysql('mysql://root@localhost/keyv_test');
+keyvOfficialTests(test, Keyv, uri, 'mysql://foo');
+
+const store = () => new KeyvMysql(uri);
 keyvTestSuite(test, Keyv, store);
-const iteratorStore = () => new KeyvMysql({uri: 'mysql://root@localhost/keyv_test', iterationLimit: 2});
+const iteratorStore = () => new KeyvMysql({uri, iterationLimit: 2});
 keyvIteratorTests(test, Keyv, iteratorStore);
 
 test.beforeEach(async () => {
@@ -17,7 +19,7 @@ test.beforeEach(async () => {
 });
 
 test.it('iterator with default namespace', async t => {
-	const keyv = new KeyvMysql({uri: 'mysql://root@localhost/keyv_test'});
+	const keyv = new KeyvMysql({uri});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
