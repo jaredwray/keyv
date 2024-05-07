@@ -1,5 +1,6 @@
 import EventEmitter from 'events';
 import {type KeyvStoreAdapter} from 'keyv';
+import {type DatabaseError} from 'pg';
 import {endPool, pool} from './pool';
 import {
 	type KeyvPostgresOptions,
@@ -41,7 +42,16 @@ class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 
 		const connected = connect()
 			.then(async query => {
-				await query(createTable);
+				try {
+					await query(createTable);
+				} catch (error) {
+					if ((error as DatabaseError).code !== '23505') {
+						this.emit('error', error);
+					}
+
+					return query;
+				}
+
 				return query;
 			}).catch(error => this.emit('error', error));
 
