@@ -13,7 +13,7 @@
     "build:keyv:serialize": "cd packages/serialize && yarn build",
     "build:keyv": "cd packages/keyv && yarn build",
     "build": "yarn build:keyv:serialize && yarn build:keyv && yarn workspaces run build",
-    "test": "yarn build && yarn workspaces run test:ci",
+    "test": "yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
     "test:services-arm64:start": "docker-compose -f ./docker-compose-arm64.yaml up -d",

@@ -8,7 +8,7 @@
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
     "test": "vitest",
-    "test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+    "test:ci": "xo && vitest --run --sequence.setupFiles=list",
     "clean": "rm -rf node_modules && rm -rf ./coverage"
   },
   "xo": {
