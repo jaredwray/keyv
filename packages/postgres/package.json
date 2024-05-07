@@ -7,8 +7,8 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
+		"test": "vitest",
+		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
 	"xo": {
@@ -19,26 +19,8 @@
 			"unicorn/prefer-node-protocol": "off",
 			"@typescript-eslint/no-unsafe-return": "off",
 			"@typescript-eslint/no-confusing-void-expression": "off",
-			"ava/no-ignored-test-files": [
-				"error",
-				{
-					"extensions": [
-						"js",
-						"ts"
-					]
-				}
-			]
+			"import/no-extraneous-dependencies": "off"
 		}
-	},
-	"ava": {
-		"require": [
-			"requirable",
-			"ts-node/register"
-		],
-		"extensions": [
-			"js",
-			"ts"
-		]
 	},
 	"repository": {
 		"type": "git",
@@ -70,7 +52,6 @@
 		"@keyv/test-suite": "*",
 		"@types/pg": "^8.10.9",
 		"keyv": "*",
-		"requirable": "^1.0.5",
 		"tsd": "^0.29.0"
 	},
 	"tsd": {

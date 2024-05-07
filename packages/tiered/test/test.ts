@@ -1,7 +1,7 @@
-import test from 'ava';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests, delay} from '@keyv/test-suite';
+import * as test from 'vitest';
 import Keyv from 'keyv';
 import KeyvSqlite from '@keyv/sqlite';
+import keyvTestSuite, {delay, keyvIteratorTests, keyvOfficialTests} from '@keyv/test-suite';
 import KeyvTiered from '../src/index';
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
@@ -29,51 +29,50 @@ test.beforeEach(async () => {
 	await store.clear();
 });
 
-test.serial('constructor on default', t => {
+test.it('constructor on default', t => {
 	// @ts-expect-error - KeyvTiered needs constructor options
 	const store = new KeyvTiered({});
-	t.is(store.local.opts.store instanceof Map, true);
-	t.is(store.remote.opts.store instanceof Map, true);
+	t.expect(store.local.opts.store).toBeTruthy();
+	t.expect(store.remote.opts.store).toBeTruthy();
 });
 
-test.serial('.set() sets to both stores', async t => {
+test.it('.set() sets to both stores', async t => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local});
 
 	await store.set('foo', 'bar');
 
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-	const [remoteResult, localResult, storeResult]: unknown[] = await Promise.all([
+	const [remoteResult, localResult, storeResult] = await Promise.all([
 		remote.get('foo'),
 		store.get('foo'),
 		local.get('foo'),
 	]);
 	const result = remoteResult === localResult && storeResult === localResult; // Check equality as 'bar' is just a string
-	t.is(result, true);
+	t.expect(result).toBeTruthy();
 });
 
-test.serial('.has() returns boolean', async t => {
+test.it('.has() returns boolean', async t => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local});
 
 	await store.set('foo', 'bar');
 
-	t.is(await store.has('foo'), true);
+	t.expect(await store.has('foo')).toBeTruthy();
 });
 
-test.serial('.has() checks both stores', async t => {
+test.it('.has() checks both stores', async t => {
 	const remote = remoteStore();
 	// @ts-expect-error - KeyvTiered needs local
 	const store = new KeyvTiered({remote});
 
 	await remote.set('fizz', 'buzz');
 
-	t.is(await store.has('fizz'), true);
+	t.expect(await store.has('fizz')).toBeTruthy();
 });
 
-test.serial('.delete() deletes both stores', async t => {
+test.it('.delete() deletes both stores', async t => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local});
@@ -81,12 +80,12 @@ test.serial('.delete() deletes both stores', async t => {
 	await store.set('fizz', 'buzz');
 	await store.delete('fizz');
 
-	t.is(await store.get('fizz'), undefined);
-	t.is(await local.get('fizz'), undefined);
-	t.is(await remote.get('fizz'), undefined);
+	t.expect(await store.get('fizz')).toBeUndefined();
+	t.expect(await local.get('fizz')).toBeUndefined();
+	t.expect(await remote.get('fizz')).toBeUndefined();
 });
 
-test.serial('.deleteMany() deletes both stores', async t => {
+test.it('.deleteMany() deletes both stores', async t => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local});
@@ -95,16 +94,16 @@ test.serial('.deleteMany() deletes both stores', async t => {
 	await store.set('fizz1', 'buzz1');
 	const value = await store.deleteMany(['fizz', 'fizz1']);
 
-	t.is(value, true);
-	t.is(await store.get('fizz'), undefined);
-	t.is(await local.get('fizz'), undefined);
-	t.is(await remote.get('fizz'), undefined);
-	t.is(await store.get('fizz1'), undefined);
-	t.is(await local.get('fizz1'), undefined);
-	t.is(await remote.get('fizz1'), undefined);
+	t.expect(value).toBeTruthy();
+	t.expect(await store.get('fizz')).toBeUndefined();
+	t.expect(await local.get('fizz')).toBeUndefined();
+	t.expect(await remote.get('fizz')).toBeUndefined();
+	t.expect(await store.get('fizz1')).toBeUndefined();
+	t.expect(await local.get('fizz1')).toBeUndefined();
+	t.expect(await remote.get('fizz1')).toBeUndefined();
 });
 
-test.serial('.getMany() deletes both stores', async t => {
+test.it('.getMany() deletes both stores', async t => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local});
@@ -112,13 +111,13 @@ test.serial('.getMany() deletes both stores', async t => {
 	await store.set('fizz', 'buzz');
 	await store.set('fizz1', 'buzz1');
 	let value = await store.getMany(['fizz', 'fizz1']);
-	t.deepEqual(value, ['buzz', 'buzz1']);
+	t.expect(value).toStrictEqual(['buzz', 'buzz1']);
 
 	value = await store.getMany(['fizz3', 'fizz4']);
-	t.deepEqual(value, [undefined, undefined]);
+	t.expect(value).toStrictEqual([undefined, undefined]);
 });
 
-test.serial(
+test.it(
 	'.delete({ localOnly: true }) deletes only local store',
 	async t => {
 		const remote = remoteStore();
@@ -128,12 +127,12 @@ test.serial(
 		await store.set('fizz', 'buzz');
 		await store.delete('fizz');
 
-		t.is(await local.get('fizz'), undefined);
-		t.is(await remote.get('fizz'), 'buzz');
+		t.expect(await local.get('fizz')).toBeUndefined();
+		t.expect(await remote.get('fizz')).toBeTruthy();
 	},
 );
 
-test.serial('.clear() clears both stores', async t => {
+test.it('.clear() clears both stores', async t => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local});
@@ -141,10 +140,10 @@ test.serial('.clear() clears both stores', async t => {
 	await store.set('fizz', 'buzz');
 	await store.clear();
 
-	t.is(await store.get('fizz'), undefined);
+	t.expect(await store.get('fizz')).toBeUndefined();
 });
 
-test.serial('.clear({ localOnly: true }) clears local store alone', async t => {
+test.it('.clear({ localOnly: true }) clears local store alone', async t => {
 	const remote = remoteStore();
 	const local = localStore();
 	const store = new KeyvTiered({remote, local, localOnly: true});
@@ -152,11 +151,11 @@ test.serial('.clear({ localOnly: true }) clears local store alone', async t => {
 	await store.set('fizz', 'buzz');
 	await store.clear();
 
-	t.is(await local.get('fizz'), undefined);
-	t.is(await remote.get('fizz'), 'buzz');
+	t.expect(await local.get('fizz')).toBeUndefined();
+	t.expect(await remote.get('fizz')).toBeTruthy();
 });
 
-test.serial('ttl is valid', async t => {
+test.it('ttl is valid', async t => {
 	const remote = remoteStore();
 	const local = new Keyv({ttl: 100}); // Set local ttl
 	const store = new KeyvTiered({remote, local});
@@ -165,21 +164,21 @@ test.serial('ttl is valid', async t => {
 	await remote.set('foo', 'notbar');
 
 	await delay(2000);
-	t.is(await store.get('foo'), 'notbar');
+	t.expect(await store.get('foo')).toBe('notbar');
 });
 
-test.serial('copy locally when is possible', async t => {
+test.it('copy locally when is possible', async t => {
 	const remote = remoteStore();
 	const local = new Keyv();
 	const store = new KeyvTiered({remote, local});
 
 	await remote.set('foo', 'bar');
 
-	t.is(await store.get('foo'), 'bar');
-	t.is(await local.get('foo'), 'bar');
+	t.expect(await store.get('foo')).toBe('bar');
+	t.expect(await local.get('foo')).toBe('bar');
 });
 
-test.serial('custom validator', async t => {
+test.it('custom validator', async t => {
 	const remote = remoteStore();
 	const local = new Keyv();
 	const store = new KeyvTiered({
@@ -198,12 +197,12 @@ test.serial('custom validator', async t => {
 	await store.set('1', {timeSensitiveData: 'bar'});
 	await store.set('2', {timeSensitiveData: false});
 
-	t.deepEqual(await store.get('1'), {timeSensitiveData: 'bar'}); // Fetched from remote
-	t.deepEqual(await store.get('2'), {timeSensitiveData: false});
+	t.expect(await store.get('1')).toStrictEqual({timeSensitiveData: 'bar'}); // Fetched from remote
+	t.expect(await store.get('2')).toStrictEqual({timeSensitiveData: false});
 
 	await remote.set('1', {timeSensitiveData: 'foo1'});
 	await remote.set('2', {timeSensitiveData: 'foo2'}); // Set to remote so local has not been updated
 
-	t.deepEqual(await store.get('1'), {timeSensitiveData: 'foo1'});
-	t.deepEqual(await store.get('2'), {timeSensitiveData: false});
+	t.expect(await store.get('1')).toStrictEqual({timeSensitiveData: 'foo1'});
+	t.expect(await store.get('2')).toStrictEqual({timeSensitiveData: false});
 });

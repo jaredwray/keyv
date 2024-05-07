@@ -7,44 +7,26 @@
   "scripts": {
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
-    "test": "xo --fix && c8 ava --serial",
-    "test:ci": "xo && ava --serial",
+    "test": "vitest",
+    "test:ci": "xo && vitest --run --sequence.setupFiles=list",
     "clean": "rm -rf node_modules && rm -rf ./coverage"
   },
   "xo": {
     "rules": {
-      "unicorn/prefer-module": 0,
-      "unicorn/prefer-event-target": 0,
-      "unicorn/no-array-reduce": 0,
-      "n/prefer-global/process": 0,
-      "node/prefer-global/process": 0,
-      "unicorn/prefer-object-from-entries": 0,
-      "unicorn/prefer-node-protocol": 0,
-      "@typescript-eslint/consistent-type-imports": 0,
-      "@typescript-eslint/consistent-type-definitions": 0,
-      "@typescript-eslint/no-empty-function": 0,
-      "import/extensions": 0,
-      "no-promise-executor-return": 0,
-      "ava/no-ignored-test-files": [
-        "error",
-        {
-          "extensions": [
-            "js",
-            "ts"
-          ]
-        }
-      ]
+      "unicorn/prefer-module": "off",
+      "unicorn/prefer-event-target": "off",
+      "unicorn/no-array-reduce": "off",
+      "n/prefer-global/process": "off",
+      "node/prefer-global/process": "off",
+      "unicorn/prefer-object-from-entries": "off",
+      "unicorn/prefer-node-protocol": "off",
+      "@typescript-eslint/consistent-type-imports": "off",
+      "@typescript-eslint/consistent-type-definitions": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "import/extensions": "off",
+      "no-promise-executor-return": "off",
+      "import/no-extraneous-dependencies": "off"
     }
-  },
-  "ava": {
-    "require": [
-      "requirable",
-      "ts-node/register"
-    ],
-    "extensions": [
-      "js",
-      "ts"
-    ]
   },
   "repository": {
     "type": "git",

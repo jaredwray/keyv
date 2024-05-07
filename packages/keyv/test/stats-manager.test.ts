@@ -1,54 +1,54 @@
-import test from 'ava';
+import * as test from 'vitest';
 import KeyvStatsManager from '../src/stats-manager';
 
-test('will initialize with correct stats at zero', t => {
+test.it('will initialize with correct stats at zero', () => {
 	const stats = new KeyvStatsManager();
-	t.is(stats.hits, 0);
+	test.expect(stats.hits).toBe(0);
 });
 
-test('will increment hits', t => {
+test.it('will increment hits', () => {
 	const stats = new KeyvStatsManager();
 	stats.hit();
-	t.is(stats.hits, 1);
+	test.expect(stats.hits).toBe(1);
 });
 
-test('will increment misses', t => {
+test.it('will increment misses', () => {
 	const stats = new KeyvStatsManager();
 	stats.miss();
-	t.is(stats.misses, 1);
+	test.expect(stats.misses).toBe(1);
 });
 
-test('will increment sets', t => {
+test.it('will increment sets', () => {
 	const stats = new KeyvStatsManager();
 	stats.set();
-	t.is(stats.sets, 1);
+	test.expect(stats.sets).toBe(1);
 });
 
-test('will increment deletes', t => {
+test.it('will increment deletes', () => {
 	const stats = new KeyvStatsManager();
 	stats.delete();
-	t.is(stats.deletes, 1);
+	test.expect(stats.deletes).toBe(1);
 });
 
-test('will reset stats', t => {
+test.it('will reset stats', () => {
 	const stats = new KeyvStatsManager();
 	stats.hit();
 	stats.miss();
 	stats.set();
 	stats.delete();
-	t.is(stats.hits, 1);
-	t.is(stats.misses, 1);
-	t.is(stats.sets, 1);
-	t.is(stats.deletes, 1);
+	test.expect(stats.hits).toBe(1);
+	test.expect(stats.misses).toBe(1);
+	test.expect(stats.sets).toBe(1);
+	test.expect(stats.deletes).toBe(1);
 	stats.reset();
-	t.is(stats.hits, 0);
-	t.is(stats.misses, 0);
-	t.is(stats.sets, 0);
-	t.is(stats.deletes, 0);
+	test.expect(stats.hits).toBe(0);
+	test.expect(stats.misses).toBe(0);
+	test.expect(stats.sets).toBe(0);
+	test.expect(stats.deletes).toBe(0);
 });
 
-test('will not increment hits if disabled', t => {
+test.it('will not increment hits if disabled', () => {
 	const stats = new KeyvStatsManager(false);
 	stats.hit();
-	t.is(stats.hits, 0);
+	test.expect(stats.hits).toBe(0);
 });

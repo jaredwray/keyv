@@ -13,7 +13,7 @@
     "build:keyv:serialize": "cd packages/serialize && yarn build",
     "build:keyv": "cd packages/keyv && yarn build",
     "build": "yarn build:keyv:serialize && yarn build:keyv && yarn workspaces run build",
-    "test": " yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
+    "test": "yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
     "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
     "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
     "test:services-arm64:start": "docker-compose -f ./docker-compose-arm64.yaml up -d",
@@ -23,13 +23,14 @@
   },
   "dependencies": {
     "@types/node": "^20.9.2",
+    "@vitest/coverage-v8": "^1.6.0",
     "webpack": "^5.89.0"
   },
   "devDependencies": {
-    "ava": "^5.3.1",
     "c8": "^8.0.1",
-    "xo": "^0.56.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^1.5.3",
+    "xo": "^0.56.0"
   }
 }

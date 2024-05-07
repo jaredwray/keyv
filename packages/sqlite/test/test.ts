@@ -1,6 +1,6 @@
-import test from 'ava';
-import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
+import * as test from 'vitest';
 import Keyv from 'keyv';
+import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
 import KeyvSqlite from '../src/index';
 
 keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
@@ -9,70 +9,74 @@ const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTime
 
 keyvTestSuite(test, Keyv, store);
 
-test.serial('table name can be numeric, alphabet, special case', t => {
+test.beforeEach(async () => {
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
+	await keyv.clear();
+});
+
+test.it('table name can be numeric, alphabet, special case', t => {
 	// @ts-expect-error - table needs to be a string
 	let keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: 3000});
-	t.is(keyv.opts.table, '_3000');
+	t.expect(keyv.opts.table).toBe('_3000');
 
 	keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: 'sample'});
-	t.is(keyv.opts.table, 'sample');
+	t.expect(keyv.opts.table).toBe('sample');
 
 	keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: '$sample'});
-	t.is(keyv.opts.table, '_$sample');
+	t.expect(keyv.opts.table).toBe('_$sample');
 });
 
-test.serial('getMany will return multiple values', async t => {
+test.it('getMany will return multiple values', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
 	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
-	t.deepEqual(values, ['bar', 'bar1', 'bar2']);
+	t.expect(values).toStrictEqual(['bar', 'bar1', 'bar2']);
 });
 
-test.serial('deleteMany will delete multiple records', async t => {
+test.it('deleteMany will delete multiple records', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
 	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
-	t.deepEqual(values, ['bar', 'bar1', 'bar2']);
+	t.expect(values).toStrictEqual(['bar', 'bar1', 'bar2']);
 	await keyv.deleteMany(['foo', 'foo1', 'foo2']);
 	const values1 = await keyv.getMany(['foo', 'foo1', 'foo2']);
-	t.deepEqual(values1, [undefined, undefined, undefined]);
+	t.expect(values1).toStrictEqual([undefined, undefined, undefined]);
 });
 
-test.serial('Async Iterator single element test', async t => {
+test.it('Async Iterator single element test', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	const iterator = keyv.iterator();
 	for await (const [key, raw] of iterator) {
-		t.is(key, 'foo');
-		t.is(raw, 'bar');
+		t.expect(key).toBe('foo');
+		t.expect(raw).toBe('bar');
 	}
 });
 
-test.serial('Async Iterator multiple element test', async t => {
+test.it('Async Iterator multiple element test', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 3});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
+	const expectedEntries = [['foo', 'bar'], ['foo1', 'bar1'], ['foo2', 'bar2']];
 	const iterator = keyv.iterator();
+	let i = 0;
 	for await (const [key, raw] of iterator) {
-		t.assert(key, 'foo');
-		t.assert(raw, 'bar');
-		t.assert(key, 'foo1');
-		t.assert(raw, 'bar1');
-		t.assert(key, 'foo2');
-		t.assert(raw, 'bar2');
+		const [expectedKey, expectedRaw] = expectedEntries[i++];
+		t.expect(key).toBe(expectedKey);
+		t.expect(raw).toBe(expectedRaw);
 	}
 });
 
-test.serial('Async Iterator multiple elements with limit=1 test', async t => {
+test.it('Async Iterator multiple elements with limit=1 test', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1});
 	await keyv.clear();
 	await keyv.set('foo', 'bar');
@@ -81,31 +85,36 @@ test.serial('Async Iterator multiple elements with limit=1 test', async t => {
 	const iterator = keyv.iterator();
 	let key = await iterator.next();
 	let [k, v] = key.value;
-	t.is(k, 'foo');
-	t.is(v, 'bar');
+	t.expect(k).toBe('foo');
+	t.expect(v).toBe('bar');
 	key = await iterator.next();
 	[k, v] = key.value;
-	t.is(k, 'foo1');
-	t.is(v, 'bar1');
+	t.expect(k).toBe('foo1');
+	t.expect(v).toBe('bar1');
 	key = await iterator.next();
 	[k, v] = key.value;
-	t.is(k, 'foo2');
-	t.is(v, 'bar2');
+	t.expect(k).toBe('foo2');
+	t.expect(v).toBe('bar2');
 });
 
-test.serial('Async Iterator 0 element test', async t => {
+test.it('Async Iterator 0 element test', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000, iterationLimit: 1});
 	await keyv.clear();
 	const iterator = keyv.iterator('keyv');
 	const key = await iterator.next();
-	t.is(key.value, undefined);
+	t.expect(key.value).toBe(undefined);
 });
 
-test.serial('close connection successfully', async t => {
+test.it('close connection successfully', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
-	await keyv.clear();
-	t.is(await keyv.get('foo'), undefined);
+	t.expect(await keyv.get('foo')).toBe(undefined);
 	await keyv.set('foo', 'bar');
-	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-	t.is(await keyv.disconnect(), undefined);
+	t.expect(await keyv.get('foo')).toBe('bar');
+	await keyv.disconnect();
+	try {
+		await keyv.get('foo');
+		t.expect.fail();
+	} catch {
+		t.expect(true).toBeTruthy();
+	}
 });

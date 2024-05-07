@@ -1,7 +1,7 @@
-import test from 'ava';
+import * as test from 'vitest';
 import HooksManager from '../src/hooks-manager';
 
-test('add and trigger handler', t => {
+test.it('add and trigger handler', t => {
 	const hooksManager = new HooksManager();
 	let testData = 'foo';
 
@@ -10,10 +10,10 @@ test('add and trigger handler', t => {
 	});
 	hooksManager.trigger('testEvent', 'testData');
 
-	t.is(testData, 'testData');
+	t.expect(testData).toBe('testData');
 });
 
-test('addHandler adds a handler for an event', t => {
+test.it('addHandler adds a handler for an event', t => {
 	const hooksManager = new HooksManager();
 	let called = false;
 	const handler = () => {
@@ -24,10 +24,10 @@ test('addHandler adds a handler for an event', t => {
 
 	// Trigger the event
 	hooksManager.trigger('testEvent', 'testData');
-	t.true(called);
+	t.expect(called).toBeTruthy();
 });
 
-test('addHandler allows multiple handlers for the same event', t => {
+test.it('addHandler allows multiple handlers for the same event', t => {
 	const hooksManager = new HooksManager();
 	let callCount = 0;
 	const handler1 = () => {
@@ -43,10 +43,10 @@ test('addHandler allows multiple handlers for the same event', t => {
 
 	// Trigger the event
 	hooksManager.trigger('testEvent', 'testData');
-	t.is(callCount, 2);
+	t.expect(callCount).toBe(2);
 });
 
-test('remove handler', t => {
+test.it('remove handler', t => {
 	const hooksManager = new HooksManager();
 	let testData = 0;
 
@@ -59,21 +59,21 @@ test('remove handler', t => {
 	hooksManager.removeHandler('testEvent', handler);
 	hooksManager.trigger('testEvent', testData);
 
-	t.is(testData, 1);
+	t.expect(testData).toBe(1);
 });
 
-test('handlers getter', t => {
+test.it('handlers getter', t => {
 	const hooksManager = new HooksManager();
 	const testData = 0;
 	hooksManager.addHandler('testEvent', (data: number) => {
 		data++;
 	});
 
-	t.true(hooksManager.handlers.has('testEvent'));
-	t.is(hooksManager.handlers.get('testEvent')?.length, 1);
+	t.expect(hooksManager.handlers.has('testEvent')).toBeTruthy();
+	t.expect(hooksManager.handlers.get('testEvent')?.length).toBe(1);
 });
 
-test('emit an error', t => {
+test.it('emit an error', t => {
 	const hooksManager = new HooksManager();
 
 	hooksManager.addHandler('testEvent', message => {
@@ -81,7 +81,7 @@ test('emit an error', t => {
 	});
 
 	hooksManager.on('error', error => {
-		t.is(error.message, 'Error in hook handler for event "testEvent": testMessage');
+		t.expect(error.message).toBe('Error in hook handler for event "testEvent": testMessage');
 	});
 
 	hooksManager.trigger('testEvent', 'testMessage');

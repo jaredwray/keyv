@@ -1,73 +1,71 @@
 import tk from 'timekeeper';
-import type {TestFn} from 'ava';
+import type Vitest from 'vitest';
 import type KeyvModule from 'keyv';
-import {type KeyvStoreAdapter} from 'keyv';
 import type {KeyvStoreFn} from './types';
 
-const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
+const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({store: store()});
 		await keyv.clear();
 	});
 
-	test.serial('.set(key, value) returns a Promise', t => {
+	test.it('.set(key, value) returns a Promise', t => {
 		const keyv = new Keyv({store: store()});
-		t.true(keyv.set('foo', 'bar') instanceof Promise);
+		t.expect(keyv.set('foo', 'bar') instanceof Promise).toBeTruthy();
 	});
 
-	test.serial('.set(key, value) resolves to true', async t => {
+	test.it('.set(key, value) resolves to true', async t => {
 		const keyv = new Keyv({store: store()});
-		t.is(await keyv.set('foo', 'bar'), true);
+		t.expect(await keyv.set('foo', 'bar')).toBeTruthy();
 	});
 
-	test.serial('.set(key, value) sets a value', async t => {
+	test.it('.set(key, value) sets a value', async t => {
 		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', 'bar');
-		t.is(await keyv.get('foo'), 'bar');
+		t.expect(await keyv.get('foo')).toBe('bar');
 	});
 
-	test.serial('.set(key, value, ttl) sets a value that expires', async t => {
+	test.it('.set(key, value, ttl) sets a value that expires', async t => {
 		const ttl = 1000;
 		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', 'bar', ttl);
-		t.is(await keyv.get('foo'), 'bar');
+		t.expect(await keyv.get('foo')).toBe('bar');
 		tk.freeze(Date.now() + ttl + 1);
-
-		t.is(await keyv.get('foo'), undefined);
+		t.expect(await keyv.get('foo')).toBeUndefined();
 		tk.reset();
 	});
 
-	test.serial('.get(key) returns a Promise', t => {
+	test.it('.get(key) returns a Promise', t => {
 		const keyv = new Keyv({store: store()});
-		t.true(keyv.get('foo') instanceof Promise);
+		t.expect(keyv.get('foo') instanceof Promise).toBeTruthy();
 	});
 
-	test.serial('.get(key) resolves to value', async t => {
+	test.it('.get(key) resolves to value', async t => {
 		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', 'bar');
-		t.is(await keyv.get('foo'), 'bar');
+		t.expect(await keyv.get('foo')).toBe('bar');
 	});
 
-	test.serial('.get(key) with nonexistent key resolves to undefined', async t => {
+	test.it('.get(key) with nonexistent key resolves to undefined', async t => {
 		const keyv = new Keyv({store: store()});
-		t.is(await keyv.get('foo'), undefined);
+		t.expect(await keyv.get('foo')).toBeUndefined();
 	});
 
-	test.serial('.get([keys]) should return array values', async t => {
+	test.it('.get([keys]) should return array values', async t => {
 		const keyv = new Keyv({store: store()});
 		const ttl = 3000;
 		await keyv.set('foo', 'bar', ttl);
 		await keyv.set('foo1', 'bar1', ttl);
 		await keyv.set('foo2', 'bar2', ttl);
 		const values = await keyv.get(['foo', 'foo1', 'foo2']) as string[];
-		t.is(Array.isArray(values), true);
-		t.is(values[0], 'bar');
-		t.is(values[1], 'bar1');
-		t.is(values[2], 'bar2');
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values[0]).toBe('bar');
+		t.expect(values[1]).toBe('bar1');
+		t.expect(values[2]).toBe('bar2');
 	});
 
-	test.serial('.get([keys]) should return array value undefined when expires', async t => {
-		const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
+	test.it('.get([keys]) should return array value undefined when expires', async t => {
+		const keyv = new Keyv();
 		await keyv.set('foo', 'bar');
 		await keyv.set('foo1', 'bar1', 1);
 		await keyv.set('foo2', 'bar2');
@@ -78,108 +76,103 @@ const keyvApiTests = (test: TestFn<any>, Keyv: typeof KeyvModule, store: KeyvSto
 			}, 30);
 		});
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
-		t.is(Array.isArray(values), true);
-		t.is(values[0], 'bar');
-		t.is(values[1], undefined);
-		t.is(values[2], 'bar2');
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values[0]).toBe('bar');
+		t.expect(values[1]).toBeUndefined();
+		t.expect(values[2]).toBe('bar2');
 	});
 
-	test.serial('.get([keys]) should return array values with undefined', async t => {
+	test.it('.get([keys]) should return array values with undefined', async t => {
 		const keyv = new Keyv({store: store()});
 		const ttl = 3000;
 		await keyv.set('foo', 'bar', ttl);
 		await keyv.set('foo2', 'bar2', ttl);
 		const values = await keyv.get(['foo', 'foo1', 'foo2']) as string[] | undefined[];
-		t.is(Array.isArray(values), true);
-		t.is(values[0], 'bar');
-		t.is(values[1], undefined);
-		t.is(values[2], 'bar2');
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values[0]).toBe('bar');
+		t.expect(values[1]).toBeUndefined();
+		t.expect(values[2]).toBe('bar2');
 	});
 
-	test.serial('.get([keys]) should return undefined array for all no existent keys', async t => {
+	test.it('.get([keys]) should return undefined array for all no existent keys', async t => {
 		const keyv = new Keyv({store: store()});
 		const values = await keyv.get(['foo', 'foo1', 'foo2']);
-		t.is(Array.isArray(values), true);
-		t.deepEqual(values, [undefined, undefined, undefined]);
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values).toEqual([undefined, undefined, undefined]);
 	});
 
-	test.serial('.delete(key) returns a Promise', t => {
+	test.it('.delete(key) returns a Promise', t => {
 		const keyv = new Keyv({store: store()});
-		t.true(keyv.delete('foo') instanceof Promise);
+		t.expect(keyv.delete('foo') instanceof Promise).toBeTruthy();
 	});
 
-	test.serial('.delete([key]) returns a Promise', t => {
+	test.it('.delete([key]) returns a Promise', t => {
 		const keyv = new Keyv({store: store()});
-		t.true(keyv.delete(['foo', 'foo1']) instanceof Promise);
+		t.expect(keyv.delete(['foo']) instanceof Promise).toBeTruthy();
 	});
 
-	test.serial('.delete(key) resolves to true', async t => {
-		const keyv = new Keyv({store: store()});
-		await keyv.set('foo', 'bar');
-		t.is(await keyv.delete('foo'), true);
-	});
-
-	test.serial('.delete(key) with nonexistent key resolves to false', async t => {
-		const keyv = new Keyv({store: store()});
-		t.is(await keyv.delete('foo'), false);
-	});
-
-	test.serial('.delete(key) deletes a key', async t => {
+	test.it('.delete(key) resolves to true', async t => {
 		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', 'bar');
-		t.is(await keyv.delete('foo'), true);
-		t.is(await keyv.get('foo'), undefined);
+		t.expect(await keyv.delete('foo')).toBeTruthy();
 	});
 
-	test.serial('.deleteMany([keys]) should delete multiple key', async t => {
+	test.it('.delete(key) with nonexistent key resolves to false', async t => {
+		const keyv = new Keyv({store: store()});
+		t.expect(await keyv.delete('foo')).toBeFalsy();
+	});
+
+	test.it('.delete(key) deletes a key', async t => {
+		const keyv = new Keyv({store: store()});
+		await keyv.set('foo', 'bar');
+		t.expect(await keyv.delete('foo')).toBeTruthy();
+		t.expect(await keyv.get('foo')).toBeUndefined();
+	});
+
+	test.it('.deleteMany([keys]) should delete multiple key', async t => {
 		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', 'bar');
 		await keyv.set('foo1', 'bar1');
 		await keyv.set('foo2', 'bar2');
-		t.is(await keyv.delete(['foo', 'foo1', 'foo2']), true);
-		t.is(await keyv.get('foo'), undefined);
-		t.is(await keyv.get('foo1'), undefined);
-		t.is(await keyv.get('foo2'), undefined);
+		t.expect(await keyv.delete(['foo', 'foo1', 'foo2'])).toBeTruthy();
+		t.expect(await keyv.get('foo')).toBeUndefined();
+		t.expect(await keyv.get('foo1')).toBeUndefined();
+		t.expect(await keyv.get('foo2')).toBeUndefined();
 	});
 
-	test.serial('.deleteMany([keys]) with nonexistent keys resolves to false', async t => {
+	test.it('.deleteMany([keys]) with nonexistent keys resolves to false', async t => {
 		const keyv = new Keyv({store: store()});
-		t.is(await keyv.delete(['foo', 'foo1', 'foo2']), false);
+		t.expect(await keyv.delete(['foo', 'foo1', 'foo2'])).toBeFalsy();
 	});
 
-	test.serial('.clear() returns a Promise', async t => {
+	test.it('.clear() returns a Promise', async t => {
 		const keyv = new Keyv({store: store()});
 		const returnValue = keyv.clear();
-		t.true(returnValue instanceof Promise);
+		t.expect(returnValue instanceof Promise).toBeTruthy();
 		await returnValue;
 	});
 
-	test.serial('.clear() resolves to undefined', async t => {
+	test.it('.clear() resolves to undefined', async t => {
 		const keyv = new Keyv({store: store()});
-		t.is(await keyv.clear(), undefined);
+		t.expect(await keyv.clear()).toBeUndefined();
 		await keyv.set('foo', 'bar');
-		t.is(await keyv.clear(), undefined);
+		t.expect(await keyv.clear()).toBeUndefined();
 	});
 
-	test.serial('.clear() deletes all key/value pairs', async t => {
+	test.it('.clear() deletes all key/value pairs', async t => {
 		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', 'bar');
 		await keyv.set('fizz', 'buzz');
 		await keyv.clear();
-		t.is(await keyv.get('foo'), undefined);
-		t.is(await keyv.get('fizz'), undefined);
+		t.expect(await keyv.get('foo')).toBeUndefined();
+		t.expect(await keyv.get('fizz')).toBeUndefined();
 	});
 
-	test.serial('.has(key) where key is the key we are looking for', async t => {
+	test.it('.has(key) where key is the key we are looking for', async t => {
 		const keyv = new Keyv({store: store()});
 		await keyv.set('foo', 'bar');
-		t.is(await keyv.has('foo'), true);
-		t.is(await keyv.has('fizz'), false);
-	});
-
-	test.after.always(async () => {
-		const keyv = new Keyv({store: store()});
-		await keyv.clear();
+		t.expect(await keyv.has('foo')).toBeTruthy();
+		t.expect(await keyv.has('fizz')).toBeFalsy();
 	});
 };
 

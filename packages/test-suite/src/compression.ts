@@ -1,7 +1,7 @@
 import Keyv, {type CompressionAdapter, type KeyvStoreAdapter} from 'keyv';
-import type {TestFn} from 'ava';
+import type Vitest from 'vitest';
 
-const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter) => {
+const keyvCompressionTests = (test: typeof Vitest, compression: CompressionAdapter) => {
 	let keyv;
 	test.beforeEach(async () => {
 		keyv = new Keyv({
@@ -11,51 +11,51 @@ const keyvCompressionTests = (test: TestFn, compression: CompressionAdapter) => 
 		await keyv.clear();
 	});
 
-	test('number array compression/decompression', async t => {
+	test.it('number array compression/decompression', async t => {
 		const array = JSON.stringify([4, 5, 6, 7]);
 		const compressed = await compression.compress(array);
 		const decompressed = JSON.parse(await compression.decompress(compressed));
-		t.deepEqual(decompressed, [4, 5, 6, 7]);
+		t.expect(decompressed).toEqual([4, 5, 6, 7]);
 	});
 
-	test.serial('compression/decompression using default options', async t => {
+	test.it('compression/decompression using default options', async t => {
 		const compressed = await compression.compress('whatever');
-		t.not(compressed, 'whatever');
+		t.expect(compressed).not.toBe('whatever');
 		const decompressed = await compression.decompress(compressed);
-		t.is(decompressed, 'whatever');
+		t.expect(decompressed).toBe('whatever');
 	});
 
-	test.serial('compression/decompression with number', async t => {
+	test.it('compression/decompression with number', async t => {
 		const number_ = JSON.stringify(5);
 		const compressed = await compression.compress(number_);
-		t.not(compressed, 5);
+		t.expect(compressed).not.toBe(5);
 		const decompressed = JSON.parse(await compression.decompress(compressed));
-		t.is(decompressed, 5);
+		t.expect(decompressed).toBe(5);
 	});
 
 	// Test serialize compression
-	test('serialize compression', async t => {
+	test.it('serialize compression', async t => {
 		const json = await compression.serialize({
 			value: 'whatever',
 			expires: undefined,
 		});
-		t.not(JSON.parse(json).value, 'whatever');
+		t.expect(JSON.parse(json).value).not.toBe('whatever');
 	});
 
 	// Test deserialize compression
-	test('deserialize compression', async t => {
+	test.it('deserialize compression', async t => {
 		const json = await compression.serialize({
 			value: 'whatever',
 			expires: undefined,
 		});
 		const djson = await compression.deserialize(json);
-		t.deepEqual(djson, {expires: undefined, value: 'whatever'});
+		t.expect(djson).toEqual({expires: undefined, value: 'whatever'});
 	});
 
-	test('compress/decompress with main keyv', async t => {
+	test.it('compress/decompress with main keyv', async t => {
 		const keyv = new Keyv({store: new Map(), compression});
 		await keyv.set('foo', 'bar');
-		t.is(await keyv.get('foo'), 'bar');
+		t.expect(await keyv.get('foo')).toBe('bar');
 	});
 };
 

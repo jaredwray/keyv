@@ -1,4 +1,4 @@
-import test from 'ava';
+import * as test from 'vitest';
 import tk from 'timekeeper';
 import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
@@ -17,79 +17,82 @@ const store = () => new KeyvRedis(redisURI);
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
-test.serial('reuse a redis instance', async t => {
+test.it('reuse a redis instance', async t => {
 	const redis = new Redis(redisURI);
 	// @ts-expect-error foo doesn't exist on Redis
 	redis.foo = 'bar';
 	const keyv = new KeyvRedis(redis);
-	t.is(keyv.redis.foo, 'bar');
+	t.expect(keyv.redis.foo).toBe('bar');
 
 	await keyv.set('foo', 'bar');
 	const value = await redis.get('foo');
-	t.true(value === 'bar');
-	t.true(await keyv.get('foo') === value);
+	t.expect(value).toBe('bar');
+	t.expect(await keyv.get('foo')).toBe(value);
 });
 
-test.serial('set an undefined key', async t => {
+test.it('set an undefined key', async t => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvRedis(redis);
 
 	await keyv.set('foo2', undefined);
 	const result = await keyv.get('foo2');
-	t.true(result === undefined);
+	t.expect(result).toBe(undefined);
 });
 
-test.serial('Async Iterator 0 element test', async t => {
+test.it('Async Iterator 0 element test', async t => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvRedis(redis);
 	await keyv.clear();
 	const iterator = keyv.iterator('keyv');
 	const key = await iterator.next();
-	t.is(key.value, undefined);
+	t.expect(key.value).toBe(undefined);
 });
 
-test.serial('close connection successfully', async t => {
+test.it('close connection successfully', async t => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvRedis(redis);
-	t.is(await keyv.get('foo'), undefined);
+	t.expect(await keyv.get('foo')).toBe(undefined);
 	await keyv.disconnect();
 	try {
 		await keyv.get('foo');
-		t.fail();
+		t.expect.fail();
 	} catch {
-		t.pass();
+		t.expect(true).toBeTruthy();
 	}
 });
 
-test.serial('should support tls', async t => {
+test.it('should support tls', async t => {
 	const options = {tls: {rejectUnauthorized: false}};
 	const redis = new Redis('rediss://localhost:6380', options);
 	const keyvRedis = new KeyvRedis(redis);
 	await keyvRedis.set('foo', 'bar');
-	t.true(await keyvRedis.get('foo') === 'bar');
+	t.expect(await keyvRedis.get('foo')).toBe('bar');
 });
 
-test.serial('close tls connection successfully', async t => {
+test.it('close tls connection successfully', async t => {
 	const options = {tls: {rejectUnauthorized: false}};
 	const redis = new Redis('rediss://localhost:6380', options);
 	const keyvRedis = new KeyvRedis(redis);
-	t.is(await keyvRedis.get('foo5'), undefined);
+	t.expect(await keyvRedis.get('foo5')).toBe(undefined);
 	await keyvRedis.disconnect();
 	try {
 		await keyvRedis.get('foo5');
-		t.fail();
+		t.expect.fail();
 	} catch {
-		t.pass();
+		t.expect(true).toBeTruthy();
 	}
 });
 
-test.serial('clear method with empty keys should not error', async t => {
-	const keyv = new KeyvRedis(redisURI);
-
-	await t.notThrowsAsync(keyv.clear());
+test.it('clear method with empty keys should not error', async t => {
+	try {
+		const keyv = new KeyvRedis(redisURI);
+		t.expect(await keyv.clear()).toBeUndefined();
+	} catch {
+		t.expect.fail();
+	}
 });
 
-test.serial('.clear cleaned namespace', async t => {
+test.it('.clear() cleaned namespace', async t => {
 	// Setup
 	const keyv = new Keyv(redisURI, {
 		adapter: 'redis',
@@ -112,48 +115,48 @@ test.serial('.clear cleaned namespace', async t => {
 	const redis = new Redis(redisURI);
 
 	// Namespace should also expire after calling clear
-	t.true(await redis.exists('namespace:v3') === 0);
+	t.expect(await redis.exists('namespace:v3')).toBe(0);
 
 	// Memory of each key should be null
-	t.true(await redis.memory('USAGE', 'namespace:v3') === null);
+	t.expect(await redis.memory('USAGE', 'namespace:v3')).toBe(null);
 });
 
-test.serial('Keyv stores ttl without const', async t => {
+test.it('Keyv stores ttl without const', async t => {
 	const keyv = new Keyv(redisURI);
 	await keyv.set('foo', 'bar', 100);
-	t.is(await keyv.get('foo'), 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
 	tk.freeze(Date.now() + 150);
-	t.is(await keyv.get('foo'), undefined);
+	t.expect(await keyv.get('foo')).toBe(undefined);
 });
 
-test.serial('should handle KeyvOptions without uri', t => {
+test.it('should handle KeyvOptions without uri', t => {
 	const options = {
 		isCluster: true,
 	};
 	const keyv = new KeyvRedis(options);
-	t.true(keyv.redis instanceof Redis);
+	t.expect(keyv.redis instanceof Redis).toBeTruthy();
 });
 
-test.serial('should handle KeyvOptions with family option', t => {
+test.it('should handle KeyvOptions with family option', t => {
 	const options = {
 		options: {},
 		family: 'IPv4',
 	};
 	const keyv = new KeyvRedis(options);
-	t.true(keyv.redis instanceof Redis);
+	t.expect(keyv.redis instanceof Redis).toBeTruthy();
 });
 
-test.serial('set method should use Redis sets when useRedisSets is false', async t => {
+test.it('set method should use Redis sets when useRedisSets is false', async t => {
 	const options = {useRedisSets: false};
 	const keyv = new KeyvRedis(options);
 
 	await keyv.set('foo', 'bar');
 
 	const value = await keyv.get('foo');
-	t.is(value, 'bar');
+	t.expect(value).toBe('bar');
 });
 
-test.serial('clear method when useRedisSets is false', async t => {
+test.it('clear method when useRedisSets is false', async t => {
 	const options = {useRedisSets: false};
 	const keyv = new KeyvRedis(options);
 
@@ -164,26 +167,25 @@ test.serial('clear method when useRedisSets is false', async t => {
 
 	const value = await keyv.get('demo');
 	const value2 = await keyv.get('demo2');
-	t.is(value, undefined);
-	t.is(value2, undefined);
+	t.expect(value).toBe(undefined);
+	t.expect(value2).toBe(undefined);
 });
 
-test.serial('clear method when useRedisSets is false and empty keys should not error', async t => {
+test.it('clear method when useRedisSets is false and empty keys should not error', async t => {
 	const options = {useRedisSets: false};
 	const keyv = new KeyvRedis(options);
-
-	await t.notThrowsAsync(keyv.clear());
+	t.expect(await keyv.clear()).toBeUndefined();
 });
 
-test.serial('when passing in ioredis set the options.useRedisSets', t => {
+test.it('when passing in ioredis set the options.useRedisSets', t => {
 	const options = {useRedisSets: false};
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvRedis(redis, options);
 
-	t.is(keyv.opts.useRedisSets, false);
+	t.expect(keyv.opts.useRedisSets).toBe(false);
 });
 
-test.serial('del should work when not using useRedisSets', async t => {
+test.it('del should work when not using useRedisSets', async t => {
 	const options = {useRedisSets: false};
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvRedis(redis, options);
@@ -194,5 +196,5 @@ test.serial('del should work when not using useRedisSets', async t => {
 
 	const value = await keyv.get('fooDel1');
 
-	t.is(value, undefined);
+	t.expect(value).toBe(undefined);
 });

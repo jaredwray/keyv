@@ -1,110 +1,110 @@
-import test from 'ava';
+import * as test from 'vitest';
 import KeyvSqlite from '@keyv/sqlite';
 import Keyv, {KeyvHooks} from '../src';
 
-test('PRE_SET hook', async t => {
+test.it('PRE_SET hook', async t => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.PRE_SET, data => {
-		t.is(data.key, 'foo');
-		t.is(data.value, 'bar');
+		t.expect(data.key).toBe('foo');
+		t.expect(data.value).toBe('bar');
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	t.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.set('foo', 'bar');
 });
 
-test('POST_SET hook', async t => {
+test.it('POST_SET hook', async t => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.POST_SET, data => {
-		t.is(data.key, 'keyv:foo');
-		t.is(data.value, '{"value":"bar","expires":null}');
+		t.expect(data.key).toBe('keyv:foo');
+		t.expect(data.value).toBe('{"value":"bar","expires":null}');
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	t.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.set('foo', 'bar');
 });
 
-test('PRE_GET_MANY hook', async t => {
+test.it('PRE_GET_MANY hook', async () => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	keyv.hooks.addHandler(KeyvHooks.PRE_GET_MANY, data => {
-		t.is(data.keys[0], 'keyv:foo');
-		t.is(data.keys[1], 'keyv:foo1');
+		test.expect(data.keys[0]).toBe('keyv:foo');
+		test.expect(data.keys[1]).toBe('keyv:foo1');
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	test.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.get(keys);
 });
 
-test('PRE_GET_MANY with manipulation', async t => {
+test.it('PRE_GET_MANY with manipulation', async () => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	keyv.hooks.addHandler(KeyvHooks.PRE_GET_MANY, data => {
-		t.is(data.keys[0], 'keyv:foo');
-		t.is(data.keys[1], 'keyv:foo1');
+		test.expect(data.keys[0]).toBe('keyv:foo');
+		test.expect(data.keys[1]).toBe('keyv:foo1');
 
 		data.keys[0] = 'keyv:fake';
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	test.expect(keyv.hooks.handlers.size).toBe(1);
 	const values = await keyv.get(keys);
-	t.is(values[0], undefined);
+	test.expect(values[0]).toBeUndefined();
 });
 
-test('POST_GET_MANY with no getMany function', async t => {
+test.it('POST_GET_MANY with no getMany function', async () => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	keyv.hooks.addHandler(KeyvHooks.POST_GET_MANY, data => {
-		t.is(data[0], 'bar');
-		t.is(data[1], 'bar1');
+		test.expect(data[0]).toBe('bar');
+		test.expect(data[1]).toBe('bar1');
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	test.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.get(keys);
 });
 
-test('POST_GET_MANY with manipulation', async t => {
+test.it('POST_GET_MANY with manipulation', async () => {
 	const keyv = new Keyv();
 	const keys = ['foo', 'foo1'];
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	keyv.hooks.addHandler(KeyvHooks.POST_GET_MANY, data => {
-		t.is(data[0], 'bar');
-		t.is(data[1], 'bar1');
+		test.expect(data[0]).toBe('bar');
+		test.expect(data[1]).toBe('bar1');
 		data[1] = 'fake';
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	test.expect(keyv.hooks.handlers.size).toBe(1);
 	const values = await keyv.get(keys);
-	t.is(values[1], 'fake');
+	test.expect(values[1]).toBe('fake');
 });
 
-test('POST_GET_MANY with getMany function', async t => {
+test.it('POST_GET_MANY with getMany function', async () => {
 	const keyvSqlite = new KeyvSqlite({uri: 'sqlite://test.db'});
 	const keyv = new Keyv({store: keyvSqlite});
 	const keys = ['foo', 'foo1'];
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	keyv.hooks.addHandler(KeyvHooks.POST_GET_MANY, data => {
-		t.is(data[0], 'bar');
-		t.is(data[1], 'bar1');
+		test.expect(data[0]).toBe('bar');
+		test.expect(data[1]).toBe('bar1');
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	test.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.get(keys);
 });
 
-test('PRE_DELETE hook', async t => {
+test.it('PRE_DELETE hook', async () => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.PRE_DELETE, data => {
-		t.is(data.key, 'foo');
+		test.expect(data.key).toBe('foo');
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	test.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.set('foo', 'bar');
 	await keyv.delete('foo');
 });
 
-test('POST_DELETE hook', async t => {
+test.it('POST_DELETE hook', async () => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.POST_DELETE, data => {
-		t.is(data, true);
+		test.expect(data).toBeTruthy();
 	});
-	t.is(keyv.hooks.handlers.size, 1);
+	test.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.set('foo', 'bar');
 	await keyv.delete('foo');
 });

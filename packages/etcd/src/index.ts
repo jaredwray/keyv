@@ -95,7 +95,7 @@ class KeyvEtcd<Value = any> extends EventEmitter {
 		}
 
 		// @ts-expect-error - Value needs to be number, string or buffer
-		return this[client]!.put(key).value(value);
+		await this[client]!.put(key).value(value);
 	}
 
 	async delete(key: string): DeleteOutput {

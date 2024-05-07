@@ -7,17 +7,17 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo --fix && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
+		"test": "vitest",
+		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite && rm -rf ./dist"
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-module": 0,
-			"unicorn/prefer-node-protocol": 0,
-			"@typescript-eslint/consistent-type-definitions": 0,
-			"unicorn/no-typeof-undefined": 0,
-			"unicorn/prefer-event-target": 0,
+			"unicorn/prefer-module": "off",
+			"unicorn/prefer-node-protocol": "off",
+			"@typescript-eslint/consistent-type-definitions": "off",
+			"unicorn/no-typeof-undefined": "off",
+			"unicorn/prefer-event-target": "off",
 			"import/no-extraneous-dependencies": "off",
 			"import/extensions": "off",
 			"@typescript-eslint/ban-ts-comment": "off",
@@ -56,21 +56,9 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"eslint": "^8.57.0",
-		"eslint-plugin-promise": "^6.1.1",
 		"pify": "^5.0.0",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.0"
-	},
-	"ava": {
-		"require": [
-			"requirable",
-			"ts-node/register"
-		],
-		"extensions": [
-			"js",
-			"ts"
-		]
 	},
 	"tsd": {
 		"directory": "test"

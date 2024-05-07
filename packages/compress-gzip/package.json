@@ -7,33 +7,17 @@
   "scripts": {
     "build": "tsc --project tsconfig.dist.json",
     "prepare": "yarn build",
-    "test": "xo --fix && c8 ava --serial",
-    "test:ci": "xo && ava --serial",
+    "test": "vitest",
+    "test:ci": "xo && vitest --run --sequence.setupFiles=list",
     "clean": "rm -rf node_modules && rm -rf .nyc_output && rm -rf ./dist && rm -rf coverage.lcov && rm -rf ./test/testdb.sqlite"
   },
   "xo": {
     "rules": {
-      "ava/no-ignored-test-files": [
-        "error",
-        {
-          "extensions": [
-            "js",
-            "ts"
-          ]
-        }
-      ],
-      "import/extensions": 0,
-      "@typescript-eslint/prefer-nullish-coalescing": 0,
-      "@typescript-eslint/no-unsafe-argument": 0
+      "import/extensions": "off",
+      "@typescript-eslint/prefer-nullish-coalescing": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "import/no-extraneous-dependencies": "off"
     }
-  },
-  "ava": {
-    "require": [
-      "ts-node/register"
-    ],
-    "extensions": [
-      "ts"
-    ]
   },
   "repository": {
     "type": "git",
@@ -63,11 +47,8 @@
     "@keyv/serialize": "*"
   },
   "devDependencies": {
-    "@ava/typescript": "^4.1.0",
     "@keyv/test-suite": "*",
     "@typescript-eslint/parser": "^7.4.0",
-    "eslint": "^8.57.0",
-    "requirable": "^1.0.5",
     "tsd": "^0.31.0",
     "xo": "^0.58.0"
   },

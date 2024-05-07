@@ -1,21 +1,21 @@
-import type {TestFn} from 'ava';
+import type Vitest from 'vitest';
 import type KeyvModule from 'keyv';
 import type {KeyvStoreFn} from './types';
 import {delay} from './helper';
 
-const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
+const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({store: store()});
 		await keyv.clear();
 	});
 
-	test.serial('.iterator() returns an asyncIterator', t => {
+	test.it('.iterator() returns an asyncIterator', t => {
 		const keyv = new Keyv({store: store()});
 		// @ts-expect-error - iterator
-		t.true(typeof keyv.iterator()[Symbol.asyncIterator] === 'function');
+		t.expect(typeof keyv.iterator()[Symbol.asyncIterator]).toBe('function');
 	});
 
-	test.serial('iterator() iterates over all values', async t => {
+	test.it('iterator() iterates over all values', async t => {
 		const keyv = new Keyv({store: store()});
 		const map = new Map(
 			Array.from({length: 5})
@@ -28,16 +28,16 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 		}
 
 		await Promise.all(toResolve);
-		t.plan(map.size);
+		t.expect.assertions(map.size);
 		// @ts-expect-error - iterator
 		for await (const [key, value] of keyv.iterator()) {
 			const doesKeyExist = map.has(key);
 			const isValueSame = map.get(key) === value;
-			t.true(doesKeyExist && isValueSame);
+			t.expect(doesKeyExist && isValueSame).toBeTruthy();
 		}
 	});
 
-	test.serial(
+	test.it(
 		'iterator() doesn\'t yield values from other namespaces',
 		async t => {
 			const keyvStore = store();
@@ -67,18 +67,17 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 			}
 
 			await Promise.all(toResolve);
-
-			t.plan(map2.size);
+			t.expect.assertions(map2.size);
 			// @ts-expect-error - iterator
 			for await (const [key, value] of keyv2.iterator()) {
 				const doesKeyExist = map2.has(key);
 				const isValueSame = map2.get(key) === value;
-				t.true(doesKeyExist && isValueSame);
+				t.expect(doesKeyExist && isValueSame).toBeTruthy();
 			}
 		},
 	);
 
-	test.serial(
+	test.it(
 		'iterator() doesn\'t yield expired values, and deletes them',
 		async t => {
 			const keyv = new Keyv({store: store()});
@@ -100,10 +99,10 @@ const keyvIteratorTests = (test: TestFn, Keyv: typeof KeyvModule, store: KeyvSto
 			const iterator = keyv.iterator();
 			let entry = await iterator.next();
 			const [k, v] = entry.value;
-			t.is(k, 'foo');
-			t.is(v, 'bar');
+			t.expect(k).toBe('foo');
+			t.expect(v).toBe('bar');
 			entry = await iterator.next();
-			t.is(entry.value, undefined);
+			t.expect(entry.value).toBeUndefined();
 		},
 	);
 };

@@ -1,6 +1,6 @@
 import {constants as zlibConstants} from 'node:zlib';
 import v8 from 'node:v8';
-import test from 'ava';
+import * as test from 'vitest';
 import {keyvCompresstionTests} from '@keyv/test-suite';
 import KeyvBrotli from '../src/index';
 import type {DeserializeResult} from '../src/types';
@@ -11,7 +11,7 @@ const {BROTLI_PARAM_MODE, BROTLI_PARAM_QUALITY} = zlibConstants;
 // @ts-expect-error - KeyvBrotli type
 keyvCompresstionTests(test, new KeyvBrotli());
 
-test('object type compression/decompression', async t => {
+test.it('object type compression/decompression', async t => {
 	const keyv = new KeyvBrotli();
 	const object = {
 		a: 1,
@@ -20,22 +20,21 @@ test('object type compression/decompression', async t => {
 	};
 	const compressed = await keyv.compress(object);
 	const decompressed = await keyv.decompress(compressed);
-	t.deepEqual(decompressed, object);
+	t.expect(decompressed).toEqual(object);
 });
 
-test('disable brotli compression', async t => {
+test.it('disable brotli compression', async t => {
 	const options = {
 		enable: false,
 	};
 	const keyv = new KeyvBrotli(options);
 	const compressed = await keyv.compress('whatever');
-	// @ts-expect-error Testing non-compressed value
-	t.is(compressed, 'whatever');
+	t.expect(compressed).toBe('whatever');
 	const decompressed: DeserializeResult = await keyv.decompress(compressed);
-	t.is(decompressed, 'whatever');
+	t.expect(decompressed).toBe('whatever');
 });
 
-test('compression with compression options', async t => {
+test.it('compression with compression options', async t => {
 	const options = {
 		compressOptions: {
 			chunkSize: 1024,
@@ -50,10 +49,10 @@ test('compression with compression options', async t => {
 	const keyvWithoutOptions = new KeyvBrotli();
 	const compressed = await keyv.compress('whatever');
 	const compressedWithoutOptions = await keyvWithoutOptions.compress('whatever');
-	t.not(compressed, compressedWithoutOptions);
+	t.expect(compressed).not.toBe(compressedWithoutOptions);
 });
 
-test('decompression with decompression options', async t => {
+test.it('decompression with decompression options', async t => {
 	const options = {
 		decompressOptions: {
 			chunkSize: 1024,
@@ -66,10 +65,10 @@ test('decompression with decompression options', async t => {
 	const keyv = new KeyvBrotli(options);
 	const compressed = await keyv.compress('whatever');
 	const decompressed = await keyv.decompress(compressed);
-	t.is(decompressed, 'whatever');
+	t.expect(decompressed).toBe('whatever');
 });
 
-test('compression/decompression with compression/decompression options', async t => {
+test.it('compression/decompression with compression/decompression options', async t => {
 	const options = {
 		compressOptions: {
 			chunkSize: 1024,
@@ -88,10 +87,10 @@ test('compression/decompression with compression/decompression options', async t
 	const keyv = new KeyvBrotli(options);
 	const compressed = await keyv.compress('whatever');
 	const decompressed = await keyv.decompress(compressed);
-	t.is(decompressed, 'whatever');
+	t.expect(decompressed).toBe('whatever');
 });
 
-test('decompression using number array with v8', async t => {
+test.it('decompression using number array with v8', async t => {
 	const options = {
 		serialize: v8.serialize,
 		deserialize: v8.deserialize,
@@ -100,6 +99,6 @@ test('decompression using number array with v8', async t => {
 	const keyv = new KeyvBrotli(options);
 	const compressed = await keyv.compress({help: [1, 2, 4]});
 	const decompressed = await keyv.decompress(compressed);
-	t.deepEqual(decompressed, {help: [1, 2, 4]});
+	t.expect(decompressed).toEqual({help: [1, 2, 4]});
 });
 

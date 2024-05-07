@@ -1,52 +1,51 @@
 
-import test from 'ava';
+import * as test from 'vitest';
 import {keyvCompresstionTests} from '@keyv/test-suite';
 import KeyvGzip from '../src/index';
 
 // @ts-expect-error - KeyvGzip type
 keyvCompresstionTests(test, new KeyvGzip());
 
-test('object type compression/decompression', async t => {
+test.it('object type compression/decompression', async t => {
 	const keyv = new KeyvGzip();
 	const testValue = JSON.stringify({my: 'super', puper: [456, 567], awesome: 'pako'});
 	const compressed = await keyv.compress(testValue);
 	const decompressed = await keyv.decompress(compressed);
-	t.deepEqual(decompressed, testValue);
+	t.expect(decompressed).toEqual(testValue);
 });
 
 // Test options while compress
-test('options while compress', async t => {
+test.it('options while compress', async t => {
 	const keyv = new KeyvGzip();
 	const compressed = await keyv.compress('whatever');
-	t.not(compressed, 'whatever');
+	t.expect(compressed).not.toBe('whatever');
 	const compressedWithoutOptions = await keyv.compress('whatever');
-	t.not(compressed, compressedWithoutOptions);
+	t.expect(compressed).not.toBe(compressedWithoutOptions);
 });
 // Test options at class level
-test('options at class level', async t => {
+test.it('options at class level', async t => {
 	const keyv = new KeyvGzip({chunkSize: 32 * 1024});
 	const compressed = await keyv.compress('whatever');
-	t.not(compressed, 'whatever');
+	t.expect(compressed).not.toBe('whatever');
 	const compressedWithoutOptions = await new KeyvGzip().compress('whatever');
-	t.not(compressed, compressedWithoutOptions);
+	t.expect(compressed).not.toBe(compressedWithoutOptions);
 });
 
-test('compression with compression options', async t => {
+test.it('compression with compression options', async t => {
 	const options = {};
 
 	const keyv = new KeyvGzip(options);
 	const keyvWithoutOptions = new KeyvGzip();
 	const compressed = await keyv.compress('whatever');
 	const compressedWithoutOptions = await keyvWithoutOptions.compress('whatever');
-	t.not(compressed, compressedWithoutOptions);
+	t.expect(compressed).not.toBe(compressedWithoutOptions);
 });
 
-test('decompression with decompression options', async t => {
+test.it('decompression with decompression options', async t => {
 	const options = {};
 
 	const keyv = new KeyvGzip(options);
 	const compressed = await keyv.compress('whatever');
 	const decompressed = await keyv.decompress(compressed, options);
-	// @ts-expect-error - TS doesn't know that decompressed is a string
-	t.is(decompressed, 'whatever');
+	t.expect(decompressed).toBe('whatever');
 });

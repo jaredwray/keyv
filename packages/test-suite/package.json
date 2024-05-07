@@ -8,18 +8,20 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.dist.json",
 		"prepare": "yarn build",
-		"test": "xo && c8 ava --serial",
-		"test:ci": "xo && ava --serial",
+		"test": "vitest",
+		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf dist && rm -rf ./test/testdb.sqlite"
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-module": 0,
-			"unicorn/prefer-node-protocol": 0,
-			"@typescript-eslint/no-unsafe-assignment": 0,
-			"@typescript-eslint/no-confusing-void-expression": 0,
-			"@typescript-eslint/no-unsafe-argument": 0,
-			"import/extensions": 0
+			"unicorn/prefer-module": "off",
+			"unicorn/prefer-node-protocol": "off",
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-confusing-void-expression": "off",
+			"@typescript-eslint/no-unsafe-argument": "off",
+			"import/extensions": "off",
+			"import/no-extraneous-dependencies": "off",
+			"no-promise-executor-return": "off"
 		}
 	},
 	"repository": {

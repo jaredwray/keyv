@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import test from 'ava';
+import * as test from 'vitest';
 import EventManager from '../src/event-manager';
 
-test('remove event listener', t => {
+test.it('remove event listener', t => {
 	const emitter = new EventManager();
 	let dataReceived = 0;
 
-	const listener: EventListener = () => {
+	const listener = () => {
 		dataReceived++;
 	};
 
@@ -15,53 +15,53 @@ test('remove event listener', t => {
 	emitter.off('test-event', listener);
 	emitter.emit('test-event');
 
-	t.is(dataReceived, 1);
+	t.expect(dataReceived).toBe(1);
 });
 
-test('get max listeners', t => {
+test.it('get max listeners', t => {
 	const emitter = new EventManager();
-	t.is(emitter.maxListeners(), 100);
+	t.expect(emitter.maxListeners()).toBe(100);
 });
 
-test('add event listener', t => {
+test.it('add event listener', t => {
 	const emitter = new EventManager();
 	emitter.addListener('test-event', () => {});
-	t.is(emitter.listeners('test-event').length, 1);
+	t.expect(emitter.listeners('test-event').length).toBe(1);
 });
 
-test('remove event listener handler', t => {
+test.it('remove event listener handler', t => {
 	const emitter = new EventManager();
 	const listener: EventListener = data => {
 		console.log(data);
 	};
 
 	emitter.addListener('test-event8', listener);
-	t.is(emitter.listeners('test-event8').length, 1);
+	t.expect(emitter.listeners('test-event8').length).toBe(1);
 	emitter.removeListener('test-event8', listener);
-	t.is(emitter.listeners('test-event8').length, 0);
+	t.expect(emitter.listeners('test-event8').length).toBe(0);
 });
 
-test('remove event listener handler when never existed', t => {
+test.it('remove event listener handler when never existed', t => {
 	const emitter = new EventManager();
-	const listener: EventListener = () => {};
+	const listener = () => {};
 	emitter.removeListener('test-event8', listener);
-	t.is(emitter.listeners('test-event8').length, 0);
+	t.expect(emitter.listeners('test-event8').length).toBe(0);
 	emitter.on('test-event8', listener);
 	emitter.removeListener('test-event8', () => {});
-	t.is(emitter.listeners('test-event8').length, 1);
+	t.expect(emitter.listeners('test-event8').length).toBe(1);
 	emitter.removeListener('test-event8', listener);
-	t.is(emitter.listeners('test-event8').length, 0);
+	t.expect(emitter.listeners('test-event8').length).toBe(0);
 });
 
-test('remove all event listeners', t => {
+test.it('remove all event listeners', t => {
 	const emitter = new EventManager();
 	let dataReceived = 0;
 
-	const listener: EventListener = () => {
+	const listener = () => {
 		dataReceived++;
 	};
 
-	const listener1: EventListener = () => {
+	const listener1 = () => {
 		dataReceived++;
 	};
 
@@ -71,20 +71,20 @@ test('remove all event listeners', t => {
 
 	emitter.removeAllListeners();
 
-	t.is(emitter.listeners('test-event').length, 0);
-	t.is(emitter.listeners('test-event2').length, 0);
+	t.expect(emitter.listeners('test-event').length).toBe(0);
+	t.expect(emitter.listeners('test-event2').length).toBe(0);
 });
 
-test('set max listeners and check warning', t => {
+test.it('set max listeners and check warning', t => {
 	const emitter = new EventManager();
 	emitter.setMaxListeners(1);
 
-	const listener: EventListener = () => {};
+	const listener = () => {};
 
 	// Temporary override console.warn
 	let capturedWarning = '';
 	const originalWarn = console.warn;
-	console.warn = (message: any) => {
+	console.warn = message => {
 		capturedWarning = message;
 	};
 
@@ -94,33 +94,33 @@ test('set max listeners and check warning', t => {
 	// Restore original console.warn
 	console.warn = originalWarn;
 
-	t.regex(capturedWarning, /MaxListenersExceededWarning/);
+	t.expect(capturedWarning).toMatch(/MaxListenersExceededWarning/);
 });
 
-test('remove all listeners', t => {
+test.it('remove all listeners', t => {
 	const emitter = new EventManager();
-	const listener: EventListener = () => {};
+	const listener = () => {};
 
 	emitter.on('test-event', listener);
 	emitter.on('test-event', listener);
 	emitter.removeAllListeners('test-event');
 
-	t.deepEqual(emitter.listeners('test-event'), []);
+	t.expect(emitter.listeners('test-event')).toEqual([]);
 });
 
-test('listeners method', t => {
+test.it('listeners method', t => {
 	const emitter = new EventManager();
-	const listener: EventListener = () => {};
+	const listener = () => {};
 
 	emitter.on('test-event', listener);
 
-	t.deepEqual(emitter.listeners('test-event'), [listener]);
+	t.expect(emitter.listeners('test-event')).toEqual([listener]);
 });
 
-test('if it is an error with no listeners throw error', t => {
+test.it('if it is an error with no listeners throw error', () => {
 	const emitter = new EventManager();
 
-	t.throws(() => {
+	test.expect(() => {
 		emitter.emit('error', new Error('test'));
-	}, {instanceOf: Error});
+	}).toThrow(Error);
 });
