@@ -1,4 +1,4 @@
-name: tests
+name: codecov
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [ '18', '20' ]
+        node: [ '20' ]
     name: Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v3
@@ -28,3 +28,10 @@ jobs:
         
       - name: Test Packages
         run: yarn test
+
+      - name: Code Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_KEY }}
+          verbose: true
+          files: ./coverage/lcov.info
