@@ -14,7 +14,7 @@
 	"scripts": {
 		"build": "tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",
-		"test": "vitest",
+		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
