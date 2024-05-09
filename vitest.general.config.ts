@@ -4,7 +4,7 @@ export default defineConfig({
 	test: {
 		include: ['test/*.ts'],
 		coverage: {
-			reporter: ['json', 'lcov'],
+			reporter: ['json', 'lcov', 'text'],
 			reportOnFailure: true,
 		}
 	},

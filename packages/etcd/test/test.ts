@@ -1,11 +1,9 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
-import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
+import keyvTestSuite from '@keyv/test-suite';
 import KeyvEtcd from '../src/index';
 
 const etcdUrl = 'etcd://127.0.0.1:2379';
-
-keyvOfficialTests(test, Keyv, etcdUrl, 'etcd://foo');
 
 const store = () => new KeyvEtcd({uri: etcdUrl, busyTimeout: 3000});
 

@@ -2,12 +2,19 @@
 	"name": "@keyv/etcd",
 	"version": "1.2.1",
 	"description": "Etcd storage adapter for Keyv",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./dist/cjs/index.js",
+			"import": "./dist/esm/index.js"
+		}
+	},
 	"scripts": {
-		"build": "tsc --project tsconfig.dist.json",
+		"build": "tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",
-		"test": "vitest",
+		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},

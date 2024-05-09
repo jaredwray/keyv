@@ -2,12 +2,20 @@
 	"name": "@keyv/mongo",
 	"version": "2.2.8",
 	"description": "MongoDB storage adapter for Keyv",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "dist/cjs/index.js",
+	"type": "module",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./dist/cjs/index.js",
+			"import": "./dist/esm/index.js"
+		}
+	},
 	"scripts": {
-		"build": "tsc --project tsconfig.dist.json",
+		"build": "tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",
-		"test": "vitest",
+		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rm -rf node_modules && rm -rf ./coverage"
 	},
@@ -26,8 +34,9 @@
 			"@typescript-eslint/consistent-type-imports": "off",
 			"@typescript-eslint/naming-convention": "off",
 			"@typescript-eslint/no-floating-promises": "off",
-			" @typescript-eslint/no-unsafe-argument": "off",
-			"import/no-extraneous-dependencies": "off"
+			"import/no-extraneous-dependencies": "off",
+			"@typescript-eslint/no-confusing-void-expression": "off",
+			"@typescript-eslint/no-empty-function": "off"
 		}
 	},
 	"repository": {

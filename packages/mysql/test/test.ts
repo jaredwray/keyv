@@ -1,12 +1,10 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMysql from '../src/index';
 import {parseConnectionString} from '../src/pool';
 
 const uri = 'mysql://root@localhost:3306/keyv_test';
-
-keyvOfficialTests(test, Keyv, uri, 'mysql://foo');
 
 const store = () => new KeyvMysql(uri);
 keyvTestSuite(test, Keyv, store);

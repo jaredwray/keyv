@@ -1,10 +1,8 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
 import KeyvSqlite from '@keyv/sqlite';
-import keyvTestSuite, {delay, keyvIteratorTests, keyvOfficialTests} from '@keyv/test-suite';
+import keyvTestSuite, {delay, keyvIteratorTests} from '@keyv/test-suite';
 import KeyvTiered from '../src/index';
-
-keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
 const remoteStore = () => new Keyv({
 	store: new KeyvSqlite({

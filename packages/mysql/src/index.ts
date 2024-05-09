@@ -175,4 +175,4 @@ class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export = KeyvMysql;
+export default KeyvMysql;

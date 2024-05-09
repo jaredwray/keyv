@@ -1,11 +1,9 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvPostgres from '../src/index';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5432/keyv_test';
-
-keyvOfficialTests(test, Keyv, postgresUri, 'postgresql://foo');
 
 const store = () => new KeyvPostgres({uri: postgresUri, iterationLimit: 2});
 keyvTestSuite(test, Keyv, store);

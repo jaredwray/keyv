@@ -1,4 +1,3 @@
-
 import * as test from 'vitest';
 import {keyvCompresstionTests} from '@keyv/test-suite';
 import KeyvGzip from '../src/index';

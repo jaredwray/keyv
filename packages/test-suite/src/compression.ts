@@ -53,7 +53,7 @@ const keyvCompressionTests = (test: typeof Vitest, compression: CompressionAdapt
 	});
 
 	test.it('compress/decompress with main keyv', async t => {
-		const keyv = new Keyv({store: new Map(), compression});
+		const keyv = new Keyv({compression});
 		await keyv.set('foo', 'bar');
 		t.expect(await keyv.get('foo')).toBe('bar');
 	});
