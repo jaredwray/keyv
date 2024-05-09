@@ -124,8 +124,6 @@ test.it('Keyv uses custom serializer when provided instead of default', async t 
 
 test.it('Keyv supports async serializer/deserializer', async t => {
 	t.expect.assertions(3);
-	const store = new Map();
-
 	const serialize = (data: Record<string, unknown>) => {
 		t.expect(true).toBeTruthy();
 		return JSON.stringify(data);
@@ -136,7 +134,7 @@ test.it('Keyv supports async serializer/deserializer', async t => {
 		return JSON.parse(data);
 	};
 
-	const keyv = new Keyv({store, serialize, deserialize});
+	const keyv = new Keyv({serialize, deserialize});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
