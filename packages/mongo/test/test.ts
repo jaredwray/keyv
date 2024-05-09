@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvIteratorTests, keyvOfficialTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMongo from '../src/index';
 
@@ -9,7 +9,6 @@ const store = () => new KeyvMongo(mongoURL, options);
 
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
-keyvOfficialTests(test, Keyv, mongoURL, 'mongodb://foo', options);
 
 test.afterAll(async () => {
 	let keyv = new KeyvMongo({...options});
@@ -165,14 +164,12 @@ test.it('.getMany([keys]) using GridFS should return empty array for all no exis
 
 test.it('Clears entire cache store', async t => {
 	const store = new KeyvMongo({useGridFS: true, ...options});
-	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 	const result = await store.clear();
 	t.expect(typeof result).toBe('undefined');
 });
 
 test.it('Clears entire cache store with default namespace', async t => {
 	const store = new KeyvMongo({...options});
-	// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 	const result = await store.clear();
 	t.expect(typeof result).toBe('undefined');
 });

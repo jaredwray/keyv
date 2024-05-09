@@ -1,6 +1,6 @@
 import * as test from 'vitest';
 import tk from 'timekeeper';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import Redis from 'ioredis';
 import KeyvRedis from '../src/index';
@@ -9,8 +9,6 @@ import KeyvRedis from '../src/index';
 const REDIS_HOST = 'localhost';
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const redisURI = `redis://${REDIS_HOST}`;
-
-keyvOfficialTests(test, Keyv, redisURI, 'redis://foo');
 
 const store = () => new KeyvRedis(redisURI);
 

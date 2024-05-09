@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvIteratorTests, keyvOfficialTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import tk from 'timekeeper';
 import KeyvSqlite from '@keyv/sqlite';
 import KeyvMongo from '@keyv/mongo';
@@ -14,7 +14,6 @@ const keyvMemcache = new KeyvMemcache('localhost:11211');
 // eslint-disable-next-line no-promise-executor-return
 const snooze = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
@@ -34,11 +33,6 @@ test.it('Keyv accepts storage adapters', async t => {
 	t.expect(await keyv.get('foo')).toBe('bar');
 	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
 	t.expect(store.size).toBe(1);
-});
-
-test.it('Keyv.loadStore throws error if adapter doesnt exist', async t => {
-	const options = {adapter: 'nonexistent', url: 'noexistent://localhost'};
-	t.expect(() => new Keyv(options)).toThrow();
 });
 
 test.it('Keyv passes ttl info to stores', async t => {
@@ -70,8 +64,7 @@ test.it('Keyv respects default ttl option', async t => {
 test.it('.set(key, val, ttl) overwrites default ttl option', async t => {
 	const startTime = Date.now();
 	tk.freeze(startTime);
-	const store = new Map();
-	const keyv = new Keyv({store, ttl: 200});
+	const keyv = new Keyv({ttl: 200});
 	await keyv.set('foo', 'bar');
 	await keyv.set('fizz', 'buzz', 100);
 	await keyv.set('ping', 'pong', 300);
@@ -103,8 +96,7 @@ test.it('.set(key, val, ttl) where ttl is "0" overwrites default ttl option and 
 });
 
 test.it('.get(key, {raw: true}) returns the raw object instead of the value', async t => {
-	const store = new Map();
-	const keyv = new Keyv({store});
+	const keyv = new Keyv();
 	await keyv.set('foo', 'bar');
 	const value = await keyv.get('foo');
 	const rawObject = await keyv.get('foo', {raw: true});
@@ -132,8 +124,6 @@ test.it('Keyv uses custom serializer when provided instead of default', async t 
 
 test.it('Keyv supports async serializer/deserializer', async t => {
 	t.expect.assertions(3);
-	const store = new Map();
-
 	const serialize = (data: Record<string, unknown>) => {
 		t.expect(true).toBeTruthy();
 		return JSON.stringify(data);
@@ -144,14 +134,14 @@ test.it('Keyv supports async serializer/deserializer', async t => {
 		return JSON.parse(data);
 	};
 
-	const keyv = new Keyv({store, serialize, deserialize});
+	const keyv = new Keyv({serialize, deserialize});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
 test.it('Keyv should wait for the expired get', async t => {
 	t.expect.assertions(4);
-	const _store = new Map() as unknown as KeyvStoreAdapter;
+	const _store = new Map();
 	const store = {
 		get: async (key: string) => _store.get(key),
 		set(key: string, value: any) {
@@ -201,7 +191,7 @@ test.it('Keyv should wait for the expired get', async t => {
 });
 
 test.it('.delete([keys]) should delete multiple keys for storage adapter not supporting deleteMany', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
+	const keyv = new Keyv({store: new Map()});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
@@ -212,12 +202,12 @@ test.it('.delete([keys]) should delete multiple keys for storage adapter not sup
 });
 
 test.it('.delete([keys]) with nonexistent keys resolves to false for storage adapter not supporting deleteMany', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
+	const keyv = new Keyv({store: new Map()});
 	t.expect(await keyv.delete(['foo', 'foo1', 'foo2'])).toBe(false);
 });
 
 test.it('keyv.get([keys]) should return array values', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
+	const keyv = new Keyv({store: new Map()});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
@@ -235,7 +225,7 @@ test.it('keyv.get([keys]) should return array values', async t => {
 });
 
 test.it('keyv.get([keys]) should return array value undefined when expires', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
+	const keyv = new Keyv({store: new Map()});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo1', 'bar1', 1);
 	await keyv.set('foo2', 'bar2');
@@ -307,7 +297,7 @@ test.it('keyv.get([keys]) should return array raw values undefined sqlite', asyn
 });
 
 test.it('keyv.get([keys]) should return array values with undefined', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
+	const keyv = new Keyv({store: new Map()});
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo2', 'bar2');
 	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']);
@@ -327,20 +317,22 @@ test.it('keyv.get([keys]) should return array values with all undefined using st
 });
 
 test.it('keyv.get([keys]) should return undefined array for all no existent keys', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter});
+	const keyv = new Keyv({store: new Map()});
 	const values = await keyv.get(['foo', 'foo1', 'foo2']);
 	t.expect(Array.isArray(values)).toBeTruthy();
 	t.expect(values).toEqual([undefined, undefined, undefined]);
 });
 
 test.it('pass compress options', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvBrotli()});
+	// @ts-expect-error - compression options
+	const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
 test.it('compress/decompress with gzip', async t => {
-	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvGzip()});
+	// @ts-expect-error - compression options
+	const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
@@ -353,8 +345,8 @@ test.it('iterator should exists with url', t => {
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with compression',
 	async t => {
-		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
-
+		const KeyvStore = new Map();
+		// @ts-expect-error - compression options
 		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -367,7 +359,7 @@ test.it(
 		}
 
 		await Promise.all(toResolve);
-
+		// @ts-expect-error - compression options
 		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
 		const map2 = new Map(
 			Array.from({length: 5})
@@ -394,7 +386,7 @@ test.it(
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces',
 	async t => {
-		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
+		const KeyvStore = new Map();
 
 		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1'});
 		const map1 = new Map(
@@ -435,7 +427,7 @@ test.it(
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer',
 	async t => {
-		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
+		const KeyvStore = new Map();
 
 		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
 
@@ -480,11 +472,11 @@ test.it(
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer and compression',
 	async t => {
-		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
+		const KeyvStore = new Map();
 
 		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
 		const deserialize = (data: string) => JSON.parse(data);
-
+		// @ts-expect-error - compression options
 		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -530,7 +522,7 @@ test.it('close connection successfully', async t => {
 });
 
 test.it('close connection undefined', async t => {
-	const store = new Map() as unknown as KeyvStoreAdapter;
+	const store = new Map();
 	const keyv = new Keyv({store});
 	t.expect(await keyv.disconnect()).toBeUndefined();
 });

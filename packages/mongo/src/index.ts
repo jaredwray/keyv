@@ -228,7 +228,7 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		}
 
 		const client = await this.connect;
-		return client.store.updateOne(
+		await client.store.updateOne(
 			{key: {$eq: key}},
 			{$set: {key, value, expiresAt}},
 			{upsert: true},
@@ -351,4 +351,4 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export = KeyvMongo;
+export default KeyvMongo;

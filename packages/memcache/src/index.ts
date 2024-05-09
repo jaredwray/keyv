@@ -92,16 +92,7 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 			options.expires = options.ttl = Math.floor(ttl / 1000); // Moving to seconds
 		}
 
-		return new Promise((resolve, reject) => {
-			this.client.set(this.formatKey(key), value as unknown as Buffer, options, (error, success) => {
-				if (error) {
-					this.emit('error', error);
-					reject(error);
-				} else {
-					resolve(success);
-				}
-			});
-		});
+		await this.client.set(this.formatKey(key), value as unknown as Buffer, options);
 	}
 
 	async delete(key: string): Promise<boolean> {
@@ -160,4 +151,4 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export = KeyvMemcache;
+export default KeyvMemcache;

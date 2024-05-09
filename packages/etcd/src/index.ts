@@ -144,4 +144,4 @@ class KeyvEtcd<Value = any> extends EventEmitter {
 	}
 }
 
-export = KeyvEtcd;
+export default KeyvEtcd;
