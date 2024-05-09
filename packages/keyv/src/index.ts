@@ -52,8 +52,7 @@ export interface KeyvStoreAdapter extends IEventEmitter {
 	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 }
 
-export interface Options {
-	[key: string]: any;
+export type KeyvOptions = {
 	/** Emit errors */
 	emitErrors?: boolean;
 	/** Namespace for the current instance. */
@@ -62,48 +61,19 @@ export interface Options {
 	serialize?: CompressionAdapter['serialize'];
 	/** A custom deserialization function. */
 	deserialize?: CompressionAdapter['deserialize'];
-	/** The connection string URI. */
-	uri?: string;
 	/** The storage adapter instance to be used by Keyv. */
-	store: KeyvStoreAdapter;
-	/** Default TTL. Can be overridden by specififying a TTL on `.set()`. */
+	store?: KeyvStoreAdapter | Map<any, any>;
+	/** Default TTL. Can be overridden by specifying a TTL on `.set()`. */
 	ttl?: number;
 	/** Enable compression option **/
 	compression?: CompressionAdapter;
-	/** Specify an adapter to use. e.g `'redis'` or `'mongodb'`. */
-	adapter?: 'redis' | 'mongodb' | 'mongo' | 'sqlite' | 'postgresql' | 'postgres' | 'mysql';
 	/** Enable or disable statistics (default is false) */
 	stats?: boolean;
-}
+};
+
+type KeyvOptions_ = Omit<KeyvOptions, 'store'> & {store: KeyvStoreAdapter | Map<any, any> & KeyvStoreAdapter};
 
 type IteratorFunction = (arg: any) => AsyncGenerator<any, void>;
-
-const loadStore = (options: Options) => {
-	const adapters = {
-		redis: '@keyv/redis',
-		rediss: '@keyv/redis',
-		mongodb: '@keyv/mongo',
-		mongo: '@keyv/mongo',
-		sqlite: '@keyv/sqlite',
-		postgresql: '@keyv/postgres',
-		postgres: '@keyv/postgres',
-		mysql: '@keyv/mysql',
-		etcd: '@keyv/etcd',
-		offline: '@keyv/offline',
-		tiered: '@keyv/tiered',
-	};
-	if (options.adapter ?? options.uri) {
-		const adapter = (options.adapter ?? /^[^:+]*/.exec(options.uri!)![0]) as Options['adapter'];
-		if (!adapter || !adapters[adapter]) {
-			throw new Error(`Adapter ${adapter} is not allowed`);
-		}
-
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		return new (require(adapters[adapter]))(options);
-	}
-
-	return new Map();
-};
 
 const iterableAdapters = [
 	'sqlite',
@@ -115,29 +85,37 @@ const iterableAdapters = [
 ];
 
 class Keyv extends EventManager {
-	opts: Options;
+	opts: KeyvOptions_;
 	iterator?: IteratorFunction;
 	hooks = new HooksManager();
 	stats = new StatsManager(false);
-	constructor(uri?: string | Omit<Options, 'store'>, options_?: Omit<Options, 'store'>) {
+
+	constructor(store?: KeyvStoreAdapter | KeyvOptions | Map<any, any>, options?: Omit<KeyvOptions, 'store'>);
+	constructor(options?: KeyvOptions);
+
+	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
 		super();
-		options_ = options_ ?? {};
-		const options = {
-			...((typeof uri === 'string') ? {uri} : uri),
-			...options_,
-		};
-		// @ts-expect-error - store is being added in the next step
+		options = options ?? {};
+		store = store ?? {} as KeyvOptions;
+
 		this.opts = {
 			namespace: 'keyv',
 			serialize: defaultSerialize,
 			deserialize: defaultDeserialize,
 			emitErrors: true,
+			// @ts-expect-error - Map is not a KeyvStoreAdapter
+			store: new Map(),
 			...options,
 		};
 
-		if (!this.opts.store) {
-			const adapterOptions = {...this.opts};
-			this.opts.store = loadStore(adapterOptions);
+		if (store && (store as KeyvStoreAdapter).get) {
+			this.opts.store = store as KeyvStoreAdapter;
+		} else {
+			// @ts-expect-error - Map is not a KeyvStoreAdapter
+			this.opts = {
+				...this.opts,
+				...store,
+			};
 		}
 
 		if (this.opts.compression) {
@@ -154,11 +132,11 @@ class Keyv extends EventManager {
 			this.opts.store.namespace = this.opts.namespace;
 
 			// Attach iterators
-			// @ts-expect-error
+			// @ts-ignore
 			if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
 				this.iterator = this.generateIterator((this.opts.store as unknown as IteratorFunction));
-			} else if (this.opts.store.iterator && this.opts.store.opts && this._checkIterableAdapter()) {
-				this.iterator = this.generateIterator(this.opts.store.iterator.bind(this.opts.store));
+			} else if ('iterator' in this.opts.store && this.opts.store.opts && this._checkIterableAdapter()) {
+				this.iterator = this.generateIterator(this.opts.store.iterator!.bind(this.opts.store));
 			}
 		}
 

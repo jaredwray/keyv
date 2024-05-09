@@ -16,7 +16,8 @@
       "unicorn/prefer-event-target": "off",
       "import/extensions": "off",
       "import/no-extraneous-dependencies": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off"
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off"
     }
   },
   "repository": {

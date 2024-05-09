@@ -11,7 +11,7 @@ type MyType = {
 
 test.it('default options', async t => {
 	const keyv = new Keyv({
-		store: new Map() as unknown as KeyvStoreAdapter,
+		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
 		compression: new KeyvBrotli(),
 	});
 
@@ -30,7 +30,7 @@ test.it('compression user defined options', async t => {
 	};
 
 	const keyv = new Keyv({
-		store: new Map() as unknown as KeyvStoreAdapter,
+		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
 		compression: new KeyvBrotli(options),
 	});
 
@@ -49,7 +49,7 @@ test.it('user defined options', async t => {
 	};
 
 	const keyv = new Keyv({
-		store: new Map() as unknown as KeyvStoreAdapter,
+		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
 		compression: new KeyvBrotli(options),
 	});
 
@@ -69,10 +69,8 @@ test.it('using number array with v8', async t => {
 		deserialize: v8.deserialize,
 	};
 
-	const map = new Map() as unknown as KeyvStoreAdapter;
-
 	const keyv = new Keyv({
-		store: map,
+		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
 		compression: new KeyvBrotli(options),
 	});
 

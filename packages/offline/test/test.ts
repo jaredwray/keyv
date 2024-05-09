@@ -1,7 +1,7 @@
 import * as test from 'vitest';
 import Keyv, {type KeyvStoreAdapter} from 'keyv';
 import KeyvRedis from '@keyv/redis';
-import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
+import keyvTestSuite from '@keyv/test-suite';
 import KeyvOffline from '../src/index';
 
 const keyvRedisBad = new KeyvRedis({
@@ -73,8 +73,6 @@ test.it('.has return false if store is unreachable', async t => {
 
 const REDIS_HOST = 'localhost';
 const redisURI = `redis://${REDIS_HOST}`;
-
-keyvOfficialTests(test, Keyv, redisURI, 'redis://foo');
 
 const store = () => new KeyvOffline(new KeyvRedis(redisURI));
 

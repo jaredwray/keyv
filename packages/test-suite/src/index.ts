@@ -14,7 +14,6 @@ const keyvTestSuite = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Keyv
 export {
 	keyvTestSuite as default,
 };
-export {default as keyvOfficialTests} from './official';
 export {default as keyvIteratorTests} from './iterator';
 export {default as keyvCompresstionTests} from './compression';
 

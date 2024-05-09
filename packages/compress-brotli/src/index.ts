@@ -29,4 +29,4 @@ class KeyvBrotli {
 	}
 }
 
-export = KeyvBrotli;
+export default KeyvBrotli;

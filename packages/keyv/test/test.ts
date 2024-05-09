@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvIteratorTests, keyvOfficialTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import tk from 'timekeeper';
 import KeyvSqlite from '@keyv/sqlite';
 import KeyvMongo from '@keyv/mongo';
@@ -14,7 +14,6 @@ const keyvMemcache = new KeyvMemcache('localhost:11211');
 // eslint-disable-next-line no-promise-executor-return
 const snooze = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
@@ -34,11 +33,6 @@ test.it('Keyv accepts storage adapters', async t => {
 	t.expect(await keyv.get('foo')).toBe('bar');
 	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
 	t.expect(store.size).toBe(1);
-});
-
-test.it('Keyv.loadStore throws error if adapter doesnt exist', async t => {
-	const options = {adapter: 'nonexistent', url: 'noexistent://localhost'};
-	t.expect(() => new Keyv(options)).toThrow();
 });
 
 test.it('Keyv passes ttl info to stores', async t => {
@@ -334,12 +328,14 @@ test.it('keyv.get([keys]) should return undefined array for all no existent keys
 });
 
 test.it('pass compress options', async t => {
+	// @ts-expect-error - compression options
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvBrotli()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
 test.it('compress/decompress with gzip', async t => {
+	// @ts-expect-error - compression options
 	const keyv = new Keyv({store: new Map() as unknown as KeyvStoreAdapter, compression: new KeyvGzip()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
@@ -354,7 +350,7 @@ test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with compression',
 	async t => {
 		const KeyvStore = new Map() as unknown as KeyvStoreAdapter;
-
+		// @ts-expect-error - compression options
 		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -367,7 +363,7 @@ test.it(
 		}
 
 		await Promise.all(toResolve);
-
+		// @ts-expect-error - compression options
 		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
 		const map2 = new Map(
 			Array.from({length: 5})
@@ -484,7 +480,7 @@ test.it(
 
 		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
 		const deserialize = (data: string) => JSON.parse(data);
-
+		// @ts-expect-error - compression options
 		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})

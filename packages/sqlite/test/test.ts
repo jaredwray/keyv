@@ -1,9 +1,7 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
-import keyvTestSuite, {keyvOfficialTests} from '@keyv/test-suite';
+import keyvTestSuite from '@keyv/test-suite';
 import KeyvSqlite from '../src/index';
-
-keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
 
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 

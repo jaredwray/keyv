@@ -33,4 +33,4 @@ class KeyvGzip {
 	}
 }
 
-export = KeyvGzip;
+export default KeyvGzip;

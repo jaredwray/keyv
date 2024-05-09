@@ -1,9 +1,7 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
 import KeyvBrotli from '@keyv/compress-brotli';
-import keyvTestSuite, {keyvOfficialTests, keyvIteratorTests, keyvCompresstionTests} from '../src/index';
-
-keyvOfficialTests(test, Keyv, 'sqlite://test/testdb.sqlite', 'sqlite://non/existent/database.sqlite');
+import keyvTestSuite, {keyvIteratorTests, keyvCompresstionTests} from '../src/index';
 
 const storeExtended = () => {
 	class MapExtend extends Map {

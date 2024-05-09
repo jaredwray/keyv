@@ -2,10 +2,17 @@
 	"name": "keyv",
 	"version": "4.5.4",
 	"description": "Simple key-value storage with support for multiple backends",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./dist/cjs/index.js",
+			"import": "./dist/esm/index.js"
+		}
+	},
 	"scripts": {
-		"build": "tsc --project tsconfig.dist.json",
+		"build": "tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",
 		"test": "vitest",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
@@ -31,7 +38,8 @@
 			"@typescript-eslint/naming-convention": "off",
 			"@typescript-eslint/consistent-type-assertions": "off",
 			"@typescript-eslint/no-confusing-void-expression": "off",
-			"@typescript-eslint/no-var-requires": "off"
+			"@typescript-eslint/no-var-requires": "off",
+			"@typescript-eslint/prefer-ts-expect-error": "off"
 		}
 	},
 	"repository": {
