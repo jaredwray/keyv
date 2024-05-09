@@ -16,14 +16,14 @@ keyvRedisBad.on('error', () => {
 });
 
 test.it('.set return true under normal behavior', async t => {
-	const store = new Map() as unknown as KeyvStoreAdapter;
+	const store = new Map();
 	const keyv = new KeyvOffline(new Keyv({store}));
 	const result = await keyv.set('foo', 'expires in 1 second', 1000) as boolean;
 	t.expect(result).toBeTruthy();
 });
 
 test.it('.get return the expected value under normal behavior', async t => {
-	const store = new Map() as unknown as KeyvStoreAdapter;
+	const store = new Map();
 	const keyv = new KeyvOffline(new Keyv({store}));
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
