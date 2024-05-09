@@ -23,8 +23,7 @@
   },
   "dependencies": {
     "@types/node": "^20.9.2",
-    "@vitest/coverage-v8": "^1.6.0",
-    "webpack": "^5.89.0"
+    "@vitest/coverage-v8": "^1.6.0"
   },
   "devDependencies": {
     "c8": "^8.0.1",
