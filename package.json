@@ -1,6 +1,7 @@
 {
   "name": "@keyv/mono-repo",
   "version": "1.0.0",
+  "type": "module",
   "description": "Keyv Mono Repo",
   "repository": "https://github.com/jaredwray/keyv.git",
   "author": "Jared Wray <me@jaredwray.com>",
@@ -21,15 +22,13 @@
     "website:build": "yarn workspace @keyv/website run build",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
-  "dependencies": {
-    "@types/node": "^20.9.2",
-    "@vitest/coverage-v8": "^1.6.0"
-  },
   "devDependencies": {
     "c8": "^8.0.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2",
+    "@types/node": "^20.9.2",
+    "@vitest/coverage-v8": "^1.6.0",
     "vitest": "^1.5.3",
-    "xo": "^0.56.0"
+    "xo": "^0.58.0"
   }
 }

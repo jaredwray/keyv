@@ -1,4 +1,4 @@
-type EventListener = (...args: any[]) => void;
+type EventListener = (...arguments_: any[]) => void;
 
 class EventManager {
 	_eventListeners: Map<string, EventListener[]>;
@@ -52,20 +52,20 @@ class EventManager {
 	}
 
 	// Emit an event
-	public emit(event: string, ...args: any[]): void {
+	public emit(event: string, ...arguments_: any[]): void {
 		const listeners = this._eventListeners.get(event);
 
 		if (listeners && listeners.length > 0) {
 			for (const listener of listeners) {
-				listener(...args);
+				listener(...arguments_);
 			}
 		} else if (event === 'error') {
 			// If it's an 'error' event with no listeners, throw the error.
-			if (args[0] instanceof Error) {
-				throw args[0]; // Throws the error object if the first arg is an error
+			if (arguments_[0] instanceof Error) {
+				throw arguments_[0]; // Throws the error object if the first arg is an error
 			} else {
-				const error = new CustomError(args[0]);
-				error.context = args[0];
+				const error = new CustomError(arguments_[0]);
+				error.context = arguments_[0];
 				throw error;
 			}
 		}

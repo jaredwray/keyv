@@ -33,7 +33,7 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
 export interface IEventEmitter {
-	on(event: string, listener: (...args: any[]) => void): this;
+	on(event: string, listener: (...arguments_: any[]) => void): this;
 }
 
 export interface KeyvStoreAdapter extends IEventEmitter {
@@ -73,7 +73,7 @@ export type KeyvOptions = {
 
 type KeyvOptions_ = Omit<KeyvOptions, 'store'> & {store: KeyvStoreAdapter | Map<any, any> & KeyvStoreAdapter};
 
-type IteratorFunction = (arg: any) => AsyncGenerator<any, void>;
+type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
 
 const iterableAdapters = [
 	'sqlite',
@@ -95,8 +95,8 @@ class Keyv extends EventManager {
 
 	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
 		super();
-		options = options ?? {};
-		store = store ?? {} as KeyvOptions;
+		options ??= {};
+		store ??= {} as KeyvOptions;
 
 		this.opts = {
 			namespace: 'keyv',
@@ -146,7 +146,7 @@ class Keyv extends EventManager {
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
-		const func: IteratorFunction = async function * (this: any) {
+		const function_: IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'
 				? iterator(this.opts.store.namespace)
 				: iterator)) {
@@ -164,7 +164,7 @@ class Keyv extends EventManager {
 			}
 		};
 
-		return func.bind(this);
+		return function_.bind(this);
 	}
 
 	_checkIterableAdapter(): boolean {
@@ -214,7 +214,7 @@ class Keyv extends EventManager {
 						return undefined;
 					}
 
-					return (options && options.raw) ? deserializedRow as StoredDataRaw<Value> : (deserializedRow as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+					return (options?.raw) ? deserializedRow as StoredDataRaw<Value> : (deserializedRow as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
 				});
 
 				const deserializedRows = await Promise.allSettled(promises);
@@ -248,7 +248,7 @@ class Keyv extends EventManager {
 					continue;
 				}
 
-				const value = (options && options.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+				const value = (options?.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
 				result.push(value);
 			}
 
@@ -277,7 +277,7 @@ class Keyv extends EventManager {
 
 		this.hooks.trigger(KeyvHooks.POST_GET, {key: keyPrefixed, value: deserializedData});
 		this.stats.hit();
-		return (options && options.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
+		return (options?.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
 	async set(key: string, value: any, ttl?: number): Promise<boolean> {

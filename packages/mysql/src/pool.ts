@@ -39,7 +39,8 @@ export const pool = (uri: string, options = {}) => {
 	const connectObject = parseConnectionString(uri);
 	const poolOptions = {...connectObject, ...options};
 
-	mysqlPool = mysqlPool ?? mysql.createPool(poolOptions);
+	// eslint-disable-next-line n/no-unsupported-features/es-syntax
+	mysqlPool ??= mysql.createPool(poolOptions);
 	return mysqlPool.promise();
 };
 

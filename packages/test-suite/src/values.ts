@@ -83,9 +83,11 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 
 	test.it('value can be BigInt using other serializer/deserializer', async t => {
 		store().opts.deserialize = JSONbig.parse;
-		const keyv = new Keyv({store: store(),
+		const keyv = new Keyv({
+			store: store(),
 			serialize: JSONbig.stringify,
-			deserialize: JSONbig.parse});
+			deserialize: JSONbig.parse,
+		});
 		const value = BigInt('9223372036854775807') as unknown as BigNumber.Value;
 		await keyv.set('foo', value);
 		const storedValue = await keyv.get('foo');

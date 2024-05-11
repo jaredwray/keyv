@@ -31,9 +31,15 @@ test.it('serialization and deserialization of only string value with colon', t =
 });
 
 test.it('serialization and deserialization of object value', t => {
-	const serialized = defaultSerialize({value: {foo: 'bar', bar: 5, baz: true, def: undefined, nul: null}});
+	const serialized = defaultSerialize({
+		value: {
+			foo: 'bar', bar: 5, baz: true, def: undefined, nul: null,
+		},
+	});
 	const deserialized = defaultDeserialize<{value: {foo: string; bar: number; baz: boolean; def?: string; nul: string | undefined}}>(serialized);
-	t.expect(deserialized.value).toEqual({foo: 'bar', bar: 5, baz: true, nul: null});
+	t.expect(deserialized.value).toEqual({
+		foo: 'bar', bar: 5, baz: true, nul: null,
+	});
 });
 
 test.it('defaultSerialize converts Buffer to base64 JSON string', t => {
@@ -60,6 +66,7 @@ test.it('defaultSerialize detects base64 on string', t => {
 	const json = JSON.stringify({
 		encoded: ':base64:aGVsbG8gd29ybGQ=', // "hello world" in base64
 	});
+	// eslint-disable-next-line @typescript-eslint/ban-types
 	const result = defaultDeserialize<{encoded: Buffer}>(json);
 	t.expect(result.encoded.toString()).toBe('hello world');
 });

@@ -2,7 +2,9 @@ import EventEmitter from 'events';
 import {promisify} from 'util';
 import sqlite3 from 'sqlite3';
 import {type KeyvStoreAdapter, type StoredData} from 'keyv';
-import {type Db, type DbClose, type DbQuery, type KeyvSqliteOptions} from './types';
+import {
+	type Db, type DbClose, type DbQuery, type KeyvSqliteOptions,
+} from './types';
 
 const toString = (input: string) => String(input).search(/^[a-zA-Z]+$/) < 0 ? '_' + input : input;
 
@@ -33,20 +35,20 @@ class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 		options.db = options.uri!.replace(/^sqlite:\/\//, '');
 
 		options.connect = async () => new Promise((resolve, reject) => {
-			const db = new sqlite3.Database(options.db!, error => {
+			const database = new sqlite3.Database(options.db!, error => {
 				if (error) {
 					reject(error);
 				} else {
 					if (options.busyTimeout) {
-						db.configure('busyTimeout', options.busyTimeout);
+						database.configure('busyTimeout', options.busyTimeout);
 					}
 
-					resolve(db);
+					resolve(database);
 				}
 			});
 		})
 			// @ts-expect-error - db is unknown
-			.then(db => ({query: promisify(db.all).bind(db), close: promisify(db.close).bind(db)}));
+			.then(database => ({query: promisify(database.all).bind(database), close: promisify(database.close).bind(database)}));
 
 		this.opts = {
 			table: 'keyv',
@@ -60,13 +62,13 @@ class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 		// @ts-expect-error - db is
 		const connected: Promise<DB> = this.opts.connect!()
-			.then(async db => db.query(createTable).then(() => db as Db))
+			.then(async database => database.query(createTable).then(() => database as Db))
 			.catch(error => this.emit('error', error));
 
 		this.query = async (sqlString, ...parameter) => connected
-			.then(async db => db.query(sqlString, ...parameter));
+			.then(async database => database.query(sqlString, ...parameter));
 
-		this.close = async () => connected.then(db => db.close);
+		this.close = async () => connected.then(database => database.close);
 	}
 
 	async get<Value>(key: string) {

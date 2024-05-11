@@ -92,6 +92,7 @@ class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 			options.expires = options.ttl = Math.floor(ttl / 1000); // Moving to seconds
 		}
 
+		// eslint-disable-next-line @typescript-eslint/ban-types
 		await this.client.set(this.formatKey(key), value as unknown as Buffer, options);
 	}
 

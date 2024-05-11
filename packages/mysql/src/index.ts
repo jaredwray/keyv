@@ -58,8 +58,10 @@ class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			};
 		};
 
-		this.opts = {table: 'keyv',
-			keySize: 255, ...options};
+		this.opts = {
+			table: 'keyv',
+			keySize: 255, ...options,
+		};
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 

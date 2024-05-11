@@ -21,7 +21,8 @@
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",
 			"@typescript-eslint/no-unsafe-return": "off",
-			"import/no-extraneous-dependencies": "off"
+			"import/no-extraneous-dependencies": "off",
+			"unicorn/prevent-abbreviations": "off"
 		}
 	},
 	"repository": {
@@ -52,7 +53,8 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"keyv": "*",
-		"tsd": "^0.29.0"
+		"tsd": "^0.29.0",
+		"xo": "^0.58.0"
 	},
 	"tsd": {
 		"directory": "test"
