@@ -1,6 +1,8 @@
 import EventEmitter from 'events';
 import {Buffer} from 'buffer';
-import {MongoClient as mongoClient, GridFSBucket, type WithId, type Document} from 'mongodb';
+import {
+	MongoClient as mongoClient, GridFSBucket, type WithId, type Document,
+} from 'mongodb';
 import pify from 'pify';
 import {KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
@@ -19,7 +21,7 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 
 	constructor(url?: KeyvMongoOptions, options?: Options) {
 		super();
-		url = url ?? {};
+		url ??= {};
 		if (typeof url === 'string') {
 			url = {url};
 		}
@@ -57,14 +59,14 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 						this.emit('error', error);
 					}
 
-					const db = client!.db(this.opts.db);
+					const database = client!.db(this.opts.db);
 
 					if (this.opts.useGridFS) {
-						const bucket = new GridFSBucket(db, {
+						const bucket = new GridFSBucket(database, {
 							readPreference: this.opts.readPreference,
 							bucketName: this.opts.collection,
 						});
-						const store = db.collection(`${this.opts.collection!}.files`);
+						const store = database.collection(`${this.opts.collection!}.files`);
 						await store.createIndex({
 							uploadDate: -1,
 						});
@@ -91,9 +93,9 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 							bucket[method] = pify(bucket[method].bind(bucket) as PifyFunction);
 						}
 
-						resolve({bucket, store, db});
+						resolve({bucket, store, db: database});
 					} else {
-						const store = db.collection(this.opts.collection!);
+						const store = database.collection(this.opts.collection!);
 						await store.createIndex(
 							{key: 1},
 							{
@@ -160,13 +162,13 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 			});
 		}
 
-		const doc = await client.store.findOne({key: {$eq: key}});
+		const document = await client.store.findOne({key: {$eq: key}});
 
-		if (!doc) {
+		if (!document) {
 			return undefined;
 		}
 
-		return doc.value as StoredData<Value>;
+		return document.value as StoredData<Value>;
 	}
 
 	async getMany<Value>(keys: string[]) {
@@ -346,8 +348,8 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	async has(key: string) {
 		const client = await this.connect;
 		const filter = {[this.opts.useGridFS ? 'filename' : 'key']: {$eq: key}};
-		const doc = await client.store.count(filter);
-		return doc !== 0;
+		const document = await client.store.count(filter);
+		return document !== 0;
 	}
 }
 

@@ -1,4 +1,6 @@
-import {type Collection, type Db, type GridFSBucket, type ReadPreference} from 'mongodb';
+import {
+	type Collection, type Db, type GridFSBucket, type ReadPreference,
+} from 'mongodb';
 
 export type Options = {
 	[key: string]: unknown;
@@ -22,4 +24,4 @@ export type KeyvMongoConnect = {
 	db?: Db;
 };
 
-export type PifyFunction = (...args: any[]) => any;
+export type PifyFunction = (...arguments_: any[]) => any;
