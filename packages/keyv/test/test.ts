@@ -6,8 +6,7 @@ import KeyvMongo from '@keyv/mongo';
 import KeyvBrotli from '@keyv/compress-brotli';
 import KeyvGzip from '@keyv/compress-gzip';
 import KeyvMemcache from '@keyv/memcache';
-import Keyv from '../src';
-import type {KeyvStoreAdapter, StoredDataNoRaw} from '../src';
+import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw} from '../src';
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 
@@ -28,6 +27,16 @@ test.it('Keyv is a class', t => {
 test.it('Keyv accepts storage adapters', async t => {
 	const store = new Map();
 	const keyv = new Keyv({store});
+	t.expect(store.size).toBe(0);
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(store.size).toBe(1);
+});
+
+test.it('Keyv accepts storage adapters instead of options', async t => {
+	const store = new Map();
+	const keyv = new Keyv(store);
 	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
@@ -433,7 +442,9 @@ test.it(
 
 		const deserialize = (data: string) => JSON.parse(data);
 
-		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1'});
+		const keyv1 = new Keyv({
+			store: KeyvStore, serialize, deserialize, namespace: 'keyv1',
+		});
 		const map1 = new Map(
 			Array.from({length: 5})
 				.fill(0)
@@ -446,7 +457,9 @@ test.it(
 
 		await Promise.all(toResolve);
 
-		const keyv2 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv2'});
+		const keyv2 = new Keyv({
+			store: KeyvStore, serialize, deserialize, namespace: 'keyv2',
+		});
 		const map2 = new Map(
 			Array.from({length: 5})
 				.fill(0)
@@ -476,8 +489,10 @@ test.it(
 
 		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
 		const deserialize = (data: string) => JSON.parse(data);
-		// @ts-expect-error - compression options
-		const keyv1 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip()});
+
+		const keyv1 = new Keyv({
+			store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip(),
+		});
 		const map1 = new Map(
 			Array.from({length: 5})
 				.fill(0)
@@ -490,7 +505,9 @@ test.it(
 
 		await Promise.all(toResolve);
 
-		const keyv2 = new Keyv({store: KeyvStore, serialize, deserialize, namespace: 'keyv2'});
+		const keyv2 = new Keyv({
+			store: KeyvStore, serialize, deserialize, namespace: 'keyv2',
+		});
 		const map2 = new Map(
 			Array.from({length: 5})
 				.fill(0)

@@ -1,6 +1,6 @@
 import EventManager from './event-manager';
 
-type HookHandler = (...args: any[]) => void;
+type HookHandler = (...arguments_: any[]) => void;
 
 class HooksManager extends EventManager {
 	_hookHandlers: Map<string, HookHandler[]>;
