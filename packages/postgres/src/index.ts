@@ -15,8 +15,10 @@ class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	constructor(options?: KeyvPostgresOptions) {
 		super();
 		this.ttlSupport = false;
-		options = {dialect: 'postgres',
-			uri: 'postgresql://localhost:5432', ...options};
+		options = {
+			dialect: 'postgres',
+			uri: 'postgresql://localhost:5432', ...options,
+		};
 
 		const connect = async () => {
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion

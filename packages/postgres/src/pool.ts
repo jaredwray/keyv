@@ -9,7 +9,8 @@ export const pool = (uri: string, options: PoolConfig = {}) => {
 		globalUri = uri;
 	}
 
-	postgresPool = postgresPool ?? new Pool({connectionString: uri, ...options});
+	// eslint-disable-next-line n/no-unsupported-features/es-syntax
+	postgresPool ??= new Pool({connectionString: uri, ...options});
 	return postgresPool;
 };
 

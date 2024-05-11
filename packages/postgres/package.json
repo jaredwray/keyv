@@ -52,7 +52,8 @@
 		"@keyv/test-suite": "*",
 		"@types/pg": "^8.10.9",
 		"keyv": "*",
-		"tsd": "^0.29.0"
+		"tsd": "^0.29.0",
+		"xo": "^0.58.0"
 	},
 	"tsd": {
 		"directory": "test"
