@@ -19,7 +19,8 @@
 			"unicorn/prefer-node-protocol": "off",
 			"@typescript-eslint/no-unsafe-return": "off",
 			"@typescript-eslint/no-confusing-void-expression": "off",
-			"import/no-extraneous-dependencies": "off"
+			"import/no-extraneous-dependencies": "off",
+			"@typescript-eslint/no-unnecessary-type-assertion": "off"
 		}
 	},
 	"repository": {
