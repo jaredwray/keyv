@@ -1,5 +1,4 @@
 import EventEmitter from 'node:events';
-// eslint-disable-next-line @typescript-eslint/ban-types
 import {Buffer} from 'buffer';
 import memcache from 'memjs';
 import {KeyvStoreAdapter, StoredData} from 'keyv';
