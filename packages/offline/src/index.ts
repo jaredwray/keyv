@@ -12,9 +12,9 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 				switch (method) {
 					case 'get':
 					{
-						return async (...args: any) => {
+						return async (...arguments_: any) => {
 							try {
-								return await keyv.get(...args);
+								return await keyv.get(...arguments_);
 							} catch {
 								return undefined;
 							}
@@ -23,9 +23,9 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 
 					case 'getMany':
 					{
-						return async (...args: any) => {
+						return async (...arguments_: any) => {
 							try {
-								return await keyv.getMany(...args);
+								return await keyv.getMany(...arguments_);
 							} catch {
 								return false;
 							}
@@ -34,9 +34,9 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 
 					case 'set':
 					{
-						return async (...args: any) => {
+						return async (...arguments_: any) => {
 							try {
-								return await keyv.set(...args);
+								return await keyv.set(...arguments_);
 							} catch {
 								return false;
 							}
@@ -45,9 +45,9 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 
 					case 'clear':
 					{
-						return async (...args: any) => {
+						return async (...arguments_: any) => {
 							try {
-								return await keyv.clear(...args);
+								return await keyv.clear(...arguments_);
 							} catch {
 								return false;
 							}
@@ -56,9 +56,9 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 
 					case 'delete':
 					{
-						return async (...args: any) => {
+						return async (...arguments_: any) => {
 							try {
-								return await keyv.delete(...args);
+								return await keyv.delete(...arguments_);
 							} catch {
 								return false;
 							}
@@ -67,9 +67,9 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 
 					case 'has':
 					{
-						return async (...args: any) => {
+						return async (...arguments_: any) => {
 							try {
-								return await keyv.has(...args);
+								return await keyv.has(...arguments_);
 							} catch {
 								return false;
 							}
@@ -82,8 +82,8 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 					}
 				}
 			},
-			set(target, prop, value) {
-				target[prop] = value;
+			set(target, property, value) {
+				target[property] = value;
 				return true;
 			},
 		});
