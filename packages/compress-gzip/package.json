@@ -55,7 +55,6 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
-    "@typescript-eslint/parser": "^7.4.0",
     "tsd": "^0.31.0",
     "xo": "^0.58.0"
   },
