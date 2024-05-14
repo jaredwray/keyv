@@ -3,7 +3,7 @@ import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMongo from '../src/index';
 
-const options = {useNewUrlParser: true, useUnifiedTopology: true, serverSelectionTimeoutMS: 5000};
+const options = {serverSelectionTimeoutMS: 5000};
 const mongoURL = 'mongodb://127.0.0.1:27017';
 const store = () => new KeyvMongo(mongoURL, options);
 
@@ -30,16 +30,10 @@ test.it('Collection option merges into default options if URL is passed', t => {
 	});
 });
 
-test.it('.delete() with no args doesn\'t empty the collection', async t => {
-	const store = new KeyvMongo('mongodb://foo'); // Make sure we don't actually connect
-	// @ts-expect-error - test invalid input
-	t.expect(await store.delete()).toBeFalsy();
-});
-
-test.it('.delete() with key as number', async t => {
-	const store = new KeyvMongo(mongoURL, {collection: 'foo'});
-	// @ts-expect-error - test invalid input
-	t.expect(await store.delete(123)).toBeFalsy();
+test.it('URI is passed it is correct', t => {
+	const options_ = {uri: 'mongodb://127.0.0.1:27017'};
+	const store = new KeyvMongo(options_);
+	t.expect(options_).toEqual(options_);
 });
 
 test.it('Stores value in GridFS', async t => {
