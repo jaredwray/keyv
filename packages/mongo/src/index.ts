@@ -3,7 +3,6 @@ import {Buffer} from 'buffer';
 import {
 	MongoClient as mongoClient, GridFSBucket, type WithId, type Document,
 } from 'mongodb';
-import pify from 'pify';
 import {KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
 	type KeyvMongoConnect,
@@ -51,83 +50,50 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 			),
 		);
 
-		// Implementation from sql by lukechilds,
-		this.connect = new Promise(resolve => {
-			mongoClient.connect(this.opts.url!, mongoOptions, async (error, client) => {
-				try {
-					if (error) {
-						this.emit('error', error);
-					}
-
-					const database = client!.db(this.opts.db);
-
-					if (this.opts.useGridFS) {
-						const bucket = new GridFSBucket(database, {
-							readPreference: this.opts.readPreference,
-							bucketName: this.opts.collection,
-						});
-						const store = database.collection(`${this.opts.collection!}.files`);
-						await store.createIndex({
-							uploadDate: -1,
-						});
-						await store.createIndex({
-							'metadata.expiresAt': 1,
-						});
-						await store.createIndex({
-							'metadata.lastAccessed': 1,
-						});
-
-						for (const method of [
-							'updateOne',
-							'count',
-						]) {
-							// @ts-expect-error - method needs to be a string
-							store[method] = pify(store[method].bind(store) as PifyFunction);
-						}
-
-						for (const method of [
-							'find',
-							'drop',
-						]) {
-							// @ts-expect-error - method needs to be a string
-							bucket[method] = pify(bucket[method].bind(bucket) as PifyFunction);
-						}
-
-						resolve({bucket, store, db: database});
-					} else {
-						const store = database.collection(this.opts.collection!);
-						await store.createIndex(
-							{key: 1},
-							{
-								unique: true,
-								background: true,
-							},
-						);
-						await store.createIndex(
-							{expiresAt: 1},
-							{
-								expireAfterSeconds: 0,
-								background: true,
-							},
-						);
-
-						for (const method of [
-							'updateOne',
-							'findOne',
-							'deleteOne',
-							'deleteMany',
-							'count',
-						]) {
-							// @ts-expect-error - method needs to be a string
-							store[method] = pify(store[method].bind(store) as PifyFunction);
-						}
-
-						resolve({store});
-					}
-				} catch (error: unknown) {
-					this.emit('error', error);
+		// eslint-disable-next-line no-async-promise-executor
+		this.connect = new Promise(async (resolve, reject) => {
+			try {
+				let url = '';
+				if (this.opts.url) {
+					url = this.opts.url;
 				}
-			});
+
+				// eslint-disable-next-line new-cap
+				const client = new mongoClient(url, mongoOptions);
+				await client.connect();
+
+				const database = client.db(this.opts.db);
+
+				if (this.opts.useGridFS) {
+					const bucket = new GridFSBucket(database, {
+						readPreference: this.opts.readPreference,
+						bucketName: this.opts.collection,
+					});
+					const store = database.collection(`${this.opts.collection}.files`);
+
+					await store.createIndex({uploadDate: -1});
+					await store.createIndex({'metadata.expiresAt': 1});
+					await store.createIndex({'metadata.lastAccessed': 1});
+
+					resolve({bucket, store, db: database});
+				} else {
+					let collection = 'keyv';
+					if (this.opts.collection) {
+						collection = this.opts.collection;
+					}
+
+					const store = database.collection(collection);
+
+					await store.createIndex({key: 1}, {unique: true, background: true});
+					await store.createIndex({expiresAt: 1}, {expireAfterSeconds: 0, background: true});
+
+					resolve({store});
+				}
+			} catch (error) {
+				this.emit('error', error);
+				// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+				reject(error);
+			}
 		});
 	}
 

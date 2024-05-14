@@ -62,14 +62,11 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mongodb": "^4.5.0",
-		"pify": "^5.0.0"
+		"mongodb": "^6.6.1"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"@types/pify": "^5.0.1",
 		"keyv": "*",
-		"this": "^1.1.0",
 		"tsd": "^0.31.0",
 		"xo": "^0.58.0"
 	},
