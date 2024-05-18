@@ -68,13 +68,12 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"ava": "^5.3.1",
 		"c8": "^9.1.0",
 		"keyv": "*",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.2",
 		"tsd": "^0.31.0",
-		"typescript": "^5.4.3",
+		"typescript": "^5.4.5",
 		"webpack": "^5.91.0",
 		"xo": "^0.58.0"
 	},
