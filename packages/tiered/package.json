@@ -46,7 +46,7 @@
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
     "c8": "^9.1.0",
-    "eslint": "^8.54.0",
+    "eslint": "^9.3.0",
     "keyv": "*",
     "tsd": "^0.29.0",
     "typescript": "^5.2.2",
