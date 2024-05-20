@@ -56,7 +56,7 @@
 	"devDependencies": {
 		"@keyv/compress-brotli": "*",
 		"@types/json-bigint": "^1.0.4",
-		"keyv": "*"
+		"keyv": "^5.0.0-rc.1"
 	},
 	"ava": {
 		"extensions": [
