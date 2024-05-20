@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/etcd",
-	"version": "1.2.1",
+	"version": "2.0.0-rc.1",
 	"description": "Etcd storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -69,7 +69,7 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"c8": "^9.1.0",
-		"keyv": "*",
+		"keyv": "^5.0.0-rc.1",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.2",
 		"tsd": "^0.31.0",
