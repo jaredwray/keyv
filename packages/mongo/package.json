@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mongo",
-	"version": "2.2.8",
+	"version": "3.0.0-rc.1",
 	"description": "MongoDB storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"type": "module",
@@ -13,7 +13,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
+		"build": "rm -rf dist && tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
@@ -62,7 +62,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mongodb": "^6.6.1"
+		"mongodb": "^6.6.2"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
