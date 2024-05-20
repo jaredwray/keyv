@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mysql",
-	"version": "1.7.1",
+	"version": "2.0.0-rc.1",
 	"description": "MySQL/MariaDB storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -12,7 +12,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
+		"build": "rm -rf dist && tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
