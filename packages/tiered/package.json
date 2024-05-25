@@ -5,7 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc --project tsconfig.dist.json",
+    "build": "tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json",
     "prepare": "yarn build",
     "test": "xo --fix && vitest run --coverage",
     "test:ci": "xo && vitest --run --sequence.setupFiles=list",
