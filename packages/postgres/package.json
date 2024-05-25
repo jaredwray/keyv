@@ -2,8 +2,15 @@
 	"name": "@keyv/postgres",
 	"version": "1.4.9",
 	"description": "PostgreSQL storage adapter for Keyv",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./dist/cjs/index.js",
+			"import": "./dist/esm/index.js"
+		}
+	},
 	"scripts": {
 		"build": "rm -rf dist && tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",

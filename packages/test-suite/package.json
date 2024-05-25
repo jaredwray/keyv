@@ -2,8 +2,15 @@
 	"name": "@keyv/test-suite",
 	"version": "1.9.4",
 	"description": "Test suite for Keyv API compliancy",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./dist/cjs/index.js",
+			"import": "./dist/esm/index.js"
+		}
+	},
 	"type": "commonjs",
 	"scripts": {
 		"build": "rm -rf dist && tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json",

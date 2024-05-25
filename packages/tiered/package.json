@@ -2,8 +2,15 @@
   "name": "@keyv/tiered",
   "version": "1.0.6",
   "description": "Tiered storage adapter for Keyv",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js"
+    }
+  },
   "scripts": {
     "build": "rm -rf dist && tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json",
     "prepare": "yarn build",
@@ -13,6 +20,7 @@
   },
   "xo": {
     "rules": {
+      "unicorn/prefer-module": "off",
       "unicorn/prefer-event-target": "off",
       "import/extensions": "off",
       "import/no-extraneous-dependencies": "off",
