@@ -158,4 +158,5 @@ class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export = KeyvRedis;
+export default KeyvRedis;
+module.exports = KeyvRedis;
