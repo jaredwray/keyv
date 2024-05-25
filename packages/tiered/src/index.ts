@@ -116,4 +116,5 @@ class KeyvTiered extends EventEmitter {
 	}
 }
 
-export = KeyvTiered;
+export default KeyvTiered;
+module.exports = KeyvTiered;

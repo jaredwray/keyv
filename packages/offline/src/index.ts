@@ -126,4 +126,5 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export = KeyvOffline;
+export default KeyvOffline;
+module.exports = KeyvOffline;

@@ -165,4 +165,5 @@ class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export = KeyvSqlite;
+export default KeyvSqlite;
+module.exports = KeyvSqlite;

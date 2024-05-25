@@ -153,4 +153,5 @@ class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export = KeyvPostgres;
+export default KeyvPostgres;
+module.exports = KeyvPostgres;

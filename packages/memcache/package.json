@@ -12,7 +12,7 @@
 		}
 	},
 	"scripts": {
-		"build": "rm -rf dist && tsc --project tsconfig.csj.json && tsc --project tsconfig.esm.json",
+		"build": "rm -rf dist && tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
