@@ -64,7 +64,6 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"pify": "^5.0.0",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.0",
 		"xo": "^0.58.0"
