@@ -58,7 +58,7 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"@keyv/serialize": "*",
-		"buffer": "^6.0.1",
+		"buffer": "^6.0.3",
 		"memjs": "^1.3.2"
 	},
 	"devDependencies": {
