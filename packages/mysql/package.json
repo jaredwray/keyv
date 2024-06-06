@@ -58,7 +58,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mysql2": "3.9.7"
+		"mysql2": "3.9.8"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
