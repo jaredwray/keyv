@@ -53,8 +53,8 @@
   "devDependencies": {
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
-    "c8": "^9.1.0",
-    "eslint": "^9.3.0",
+    "c8": "^10.1.2",
+    "eslint": "^9.5.0",
     "keyv": "^5.0.0-rc.1",
     "tsd": "^0.31.0",
     "typescript": "^5.4.5",
