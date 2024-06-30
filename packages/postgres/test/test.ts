@@ -58,3 +58,22 @@ test.it('close connection successfully', async t => {
 		t.expect(true).toBeTruthy();
 	}
 });
+
+test.it('create two instances and make sure they do not conflict', async t => {
+	const postgresUri = 'postgresql://postgres:postgres@localhost:5432/keyv_test';
+	const postgresA = new KeyvPostgres({uri: postgresUri});
+	const postgresB = new KeyvPostgres({uri: postgresUri});
+	const keyvA = new Keyv({
+		store: postgresA,
+		namespace: 'namespace-a',
+	});
+	const keyvB = new Keyv({
+		store: postgresB,
+		namespace: 'namespace-b',
+	});
+
+	t.expect(await keyvA.set('foo', 'bar')).toBe(true);
+	t.expect(await keyvA.get('foo')).toBe('bar');
+	t.expect(await keyvB.set('foo', 'baz')).toBe(true);
+	t.expect(await keyvB.get('foo')).toBe('baz');
+});
