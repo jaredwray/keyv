@@ -36,7 +36,8 @@
 		"url": "git+https://github.com/jaredwray/keyv.git"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"LICENSE"
 	],
 	"keywords": [
 		"test",

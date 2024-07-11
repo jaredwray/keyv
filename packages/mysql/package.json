@@ -74,6 +74,7 @@
 		"node": ">= 14"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"LICENSE"
 	]
 }

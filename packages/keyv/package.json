@@ -86,6 +86,7 @@
 		"directory": "test"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"LISCENCE"
 	]
 }

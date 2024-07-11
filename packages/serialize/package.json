@@ -67,6 +67,7 @@
     "directory": "test"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ]
 }
