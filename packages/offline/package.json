@@ -70,6 +70,7 @@
 		"node": ">= 12"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"LICENSE"
 	]
 }
