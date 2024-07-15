@@ -15,6 +15,7 @@ test.afterAll(async () => {
 	await keyv.clear();
 	keyv = new KeyvMongo({collection: 'foo', useGridFS: true, ...options});
 	await keyv.clear();
+	await keyv.disconnect();
 });
 
 test.beforeEach(async () => {
@@ -204,4 +205,37 @@ test.it('iterator with namespace', async t => {
 	t.expect(entry.value[1]).toBe('bar2');
 	entry = await iterator.next();
 	t.expect(entry.value).toBeUndefined();
+});
+
+test.it('Close connection successfully on GridFS', async t => {
+	const keyv = new KeyvMongo({useGridFS: true, ...options});
+	t.expect(await keyv.get('foo')).toBeUndefined();
+	await keyv.disconnect();
+	try {
+		await keyv.get('foo');
+		t.expect.fail();
+	} catch {
+		t.expect(true).toBeTruthy();
+	}
+});
+
+test.it('Close connection successfully', async t => {
+	const keyv = new KeyvMongo({namespace: 'key1', ...options});
+	t.expect(await keyv.get('foo')).toBeUndefined();
+	await keyv.disconnect();
+	try {
+		await keyv.get('foo');
+		t.expect.fail();
+	} catch {
+		t.expect(true).toBeTruthy();
+	}
+});
+
+test.it('Close connection should fail', async t => {
+	const keyv = new KeyvMongo({namespace: 'key1', ...options});
+	try {
+		await keyv.disconnect();
+	} catch {
+		t.expect(true).toBeTruthy();
+	}
 });
