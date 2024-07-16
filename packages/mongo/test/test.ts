@@ -1,6 +1,7 @@
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
+import {KeyvMongoOptions} from 'types';
 import KeyvMongo from '../src/index';
 
 const options = {serverSelectionTimeoutMS: 5000};
@@ -170,26 +171,56 @@ test.it('Clears entire cache store with default namespace', async t => {
 });
 
 test.it('iterator with default namespace', async t => {
-	const store = new KeyvMongo({...options});
-	await store.set('foo', 'bar');
-	await store.set('foo2', 'bar2');
-	const iterator = store.iterator();
-	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe('foo');
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe('bar');
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe('foo2');
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe('bar2');
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	await exceptIteratorDefaultNamespace({...options}, t);
 });
 
 test.it('iterator with namespace', async t => {
-	const store = new KeyvMongo({namespace: 'key1', ...options});
+	await expectIteratorNamespace({namespace: 'key1', ...options}, t);
+});
+
+test.it('iterator with default namespace using GridFS', async t => {
+	await exceptIteratorDefaultNamespace({namespace: 'key1', useGridFS: true, ...options}, t);
+});
+
+test.it('iterator with namespace using GridFS', async t => {
+	await expectIteratorNamespace({namespace: 'key1', useGridFS: true, ...options}, t);
+});
+
+test.it('Close connection successfully on GridFS', async t => {
+	const keyv = new KeyvMongo({useGridFS: true, ...options});
+	t.expect(await keyv.get('foobar')).toBeUndefined();
+	await keyv.disconnect();
+	try {
+		await keyv.get('foobar');
+		t.expect.fail();
+	} catch {
+		t.expect(true).toBeTruthy();
+	}
+});
+
+test.it('Close connection successfully', async t => {
+	const keyv = new KeyvMongo({namespace: 'key1', ...options});
+	t.expect(await keyv.get('foobar')).toBeUndefined();
+	await keyv.disconnect();
+	try {
+		await keyv.get('foobar');
+		t.expect.fail();
+	} catch {
+		t.expect(true).toBeTruthy();
+	}
+});
+
+test.it('Close connection should fail', async t => {
+	const keyv = new KeyvMongo({namespace: 'key1', ...options});
+	try {
+		await keyv.disconnect();
+	} catch {
+		t.expect(true).toBeTruthy();
+	}
+});
+
+const expectIteratorNamespace = async (options_: KeyvMongoOptions, t: test.TaskContext<test.Test> & test.TestContext) => {
+	const store = new KeyvMongo(options_);
 	await store.set('key1:foo', 'bar');
 	await store.set('key1:foo2', 'bar2');
 	const iterator = store.iterator('key1');
@@ -205,37 +236,24 @@ test.it('iterator with namespace', async t => {
 	t.expect(entry.value[1]).toBe('bar2');
 	entry = await iterator.next();
 	t.expect(entry.value).toBeUndefined();
-});
+};
 
-test.it('Close connection successfully on GridFS', async t => {
-	const keyv = new KeyvMongo({useGridFS: true, ...options});
-	t.expect(await keyv.get('foo')).toBeUndefined();
-	await keyv.disconnect();
-	try {
-		await keyv.get('foo');
-		t.expect.fail();
-	} catch {
-		t.expect(true).toBeTruthy();
-	}
-});
+const exceptIteratorDefaultNamespace = async (options_: KeyvMongoOptions, t: test.TaskContext<test.Test> & test.TestContext) => {
+	const store = new KeyvMongo(options_);
+	await store.set('foo', 'bar');
+	await store.set('foo2', 'bar2');
+	const iterator = store.iterator();
+	let entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe('foo');
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe('bar');
+	entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe('foo2');
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe('bar2');
+	entry = await iterator.next();
+	t.expect(entry.value).toBeUndefined();
+};
 
-test.it('Close connection successfully', async t => {
-	const keyv = new KeyvMongo({namespace: 'key1', ...options});
-	t.expect(await keyv.get('foo')).toBeUndefined();
-	await keyv.disconnect();
-	try {
-		await keyv.get('foo');
-		t.expect.fail();
-	} catch {
-		t.expect(true).toBeTruthy();
-	}
-});
-
-test.it('Close connection should fail', async t => {
-	const keyv = new KeyvMongo({namespace: 'key1', ...options});
-	try {
-		await keyv.disconnect();
-	} catch {
-		t.expect(true).toBeTruthy();
-	}
-});
