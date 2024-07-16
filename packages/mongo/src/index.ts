@@ -75,7 +75,9 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					await store.createIndex({'metadata.expiresAt': 1});
 					await store.createIndex({'metadata.lastAccessed': 1});
 
-					resolve({bucket, store, db: database});
+					resolve({
+						bucket, store, db: database, mongoClient: client,
+					});
 				} else {
 					let collection = 'keyv';
 					if (this.opts.collection) {
@@ -87,7 +89,7 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					await store.createIndex({key: 1}, {unique: true, background: true});
 					await store.createIndex({expiresAt: 1}, {expireAfterSeconds: 0, background: true});
 
-					resolve({store});
+					resolve({store, mongoClient: client});
 				}
 			} catch (error) {
 				this.emit('error', error);
@@ -316,6 +318,11 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		const filter = {[this.opts.useGridFS ? 'filename' : 'key']: {$eq: key}};
 		const document = await client.store.count(filter);
 		return document !== 0;
+	}
+
+	async disconnect(): Promise<void> {
+		const client = await this.connect;
+		await client.mongoClient.close();
 	}
 }
 

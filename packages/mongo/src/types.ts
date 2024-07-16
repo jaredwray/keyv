@@ -1,4 +1,5 @@
 import {
+	type MongoClient,
 	type Collection, type Db, type GridFSBucket, type ReadPreference,
 } from 'mongodb';
 
@@ -22,6 +23,7 @@ export type KeyvMongoConnect = {
 	bucket?: GridFSBucket;
 	store: Collection;
 	db?: Db;
+	mongoClient: MongoClient;
 };
 
 export type PifyFunction = (...arguments_: any[]) => any;
