@@ -2,6 +2,7 @@ import EventEmitter from 'events';
 import {Buffer} from 'buffer';
 import {
 	MongoClient as mongoClient, GridFSBucket, type WithId, type Document,
+	MongoServerError,
 } from 'mongodb';
 import {KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
@@ -74,6 +75,7 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					await store.createIndex({uploadDate: -1});
 					await store.createIndex({'metadata.expiresAt': 1});
 					await store.createIndex({'metadata.lastAccessed': 1});
+					await store.createIndex({'metadata.filename': 1});
 
 					resolve({
 						bucket, store, db: database, mongoClient: client,
@@ -253,7 +255,14 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	async clear() {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
-			await client.bucket!.drop();
+			try {
+				await client.bucket!.drop();
+			} catch (error: unknown) {
+				// Throw error if not "namespace not found" error
+				if (!(error instanceof MongoServerError && error.code === 26)) {
+					throw error;
+				}
+			}
 		}
 
 		await client.store.deleteMany({
@@ -304,11 +313,18 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 
 	async * iterator(namespace?: string) {
 		const client = await this.connect;
-		const iterator = client.store
-			.find({
-				key: new RegExp(`^${namespace ? namespace + ':' : '.*'}`),
-			})
-			.map((x: WithId<Document>) => [x.key, x.value]);
+		const regexp = new RegExp(`^${namespace ? namespace + ':' : '.*'}`);
+		const iterator = (this.opts.useGridFS)
+			? client.store
+				.find({
+					filename: regexp,
+				})
+				.map(async (x: WithId<Document>) => [x.filename, await this.get(x.filename)])
+			: client.store
+				.find({
+					key: regexp,
+				})
+				.map((x: WithId<Document>) => [x.key, x.value]);
 
 		yield * iterator;
 	}
