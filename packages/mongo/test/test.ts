@@ -256,4 +256,3 @@ const exceptIteratorDefaultNamespace = async (options_: KeyvMongoOptions, t: tes
 	entry = await iterator.next();
 	t.expect(entry.value).toBeUndefined();
 };
-
