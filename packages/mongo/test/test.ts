@@ -170,6 +170,18 @@ test.it('Clears entire cache store with default namespace', async t => {
 	t.expect(typeof result).toBe('undefined');
 });
 
+test.it('Clears an empty store should not fail', async t => {
+	const store = new KeyvMongo({...options});
+	await store.clear();
+	await store.clear();
+});
+
+test.it('Clears an empty store GridFS should not fail', async t => {
+	const store = new KeyvMongo({useGridFS: true, ...options});
+	await store.clear();
+	await store.clear();
+});
+
 test.it('iterator with default namespace', async t => {
 	await exceptIteratorDefaultNamespace({...options}, t);
 });

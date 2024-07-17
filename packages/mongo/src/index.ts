@@ -2,6 +2,7 @@ import EventEmitter from 'events';
 import {Buffer} from 'buffer';
 import {
 	MongoClient as mongoClient, GridFSBucket, type WithId, type Document,
+	MongoServerError,
 } from 'mongodb';
 import {KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
@@ -254,7 +255,14 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	async clear() {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
-			await client.bucket!.drop();
+			try {
+				await client.bucket!.drop();
+			} catch (error: unknown) {
+				// Throw error if not "namespace not found" error
+				if (!(error instanceof MongoServerError && error.code === 26)) {
+					throw error;
+				}
+			}
 		}
 
 		await client.store.deleteMany({
