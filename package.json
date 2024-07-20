@@ -15,21 +15,21 @@
     "build:keyv": "cd packages/keyv && yarn build",
     "build": "yarn build:keyv:serialize && yarn build:keyv && yarn workspaces run build",
     "test": "yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
-    "test:services:start": "docker-compose -f ./docker-compose.yaml up -d",
-    "test:services:stop": "docker-compose -f ./docker-compose.yaml down -v",
-    "test:services-arm64:start": "docker-compose -f ./docker-compose-arm64.yaml up -d",
-    "test:services-arm64:stop": "docker-compose -f ./docker-compose-arm64.yaml down -v",
+    "test:services:start": "docker compose -f ./docker-compose.yaml up -d",
+    "test:services:stop": "docker compose -f ./docker-compose.yaml down -v",
+    "test:services-arm64:start": "docker compose -f ./docker-compose-arm64.yaml up -d",
+    "test:services-arm64:stop": "docker compose -f ./docker-compose-arm64.yaml down -v",
     "website:build": "yarn workspace @keyv/website run build",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
   "devDependencies": {
-    "@types/node": "^20.12.11",
+    "@types/node": "^20.14.11",
     "@vitest/coverage-v8": "^1.6.0",
     "c8": "^9.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0",
     "webpack": "^5.91.0",
-    "xo": "^0.58.0"
+    "xo": "^0.59.0"
   }
 }
