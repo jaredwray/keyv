@@ -29,7 +29,8 @@
 			"@typescript-eslint/no-unsafe-argument": "off",
 			"import/extensions": "off",
 			"import/no-extraneous-dependencies": "off",
-			"no-promise-executor-return": "off"
+			"no-promise-executor-return": "off",
+			"@typescript-eslint/use-unknown-in-catch-callback-variable": "off"
 		}
 	},
 	"repository": {
