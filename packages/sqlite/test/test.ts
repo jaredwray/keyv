@@ -1,7 +1,7 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
 import keyvTestSuite from '@keyv/test-suite';
-import KeyvSqlite from '../src/index';
+import KeyvSqlite from '../src/index.js';
 
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 
@@ -22,6 +22,12 @@ test.it('table name can be numeric, alphabet, special case', t => {
 
 	keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', table: '$sample'});
 	t.expect(keyv.opts.table).toBe('_$sample');
+});
+
+test.it('keyv options as a string', t => {
+	const uri = 'sqlite://test/testdb.sqlite';
+	const keyv = new KeyvSqlite(uri);
+	t.expect(keyv.opts.uri).toBe(uri);
 });
 
 test.it('getMany will return multiple values', async t => {

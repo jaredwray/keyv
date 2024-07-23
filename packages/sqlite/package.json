@@ -21,8 +21,11 @@
 	"xo": {
 		"rules": {
 			"unicorn/prefer-module": "off",
+			"n/file-extension-in-import": "off",
 			"unicorn/prefer-event-target": "off",
 			"unicorn/prefer-node-protocol": "off",
+			"promise/prefer-await-to-then": "off",
+			"@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
 			"import/extensions": "off",
 			"@typescript-eslint/no-unsafe-argument": "off",
 			"@typescript-eslint/no-unsafe-assignment": "off",
@@ -60,8 +63,8 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"keyv": "^5.0.0-rc.1",
-		"tsd": "^0.31.0",
-		"xo": "^0.58.0"
+		"tsd": "^0.31.1",
+		"xo": "^0.59.2"
 	},
 	"tsd": {
 		"directory": "test"

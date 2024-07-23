@@ -36,6 +36,7 @@ class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 		options.connect = async () => new Promise((resolve, reject) => {
 			const database = new sqlite3.Database(options.db!, error => {
+				/* c8 ignore next 2 */
 				if (error) {
 					reject(error);
 				} else {
