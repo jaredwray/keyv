@@ -24,6 +24,8 @@
 			"unicorn/no-array-reduce": "off",
 			"unicorn/prefer-object-from-entries": "off",
 			"unicorn/prefer-node-protocol": "off",
+			"n/file-extension-in-import": "off",
+			"@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
 			"import/extensions": "off",
 			"@typescript-eslint/no-confusing-void-expression": "off",
 			"@typescript-eslint/promise-function-async": "off",
@@ -72,10 +74,10 @@
 		"keyv": "^5.0.0-rc.1",
 		"requirable": "^1.0.5",
 		"ts-node": "^10.9.2",
-		"tsd": "^0.31.0",
-		"typescript": "^5.4.5",
-		"webpack": "^5.92.0",
-		"xo": "^0.58.0"
+		"tsd": "^0.31.1",
+		"typescript": "^5.5.4",
+		"webpack": "^5.93.0",
+		"xo": "^0.59.2"
 	},
 	"tsd": {
 		"directory": "test"
