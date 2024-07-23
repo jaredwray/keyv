@@ -22,6 +22,7 @@
     "rules": {
       "unicorn/prefer-module": "off",
       "unicorn/prefer-event-target": "off",
+      "n/file-extension-in-import": "off",
       "import/extensions": "off",
       "import/no-extraneous-dependencies": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
