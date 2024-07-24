@@ -100,7 +100,6 @@ keyv.iml
 *.swp
 
 #website
-packages/website/site/docs/compression/compress-*.md
-packages/website/site/docs/storage-adapters/*.md
-!packages/website/site/docs/storage-adapters/storage-adapters.md
-packages/website/site/_data/github.json
+packages/website/site/docs/**
+!packages/website/site/docs/index.md
+!packages/website/site/docs/cacheing/**

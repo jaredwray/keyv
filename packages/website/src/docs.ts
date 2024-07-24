@@ -9,12 +9,13 @@ async function main() {
     await copyStorageAdapters();
     await copyCompressionDocs();
     await copyTestSuite();
+    await copyKeyvAPI();
 };
 
 async function copyStorageAdapters() {
     const packagesPath = getRelativePackagePath();
     const storageAdapters = await fs.readdir(`${packagesPath}`);
-    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "test-suite", ".DS_Store"];
+    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "test-suite", ".DS_Store", "serialize"];
 
     for (const storageAdapter of storageAdapters) {
         if((filterList.indexOf(storageAdapter) > -1) !== true ) {
@@ -30,7 +31,7 @@ async function copyTestSuite() {
     let newFileText = "---\n";
     newFileText += `title: 'Test Suite'\n`;
     newFileText += `permalink: /docs/test-suite/\n`;
-    newFileText += `order: 4` + os.EOL;
+    newFileText += `order: 6\n`;
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
@@ -38,7 +39,23 @@ async function copyTestSuite() {
     newFileText = cleanDocumentFromImage(newFileText);
 
     console.log("Adding Test Suite");
-    await fs.writeFile(`${packagesPath}/website/site/docs/test-suite/index.md`, newFileText);
+    await fs.writeFile(`${packagesPath}/website/site/docs/test-suite.md`, newFileText);
+}
+
+async function copyKeyvAPI() {
+    const packagesPath = getRelativePackagePath();
+    const originalFileText = await fs.readFile(`${packagesPath}/keyv/README.md`, "utf8");
+    let newFileText = "---\n";
+    newFileText += `title: 'Keyv API'\n`;
+    newFileText += `order: 2\n`;
+    newFileText += "---\n";
+    newFileText += "\n";
+    newFileText += originalFileText;
+
+    newFileText = cleanDocumentFromImage(newFileText);
+
+    console.log("Adding Keyv API");
+    await fs.writeFile(`${packagesPath}/website/site/docs/keyv.md`, newFileText);
 }
 
 async function copyCompressionDocs() {
@@ -93,6 +110,7 @@ async function createDoc(adapterName: string, path: string, outputPath: string, 
 
     newFileText = cleanDocumentFromImage(newFileText);
 
+    await fs.ensureDir(outputPath);
     await fs.writeFile(`${outputPath}/${newFileName}`, newFileText);
 }
 
