@@ -15,7 +15,7 @@ async function main() {
 async function copyStorageAdapters() {
     const packagesPath = getRelativePackagePath();
     const storageAdapters = await fs.readdir(`${packagesPath}`);
-    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "test-suite", ".DS_Store"];
+    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "test-suite", ".DS_Store", "serialize"];
 
     for (const storageAdapter of storageAdapters) {
         if((filterList.indexOf(storageAdapter) > -1) !== true ) {
@@ -31,7 +31,7 @@ async function copyTestSuite() {
     let newFileText = "---\n";
     newFileText += `title: 'Test Suite'\n`;
     newFileText += `permalink: /docs/test-suite/\n`;
-    newFileText += `order: 4` + os.EOL;
+    newFileText += `order: 6\n`;
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
@@ -47,7 +47,7 @@ async function copyKeyvAPI() {
     const originalFileText = await fs.readFile(`${packagesPath}/keyv/README.md`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: 'Keyv API'\n`;
-    newFileText += `permalink: /docs/keyv/\n`;
+    newFileText += `order: 2\n`;
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
