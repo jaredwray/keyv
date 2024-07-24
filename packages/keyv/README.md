@@ -1,8 +1,4 @@
-<h1 align="center">
-	<img width="250" src="https://jaredwray.com/images/keyv.svg" alt="keyv">
-	<br>
-	<br>
-</h1>
+[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Simple key-value storage with support for multiple backends
 
@@ -296,7 +292,7 @@ The Keyv instance is also an `EventEmitter` that will emit an `'error'` event if
 
 ### uri
 
-Type: `String`<br>
+Type: `String`<br />
 Default: `undefined`
 
 The connection string URI.
@@ -311,49 +307,49 @@ The options object is also passed through to the storage adapter. Check your sto
 
 #### options.namespace
 
-Type: `String`<br>
+Type: `String`<br />
 Default: `'keyv'`
 
 Namespace for the current instance.
 
 #### options.ttl
 
-Type: `Number`<br>
+Type: `Number`<br />
 Default: `undefined`
 
 Default TTL. Can be overridden by specififying a TTL on `.set()`.
 
 #### options.compression
 
-Type: `@keyv/compress-<compression_package_name>`<br>
+Type: `@keyv/compress-<compression_package_name>`<br />
 Default: `undefined`
 
 Compression package to use. See [Compression](#compression) for more details.
 
 #### options.serialize
 
-Type: `Function`<br>
+Type: `Function`<br />
 Default: `JSONB.stringify`
 
 A custom serialization function.
 
 #### options.deserialize
 
-Type: `Function`<br>
+Type: `Function`<br />
 Default: `JSONB.parse`
 
 A custom deserialization function.
 
 #### options.store
 
-Type: `Storage adapter instance`<br>
+Type: `Storage adapter instance`<br />
 Default: `new Map()`
 
 The storage adapter instance to be used by Keyv.
 
 #### options.adapter
 
-Type: `String`<br>
+Type: `String`<br />
 Default: `undefined`
 
 Specify an adapter to use. e.g `'redis'` or `'mongodb'`.
@@ -376,7 +372,7 @@ Returns a promise which resolves to the retrieved value.
 
 ##### options.raw
 
-Type: `Boolean`<br>
+Type: `Boolean`<br />
 Default: `false`
 
 If set to true the raw DB object Keyv stores internally will be returned instead of just the value.
