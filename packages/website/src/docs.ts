@@ -47,7 +47,7 @@ async function copyKeyvAPI() {
     const originalFileText = await fs.readFile(`${packagesPath}/keyv/README.md`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: 'Keyv API'\n`;
-    newFileText += `order: 2\n`;
+    newFileText += `order: 3\n`;
     newFileText += "---\n";
     newFileText += "\n";
     newFileText += originalFileText;
