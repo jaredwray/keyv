@@ -102,4 +102,5 @@ keyv.iml
 #website
 packages/website/site/docs/**
 !packages/website/site/docs/index.md
+!packages/website/site/docs/v4-to-v5.md
 !packages/website/site/docs/cacheing/**
