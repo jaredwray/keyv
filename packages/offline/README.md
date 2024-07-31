@@ -18,12 +18,13 @@ npm install --save keyv @keyv/offline
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvOffline from '@keyv/offline';
 
-const keyv = new Keyv('offline://path/to/database.offline');
+const keyv = new KeyvOffline(new Keyv());
 keyv.on('error', handleConnectionError);
 ```
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

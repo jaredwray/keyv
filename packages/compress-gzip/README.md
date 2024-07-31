@@ -18,8 +18,8 @@ npm install --save keyv @keyv/compress-gzip
 ## Usage
 
 ```javascript
-const KeyvGzip = require('@keyv/compress-gzip');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvGzip from '@keyv/compress-gzip';
 
 const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 
@@ -35,4 +35,4 @@ All options for @keyv/compress-gzip are based on the package [compress-gzip](htt
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

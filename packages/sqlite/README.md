@@ -18,9 +18,10 @@ npm install --save keyv @keyv/sqlite
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvSQLite from '@keyv/sqlite';
 
-const keyv = new Keyv('sqlite://path/to/database.sqlite');
+const keyv = new Keyv(new KeyvSQLite('sqlite://path/to/database.sqlite'));
 keyv.on('error', handleConnectionError);
 ```
 
@@ -29,12 +30,14 @@ You can specify the `table` and [`busyTimeout`](https://sqlite.org/c3ref/busy_ti
 e.g:
 
 ```js
-const keyv = new Keyv('sqlite://path/to/database.sqlite', {
-  table: 'cache',
-  busyTimeout: 10000
-});
+import Keyv from 'keyv';
+import KeyvSQLite from '@keyv/sqlite';
+
+const keyvSQLite = new KeyvSQLite('sqlite://path/to/database.sqlite', { table: 'cache', busyTimeout: 10000 });
+
+const keyv = new Keyv({ store: keyvSQLite });
 ```
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

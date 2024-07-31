@@ -110,8 +110,8 @@ const user = "";
 const pass = "";
 const server = "XXX.XXX.XXX.XXX.cloud.redislabs.com:XXX"
 
-const Keyv = require("keyv");
-const KeyvMemcache = require("@keyv/memcache");
+import Keyv from "keyv";
+import KeyvMemcache from "@keyv/memcache";
 
 const memcache = new KeyvMemcache(user +":"+ pass +"@"+ server);
 const keyv = new Keyv({ store: memcache});
@@ -130,8 +130,8 @@ const keyv = new Keyv({ store: memcache});
 
 ```js
 
-const Keyv = require("keyv");
-const KeyvMemcache = require("@keyv/memcache");
+import Keyv from "keyv";
+import KeyvMemcache from "@keyv/memcache";
 
 const memcache = new KeyvMemcache("insert the internal google memcached discovery endpoint");
 const keyv = new Keyv({ store: memcache});
@@ -141,4 +141,4 @@ const keyv = new Keyv({ store: memcache});
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

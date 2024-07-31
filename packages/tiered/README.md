@@ -20,9 +20,10 @@ npm install --save keyv @keyv/tiered
 First, you need to provide your `local` and `remote` stores to be used, being possible to use any [Keyv storage adapter](https://github.com/jaredwray/keyv#storage-adapters):
 
 ```js
-const Keyv = require('keyv');
-const KeyvSqlite = require('@keyv/sqlite');
-const KeyvTiered = require('@keyv/tiered');
+import Keyv from 'keyv';
+import KeyvTiered from '@keyv/tiered';
+import KeyvSqlite from '@keyv/sqlite';
+
 const remoteStore = () => new Keyv({
 	store: new KeyvSqlite({
 		uri: 'sqlite://test/testdb.sqlite',
@@ -37,33 +38,6 @@ const keyv = new Keyv({store});
 keyv.on('error', handleConnectionError);
 ```
 
-## API
-
-### KeyvTiered(\[options])
-
-#### options
-
-##### local
-
-Type: `Object`<br/>
-Default: `new Keyv()`
-
-A keyv instance to be used as local strategy.
-
-##### remote
-
-Type: `Object`<br/>
-Default: `new Keyv()`
-
-A keyv instance to be used as remote strategy.
-
-##### validator
-
-Type: `Function`<br/>
-Default: `() =>  true`
-
-The validator function is used as a precondition to determining is remote storage should be checked.
-
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

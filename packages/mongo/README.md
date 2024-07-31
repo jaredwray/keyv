@@ -20,9 +20,10 @@ npm install --save keyv @keyv/mongo
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvMongo from '@keyv/mongo';
 
-const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
+const keyv = new Keyv(new KeyvMongo('mongodb://user:pass@localhost:27017/dbname'));
 keyv.on('error', handleConnectionError);
 ```
 
@@ -31,9 +32,12 @@ You can specify the collection name, by default `'keyv'` is used.
 e.g:
 
 ```js
-const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname', { collection: 'cache' });
+import Keyv from 'keyv';
+import KeyvMongo from '@keyv/mongo';
+const keyvMongo = new KeyvMongo('mongodb://user:pass@localhost:27017/dbname', { collection: 'cache' });
+const keyv = new Keyv({ store: keyvMongo });
 ```
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

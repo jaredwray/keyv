@@ -20,8 +20,8 @@ npm install --save keyv @keyv/compress-brotli
 ## Usage
 
 ```javascript
-const KeyvBrotli = require('@keyv/compress-brotli');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvBrotli from '@keyv/compress-brotli';
 
 const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 
@@ -37,4 +37,4 @@ All options for @keyv/compress-brotli are based on the package [compress-brotli]
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

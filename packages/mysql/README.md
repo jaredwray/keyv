@@ -18,9 +18,10 @@ npm install --save keyv @keyv/mysql
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvMysql from '@keyv/mysql';
 
-const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname');
+const keyv = new Keyv(new KeyvMysql('mysql://user:pass@localhost:3306/dbname'));
 keyv.on('error', handleConnectionError);
 ```
 
@@ -29,18 +30,20 @@ You can specify a custom table with the `table` option and the primary key size 
 e.g:
 
 ```js
-const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname', {
-  table: 'cache',
-  keySize: 255
-});
+import Keyv from 'keyv';
+import KeyvMysql from '@keyv/mysql';
+
+const keyvMysql = new KeyvMysql('mysql://user:pass@localhost:3306/dbname', { table: 'cache', keySize: 255 });
+const keyv = new Keyv({ store: keyvMysql });
 ```
 
 ## SSL
 
 ```js
-const fs = require('fs');
-const path = require('path');
-const KeyvMysql = require('@keyv/mysql');
+import fs from 'fs';
+import path from 'path';
+import KeyvMysql from '@keyv/mysql';
+import Keyv from 'keyv';
 
 const options = {
 	ssl: {
@@ -51,12 +54,11 @@ const options = {
 	},
 };
 
-const keyv = new KeyvMysql({uri, ...options});
+const keyvMysql = new KeyvMysql({uri, ...options});
+const keyv = new Keyv({ store: keyvMysql });
 
 ```
 
-**Note:** Some MySQL/MariaDB installations won't allow a key size longer than 767 bytes. If you get an error on table creation try reducing `keySize` to 191 or lower. [#5](https://github.com/jaredwray/keyv-sql/issues/5)
-
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

@@ -11,6 +11,10 @@
 [![npm](https://img.shields.io/npm/dm/keyv.svg)](https://www.npmjs.com/package/keyv)
 [![npm](https://img.shields.io/npm/v/keyv.svg)](https://www.npmjs.com/package/keyv)
 
+# v4 to v5 Migration Guide
+
+Keyv v5 is a major update that includes breaking changes. Here's a migration guide to help you update your code. https://keyv.org/docs/v4-to-v5/
+
 # How to Use the Keyv Mono Repo
 
 Keyv and its storage adapters are in this mono repo and there are details below on how to use this repository. In addtion we have a couple of other documents for review:
@@ -21,7 +25,7 @@ Keyv and its storage adapters are in this mono repo and there are details below 
 
 ## Getting Started
 
-Keyv is a simple key-value storage system that supports multiple backends. It's designed to be a simple and consistent way to work with key-value stores.
+Keyv is a simple key-value storage system that supports multiple backends. It's designed to be a simple and consistent way to work with key-value stores. Here is a getting started guide: https://keyv.org/docs/
 
 To learn how to use Keyv, check out the [keyv](https://github.com/jaredwray/keyv/blob/main/packages/keyv/README.md) README. To learn how to use a specific storage adapter, check out the README for that adapter under [Storage Adapters](#storage-adapters).
 
@@ -68,6 +72,7 @@ If there is already an adapter that you would like to add, please post an issue 
 
 * [keyv](https://github.com/jaredwray/keyv/tree/main/packages/keyv): Simple key-value storage with support for multiple backends
 * [test-suite](https://github.com/jaredwray/keyv/tree/main/packages/test-suite): Test suite for Keyv API compliance
+* [keyv@serialize](https://github.com/jaredwray/keyv/tree/main/packages/serialize) - Keyv serialization and deserialization utility
 
 ### Storage Adapters
 
