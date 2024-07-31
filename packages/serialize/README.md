@@ -1,4 +1,4 @@
-# @keyv/serialize [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/serialize [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Serialization functionality for [Keyv](https://github.com/jaredwray/keyv)
 
