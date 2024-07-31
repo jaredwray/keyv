@@ -26,6 +26,31 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 
 Go here for the [full documentation](https://keyv.org/docs).
 
+## Migrating from v4 to v5
+
+Keyv v5 is a major release that introduces a number of breaking changes. To learn more go to the [migration guide](https://keyv.org/docs/v4-to-v5/). The two biggest changes are:
+
+### No longer supports URI on the constructor
+You can no longer pass in the `uri` of the storage adapter directly. Instead, you should pass in the storage adapter instance. You can do this easily by importing the storage adapter and passing it in as an option.
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
+```
+
+or you can pass in the storage adapter via options like this:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+const keyv = new Keyv({ store: new KeyvRedis('redis://user:pass@localhost:6379') });
+```
+
+### No longer supporting Nodejs < 18
+
+Keyv v5 no longer supports Nodejs versions below 18 as the are no longer supported by the Nodejs foundation.
+
 ## Usage
 
 Install Keyv.

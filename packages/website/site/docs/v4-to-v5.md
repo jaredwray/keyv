@@ -5,7 +5,7 @@ order: 2
 
 # v4 to v5 Migration
 
-Keyv v5 is a major release with breaking changes. The biggest breaking changes are the removal of the URI via the constructor and the support for Nodejs 20+. Below are the new features and breaking changes in Keyv v5. To get past this please use Nodejs 20+ and update your code to use the new features and breaking changes like the following:
+Keyv v5 is a major release with breaking changes. The biggest breaking changes are the removal of the URI via the constructor and no longer supporting Nodejs < 18.
 
 ## Before with v4
 ```js
