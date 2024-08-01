@@ -17,12 +17,13 @@ npm install --save keyv @keyv/etcd
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvEtcd from '@keyv/etcd';
 
-const keyv = new Keyv('etcd://localhost:2379');
+const keyv = new Keyv(new KeyvEtcd('etcd://localhost:2379'));
 keyv.on('error', handleConnectionError);
 ```
 
 ## License
 
-Copyright (c) 2022 Jared Wray
+[MIT © Jared Wray](LICENSE)
