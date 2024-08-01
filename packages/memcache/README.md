@@ -1,4 +1,4 @@
-# @keyv/memcache [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/memcache [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Memcache storage adapter for [Keyv](https://github.com/jaredwray/keyv)
 
@@ -21,8 +21,8 @@ yarn add @keyv/memcache
 ## Usage
 
 ```js
-const Keyv = require('keyv');
-const KeyvMemcache = require('@keyv/memcache');
+import Keyv from 'keyv';
+import KeyvMemcache from '@keyv/memcache';
 
 const memcache = new KeyvMemcache('user:pass@localhost:11211');
 const keyv = new Keyv({ store: memcache });
@@ -44,8 +44,8 @@ await keyv.clear();
 ## Usage with Namespaces
 
 ```js
-const Keyv = require('keyv');
-const KeyvMemcache = require('@keyv/memcache');
+import Keyv from 'keyv';
+import KeyvMemcache from '@keyv/memcache';
 
 const memcache = new KeyvMemcache('user:pass@localhost:11211');
 const keyv1 = new Keyv({ store: memcache, namespace: "namespace1" });
@@ -129,9 +129,8 @@ const keyv = new Keyv({ store: memcache});
 7. Google provides further documentation for connecting to and managing your Memecached instance [here](https://cloud.google.com/memorystore/docs/memcached). 
 
 ```js
-
-const Keyv = require("keyv");
-const KeyvMemcache = require("@keyv/memcache");
+import Keyv from 'keyv';
+import KeyvMemcache from '@keyv/memcache';
 
 const memcache = new KeyvMemcache("insert the internal google memcached discovery endpoint");
 const keyv = new Keyv({ store: memcache});
@@ -141,4 +140,4 @@ const keyv = new Keyv({ store: memcache});
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LISCENCE)
