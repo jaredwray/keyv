@@ -1,4 +1,4 @@
-# @keyv/postgres [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/postgres [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > PostgreSQL storage adapter for Keyv
 
@@ -20,9 +20,10 @@ npm install --save keyv @keyv/postgres
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvPostgres from '@keyv/postgres';
 
-const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname');
+const keyv = new Keyv(new KeyvPostgres('postgresql://user:pass@localhost:5432/dbname'));
 keyv.on('error', handleConnectionError);
 ```
 
@@ -31,7 +32,7 @@ You can specify the `table` option.
 e.g:
 
 ```js
-const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname', { table: 'cache' });
+const keyv = new Keyv(new KeyvPostgres('postgresql://user:pass@localhost:5432/dbname'), { table: 'cache' });
 ```
 
 You can specify the `schema` option (default is `public`).
@@ -39,12 +40,12 @@ You can specify the `schema` option (default is `public`).
 e.g:
 
 ```js
-const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname', { schema: 'keyv' });
+const keyv = new Keyv(new KeyvPostgres('postgresql://user:pass@localhost:5432/dbname'), { schema: 'keyv' });
 ```
 
 ## Testing
 
-When testing you can use our `docker-compose` postgresql instance by having docker installed and running. This will start a postgres server, run the tests, and stop the server:
+When testing you can use our `docker compose` postgresql instance by having docker installed and running. This will start a postgres server, run the tests, and stop the server:
 
 At the root of the Keyv mono repo:
 ```shell
@@ -58,4 +59,4 @@ yarn test
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LISCENCE)
