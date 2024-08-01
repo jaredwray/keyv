@@ -5,7 +5,7 @@ order: 2
 
 # v4 to v5 Migration
 
-Keyv v5 is a major release with breaking changes. The biggest breaking changes are the removal of the URI via the constructor and the support for Nodejs 20+. Below are the new features and breaking changes in Keyv v5. To get past this please use Nodejs 20+ and update your code to use the new features and breaking changes like the following:
+Keyv v5 is a major release with breaking changes. The biggest breaking changes are the removal of the URI. Here is how you can change your code to work with Keyv v5.
 
 ## Before with v4
 ```js
@@ -30,6 +30,10 @@ import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 const keyv = new Keyv({ store: new KeyvRedis({ uri: 'redis://user:pass@localhost:6379' }), namespace: 'my-namespace' });
 ```
+
+## Removing support for Nodejs 18 and below
+
+We have stopped testing on Nodejs 18 and below and while we do not force or require you to use Nodejs 20+ we do recommend it.
 
 # New Features
 Here are a list of new features in Keyv v5:
