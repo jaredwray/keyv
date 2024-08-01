@@ -34,6 +34,14 @@ test.it('Keyv accepts storage adapters', async t => {
 	t.expect(store.size).toBe(1);
 });
 
+test.it('Keyv accepts storage adapters and options', async t => {
+	const store = new Map();
+	const keyv = new Keyv(store, {namespace: 'test'});
+	t.expect(store.size).toBe(0);
+	await keyv.set('foo', 'bar');
+	t.expect(keyv.opts.namespace).toBe('test');
+});
+
 test.it('Keyv accepts storage adapters instead of options', async t => {
 	const store = new Map();
 	const keyv = new Keyv(store);
