@@ -1,4 +1,4 @@
-# @keyv/redis [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/redis [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Redis storage adapter for Keyv
 
@@ -20,9 +20,10 @@ npm install --save keyv @keyv/redis
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
 
-const keyv = new Keyv('redis://user:pass@localhost:6379');
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
 keyv.on('error', handleConnectionError);
 ```
 
@@ -31,14 +32,14 @@ Any valid [`Redis`](https://github.com/luin/ioredis#connect-to-redis) options wi
 e.g:
 
 ```js
-const keyv = new Keyv('redis://user:pass@localhost:6379', { disable_resubscribing: true });
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'), { disable_resubscribing: true });
 ```
 
 Or you can manually create a storage adapter instance and pass it to Keyv:
 
 ```js
-const KeyvRedis = require('@keyv/redis');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
 
 const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379');
 const keyv = new Keyv({ store: keyvRedis });
@@ -47,9 +48,9 @@ const keyv = new Keyv({ store: keyvRedis });
 Or reuse a previous Redis instance:
 
 ```js
-const KeyvRedis = require('@keyv/redis');
-const Redis = require('ioredis');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import Redis from 'ioredis';
+import KeyvRedis from '@keyv/redis';
 
 const redis = new Redis('redis://user:pass@localhost:6379');
 const keyvRedis = new KeyvRedis(redis);
@@ -59,9 +60,9 @@ const keyv = new Keyv({ store: keyvRedis });
 Or reuse a previous Redis cluster:
 
 ```js
-const KeyvRedis = require('@keyv/redis');
-const Redis = require('ioredis');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import Redis from 'ioredis';
+import KeyvRedis from '@keyv/redis';
 
 const redis = new Redis.Cluster('redis://user:pass@localhost:6379');
 const keyvRedis = new KeyvRedis(redis);
@@ -90,11 +91,11 @@ However, please note that setting `useRedisSets` to `false` could lead to perfor
 Here's how you can use the `useRedisSets` option:
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
 
-const keyv = new Keyv('redis://user:pass@localhost:6379', { useRedisSets: false });
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useRedisSets: false }));
 ```
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LISCENCE)
