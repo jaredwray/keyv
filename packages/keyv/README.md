@@ -41,24 +41,48 @@ npm install --save @keyv/sqlite
 npm install --save @keyv/postgres
 npm install --save @keyv/mysql
 npm install --save @keyv/etcd
+npm install --save @keyv/memcache
 ```
 
-Create a new Keyv instance, passing your connection string if applicable. Keyv will automatically load the correct storage adapter.
+First, create a new Keyv instance. 
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+```
 
-// One of the following
-const keyv = new Keyv();
-const keyv = new Keyv('redis://user:pass@localhost:6379');
-const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
-const keyv = new Keyv('sqlite://path/to/database.sqlite');
-const keyv = new Keyv('postgresql://user:pass@localhost:5432/dbname');
-const keyv = new Keyv('mysql://user:pass@localhost:3306/dbname');
-const keyv = new Keyv('etcd://localhost:2379');
+Once you have created your Keyv instance you can use it as a simple key-value store with `in-memory` by default. To use a storage adapter, create an instance of the adapter and pass it to the Keyv constructor. Here are some examples:
 
+```js
+// redis
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
+```
+
+You can also pass in a storage adapter with other options such as `ttl` and `namespace`:
+
+```js
+import KeyvSqlite from '@keyv/sqlite';
+
+const keyvSqlite = new KeyvSqlite('sqlite://path/to/database.sqlite');
+const keyv = new Keyv({ store: keyvSqlite, ttl: 5000, namespace: 'cache' });
+```
+
+To handle an event you can do the following:
+
+```js
 // Handle DB connection errors
 keyv.on('error', err => console.log('Connection Error', err));
+```
+
+Now lets so an end to end example using `Keyv` and the `Redis` storage adapter:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379');
+const keyv = new Keyv({ store: keyvRedis });
 
 await keyv.set('foo', 'expires in 1 second', 1000); // true
 await keyv.set('foo', 'never expires'); // true
@@ -67,13 +91,15 @@ await keyv.delete('foo'); // true
 await keyv.clear(); // undefined
 ```
 
+It's is just that simple! Keyv is designed to be simple and easy to use.
+
 ### Namespaces
 
 You can namespace your Keyv instance to avoid key collisions and allow you to clear only a certain namespace while using the same database.
 
 ```js
-const users = new Keyv('redis://user:pass@localhost:6379', { namespace: 'users' });
-const cache = new Keyv('redis://user:pass@localhost:6379', { namespace: 'cache' });
+const users = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'), { namespace: 'users' });
+const cache = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'), { namespace: 'cache' });
 
 await users.set('foo', 'users'); // true
 await cache.set('foo', 'cache'); // true
@@ -147,7 +173,7 @@ In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an 
 
 ### Custom Serializers
 
-Keyv uses [`buffer`](https://github.com/feross/buffer) for data serialization to ensure consistency across different backends.
+Keyv uses [`buffer`](https://nodejs.org/api/buffer.html) for data serialization to ensure consistency across different backends.
 
 You can optionally provide your own serialization functions to support extra data types or to serialize to something other than JSON.
 
@@ -176,8 +202,8 @@ Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packag
 You can also use third-party storage adapters or build your own. Keyv will wrap these storage adapters in TTL functionality and handle complex types internally.
 
 ```js
-const Keyv = require('keyv');
-const myAdapter = require('./my-storage-adapter');
+import Keyv from 'keyv';
+import myAdapter from 'my-adapter';
 
 const keyv = new Keyv({ store: myAdapter });
 ```
@@ -191,8 +217,8 @@ new Keyv({ store: new Map() });
 For example, [`quick-lru`](https://github.com/sindresorhus/quick-lru) is a completely unrelated module that implements the Map API.
 
 ```js
-const Keyv = require('keyv');
-const QuickLRU = require('quick-lru');
+import Keyv from 'keyv';
+import QuickLRU from 'quick-lru';
 
 const lru = new QuickLRU({ maxSize: 1000 });
 const keyv = new Keyv({ store: lru });
@@ -234,7 +260,7 @@ class AwesomeModule {
 Now it can be consumed like this:
 
 ```js
-const AwesomeModule = require('awesome-module');
+import AwesomeModule from 'awesome-module';
 
 // Caches stuff in memory by default
 const awesomeModule = new AwesomeModule();
@@ -251,8 +277,8 @@ const awesomeModule = new AwesomeModule({ cache: some3rdPartyStore });
 Keyv supports `gzip` and `brotli` compression. To enable compression, pass the `compress` option to the constructor.
 
 ```js
-const KeyvGzip = require('@keyv/compress-gzip');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvGzip from '@keyv/compress-gzip';
 
 const keyvGzip = new KeyvGzip();
 const keyv = new Keyv({ compression: KeyvGzip });
@@ -276,23 +302,23 @@ interface CompressionAdapter {
 In addition to the interface, you can test it with our compression test suite using @keyv/test-suite:
 
 ```js
-const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('@keyv/compress-gzip');
+import { keyvCompresstionTests } from '@keyv/test-suite';
+import KeyvGzip from '@keyv/compress-gzip';
 
 keyvCompresstionTests(test, new KeyvGzip());
 ```
 
 ## API
 
-### new Keyv([uri], [options])
+### new Keyv([storage-adapter], [options]) or new Keyv([options])
 
 Returns a new Keyv instance.
 
 The Keyv instance is also an `EventEmitter` that will emit an `'error'` event if the storage adapter connection fails.
 
-### uri
+### storage-adapter
 
-Type: `String`<br />
+Type: `KeyvStorageAdapter`<br />
 Default: `undefined`
 
 The connection string URI.
@@ -406,81 +432,12 @@ for await (const [key, value] of this.keyv.iterator()) {
 
 # How to Contribute
 
-In this section of the documentation we will cover:
+We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:
 
-1) How to set up this repository locally
-2) How to get started with running commands
-3) How to contribute changes using Pull Requests
+* [Contributing](https://github.com/jaredwray/keyv/blob/main/CONTRIBUTING.md) - Learn about how to contribute to Keyv
+* [Code of Conduct](https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md) - Learn about the Keyv Code of Conduct
+* [How to Contribute](https://github.com/jaredwray/keyv/blob/main/README.md) - How do develop in the Keyv mono repo! 
 
-## Dependencies
+# License
 
-This package requires the following dependencies to run:
-
-1) [Yarn V1](https://yarnpkg.com/getting-started/install)
-3) [Docker](https://docs.docker.com/get-docker/)
-
-## Setting up your workspace
-
-To contribute to this repository, start by setting up this project locally:
-
-1) Fork this repository into your Git account
-2) Clone the forked repository to your local directory using `git clone`
-3) Install any of the above missing dependencies
-
-## Launching the project
-
-Once the project is installed locally, you are ready to start up its services:
-
-1) Ensure that your Docker service is running.
-2) From the root directory of your project, run the `yarn` command in the command prompt to install yarn.
-3) Run the `yarn bootstrap` command to  install any necessary dependencies.
-4) Run `yarn test:services:start` to start up this project's Docker container. The container will launch all services within your workspace.
-
-## Available Commands
-
-Once the project is running, you can execute a variety of commands. The root workspace and each subpackage contain a `package.json` file with a  `scripts` field listing all the commands that can be executed from that directory. This project also supports native `yarn`, and `docker` commands.
-
-Here, we'll cover the primary commands that can be executed from the root directory. Unless otherwise noted, these commands can also be executed from a subpackage. If executed from a subpackage, they will only affect that subpackage, rather than the entire workspace.
-
-### `yarn`
-
-The `yarn` command installs yarn in the workspace.
-
-### `yarn bootstrap`
-
-The `yarn bootstrap` command installs all dependencies in the workspace.
-
-### `yarn test:services:start`
-
-The `yarn test:services:start` command starts up the project's Docker container, launching all services in the workspace. This command must be executed from the root directory.
-
-### `yarn test:services:stop`
-
-The `yarn test:services:stop` command brings down the project's Docker container, halting all services. This command must be executed from the root directory.
-
-### `yarn test`
-
-The `yarn test` command runs all tests in the workspace.
-
-### `yarn clean`
-
-The `yarn clean` command removes yarn and all dependencies installed by yarn. After executing this command, you must repeat the steps in *Setting up your workspace* to rebuild your workspace.
-
-## Contributing Changes
-
-Now that you've set up your workspace, you're ready to contribute changes to the `keyv` repository.
-
-1) Make any changes that you would like to contribute in your local workspace.
-2) After making these changes, ensure that the project's tests still pass by executing the `yarn test` command in the root directory.
-3) Commit your changes and push them to your forked repository.
-4) Navigate to the original `keyv` repository and go the *Pull Requests* tab.
-5) Click the *New pull request* button, and open a pull request for the branch in your repository that contains your changes.
-6) Once your pull request is created, ensure that all checks have passed and that your branch has no conflicts with the base branch. If there are any issues, resolve these changes in your local repository, and then commit and push them to git.
-7) Similarly, respond to any reviewer comments or requests for changes by making edits to your local repository and pushing them to Git.
-8) Once the pull request has been reviewed, those with write access to the branch will be able to merge your changes into the `keyv` repository.
-
-If you need more information on the steps to create a pull request, you can find a detailed walkthrough in the [Github documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)
-
-## License
-
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)
