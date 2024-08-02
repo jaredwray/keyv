@@ -1,5 +1,4 @@
 import * as fs from "fs-extra";
-import os from "os";
 
 async function main() {
 

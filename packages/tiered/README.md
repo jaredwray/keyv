@@ -1,4 +1,4 @@
-# @keyv/tiered [<img width="100" align="right" src="https://jaredwray.com/images/keyv-svg.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/tiered [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Tiered storage adapter for Keyv to manage local and remote store as one for Keyv
 
