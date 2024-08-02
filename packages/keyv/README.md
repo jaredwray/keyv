@@ -1,4 +1,4 @@
-[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+[<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Simple key-value storage with support for multiple backends
 
@@ -59,9 +59,10 @@ import KeyvRedis from '@keyv/redis';
 const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
 ```
 
-You can also pass in a storage adapter with other options such as `ttl` and `namespace`:
+You can also pass in a storage adapter with other options such as `ttl` and `namespace` (example using `sqlite`):
 
 ```js
+//sqlite
 import KeyvSqlite from '@keyv/sqlite';
 
 const keyvSqlite = new KeyvSqlite('sqlite://path/to/database.sqlite');
@@ -75,7 +76,7 @@ To handle an event you can do the following:
 keyv.on('error', err => console.log('Connection Error', err));
 ```
 
-Now lets so an end to end example using `Keyv` and the `Redis` storage adapter:
+Now lets do an end-to-end example using `Keyv` and the `Redis` storage adapter:
 
 ```js
 import Keyv from 'keyv';
@@ -372,13 +373,6 @@ Type: `Storage adapter instance`<br />
 Default: `new Map()`
 
 The storage adapter instance to be used by Keyv.
-
-#### options.adapter
-
-Type: `String`<br />
-Default: `undefined`
-
-Specify an adapter to use. e.g `'redis'` or `'mongodb'`.
 
 ### Instance
 
