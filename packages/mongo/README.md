@@ -1,4 +1,4 @@
-# @keyv/mongo [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/mongo [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > MongoDB storage adapter for Keyv
 
@@ -20,9 +20,10 @@ npm install --save keyv @keyv/mongo
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvMongo from '@keyv/mongo';
 
-const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
+const keyv = new Keyv(new KeyvMongo('mongodb://user:pass@localhost:27017/dbname'));
 keyv.on('error', handleConnectionError);
 ```
 
@@ -36,4 +37,4 @@ const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname', { collection
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LISCENCE)

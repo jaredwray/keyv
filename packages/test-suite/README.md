@@ -1,4 +1,4 @@
-# @keyv/test-suite [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/test-suite [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Test suite for Keyv API compliance
 
@@ -13,10 +13,10 @@ Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https:/
 
 ### Install
 
-Install AVA, Keyv and `@keyv/test-suite` as development dependencies.
+Install `vitest`, `keyv` and `@keyv/test-suite` as development dependencies.
 
 ```shell
-npm install --save-dev ava keyv @keyv/test-suite
+npm install --save-dev vitest keyv @keyv/test-suite
 ```
 
 Then update `keyv` and `@keyv/test-suite` versions to `*` in `package.json` to ensure you're always testing against the latest version.
@@ -26,7 +26,7 @@ Then update `keyv` and `@keyv/test-suite` versions to `*` in `package.json` to e
 `test.js`
 
 ```js
-import test from 'ava';
+import test from 'vitest';
 import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvStore from './';
@@ -37,28 +37,29 @@ keyvTestSuite(test, Keyv, store);
 
 Where `KeyvStore` is your storage adapter.
 
-Set your test script in `package.json` to `ava`.
+Set your test script in `package.json` to `vitest`.
 ```json
 "scripts": {
-  "test": "ava"
+  "test": "vitest"
 }
 ```
 
 ## Example for Storage Adapters
 
-Take a look at [keyv-redis](https://github.com/jaredwray/keyv-redis) for an example of an existing storage adapter using `@keyv/test-suite`.
+Take a look at [keyv/redis](https://github.com/jaredwray/keyv/tree/main/packages/redis) for an example of an existing storage adapter using `@keyv/test-suite`.
 
 ## Testing Compression Adapters
 
 If you're testing a compression adapter, you can use the `keyvCompresstionTests` method instead of `keyvTestSuite`.
 
 ```js
-const {keyvCompresstionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('@keyv/compress-gzip');
+import test from 'vitest';
+import { keyvCompresstionTests, KeyvGzip } from '@keyv/test-suite';
+import Keyv from 'keyv';
 
 keyvCompresstionTests(test, new KeyvGzip());
 ```
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LISCENCE)

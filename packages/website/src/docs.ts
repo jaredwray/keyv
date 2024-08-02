@@ -1,5 +1,4 @@
 import * as fs from "fs-extra";
-import os from "os";
 
 async function main() {
 
@@ -71,6 +70,7 @@ async function copyCompressionDocs() {
 
 function cleanDocumentFromImage(document: string) {
     document = document.replace(`[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)`, "");
+    document = document.replace(`[<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)`, "");
     return document;
 };
 

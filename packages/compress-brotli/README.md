@@ -1,4 +1,4 @@
-# @keyv/compress-brotli [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/compress-brotli [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Brotli compression for Keyv
 
@@ -20,8 +20,8 @@ npm install --save keyv @keyv/compress-brotli
 ## Usage
 
 ```javascript
-const KeyvBrotli = require('@keyv/compress-brotli');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvBrotli from '@keyv/compress-brotli';
 
 const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 
@@ -33,8 +33,8 @@ const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 
 #### options
 
-All options for @keyv/compress-brotli are based on the package [compress-brotli](https://github.com/Kikobeats/compress-brotli)
+All options for `@keyv/compress-brotli` are based on the package [compress-brotli](https://github.com/Kikobeats/compress-brotli)
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

@@ -1,4 +1,4 @@
-# @keyv/compress-gzip [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/compress-gzip [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Gzip compression for Keyv
 
@@ -18,8 +18,8 @@ npm install --save keyv @keyv/compress-gzip
 ## Usage
 
 ```javascript
-const KeyvGzip = require('@keyv/compress-gzip');
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvGzip from '@keyv/compress-gzip';
 
 const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 
@@ -31,8 +31,8 @@ const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 
 #### options
 
-All options for @keyv/compress-gzip are based on the package [compress-gzip](https://github.com/nodeca/pako#readme)
+All options for `@keyv/compress-gzip` are based on the package [compress-gzip](https://github.com/nodeca/pako#readme)
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LICENSE)

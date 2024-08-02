@@ -1,4 +1,4 @@
-# @keyv/offline [<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/offline [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Offline storage adapter for Keyv
 
@@ -9,6 +9,8 @@
 
 Offline storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
+This is a wrapper over `Keyv` to support offline mode.
+
 ## Install
 
 ```shell
@@ -18,12 +20,14 @@ npm install --save keyv @keyv/offline
 ## Usage
 
 ```js
-const Keyv = require('keyv');
+import Keyv from 'keyv';
+import KeyvOffline from '@keyv/offline';
 
-const keyv = new Keyv('offline://path/to/database.offline');
-keyv.on('error', handleConnectionError);
+const keyvOffline = new KeyvOffline(new Keyv());
+
+keyvOffline.on('error', handleConnectionError);
 ```
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](LISCENCE)
