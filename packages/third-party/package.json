@@ -1,0 +1,31 @@
+{
+  "name": "@keyv/third-party",
+  "version": "1.0.0",
+  "description": "Keyv test suite for third-party Storage Adapters",
+  "main": "index.js",
+  "repository": "https://github.com/jaredwray/keyv.git",
+  "author": "Jared Wray <me@jaredwray.com>",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@keyv/redis": "*",
+    "@keyv/test-suite": "*",
+    "keyv": "*",
+    "ts-node": "^10.9.2",
+    "tsd": "^0.31.1",
+    "xo": "^0.59.3"
+  },
+  "dependencies": {
+    "@gomomento-poc/node-keyv-adaptor": "^0.4.0",
+    "arangojs": "^9.0.0",
+    "keyv-arango": "^1.4.0",
+    "keyv-azuretable": "^1.2.1",
+    "keyv-dynamodb": "^1.1.1",
+    "keyv-file": "^0.3.1",
+    "keyv-firestore": "^2.0.0",
+    "keyv-lru": "^3.0.4",
+    "keyv-mssql": "^1.0.3",
+    "keyv-null": "^1.1.1",
+    "quick-lru": "^7.0.0"
+  }
+}
