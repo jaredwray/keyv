@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  keyv_mssql:
+    image: mcr.microsoft.com/mssql/server:latest
+    environment:
+      SA_PASSWORD: 'YourStrong!Passw0rd'
+      ACCEPT_EULA: 'Y'
+    ports:
+      - "1433:1433"
+
+  keyv_dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+    entrypoint: >
+      /bin/sh -c "
+      java -jar DynamoDBLocal.jar -sharedDb & 
+      sleep 5 && 
+      aws dynamodb create-table --table-name KeyvStore \
+      --attribute-definitions AttributeName=Cid,AttributeType=S \
+      --key-schema AttributeName=Cid,KeyType=HASH \
+      --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+      --endpoint-url http://localhost:8000
+      && fg"
