@@ -31,9 +31,5 @@
     "vitest": "^2.0.4",
     "webpack": "^5.93.0",
     "xo": "^0.59.3"
-  },
-  "dependencies": {
-    "open": "^10.1.0",
-    "open-editor": "^5.0.0"
   }
 }
