@@ -9,6 +9,8 @@
   "private": true,
   "scripts": {
     "test": "xo --fix && vitest run",
+    "build": "No build step required",
+    "test:ci": "No CI test step required",
     "test:services:start": "docker compose -f ./docker-compose.yaml up -d"
   },
   "xo": {
