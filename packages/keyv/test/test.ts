@@ -341,14 +341,12 @@ test.it('keyv.get([keys]) should return undefined array for all no existent keys
 });
 
 test.it('pass compress options', async t => {
-	// @ts-expect-error - compression options
 	const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
 test.it('compress/decompress with gzip', async t => {
-	// @ts-expect-error - compression options
 	const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
@@ -363,7 +361,6 @@ test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with compression',
 	async t => {
 		const KeyvStore = new Map();
-		// @ts-expect-error - compression options
 		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -376,7 +373,6 @@ test.it(
 		}
 
 		await Promise.all(toResolve);
-		// @ts-expect-error - compression options
 		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
 		const map2 = new Map(
 			Array.from({length: 5})

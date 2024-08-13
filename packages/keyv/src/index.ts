@@ -66,7 +66,7 @@ export type KeyvOptions = {
 	/** Default TTL. Can be overridden by specifying a TTL on `.set()`. */
 	ttl?: number;
 	/** Enable compression option **/
-	compression?: CompressionAdapter;
+	compression?: CompressionAdapter | any;
 	/** Enable or disable statistics (default is false) */
 	stats?: boolean;
 };
