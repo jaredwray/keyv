@@ -8,9 +8,9 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "test": "xo --fix && vitest run",
-    "build": "No build step required",
-    "test:ci": "No CI test step required",
+    "third:test": "xo --fix && vitest run",
+    "build": "echo 'No build step required'",
+    "test:ci": "echo 'No CI test step required'",
     "test:services:start": "docker compose -f ./docker-compose.yaml up -d"
   },
   "xo": {
