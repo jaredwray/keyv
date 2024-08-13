@@ -1,0 +1,14 @@
+services:
+  keyv_mssql:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      SA_PASSWORD: 'YourStrong!Passw0rd'
+      ACCEPT_EULA: 'Y'
+    ports:
+      - "1433:1433"
+
+  keyv_azuretable:
+    image: mcr.microsoft.com/azure-storage/azurite
+    command: "azurite-table --silent --location /data --debug /dev/null"
+    ports:
+      - "10002:10002"
