@@ -164,6 +164,9 @@ test.it('Keyv should wait for the expired get', async t => {
 		set(key: string, value: any) {
 			_store.set(key, value);
 		},
+		clear() {
+			_store.clear();
+		},
 		async delete(key: string) {
 			await new Promise<void>(resolve => {
 				setTimeout(() => {
@@ -205,6 +208,18 @@ test.it('Keyv should wait for the expired get', async t => {
 	});
 	const v4 = await keyv.get('foo');
 	t.expect(v4).toBe('bar');
+});
+
+test.it('keyv should trigger an error when store is invalid', async t => {
+	const store = new Map();
+
+	t.expect(() => new Keyv({
+		store: {
+			async get(key: string) {
+				store.get(key);
+			},
+		},
+	})).toThrow();
 });
 
 test.it('.delete([keys]) should delete multiple keys for storage adapter not supporting deleteMany', async t => {
