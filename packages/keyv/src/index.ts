@@ -62,11 +62,11 @@ export type KeyvOptions = {
 	/** A custom deserialization function. */
 	deserialize?: CompressionAdapter['deserialize'];
 	/** The storage adapter instance to be used by Keyv. */
-	store?: KeyvStoreAdapter | Map<any, any>;
+	store?: KeyvStoreAdapter | Map<any, any> | any;
 	/** Default TTL. Can be overridden by specifying a TTL on `.set()`. */
 	ttl?: number;
 	/** Enable compression option **/
-	compression?: CompressionAdapter;
+	compression?: CompressionAdapter | any;
 	/** Enable or disable statistics (default is false) */
 	stats?: boolean;
 };
@@ -92,7 +92,6 @@ class Keyv extends EventManager {
 
 	constructor(store?: KeyvStoreAdapter | KeyvOptions | Map<any, any>, options?: Omit<KeyvOptions, 'store'>);
 	constructor(options?: KeyvOptions);
-
 	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
 		super();
 		options ??= {};
@@ -111,7 +110,6 @@ class Keyv extends EventManager {
 		if (store && (store as KeyvStoreAdapter).get) {
 			this.opts.store = store as KeyvStoreAdapter;
 		} else {
-			// @ts-expect-error - Map is not a KeyvStoreAdapter
 			this.opts = {
 				...this.opts,
 				...store,
@@ -125,6 +123,10 @@ class Keyv extends EventManager {
 		}
 
 		if (this.opts.store) {
+			if (!this._isValidStorageAdapter(this.opts.store)) {
+				throw new Error('Invalid storage adapter');
+			}
+
 			if (typeof this.opts.store.on === 'function' && this.opts.emitErrors) {
 				this.opts.store.on('error', (error: any) => this.emit('error', error));
 			}
@@ -169,7 +171,7 @@ class Keyv extends EventManager {
 
 	_checkIterableAdapter(): boolean {
 		return iterableAdapters.includes((this.opts.store.opts.dialect as string))
-			|| iterableAdapters.findIndex(element => (this.opts.store.opts.url as string).includes(element)) >= 0;
+			|| iterableAdapters.some(element => (this.opts.store.opts.url as string).includes(element));
 	}
 
 	_getKeyPrefix(key: string): string {
@@ -185,6 +187,17 @@ class Keyv extends EventManager {
 			.split(':')
 			.splice(1)
 			.join(':');
+	}
+
+	_isValidStorageAdapter(store: KeyvStoreAdapter | any): boolean {
+		return (
+			store instanceof Map || (
+				typeof store.get === 'function'
+				&& typeof store.set === 'function'
+				&& typeof store.delete === 'function'
+				&& typeof store.clear === 'function'
+			)
+		);
 	}
 
 	async get<Value>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;

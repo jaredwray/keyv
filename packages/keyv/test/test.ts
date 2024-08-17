@@ -164,6 +164,9 @@ test.it('Keyv should wait for the expired get', async t => {
 		set(key: string, value: any) {
 			_store.set(key, value);
 		},
+		clear() {
+			_store.clear();
+		},
 		async delete(key: string) {
 			await new Promise<void>(resolve => {
 				setTimeout(() => {
@@ -205,6 +208,18 @@ test.it('Keyv should wait for the expired get', async t => {
 	});
 	const v4 = await keyv.get('foo');
 	t.expect(v4).toBe('bar');
+});
+
+test.it('keyv should trigger an error when store is invalid', async t => {
+	const store = new Map();
+
+	t.expect(() => new Keyv({
+		store: {
+			async get(key: string) {
+				store.get(key);
+			},
+		},
+	})).toThrow();
 });
 
 test.it('.delete([keys]) should delete multiple keys for storage adapter not supporting deleteMany', async t => {
@@ -341,14 +356,12 @@ test.it('keyv.get([keys]) should return undefined array for all no existent keys
 });
 
 test.it('pass compress options', async t => {
-	// @ts-expect-error - compression options
 	const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
 test.it('compress/decompress with gzip', async t => {
-	// @ts-expect-error - compression options
 	const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
@@ -363,7 +376,6 @@ test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with compression',
 	async t => {
 		const KeyvStore = new Map();
-		// @ts-expect-error - compression options
 		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -376,7 +388,6 @@ test.it(
 		}
 
 		await Promise.all(toResolve);
-		// @ts-expect-error - compression options
 		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
 		const map2 = new Map(
 			Array.from({length: 5})
