@@ -26,8 +26,7 @@ const keyvMssql = () => new KeyvMssql({
 	},
 });
 
-keyvApiTests(test, Keyv, keyvLru as any);
-keyvApiTests(test, Keyv, keyvFile as any);
-keyvApiTests(test, Keyv, keyvQuickLru as any);
-// KeyvApiTests(test, Keyv, keyvFirestore as any);
-keyvApiTests(test, Keyv, keyvMssql as any);
+keyvApiTests(test, Keyv, keyvLru);
+keyvApiTests(test, Keyv, keyvFile);
+keyvApiTests(test, Keyv, keyvQuickLru);
+keyvApiTests(test, Keyv, keyvMssql);
