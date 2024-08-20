@@ -2,8 +2,8 @@ import {constants as zlibConstants} from 'node:zlib';
 import v8 from 'node:v8';
 import * as test from 'vitest';
 import {keyvCompresstionTests} from '@keyv/test-suite';
-import KeyvBrotli from '../src/index';
-import type {DeserializeResult} from '../src/types';
+import KeyvBrotli from '../src/index.js';
+import type {DeserializeResult} from '../src/types.js';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const {BROTLI_PARAM_MODE, BROTLI_PARAM_QUALITY} = zlibConstants;

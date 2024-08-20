@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/offline",
-	"version": "3.0.7",
+	"version": "4.0.0",
 	"description": "Offline storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -58,16 +58,16 @@
 	"devDependencies": {
 		"@keyv/redis": "*",
 		"@keyv/test-suite": "*",
-		"keyv": "^5.0.0-rc.1",
+		"keyv": "^5.0.0",
 		"ts-node": "^10.9.2",
-		"tsd": "^0.31.0",
-		"xo": "^0.58.0"
+		"tsd": "^0.31.1",
+		"xo": "^0.59.3"
 	},
 	"tsd": {
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 12"
+		"node": ">= 18"
 	},
 	"files": [
 		"dist",

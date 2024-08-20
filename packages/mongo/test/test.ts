@@ -2,7 +2,7 @@ import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import {KeyvMongoOptions} from 'types';
-import KeyvMongo from '../src/index';
+import KeyvMongo from '../src/index.js';
 
 const options = {serverSelectionTimeoutMS: 5000};
 const mongoURL = 'mongodb://127.0.0.1:27017';

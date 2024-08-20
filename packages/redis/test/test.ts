@@ -3,7 +3,7 @@ import tk from 'timekeeper';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import Redis from 'ioredis';
-import KeyvRedis from '../src/index';
+import KeyvRedis from '../src/index.js';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const REDIS_HOST = 'localhost';
@@ -92,8 +92,8 @@ test.it('clear method with empty keys should not error', async t => {
 
 test.it('.clear() cleaned namespace', async t => {
 	// Setup
-	const keyv = new Keyv(redisURI, {
-		adapter: 'redis',
+	const keyvRedis = new KeyvRedis(redisURI);
+	const keyv = new Keyv(keyvRedis, {
 		namespace: 'v3',
 	});
 
@@ -102,6 +102,7 @@ test.it('.clear() cleaned namespace', async t => {
 
 	await keyv.set(key, 'value', 1);
 
+	// eslint-disable-next-line promise/param-names
 	await new Promise(r => {
 		setTimeout(r, 250);
 	});
@@ -120,7 +121,7 @@ test.it('.clear() cleaned namespace', async t => {
 });
 
 test.it('Keyv stores ttl without const', async t => {
-	const keyv = new Keyv(redisURI);
+	const keyv = new Keyv(new KeyvRedis(redisURI));
 	await keyv.set('foo', 'bar', 100);
 	t.expect(await keyv.get('foo')).toBe('bar');
 	tk.freeze(Date.now() + 150);

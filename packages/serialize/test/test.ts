@@ -1,6 +1,6 @@
 import {Buffer} from 'node:buffer';
 import * as test from 'vitest';
-import {defaultDeserialize, defaultSerialize} from '../src';
+import {defaultDeserialize, defaultSerialize} from '../src/index.js';
 
 test.it('serialization and deserialization of string value', t => {
 	const serialized = defaultSerialize({value: 'foo'});

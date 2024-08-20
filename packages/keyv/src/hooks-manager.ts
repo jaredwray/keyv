@@ -1,4 +1,4 @@
-import EventManager from './event-manager';
+import EventManager from './event-manager.js';
 
 type HookHandler = (...arguments_: any[]) => void;
 

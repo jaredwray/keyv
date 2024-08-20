@@ -1,6 +1,6 @@
 {
   "name": "@keyv/tiered",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "Tiered storage adapter for Keyv",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -55,17 +55,17 @@
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
     "c8": "^10.1.2",
-    "eslint": "^9.7.0",
-    "keyv": "^5.0.0-rc.1",
+    "eslint": "^9.9.0",
+    "keyv": "^5.0.0",
     "tsd": "^0.31.1",
     "typescript": "^5.5.4",
-    "xo": "^0.59.2"
+    "xo": "^0.59.3"
   },
   "tsd": {
     "directory": "test"
   },
   "engines": {
-    "node": ">= 16"
+    "node": ">= 18"
   },
   "files": [
     "dist",

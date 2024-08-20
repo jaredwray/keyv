@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/sqlite",
-	"version": "3.6.6",
+	"version": "4.0.0",
 	"description": "SQLite storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -62,15 +62,15 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"keyv": "^5.0.0-rc.1",
+		"keyv": "^5.0.0",
 		"tsd": "^0.31.1",
-		"xo": "^0.59.2"
+		"xo": "^0.59.3"
 	},
 	"tsd": {
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 14"
+		"node": ">= 18"
 	},
 	"files": [
 		"dist",

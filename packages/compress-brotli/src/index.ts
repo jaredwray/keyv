@@ -3,7 +3,7 @@ import compressBrotli from 'compress-brotli';
 import {defaultDeserialize, defaultSerialize} from '@keyv/serialize';
 import type {
 	Brotli, CompressResult, Options, SerializeResult, Serialize,
-} from './types';
+} from './types.js';
 
 class KeyvBrotli {
 	private readonly brotli: Brotli;

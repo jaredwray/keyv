@@ -22,7 +22,6 @@ const keyvMssql = () => new KeyvMssql({
 		user: 'sa',
 		password: 'YourStrong!Passw0rd',
 		host: 'localhost',
-		database: 'keyv',
 	},
 });
 

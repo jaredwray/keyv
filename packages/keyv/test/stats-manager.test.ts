@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import KeyvStatsManager from '../src/stats-manager';
+import KeyvStatsManager from '../src/stats-manager.js';
 
 test.it('will initialize with correct stats at zero', () => {
 	const stats = new KeyvStatsManager();

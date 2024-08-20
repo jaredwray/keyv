@@ -1,4 +1,4 @@
-import EventManager from './event-manager';
+import EventManager from './event-manager.js';
 
 class StatsManager extends EventManager {
 	public enabled = true;

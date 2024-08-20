@@ -2,7 +2,7 @@ import * as test from 'vitest';
 import Keyv, {type KeyvStoreAdapter} from 'keyv';
 import KeyvRedis from '@keyv/redis';
 import keyvTestSuite from '@keyv/test-suite';
-import KeyvOffline from '../src/index';
+import KeyvOffline from '../src/index.js';
 
 const keyvRedisBad = new KeyvRedis({
 	uri: 'redis://user:pass@localhost:1338',

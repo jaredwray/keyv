@@ -1,7 +1,7 @@
 import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
-import HooksManager from './hooks-manager';
-import EventManager from './event-manager';
-import StatsManager from './stats-manager';
+import HooksManager from './hooks-manager.js';
+import EventManager from './event-manager.js';
+import StatsManager from './stats-manager.js';
 
 export type DeserializedData<Value> = {
 	value?: Value;

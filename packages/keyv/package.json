@@ -1,6 +1,6 @@
 {
 	"name": "keyv",
-	"version": "5.0.0-rc.1",
+	"version": "5.0.0",
 	"description": "Simple key-value storage with support for multiple backends",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -79,8 +79,8 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"timekeeper": "^2.3.1",
-		"tsd": "^0.31.0",
-		"xo": "^0.58.0"
+		"tsd": "^0.31.1",
+		"xo": "^0.59.3"
 	},
 	"tsd": {
 		"directory": "test"

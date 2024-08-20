@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mysql",
-	"version": "2.0.0-rc.1",
+	"version": "2.0.0",
 	"description": "MySQL/MariaDB storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -61,20 +61,20 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mysql2": "^3.10.3"
+		"mysql2": "^3.11.0"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"keyv": "^5.0.0-rc.1",
+		"keyv": "^5.0.0",
 		"ts-node": "^10.9.2",
 		"tsd": "^0.31.1",
-		"xo": "^0.59.2"
+		"xo": "^0.59.3"
 	},
 	"tsd": {
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 14"
+		"node": ">= 18"
 	},
 	"files": [
 		"dist",
