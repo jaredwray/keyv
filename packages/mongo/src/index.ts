@@ -9,8 +9,7 @@ import {
 	type KeyvMongoConnect,
 	type KeyvMongoOptions,
 	type Options,
-	type PifyFunction,
-} from './types';
+} from './types.js';
 
 const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect']);
 class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
@@ -94,6 +93,7 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					resolve({store, mongoClient: client});
 				}
 			} catch (error) {
+				/* c8 ignore next 4 */
 				this.emit('error', error);
 				// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
 				reject(error);
@@ -258,6 +258,7 @@ class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 			try {
 				await client.bucket!.drop();
 			} catch (error: unknown) {
+				/* c8 ignore next 5 */
 				// Throw error if not "namespace not found" error
 				if (!(error instanceof MongoServerError && error.code === 26)) {
 					throw error;
