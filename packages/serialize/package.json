@@ -32,7 +32,10 @@
       "@typescript-eslint/no-empty-function": "off",
       "import/extensions": "off",
       "no-promise-executor-return": "off",
-      "import/no-extraneous-dependencies": "off"
+      "import/no-extraneous-dependencies": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off"
+
     }
   },
   "repository": {
@@ -59,9 +62,9 @@
     "@keyv/test-suite": "*",
     "keyv": "^5.0.0",
     "ts-node": "^10.9.2",
-    "tsd": "^0.31.0",
-    "typescript": "^5.4.5",
-    "xo": "^0.58.0"
+    "tsd": "^0.31.1",
+    "typescript": "^5.5.4",
+    "xo": "^0.59.3"
   },
   "tsd": {
     "directory": "test"

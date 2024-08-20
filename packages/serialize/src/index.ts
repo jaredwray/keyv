@@ -16,7 +16,6 @@ export const defaultSerialize = (data: any): string => {
 	}
 
 	if (data?.toJSON) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 		data = data.toJSON();
 	}
 
@@ -29,7 +28,7 @@ export const defaultSerialize = (data: any): string => {
 		// eslint-disable-next-line guard-for-in
 		for (const k in data) {
 			const ignore = typeof data[k] === 'function' || (!array && data[k] === undefined);
-			// eslint-disable-next-line no-prototype-builtins, @typescript-eslint/no-unsafe-call
+			// eslint-disable-next-line no-prototype-builtins
 			if (!data.hasOwnProperty(k) || ignore) {
 				continue;
 			}
