@@ -1,6 +1,6 @@
 import * as test from 'vitest';
 import KeyvSqlite from '@keyv/sqlite';
-import Keyv, {KeyvHooks} from '../src';
+import Keyv, {KeyvHooks} from '../src/index.js';
 
 test.it('PRE_SET hook', async t => {
 	const keyv = new Keyv();

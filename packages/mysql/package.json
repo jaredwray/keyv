@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mysql",
-	"version": "2.0.0-rc.1",
+	"version": "2.0.0",
 	"description": "MySQL/MariaDB storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -65,7 +65,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"keyv": "^5.0.0-rc.1",
+		"keyv": "^5.0.0",
 		"ts-node": "^10.9.2",
 		"tsd": "^0.31.1",
 		"xo": "^0.59.2"
@@ -74,7 +74,7 @@
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 14"
+		"node": ">= 18"
 	},
 	"files": [
 		"dist",

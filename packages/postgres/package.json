@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/postgres",
-	"version": "1.4.9",
+	"version": "2.0.0",
 	"description": "PostgreSQL storage adapter for Keyv",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
@@ -62,7 +62,7 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"@types/pg": "^8.11.6",
-		"keyv": "^5.0.0-rc.1",
+		"keyv": "^5.0.0",
 		"tsd": "^0.31.1",
 		"xo": "^0.59.2"
 	},
@@ -70,7 +70,7 @@
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 14"
+		"node": ">= 18"
 	},
 	"files": [
 		"dist",

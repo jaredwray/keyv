@@ -36,10 +36,8 @@
     "xo": "^0.59.3"
   },
   "dependencies": {
-    "keyv": "^5.0.0-rc.1",
-    "keyv-azuretable": "^1.2.1",
+    "keyv": "^5.0.0",
     "keyv-file": "^0.3.1",
-    "keyv-firestore": "^2.0.0",
     "keyv-lru": "^3.0.4",
     "keyv-mssql": "^1.0.3",
     "quick-lru": "^7.0.0"

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import * as test from 'vitest';
-import EventManager from '../src/event-manager';
+import EventManager from '../src/event-manager.js';
 
 test.it('remove event listener', t => {
 	const emitter = new EventManager();

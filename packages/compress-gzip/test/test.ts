@@ -1,6 +1,6 @@
 import * as test from 'vitest';
 import {keyvCompresstionTests} from '@keyv/test-suite';
-import KeyvGzip from '../src/index';
+import KeyvGzip from '../src/index.js';
 
 // @ts-expect-error - KeyvGzip type
 keyvCompresstionTests(test, new KeyvGzip());

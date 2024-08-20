@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import HooksManager from '../src/hooks-manager';
+import HooksManager from '../src/hooks-manager.js';
 
 test.it('add and trigger handler', t => {
 	const hooksManager = new HooksManager();

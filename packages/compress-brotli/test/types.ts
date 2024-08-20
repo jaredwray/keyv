@@ -2,7 +2,7 @@ import zlib from 'node:zlib';
 import v8 from 'node:v8';
 import * as test from 'vitest';
 import Keyv, {type KeyvStoreAdapter} from 'keyv';
-import KeyvBrotli from '../src/index';
+import KeyvBrotli from '../src/index.js';
 
 type MyType = {
 	a?: string;

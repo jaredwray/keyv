@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
-    "keyv": "^5.0.0-rc.1",
+    "keyv": "^5.0.0",
     "ts-node": "^10.9.2",
     "tsd": "^0.31.0",
     "typescript": "^5.4.5",

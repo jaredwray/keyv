@@ -1,6 +1,6 @@
 {
   "name": "@keyv/compress-gzip",
-  "version": "1.2.4",
+  "version": "2.0.0",
   "description": "gzip compression for keyv",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -55,14 +55,14 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "*",
-    "tsd": "^0.31.0",
-    "xo": "^0.58.0"
+    "tsd": "^0.31.1",
+    "xo": "^0.59.3"
   },
   "tsd": {
     "directory": "test"
   },
   "engines": {
-    "node": ">= 12"
+    "node": ">= 18"
   },
   "files": [
     "dist",

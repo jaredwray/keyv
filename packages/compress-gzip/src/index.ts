@@ -1,6 +1,6 @@
 import pako from 'pako';
 import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
-import type {Options, Serialize} from './types';
+import type {Options, Serialize} from './types.js';
 
 class KeyvGzip {
 	opts: Options;
