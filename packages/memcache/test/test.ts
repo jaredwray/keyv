@@ -2,7 +2,7 @@ import {EventEmitter} from 'events';
 import * as test from 'vitest';
 import Keyv from 'keyv';
 import {keyvApiTests, keyvValueTests} from '@keyv/test-suite';
-import KeyvMemcache from '../src/index';
+import KeyvMemcache from '../src/index.js';
 
 const snooze = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
