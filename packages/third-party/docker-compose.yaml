@@ -1,6 +1,7 @@
 services:
   keyv_mssql:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    platform: linux/amd64
     environment:
       SA_PASSWORD: 'YourStrong!Passw0rd'
       ACCEPT_EULA: 'Y'
