@@ -4,7 +4,7 @@ import {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
 	type KeyvRedisOptions,
 	type KeyvUriOptions,
-} from './types';
+} from './types.js';
 
 class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = true;
