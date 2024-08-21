@@ -12,7 +12,7 @@ type KeyvEtcdOptions = {
 	busyTimeout?: number;
 };
 
-class KeyvEtcd<Value = any> extends EventEmitter {
+export class KeyvEtcd<Value = any> extends EventEmitter {
 	public ttlSupport: boolean;
 	public opts: KeyvEtcdOptions;
 	public client: Etcd3;

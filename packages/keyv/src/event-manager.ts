@@ -108,4 +108,3 @@ class CustomError extends Error {
 }
 
 export default EventManager;
-module.exports = EventManager;

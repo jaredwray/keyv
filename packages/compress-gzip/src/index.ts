@@ -2,7 +2,7 @@ import pako from 'pako';
 import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
 import type {Options, Serialize} from './types.js';
 
-class KeyvGzip {
+export class KeyvGzip {
 	opts: Options;
 	constructor(options?: Options) {
 		this.opts = {

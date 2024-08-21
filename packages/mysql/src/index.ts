@@ -17,7 +17,7 @@ mysql.ResultSetHeader
 	? T
 	: never>;
 
-class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvMysqlOptions;
 	namespace?: string;

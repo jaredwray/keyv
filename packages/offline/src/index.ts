@@ -1,7 +1,7 @@
 import EventEmitter from 'node:events';
 import type {KeyvStoreAdapter} from 'keyv';
 
-class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 	proxy: any;
 	opts: any;
 	namespace: any;
@@ -127,4 +127,3 @@ class KeyvOffline extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvOffline;
-module.exports = KeyvOffline;

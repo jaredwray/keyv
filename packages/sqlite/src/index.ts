@@ -8,7 +8,7 @@ import {
 
 const toString = (input: string) => String(input).search(/^[a-zA-Z]+$/) < 0 ? '_' + input : input;
 
-class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvSqliteOptions;
 	namespace?: string;
@@ -167,4 +167,3 @@ class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvSqlite;
-module.exports = KeyvSqlite;

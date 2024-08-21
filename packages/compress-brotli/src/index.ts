@@ -5,7 +5,7 @@ import type {
 	Brotli, CompressResult, Options, SerializeResult, Serialize,
 } from './types.js';
 
-class KeyvBrotli {
+export class KeyvBrotli {
 	private readonly brotli: Brotli;
 	constructor(options?: Options) {
 		this.brotli = compressBrotli(options);

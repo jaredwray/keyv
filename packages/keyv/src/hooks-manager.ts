@@ -53,4 +53,3 @@ class HooksManager extends EventManager {
 }
 
 export default HooksManager;
-module.exports = HooksManager;

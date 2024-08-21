@@ -84,7 +84,7 @@ const iterableAdapters = [
 	'tiered',
 ];
 
-class Keyv extends EventManager {
+export class Keyv extends EventManager {
 	opts: KeyvOptions_;
 	iterator?: IteratorFunction;
 	hooks = new HooksManager();
@@ -383,5 +383,3 @@ class Keyv extends EventManager {
 }
 
 export default Keyv;
-module.exports = Keyv;
-module.exports.KeyvHooks = KeyvHooks;
