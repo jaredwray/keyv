@@ -52,4 +52,3 @@ class StatsManager extends EventManager {
 }
 
 export default StatsManager;
-module.exports = StatsManager;

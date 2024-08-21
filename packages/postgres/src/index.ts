@@ -7,7 +7,7 @@ import {
 	type Query,
 } from './types';
 
-class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvPostgresOptions;
 	query: Query;
@@ -155,4 +155,3 @@ class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvPostgres;
-module.exports = KeyvPostgres;

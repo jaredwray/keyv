@@ -12,7 +12,7 @@ import {
 } from './types.js';
 
 const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect']);
-class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = false;
 	opts: Options;
 	connect: Promise<KeyvMongoConnect>;

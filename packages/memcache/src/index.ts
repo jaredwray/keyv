@@ -9,7 +9,7 @@ type KeyvMemcacheOptions = {
 	expires?: number;
 } & memcache.ClientOptions & Record<string, any>;
 
-class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	public ttlSupport = true;
 	public namespace?: string;
 	public client: memcache.Client;

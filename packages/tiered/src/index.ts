@@ -4,7 +4,7 @@ import type {Options, Options_} from './types';
 
 type KeyvTieredIndex = 'local' | 'remote';
 
-class KeyvTiered extends EventEmitter {
+export class KeyvTiered extends EventEmitter {
 	opts: Options_;
 	remote: Keyv;
 	local: Keyv;
@@ -117,4 +117,3 @@ class KeyvTiered extends EventEmitter {
 }
 
 export default KeyvTiered;
-module.exports = KeyvTiered;
