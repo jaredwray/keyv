@@ -1,6 +1,6 @@
 {
   "name": "@keyv/serialize",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Serialization for keyv",
   "type": "module",
   "main": "dist/index.cjs",
