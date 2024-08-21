@@ -21,6 +21,7 @@
 	},
 	"xo": {
 		"rules": {
+			"import/no-named-as-default": "off",
 			"unicorn/prefer-module": "off",
 			"unicorn/no-array-reduce": "off",
 			"unicorn/prefer-object-from-entries": "off",

@@ -21,6 +21,7 @@
   },
   "xo": {
     "rules": {
+      "import/no-named-as-default": "off",
       "unicorn/prefer-module": "off",
       "unicorn/prefer-event-target": "off",
       "unicorn/no-array-reduce": "off",
@@ -36,7 +37,6 @@
       "import/no-extraneous-dependencies": "off",
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-assignment": "off"
-
     }
   },
   "repository": {

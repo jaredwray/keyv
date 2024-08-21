@@ -21,6 +21,7 @@
 	},
 	"xo": {
 		"rules": {
+			"import/no-named-as-default": "off",
 			"unicorn/prefer-module": "off",
 			"import/extensions": "off",
 			"unicorn/prefer-event-target": "off",

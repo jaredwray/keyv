@@ -21,6 +21,7 @@
 	},
 	"xo": {
 		"rules": {
+			"import/no-named-as-default": "off",
 			"unicorn/prefer-module": "off",
 			"@typescript-eslint/no-unsafe-call": "off",
 			"@typescript-eslint/consistent-type-definitions": "off",
