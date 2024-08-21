@@ -150,18 +150,18 @@ import Keyv, { KeyvHooks } from 'keyv';
 ```js
 //PRE_SET hook
 const keyv = new Keyv();
-keyv.hooks.addListener(KeyvHooks.PRE_SET, (key, value) => console.log(`Setting key ${key} to ${value}`));
+keyv.hooks.addHandler(KeyvHooks.PRE_SET, (key, value) => console.log(`Setting key ${key} to ${value}`));
 
 //POST_SET hook
 const keyv = new Keyv();
-keyv.hooks.addListener(KeyvHooks.POST_SET, (key, value) => console.log(`Set key ${key} to ${value}`));
+keyv.hooks.addHandler(KeyvHooks.POST_SET, (key, value) => console.log(`Set key ${key} to ${value}`));
 ```
 
 In these examples you can also manipulate the value before it is set. For example, you could add a prefix to all keys.
 
 ```js
 const keyv = new Keyv();
-keyv.hooks.addListener(KeyvHooks.PRE_SET, (key, value) => {
+keyv.hooks.addHandler(KeyvHooks.PRE_SET, (key, value) => {
   console.log(`Setting key ${key} to ${value}`);
   key = `prefix-${key}`;
 });
