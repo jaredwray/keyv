@@ -2,6 +2,7 @@
 	"name": "@keyv/redis",
 	"version": "3.0.0",
 	"description": "Redis storage adapter for Keyv",
+	"type": "module",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",

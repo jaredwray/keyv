@@ -2,12 +2,13 @@
   "name": "@keyv/serialize",
   "version": "1.0.0",
   "description": "Serialization for keyv",
-  "main": "dist/cjs/index.js",
+  "type": "module",
+  "main": "dist/cjs/index.cjs",
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
-	"exports": {
+  "exports": {
 		".": {
-			"require": "./dist/cjs/index.js",
+			"require": "./dist/cjs/index.cjs",
 			"import": "./dist/esm/index.js"
 		}
   },

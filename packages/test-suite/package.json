@@ -11,7 +11,7 @@
 			"import": "./dist/esm/index.js"
 		}
 	},
-	"type": "commonjs",
+	"type": "module",
 	"scripts": {
 		"build": "rm -rf dist && tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json",
 		"prepare": "yarn build",

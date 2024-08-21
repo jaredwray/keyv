@@ -2,6 +2,7 @@
 	"name": "@keyv/postgres",
 	"version": "2.0.0",
 	"description": "PostgreSQL storage adapter for Keyv",
+	"type": "module",
 	"main": "dist/cjs/index.js",
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
