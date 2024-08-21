@@ -3,17 +3,17 @@
 	"version": "3.0.0",
 	"description": "MongoDB storage adapter for Keyv",
 	"type": "module",
-	"main": "dist/cjs/index.js",
-	"module": "dist/esm/index.js",
-	"types": "dist/esm/index.d.ts",
+	"main": "dist/index.cjs",
+	"module": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
-			"require": "./dist/cjs/index.js",
-			"import": "./dist/esm/index.js"
+			"require": "./dist/index.cjs",
+			"import": "./dist/index.js"
 		}
 	},
 	"scripts": {
-		"build": "rm -rf dist && tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json",
+		"build": "rm -rf dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
