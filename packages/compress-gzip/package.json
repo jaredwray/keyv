@@ -1,6 +1,6 @@
 {
   "name": "@keyv/compress-gzip",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "gzip compression for keyv",
   "type": "module",
   "main": "dist/index.cjs",
