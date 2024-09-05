@@ -102,3 +102,14 @@ test.it('decompression using number array with v8', async t => {
 	t.expect(decompressed).toEqual({help: [1, 2, 4]});
 });
 
+test.it('decompress should not throw error when empty with brotli', async t => {
+	const keyv = new KeyvBrotli();
+	await t.expect(keyv.decompress()).resolves.not.toThrowError();
+});
+
+test.it('should return empty object when empty', async t => {
+	const keyv = new KeyvBrotli();
+	const result = await keyv.deserialize();
+	t.expect(result).toEqual({value: undefined, expires: undefined});
+});
+

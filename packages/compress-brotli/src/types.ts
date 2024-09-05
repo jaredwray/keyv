@@ -10,7 +10,7 @@ type BrotliSerialize<T> = (source: InputType) => T;
 type BrotliDeserialize<T> = (source: CompressResult) => T;
 
 export type Serialize = {
-	value: InputType;
+	value?: InputType;
 	expires?: number;
 };
 
