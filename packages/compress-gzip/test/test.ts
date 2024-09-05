@@ -1,5 +1,6 @@
 import * as test from 'vitest';
 import {keyvCompresstionTests} from '@keyv/test-suite';
+import {Keyv} from 'keyv';
 import KeyvGzip from '../src/index.js';
 
 // @ts-expect-error - KeyvGzip type
@@ -47,4 +48,14 @@ test.it('decompression with decompression options', async t => {
 	const compressed = await keyv.compress('whatever');
 	const decompressed = await keyv.decompress(compressed, options);
 	t.expect(decompressed).toBe('whatever');
+});
+
+test.it('decompress should not throw error when empty with gzip', async t => {
+	const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
+	await t.expect(keyv.get('foo')).resolves.not.toThrowError();
+});
+
+test.it('should not throw error when empty', async t => {
+	const keyv = new Keyv({store: new Map()});
+	await t.expect(keyv.get('foo')).resolves.not.toThrowError();
 });
