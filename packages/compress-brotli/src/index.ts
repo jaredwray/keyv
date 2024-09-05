@@ -15,17 +15,25 @@ export class KeyvBrotli {
 		return this.brotli.compress(value, options);
 	}
 
-	async decompress<T>(data: InputType, options?: BrotliOptions): Promise<T> {
-		return await this.brotli.decompress(data, options) as T;
+	async decompress<T>(data?: InputType, options?: BrotliOptions): Promise<T> {
+		if (data) {
+			return await this.brotli.decompress(data, options) as T;
+		}
+
+		return undefined as unknown as T;
 	}
 
 	async serialize({value, expires}: Serialize): Promise<SerializeResult> {
 		return defaultSerialize({value: await this.compress(value), expires});
 	}
 
-	async deserialize(data: CompressResult): Promise<Serialize> {
-		const {value, expires}: Serialize = defaultDeserialize(data);
-		return {value: await this.decompress(value), expires};
+	async deserialize(data?: CompressResult): Promise<Serialize> {
+		if (data) {
+			const {value, expires}: Serialize = defaultDeserialize(data);
+			return {value: await this.decompress(value), expires};
+		}
+
+		return {value: undefined, expires: undefined};
 	}
 }
 
