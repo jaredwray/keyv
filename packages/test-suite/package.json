@@ -13,11 +13,11 @@
 	},
 	"type": "module",
 	"scripts": {
-		"build": "rm -rf dist && tsup src/index.ts --format cjs,esm --dts --clean",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
-		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf dist && rm -rf ./test/testdb.sqlite"
+		"clean": "rimraf ./node_modules ./coverage ./dist ./test/testdb.sqlite"
 	},
 	"xo": {
 		"rules": {
@@ -67,7 +67,8 @@
 	"devDependencies": {
 		"@keyv/compress-brotli": "*",
 		"@types/json-bigint": "^1.0.4",
-		"keyv": "^5.0.1"
+		"keyv": "^5.0.1",
+		"rimraf": "^6.0.1"
 	},
 	"ava": {
 		"extensions": [
