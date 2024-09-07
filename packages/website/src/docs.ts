@@ -1,9 +1,9 @@
-import * as fs from "fs-extra";
+import fs from "node:fs";
 
 async function main() {
 
-    console.log("packages path:" + getRelativePackagePath());
-    console.log("docs path:" + getRelativeDocsPath());
+    console.log("packages path:" + await getRelativePackagePath());
+    console.log("docs path:" + await getRelativeDocsPath());
 
     await copyStorageAdapters();
     await copyCompressionDocs();
@@ -12,8 +12,8 @@ async function main() {
 };
 
 async function copyStorageAdapters() {
-    const packagesPath = getRelativePackagePath();
-    const storageAdapters = await fs.readdir(`${packagesPath}`);
+    const packagesPath = await getRelativePackagePath();
+    const storageAdapters = await fs.promises.readdir(`${packagesPath}`);
     const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "test-suite", ".DS_Store", "serialize", "third-party"];
 
     for (const storageAdapter of storageAdapters) {
@@ -25,8 +25,8 @@ async function copyStorageAdapters() {
 }
 
 async function copyTestSuite() {
-    const packagesPath = getRelativePackagePath();
-    const originalFileText = await fs.readFile(`${packagesPath}/test-suite/README.md`, "utf8");
+    const packagesPath = await getRelativePackagePath();
+    const originalFileText = await fs.promises.readFile(`${packagesPath}/test-suite/README.md`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: 'Test Suite'\n`;
     newFileText += `permalink: /docs/test-suite/\n`;
@@ -38,12 +38,12 @@ async function copyTestSuite() {
     newFileText = cleanDocumentFromImage(newFileText);
 
     console.log("Adding Test Suite");
-    await fs.writeFile(`${packagesPath}/website/site/docs/test-suite.md`, newFileText);
+    await fs.promises.writeFile(`${packagesPath}/website/site/docs/test-suite.md`, newFileText);
 }
 
 async function copyKeyvAPI() {
-    const packagesPath = getRelativePackagePath();
-    const originalFileText = await fs.readFile(`${packagesPath}/keyv/README.md`, "utf8");
+    const packagesPath = await getRelativePackagePath();
+    const originalFileText = await fs.promises.readFile(`${packagesPath}/keyv/README.md`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: 'Keyv API'\n`;
     newFileText += `order: 3\n`;
@@ -54,12 +54,12 @@ async function copyKeyvAPI() {
     newFileText = cleanDocumentFromImage(newFileText);
 
     console.log("Adding Keyv API");
-    await fs.writeFile(`${packagesPath}/website/site/docs/keyv.md`, newFileText);
+    await fs.promises.writeFile(`${packagesPath}/website/site/docs/keyv.md`, newFileText);
 }
 
 async function copyCompressionDocs() {
-    const packagesPath = getRelativePackagePath();
-    const compressionAdapters = await fs.readdir(`${packagesPath}`);
+    const packagesPath = await getRelativePackagePath();
+    const compressionAdapters = await fs.promises.readdir(`${packagesPath}`);
     for(const compressionAdapter of compressionAdapters) {
         if(compressionAdapter.startsWith("compress-")) {
             console.log("Adding compression adapter: " + compressionAdapter);
@@ -74,8 +74,8 @@ function cleanDocumentFromImage(document: string) {
     return document;
 };
 
-function getRelativePackagePath() {
-    if(fs.pathExistsSync("packages")) {
+async function getRelativePackagePath() {
+    if(await directoryExists("packages")) {
         //we are in the root
         return "packages";
     }
@@ -84,8 +84,17 @@ function getRelativePackagePath() {
     return "../../packages"
 }
 
-function getRelativeDocsPath() {
-    if(fs.pathExistsSync("docs")) {
+async function directoryExists(path: string): Promise<boolean> {
+    try {
+        const stats = await fs.promises.stat(path);
+        return stats.isDirectory();
+    } catch {
+        return false;
+    }
+}
+
+async function getRelativeDocsPath() {
+    if(await directoryExists("docs")) {
         //we are in the root
         return "docs";
     }
@@ -98,8 +107,9 @@ async function createDoc(adapterName: string, path: string, outputPath: string, 
     const originalFileName = "README.md";
     const newFileName = `${adapterName}.md`;
     const packageJSONPath = `${path}/${adapterName}/package.json`;
-    const packageJSON = await fs.readJSON(packageJSONPath);
-    const originalFileText = await fs.readFile(`${path}/${adapterName}/${originalFileName}`, "utf8");
+    const packageJSONContent = await fs.promises.readFile(packageJSONPath);
+    const packageJSON = JSON.parse(packageJSONContent.toString());
+    const originalFileText = await fs.promises.readFile(`${path}/${adapterName}/${originalFileName}`, "utf8");
     let newFileText = "---\n";
     newFileText += `title: '${packageJSON.name}'\n`;
     newFileText += `sidebarTitle: '${packageJSON.name}'\n`;
@@ -110,8 +120,8 @@ async function createDoc(adapterName: string, path: string, outputPath: string, 
 
     newFileText = cleanDocumentFromImage(newFileText);
 
-    await fs.ensureDir(outputPath);
-    await fs.writeFile(`${outputPath}/${newFileName}`, newFileText);
+    await fs.promises.mkdir(outputPath, {recursive: true});
+    await fs.promises.writeFile(`${outputPath}/${newFileName}`, newFileText);
 }
 
 main();
