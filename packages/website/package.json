@@ -10,7 +10,7 @@
     "test:ci": "echo 'no tests needed'",
     "test": "echo 'no tests needed'",
     "generate-docs": "rimraf ./dist && ts-node ./src/docs.ts",
-    "build": "yarn generate-docs && docula build",
+    "website:build": "yarn generate-docs && docula build",
     "build-serve": "yarn clean && yarn generate-docs && docula serve",
     "clean": "rimraf ./dist ./docs/compression ./docs/test-suite ./docs/storage-adapters",
     "website:serve": "docula serve"
