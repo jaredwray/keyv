@@ -9,18 +9,17 @@
   "scripts": {
     "test:ci": "echo 'no tests needed'",
     "test": "echo 'no tests needed'",
-    "generate-docs": "ts-node ./src/docs.ts",
-    "build": "yarn clean && yarn generate-docs && docula build",
+    "generate-docs": "rimraf ./dist && ts-node ./src/docs.ts",
+    "build": "yarn generate-docs && docula build",
     "build-serve": "yarn clean && yarn generate-docs && docula serve",
     "clean": "rimraf ./dist ./docs/compression ./docs/test-suite ./docs/storage-adapters",
-    "serve": "docula serve"
+    "website:serve": "docula serve"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
     "docula": "^0.9.0",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.9.2"
   },
   "dependencies": {
-    "fs-extra": "^11.2.0"
   }
 }

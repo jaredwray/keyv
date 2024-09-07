@@ -13,11 +13,11 @@
 		}
 	},
 	"scripts": {
-		"build": "rm -rf dist && tsup src/index.ts --format cjs,esm --dts --clean",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
-		"clean": "rm -rf node_modules && rm -rf ./coverage && rm -rf ./test/testdb.sqlite && rm -rf ./dist"
+		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist"
 	},
 	"xo": {
 		"rules": {
@@ -80,6 +80,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
+		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
 		"xo": "^0.59.3"

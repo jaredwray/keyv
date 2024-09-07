@@ -19,7 +19,8 @@
     "test:services:stop": "docker compose -f ./docker-compose.yaml down -v",
     "test:services-arm64:start": "docker compose -f ./docker-compose-arm64.yaml up -d",
     "test:services-arm64:stop": "docker compose -f ./docker-compose-arm64.yaml down -v",
-    "website:build": "yarn workspace @keyv/website run build",
+    "website:build": "yarn workspace @keyv/website run website:build",
+    "website:serve": "yarn workspace @keyv/website run website:serve",
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
   "devDependencies": {
