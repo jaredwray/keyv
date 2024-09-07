@@ -13,11 +13,11 @@
 		}
 	},
 	"scripts": {
-		"build": "rm -rf dist && tsup src/index.ts --format cjs,esm --dts --clean",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
-		"clean": "rm -rf node_modules && rm -rf ./coverage"
+		"clean": "rimraf ./node_modules ./coverage ./dist"
 	},
 	"xo": {
 		"rules": {
@@ -75,6 +75,7 @@
 		"c8": "^10.1.2",
 		"keyv": "^5.0.0",
 		"requirable": "^1.0.5",
+		"rimraf": "^6.0.1",
 		"ts-node": "^10.9.2",
 		"tsd": "^0.31.1",
 		"typescript": "^5.5.4",
