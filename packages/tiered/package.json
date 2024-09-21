@@ -28,7 +28,8 @@
       "import/extensions": "off",
       "import/no-extraneous-dependencies": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-call": "off"
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unnecessary-type-arguments": "off"
     }
   },
   "repository": {
