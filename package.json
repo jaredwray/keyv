@@ -24,13 +24,13 @@
     "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
   },
   "devDependencies": {
-    "@types/node": "^22.5.4",
-    "@vitest/coverage-v8": "^2.0.5",
+    "@types/node": "^22.5.5",
+    "@vitest/coverage-v8": "^2.1.1",
     "c8": "^10.1.2",
     "ts-node": "^10.9.2",
-    "tsup": "^8.2.4",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1",
     "webpack": "^5.94.0",
     "xo": "^0.59.3"
   }
