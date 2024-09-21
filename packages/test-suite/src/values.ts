@@ -1,5 +1,5 @@
 import {Buffer} from 'buffer';
-import type Vitest from 'vitest';
+import type * as Vitest from 'vitest';
 import type KeyvModule from 'keyv';
 import JSONbig from 'json-bigint';
 import {BigNumber} from 'bignumber.js';
