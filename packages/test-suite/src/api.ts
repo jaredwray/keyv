@@ -1,5 +1,5 @@
 import tk from 'timekeeper';
-import type Vitest from 'vitest';
+import type * as Vitest from 'vitest';
 import type KeyvModule from 'keyv';
 import type {KeyvStoreFn} from './types';
 

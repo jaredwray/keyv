@@ -13,7 +13,7 @@
 	},
 	"type": "module",
 	"scripts": {
-		"build": "rimraf ./dist && tsup src/index.ts --format esm --dts --clean",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepare": "yarn build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",

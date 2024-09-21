@@ -1,5 +1,5 @@
 import Keyv, {type CompressionAdapter, type KeyvStoreAdapter} from 'keyv';
-import type Vitest from 'vitest';
+import type * as Vitest from 'vitest';
 
 const keyvCompressionTests = (test: typeof Vitest, compression: CompressionAdapter) => {
 	let keyv;
