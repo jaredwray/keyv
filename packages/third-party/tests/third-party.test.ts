@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import Keyv from 'keyv';
+import {Keyv} from 'keyv';
 import KeyvFile from 'keyv-file';
 import QuickLRU from 'quick-lru';
 import {keyvApiTests} from '@keyv/test-suite';
