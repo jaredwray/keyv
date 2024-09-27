@@ -1,4 +1,4 @@
-import {Pool, type PoolConfig} from 'pg';
+import pg, {type Pool, type PoolConfig} from 'pg';
 
 let postgresPool: Pool | undefined;
 let globalUri: string | undefined;
@@ -9,7 +9,7 @@ export const pool = (uri: string, options: PoolConfig = {}) => {
 		globalUri = uri;
 	}
 
-	postgresPool ??= new Pool({connectionString: uri, ...options});
+	postgresPool ??= new pg.Pool({connectionString: uri, ...options});
 	return postgresPool;
 };
 
