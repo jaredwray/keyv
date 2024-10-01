@@ -159,3 +159,4 @@ class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvRedis;
+export type {KeyvRedisOptions} from './types.js';

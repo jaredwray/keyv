@@ -178,3 +178,4 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvMysql;
+export type {KeyvMysqlOptions} from './types';

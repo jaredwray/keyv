@@ -167,3 +167,4 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvSqlite;
+export type {KeyvSqliteOptions} from './types';

@@ -344,3 +344,4 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvMongo;
+export type {KeyvMongoOptions} from './types.js';
