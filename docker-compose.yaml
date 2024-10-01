@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   keyv_postgres:
     image: postgres:latest
