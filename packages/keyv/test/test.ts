@@ -26,7 +26,7 @@ test.it('Keyv is a class', t => {
 
 test.it('Keyv accepts storage adapters', async t => {
 	const store = new Map();
-	const keyv = new Keyv({store});
+	const keyv = new Keyv<string>({store});
 	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
@@ -44,7 +44,7 @@ test.it('Keyv accepts storage adapters and options', async t => {
 
 test.it('Keyv accepts storage adapters instead of options', async t => {
 	const store = new Map();
-	const keyv = new Keyv(store);
+	const keyv = new Keyv<string>(store);
 	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');

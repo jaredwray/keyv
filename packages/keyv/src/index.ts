@@ -5,7 +5,8 @@ import StatsManager from './stats-manager.js';
 
 export type DeserializedData<Value> = {
 	value?: Value;
-	expires?: number;
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	expires?: number | null;
 };
 
 export interface CompressionAdapter {
@@ -84,7 +85,7 @@ const iterableAdapters = [
 	'tiered',
 ];
 
-export class Keyv extends EventManager {
+export class Keyv<GenericValue = any> extends EventManager {
 	opts: KeyvOptions_;
 	iterator?: IteratorFunction;
 	hooks = new HooksManager();
@@ -200,11 +201,11 @@ export class Keyv extends EventManager {
 		);
 	}
 
-	async get<Value>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;
-	async get<Value>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
-	async get<Value>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
-	async get<Value>(key: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
-	async get<Value>(key: string | string[], options?: {raw: boolean}): Promise<StoredDataNoRaw<Value> | Array<StoredDataNoRaw<Value>> | StoredDataRaw<Value> | Array<StoredDataRaw<Value>>> {
+	async get<Value = GenericValue>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;
+	async get<Value = GenericValue>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
+	async get<Value = GenericValue>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
+	async get<Value = GenericValue>(key: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
+	async get<Value = GenericValue>(key: string | string[], options?: {raw: boolean}): Promise<StoredDataNoRaw<Value> | Array<StoredDataNoRaw<Value>> | StoredDataRaw<Value> | Array<StoredDataRaw<Value>>> {
 		const {store} = this.opts;
 		const isArray = Array.isArray(key);
 		const keyPrefixed = isArray ? this._getKeyPrefixArray(key) : this._getKeyPrefix(key);
@@ -293,7 +294,7 @@ export class Keyv extends EventManager {
 		return (options?.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
-	async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (typeof ttl === 'undefined') {
@@ -312,11 +313,11 @@ export class Keyv extends EventManager {
 			this.emit('error', 'symbol cannot be serialized');
 		}
 
-		value = {value, expires};
+		const formattedValue = {value, expires};
+		const serializedValue = await this.opts.serialize!(formattedValue);
 
-		value = await this.opts.serialize!(value);
-		await store.set(keyPrefixed, value, ttl);
-		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value, ttl});
+		await store.set(keyPrefixed, serializedValue, ttl);
+		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
 		this.stats.set();
 		return true;
 	}

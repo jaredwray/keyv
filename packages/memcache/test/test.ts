@@ -22,7 +22,7 @@ test.beforeEach(async () => {
 });
 
 test.it('keyv get / no expired', async t => {
-	const keyv = new Keyv({store: keyvMemcache});
+	const keyv = new Keyv<string>({store: keyvMemcache});
 
 	await keyv.set('foo', 'bar');
 
@@ -76,7 +76,7 @@ test.it('keyv get with namespace', async t => {
 });
 
 test.it('keyv get / should still exist', async t => {
-	const keyv = new Keyv({store: keyvMemcache});
+	const keyv = new Keyv<string>({store: keyvMemcache});
 
 	await keyv.set('foo-expired', 'bar-expired', 10_000);
 
@@ -88,7 +88,7 @@ test.it('keyv get / should still exist', async t => {
 });
 
 test.it('keyv get / expired existing', async t => {
-	const keyv = new Keyv({store: keyvMemcache});
+	const keyv = new Keyv<string>({store: keyvMemcache});
 
 	await keyv.set('foo-expired', 'bar-expired', 1000);
 
@@ -100,7 +100,7 @@ test.it('keyv get / expired existing', async t => {
 });
 
 test.it('keyv get / expired existing with bad number', async t => {
-	const keyv = new Keyv({store: keyvMemcache});
+	const keyv = new Keyv<string>({store: keyvMemcache});
 
 	await keyv.set('foo-expired', 'bar-expired', 1);
 
@@ -112,7 +112,7 @@ test.it('keyv get / expired existing with bad number', async t => {
 });
 
 test.it('keyv get / expired', async t => {
-	const keyv = new Keyv({store: keyvMemcache});
+	const keyv = new Keyv<string>({store: keyvMemcache});
 
 	await keyv.set('foo-expired', 'bar-expired', 1000);
 
