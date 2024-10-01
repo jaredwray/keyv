@@ -19,12 +19,13 @@
     "test:services:stop": "chmod +x ./test-services-stop.sh && ./test-services-stop.sh",
     "website:build": "yarn workspace @keyv/website run website:build",
     "website:serve": "yarn workspace @keyv/website run website:serve",
-    "clean": "rm -rf node_modules && rm -rf yarn.lock && yarn workspaces run clean"
+    "clean": "rimraf node_modules yarn.lock && yarn workspaces run clean"
   },
   "devDependencies": {
     "@types/node": "^22.5.5",
     "@vitest/coverage-v8": "^2.1.1",
     "c8": "^10.1.2",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsup": "^8.3.0",
     "typescript": "^5.6.2",
