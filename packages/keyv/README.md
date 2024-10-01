@@ -50,6 +50,36 @@ First, create a new Keyv instance.
 import Keyv from 'keyv';
 ```
 
+### Type-safe Usage
+
+You can create a `Keyv` instance with a generic type to enforce type safety for the values stored. Additionally, both the `get` and `set` methods support specifying custom types for specific use cases.
+
+#### Example with Instance-level Generic Type:
+
+```ts
+const keyv = new Keyv<number>(); // Instance handles only numbers
+await keyv.set('key1', 123);
+const value = await keyv.get('key1'); // value is inferred as number
+```
+
+#### Example with Method-level Generic Type:
+
+You can also specify a type directly in the `get` or `set` methods, allowing flexibility for different types of values within the same instance.
+
+```ts
+const keyv = new Keyv(); // Generic type not specified at instance level
+
+await keyv.set<string>('key2', 'some string'); // Method-level type for this value
+const strValue = await keyv.get<string>('key2'); // Explicitly typed as string
+
+await keyv.set<number>('key3', 456); // Storing a number in the same instance
+const numValue = await keyv.get<number>('key3'); // Explicitly typed as number
+```
+
+This makes `Keyv` highly adaptable to different data types while maintaining type safety.
+
+### Using Storage Adapters
+
 Once you have created your Keyv instance you can use it as a simple key-value store with `in-memory` by default. To use a storage adapter, create an instance of the adapter and pass it to the Keyv constructor. Here are some examples:
 
 ```js
