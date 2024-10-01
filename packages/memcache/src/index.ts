@@ -4,7 +4,7 @@ import memcache from 'memjs';
 import {KeyvStoreAdapter, StoredData} from 'keyv';
 import {defaultDeserialize} from '@keyv/serialize';
 
-type KeyvMemcacheOptions = {
+export type KeyvMemcacheOptions = {
 	url?: string;
 	expires?: number;
 } & memcache.ClientOptions & Record<string, any>;

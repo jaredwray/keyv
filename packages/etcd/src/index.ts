@@ -5,7 +5,7 @@ import type {
 	ClearOutput, DeleteManyOutput, DeleteOutput, GetOutput, HasOutput, SetOutput,
 } from './types';
 
-type KeyvEtcdOptions = {
+export type KeyvEtcdOptions = {
 	url?: string;
 	uri?: string;
 	ttl?: number;

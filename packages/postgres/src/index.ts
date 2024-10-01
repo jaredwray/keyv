@@ -155,3 +155,4 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvPostgres;
+export type {KeyvPostgresOptions} from './types';
