@@ -7,9 +7,11 @@
 [![npm](https://img.shields.io/npm/v/@keyv/offline.svg)](https://www.npmjs.com/package/@keyv/offline)
 [![npm](https://img.shields.io/npm/dm/@keyv/offline)](https://npmjs.com/package/@keyv/offline)
 
-Offline storage adapter for [Keyv](https://github.com/jaredwray/keyv).
+# Feature is Deprecated
 
-This is a wrapper over `Keyv` to support offline mode.
+This feature is deprecated and will be removed in 2025 as it is no longer needed. 
+
+`offline` and `tiered` mode for caching is built into the core [Cacheable](https://cacheable.org) library which uses Keyv under the hood. Please use the `Cacheable` library for `offline` and `tiered` caching.
 
 ## Install
 
