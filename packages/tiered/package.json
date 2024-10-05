@@ -58,11 +58,11 @@
     "@keyv/sqlite": "*",
     "@keyv/test-suite": "*",
     "c8": "^10.1.2",
-    "eslint": "^9.9.0",
-    "keyv": "^5.0.0",
+    "eslint": "^9.12.0",
+    "keyv": "^5.0.3",
     "rimraf": "^6.0.1",
-    "tsd": "^0.31.1",
-    "typescript": "^5.5.4",
+    "tsd": "^0.31.2",
+    "typescript": "^5.6.2",
     "xo": "^0.59.3"
   },
   "tsd": {

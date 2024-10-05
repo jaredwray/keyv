@@ -7,7 +7,11 @@
 [![npm](https://img.shields.io/npm/v/@keyv/tiered.svg)](https://www.npmjs.com/package/@keyv/tiered)
 [![npm](https://img.shields.io/npm/dm/@keyv/tiered)](https://npmjs.com/package/@keyv/tiered)
 
-Tiered storage adapter for [Keyv](https://github.com/jaredwray/keyv).
+# Feature is Deprecated
+
+This feature is deprecated and will be removed in 2025 as it is no longer needed. 
+
+`offline` and `tiered` mode for caching is built into the core [Cacheable](https://cacheable.org) library which uses Keyv under the hood. Please use the `Cacheable` library for `offline` and `tiered` caching.
 
 ## Install
 
