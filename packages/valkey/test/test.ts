@@ -3,14 +3,14 @@ import tk from 'timekeeper';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import Redis from 'iovalkey';
-import KeyvRedis from '../src/index.js';
+import KeyvValkey from '../src/index.js';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const REDIS_HOST = 'localhost';
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const redisURI = `redis://${REDIS_HOST}`;
 
-const store = () => new KeyvRedis(redisURI);
+const store = () => new KeyvValkey(redisURI);
 
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
@@ -19,7 +19,7 @@ test.it('reuse a redis instance', async t => {
 	const redis = new Redis(redisURI);
 	// @ts-expect-error foo doesn't exist on Redis
 	redis.foo = 'bar';
-	const keyv = new KeyvRedis(redis);
+	const keyv = new KeyvValkey(redis);
 	t.expect(keyv.redis.foo).toBe('bar');
 
 	await keyv.set('foo', 'bar');
@@ -30,7 +30,7 @@ test.it('reuse a redis instance', async t => {
 
 test.it('set an undefined key', async t => {
 	const redis = new Redis(redisURI);
-	const keyv = new KeyvRedis(redis);
+	const keyv = new KeyvValkey(redis);
 
 	await keyv.set('foo2', undefined);
 	const result = await keyv.get('foo2');
@@ -39,7 +39,7 @@ test.it('set an undefined key', async t => {
 
 test.it('Async Iterator 0 element test', async t => {
 	const redis = new Redis(redisURI);
-	const keyv = new KeyvRedis(redis);
+	const keyv = new KeyvValkey(redis);
 	await keyv.clear();
 	const iterator = keyv.iterator('keyv');
 	const key = await iterator.next();
@@ -48,7 +48,7 @@ test.it('Async Iterator 0 element test', async t => {
 
 test.it('close connection successfully', async t => {
 	const redis = new Redis(redisURI);
-	const keyv = new KeyvRedis(redis);
+	const keyv = new KeyvValkey(redis);
 	t.expect(await keyv.get('foo')).toBe(undefined);
 	await keyv.disconnect();
 	try {
@@ -62,7 +62,7 @@ test.it('close connection successfully', async t => {
 test.it('should support tls', async t => {
 	const options = {tls: {rejectUnauthorized: false}};
 	const redis = new Redis('rediss://localhost:6380', options);
-	const keyvRedis = new KeyvRedis(redis);
+	const keyvRedis = new KeyvValkey(redis);
 	await keyvRedis.set('foo', 'bar');
 	t.expect(await keyvRedis.get('foo')).toBe('bar');
 });
@@ -70,7 +70,7 @@ test.it('should support tls', async t => {
 test.it('close tls connection successfully', async t => {
 	const options = {tls: {rejectUnauthorized: false}};
 	const redis = new Redis('rediss://localhost:6380', options);
-	const keyvRedis = new KeyvRedis(redis);
+	const keyvRedis = new KeyvValkey(redis);
 	t.expect(await keyvRedis.get('foo5')).toBe(undefined);
 	await keyvRedis.disconnect();
 	try {
@@ -83,7 +83,7 @@ test.it('close tls connection successfully', async t => {
 
 test.it('clear method with empty keys should not error', async t => {
 	try {
-		const keyv = new KeyvRedis(redisURI);
+		const keyv = new KeyvValkey(redisURI);
 		t.expect(await keyv.clear()).toBeUndefined();
 	} catch {
 		t.expect.fail();
@@ -92,7 +92,7 @@ test.it('clear method with empty keys should not error', async t => {
 
 test.it('.clear() cleaned namespace', async t => {
 	// Setup
-	const keyvRedis = new KeyvRedis(redisURI);
+	const keyvRedis = new KeyvValkey(redisURI);
 	const keyv = new Keyv(keyvRedis, {
 		namespace: 'v3',
 	});
@@ -121,7 +121,7 @@ test.it('.clear() cleaned namespace', async t => {
 });
 
 test.it('Keyv stores ttl without const', async t => {
-	const keyv = new Keyv(new KeyvRedis(redisURI));
+	const keyv = new Keyv(new KeyvValkey(redisURI));
 	await keyv.set('foo', 'bar', 100);
 	t.expect(await keyv.get('foo')).toBe('bar');
 	tk.freeze(Date.now() + 150);
@@ -132,7 +132,7 @@ test.it('should handle KeyvOptions without uri', t => {
 	const options = {
 		isCluster: true,
 	};
-	const keyv = new KeyvRedis(options);
+	const keyv = new KeyvValkey(options);
 	t.expect(keyv.redis instanceof Redis).toBeTruthy();
 });
 
@@ -141,13 +141,13 @@ test.it('should handle KeyvOptions with family option', t => {
 		options: {},
 		family: 'IPv4',
 	};
-	const keyv = new KeyvRedis(options);
+	const keyv = new KeyvValkey(options);
 	t.expect(keyv.redis instanceof Redis).toBeTruthy();
 });
 
 test.it('set method should use Redis sets when useRedisSets is false', async t => {
 	const options = {useRedisSets: false};
-	const keyv = new KeyvRedis(options);
+	const keyv = new KeyvValkey(options);
 
 	await keyv.set('foo', 'bar');
 
@@ -157,7 +157,7 @@ test.it('set method should use Redis sets when useRedisSets is false', async t =
 
 test.it('clear method when useRedisSets is false', async t => {
 	const options = {useRedisSets: false};
-	const keyv = new KeyvRedis(options);
+	const keyv = new KeyvValkey(options);
 
 	await keyv.set('foo', 'bar');
 	await keyv.set('foo2', 'bar2');
@@ -172,14 +172,14 @@ test.it('clear method when useRedisSets is false', async t => {
 
 test.it('clear method when useRedisSets is false and empty keys should not error', async t => {
 	const options = {useRedisSets: false};
-	const keyv = new KeyvRedis(options);
+	const keyv = new KeyvValkey(options);
 	t.expect(await keyv.clear()).toBeUndefined();
 });
 
 test.it('when passing in ioredis set the options.useRedisSets', t => {
 	const options = {useRedisSets: false};
 	const redis = new Redis(redisURI);
-	const keyv = new KeyvRedis(redis, options);
+	const keyv = new KeyvValkey(redis, options);
 
 	t.expect(keyv.opts.useRedisSets).toBe(false);
 });
@@ -187,7 +187,7 @@ test.it('when passing in ioredis set the options.useRedisSets', t => {
 test.it('del should work when not using useRedisSets', async t => {
 	const options = {useRedisSets: false};
 	const redis = new Redis(redisURI);
-	const keyv = new KeyvRedis(redis, options);
+	const keyv = new KeyvValkey(redis, options);
 
 	await keyv.set('fooDel1', 'barDel1');
 

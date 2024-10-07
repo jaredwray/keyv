@@ -1,6 +1,6 @@
 import {type Redis, type Cluster} from 'iovalkey';
 
-export type KeyvRedisOptions = {
+export type KeyvValkeyOptions = {
 	[K in keyof Redis]?: Redis[K];
 } & {
 	uri?: string;
@@ -8,4 +8,4 @@ export type KeyvRedisOptions = {
 	useRedisSets?: boolean;
 };
 
-export type KeyvUriOptions = string | KeyvRedisOptions | Redis | Cluster;
+export type KeyvUriOptions = string | KeyvValkeyOptions | Redis | Cluster;

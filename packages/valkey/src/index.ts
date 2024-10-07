@@ -2,16 +2,16 @@ import EventEmitter from 'events';
 import Redis from 'iovalkey';
 import {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
-	type KeyvRedisOptions,
+	type KeyvValkeyOptions,
 	type KeyvUriOptions,
 } from './types.js';
 
-class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
+class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = true;
 	namespace?: string;
 	opts: Record<string, unknown>;
 	redis: any;
-	constructor(uri: KeyvRedisOptions | KeyvUriOptions, options?: KeyvRedisOptions) {
+	constructor(uri: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions) {
 		super();
 		this.opts = {};
 		this.opts.useRedisSets = true;
@@ -20,7 +20,7 @@ class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 		if (typeof uri !== 'string' && uri.options && ('family' in uri.options || uri.isCluster)) {
 			this.redis = uri;
 		} else {
-			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvRedisOptions), ...options};
+			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvValkeyOptions), ...options};
 			// @ts-expect-error - uri is a string or RedisOptions
 			this.redis = new Redis(options.uri!, options);
 		}
@@ -158,5 +158,5 @@ class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-export default KeyvRedis;
-export type {KeyvRedisOptions} from './types.js';
+export default KeyvValkey;
+export type {KeyvValkeyOptions} from './types.js';
