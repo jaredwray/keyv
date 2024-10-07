@@ -38,7 +38,8 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/jaredwray/keyv.git"
+		"url": "git+https://github.com/jaredwray/keyv.git",
+		"directory": "packages/valkey"
 	},
 	"keywords": [
 		"redis",
