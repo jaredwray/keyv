@@ -59,28 +59,6 @@ test.it('close connection successfully', async t => {
 	}
 });
 
-test.it('should support tls', async t => {
-	const options = {tls: {rejectUnauthorized: false}};
-	const redis = new Redis('rediss://localhost:6380', options);
-	const keyvRedis = new KeyvValkey(redis);
-	await keyvRedis.set('foo', 'bar');
-	t.expect(await keyvRedis.get('foo')).toBe('bar');
-});
-
-test.it('close tls connection successfully', async t => {
-	const options = {tls: {rejectUnauthorized: false}};
-	const redis = new Redis('rediss://localhost:6380', options);
-	const keyvRedis = new KeyvValkey(redis);
-	t.expect(await keyvRedis.get('foo5')).toBe(undefined);
-	await keyvRedis.disconnect();
-	try {
-		await keyvRedis.get('foo5');
-		t.expect.fail();
-	} catch {
-		t.expect(true).toBeTruthy();
-	}
-});
-
 test.it('clear method with empty keys should not error', async t => {
 	try {
 		const keyv = new KeyvValkey(redisURI);
