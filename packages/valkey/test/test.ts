@@ -6,7 +6,7 @@ import Redis from 'iovalkey';
 import KeyvValkey from '../src/index.js';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const REDIS_HOST = 'localhost';
+const REDIS_HOST = 'localhost:6370';
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const redisURI = `redis://${REDIS_HOST}`;
 
