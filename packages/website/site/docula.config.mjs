@@ -1,4 +1,4 @@
-module.exports.options = {
+export const options = {
 	githubPath: 'jaredwray/keyv',
 	siteTitle: 'Keyv',
 	siteDescription: 'Simple key-value storage with support for multiple backends',
