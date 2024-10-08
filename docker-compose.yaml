@@ -56,6 +56,13 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
       MYSQL_DATABASE: keyv_test
       MYSQL_ROOT_HOST: '%'
+  keyv_valkey:
+    image: valkey/valkey:latest
+    command: redis-server --port 6370
+    environment:
+      REDIS_HOST: redis
+    ports:
+      - 6370:6370
   keyv_redis:
     image: redis:latest
     environment:
