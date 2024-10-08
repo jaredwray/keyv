@@ -1,48 +1,48 @@
-# @keyv/redis [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/valkey [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
-> Redis storage adapter for Keyv
+> Valkey storage adapter for Keyv
 
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
-[![npm](https://img.shields.io/npm/v/@keyv/redis.svg)](https://www.npmjs.com/package/@keyv/redis)
-[![npm](https://img.shields.io/npm/dm/@keyv/redis)](https://npmjs.com/package/@keyv/redis)
+[![npm](https://img.shields.io/npm/v/@keyv/valkey.svg)](https://www.npmjs.com/package/@keyv/valkey)
+[![npm](https://img.shields.io/npm/dm/@keyv/valkey)](https://npmjs.com/package/@keyv/valkey)
 
 [Valkey](https://valkey.io) storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
-TTL functionality is handled directly by Redis so no timestamps are stored and expired keys are cleaned up internally.
+Valkey is the open source replacement to Redis which decided do a [dual license](https://redis.com/blog/redis-adopts-dual-source-available-licensing/) approach moving forward. Valkey is a drop-in replacement for Redis and is fully compatible with the Redis protocol.
+
+We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a Node.js client for Valkey based on the `ioredis` client.
 
 ## Install
 
 ```shell
-npm install --save keyv @keyv/redis
+npm install --save keyv @keyv/valkey
 ```
 
 ## Usage
 
 ```js
 import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
+import KeyvValkey from '@keyv/valkey';
 
-const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
+const keyv = new Keyv(new KeyvValkey('redis://user:pass@localhost:6379'));
 keyv.on('error', handleConnectionError);
 ```
-
-Any valid [`Redis`](https://github.com/luin/ioredis#connect-to-redis) options will be passed directly through.
 
 e.g:
 
 ```js
-const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { disable_resubscribing: true }));
+const keyv = new Keyv(new KeyvValkey('redis://user:pass@localhost:6379', { disable_resubscribing: true }));
 ```
 
 Or you can manually create a storage adapter instance and pass it to Keyv:
 
 ```js
 import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
+import KeyvValkey from '@keyv/redis';
 
-const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379');
-const keyv = new Keyv({ store: keyvRedis });
+const KeyvValkey = new KeyvValkey('redis://user:pass@localhost:6379');
+const keyv = new Keyv({ store: KeyvValkey });
 ```
 
 Or reuse a previous Redis instance:
@@ -50,11 +50,11 @@ Or reuse a previous Redis instance:
 ```js
 import Keyv from 'keyv';
 import Redis from 'ioredis';
-import KeyvRedis from '@keyv/redis';
+import KeyvValkey from '@keyv/redis';
 
 const redis = new Redis('redis://user:pass@localhost:6379');
-const keyvRedis = new KeyvRedis(redis);
-const keyv = new Keyv({ store: keyvRedis });
+const KeyvValkey = new KeyvValkey(redis);
+const keyv = new Keyv({ store: KeyvValkey });
 ```
 
 Or reuse a previous Redis cluster:
@@ -62,11 +62,11 @@ Or reuse a previous Redis cluster:
 ```js
 import Keyv from 'keyv';
 import Redis from 'ioredis';
-import KeyvRedis from '@keyv/redis';
+import KeyvValkey from '@keyv/redis';
 
 const redis = new Redis.Cluster('redis://user:pass@localhost:6379');
-const keyvRedis = new KeyvRedis(redis);
-const keyv = new Keyv({ store: keyvRedis });
+const KeyvValkey = new KeyvValkey(redis);
+const keyv = new Keyv({ store: KeyvValkey });
 ```
 ## Options
 
@@ -93,7 +93,7 @@ Here's how you can use the `useRedisSets` option:
 ```js
 import Keyv from 'keyv';
 
-const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useRedisSets: false }));
+const keyv = new Keyv(new KeyvValkey('redis://user:pass@localhost:6379', { useRedisSets: false }));
 ```
 
 ## License
