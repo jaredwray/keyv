@@ -1,10 +1,12 @@
 import EventEmitter from 'events';
 import Redis from 'iovalkey';
-import {type KeyvStoreAdapter, type StoredData} from 'keyv';
+import {Keyv, type KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
 	type KeyvValkeyOptions,
 	type KeyvUriOptions,
 } from './types.js';
+
+export const createKeyv = <Value>(uri: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions) => new Keyv<Value>({store: new KeyvValkey(uri, options)});
 
 class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = true;
@@ -14,7 +16,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	constructor(uri: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions) {
 		super();
 		this.opts = {};
-		this.opts.useRedisSets = true;
+		this.opts.useSets = true;
 		this.opts.dialect = 'redis';
 
 		if (typeof uri !== 'string' && uri.options && ('family' in uri.options || uri.isCluster)) {
@@ -25,8 +27,8 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			this.redis = new Redis(options.uri!, options);
 		}
 
-		if (options !== undefined && options.useRedisSets === false) {
-			this.opts.useRedisSets = false;
+		if (options !== undefined && options.useSets === false) {
+			this.opts.useSets = false;
 		}
 
 		this.redis.on('error', (error: Error) => this.emit('error', error));
@@ -37,7 +39,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	_getKeyName = (key: string): string => {
-		if (!this.opts.useRedisSets) {
+		if (!this.opts.useSets) {
 			return `sets:${this._getNamespace()}:${key}`;
 		}
 
@@ -75,7 +77,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			}
 		};
 
-		if (this.opts.useRedisSets) {
+		if (this.opts.useSets) {
 			const trx = await this.redis.multi();
 			await set(trx);
 			await trx.sadd(this._getNamespace(), key);
@@ -90,7 +92,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		let items = 0;
 		const unlink = async (redis: any) => redis.unlink(key);
 
-		if (this.opts.useRedisSets) {
+		if (this.opts.useSets) {
 			const trx = this.redis.multi();
 			await unlink(trx);
 			await trx.srem(this._getNamespace(), key);
@@ -111,7 +113,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async clear() {
-		if (this.opts.useRedisSets) {
+		if (this.opts.useSets) {
 			const keys: string[] = await this.redis.smembers(this._getNamespace());
 			if (keys.length > 0) {
 				await Promise.all([
