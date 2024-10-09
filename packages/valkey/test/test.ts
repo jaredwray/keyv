@@ -3,7 +3,7 @@ import tk from 'timekeeper';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import Redis from 'iovalkey';
-import KeyvValkey from '../src/index.js';
+import KeyvValkey, {createKeyv} from '../src/index.js';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const REDIS_HOST = 'localhost:6370';
@@ -123,8 +123,8 @@ test.it('should handle KeyvOptions with family option', t => {
 	t.expect(keyv.redis instanceof Redis).toBeTruthy();
 });
 
-test.it('set method should use Redis sets when useRedisSets is false', async t => {
-	const options = {useRedisSets: false};
+test.it('set method should use Redis sets when useSets is false', async t => {
+	const options = {useSets: false};
 	const keyv = new KeyvValkey(options);
 
 	await keyv.set('foo', 'bar');
@@ -133,8 +133,8 @@ test.it('set method should use Redis sets when useRedisSets is false', async t =
 	t.expect(value).toBe('bar');
 });
 
-test.it('clear method when useRedisSets is false', async t => {
-	const options = {useRedisSets: false};
+test.it('clear method when useSets is false', async t => {
+	const options = {useSets: false};
 	const keyv = new KeyvValkey(options);
 
 	await keyv.set('foo', 'bar');
@@ -148,22 +148,22 @@ test.it('clear method when useRedisSets is false', async t => {
 	t.expect(value2).toBe(undefined);
 });
 
-test.it('clear method when useRedisSets is false and empty keys should not error', async t => {
-	const options = {useRedisSets: false};
+test.it('clear method when useSets is false and empty keys should not error', async t => {
+	const options = {useSets: false};
 	const keyv = new KeyvValkey(options);
 	t.expect(await keyv.clear()).toBeUndefined();
 });
 
-test.it('when passing in ioredis set the options.useRedisSets', t => {
-	const options = {useRedisSets: false};
+test.it('when passing in ioredis set the options.useSets', t => {
+	const options = {useSets: false};
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
-	t.expect(keyv.opts.useRedisSets).toBe(false);
+	t.expect(keyv.opts.useSets).toBe(false);
 });
 
-test.it('del should work when not using useRedisSets', async t => {
-	const options = {useRedisSets: false};
+test.it('del should work when not using useSets', async t => {
+	const options = {useSets: false};
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
@@ -174,4 +174,11 @@ test.it('del should work when not using useRedisSets', async t => {
 	const value = await keyv.get('fooDel1');
 
 	t.expect(value).toBe(undefined);
+});
+
+test.it('can create a full keyv instance with a uri', async t => {
+	const keyv = createKeyv(redisURI);
+	t.expect(keyv).toBeTruthy();
+	await keyv.set('foo222', 'bar222');
+	t.expect(await keyv.get('foo222')).toBe('bar222');
 });
