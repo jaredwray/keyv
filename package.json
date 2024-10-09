@@ -7,19 +7,16 @@
   "author": "Jared Wray <me@jaredwray.com>",
   "license": "MIT",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
-    "build:keyv:serialize": "cd packages/serialize && yarn build",
-    "build:keyv": "cd packages/keyv && yarn build",
-    "build": "yarn build:keyv:serialize && yarn build:keyv && yarn workspaces run build",
-    "test": "yarn build && c8 --reporter=lcov yarn workspaces run test:ci",
+    "build:keyv:serialize": "cd packages/serialize && pnpm build",
+    "build:keyv": "cd packages/keyv && pnpm build",
+    "build": "pnpm build:keyv:serialize && pnpm build:keyv && pnpm recursive run build",
+    "test": "pnpm build && c8 --reporter=lcov pnpm -r --workspace-concurrency 1 test:ci",
     "test:services:start": "chmod +x ./test-services-start.sh && ./test-services-start.sh",
     "test:services:stop": "chmod +x ./test-services-stop.sh && ./test-services-stop.sh",
-    "website:build": "yarn workspace @keyv/website run website:build",
-    "website:serve": "yarn workspace @keyv/website run website:serve",
-    "clean": "rimraf node_modules yarn.lock && yarn workspaces run clean"
+    "website:build": "pnpm recursive --filter @keyv/website run website:build",
+    "website:serve": "pnpm recursive --filter @keyv/website run website:serve",
+    "clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean"
   },
   "devDependencies": {
     "@types/node": "^22.7.4",

@@ -11,8 +11,8 @@ You can contribute changes to this repo by opening a pull request:
 1) After forking this repository to your Git account, make the proposed changes on your forked branch.
 2) Run tests and linting locally.
 	- [Install and run Docker](https://docs.docker.com/get-docker/) if you aren't already.
-	- Run `yarn test:services:start`, allow for the services to come up.
-	- Run `yarn test`.
+	- Run `pnpm test:services:start`, allow for the services to come up.
+	- Run `pnpm test`.
 3) Commit your changes and push them to your forked repository.
 4) Navigate to the main `keyv` repository and select the *Pull Requests* tab.
 5) Click the *New pull request* button, then select the option "Compare across forks"

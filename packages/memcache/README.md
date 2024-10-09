@@ -13,10 +13,6 @@
 ```shell
 npm install --save @keyv/memcache
 ```
-or 
-```
-yarn add @keyv/memcache
-```
 
 ## Usage
 
