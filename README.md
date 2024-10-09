@@ -78,6 +78,7 @@ If there is already an adapter that you would like to add, please post an issue 
 * [offline](https://github.com/jaredwray/keyv/tree/main/packages/offline): Offline storage adapter
 * [postgres](https://github.com/jaredwray/keyv/tree/main/packages/postgres): PostgreSQL storage adapter
 * [redis](https://github.com/jaredwray/keyv/tree/main/packages/redis): Redis storage adapter
+* [valkey](https://github.com/jaredwray/keyv/tree/main/packages/valkey): Valkey (Open Source Redis) storage adapter
 * [sqlite](https://github.com/jaredwray/keyv/tree/main/packages/sqlite): SQLite storage adapter
 * [tiered](https://github.com/jaredwray/keyv/tree/main/packages/tiered): Tiered storage adapter to manage local and remote storage as one
 

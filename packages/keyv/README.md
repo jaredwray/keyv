@@ -221,6 +221,7 @@ The official storage adapters are covered by [over 150 integration tests](https:
 Database | Adapter | Native TTL
 ---|---|---
 Redis | [@keyv/redis](https://github.com/jaredwray/keyv/tree/master/packages/redis) | Yes
+Valkey | [@keyv/valkey](https://github.com/jaredwray/keyv/tree/master/packages/valkey) | Yes
 MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/master/packages/mongo) | Yes 
 SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/packages/sqlite) | No 
 PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/packages/postgres) | No 
