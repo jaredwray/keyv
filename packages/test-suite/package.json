@@ -14,7 +14,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
-		"prepare": "yarn build",
+		"prepare": "pnpm build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./dist ./test/testdb.sqlite"

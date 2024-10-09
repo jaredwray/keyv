@@ -49,12 +49,12 @@ When testing you can use our `docker compose` postgresql instance by having dock
 
 At the root of the Keyv mono repo:
 ```shell
-yarn test:services:start
+pnpm test:services:start
 ```
 
 To just test the postgres adapter go to the postgres directory (packages/postgres) and run:
 ```shell
-yarn test
+pnpm test
 ```
 
 ## License

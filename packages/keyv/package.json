@@ -14,7 +14,7 @@
 	},
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
-		"prepare": "yarn build",
+		"prepare": "pnpm build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist"
@@ -79,6 +79,11 @@
 		"@keyv/serialize": "*"
 	},
 	"devDependencies": {
+		"@keyv/compress-brotli": "*",
+		"@keyv/compress-gzip": "*",
+		"@keyv/memcache": "*",
+		"@keyv/mongo": "*",
+		"@keyv/sqlite": "*",
 		"@keyv/test-suite": "*",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",

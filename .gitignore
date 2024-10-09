@@ -106,3 +106,6 @@ packages/website/site/docs/**
 !packages/website/site/docs/cacheing/**
 packages/third-party/keyv-file.json
 packages/keyv/test.db
+
+# pnpm
+pnpm-lock.yaml
