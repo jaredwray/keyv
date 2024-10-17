@@ -122,3 +122,35 @@ test.it('close connection successfully', async t => {
 		t.expect(true).toBeTruthy();
 	}
 });
+
+test.it('handling namespaces with multiple keyv instances', async t => {
+	const storeA = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
+	const storeB = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
+	const keyvA = new Keyv({store: storeA, namespace: 'ns1'});
+	const keyvB = new Keyv({store: storeB, namespace: 'ns2'});
+
+	await keyvA.set('a', 'x');
+	await keyvA.set('b', 'y');
+	await keyvA.set('c', 'z');
+
+	await keyvB.set('a', 'one');
+	await keyvB.set('b', 'two');
+	await keyvB.set('c', 'three');
+
+	const resultA = await keyvA.get(['a', 'b', 'c']);
+	const resultB = await keyvB.get(['a', 'b', 'c']);
+
+	t.expect(resultA).toStrictEqual(['x', 'y', 'z']);
+	t.expect(resultB).toStrictEqual(['one', 'two', 'three']);
+
+	const iteratorResultA = new Map<string, string>();
+
+	const iterator1 = keyvA.iterator ? keyvA.iterator('ns1') : undefined;
+	if (iterator1) {
+		for await (const [key, value] of iterator1) {
+			iteratorResultA.set(key, value);
+		}
+	}
+
+	t.expect(iteratorResultA).toStrictEqual(new Map([['a', 'x'], ['b', 'y'], ['c', 'z']]));
+});
