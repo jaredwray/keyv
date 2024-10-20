@@ -1,7 +1,7 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
 import keyvTestSuite from '@keyv/test-suite';
-import KeyvSqlite from '../src/index.js';
+import KeyvSqlite, {createKeyv} from '../src/index.js';
 
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
 
@@ -153,4 +153,9 @@ test.it('handling namespaces with multiple keyv instances', async t => {
 	}
 
 	t.expect(iteratorResultA).toStrictEqual(new Map([['a', 'x'], ['b', 'y'], ['c', 'z']]));
+});
+
+test.it('will create a Keyv instance with a store', t => {
+	const keyv = createKeyv('sqlite://test/testdb.sqlite');
+	t.expect(keyv).toBeInstanceOf(Keyv);
 });
