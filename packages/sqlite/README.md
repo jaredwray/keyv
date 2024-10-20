@@ -41,6 +41,15 @@ const keyvSqlite = new KeyvSqlite('sqlite://path/to/database.sqlite', {
 const keyv = new Keyv({ store: keyvSqlite }); 
 ```
 
+You can also use a helper function to create `Keyv` with `KeyvSqlite` store.
+
+```js
+import {createKeyv} from '@keyv/sqlite';
+
+const keyv = createKeyv('sqlite://path/to/database.sqlite');
+```
+
+
 ## License
 
 [MIT © Jared Wray](LISCENCE)

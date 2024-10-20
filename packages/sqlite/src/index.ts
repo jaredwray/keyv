@@ -166,7 +166,7 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
-const createKeyv = (keyvOptions?: KeyvSqliteOptions | string) => new Keyv({store: new KeyvSqlite(keyvOptions)});
+export const createKeyv = (keyvOptions?: KeyvSqliteOptions | string) => new Keyv({store: new KeyvSqlite(keyvOptions)});
 
 export default KeyvSqlite;
 export type {KeyvSqliteOptions} from './types';
