@@ -1,7 +1,7 @@
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvPostgres from '../src/index';
+import KeyvPostgres, {createKeyv} from '../src/index';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5432/keyv_test';
 
@@ -76,4 +76,10 @@ test.it('create two instances and make sure they do not conflict', async t => {
 	t.expect(await keyvA.get('foo')).toBe('bar');
 	t.expect(await keyvB.set('foo', 'baz')).toBe(true);
 	t.expect(await keyvB.get('foo')).toBe('baz');
+});
+
+test.it('helper to create Keyv instance with postgres', async t => {
+	const keyv = createKeyv({uri: postgresUri});
+	t.expect(await keyv.set('foo', 'bar')).toBe(true);
+	t.expect(await keyv.get('foo')).toBe('bar');
 });

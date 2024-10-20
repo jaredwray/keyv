@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import {type KeyvStoreAdapter} from 'keyv';
+import Keyv, {type KeyvStoreAdapter} from 'keyv';
 import {type DatabaseError} from 'pg';
 import {endPool, pool} from './pool';
 import {
@@ -153,6 +153,8 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 		await endPool();
 	}
 }
+
+export const createKeyv = (options?: KeyvPostgresOptions) => new Keyv({store: new KeyvPostgres(options)});
 
 export default KeyvPostgres;
 export type {KeyvPostgresOptions} from './types';
