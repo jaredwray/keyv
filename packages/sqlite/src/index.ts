@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import {promisify} from 'util';
+import Keyv, {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import sqlite3 from 'sqlite3';
-import {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
 	type Db, type DbClose, type DbQuery, type KeyvSqliteOptions,
 } from './types';
@@ -165,6 +165,8 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 		await this.close();
 	}
 }
+
+const createKeyv = (keyvOptions?: KeyvSqliteOptions | string) => new Keyv({store: new KeyvSqlite(keyvOptions)});
 
 export default KeyvSqlite;
 export type {KeyvSqliteOptions} from './types';
