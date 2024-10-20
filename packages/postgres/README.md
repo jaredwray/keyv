@@ -43,6 +43,14 @@ e.g:
 const keyv = new Keyv(new KeyvPostgres('postgresql://user:pass@localhost:5432/dbname'), { schema: 'keyv' });
 ```
 
+You can also use a helper function to create `Keyv` with `KeyvPostgres` store.
+
+```js
+import {createKeyv} from '@keyv/postgres';
+
+const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', table: 'cache', schema: 'keyv' });
+```
+
 ## Testing
 
 When testing you can use our `docker compose` postgresql instance by having docker installed and running. This will start a postgres server, run the tests, and stop the server:
