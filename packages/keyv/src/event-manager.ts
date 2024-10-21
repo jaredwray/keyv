@@ -51,6 +51,15 @@ class EventManager {
 		}
 	}
 
+	public once(event: string, listener: EventListener): void {
+		const onceListener: EventListener = (...arguments_: any[]) => {
+			listener(...arguments_);
+			this.off(event, onceListener);
+		};
+
+		this.on(event, onceListener);
+	}
+
 	// Emit an event
 	public emit(event: string, ...arguments_: any[]): void {
 		const listeners = this._eventListeners.get(event);
