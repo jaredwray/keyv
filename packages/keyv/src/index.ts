@@ -148,6 +148,25 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 	}
 
+	/**
+	 * Get the current namespace.
+	 * @returns {string | undefined} The current namespace.
+	 */
+	public get namespace(): string | undefined {
+		return this.opts.namespace;
+	}
+
+	/**
+	 * Set the current namespace.
+	 * @param {string | undefined} namespace The namespace to set.
+	 */
+	public set namespace(namespace: string | undefined) {
+		this.opts.namespace = namespace;
+		if (this.opts.store) {
+			this.opts.store.namespace = namespace;
+		}
+	}
+
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
 		const function_: IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'

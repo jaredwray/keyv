@@ -649,3 +649,13 @@ test.it('Keyv stats enabled should create counts', async t => {
 	t.expect(keyv.stats.deletes).toBe(1);
 	t.expect(keyv.stats.sets).toBe(1);
 });
+
+test.it('should be able to set the namespace via property', async t => {
+	const store = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
+	const keyv = new Keyv({store});
+	t.expect(keyv.namespace).toBe('keyv');
+	t.expect(store.namespace).toBe('keyv');
+	keyv.namespace = 'test';
+	t.expect(keyv.namespace).toBe('test');
+	t.expect(store.namespace).toBe('test');
+});
