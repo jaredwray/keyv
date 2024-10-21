@@ -357,6 +357,13 @@ The connection string URI.
 
 Merged into the options object as options.uri.
 
+### .namespace
+
+Type: `String`
+Default: `'keyv'`
+
+This is the namespace for the current instance. When you set it it will set it also on the storage adapter.
+
 ### options
 
 Type: `Object`
