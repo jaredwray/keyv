@@ -9,7 +9,7 @@
   "scripts": {
     "test:ci": "echo 'no tests needed'",
     "test": "echo 'no tests needed'",
-    "generate-docs": "rimraf ./dist && ts-node ./src/docs.ts",
+    "generate-docs": "rimraf ./dist && tsx ./src/docs.ts",
     "build": "pnpm website:build",
     "website:build": "pnpm generate-docs && docula build",
     "build-serve": "pnpm clean && pnpm generate-docs && docula serve",
@@ -17,10 +17,8 @@
     "website:serve": "docula serve"
   },
   "devDependencies": {
-    "docula": "^0.9.2",
+    "docula": "^0.9.4",
     "rimraf": "^6.0.1",
-    "ts-node": "^10.9.2"
-  },
-  "dependencies": {
+    "tsx": "^4.19.1"
   }
 }
