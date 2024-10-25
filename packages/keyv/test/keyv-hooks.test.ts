@@ -92,7 +92,7 @@ test.it('POST_GET_MANY with getMany function', async () => {
 test.it('PRE_DELETE hook', async () => {
 	const keyv = new Keyv();
 	keyv.hooks.addHandler(KeyvHooks.PRE_DELETE, data => {
-		test.expect(data.key).toBe('foo');
+		test.expect(data.key).toBe('keyv:foo');
 	});
 	test.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.set('foo', 'bar');
