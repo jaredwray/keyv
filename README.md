@@ -75,7 +75,6 @@ If there is already an adapter that you would like to add, please post an issue 
 * [memcache](https://github.com/jaredwray/keyv/tree/main/packages/memcache): Memcache storage adapter
 * [mongo](https://github.com/jaredwray/keyv/tree/main/packages/mongo): MongoDB storage adapter
 * [mysql](https://github.com/jaredwray/keyv/tree/main/packages/mysql): MySQL/MariaDB storage adapter
-* [offline](https://github.com/jaredwray/keyv/tree/main/packages/offline): Offline storage adapter
 * [postgres](https://github.com/jaredwray/keyv/tree/main/packages/postgres): PostgreSQL storage adapter
 * [redis](https://github.com/jaredwray/keyv/tree/main/packages/redis): Redis storage adapter
 * [valkey](https://github.com/jaredwray/keyv/tree/main/packages/valkey): Valkey (Open Source Redis) storage adapter
