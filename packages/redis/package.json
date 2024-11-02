@@ -62,7 +62,7 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"keyv": "^5.0.3",
+		"keyv": "*",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
