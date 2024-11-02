@@ -63,12 +63,12 @@
 		"json-bigint": "^1.0.0",
 		"sqlite3": "^5.1.7",
 		"timekeeper": "^2.3.1",
-		"vitest": "^2.1.2"
+		"vitest": "^2.1.4"
 	},
 	"devDependencies": {
 		"@keyv/compress-brotli": "*",
 		"@types/json-bigint": "^1.0.4",
-		"keyv": "^5.0.3",
+		"keyv": "*",
 		"rimraf": "^6.0.1"
 	}
 }
