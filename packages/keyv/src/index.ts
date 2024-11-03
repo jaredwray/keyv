@@ -234,6 +234,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		);
 	}
 
+	/**
+	 * Get the Value of a Key
+	 * @param {string | string[]} key passing in a single key or multiple as an array
+	 * @param [options] can pass in to return the raw value by setting { raw: true }
+	 */
 	async get<Value = GenericValue>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;
 	async get<Value = GenericValue>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
 	async get<Value = GenericValue>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
