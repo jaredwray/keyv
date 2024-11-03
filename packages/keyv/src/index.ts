@@ -332,6 +332,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return (options?.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
+	/**
+	 * Set an item to the store
+	 * @param {string} key the key to use
+	 * @param {Value} value the value of the key
+	 * @param {number} [ttl] time to live in milliseconds
+	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
+	 */
 	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
