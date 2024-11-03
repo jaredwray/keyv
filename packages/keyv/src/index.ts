@@ -367,6 +367,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return true;
 	}
 
+	/**
+	 * Delete an Entry
+	 * @param {string | string[]} key the key to be deleted. if an array it will delete many items
+	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
+	 */
 	async delete(key: string | string[]): Promise<boolean> {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
