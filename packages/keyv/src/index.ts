@@ -91,8 +91,22 @@ export class Keyv<GenericValue = any> extends EventManager {
 	hooks = new HooksManager();
 	stats = new StatsManager(false);
 
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
+	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
+	 */
 	constructor(store?: KeyvStoreAdapter | KeyvOptions | Map<any, any>, options?: Omit<KeyvOptions, 'store'>);
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvOptions} options to be provided
+	 */
 	constructor(options?: KeyvOptions);
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvStoreAdapter | KeyvOptions} store
+	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
+	 */
 	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
 		super();
 		options ??= {};
