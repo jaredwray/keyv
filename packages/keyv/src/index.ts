@@ -422,12 +422,21 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return result;
 	}
 
+	/**
+	 * Clear the store
+	 * @returns {void}
+	 */
 	async clear(): Promise<void> {
 		this.emit('clear');
 		const {store} = this.opts;
 		await store.clear();
 	}
 
+	/**
+	 * Has a key
+	 * @param {string} key the key to check
+	 * @returns {boolean} will return true if the key exists
+	 */
 	async has(key: string): Promise<boolean> {
 		const keyPrefixed = this._getKeyPrefix(key);
 		const {store} = this.opts;
@@ -450,6 +459,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return false;
 	}
 
+	/**
+	 * Will disconnect the store. This is only available if the store has a disconnect method
+	 * @returns {Promise<void>}
+	 */
 	async disconnect(): Promise<void> {
 		const {store} = this.opts;
 		this.emit('disconnect');
