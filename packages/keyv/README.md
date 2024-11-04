@@ -462,6 +462,33 @@ for await (const [key, value] of this.keyv.iterator()) {
 };
 ```
 
+# API - Properties
+
+## .namespace
+
+Type: `String`
+
+The namespace for the current instance. This will define the namespace for the current instance and the storage adapter.
+
+```js
+const keyv = new Keyv({ namespace: 'my-namespace' });
+console.log(keyv.namespace); // 'my-namespace'
+```
+
+## .ttl
+
+Type: `Number`<br />
+Default: `undefined`
+
+Default TTL. Can be overridden by specififying a TTL on `.set()`. If set to `undefined` it will never expire.
+
+```js
+const keyv = new Keyv({ ttl: 5000 });
+console.log(keyv.ttl); // 5000
+keyv.ttl = undefined;
+console.log(keyv.ttl); // undefined (never expires)
+```
+
 # How to Contribute
 
 We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:
