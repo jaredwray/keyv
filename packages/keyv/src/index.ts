@@ -91,6 +91,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	stats = new StatsManager(false);
 
 	/**
+	 * Time to live in milliseconds
+	 */
+	private _ttl?: number;
+
+	/**
 	 * Keyv Constructor
 	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
@@ -159,6 +164,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (this.opts.stats) {
 			this.stats.enabled = this.opts.stats;
 		}
+
+		if (this.opts.ttl) {
+			this._ttl = this.opts.ttl;
+		}
 	}
 
 	/**
@@ -178,6 +187,23 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (this.opts.store) {
 			this.opts.store.namespace = namespace;
 		}
+	}
+
+	/**
+	 * Get the current TTL.
+	 * @returns {number} The current TTL.
+	 */
+	public get ttl(): number | undefined {
+		return this._ttl;
+	}
+
+	/**
+	 * Set the current TTL.
+	 * @param {number} ttl The TTL to set.
+	 */
+	public set ttl(ttl: number | undefined) {
+		this.opts.ttl = ttl;
+		this._ttl = ttl;
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
@@ -342,7 +368,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (typeof ttl === 'undefined') {
-			ttl = this.opts.ttl;
+			ttl = this._ttl;
 		}
 
 		if (ttl === 0) {

@@ -1,3 +1,4 @@
+import {describe} from 'node:test';
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import tk from 'timekeeper';
@@ -658,4 +659,33 @@ test.it('should be able to set the namespace via property', async t => {
 	keyv.namespace = 'test';
 	t.expect(keyv.namespace).toBe('test');
 	t.expect(store.namespace).toBe('test');
+});
+
+test.it('Keyv respects default ttl option', async t => {
+	const store = new Map();
+	const keyv = new Keyv({store, ttl: 100});
+	await keyv.set('foo', 'bar');
+	tk.freeze(Date.now() + 150);
+	t.expect(await keyv.get('foo')).toBeUndefined();
+	t.expect(store.size).toBe(0);
+	tk.reset();
+});
+
+test.it('should be able to set the ttl as default option and then property', async t => {
+	const keyv = new Keyv({store: new Map(), ttl: 100});
+	t.expect(keyv.ttl).toBe(100);
+	keyv.ttl = 200;
+	t.expect(keyv.ttl).toBe(200);
+	t.expect(keyv.opts.ttl).toBe(200);
+});
+
+test.it('should be able to set the ttl as default option and then property', async t => {
+	const keyv = new Keyv({store: new Map()});
+	t.expect(keyv.ttl).not.toBeDefined();
+	keyv.ttl = 200;
+	t.expect(keyv.ttl).toBe(200);
+	t.expect(keyv.opts.ttl).toBe(200);
+	keyv.ttl = undefined;
+	t.expect(keyv.ttl).not.toBeDefined();
+	t.expect(keyv.opts.ttl).not.toBeDefined();
 });
