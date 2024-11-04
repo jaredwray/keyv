@@ -1,4 +1,3 @@
-import {describe} from 'node:test';
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import tk from 'timekeeper';

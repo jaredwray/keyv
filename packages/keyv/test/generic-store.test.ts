@@ -28,16 +28,6 @@ describe('Keyv Generic Store Options', () => {
 		expect(keyv.keySeparator).toBe('new');
 	});
 
-	test('should be able to get the features', () => {
-		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
-		expect(keyv.features.createKeyv).toBe(false);
-		expect(keyv.features.iterable).toBe(true);
-		expect(keyv.features.serialization).toBe(true);
-		expect(keyv.features.namespace).toBe(true);
-		expect(keyv.features.timeToLive).toBe(true);
-	});
-
 	test('should be able to get the options', () => {
 		const store = new Map();
 		const options = {namespace: 'test'};

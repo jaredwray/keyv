@@ -18,7 +18,7 @@ class EventManager {
 		this.on(event, listener);
 	}
 
-	public on(event: string, listener: EventListener): void {
+	public on(event: string, listener: EventListener): this {
 		if (!this._eventListeners.has(event)) {
 			this._eventListeners.set(event, []);
 		}
@@ -32,6 +32,8 @@ class EventManager {
 
 			listeners.push(listener);
 		}
+
+		return this;
 	}
 
 	// Remove an event listener

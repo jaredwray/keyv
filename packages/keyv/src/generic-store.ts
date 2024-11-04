@@ -1,12 +1,5 @@
+import EventManager from './event-manager.js';
 import {type KeyvStoreAdapter, type StoredData} from './index.js';
-
-export type KeyvStoreAdapterFeature = {
-	namespace?: boolean;
-	timeToLive?: boolean;
-	iterable?: boolean;
-	serialization?: boolean;
-	createKeyv?: boolean;
-};
 
 export type KeyvGenericStoreOptions = {
 	namespace?: string | (() => string);
@@ -38,20 +31,14 @@ export type KeyPrefixData = {
 	key: string;
 };
 
-export class KeyvGenericStore implements KeyvStoreAdapter {
+export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	private readonly _options?: KeyvGenericStoreOptions;
 	private _store: Map<any, any> | KeyvMapType;
-	private readonly _features: KeyvStoreAdapterFeature = {
-		namespace: true,
-		timeToLive: true,
-		iterable: true,
-		serialization: true,
-		createKeyv: false,
-	};
-
 	private _namespace?: string | (() => string);
 	private _keySeparator = '::';
+
 	constructor(store: Map<any, any> | KeyvMapType, options?: KeyvGenericStoreOptions) {
+		super();
 		this._store = store;
 		this._options = options;
 
@@ -78,10 +65,6 @@ export class KeyvGenericStore implements KeyvStoreAdapter {
 
 	public set keySeparator(separator: string) {
 		this._keySeparator = separator;
-	}
-
-	public get features() {
-		return this._features;
 	}
 
 	public get opts() {
@@ -172,20 +155,13 @@ export class KeyvGenericStore implements KeyvStoreAdapter {
 	}
 
 	async deleteMany(key: string[]): Promise<boolean> {
-		const values = key.map(async key => this.delete(key));
+		const promises = key.map(async key_ => this.delete(key_));
+		await Promise.all(promises);
 		return true;
 	}
 
 	/* c8 ignore next 14 */
 	iterator<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
-		throw new Error('Method not implemented.');
-	}
-
-	disconnect?(): Promise<void> {
-		throw new Error('Method not implemented.');
-	}
-
-	on(event: string, listener: (...arguments_: any[]) => void): this {
 		throw new Error('Method not implemented.');
 	}
 }
