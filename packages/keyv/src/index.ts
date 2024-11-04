@@ -96,6 +96,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _ttl?: number;
 
 	/**
+	 * Namespace
+	 */
+	private _namespace?: string;
+
+	/**
 	 * Keyv Constructor
 	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
@@ -141,6 +146,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
+		if (this.opts.namespace) {
+			this._namespace = this.opts.namespace;
+		}
+
 		if (this.opts.store) {
 			if (!this._isValidStorageAdapter(this.opts.store)) {
 				throw new Error('Invalid storage adapter');
@@ -150,7 +159,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				this.opts.store.on('error', (error: any) => this.emit('error', error));
 			}
 
-			this.opts.store.namespace = this.opts.namespace;
+			this.opts.store.namespace = this._namespace;
 
 			// Attach iterators
 			// @ts-ignore
@@ -175,7 +184,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {string | undefined} The current namespace.
 	 */
 	public get namespace(): string | undefined {
-		return this.opts.namespace;
+		return this._namespace;
 	}
 
 	/**
@@ -183,6 +192,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {string | undefined} namespace The namespace to set.
 	 */
 	public set namespace(namespace: string | undefined) {
+		this._namespace = namespace;
 		this.opts.namespace = namespace;
 		if (this.opts.store) {
 			this.opts.store.namespace = namespace;
@@ -234,11 +244,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	_getKeyPrefix(key: string): string {
-		return `${this.opts.namespace}:${key}`;
+		return `${this._namespace}:${key}`;
 	}
 
 	_getKeyPrefixArray(keys: string[]): string[] {
-		return keys.map(key => `${this.opts.namespace}:${key}`);
+		return keys.map(key => `${this._namespace}:${key}`);
 	}
 
 	_getKeyUnprefix(key: string): string {
