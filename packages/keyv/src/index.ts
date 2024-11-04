@@ -91,8 +91,22 @@ export class Keyv<GenericValue = any> extends EventManager {
 	hooks = new HooksManager();
 	stats = new StatsManager(false);
 
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
+	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
+	 */
 	constructor(store?: KeyvStoreAdapter | KeyvOptions | Map<any, any>, options?: Omit<KeyvOptions, 'store'>);
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvOptions} options to be provided
+	 */
 	constructor(options?: KeyvOptions);
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvStoreAdapter | KeyvOptions} store
+	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
+	 */
 	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
 		super();
 		options ??= {};
@@ -220,6 +234,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		);
 	}
 
+	/**
+	 * Get the Value of a Key
+	 * @param {string | string[]} key passing in a single key or multiple as an array
+	 * @param [options] can pass in to return the raw value by setting { raw: true }
+	 */
 	async get<Value = GenericValue>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;
 	async get<Value = GenericValue>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
 	async get<Value = GenericValue>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
@@ -313,6 +332,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return (options?.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
+	/**
+	 * Set an item to the store
+	 * @param {string} key the key to use
+	 * @param {Value} value the value of the key
+	 * @param {number} [ttl] time to live in milliseconds
+	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
+	 */
 	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
@@ -341,6 +367,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return true;
 	}
 
+	/**
+	 * Delete an Entry
+	 * @param {string | string[]} key the key to be deleted. if an array it will delete many items
+	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
+	 */
 	async delete(key: string | string[]): Promise<boolean> {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
