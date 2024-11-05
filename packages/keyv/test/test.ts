@@ -52,6 +52,35 @@ test.it('Keyv accepts storage adapters instead of options', async t => {
 	t.expect(store.size).toBe(1);
 });
 
+test.it('Keyv allows get and set the store via property', async t => {
+	const store = new Map();
+	const keyv = new Keyv<string>();
+	keyv.store = store;
+	t.expect(store.size).toBe(0);
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(store.size).toBe(1);
+	t.expect(keyv.store).toBe(store);
+});
+
+test.it('Keyv should throw if invalid storage or Map on store property', async t => {
+	const store = new Map();
+	const keyv = new Keyv<string>();
+	keyv.store = store;
+	t.expect(store.size).toBe(0);
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(store.size).toBe(1);
+	t.expect(keyv.store).toBe(store);
+
+	t.expect(() => {
+		// eslint-disable-next-line @typescript-eslint/no-empty-function
+		keyv.store = {get() {}, set() {}, delete() {}};
+	}).toThrow();
+});
+
 test.it('Keyv passes ttl info to stores', async t => {
 	t.expect.assertions(1);
 	const store = new Map();
@@ -658,6 +687,13 @@ test.it('should be able to set the namespace via property', async t => {
 	keyv.namespace = 'test';
 	t.expect(keyv.namespace).toBe('test');
 	t.expect(store.namespace).toBe('test');
+});
+
+test.it('should be able to set the store via property', async t => {
+	const store = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
+	const keyv = new Keyv();
+	keyv.store = store;
+	t.expect(keyv.store).toBe(store);
 });
 
 test.it('Keyv respects default ttl option', async t => {

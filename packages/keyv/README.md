@@ -489,6 +489,21 @@ keyv.ttl = undefined;
 console.log(keyv.ttl); // undefined (never expires)
 ```
 
+## .store
+
+Type: `Storage adapter instance`<br />
+Default: `new Map()`
+
+The storage adapter instance to be used by Keyv. This will wire up the iterator, events, and more when a set happens. If it is not a valid Map or Storage Adapter it will throw an error. 
+
+```js
+import KeyvSqlite from '@keyv/sqlite';
+const keyv = new Keyv();
+console.log(keyv.store instanceof Map); // true
+keyv.store = new KeyvSqlite('sqlite://path/to/database.sqlite');
+console.log(keyv.store instanceof KeyvSqlite); // true
+```
+
 # How to Contribute
 
 We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:
