@@ -504,6 +504,34 @@ keyv.store = new KeyvSqlite('sqlite://path/to/database.sqlite');
 console.log(keyv.store instanceof KeyvSqlite); // true
 ```
 
+## .serialize
+
+Type: `Function`<br />
+Default: `JSON.stringify`
+
+A custom serialization function used for any value. 
+
+```js
+const keyv = new Keyv();
+console.log(keyv.serialize); // JSON.stringify
+keyv.serialize = value => value.toString();
+console.log(keyv.serialize); // value => value.toString()
+```
+
+## .deserialize
+
+Type: `Function`<br />
+Default: `JSON.parse`
+
+A custom deserialization function used for any value.
+
+```js
+const keyv = new Keyv();
+console.log(keyv.deserialize); // JSON.parse
+keyv.deserialize = value => parseInt(value);
+console.log(keyv.deserialize); // value => parseInt(value)
+```
+
 # How to Contribute
 
 We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:

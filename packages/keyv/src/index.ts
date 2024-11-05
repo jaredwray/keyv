@@ -105,6 +105,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	private _store: KeyvStoreAdapter | Map<any, any> | any = new Map();
 
+	private _serialize: CompressionAdapter['serialize'] = defaultSerialize;
+	private _deserialize: CompressionAdapter['deserialize'] = defaultDeserialize;
+
 	/**
 	 * Keyv Constructor
 	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
@@ -153,6 +156,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
+		this._serialize = this.opts.serialize!;
+		this._deserialize = this.opts.deserialize!;
+
 		if (this.opts.namespace) {
 			this._namespace = this.opts.namespace;
 		}
@@ -193,6 +199,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return this._store;
 	}
 
+	/**
+	 * Set the current store. This will also set the namespace, event error handler, and generate the iterator. If the store is not valid it will throw an error.
+	 * @param {KeyvStoreAdapter | Map<any, any> | any} store the store to set
+	 */
 	public set store(store: KeyvStoreAdapter | Map<any, any> | any) {
 		if (this._isValidStorageAdapter(store)) {
 			this._store = store;
@@ -254,12 +264,46 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this._ttl = ttl;
 	}
 
+	/**
+	 * Get the current serialize function.
+	 * @returns {CompressionAdapter['serialize']} The current serialize function.
+	 */
+	public get serialize(): CompressionAdapter['serialize'] {
+		return this._serialize;
+	}
+
+	/**
+	 * Set the current serialize function.
+	 * @param {CompressionAdapter['serialize']} serialize The serialize function to set.
+	 */
+	public set serialize(serialize: CompressionAdapter['serialize']) {
+		this.opts.serialize = serialize;
+		this._serialize = serialize;
+	}
+
+	/**
+	 * Get the current deserialize function.
+	 * @returns {CompressionAdapter['deserialize']} The current deserialize function.
+	 */
+	public get deserialize(): CompressionAdapter['deserialize'] {
+		return this._deserialize;
+	}
+
+	/**
+	 * Set the current deserialize function.
+	 * @param {CompressionAdapter['deserialize']} deserialize The deserialize function to set.
+	 */
+	public set deserialize(deserialize: CompressionAdapter['deserialize']) {
+		this.opts.deserialize = deserialize;
+		this._deserialize = deserialize;
+	}
+
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
 		const function_: IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'
 				? iterator(this._store.namespace)
 				: iterator)) {
-				const data = await this.opts.deserialize(raw);
+				const data = await this._deserialize(raw);
 				if (this._store.namespace && !key.includes(this._store.namespace)) {
 					continue;
 				}
@@ -328,7 +372,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			if (store.getMany === undefined) {
 				const promises = (keyPrefixed as string[]).map(async key => {
 					const rawData = await store.get<Value>(key);
-					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
+					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this._deserialize<Value>(rawData as string) : rawData;
 
 					if (deserializedRow === undefined || deserializedRow === null) {
 						return undefined;
@@ -359,7 +403,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				let row = rawData[index];
 
 				if ((typeof row === 'string')) {
-					row = await this.opts.deserialize!<Value>(row);
+					row = await this._deserialize<Value>(row);
 				}
 
 				if (row === undefined || row === null) {
@@ -387,7 +431,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
 		const rawData = await store.get<Value>(keyPrefixed as string);
-		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.opts.deserialize!<Value>(rawData as string) : rawData;
+		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this._deserialize<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
 			this.stats.miss();
@@ -432,7 +476,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		const formattedValue = {value, expires};
-		const serializedValue = await this.opts.serialize!(formattedValue);
+		const serializedValue = await this._serialize(formattedValue);
 
 		await store.set(keyPrefixed, serializedValue, ttl);
 		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
@@ -494,7 +538,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		const rawData = await store.get(keyPrefixed) as any;
 		if (rawData) {
-			const data = this.opts.deserialize!(rawData) as any;
+			const data = this._deserialize(rawData) as any;
 			if (data) {
 				if (data.expires === undefined || data.expires === null) {
 					return true;
