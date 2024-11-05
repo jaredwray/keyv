@@ -101,6 +101,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _namespace?: string;
 
 	/**
+	 * Store
+	 */
+	private _store: KeyvStoreAdapter | Map<any, any> | any = new Map();
+
+	/**
 	 * Keyv Constructor
 	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
@@ -140,6 +145,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 			};
 		}
 
+		this._store = this.opts.store;
+
 		if (this.opts.compression) {
 			const compression = this.opts.compression;
 			this.opts.serialize = compression.serialize.bind(compression);
@@ -150,23 +157,23 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this._namespace = this.opts.namespace;
 		}
 
-		if (this.opts.store) {
-			if (!this._isValidStorageAdapter(this.opts.store)) {
+		if (this._store) {
+			if (!this._isValidStorageAdapter(this._store)) {
 				throw new Error('Invalid storage adapter');
 			}
 
-			if (typeof this.opts.store.on === 'function' && this.opts.emitErrors) {
-				this.opts.store.on('error', (error: any) => this.emit('error', error));
+			if (typeof this._store.on === 'function' && this.opts.emitErrors) {
+				this._store.on('error', (error: any) => this.emit('error', error));
 			}
 
-			this.opts.store.namespace = this._namespace;
+			this._store.namespace = this._namespace;
 
 			// Attach iterators
 			// @ts-ignore
-			if (typeof this.opts.store[Symbol.iterator] === 'function' && this.opts.store instanceof Map) {
-				this.iterator = this.generateIterator((this.opts.store as unknown as IteratorFunction));
-			} else if ('iterator' in this.opts.store && this.opts.store.opts && this._checkIterableAdapter()) {
-				this.iterator = this.generateIterator(this.opts.store.iterator!.bind(this.opts.store));
+			if (typeof this._store[Symbol.iterator] === 'function' && this._store instanceof Map) {
+				this.iterator = this.generateIterator((this._store as unknown as IteratorFunction));
+			} else if ('iterator' in this._store && this._store.opts && this._checkIterableAdapter()) {
+				this.iterator = this.generateIterator(this._store.iterator!.bind(this._store));
 			}
 		}
 
@@ -176,6 +183,36 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (this.opts.ttl) {
 			this._ttl = this.opts.ttl;
+		}
+	}
+
+	/**
+	 * Get the current store
+	 */
+	public get store(): KeyvStoreAdapter | Map<any, any> | any {
+		return this._store;
+	}
+
+	public set store(store: KeyvStoreAdapter | Map<any, any> | any) {
+		if (this._isValidStorageAdapter(store)) {
+			this._store = store;
+			this.opts.store = store;
+
+			if (typeof store.on === 'function' && this.opts.emitErrors) {
+				store.on('error', (error: any) => this.emit('error', error));
+			}
+
+			if (this._namespace) {
+				this._store.namespace = this._namespace;
+			}
+
+			if (typeof store[Symbol.iterator] === 'function' && store instanceof Map) {
+				this.iterator = this.generateIterator((store as unknown as IteratorFunction));
+			} else if ('iterator' in store && store.opts && this._checkIterableAdapter()) {
+				this.iterator = this.generateIterator(store.iterator!.bind(store));
+			}
+		} else {
+			throw new Error('Invalid storage adapter');
 		}
 	}
 
@@ -194,6 +231,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public set namespace(namespace: string | undefined) {
 		this._namespace = namespace;
 		this.opts.namespace = namespace;
+		this._store.namespace = namespace;
 		if (this.opts.store) {
 			this.opts.store.namespace = namespace;
 		}
@@ -219,10 +257,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
 		const function_: IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'
-				? iterator(this.opts.store.namespace)
+				? iterator(this._store.namespace)
 				: iterator)) {
 				const data = await this.opts.deserialize(raw);
-				if (this.opts.store.namespace && !key.includes(this.opts.store.namespace)) {
+				if (this._store.namespace && !key.includes(this._store.namespace)) {
 					continue;
 				}
 
@@ -239,8 +277,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	_checkIterableAdapter(): boolean {
-		return iterableAdapters.includes((this.opts.store.opts.dialect as string))
-			|| iterableAdapters.some(element => (this.opts.store.opts.url as string).includes(element));
+		return iterableAdapters.includes((this._store.opts.dialect as string))
+			|| iterableAdapters.some(element => (this._store.opts.url as string).includes(element));
 	}
 
 	_getKeyPrefix(key: string): string {
