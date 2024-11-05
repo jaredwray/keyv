@@ -724,3 +724,21 @@ test.it('should be able to set the ttl as default option and then property', asy
 	t.expect(keyv.ttl).not.toBeDefined();
 	t.expect(keyv.opts.ttl).not.toBeDefined();
 });
+
+test.it('Keyv does get and set on serialize / deserialize function', async t => {
+	const keyv = new Keyv({
+		store: new Map(),
+		serialize: data => JSON.stringify(data),
+		deserialize: data => JSON.parse(data),
+	});
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+
+	const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
+	keyv.serialize = serialize;
+	t.expect(keyv.serialize).toBe(serialize);
+
+	const deserialize = (data: string) => JSON.parse(data);
+	keyv.deserialize = deserialize;
+	t.expect(keyv.deserialize).toBe(deserialize);
+});
