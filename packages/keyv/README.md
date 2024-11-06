@@ -532,6 +532,34 @@ keyv.deserialize = value => parseInt(value);
 console.log(keyv.deserialize); // value => parseInt(value)
 ```
 
+## .compress
+
+Type: `Function`<br />
+Default: `undefined`
+
+A custom compression function used for any value. This is usually set by the compression adapters in on the constructor but can be set directly.
+
+```js
+const keyv = new Keyv();
+console.log(keyv.compress); // undefined
+keyv.compress = value => zlib.gzipSync(value);
+console.log(keyv.compress); // value => zlib.gzipSync(value)
+```
+
+## .decompress
+
+Type: `Function`<br />
+Default: `undefined`
+
+A custom decompression function used for any value. This is usually set by the compression adapters in on the constructor but can be set directly.
+
+```js
+const keyv = new Keyv();
+console.log(keyv.decompress); // undefined
+keyv.decompress = value => zlib.gunzipSync(value);
+console.log(keyv.decompress); // value => zlib.gunzipSync(value)
+```
+
 # How to Contribute
 
 We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:

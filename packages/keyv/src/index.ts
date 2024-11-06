@@ -108,6 +108,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _serialize: CompressionAdapter['serialize'] = defaultSerialize;
 	private _deserialize: CompressionAdapter['deserialize'] = defaultDeserialize;
 
+	private _compress: CompressionAdapter['compress'] | undefined;
+	private _decompress: CompressionAdapter['decompress'] | undefined;
+
 	/**
 	 * Keyv Constructor
 	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
@@ -150,14 +153,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		this._store = this.opts.store;
 
+		const compression = this.opts.compression;
 		if (this.opts.compression) {
-			const compression = this.opts.compression;
 			this.opts.serialize = compression.serialize.bind(compression);
 			this.opts.deserialize = compression.deserialize.bind(compression);
 		}
 
 		this._serialize = this.opts.serialize!;
 		this._deserialize = this.opts.deserialize!;
+
+		this._compress = compression?.compress.bind(compression);
+		this._decompress = compression?.decompress.bind(compression);
 
 		if (this.opts.namespace) {
 			this._namespace = this.opts.namespace;
@@ -224,6 +230,38 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} else {
 			throw new Error('Invalid storage adapter');
 		}
+	}
+
+	/**
+	 * Get the current compression function
+	 * @returns {CompressionAdapter['compress']} The current compression function
+	 */
+	public get compress(): CompressionAdapter['compress'] | undefined {
+		return this._compress;
+	}
+
+	/**
+	 * Set the current compression function
+	 * @param {CompressionAdapter['compress']} compress The compression function to set
+	 */
+	public set compress(compress: CompressionAdapter['compress'] | undefined) {
+		this._compress = compress;
+	}
+
+	/**
+	 * Get the current decompression function
+	 * @returns {CompressionAdapter['decompress']} The current decompression function
+	 */
+	public get decompress(): CompressionAdapter['decompress'] | undefined {
+		return this._decompress;
+	}
+
+	/**
+	 * Set the current decompression function
+	 * @param {CompressionAdapter['decompress']} decompress The decompression function to set
+	 */
+	public set decompress(decompress: CompressionAdapter['decompress'] | undefined) {
+		this._decompress = decompress;
 	}
 
 	/**
