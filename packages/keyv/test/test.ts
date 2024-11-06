@@ -742,3 +742,19 @@ test.it('Keyv does get and set on serialize / deserialize function', async t => 
 	keyv.deserialize = deserialize;
 	t.expect(keyv.deserialize).toBe(deserialize);
 });
+
+test.it('Keyv can get and set the compress property', async t => {
+	const keyv = new Keyv();
+	t.expect(keyv.compress).not.toBeDefined();
+	const compressFunction = (value: any) => value;
+	keyv.compress = compressFunction;
+	t.expect(keyv.compress).toBe(compressFunction);
+});
+
+test.it('Keyv can get and set the decompress property', async t => {
+	const keyv = new Keyv();
+	t.expect(keyv.decompress).not.toBeDefined();
+	const decompressFunction = async (value: any) => value;
+	keyv.decompress = decompressFunction;
+	t.expect(keyv.decompress).toBe(decompressFunction);
+});
