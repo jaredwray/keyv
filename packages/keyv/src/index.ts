@@ -352,7 +352,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				? iterator(this._store.namespace)
 				: iterator)) {
 				const data = await this._deserialize(raw);
-				if (this._store.namespace && !key.includes(this._store.namespace)) {
+				if (this._useKeyPrefix && this._store.namespace && !key.includes(this._store.namespace)) {
 					continue;
 				}
 
