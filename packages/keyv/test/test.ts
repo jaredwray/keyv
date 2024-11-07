@@ -751,3 +751,45 @@ test.it('Keyv can get and set the compress property', async t => {
 	t.expect(keyv.compression).toBe(gzip);
 });
 
+test.it('Keyv can set the useKeyPrefix via options', async t => {
+	const keyv = new Keyv({useKeyPrefix: false});
+	t.expect(keyv.useKeyPrefix).toBe(false);
+});
+
+test.it('Keyv can get and set useKeyPrefix property', async t => {
+	const keyv = new Keyv();
+	t.expect(keyv.useKeyPrefix).toBe(true);
+	keyv.useKeyPrefix = false;
+	t.expect(keyv.useKeyPrefix).toBe(false);
+});
+
+test.it('Keyv can get and set values with useKeyPrefix false', async t => {
+	const keyv = new Keyv({useKeyPrefix: false});
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+});
+
+test.it('Keyv can get many and set values with useKeyPrefix false', async t => {
+	const keyv = new Keyv({useKeyPrefix: false});
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']) as string[];
+	t.expect(values).toStrictEqual(['bar', 'bar1', 'bar2']);
+});
+
+test.it('Keyv can iterate with useKeyPrefix false', async t => {
+	const keyv = new Keyv({useKeyPrefix: false});
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	const keys = [];
+	console.log('iterator=', keyv.iterator);
+	if (keyv.iterator !== undefined) {
+		for await (const [key, value] of keyv.iterator('')) {
+			keys.push(key);
+		}
+	}
+
+	t.expect(keys).toStrictEqual(['foo', 'foo1', 'foo2']);
+});

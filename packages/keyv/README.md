@@ -548,6 +548,20 @@ keyv.compression = new KeyvGzip();
 console.log(keyv.compression); // KeyvGzip
 ```
 
+## .useKeyPrefix
+
+Type: `Boolean`<br />
+Default: `true`
+
+If set to `true` Keyv will prefix all keys with the namespace. This is useful if you want to avoid collisions with other data in your storage.
+
+```js
+const keyv = new Keyv({ useKeyPrefix: false });
+console.log(keyv.useKeyPrefix); // false
+keyv.useKeyPrefix = true;
+console.log(keyv.useKeyPrefix); // true
+```
+
 # How to Contribute
 
 We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:

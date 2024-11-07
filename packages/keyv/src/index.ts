@@ -70,6 +70,8 @@ export type KeyvOptions = {
 	compression?: CompressionAdapter | any;
 	/** Enable or disable statistics (default is false) */
 	stats?: boolean;
+	/** Enable or disable key prefixing (default is true) */
+	useKeyPrefix?: boolean;
 };
 
 type KeyvOptions_ = Omit<KeyvOptions, 'store'> & {store: KeyvStoreAdapter | Map<any, any> & KeyvStoreAdapter};
@@ -109,6 +111,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _deserialize: CompressionAdapter['deserialize'] = defaultDeserialize;
 
 	private _compression: CompressionAdapter | undefined;
+
+	private _useKeyPrefix = true;
 
 	/**
 	 * Keyv Constructor
@@ -191,6 +195,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (this.opts.ttl) {
 			this._ttl = this.opts.ttl;
+		}
+
+		if (this.opts.useKeyPrefix !== undefined) {
+			this._useKeyPrefix = this.opts.useKeyPrefix;
 		}
 	}
 
@@ -320,13 +328,31 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this._deserialize = deserialize;
 	}
 
+	/**
+	 * Get the current useKeyPrefix value. This will enable or disable key prefixing.
+	 * @returns {boolean} The current useKeyPrefix value.
+	 * @default true
+	 */
+	public get useKeyPrefix(): boolean {
+		return this._useKeyPrefix;
+	}
+
+	/**
+	 * Set the current useKeyPrefix value. This will enable or disable key prefixing.
+	 * @param {boolean} value The useKeyPrefix value to set.
+	 */
+	public set useKeyPrefix(value: boolean) {
+		this._useKeyPrefix = value;
+		this.opts.useKeyPrefix = value;
+	}
+
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
 		const function_: IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'
 				? iterator(this._store.namespace)
 				: iterator)) {
 				const data = await this._deserialize(raw);
-				if (this._store.namespace && !key.includes(this._store.namespace)) {
+				if (this._useKeyPrefix && this._store.namespace && !key.includes(this._store.namespace)) {
 					continue;
 				}
 
@@ -348,14 +374,26 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	_getKeyPrefix(key: string): string {
+		if (!this._useKeyPrefix) {
+			return key;
+		}
+
 		return `${this._namespace}:${key}`;
 	}
 
 	_getKeyPrefixArray(keys: string[]): string[] {
+		if (!this._useKeyPrefix) {
+			return keys;
+		}
+
 		return keys.map(key => `${this._namespace}:${key}`);
 	}
 
 	_getKeyUnprefix(key: string): string {
+		if (!this._useKeyPrefix) {
+			return key;
+		}
+
 		return key
 			.split(':')
 			.splice(1)
