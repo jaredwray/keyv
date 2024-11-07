@@ -532,32 +532,20 @@ keyv.deserialize = value => parseInt(value);
 console.log(keyv.deserialize); // value => parseInt(value)
 ```
 
-## .compress
+## .compression
 
-Type: `Function`<br />
+Type: `CompressionAdapter`<br />
 Default: `undefined`
 
-A custom compression function used for any value. This is usually set by the compression adapters in on the constructor but can be set directly.
+this is the compression package to use. See [Compression](#compression) for more details. If it is undefined it will not compress (default).
 
 ```js
+import KeyvGzip from '@keyv/compress-gzip';
+
 const keyv = new Keyv();
-console.log(keyv.compress); // undefined
-keyv.compress = value => zlib.gzipSync(value);
-console.log(keyv.compress); // value => zlib.gzipSync(value)
-```
-
-## .decompress
-
-Type: `Function`<br />
-Default: `undefined`
-
-A custom decompression function used for any value. This is usually set by the compression adapters in on the constructor but can be set directly.
-
-```js
-const keyv = new Keyv();
-console.log(keyv.decompress); // undefined
-keyv.decompress = value => zlib.gunzipSync(value);
-console.log(keyv.decompress); // value => zlib.gunzipSync(value)
+console.log(keyv.compression); // undefined
+keyv.compression = new KeyvGzip();
+console.log(keyv.compression); // KeyvGzip
 ```
 
 # How to Contribute

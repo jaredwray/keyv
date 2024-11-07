@@ -6,7 +6,7 @@ import KeyvMongo from '@keyv/mongo';
 import KeyvBrotli from '@keyv/compress-brotli';
 import KeyvGzip from '@keyv/compress-gzip';
 import KeyvMemcache from '@keyv/memcache';
-import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw} from '../src/index.js';
+import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw, type CompressionAdapter} from '../src/index.js';
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 
@@ -745,16 +745,9 @@ test.it('Keyv does get and set on serialize / deserialize function', async t => 
 
 test.it('Keyv can get and set the compress property', async t => {
 	const keyv = new Keyv();
-	t.expect(keyv.compress).not.toBeDefined();
-	const compressFunction = (value: any) => value;
-	keyv.compress = compressFunction;
-	t.expect(keyv.compress).toBe(compressFunction);
+	const gzip = new KeyvGzip();
+	t.expect(keyv.compression).not.toBeDefined();
+	keyv.compression = gzip as CompressionAdapter;
+	t.expect(keyv.compression).toBe(gzip);
 });
 
-test.it('Keyv can get and set the decompress property', async t => {
-	const keyv = new Keyv();
-	t.expect(keyv.decompress).not.toBeDefined();
-	const decompressFunction = async (value: any) => value;
-	keyv.decompress = decompressFunction;
-	t.expect(keyv.decompress).toBe(decompressFunction);
-});
