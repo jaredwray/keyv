@@ -197,7 +197,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this._ttl = this.opts.ttl;
 		}
 
-		if(this.opts.useKeyPrefix) {
+		if (this.opts.useKeyPrefix !== undefined) {
 			this._useKeyPrefix = this.opts.useKeyPrefix;
 		}
 	}
@@ -377,6 +377,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (!this._useKeyPrefix) {
 			return key;
 		}
+
 		return `${this._namespace}:${key}`;
 	}
 
@@ -384,6 +385,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (!this._useKeyPrefix) {
 			return keys;
 		}
+
 		return keys.map(key => `${this._namespace}:${key}`);
 	}
 
@@ -391,7 +393,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (!this._useKeyPrefix) {
 			return key;
 		}
-		
+
 		return key
 			.split(':')
 			.splice(1)
