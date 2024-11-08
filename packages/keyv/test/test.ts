@@ -793,3 +793,15 @@ test.it('Keyv can iterate with useKeyPrefix false', async t => {
 
 	t.expect(keys).toStrictEqual(['foo', 'foo1', 'foo2']);
 });
+
+test.it('Keyv will not prefix if there is no namespace', async t => {
+	const keyv = new Keyv();
+	t.expect(keyv.namespace).toBe('keyv');
+	keyv.namespace = undefined;
+	await keyv.set('foo', 'bar');
+	await keyv.set('foo1', 'bar1');
+	await keyv.set('foo2', 'bar2');
+	t.expect(await keyv.get('foo')).toBe('bar');
+	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']) as string[];
+	t.expect(values).toStrictEqual(['bar', 'bar1', 'bar2']);
+});
