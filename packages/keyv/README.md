@@ -340,15 +340,15 @@ import KeyvGzip from '@keyv/compress-gzip';
 keyvCompresstionTests(test, new KeyvGzip());
 ```
 
-## API
+# API
 
-### new Keyv([storage-adapter], [options]) or new Keyv([options])
+## new Keyv([storage-adapter], [options]) or new Keyv([options])
 
 Returns a new Keyv instance.
 
 The Keyv instance is also an `EventEmitter` that will emit an `'error'` event if the storage adapter connection fails.
 
-### storage-adapter
+## storage-adapter
 
 Type: `KeyvStorageAdapter`<br />
 Default: `undefined`
@@ -357,66 +357,66 @@ The connection string URI.
 
 Merged into the options object as options.uri.
 
-### .namespace
+## .namespace
 
 Type: `String`
 Default: `'keyv'`
 
 This is the namespace for the current instance. When you set it it will set it also on the storage adapter. This is the preferred way to set the namespace over `.opts.namespace`.
 
-### options
+## options
 
 Type: `Object`
 
 The options object is also passed through to the storage adapter. Check your storage adapter docs for any extra options.
 
-#### options.namespace
+## options.namespace
 
 Type: `String`<br />
 Default: `'keyv'`
 
 Namespace for the current instance.
 
-#### options.ttl
+## options.ttl
 
 Type: `Number`<br />
 Default: `undefined`
 
 Default TTL. Can be overridden by specififying a TTL on `.set()`.
 
-#### options.compression
+## options.compression
 
 Type: `@keyv/compress-<compression_package_name>`<br />
 Default: `undefined`
 
 Compression package to use. See [Compression](#compression) for more details.
 
-#### options.serialize
+## options.serialize
 
 Type: `Function`<br />
-Default: `JSONB.stringify`
+Default: `JSON.stringify`
 
 A custom serialization function.
 
-#### options.deserialize
+## options.deserialize
 
 Type: `Function`<br />
-Default: `JSONB.parse`
+Default: `JSON.parse`
 
 A custom deserialization function.
 
-#### options.store
+## options.store
 
 Type: `Storage adapter instance`<br />
 Default: `new Map()`
 
 The storage adapter instance to be used by Keyv.
 
-### Instance
+# Keyv Instance
 
 Keys must always be strings. Values can be of any type.
 
-#### .set(key, value, [ttl])
+## .set(key, value, [ttl])
 
 Set a value.
 
@@ -424,11 +424,11 @@ By default keys are persistent. You can set an expiry TTL in milliseconds.
 
 Returns a promise which resolves to `true`.
 
-#### .get(key, [options])
+## .get(key, [options])
 
 Returns a promise which resolves to the retrieved value.
 
-##### options.raw
+### options.raw
 
 Type: `Boolean`<br />
 Default: `false`
@@ -437,19 +437,19 @@ If set to true the raw DB object Keyv stores internally will be returned instead
 
 This contains the TTL timestamp.
 
-#### .delete(key)
+## .delete(key)
 
 Deletes an entry.
 
 Returns a promise which resolves to `true` if the key existed, `false` if not.
 
-#### .clear()
+## .clear()
 
 Delete all entries in the current namespace.
 
 Returns a promise which is resolved when the entries have been cleared.
 
-#### .iterator()
+## .iterator()
 
 Iterate over all entries of the current namespace.
 
@@ -468,11 +468,20 @@ for await (const [key, value] of this.keyv.iterator()) {
 
 Type: `String`
 
-The namespace for the current instance. This will define the namespace for the current instance and the storage adapter.
+The namespace for the current instance. This will define the namespace for the current instance and the storage adapter. If you set the namespace to `undefined` it will no longer do key prefixing.
 
 ```js
 const keyv = new Keyv({ namespace: 'my-namespace' });
 console.log(keyv.namespace); // 'my-namespace'
+```
+
+here is an example of setting the namespace to `undefined`:
+
+```js
+const keyv = new Keyv();
+console.log(keyv.namespace); // 'keyv' which is default
+keyv.namespace = undefined;
+console.log(keyv.namespace); // undefined
 ```
 
 ## .ttl
