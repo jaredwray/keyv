@@ -36,6 +36,7 @@ By default everything is stored in memory, you can optionally also install a sto
 
 ```
 npm install --save @keyv/redis
+npm install --save @keyv/valkey
 npm install --save @keyv/mongo
 npm install --save @keyv/sqlite
 npm install --save @keyv/postgres
