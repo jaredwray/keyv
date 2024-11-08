@@ -378,11 +378,19 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return key;
 		}
 
+		if (!this._namespace) {
+			return key;
+		}
+
 		return `${this._namespace}:${key}`;
 	}
 
 	_getKeyPrefixArray(keys: string[]): string[] {
 		if (!this._useKeyPrefix) {
+			return keys;
+		}
+
+		if (!this._namespace) {
 			return keys;
 		}
 
