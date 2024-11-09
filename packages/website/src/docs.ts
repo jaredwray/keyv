@@ -69,6 +69,7 @@ async function copyCompressionDocs() {
 }
 
 function cleanDocumentFromImage(document: string) {
+    document = document.replace(`[<img width="250" align="center" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)`, "");
     document = document.replace(`[<img width="100" align="right" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)`, "");
     document = document.replace(`[<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)`, "");
     return document;

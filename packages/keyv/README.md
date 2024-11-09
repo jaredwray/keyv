@@ -1,8 +1,4 @@
-<h1 align="center">
-	<img width="250" src="https://jaredwray.com/images/keyv.svg" alt="keyv">
-	<br>
-	<br>
-</h1>
+[<img width="250" align="center" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
 
 > Simple key-value storage with support for multiple backends
 
