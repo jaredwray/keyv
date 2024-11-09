@@ -12,6 +12,8 @@ export type DeserializedData<Value> = {
 export interface CompressionAdapter {
 	compress(value: any, options?: any): Promise<any>;
 	decompress(value: any, options?: any): Promise<any>;
+	serialize<Value>(data: DeserializedData<Value>): Promise<string> | string;
+	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
 }
 
 export type Serialize = <Value>(data: DeserializedData<Value>) => Promise<string> | string;

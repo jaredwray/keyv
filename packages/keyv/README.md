@@ -1,4 +1,4 @@
-[<img width="250" align="center" src="https://jaredwray.com/images/keyv.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+<h1 align="center"><img width="250" src="https://jaredwray.com/images/keyv.svg" alt="keyv"></h1>
 
 > Simple key-value storage with support for multiple backends
 
