@@ -805,3 +805,21 @@ test.it('Keyv will not prefix if there is no namespace', async t => {
 	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']) as string[];
 	t.expect(values).toStrictEqual(['bar', 'bar1', 'bar2']);
 });
+
+test.it('Keyv will not serialize / deserialize / compress if it is undefined', async t => {
+	const keyv = new Keyv({compression: new KeyvGzip()});
+	keyv.serialize = undefined;
+	keyv.deserialize = undefined;
+	const complexObject = {foo: 'bar', fizz: 'buzz'};
+	await keyv.set('foo-complex', complexObject);
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+	t.expect(await keyv.get('foo-complex')).toStrictEqual(complexObject);
+});
+
+test.it('Keyv deserlize will return undefined if not string', async t => {
+	const keyv = new Keyv({compression: new KeyvGzip()});
+	const complexObject = {foo: 'bar', fizz: 'buzz'};
+	const result = await keyv.deserializeData({value: complexObject});
+	t.expect(result).toBeUndefined();
+});
