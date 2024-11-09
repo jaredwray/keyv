@@ -109,8 +109,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	private _store: KeyvStoreAdapter | Map<any, any> | any = new Map();
 
-	private _serialize: Serialize = defaultSerialize;
-	private _deserialize: Deserialize = defaultDeserialize;
+	private _serialize: Serialize | undefined = defaultSerialize;
+	private _deserialize: Deserialize | undefined = defaultDeserialize;
 
 	private _compression: CompressionAdapter | undefined;
 
@@ -292,7 +292,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Get the current serialize function.
 	 * @returns {Serialize} The current serialize function.
 	 */
-	public get serialize(): Serialize {
+	public get serialize(): Serialize | undefined {
 		return this._serialize;
 	}
 
@@ -300,7 +300,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Set the current serialize function.
 	 * @param {Serialize} serialize The serialize function to set.
 	 */
-	public set serialize(serialize: Serialize) {
+	public set serialize(serialize: Serialize | undefined) {
 		this.opts.serialize = serialize;
 		this._serialize = serialize;
 	}
@@ -309,7 +309,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Get the current deserialize function.
 	 * @returns {Deserialize} The current deserialize function.
 	 */
-	public get deserialize(): Deserialize {
+	public get deserialize(): Deserialize | undefined {
 		return this._deserialize;
 	}
 
@@ -317,7 +317,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Set the current deserialize function.
 	 * @param {Deserialize} deserialize The deserialize function to set.
 	 */
-	public set deserialize(deserialize: Deserialize) {
+	public set deserialize(deserialize: Deserialize | undefined) {
 		this.opts.deserialize = deserialize;
 		this._deserialize = deserialize;
 	}
@@ -625,7 +625,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 	}
 
-	public async serializeData<T>(data: DeserializedData<T>): Promise<string> {
+	public async serializeData<T>(data: DeserializedData<T>): Promise<string | DeserializedData<T>> {
+		if (!this._serialize) {
+			return data;
+		}
+
 		if (this._compression?.compress) {
 			return this._serialize({value: await this._compression.compress(data.value), expires: data.expires});
 		}
@@ -633,13 +637,21 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return this._serialize(data);
 	}
 
-	public async deserializeData<T>(data: string): Promise<DeserializedData<T> | undefined> {
-		if (this._compression?.decompress) {
+	public async deserializeData<T>(data: string | DeserializedData<T>): Promise<DeserializedData<T> | undefined> {
+		if (!this._deserialize) {
+			return data as DeserializedData<T>;
+		}
+
+		if (this._compression?.decompress && typeof data === 'string') {
 			const result = await this._deserialize(data);
 			return {value: await this._compression.decompress(result?.value), expires: result?.expires};
 		}
 
-		return this._deserialize(data);
+		if (typeof data === 'string') {
+			return this._deserialize(data);
+		}
+
+		return undefined;
 	}
 }
 
