@@ -68,7 +68,7 @@
 	"devDependencies": {
 		"@keyv/compress-brotli": "*",
 		"@types/json-bigint": "^1.0.4",
-		"keyv": "*",
+		"keyv": "^5.2.1",
 		"rimraf": "^6.0.1"
 	}
 }
