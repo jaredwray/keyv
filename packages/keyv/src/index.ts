@@ -12,9 +12,11 @@ export type DeserializedData<Value> = {
 export interface CompressionAdapter {
 	compress(value: any, options?: any): Promise<any>;
 	decompress(value: any, options?: any): Promise<any>;
-	serialize<Value>(data: DeserializedData<Value>): Promise<string> | string;
-	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
 }
+
+export type Serialize = <Value>(data: DeserializedData<Value>) => Promise<string> | string;
+
+export type Deserialize = <Value>(data: string) => Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
 
 export enum KeyvHooks {
 	PRE_SET = 'preSet',
@@ -59,9 +61,9 @@ export type KeyvOptions = {
 	/** Namespace for the current instance. */
 	namespace?: string;
 	/** A custom serialization function. */
-	serialize?: CompressionAdapter['serialize'];
+	serialize?: Serialize;
 	/** A custom deserialization function. */
-	deserialize?: CompressionAdapter['deserialize'];
+	deserialize?: Deserialize;
 	/** The storage adapter instance to be used by Keyv. */
 	store?: KeyvStoreAdapter | Map<any, any> | any;
 	/** Default TTL. Can be overridden by specifying a TTL on `.set()`. */
@@ -107,8 +109,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	private _store: KeyvStoreAdapter | Map<any, any> | any = new Map();
 
-	private _serialize: CompressionAdapter['serialize'] = defaultSerialize;
-	private _deserialize: CompressionAdapter['deserialize'] = defaultDeserialize;
+	private _serialize: Serialize = defaultSerialize;
+	private _deserialize: Deserialize = defaultDeserialize;
 
 	private _compression: CompressionAdapter | undefined;
 
@@ -288,34 +290,34 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Get the current serialize function.
-	 * @returns {CompressionAdapter['serialize']} The current serialize function.
+	 * @returns {Serialize} The current serialize function.
 	 */
-	public get serialize(): CompressionAdapter['serialize'] {
+	public get serialize(): Serialize {
 		return this._serialize;
 	}
 
 	/**
 	 * Set the current serialize function.
-	 * @param {CompressionAdapter['serialize']} serialize The serialize function to set.
+	 * @param {Serialize} serialize The serialize function to set.
 	 */
-	public set serialize(serialize: CompressionAdapter['serialize']) {
+	public set serialize(serialize: Serialize) {
 		this.opts.serialize = serialize;
 		this._serialize = serialize;
 	}
 
 	/**
 	 * Get the current deserialize function.
-	 * @returns {CompressionAdapter['deserialize']} The current deserialize function.
+	 * @returns {Deserialize} The current deserialize function.
 	 */
-	public get deserialize(): CompressionAdapter['deserialize'] {
+	public get deserialize(): Deserialize {
 		return this._deserialize;
 	}
 
 	/**
 	 * Set the current deserialize function.
-	 * @param {CompressionAdapter['deserialize']} deserialize The deserialize function to set.
+	 * @param {Deserialize} deserialize The deserialize function to set.
 	 */
-	public set deserialize(deserialize: CompressionAdapter['deserialize']) {
+	public set deserialize(deserialize: Deserialize) {
 		this.opts.deserialize = deserialize;
 		this._deserialize = deserialize;
 	}
