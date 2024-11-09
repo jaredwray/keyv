@@ -1,4 +1,8 @@
-[<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+<h1 align="center">
+	<img width="250" src="https://jaredwray.com/images/keyv.svg" alt="keyv">
+	<br>
+	<br>
+</h1>
 
 > Simple key-value storage with support for multiple backends
 
@@ -9,7 +13,7 @@
 
 Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. It supports TTL based expiry, making it suitable as a cache or a persistent key-value store.
 
-## Features
+# Features
 
 There are a few existing modules similar to Keyv, however Keyv is different because it:
 
@@ -24,7 +28,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - Connection errors are passed through (db failures won't kill your app)
 - Supports the current active LTS version of Node.js or higher
 
-## Usage
+# Usage
 
 Install Keyv.
 
@@ -51,11 +55,11 @@ First, create a new Keyv instance.
 import Keyv from 'keyv';
 ```
 
-### Type-safe Usage
+# Type-safe Usage
 
 You can create a `Keyv` instance with a generic type to enforce type safety for the values stored. Additionally, both the `get` and `set` methods support specifying custom types for specific use cases.
 
-#### Example with Instance-level Generic Type:
+## Example with Instance-level Generic Type:
 
 ```ts
 const keyv = new Keyv<number>(); // Instance handles only numbers
@@ -63,7 +67,7 @@ await keyv.set('key1', 123);
 const value = await keyv.get('key1'); // value is inferred as number
 ```
 
-#### Example with Method-level Generic Type:
+## Example with Method-level Generic Type:
 
 You can also specify a type directly in the `get` or `set` methods, allowing flexibility for different types of values within the same instance.
 
@@ -79,7 +83,7 @@ const numValue = await keyv.get<number>('key3'); // Explicitly typed as number
 
 This makes `Keyv` highly adaptable to different data types while maintaining type safety.
 
-### Using Storage Adapters
+# Using Storage Adapters
 
 Once you have created your Keyv instance you can use it as a simple key-value store with `in-memory` by default. To use a storage adapter, create an instance of the adapter and pass it to the Keyv constructor. Here are some examples:
 
@@ -125,7 +129,7 @@ await keyv.clear(); // undefined
 
 It's is just that simple! Keyv is designed to be simple and easy to use.
 
-### Namespaces
+# Namespaces
 
 You can namespace your Keyv instance to avoid key collisions and allow you to clear only a certain namespace while using the same database.
 
@@ -142,7 +146,7 @@ await users.get('foo'); // undefined
 await cache.get('foo'); // 'cache'
 ```
 
-### Events
+# Events
 
 Keyv is a custom `EventEmitter` and will emit an `'error'` event if there is an error. In addition it will emit a `clear` and `disconnect` event when the corresponding methods are called.
 
@@ -157,7 +161,7 @@ keyv.on('clear', handleClear);
 keyv.on('disconnect', handleDisconnect);
 ```
 
-### Hooks
+# Hooks
 
 Keyv supports hooks for `get`, `set`, and `delete` methods. Hooks are useful for logging, debugging, and other custom functionality. Here is a list of all the hooks:
 
@@ -203,7 +207,7 @@ Now this key will have prefix- added to it before it is set.
 In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an `Array`. This is based on the fact that `delete` can accept a single key or an `Array` of keys.
 
 
-### Custom Serializers
+# Custom Serializers
 
 Keyv uses [`buffer`](https://nodejs.org/api/buffer.html) for data serialization to ensure consistency across different backends.
 
@@ -215,7 +219,15 @@ const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
 
 **Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialisation functions and chosen storage engine.
 
-## Official Storage Adapters
+If you do not want to use serialization you can set the `serialize` and `deserialize` functions to `undefined`. This will also turn off compression.
+
+```js
+const keyv = new Keyv();
+keyv.serialize = undefined;
+keyv.deserialize = undefined;
+```
+
+# Official Storage Adapters
 
 The official storage adapters are covered by [over 150 integration tests](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml) to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
 
@@ -230,7 +242,7 @@ MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mys
 Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes
 Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) | Yes
 
-## Third-party Storage Adapters
+# Third-party Storage Adapters
 
 You can also use third-party storage adapters or build your own. Keyv will wrap these storage adapters in TTL functionality and handle complex types internally.
 
@@ -270,7 +282,7 @@ The following are third-party storage adapters compatible with Keyv:
 - [keyv-arango](https://github.com/TimMikeladze/keyv-arango) - ArangoDB storage adapter for Keyv
 - [keyv-momento](https://github.com/momentohq/node-keyv-adaptor/) - Momento storage adapter for Keyv
 
-## Add Cache Support to your Module
+# Add Cache Support to your Module
 
 Keyv is designed to be easily embedded into other modules to add cache support. The recommended pattern is to expose a `cache` option in your modules options which is passed through to Keyv. Caching will work in memory by default and users have the option to also install a Keyv storage adapter and pass in a connection string, or any other storage that implements the `Map` API.
 
@@ -305,7 +317,7 @@ const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
 const awesomeModule = new AwesomeModule({ cache: some3rdPartyStore });
 ```
 
-## Compression
+# Compression
 
 Keyv supports `gzip` and `brotli` compression. To enable compression, pass the `compress` option to the constructor.
 
@@ -319,7 +331,7 @@ const keyv = new Keyv({ compression: KeyvGzip });
 
 You can also pass a custom compression function to the `compression` option. Following the pattern of the official compression adapters.
 
-### Want to build your own? 
+## Want to build your own CompressionAdapter? 
 
 Great! Keyv is designed to be easily extended. You can build your own compression adapter by following the pattern of the official compression adapters based on this interface:
 
