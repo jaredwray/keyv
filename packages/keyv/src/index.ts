@@ -157,10 +157,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this._store = this.opts.store;
 
 		this._compression = this.opts.compression;
-		if (this._compression) {
-			this.opts.serialize = this._compression.serialize.bind(this._compression);
-			this.opts.deserialize = this._compression.deserialize.bind(this._compression);
-		}
 
 		this._serialize = this.opts.serialize!;
 		this._deserialize = this.opts.deserialize!;
@@ -250,10 +246,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public set compression(compress: CompressionAdapter | undefined) {
 		this._compression = compress;
-		if (this._compression) {
-			this.opts.serialize = this._compression.serialize.bind(this._compression);
-			this.opts.deserialize = this._compression.deserialize.bind(this._compression);
-		}
 	}
 
 	/**
@@ -351,7 +343,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			for await (const [key, raw] of (typeof iterator === 'function'
 				? iterator(this._store.namespace)
 				: iterator)) {
-				const data = await this._deserialize(raw);
+				const data = await this.deserializeData(raw);
 				if (this._useKeyPrefix && this._store.namespace && !key.includes(this._store.namespace)) {
 					continue;
 				}
@@ -440,7 +432,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			if (store.getMany === undefined) {
 				const promises = (keyPrefixed as string[]).map(async key => {
 					const rawData = await store.get<Value>(key);
-					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this._deserialize<Value>(rawData as string) : rawData;
+					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
 
 					if (deserializedRow === undefined || deserializedRow === null) {
 						return undefined;
@@ -471,7 +463,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				let row = rawData[index];
 
 				if ((typeof row === 'string')) {
-					row = await this._deserialize<Value>(row);
+					row = await this.deserializeData<Value>(row);
 				}
 
 				if (row === undefined || row === null) {
@@ -499,7 +491,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
 		const rawData = await store.get<Value>(keyPrefixed as string);
-		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this._deserialize<Value>(rawData as string) : rawData;
+		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
 			this.stats.miss();
@@ -544,7 +536,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		const formattedValue = {value, expires};
-		const serializedValue = await this._serialize(formattedValue);
+		const serializedValue = await this.serializeData(formattedValue);
 
 		await store.set(keyPrefixed, serializedValue, ttl);
 		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
@@ -606,7 +598,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		const rawData = await store.get(keyPrefixed) as any;
 		if (rawData) {
-			const data = this._deserialize(rawData) as any;
+			const data = await this.deserializeData(rawData) as any;
 			if (data) {
 				if (data.expires === undefined || data.expires === null) {
 					return true;
@@ -629,6 +621,23 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (typeof store.disconnect === 'function') {
 			return store.disconnect();
 		}
+	}
+
+	public async serializeData<T>(data: DeserializedData<T>): Promise<string> {
+		if (this._compression?.compress) {
+			return this._serialize({value: await this._compression.compress(data.value), expires: data.expires});
+		}
+
+		return this._serialize(data);
+	}
+
+	public async deserializeData<T>(data: string): Promise<DeserializedData<T> | undefined> {
+		if (this._compression?.decompress) {
+			const result = await this._deserialize(data);
+			return {value: await this._compression.decompress(result?.value), expires: result?.expires};
+		}
+
+		return this._deserialize(data);
 	}
 }
 
