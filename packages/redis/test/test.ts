@@ -31,6 +31,45 @@ describe('KeyvRedis', () => {
 		const keyvRedis = new KeyvRedis({url: uri});
 		expect(keyvRedis.client.options?.url).toBe(uri);
 	});
+
+	test('should be able to pass in the url and options to constructor', () => {
+		const uri = 'redis://localhost:6379';
+		const keyvRedis = new KeyvRedis(uri, {namespace: 'test'});
+		expect(keyvRedis.client.options?.url).toBe(uri);
+		expect(keyvRedis.namespace).toBe('test');
+	});
+
+	test('should be able to pass in the url and options to constructor', () => {
+		const uri = 'redis://localhost:6379';
+		const options = {
+			namespace: 'test',
+			keyPrefixSeparator: '->',
+			clearBatchSize: 100,
+		};
+		const keyvRedis = new KeyvRedis(uri, options);
+		expect(keyvRedis.client.options?.url).toBe(uri);
+		expect(keyvRedis.namespace).toBe('test');
+		expect(keyvRedis.keyPrefixSeparator).toBe('->');
+		expect(keyvRedis.clearBatchSize).toBe(100);
+	});
+
+	test('should be able to get and set properties', () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.namespace = 'test';
+		keyvRedis.keyPrefixSeparator = '->';
+		keyvRedis.clearBatchSize = 1001;
+		expect(keyvRedis.namespace).toBe('test');
+		expect(keyvRedis.keyPrefixSeparator).toBe('->');
+		expect(keyvRedis.clearBatchSize).toBe(1001);
+	});
+
+	test('should be able to get and set opts', () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.opts = {namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000};
+		expect(keyvRedis.opts).toEqual({
+			namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000,
+		});
+	});
 });
 
 describe('KeyvRedis Methods', () => {
@@ -57,6 +96,81 @@ describe('KeyvRedis Methods', () => {
 		const keyvRedis = new KeyvRedis();
 		const deleted = await keyvRedis.delete('foo');
 		expect(deleted).toBe(false);
+		await keyvRedis.disconnect();
+	});
+
+	test('if there is a namespace on key prefix', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.namespace = 'ns1';
+		const key = keyvRedis.createKeyPrefix('foo', 'ns2');
+		expect(key).toBe('ns2::foo');
+	});
+
+	test('if no namespace on key prefix and no default namespace', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.namespace = undefined;
+		const key = keyvRedis.createKeyPrefix('foo');
+		expect(key).toBe('foo');
+	});
+
+	test('if no namespace on key prefix and no default namespace', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.namespace = 'ns1';
+		const key = keyvRedis.createKeyPrefix('foo');
+		expect(key).toBe('ns1::foo');
+	});
+
+	test('should do nothing if no keys on clear', async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient();
+		await client.flushDb();
+		await keyvRedis.clear();
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.clear();
+		await keyvRedis.disconnect();
+	});
+});
+
+describe('KeyvRedis Namespace', () => {
+	test('should clear with no namespace', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('foo', 'bar');
+		await keyvRedis.set('foo2', 'bar2');
+		await keyvRedis.set('foo3', 'bar3');
+		await keyvRedis.clear();
+		const value = await keyvRedis.get('foo');
+		expect(value).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
+
+	test('should clear with no namespace but not the namespace ones', async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient();
+		await client.flushDb();
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.set('foo', 'bar');
+		keyvRedis.namespace = undefined;
+		await keyvRedis.set('foo2', 'bar2');
+		await keyvRedis.set('foo3', 'bar3');
+		await keyvRedis.clear();
+		keyvRedis.namespace = 'ns1';
+		const value = await keyvRedis.get('foo');
+		expect(value).toBe('bar');
+		await keyvRedis.disconnect();
+	});
+
+	test('should clear namespace but not other ones', async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient();
+		await client.flushDb();
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.set('foo1', 'bar');
+		keyvRedis.namespace = 'ns2';
+		await keyvRedis.set('foo2', 'bar2');
+		await keyvRedis.clear();
+		keyvRedis.namespace = 'ns1';
+		const value = await keyvRedis.get('foo1');
+		expect(value).toBe('bar');
 		await keyvRedis.disconnect();
 	});
 });
