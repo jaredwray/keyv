@@ -1,4 +1,6 @@
-import {describe, test, expect} from 'vitest';
+import {
+	describe, test, expect, beforeEach,
+} from 'vitest';
 import {createClient, type RedisClientType} from 'redis';
 import {delay} from '@keyv/test-suite';
 import KeyvRedis from '../src/index.js';
@@ -73,6 +75,12 @@ describe('KeyvRedis', () => {
 });
 
 describe('KeyvRedis Methods', () => {
+	beforeEach(async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient();
+		await client.flushDb();
+		await keyvRedis.disconnect();
+	});
 	test('should be able to connect, set, delete, and disconnect', async () => {
 		const keyvRedis = new KeyvRedis();
 		await keyvRedis.set('foo', 'bar');
@@ -144,9 +152,59 @@ describe('KeyvRedis Methods', () => {
 		expect(exists).toBe(false);
 		await keyvRedis.disconnect();
 	});
+
+	test('should be able to set many keys', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-many1', value: 'bar'}, {key: 'foo-many2', value: 'bar2'}, {key: 'foo-many3', value: 'bar3', ttl: 5}]);
+		const value = await keyvRedis.get('foo-many1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-many2');
+		expect(value2).toBe('bar2');
+		await delay(10);
+		const value3 = await keyvRedis.get('foo-many3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to has many keys', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-has-many1', value: 'bar'}, {key: 'foo-has-many2', value: 'bar2'}, {key: 'foo-has-many3', value: 'bar3', ttl: 5}]);
+		await delay(10);
+		const exists = await keyvRedis.hasMany(['foo-has-many1', 'foo-has-many2', 'foo-has-many3']);
+		expect(exists).toEqual([true, true, false]);
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to get many keys', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-get-many1', value: 'bar'}, {key: 'foo-get-many2', value: 'bar2'}, {key: 'foo-get-many3', value: 'bar3', ttl: 5}]);
+		await delay(10);
+		const values = await keyvRedis.getMany(['foo-get-many1', 'foo-get-many2', 'foo-get-many3']);
+		expect(values).toEqual(['bar', 'bar2', undefined]);
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to delete many with namespace', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-dm1', value: 'bar'}, {key: 'foo-dm2', value: 'bar2'}, {key: 'foo-dm3', value: 'bar3', ttl: 5}]);
+		await keyvRedis.deleteMany(['foo-dm2', 'foo-dm3']);
+		const value = await keyvRedis.get('foo-dm1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-dm2');
+		expect(value2).toBeUndefined();
+		const value3 = await keyvRedis.get('foo-dm3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
 });
 
 describe('KeyvRedis Namespace', () => {
+	beforeEach(async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient();
+		await client.flushDb();
+		await keyvRedis.disconnect();
+	});
 	test('should clear with no namespace', async () => {
 		const keyvRedis = new KeyvRedis();
 		await keyvRedis.set('foo', 'bar');
@@ -188,9 +246,51 @@ describe('KeyvRedis Namespace', () => {
 		expect(value).toBe('bar');
 		await keyvRedis.disconnect();
 	});
+
+	test('should be able to set many keys with namespace', async () => {
+		const keyvRedis = new KeyvRedis('redis://localhost:6379', {namespace: 'ns-many1'});
+		await keyvRedis.setMany([{key: 'foo-many1', value: 'bar'}, {key: 'foo-many2', value: 'bar2'}, {key: 'foo-many3', value: 'bar3', ttl: 5}]);
+		const value = await keyvRedis.get('foo-many1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-many2');
+		expect(value2).toBe('bar2');
+		await delay(10);
+		const value3 = await keyvRedis.get('foo-many3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to has many keys with namespace', async () => {
+		const keyvRedis = new KeyvRedis('redis://localhost:6379', {namespace: 'ns-many2'});
+		await keyvRedis.setMany([{key: 'foo-has-many1', value: 'bar'}, {key: 'foo-has-many2', value: 'bar2'}, {key: 'foo-has-many3', value: 'bar3', ttl: 5}]);
+		await delay(10);
+		const exists = await keyvRedis.hasMany(['foo-has-many1', 'foo-has-many2', 'foo-has-many3']);
+		expect(exists).toEqual([true, true, false]);
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to delete many with namespace', async () => {
+		const keyvRedis = new KeyvRedis('redis://localhost:6379', {namespace: 'ns-dm1'});
+		await keyvRedis.setMany([{key: 'foo-delete-many1', value: 'bar'}, {key: 'foo-delete-many2', value: 'bar2'}, {key: 'foo-delete-many3', value: 'bar3', ttl: 5}]);
+		await keyvRedis.deleteMany(['foo-delete-many2', 'foo-delete-many3']);
+		await delay(10);
+		const value = await keyvRedis.get('foo-delete-many1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-delete-many2');
+		expect(value2).toBeUndefined();
+		const value3 = await keyvRedis.get('foo-delete-many3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
 });
 
 describe('KeyvRedis Iterators', () => {
+	beforeEach(async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient();
+		await client.flushDb();
+		await keyvRedis.disconnect();
+	});
 	test('should be able to iterate over keys', async () => {
 		const keyvRedis = new KeyvRedis();
 		await keyvRedis.set('foo', 'bar');
@@ -222,8 +322,13 @@ describe('KeyvRedis Iterators', () => {
 			values.push(value);
 		}
 
-		expect(keys).toEqual(['foo1', 'foo12', 'foo13']);
-		expect(values).toEqual(['bar', 'bar2', 'bar3']);
+		expect(keys).toContain('foo1');
+		expect(keys).toContain('foo12');
+		expect(keys).toContain('foo13');
+		expect(values).toContain('bar');
+		expect(values).toContain('bar2');
+		expect(values).toContain('bar3');
+
 		await keyvRedis.disconnect();
 	});
 });

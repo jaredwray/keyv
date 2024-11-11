@@ -8,6 +8,12 @@ export type KeyvRedisOptions = {
 	clearBatchSize?: number;
 };
 
+export type KeyvRedisEntry<T> = {
+	key: string;
+	value: T;
+	ttl?: number;
+};
+
 export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 	private _client: RedisClientType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
@@ -96,12 +102,41 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		}
 	}
 
+	public async setMany(entries: Array<KeyvRedisEntry<string>>): Promise<void> {
+		const client = await this.getClient();
+		const multi = client.multi();
+		for (const {key, value, ttl} of entries) {
+			const prefixedKey = this.createKeyPrefix(key, this._namespace);
+			if (ttl) {
+				// eslint-disable-next-line @typescript-eslint/naming-convention
+				multi.set(prefixedKey, value, {PX: ttl});
+			} else {
+				multi.set(prefixedKey, value);
+			}
+		}
+
+		await multi.exec();
+	}
+
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
 		const exists = await client.exists(key);
 
 		return exists === 1;
+	}
+
+	public async hasMany(keys: string[]): Promise<boolean[]> {
+		const client = await this.getClient();
+		const multi = client.multi();
+		for (const key of keys) {
+			const prefixedKey = this.createKeyPrefix(key, this._namespace);
+			multi.exists(prefixedKey);
+		}
+
+		const results = await multi.exec();
+
+		return results.map(result => result === 1);
 	}
 
 	public async get<T>(key: string): Promise<T | undefined> {
@@ -115,12 +150,38 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return value as T;
 	}
 
+	public async getMany<T>(keys: string[]): Promise<Array<T | undefined>> {
+		const client = await this.getClient();
+		const multi = client.multi();
+		for (const key of keys) {
+			const prefixedKey = this.createKeyPrefix(key, this._namespace);
+			multi.get(prefixedKey);
+		}
+
+		const values = await multi.exec();
+
+		return values.map(value => value === null ? undefined : value as T);
+	}
+
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
 		const deleted = await client.del(key);
 
 		return deleted > 0;
+	}
+
+	public async deleteMany(keys: string[]): Promise<boolean> {
+		const client = await this.getClient();
+		const multi = client.multi();
+		for (const key of keys) {
+			const prefixedKey = this.createKeyPrefix(key, this._namespace);
+			multi.del(prefixedKey);
+		}
+
+		const results = await multi.exec();
+
+		return Boolean(results);
 	}
 
 	public async disconnect(): Promise<void> {
