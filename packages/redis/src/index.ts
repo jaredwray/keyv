@@ -10,15 +10,13 @@ export default class KeyvRedis extends EventEmitter {
 	constructor(argument1?: RedisClientOptions | RedisClientType) {
 		super();
 
-		if ((argument1 as RedisClientType).connect !== undefined) {
-			this._client = argument1 as RedisClientType;
-		} else if (argument1 instanceof Object) {
-			this._client = createClient(argument1 as RedisClientOptions) as RedisClientType;
+		if (argument1) {
+			if ((argument1 as RedisClientType).connect !== undefined) {
+				this._client = argument1 as RedisClientType;
+			} else if (argument1 instanceof Object) {
+				this._client = createClient(argument1 as RedisClientOptions) as RedisClientType;
+			}
 		}
-	}
-
-	public get defaultUri(): string {
-		return this._defaultUri;
 	}
 
 	public get client(): RedisClientType {
