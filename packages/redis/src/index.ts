@@ -96,6 +96,14 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		}
 	}
 
+	public async has(key: string): Promise<boolean> {
+		const client = await this.getClient();
+		key = this.createKeyPrefix(key, this._namespace);
+		const exists = await client.exists(key);
+
+		return exists === 1;
+	}
+
 	public async get<T>(key: string): Promise<T | undefined> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
@@ -131,19 +139,49 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return key;
 	}
 
+	public getKeyWithoutPrefix(key: string, namespace?: string): string {
+		if (namespace) {
+			return key.replace(`${namespace}${this._keyPrefixSeparator}`, '');
+		}
+
+		return key;
+	}
+
+	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
+		const client = await this.getClient();
+		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
+		let cursor = '0';
+		do {
+			// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
+			const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, TYPE: 'string'});
+			cursor = result.cursor.toString();
+			let {keys} = result;
+
+			if (!namespace) {
+				keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
+			}
+
+			if (keys.length > 0) {
+				// eslint-disable-next-line no-await-in-loop
+				const values = await client.mGet(keys);
+				for (const [i] of keys.entries()) {
+					const key = this.getKeyWithoutPrefix(keys[i], namespace);
+					const value = values ? values[i] : undefined;
+					yield [key, value as Value | undefined];
+				}
+			}
+		} while (cursor !== '0');
+	}
+
 	public async clear(): Promise<void> {
-		if (this._namespace) {
-			await this.clearNamespace(this._namespace);
-		} else {
-			await this.clearNoNamespace();
-		}
+		await this.clearNamespace(this._namespace);
 	}
 
-	private async clearNoNamespace(): Promise<void> {
+	private async clearNamespace(namespace?: string): Promise<void> {
 		try {
 			let cursor = '0';
 			const batchSize = this._clearBatchSize;
-			const match = '*';
+			const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
 			const client = await this.getClient();
 
 			do {
@@ -152,43 +190,14 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 				const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
 
 				cursor = result.cursor.toString();
-				const {keys} = result;
+				let {keys} = result;
 
 				if (keys.length === 0) {
 					continue;
 				}
 
-				// Filter keys that do not contain the namespace separator
-				const nonNamespaceKeys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
-
-				if (nonNamespaceKeys.length > 0) {
-					// eslint-disable-next-line no-await-in-loop
-					await client.del(nonNamespaceKeys);
-				}
-			} while (cursor !== '0');
-		/* c8 ignore next 3 */
-		} catch (error) {
-			this.emit('error', error);
-		}
-	}
-
-	private async clearNamespace(namespace: string): Promise<void> {
-		try {
-			let cursor = '0';
-			const batchSize = this._clearBatchSize;
-			const match = `${namespace}${this._keyPrefixSeparator}*`;
-			const client = await this.getClient();
-
-			do {
-				// Use SCAN to find keys incrementally in batches
-				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-				const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
-
-				cursor = result.cursor.toString();
-				const {keys} = result;
-
-				if (keys.length === 0) {
-					continue;
+				if (!namespace) {
+					keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
 				}
 
 				if (keys.length > 0) {

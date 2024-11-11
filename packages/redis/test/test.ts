@@ -129,6 +129,21 @@ describe('KeyvRedis Methods', () => {
 		await keyvRedis.clear();
 		await keyvRedis.disconnect();
 	});
+
+	test('should return true on has if key exists', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('hasfoo1', 'bar');
+		const exists = await keyvRedis.has('hasfoo1');
+		expect(exists).toBe(true);
+		await keyvRedis.disconnect();
+	});
+
+	test('should return false on has if key does not exist', async () => {
+		const keyvRedis = new KeyvRedis();
+		const exists = await keyvRedis.has('hasfoo2');
+		expect(exists).toBe(false);
+		await keyvRedis.disconnect();
+	});
 });
 
 describe('KeyvRedis Namespace', () => {
@@ -171,6 +186,44 @@ describe('KeyvRedis Namespace', () => {
 		keyvRedis.namespace = 'ns1';
 		const value = await keyvRedis.get('foo1');
 		expect(value).toBe('bar');
+		await keyvRedis.disconnect();
+	});
+});
+
+describe('KeyvRedis Iterators', () => {
+	test('should be able to iterate over keys', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('foo', 'bar');
+		await keyvRedis.set('foo2', 'bar2');
+		await keyvRedis.set('foo3', 'bar3');
+		const keys = [];
+		for await (const [key, value] of keyvRedis.iterator()) {
+			keys.push(key);
+		}
+
+		expect(keys).toEqual(['foo', 'foo3', 'foo2']);
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to iterate over keys by namespace', async () => {
+		const keyvRedis = new KeyvRedis();
+		const namespace = 'ns1';
+		await keyvRedis.set('foo', 'bar');
+		await keyvRedis.set('foo2', 'bar2');
+		await keyvRedis.set('foo3', 'bar3');
+		keyvRedis.namespace = namespace;
+		await keyvRedis.set('foo1', 'bar');
+		await keyvRedis.set('foo12', 'bar2');
+		await keyvRedis.set('foo13', 'bar3');
+		const keys = [];
+		const values = [];
+		for await (const [key, value] of keyvRedis.iterator(namespace)) {
+			keys.push(key);
+			values.push(value);
+		}
+
+		expect(keys).toEqual(['foo1', 'foo12', 'foo13']);
+		expect(values).toEqual(['bar', 'bar2', 'bar3']);
 		await keyvRedis.disconnect();
 	});
 });
