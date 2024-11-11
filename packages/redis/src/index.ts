@@ -17,6 +17,11 @@ export default class KeyvRedis extends EventEmitter {
 				this._client = createClient(argument1 as RedisClientOptions) as RedisClientType;
 			}
 		}
+
+		/* c8 ignore next 3 */
+		this._client.on('error', error => {
+			this.emit('error', error);
+		});
 	}
 
 	public get client(): RedisClientType {
@@ -25,6 +30,44 @@ export default class KeyvRedis extends EventEmitter {
 
 	public set client(value: RedisClientType) {
 		this._client = value;
+	}
+
+	public async getClient(): Promise<RedisClientType> {
+		if (!this._client.isOpen) {
+			await this._client.connect();
+		}
+
+		return this._client;
+	}
+
+	public async set(key: string, value: string, ttl?: number): Promise<void> {
+		const client = await this.getClient();
+		if (ttl) {
+			// eslint-disable-next-line @typescript-eslint/naming-convention
+			await client.set(key, value, {PX: ttl});
+		} else {
+			await client.set(key, value);
+		}
+	}
+
+	public async get(key: string): Promise<string | undefined> {
+		const client = await this.getClient();
+		const value = await client.get(key);
+		if (value === null) {
+			return undefined;
+		}
+
+		return value;
+	}
+
+	public async delete(key: string): Promise<boolean> {
+		const client = await this.getClient();
+		const result = await client.del(key);
+		return result === 1;
+	}
+
+	public async disconnect(): Promise<void> {
+		await this._client.quit();
 	}
 }
 
