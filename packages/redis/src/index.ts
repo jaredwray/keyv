@@ -191,12 +191,9 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 					continue;
 				}
 
-				// Filter keys that do not contain the namespace separator
-				const nonNamespaceKeys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
-
-				if (nonNamespaceKeys.length > 0) {
+				if (keys.length > 0) {
 					// eslint-disable-next-line no-await-in-loop
-					await client.del(nonNamespaceKeys);
+					await client.del(keys);
 				}
 			} while (cursor !== '0');
 		/* c8 ignore next 3 */
