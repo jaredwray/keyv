@@ -497,3 +497,7 @@ export function createKeyv(connect?: string | RedisClientOptions | RedisClientTy
 export {
 	createClient, createCluster, type RedisClientOptions, type RedisClientType,
 } from 'redis';
+
+export {
+	Keyv, type KeyvStoreAdapter,
+} from 'keyv';
