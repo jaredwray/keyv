@@ -12,30 +12,31 @@ Express is a minimal Node.js web application framework. Its APIs provide web and
 ## What is a Cache?
 A cache is a short-term, high-speed data storage layer that stores a subset of data, enabling it to be retrieved faster than accessing it from its primary storage location. Caching allows you to reuse previously retrieved data efficiently.
 
-## Caching Support in Keyv
-Caching will work in memory by default. However, users can also install a Keyv storage adapter that is initialized with a connection string or any other storage that implements the Map API.
+## Caching Support in Keyv via Cacheable
 
-### Example - Add Cache Support Using Express
+We can use Keyv to implement caching using [Cacheable](https://npmjs.org/package/cacheable) which is a high performance layer 1 / layer 2 caching framework built on Keyv. It supports multiple storage backends and provides a simple, consistent API for caching.
+
+### Example - Add Cache Support for Express
 
 ```js
-const express = require('express');
-const Keyv = require('keyv');
+import express from 'express';
+import { Cacheable } from 'cacheable';
+import { createKeyv } from '@keyv/redis';
 
-const keyv = new Keyv();
+const secondary = createKeyv('redis://user:pass@localhost:6379');
+const cache = new Cacheable({ secondary, ttl: '4h' });
 
 const app = express();
-
-const ttl = 1000 * 60 * 60 * 24; // 24 hours
 
 app.get('/test-cache/:id', async (req, res) => {
     if(!req.params.id) return res.status(400).send('Missing id param');
     const id = req.params.id;
-    const cached = await keyv.get(id);
+    const cached = await cache.get(id);
     if(cached) {
         return res.send(cached);
     } else {
         const data = await getData(id);
-        await keyv.set(id, data, ttl);
+        await cache.set(id, data);
         return res.send(data);
     }
 });
