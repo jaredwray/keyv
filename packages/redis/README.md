@@ -27,6 +27,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Usage](#usage)
 * [Namespaces](#namespaces)
 * [Performance Considerations](#performance-considerations)
+* [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
 * [Clustering and TLS Support](#clustering-and-tls-support)
 * [API](#api)
@@ -123,6 +124,18 @@ With namespaces being prefix based it is critical to understand some of the perf
 * `setMany`, `getMany`, `deleteMany` - These methods are more efficient than their singular counterparts. If you are doing multiple operations it is recommended to use these methods.
 
 If you want to see even better performance please see the [Using Cacheable with Redis](#using-cacheable-with-redis) section as it has non-blocking and in-memory primary caching that goes along well with this library and Keyv.
+
+# High Memory Usage on Redis Server
+
+This is because we are using `UNLINK` by default instead of `DEL`. This is a non-blocking command that is more efficient than `DEL` but will slowly remove the memory allocation. 
+
+If you are deleting or clearing a large number of keys you can disable this by setting the `useUnlink` option to `false`. This will use `DEL` instead of `UNLINK` and should reduce the memory usage.
+
+```js
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useUnlink: false }));
+// Or
+keyv.useUnlink = false;
+```
 
 # Using Cacheable with Redis
 
