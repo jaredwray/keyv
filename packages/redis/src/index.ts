@@ -8,6 +8,11 @@ export type KeyvRedisOptions = {
 	clearBatchSize?: number;
 };
 
+export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
+	dialect: 'redis';
+	url: string;
+};
+
 export type KeyvRedisEntry<T> = {
 	key: string;
 	value: T;
@@ -47,15 +52,17 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		this.initClient();
 	}
 
-	public get opts(): KeyvRedisOptions | undefined {
+	public get opts(): KeyvRedisPropertyOptions {
 		return {
 			namespace: this._namespace,
 			keyPrefixSeparator: this._keyPrefixSeparator,
 			clearBatchSize: this._clearBatchSize,
+			dialect: 'redis',
+			url: this._client?.options?.url ?? 'redis://localhost:6379',
 		};
 	}
 
-	public set opts(options: KeyvRedisOptions | undefined) {
+	public set opts(options: KeyvRedisOptions) {
 		this.setOptions(options);
 	}
 
@@ -172,6 +179,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	}
 
 	public async deleteMany(keys: string[]): Promise<boolean> {
+		let result = false;
 		const client = await this.getClient();
 		const multi = client.multi();
 		for (const key of keys) {
@@ -181,11 +189,19 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 		const results = await multi.exec();
 
-		return Boolean(results);
+		for (const deleted of results) {
+			if (typeof deleted === 'number' && deleted > 0) {
+				result = true;
+			}
+		}
+
+		return result;
 	}
 
 	public async disconnect(): Promise<void> {
-		await this._client.quit();
+		if (this._client.isOpen) {
+			await this._client.disconnect();
+		}
 	}
 
 	public createKeyPrefix(key: string, namespace?: string): string {
