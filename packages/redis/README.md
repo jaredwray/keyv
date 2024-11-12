@@ -47,6 +47,16 @@ const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
 keyv.on('error', handleConnectionError);
 ```
 
+Here is the same example but with the `Keyv` instance created with the `createKeyv` function:
+
+```js
+import { createKeyv } from '@keyv/redis';
+
+const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
+```
+
+You only have to import the `@keyv/redis` library if you are using the `createKeyv` function. 🎉 Otherwise, you can import `Keyv` and `@keyv/redis` independently.
+
 Here you can pass in the Redis options directly:
 
 ```js
@@ -81,17 +91,7 @@ const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis });
 ```
 
-Here is the same example but with the `Keyv` instance created with the `createKeyv` function:
-
-```js
-import { createKeyv } from '@keyv/redis';
-
-const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
-```
-
-You only have to import the `@keyv/redis` library if you are using the `createKeyv` function. 🎉 Otherwise, you can import `Keyv` and `@keyv/redis` independently.
-
-# Namspaces
+# Namespaces
 
 You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a namespace:
 
@@ -227,7 +227,25 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 
 # Migrating from v3 to v4
 
-The main change in v4 is the removal of the `ioredis` library in favor of the `@keyv/redis` library. This was done to provide a more consistent experience across all Keyv storage adapters. The `@keyv/redis` library is a wrapper around the `redis` library and provides a more consistent experience across all Keyv storage adapters. The only other change is that we no longer do redis sets as they caused performance issues.
+Overall the API is the same as v3 with additional options and performance improvements. Here are the main changes:
+* The `ioredis` library has been removed in favor of the `redis` aka `node-redis` library. If you want to use ioredis you can use `@keyv/keyval`
+* The `useUnlink` option has been added to use `UNLINK` instead of `DEL` and set to true by default.
+* The `clearBatchSize` option has been added to set the number of keys to delete in a single batch.
+* The `clear()` and `delete()` methods now use `UNLINK` instead of `DEL`. If you want to use `DEL` you can set the `useUnlink` option to `false`.
+* BREAKING: We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library.
+* BREAKING: YOUR PREVIOUS KEYS WILL NOT BE VALID. This is because of the fixe of the namespace support and how it is handled. Now, when using `keyv` with `@keyv/redis` as the storage adapter you can do the following:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const redis = new KeyvRedis('redis://user:pass@localhost:6379');
+const keyv = new Keyv({ store: redis, namespace: 'my-namespace', useKeyPrefix: false });
+```
+
+This will make it so the storage adapter `@keyv/redis` will handle the namespace and not the `keyv` instance. If you leave it on it will just look duplicated like `my-namespace:my-namespace:key`.
+
+
 
 # About Redis Sets and its Support in v4
 
