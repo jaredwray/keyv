@@ -218,7 +218,7 @@ The main change in v4 is the removal of the `ioredis` library in favor of the `@
 
 # About Redis Sets and its Support in v4
 
-We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library. We recommend using the `@keyv/redis` library for all your needs.
+We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library.
 
 # License
 
