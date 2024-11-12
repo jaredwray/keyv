@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/redis",
-	"version": "3.0.1",
+	"version": "4.0.0",
 	"description": "Redis storage adapter for Keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
@@ -58,11 +58,11 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"ioredis": "^5.4.1"
+		"redis": "^4.7.0",
+		"keyv": "*"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
-		"keyv": "*",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
