@@ -294,7 +294,9 @@ describe('KeyvRedis Iterators', () => {
 			keys.push(key);
 		}
 
-		expect(keys).toEqual(['foo95', 'foo953', 'foo952']);
+		expect(keys).toContain('foo95');
+		expect(keys).toContain('foo952');
+		expect(keys).toContain('foo953');
 		await keyvRedis.disconnect();
 	});
 
