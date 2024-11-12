@@ -20,6 +20,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * Access to the Redis client for advanced use cases.
 * Keyv and Redis Libraries are exported for advanced use cases.
 * `createKeyv` function for easy creation of Keyv instances.
+* jsDoc comments for easy documentation.
 * CJS / ESM and TypeScript supported out of the box.
 
 ## Usage
@@ -68,6 +69,16 @@ const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis });
 ```
 
+Here is the same example but with the `Keyv` instance created with the `createKeyv` function:
+
+```js
+import { createKeyv } from '@keyv/redis';
+
+const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
+```
+
+You only have to import the `@keyv/redis` library if you are using the `createKeyv` function. 🎉 Otherwise, you can import `Keyv` and `@keyv/redis` independently.
+
 # Clustering and TLS Support
 
 If you are using a Redis Cluster or need to use TLS, you can pass in the `redisOptions` directly. Here is an example of how to do that:
@@ -115,6 +126,29 @@ const tlsOptions = {
 
 const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 ```
+
+# API
+* **constructor([connection], [options])**
+* **namespace** - The namespace to use for the keys.
+* **client** - The Redis client instance.
+* **keyPrefixSeparator** - The separator to use between the namespace and key.
+* **clearBatchSize** - The number of keys to delete in a single batch.
+* **useUnlink** - Use the `UNLINK` command for deleting keys isntead of `DEL`.
+* **set** - Set a key.
+* **setMany** - Set multiple keys.
+* **get** - Get a key.
+* **getMany** - Get multiple keys.
+* **has** - Check if a key exists.
+* **hasMany** - Check if multiple keys exist.
+* **delete** - Delete a key.
+* **deleteMany** - Delete multiple keys.
+* **clear** - Clear all keys. If the `namespace` is set it will only clear keys with that namespace.
+* **disconnect** - Disconnect from the Redis server.
+* **iterator** - Create a new iterator for the keys.
+
+
+
+
 
 # Migrating from v3 to v4
 

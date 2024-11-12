@@ -3,7 +3,7 @@ import {
 } from 'vitest';
 import {createClient, type RedisClientType} from 'redis';
 import {delay} from '@keyv/test-suite';
-import KeyvRedis from '../src/index.js';
+import KeyvRedis, {createKeyv} from '../src/index.js';
 
 describe('KeyvRedis', () => {
 	test('should be a class', () => {
@@ -13,6 +13,17 @@ describe('KeyvRedis', () => {
 	test('should have a client property', () => {
 		const keyvRedis = new KeyvRedis();
 		expect(keyvRedis.client).toBeDefined();
+	});
+
+	test('should be able to create Keyv instance', async () => {
+		const keyv = createKeyv('redis://localhost:6379', {namespace: 'test'});
+		expect(keyv).toBeDefined();
+		await keyv.set('mykey', 'myvalue');
+		await keyv.set('mykey2', {foo: 'bar'});
+		const value = await keyv.get('mykey');
+		expect(value).toBe('myvalue');
+		const value2 = await keyv.get('mykey2');
+		expect(value2).toEqual({foo: 'bar'});
 	});
 
 	test('should be able to set the client property', () => {

@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import {createClient, type RedisClientType, type RedisClientOptions} from 'redis';
-import {type KeyvStoreAdapter} from 'keyv';
+import {Keyv, type KeyvStoreAdapter} from 'keyv';
 
 export type KeyvRedisOptions = {
 	/**
@@ -480,6 +480,18 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			this.emit('error', error);
 		});
 	}
+}
+
+/**
+ * Will create a Keyv instance with the Redis adapter.
+ * @param connect
+ * @param options
+ * @returns {Keyv} - Keyv instance with the Redis adapter
+ */
+export function createKeyv(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions): Keyv {
+	const adapter = new KeyvRedis(connect, options);
+	const keyv = new Keyv({store: adapter, namespace: options?.namespace});
+	return keyv;
 }
 
 export {
