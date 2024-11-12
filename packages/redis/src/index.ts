@@ -482,7 +482,6 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	}
 }
 
-export {type StoredData} from 'keyv';
 export {
 	createClient, createCluster, type RedisClientOptions, type RedisClientType,
 } from 'redis';

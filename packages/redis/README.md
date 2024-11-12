@@ -9,15 +9,22 @@
 
 Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
-TTL functionality is handled directly by Redis so no timestamps are stored and expired keys are cleaned up internally.
-
-## Install
-
-```shell
-npm install --save keyv @keyv/redis
-```
+# Features
+* Built on top of [redis](https://npmjs.com/package/redis).
+* TTL is handled directly by Redis.
+* Supports Redis Clusters.
+* Url connection string support or pass in your Redis Options
+* Easily add in your own Redis client.
+* Namespace support for key management.
+* Unlink as default delete method for performance.
+* Access to the Redis client for advanced use cases.
+* Keyv and Redis Libraries are exported for advanced use cases.
+* `createKeyv` function for easy creation of Keyv instances.
+* CJS / ESM and TypeScript supported out of the box.
 
 ## Usage
+
+Here is a standard use case where we implement `Keyv` and `@keyv/redis`:
 
 ```js
 import Keyv from 'keyv';
@@ -27,75 +34,96 @@ const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
 keyv.on('error', handleConnectionError);
 ```
 
-Any valid [`Redis`](https://github.com/luin/ioredis#connect-to-redis) options will be passed directly through.
-
-e.g:
-
-```js
-const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { disable_resubscribing: true }));
-```
-
-Or you can manually create a storage adapter instance and pass it to Keyv:
+Here you can pass in the Redis options directly:
 
 ```js
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379');
-const keyv = new Keyv({ store: keyvRedis });
+const redisOptions = {
+  url: 'redis://localhost:6379', // The Redis server URL (use 'rediss' for TLS)
+  password: 'your_password', // Optional password if Redis has authentication enabled
+
+  socket: {
+    host: 'localhost', // Hostname of the Redis server
+    port: 6379,        // Port number
+    reconnectStrategy: (retries) => Math.min(retries * 50, 2000), // Custom reconnect logic
+
+    tls: false, // Enable TLS if you need to connect over SSL
+    keepAlive: 30000, // Keep-alive timeout (in milliseconds)
+  }
+};
+
+const keyv = new Keyv(new KeyvRedis(redisOptions));
 ```
 
-Or reuse a previous Redis instance:
+Or you can create a new Redis instance and pass it in with `KeyvOptions`:
 
 ```js
 import Keyv from 'keyv';
-import Redis from 'ioredis';
-import KeyvRedis from '@keyv/redis';
+import KeyvRedis, { createClient } from '@keyv/redis';
 
-const redis = new Redis('redis://user:pass@localhost:6379');
+const redis = createClient('redis://user:pass@localhost:6379', { namespace: 'my-namespace'});
 const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis });
 ```
 
-Or reuse a previous Redis cluster:
+# Clustering and TLS Support
+
+If you are using a Redis Cluster or need to use TLS, you can pass in the `redisOptions` directly. Here is an example of how to do that:
 
 ```js
 import Keyv from 'keyv';
-import Redis from 'ioredis';
+import KeyvRedis, { createCluster } from '@keyv/redis';
+
+const cluster = createCluster({
+    rootNodes: [
+      {
+        url: 'redis://127.0.0.1:7000',
+      },
+      {
+        url: 'redis://127.0.0.1:7001',
+      },
+      {
+        url: 'redis://127.0.0.1:7002',
+      },
+    ],
+});
+
+const keyv = new Keyv({ store: new KeyvRedis(cluster) });
+```
+
+Here is an example of how to use TLS:
+
+```js
+import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-const redis = new Redis.Cluster('redis://user:pass@localhost:6379');
-const keyvRedis = new KeyvRedis(redis);
-const keyv = new Keyv({ store: keyvRedis });
-```
-## Options
+const tlsOptions = {
+    socket: {
+      host: 'localhost',
+      port: 6379,
+      tls: true,  // Enable TLS connection
+      rejectUnauthorized: false,  // Ignore self-signed certificate errors (for testing)
+      
+      // Alternatively, provide CA, key, and cert for mutual authentication
+      ca: fs.readFileSync('/path/to/ca-cert.pem'),
+      cert: fs.readFileSync('/path/to/client-cert.pem'),  // Optional for client auth
+      key: fs.readFileSync('/path/to/client-key.pem'),    // Optional for client auth
+    }
+};
 
-### useRedisSets
-
-The `useRedisSets` option lets you decide whether to use Redis sets for key management. By default, this option is set to `true`.
-
-When `useRedisSets` is enabled (`true`):
-
-- A namespace for the Redis sets is created, and all created keys are added to this. This allows for group management of keys.
-- When a key is deleted, it's removed not only from the main storage but also from the Redis set.
-- When clearing all keys (using the `clear` function), all keys in the Redis set are looked up for deletion. The set itself is also deleted.
-
-**Note**: In high-performance scenarios, enabling `useRedisSets` might lead to memory leaks. If you're running a high-performance application or service, it is recommended to set `useRedisSets` to `false`.
-
-If you decide to set `useRedisSets` as `false`, keys will be handled individually and Redis sets won't be utilized.
-
-However, please note that setting `useRedisSets` to `false` could lead to performance issues in production when using the `clear` function, as it will need to iterate over all keys to delete them.
-
-#### Example
-
-Here's how you can use the `useRedisSets` option:
-
-```js
-import Keyv from 'keyv';
-
-const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useRedisSets: false }));
+const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 ```
 
-## License
+# Migrating from v3 to v4
+
+The main change in v4 is the removal of the `ioredis` library in favor of the `@keyv/redis` library. This was done to provide a more consistent experience across all Keyv storage adapters. The `@keyv/redis` library is a wrapper around the `redis` library and provides a more consistent experience across all Keyv storage adapters. The only other change is that we no longer do redis sets as they caused performance issues.
+
+# About Redis Sets and its Support in v4
+
+We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library. We recommend using the `@keyv/redis` library for all your needs.
+
+# License
 
 [MIT © Jared Wray](LISCENCE)
