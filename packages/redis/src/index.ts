@@ -499,5 +499,5 @@ export {
 } from 'redis';
 
 export {
-	Keyv, type KeyvStoreAdapter,
+	Keyv,
 } from 'keyv';
