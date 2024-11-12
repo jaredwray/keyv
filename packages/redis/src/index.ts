@@ -15,6 +15,11 @@ export type KeyvRedisOptions = {
 	 * Number of keys to delete in a single batch.
 	 */
 	clearBatchSize?: number;
+	/**
+	 * Enable Unlink instead of using Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 */
+	useUnlink?: boolean;
+
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
@@ -48,6 +53,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = '::';
 	private _clearBatchSize = 1000;
+	private _useUnlink = true;
 
 	/**
 	 * KeyvRedis constructor.
@@ -150,6 +156,21 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 */
 	public set clearBatchSize(value: number) {
 		this._clearBatchSize = value;
+	}
+
+	/**
+	 * Get if Unlink is used instead of Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 * @default true
+	 */
+	public get useUnlink(): boolean {
+		return this._useUnlink;
+	}
+
+	/**
+	 * Set if Unlink is used instead of Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 */
+	public set useUnlink(value: boolean) {
+		this._useUnlink = value;
 	}
 
 	/**
@@ -273,7 +294,12 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
-		const deleted = await client.del(key);
+		let deleted = 0;
+		if (this._useUnlink) {
+			deleted = await client.unlink(key);
+		} else {
+			deleted = await client.del(key);
+		}
 
 		return deleted > 0;
 	}
@@ -289,7 +315,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		const multi = client.multi();
 		for (const key of keys) {
 			const prefixedKey = this.createKeyPrefix(key, this._namespace);
-			multi.del(prefixedKey);
+			if (this._useUnlink) {
+				multi.unlink(prefixedKey);
+			} else {
+				multi.del(prefixedKey);
+			}
 		}
 
 		const results = await multi.exec();
@@ -407,8 +437,13 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 				}
 
 				if (keys.length > 0) {
-					// eslint-disable-next-line no-await-in-loop
-					await client.del(keys);
+					if (this._useUnlink) {
+						// eslint-disable-next-line no-await-in-loop
+						await client.unlink(keys);
+					} else {
+						// eslint-disable-next-line no-await-in-loop
+						await client.del(keys);
+					}
 				}
 			} while (cursor !== '0');
 		/* c8 ignore next 3 */
@@ -432,6 +467,10 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 		if (options.clearBatchSize) {
 			this._clearBatchSize = options.clearBatchSize;
+		}
+
+		if (options.useUnlink !== undefined) {
+			this._useUnlink = options.useUnlink;
 		}
 	}
 

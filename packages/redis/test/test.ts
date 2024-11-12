@@ -47,12 +47,14 @@ describe('KeyvRedis', () => {
 			namespace: 'test',
 			keyPrefixSeparator: '->',
 			clearBatchSize: 100,
+			useUnlink: true,
 		};
 		const keyvRedis = new KeyvRedis(uri, options);
 		expect(keyvRedis.client.options?.url).toBe(uri);
 		expect(keyvRedis.namespace).toBe('test');
 		expect(keyvRedis.keyPrefixSeparator).toBe('->');
 		expect(keyvRedis.clearBatchSize).toBe(100);
+		expect(keyvRedis.useUnlink).toBe(true);
 	});
 
 	test('should be able to get and set properties', () => {
@@ -60,9 +62,11 @@ describe('KeyvRedis', () => {
 		keyvRedis.namespace = 'test';
 		keyvRedis.keyPrefixSeparator = '->';
 		keyvRedis.clearBatchSize = 1001;
+		keyvRedis.useUnlink = false;
 		expect(keyvRedis.namespace).toBe('test');
 		expect(keyvRedis.keyPrefixSeparator).toBe('->');
 		expect(keyvRedis.clearBatchSize).toBe(1001);
+		expect(keyvRedis.useUnlink).toBe(false);
 	});
 
 	test('should be able to get and set opts', () => {
@@ -83,6 +87,17 @@ describe('KeyvRedis Methods', () => {
 	});
 	test('should be able to connect, set, delete, and disconnect', async () => {
 		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('foo', 'bar');
+		const value = await keyvRedis.get('foo');
+		expect(value).toBe('bar');
+		const deleted = await keyvRedis.delete('foo');
+		expect(deleted).toBe(true);
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to connect, set, delete, and disconnect using useUnlink to false', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.useUnlink = false;
 		await keyvRedis.set('foo', 'bar');
 		const value = await keyvRedis.get('foo');
 		expect(value).toBe('bar');
@@ -189,6 +204,20 @@ describe('KeyvRedis Methods', () => {
 		expect(value3).toBeUndefined();
 		await keyvRedis.disconnect();
 	});
+
+	test('should be able to delete many with namespace with useUnlink false', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.useUnlink = false;
+		await keyvRedis.setMany([{key: 'foo-dm1', value: 'bar'}, {key: 'foo-dm2', value: 'bar2'}, {key: 'foo-dm3', value: 'bar3', ttl: 5}]);
+		await keyvRedis.deleteMany(['foo-dm2', 'foo-dm3']);
+		const value = await keyvRedis.get('foo-dm1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-dm2');
+		expect(value2).toBeUndefined();
+		const value3 = await keyvRedis.get('foo-dm3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
 });
 
 describe('KeyvRedis Namespace', () => {
@@ -200,6 +229,18 @@ describe('KeyvRedis Namespace', () => {
 	});
 	test('should clear with no namespace', async () => {
 		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('foo90', 'bar');
+		await keyvRedis.set('foo902', 'bar2');
+		await keyvRedis.set('foo903', 'bar3');
+		await keyvRedis.clear();
+		const value = await keyvRedis.get('foo90');
+		expect(value).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
+
+	test('should clear with no namespace and useUnlink to false', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.useUnlink = false;
 		await keyvRedis.set('foo90', 'bar');
 		await keyvRedis.set('foo902', 'bar2');
 		await keyvRedis.set('foo903', 'bar3');
