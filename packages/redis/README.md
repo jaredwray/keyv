@@ -23,7 +23,18 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * jsDoc comments for easy documentation.
 * CJS / ESM and TypeScript supported out of the box.
 
-## Usage
+# Table of Contents
+* [Usage](#usage)
+* [Namespaces](#namespaces)
+* [Performance Considerations](#performance-considerations)
+* [Using Cacheable with Redis](#using-cacheable-with-redis)
+* [Clustering and TLS Support](#clustering-and-tls-support)
+* [API](#api)
+* [Migrating from v3 to v4](#migrating-from-v3-to-v4)
+* [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
+* [License](#license)
+
+# Usage
 
 Here is a standard use case where we implement `Keyv` and `@keyv/redis`:
 
@@ -78,6 +89,61 @@ const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-nam
 ```
 
 You only have to import the `@keyv/redis` library if you are using the `createKeyv` function. 🎉 Otherwise, you can import `Keyv` and `@keyv/redis` independently.
+
+# Namspaces
+
+You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a namespace:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { namespace: 'my-namespace' }));
+```
+
+This will prefix all keys with `my-namespace:`. You can also set the namespace after the fact:
+
+```js
+keyv.namespace = 'my-namespace';
+```
+
+NOTE: If you plan to do many clears or deletes, it is recommended to read the [Performance Considerations](#performance-considerations) section.
+
+# Performance Considerations
+
+With namespaces being prefix based it is critical to understand some of the performance considerations we have made:
+* `clear()` - We use the `SCAN` command to iterate over keys. This is a non-blocking command that is more efficient than `KEYS`. In addition we are using `UNLINK` by default instead of `DEL`. Even with that if you are iterating over a large dataset it can still be slow. It is highly recommended to use the `namespace` option to limit the keys that are being cleared and if possible to not use the `clear()` method in high performance environments.
+
+* `delete()` - By default we are now using `UNLINK` instead of `DEL` for deleting keys. This is a non-blocking command that is more efficient than `DEL`. If you are deleting a large number of keys it is recommended to use the `deleteMany()` method instead of `delete()`.
+
+* `clearBatchSize` - The `clearBatchSize` option is set to `1000` by default. This is because Redis has a limit of 1000 keys that can be deleted in a single batch. 
+
+* `useUnlink` - This option is set to `true` by default. This is because `UNLINK` is a non-blocking command that is more efficient than `DEL`. If you are not using `UNLINK` and are doing a lot of deletes it is recommended to set this option to `true`.
+
+* `setMany`, `getMany`, `deleteMany` - These methods are more efficient than their singular counterparts. If you are doing multiple operations it is recommended to use these methods.
+
+If you want to see even better performance please see the [Using Cacheable with Redis](#using-cacheable-with-redis) section as it has non-blocking and in-memory primary caching that goes along well with this library and Keyv.
+
+# Using Cacheable with Redis
+
+If you are wanting to see even better performance with Redis, you can use [Cacheable](https://npmjs.org/package/cacheable) which is a multi-layered cache library that has in-memory primary caching and non-blocking secondary caching. Here is an example of how to use it with Redis:
+
+```js
+import KeyvRedis from '@keyv/redis';
+import Cacheable from 'cacheable';
+
+const secondary = new KeyvRedis('redis://user:pass@localhost:6379');
+
+const cache = new Cacheable( { secondary } );
+```
+
+For even higher performance you can set the `nonBlocking` option to `true`:
+
+```js
+const cache = new Cacheable( { secondary, nonBlocking: true } );
+```
+
+This will make it so that the secondary does not block the primary cache and will be very fast. 🚀
 
 # Clustering and TLS Support
 
