@@ -212,10 +212,6 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **disconnect** - Disconnect from the Redis server.
 * **iterator** - Create a new iterator for the keys.
 
-
-
-
-
 # Migrating from v3 to v4
 
 The main change in v4 is the removal of the `ioredis` library in favor of the `@keyv/redis` library. This was done to provide a more consistent experience across all Keyv storage adapters. The `@keyv/redis` library is a wrapper around the `redis` library and provides a more consistent experience across all Keyv storage adapters. The only other change is that we no longer do redis sets as they caused performance issues.
