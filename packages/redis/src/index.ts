@@ -3,19 +3,43 @@ import {createClient, type RedisClientType, type RedisClientOptions} from 'redis
 import {type KeyvStoreAdapter} from 'keyv';
 
 export type KeyvRedisOptions = {
+	/**
+	 * Namespace for the current instance.
+	 */
 	namespace?: string;
+	/**
+	 * Separator to use between namespace and key.
+	 */
 	keyPrefixSeparator?: string;
+	/**
+	 * Number of keys to delete in a single batch.
+	 */
 	clearBatchSize?: number;
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
+	/**
+	 * Dialect used by the adapter. This is legacy so Keyv knows what is iteratable.
+	 */
 	dialect: 'redis';
+	/**
+	 * URL used to connect to the Redis server. This is legacy so Keyv knows what is iteratable.
+	 */
 	url: string;
 };
 
 export type KeyvRedisEntry<T> = {
+	/**
+	 * Key to set.
+	 */
 	key: string;
+	/**
+	 * Value to set.
+	 */
 	value: T;
+	/**
+	 * Time to live in milliseconds.
+	 */
 	ttl?: number;
 };
 
@@ -25,6 +49,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	private _keyPrefixSeparator = '::';
 	private _clearBatchSize = 1000;
 
+	/**
+	 * KeyvRedis constructor.
+	 * @param {string | RedisClientOptions | RedisClientType} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
+	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
+	 */
 	constructor(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions) {
 		super();
 
@@ -43,15 +72,24 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		this.initClient();
 	}
 
+	/**
+	 * Get the Redis client.
+	 */
 	public get client(): RedisClientType {
 		return this._client;
 	}
 
+	/**
+	 * Set the Redis client.
+	 */
 	public set client(value: RedisClientType) {
 		this._client = value;
 		this.initClient();
 	}
 
+	/**
+	 * Get the options for the adapter.
+	 */
 	public get opts(): KeyvRedisPropertyOptions {
 		return {
 			namespace: this._namespace,
@@ -62,34 +100,61 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		};
 	}
 
+	/**
+	 * Set the options for the adapter.
+	 */
 	public set opts(options: KeyvRedisOptions) {
 		this.setOptions(options);
 	}
 
+	/**
+	 * Get the namespace for the adapter. If undefined, it will not use a namespace including keyPrefixing.
+	 * @default undefined
+	 */
 	public get namespace(): string | undefined {
 		return this._namespace;
 	}
 
+	/**
+	 * Set the namespace for the adapter. If undefined, it will not use a namespace including keyPrefixing.
+	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
 	}
 
+	/**
+	 * Get the separator between the namespace and key.
+	 * @default '::'
+	 */
 	public get keyPrefixSeparator(): string {
 		return this._keyPrefixSeparator;
 	}
 
+	/**
+	 * Set the separator between the namespace and key.
+	 */
 	public set keyPrefixSeparator(value: string) {
 		this._keyPrefixSeparator = value;
 	}
 
+	/**
+	 * Get the number of keys to delete in a single batch.
+	 * @default 1000
+	 */
 	public get clearBatchSize(): number {
 		return this._clearBatchSize;
 	}
 
+	/**
+	 * Set the number of keys to delete in a single batch.
+	 */
 	public set clearBatchSize(value: number) {
 		this._clearBatchSize = value;
 	}
 
+	/**
+	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
+	 */
 	public async getClient(): Promise<RedisClientType> {
 		if (!this._client.isOpen) {
 			await this._client.connect();
@@ -98,6 +163,12 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return this._client;
 	}
 
+	/**
+	 * Set a key value pair in the store. TTL is in milliseconds.
+	 * @param {string} key - the key to set
+	 * @param {string} value - the value to set
+	 * @param {number} [ttl] - the time to live in milliseconds
+	 */
 	public async set(key: string, value: string, ttl?: number): Promise<void> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
@@ -109,6 +180,10 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		}
 	}
 
+	/**
+	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
+	 * @param {Array<KeyvRedisEntry<string>>} entries - the key value pairs to set with optional ttl
+	 */
 	public async setMany(entries: Array<KeyvRedisEntry<string>>): Promise<void> {
 		const client = await this.getClient();
 		const multi = client.multi();
@@ -125,6 +200,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		await multi.exec();
 	}
 
+	/**
+	 * Check if a key exists in the store.
+	 * @param {string} key - the key to check
+	 * @returns {Promise<boolean>} - true if the key exists, false if not
+	 */
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
@@ -133,6 +213,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return exists === 1;
 	}
 
+	/**
+	 * Check if many keys exist in the store. This will be done as a single transaction.
+	 * @param {Array<string>} keys - the keys to check
+	 * @returns {Promise<Array<boolean>>} - array of booleans for each key if it exists
+	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const client = await this.getClient();
 		const multi = client.multi();
@@ -146,6 +231,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return results.map(result => result === 1);
 	}
 
+	/**
+	 * Get a value from the store. If the key does not exist, it will return undefined.
+	 * @param {string} key - the key to get
+	 * @returns {Promise<string | undefined>} - the value or undefined if the key does not exist
+	 */
 	public async get<T>(key: string): Promise<T | undefined> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
@@ -157,6 +247,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return value as T;
 	}
 
+	/**
+	 * Get many values from the store. If a key does not exist, it will return undefined.
+	 * @param {Array<string>} keys - the keys to get
+	 * @returns {Promise<Array<string | undefined>>} - array of values or undefined if the key does not exist
+	 */
 	public async getMany<T>(keys: string[]): Promise<Array<T | undefined>> {
 		const client = await this.getClient();
 		const multi = client.multi();
@@ -170,6 +265,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return values.map(value => value === null ? undefined : value as T);
 	}
 
+	/**
+	 * Delete a key from the store.
+	 * @param {string} key - the key to delete
+	 * @returns {Promise<boolean>} - true if the key was deleted, false if not
+	 */
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
@@ -178,6 +278,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return deleted > 0;
 	}
 
+	/**
+	 * Delete many keys from the store. This will be done as a single transaction.
+	 * @param {Array<string>} keys - the keys to delete
+	 * @returns {Promise<boolean>} - true if any key was deleted, false if not
+	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		let result = false;
 		const client = await this.getClient();
@@ -198,24 +303,36 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return result;
 	}
 
+	/**
+	 * Disconnect from the Redis server.
+	 * @returns {Promise<void>}
+	 */
 	public async disconnect(): Promise<void> {
 		if (this._client.isOpen) {
 			await this._client.disconnect();
 		}
 	}
 
+	/**
+	 * Helper function to create a key with a namespace.
+	 * @param {string} key - the key to prefix
+	 * @param {string} namespace - the namespace to prefix the key with
+	 * @returns {string} - the key with the namespace such as 'namespace::key'
+	 */
 	public createKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
 			return `${namespace}${this._keyPrefixSeparator}${key}`;
 		}
 
-		if (this._namespace) {
-			return `${this._namespace}${this._keyPrefixSeparator}${key}`;
-		}
-
 		return key;
 	}
 
+	/**
+	 * Helper function to get a key without the namespace.
+	 * @param {string} key - the key to remove the namespace from
+	 * @param {string} namespace - the namespace to remove from the key
+	 * @returns {string} - the key without the namespace such as 'key'
+	 */
 	public getKeyWithoutPrefix(key: string, namespace?: string): string {
 		if (namespace) {
 			return key.replace(`${namespace}${this._keyPrefixSeparator}`, '');
@@ -224,6 +341,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return key;
 	}
 
+	/**
+	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
+	 * @param {string} [namespace] - the namespace to iterate over
+	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
+	 */
 	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const client = await this.getClient();
 		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
@@ -250,6 +372,13 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		} while (cursor !== '0');
 	}
 
+	/**
+	 * Clear all keys in the store.
+	 * IMPORTANT: this can cause performance issues if there are a large number of keys in the store. Use with caution as not recommended for production.
+	 * If a namespace is not set it will clear all keys with no prefix.
+	 * If a namespace is set it will clear all keys with that namespace.
+	 * @returns {Promise<void>}
+	 */
 	public async clear(): Promise<void> {
 		await this.clearNamespace(this._namespace);
 	}

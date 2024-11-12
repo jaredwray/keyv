@@ -121,13 +121,6 @@ describe('KeyvRedis Methods', () => {
 		expect(key).toBe('foo78');
 	});
 
-	test('if no namespace on key prefix and no default namespace', async () => {
-		const keyvRedis = new KeyvRedis();
-		keyvRedis.namespace = 'ns1';
-		const key = keyvRedis.createKeyPrefix('foo80');
-		expect(key).toBe('ns1::foo80');
-	});
-
 	test('should do nothing if no keys on clear', async () => {
 		const keyvRedis = new KeyvRedis();
 		const client = await keyvRedis.getClient();
