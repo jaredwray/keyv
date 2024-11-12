@@ -483,14 +483,14 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 }
 
 /**
- * Will create a Keyv instance with the Redis adapter.
+ * Will create a Keyv instance with the Redis adapter. This will also set the namespace and useKeyPrefix to false.
  * @param connect
  * @param options
  * @returns {Keyv} - Keyv instance with the Redis adapter
  */
 export function createKeyv(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions): Keyv {
 	const adapter = new KeyvRedis(connect, options);
-	const keyv = new Keyv({store: adapter, namespace: options?.namespace});
+	const keyv = new Keyv({store: adapter, namespace: options?.namespace, useKeyPrefix: false});
 	return keyv;
 }
 
