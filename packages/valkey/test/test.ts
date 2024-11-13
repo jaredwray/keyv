@@ -159,7 +159,7 @@ test.it('when passing in ioredis set the options.useSets', t => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
-	t.expect(keyv.opts.useSets).toBe(false);
+	t.expect(keyv.opts.useRedisSets).toBe(false);
 });
 
 test.it('del should work when not using useSets', async t => {
