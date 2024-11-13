@@ -5,7 +5,7 @@ export type KeyvValkeyOptions = {
 } & {
 	uri?: string;
 	dialect?: string;
-	useSets?: boolean;
+	useRedisSets?: boolean;
 };
 
 export type KeyvUriOptions = string | KeyvValkeyOptions | Redis | Cluster;
