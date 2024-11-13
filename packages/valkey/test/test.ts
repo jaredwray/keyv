@@ -124,7 +124,7 @@ test.it('should handle KeyvOptions with family option', t => {
 });
 
 test.it('set method should use Redis sets when useSets is false', async t => {
-	const options = {useSets: false};
+	const options = {useRedisSets: false};
 	const keyv = new KeyvValkey(options);
 
 	await keyv.set('foo', 'bar');
@@ -134,7 +134,7 @@ test.it('set method should use Redis sets when useSets is false', async t => {
 });
 
 test.it('clear method when useSets is false', async t => {
-	const options = {useSets: false};
+	const options = {useRedisSets: false};
 	const keyv = new KeyvValkey(options);
 
 	await keyv.set('foo', 'bar');
@@ -149,21 +149,21 @@ test.it('clear method when useSets is false', async t => {
 });
 
 test.it('clear method when useSets is false and empty keys should not error', async t => {
-	const options = {useSets: false};
+	const options = {useRedisSets: false};
 	const keyv = new KeyvValkey(options);
 	t.expect(await keyv.clear()).toBeUndefined();
 });
 
 test.it('when passing in ioredis set the options.useSets', t => {
-	const options = {useSets: false};
+	const options = {useRedisSets: false};
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
-	t.expect(keyv.opts.useSets).toBe(false);
+	t.expect(keyv.opts.useRedisSets).toBe(false);
 });
 
 test.it('del should work when not using useSets', async t => {
-	const options = {useSets: false};
+	const options = {useRedisSets: false};
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
