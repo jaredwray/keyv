@@ -9,7 +9,7 @@
 
 [Valkey](https://valkey.io) storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
-Valkey is the open source replacement to Redis which decided do a [dual license](https://redis.com/blog/redis-adopts-dual-source-available-licensing/) approach moving forward. Valkey is a drop-in replacement for Redis and is fully compatible with the Redis protocol.
+Valkey is the open source replacement to Redis which decided to do a [dual license](https://redis.com/blog/redis-adopts-dual-source-available-licensing/) approach moving forward. Valkey is a drop-in replacement for Redis and is fully compatible with the Redis protocol.
 
 We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a Node.js client for Valkey based on the `ioredis` client.
 
