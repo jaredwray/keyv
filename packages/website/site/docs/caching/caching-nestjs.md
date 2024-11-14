@@ -20,7 +20,7 @@ $ cd nestjs-keyv-cache
 
 To begin, install Keyv and a storage adapter of your choice. In this example, we'll use SQLite:
 ```bash
-$ npm install keyv keyv-sqlite
+$ npm install cacheable @keyv/redis --save
 ```
 ## 3. Integrating Keyv with NestJS
 
@@ -33,17 +33,20 @@ Then, update the cache.module.ts file to import and configure Keyv:
 
 ```javascript
 import { Module } from '@nestjs/common';
-import { Keyv } from 'keyv';
-import KeyvSqlite from 'keyv-sqlite';
+import { Cacheable } from 'cacheable';
+import KeyvRedis from '@keyv/redis';
 
 @Module({
   providers: [
     {
-      provide: 'KEYV_INSTANCE',
-      useFactory: () => new Keyv({ store: new KeyvSqlite('sqlite://cache.sqlite') }),
+      provide: 'CACHE_INSTANCE',
+      useFactory: () => {
+        const secondary = new KeyvRedis('redis://user:pass@localhost:6379');
+        return new Cacheable({ secondary, ttl: '4h' });
+      },
     },
   ],
-  exports: ['KEYV_INSTANCE'],
+  exports: ['CACHE_INSTANCE'],
 })
 export class CacheModule {}
 ```
@@ -69,22 +72,21 @@ Update the cache.service.ts file with caching methods:
 
 ```javascript
 import { Inject, Injectable } from '@nestjs/common';
-import { Keyv } from 'keyv';
 
 @Injectable()
 export class CacheService {
-  constructor(@Inject('KEYV_INSTANCE') private readonly keyv: Keyv) {}
+  constructor(@Inject('CACHE_INSTANCE') private readonly cache: Cacheable) {}
 
   async get<T>(key: string): Promise<T> {
-    return await this.keyv.get<T>(key);
+    return await this.cache.get<T>(key);
   }
 
-  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
-    await this.keyv.set<T>(key, value, ttl);
+  async set<T>(key: string, value: T, ttl?: number | string): Promise<void> {
+    await this.cache.set<T>(key, value, ttl);
   }
 
   async delete(key: string): Promise<void> {
-    await this.keyv.delete(key);
+    await this.cache.delete(key);
   }
 }
 ```
@@ -113,7 +115,7 @@ export class SampleController {
     if (!data) {
       // Simulate fetching data from an external API
       data = 'Sample data from external API';
-      await this.cacheService.set(cacheKey, data, 60 * 1000); // Cache for 1 minute
+      await this.cacheService.set(cacheKey, data, '1m'); // Cache for 1 minute
     }
 
     return {

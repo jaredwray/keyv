@@ -12,28 +12,33 @@ Koa is a web framework from the team behind Express that offers a smaller, more 
 ## What is a Cache?
 A cache is a short-term, high-speed data storage layer that stores a subset of data, enabling it to be retrieved faster than accessing it from its primary storage location. Caching allows you to reuse previously retrieved data efficiently.
 
-## Caching Support in Keyv
-Caching will work in memory by default. However, users can also install a Keyv storage adapter that is initialized with a connection string or any other storage that implements the Map API.
+## Caching Support in Keyv via Cacheable
+
+We can use Keyv to implement caching using [Cacheable](https://npmjs.org/package/cacheable) which is a high performance layer 1 / layer 2 caching framework built on Keyv. It supports multiple storage backends and provides a simple, consistent API for caching.
 
 ### Example - Add Cache Support Using Koa
 
 ```js
-import keyv from 'keyv';
+import Koa from 'koa';
+import { Cacheable } from 'cacheable';
+import KeyvRedis from '@keyv/redis';
 
-// ...
-const cache = new Keyv();
-const cacheTTL = 1000 * 60 * 60 * 24; // 24 hours
+// by default layer 1 cache is in-memory. If you want to add a layer 2 cache, you can use KeyvRedis
+const secondary = new KeyvRedis('redis://user:pass@localhost:6379');
+const cache = new Cacheable({ secondary, ttl: '4h' }); // default time to live set to 4 hours
+
+const app = new Koa();
 
 app.use(async ctx => {
     // this response is already cashed if `true` is returned,
     // so this middleware will automatically serve this response from cache
-    if (await keyv.get(ctx.url)) {
-        return keyv.get(ctx.url);
+    if (await cache.get(ctx.url)) {
+        return cache.get(ctx.url);
     }
 
     // set the response body here
     ctx.body = 'hello world!';
     // cache the response
-    await keyv.set(ctx.url, ctx.body. cacheTTL);
+    await cache.set(ctx.url, ctx.body. cacheTTL);
 });
 ```
