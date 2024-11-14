@@ -12,34 +12,24 @@ A cache is a short-term, high-speed data storage layer that stores a subset of d
 ## Caching Support in Keyv
 Caching will work in memory by default. However, users can also install a Keyv storage adapter that is initialized with a connection string or any other storage that implements the Map API.
 
-## Extend your own Module with Keyv to Add Cache Support
-- Keyv can be easily embedded into other modules to add cache support.
-- You should also set a namespace for your module to safely call `.clear()` without clearing unrelated app data.
+## Caching Support in Keyv via Cacheable
 
->**Note**:
-> The recommended pattern is to expose a cache option in your module's options which is passed through to Keyv.
+We can use Keyv to implement caching using [Cacheable](https://npmjs.org/package/cacheable) which is a high performance layer 1 / layer 2 caching framework built on Keyv. It supports multiple storage backends and provides a simple, consistent API for caching.
+
+
 
 ### Example - Add Cache Support to a Module
 
 1. Install whichever storage adapter you will be using, `@keyv/redis` in this example
 ```sh
-npm install --save @keyv/redis
+npm install --save @keyv/redis cacheable
 ```
 2. Declare the Module with the cache controlled by a Keyv instance
 ```js
-class AwesomeModule {
-	constructor(opts) {
-		this.cache = new Keyv({
-			uri: typeof opts.cache === 'string' && opts.cache,
-			store: typeof opts.cache !== 'string' && opts.cache,
-			namespace: 'awesome-module'
-		});
-	}
-}
-```
+import { Cacheable } from 'cacheable';
+import KeyvRedis from '@keyv/redis';
 
-3. Create an Instance of the Module with caching support
-```js
-const AwesomeModule = require('awesome-module');
-const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
+// by default layer 1 cache is in-memory. If you want to add a layer 2 cache, you can use KeyvRedis
+const secondary = new KeyvRedis('redis://user:pass@localhost:6379');
+const cache = new Cacheable({ secondary, ttl: '4h' }); // default time to live set to 4 hours
 ```
