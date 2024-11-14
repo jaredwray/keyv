@@ -17,10 +17,10 @@ npm init -y
 The npm init -y command will create a new package.json file in your project directory with default settings.
 
 ## 2. Installing Keyv and its Dependencies
-In this step, you'll install Keyv and a Keyv storage adapter for your project. For this example, we'll use SQLite as the storage adapter.
+In this step, you'll install Keyv and a Keyv storage adapter for your project. For this example, we'll use Redis as the storage backend.
 
 ```bash
-npm install keyv @keyv/sqlite
+npm install cacheable @keyv/redis --save
 ```
 Keyv supports a variety of storage adapters like Redis, MongoDB, PostgreSQL, etc. Feel free to choose the one that best fits your project requirements.
 
@@ -30,47 +30,12 @@ In this step, we'll create a simple caching service using Keyv.
 Create a new file named cacheService.js in your project directory and add the following code to that file.
 
 ```javascript
-const Keyv = require('keyv');
-const keyv = new Keyv('sqlite://path/to/database.sqlite');
+import { Cacheable } from 'cacheable';
+import KeyvRedis from '@keyv/redis';
 
-class CacheService {
-  async get(key) {
-    const value = await keyv.get(key);
-    if (value) {
-      console.log('Cache hit');
-    } else {
-      console.log('Cache miss');
-    }  
-    return value;
-  }
-
-  async set(key, value, ttlInMilliseconds) {
-    await keyv.set(key, value, ttlInMilliseconds);
-  }
-
-  async delete(key) {
-    await keyv.delete(key);
-  }
-}
-
-module.exports = CacheService;
-```
-
-In this code:
-
-We're importing the Keyv library and initializing it with an SQLite database.
-
-We're creating a CacheService class with get, set, and delete methods that wrap the corresponding methods of the Keyv instance. The get method includes console logs to indicate whether the requested value was found in the cache.
-
-The set method includes an optional ttlInMilliseconds parameter, which you can use to set a time-to-live (TTL) for the cached value.
-
-Now you have a reusable CacheService that you can use to add caching to your Node.js project.
-
-Here is how you could use the CacheService:
-
-```javascript
-const CacheService = require('./cacheService');
-const cache = new CacheService();
+// Initialize Keyv with Redis as the storage backend
+const secondary = new KeyvRedis('redis://user:pass@localhost:6379');
+const cache = new Cacheable({ secondary, ttl: '4h' }); // default time to live set to 4 hours
 
 // Usage
 async function fetchData() {
@@ -83,5 +48,3 @@ async function fetchData() {
   return data;
 }
 ```
-
-This is a basic example, and Keyv provides a lot of flexibility, so you can modify this service to better suit your project's needs.
