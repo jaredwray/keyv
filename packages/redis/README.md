@@ -183,6 +183,8 @@ const cluster = createCluster({
 const keyv = new Keyv({ store: new KeyvRedis(cluster) });
 ```
 
+You can learn more about the `createCluster` function in the [documentation](https://github.com/redis/node-redis/blob/master/docs/clustering.md) at https://github.com/redis/node-redis/tree/master/docs.
+
 Here is an example of how to use TLS:
 
 ```js
