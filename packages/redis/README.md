@@ -121,7 +121,7 @@ With namespaces being prefix based it is critical to understand some of the perf
 
 * `useUnlink` - This option is set to `true` by default. This is because `UNLINK` is a non-blocking command that is more efficient than `DEL`. If you are not using `UNLINK` and are doing a lot of deletes it is recommended to set this option to `true`.
 
-* `setMany`, `getMany`, `deleteMany` - These methods are more efficient than their singular counterparts. If you are doing multiple operations it is recommended to use these methods.
+* `setMany`, `getMany`, `deleteMany` - These methods are more efficient than their singular counterparts. These will be used by default in the `Keyv` library such as when using `keyv.delete(string[])` it will use `deleteMany()`.
 
 If you want to see even better performance please see the [Using Cacheable with Redis](#using-cacheable-with-redis) section as it has non-blocking and in-memory primary caching that goes along well with this library and Keyv.
 
@@ -182,6 +182,8 @@ const cluster = createCluster({
 
 const keyv = new Keyv({ store: new KeyvRedis(cluster) });
 ```
+
+You can learn more about the `createCluster` function in the [documentation](https://github.com/redis/node-redis/blob/master/docs/clustering.md) at https://github.com/redis/node-redis/tree/master/docs.
 
 Here is an example of how to use TLS:
 
