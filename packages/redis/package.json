@@ -19,23 +19,6 @@
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
 	},
-	"xo": {
-		"rules": {
-			"import/no-named-as-default": "off",
-			"unicorn/prefer-module": "off",
-			"unicorn/prefer-event-target": "off",
-			"unicorn/prefer-node-protocol": "off",
-			"unicorn/no-typeof-undefined": "off",
-			"import/extensions": "off",
-			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/no-unsafe-assignment": "off",
-			"@typescript-eslint/no-unsafe-return": "off",
-			"unicorn/prefer-ternary": "off",
-			"unicorn/no-array-callback-reference": "off",
-			"import/no-extraneous-dependencies": "off",
-			"@typescript-eslint/no-confusing-void-expression": "off"
-		}
-	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/jaredwray/keyv.git"
@@ -58,14 +41,16 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"redis": "^4.7.0",
-		"keyv": "*"
+		"keyv": "*",
+		"redis": "^4.7.0"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "*",
+		"@vitest/coverage-v8": "^2.1.5",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
+		"vitest": "^2.1.5",
 		"xo": "^0.59.3"
 	},
 	"tsd": {
