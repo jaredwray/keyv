@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mysql",
-	"version": "2.0.2",
+	"version": "2.0.3",
 	"description": "MySQL/MariaDB storage adapter for Keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
