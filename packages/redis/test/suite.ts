@@ -1,6 +1,6 @@
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
-import Keyv from 'keyv';
+import {Keyv} from 'keyv';
 import KeyvRedis from '../src/index.js';
 
 const redisUrl = 'redis://localhost:6379/5';

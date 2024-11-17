@@ -20,8 +20,9 @@ describe('KeyvRedis', () => {
 		expect(keyv).toBeDefined();
 		await keyv.set('mykey', 'myvalue');
 		await keyv.set('mykey2', {foo: 'bar'});
-		const value = await keyv.get('mykey');
+		const value = await keyv.get<string>('mykey');
 		expect(value).toBe('myvalue');
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const value2 = await keyv.get('mykey2');
 		expect(value2).toEqual({foo: 'bar'});
 	});

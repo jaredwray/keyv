@@ -1,4 +1,4 @@
-import EventEmitter from 'events';
+import EventEmitter from 'node:events';
 import {createClient, type RedisClientType, type RedisClientOptions} from 'redis';
 import {Keyv, type KeyvStoreAdapter} from 'keyv';
 
@@ -47,7 +47,7 @@ export type KeyvRedisEntry<T> = {
 	 */
 	ttl?: number;
 };
-
+// eslint-disable-next-line unicorn/prefer-event-target
 export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
 	private _client: RedisClientType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
@@ -193,6 +193,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	public async set(key: string, value: string, ttl?: number): Promise<void> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
+		// eslint-disable-next-line unicorn/prefer-ternary
 		if (ttl) {
 			// eslint-disable-next-line @typescript-eslint/naming-convention
 			await client.set(key, value, {PX: ttl});
@@ -295,11 +296,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
 		let deleted = 0;
-		if (this._useUnlink) {
-			deleted = await client.unlink(key);
-		} else {
-			deleted = await client.del(key);
-		}
+		deleted = await (this._useUnlink ? client.unlink(key) : client.del(key));
 
 		return deleted > 0;
 	}
@@ -437,6 +434,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 				}
 
 				if (keys.length > 0) {
+					// eslint-disable-next-line unicorn/prefer-ternary
 					if (this._useUnlink) {
 						// eslint-disable-next-line no-await-in-loop
 						await client.unlink(keys);
