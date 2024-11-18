@@ -43,13 +43,13 @@ describe('KeyvRedis', () => {
 	test('should be able to pass in client options to constructor', () => {
 		const uri = 'redis://foo:6379';
 		const keyvRedis = new KeyvRedis({url: uri});
-		expect(keyvRedis.client.options?.url).toBe(uri);
+		expect((keyvRedis.client as RedisClientType).options?.url).toBe(uri);
 	});
 
 	test('should be able to pass in the url and options to constructor', () => {
 		const uri = 'redis://localhost:6379';
 		const keyvRedis = new KeyvRedis(uri, {namespace: 'test'});
-		expect(keyvRedis.client.options?.url).toBe(uri);
+		expect((keyvRedis.client as RedisClientType).options?.url).toBe(uri);
 		expect(keyvRedis.namespace).toBe('test');
 	});
 
@@ -62,7 +62,6 @@ describe('KeyvRedis', () => {
 			useUnlink: true,
 		};
 		const keyvRedis = new KeyvRedis(uri, options);
-		expect(keyvRedis.client.options?.url).toBe(uri);
 		expect(keyvRedis.namespace).toBe('test');
 		expect(keyvRedis.keyPrefixSeparator).toBe('->');
 		expect(keyvRedis.clearBatchSize).toBe(100);
@@ -81,9 +80,12 @@ describe('KeyvRedis', () => {
 		expect(keyvRedis.useUnlink).toBe(false);
 	});
 
-	test('should be able to get and set opts', () => {
+	test('should be able to get and set opts', async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.opts = {namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000};
+		const client = await keyvRedis.getClient() as RedisClientType;
+		console.log(client.options);
+
 		expect(keyvRedis.opts).toEqual({
 			namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000, dialect: 'redis', url: 'redis://localhost:6379',
 		});
@@ -93,7 +95,7 @@ describe('KeyvRedis', () => {
 describe('KeyvRedis Methods', () => {
 	beforeEach(async () => {
 		const keyvRedis = new KeyvRedis();
-		const client = await keyvRedis.getClient();
+		const client = await keyvRedis.getClient() as RedisClientType;
 		await client.flushDb();
 		await keyvRedis.disconnect();
 	});
@@ -150,7 +152,7 @@ describe('KeyvRedis Methods', () => {
 
 	test('should do nothing if no keys on clear', async () => {
 		const keyvRedis = new KeyvRedis();
-		const client = await keyvRedis.getClient();
+		const client = await keyvRedis.getClient() as RedisClientType;
 		await client.flushDb();
 		await keyvRedis.clear();
 		keyvRedis.namespace = 'ns1';
@@ -235,7 +237,7 @@ describe('KeyvRedis Methods', () => {
 describe('KeyvRedis Namespace', () => {
 	beforeEach(async () => {
 		const keyvRedis = new KeyvRedis();
-		const client = await keyvRedis.getClient();
+		const client = await keyvRedis.getClient() as RedisClientType;
 		await client.flushDb();
 		await keyvRedis.disconnect();
 	});
@@ -264,7 +266,7 @@ describe('KeyvRedis Namespace', () => {
 
 	test('should clear with no namespace but not the namespace ones', async () => {
 		const keyvRedis = new KeyvRedis();
-		const client = await keyvRedis.getClient();
+		const client = await keyvRedis.getClient() as RedisClientType;
 		await client.flushDb();
 		keyvRedis.namespace = 'ns1';
 		await keyvRedis.set('foo91', 'bar');
@@ -280,7 +282,7 @@ describe('KeyvRedis Namespace', () => {
 
 	test('should clear namespace but not other ones', async () => {
 		const keyvRedis = new KeyvRedis();
-		const client = await keyvRedis.getClient();
+		const client = await keyvRedis.getClient() as RedisClientType;
 		await client.flushDb();
 		keyvRedis.namespace = 'ns1';
 		await keyvRedis.set('foo921', 'bar');
@@ -333,7 +335,7 @@ describe('KeyvRedis Namespace', () => {
 describe('KeyvRedis Iterators', () => {
 	beforeEach(async () => {
 		const keyvRedis = new KeyvRedis();
-		const client = await keyvRedis.getClient();
+		const client = await keyvRedis.getClient() as RedisClientType;
 		await client.flushDb();
 		await keyvRedis.disconnect();
 	});
