@@ -1,5 +1,7 @@
 import EventEmitter from 'node:events';
-import {createClient, type RedisClientType, type RedisClientOptions} from 'redis';
+import {
+	createClient, type RedisClientType, type RedisClientOptions, RedisClusterType,
+} from 'redis';
 import {Keyv, type KeyvStoreAdapter} from 'keyv';
 
 export type KeyvRedisOptions = {
@@ -47,9 +49,11 @@ export type KeyvRedisEntry<T> = {
 	 */
 	ttl?: number;
 };
+export type RedistConnectType = RedisClientType;
+
 // eslint-disable-next-line unicorn/prefer-event-target
 export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
-	private _client: RedisClientType = createClient() as RedisClientType;
+	private _client: RedistConnectType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = '::';
 	private _clearBatchSize = 1000;
@@ -60,28 +64,27 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @param {string | RedisClientOptions | RedisClientType} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
 	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
 	 */
-	constructor(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions) {
+	constructor(connect?: string | RedisClientOptions | RedistConnectType, options?: KeyvRedisOptions) {
 		super();
 
 		if (connect) {
 			if (typeof connect === 'string') {
 				this._client = createClient({url: connect}) as RedisClientType;
-			} else if ((connect as RedisClientType).connect !== undefined) {
-				this._client = connect as RedisClientType;
+			} else if ((connect as RedistConnectType).connect !== undefined) {
+				this._client = connect as RedistConnectType;
 			} else if (connect instanceof Object) {
 				this._client = createClient(connect as RedisClientOptions) as RedisClientType;
 			}
 		}
 
 		this.setOptions(options);
-
 		this.initClient();
 	}
 
 	/**
 	 * Get the Redis client.
 	 */
-	public get client(): RedisClientType {
+	public get client(): RedistConnectType {
 		return this._client;
 	}
 

@@ -3,7 +3,7 @@ import {
 } from 'vitest';
 import {createClient, type RedisClientType} from 'redis';
 import {delay} from '@keyv/test-suite';
-import KeyvRedis, {createKeyv} from '../src/index.js';
+import KeyvRedis, {createKeyv, createCluster} from '../src/index.js';
 
 describe('KeyvRedis', () => {
 	test('should be a class', () => {
@@ -378,5 +378,20 @@ describe('KeyvRedis Iterators', () => {
 		expect(values).toContain('bar3');
 
 		await keyvRedis.disconnect();
+	});
+});
+
+describe('KeyvRedis Cluster', () => {
+	test('should be able to connect to a cluster', async () => {
+		const cluster = createCluster({
+			rootNodes: [
+				{
+					url: 'redis://localhost:6379',
+				},
+			],
+			useReplicas: true,
+		});
+
+		const keyvRedis = new KeyvRedis(cluster);
 	});
 });
