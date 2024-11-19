@@ -54,9 +54,11 @@ export type KeyvRedisEntry<T> = {
 	ttl?: number;
 };
 
+export type RedisClientConnectionType = RedisClientType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>;
+
 // eslint-disable-next-line unicorn/prefer-event-target
 export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
-	private _client: RedisClientType | RedisClusterType = createClient() as RedisClientType;
+	private _client: RedisClientConnectionType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = '::';
 	private _clearBatchSize = 1000;
@@ -67,14 +69,14 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @param {string | RedisClientOptions | RedisClientType} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
 	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
 	 */
-	constructor(connect?: string | RedisClientOptions | RedisClientType | RedisClusterOptions | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>, options?: KeyvRedisOptions) {
+	constructor(connect?: string | RedisClientOptions | RedisClusterOptions | RedisClientConnectionType, options?: KeyvRedisOptions) {
 		super();
 
 		if (connect) {
 			if (typeof connect === 'string') {
 				this._client = createClient({url: connect}) as RedisClientType;
 			} else if ((connect as any).connect !== undefined) {
-				this._client = (connect as any).options === undefined ? connect as RedisClusterType : connect as RedisClientType;
+				this._client = this.isClientCluster(connect as RedisClientConnectionType) ? connect as RedisClusterType : connect as RedisClientType;
 			} else if (connect instanceof Object) {
 				this._client = createClient(connect as RedisClientOptions) as RedisClientType;
 			}
@@ -87,14 +89,14 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	/**
 	 * Get the Redis client.
 	 */
-	public get client(): RedisClientType | RedisClusterType {
+	public get client(): RedisClientConnectionType {
 		return this._client;
 	}
 
 	/**
 	 * Set the Redis client.
 	 */
-	public set client(value: RedisClientType) {
+	public set client(value: RedisClientConnectionType) {
 		this._client = value;
 		this.initClient();
 	}
@@ -189,7 +191,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	/**
 	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
 	 */
-	public async getClient(): Promise<RedisClientType | RedisClusterType> {
+	public async getClient(): Promise<RedisClientConnectionType> {
 		if (!this._client.isOpen) {
 			await this._client.connect();
 		}
@@ -382,11 +384,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	}
 
 	public isCluster(): boolean {
-		if ((this._client as any).options === undefined && (this._client as any).scan === undefined) {
-			return true;
-		}
-
-		return false;
+		return this.isClientCluster(this._client);
 	}
 
 	/**
@@ -483,6 +481,14 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		} catch (error) {
 			this.emit('error', error);
 		}
+	}
+
+	private isClientCluster(client: RedisClientConnectionType): boolean {
+		if ((client as any).options === undefined && (client as any).scan === undefined) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private setOptions(options?: KeyvRedisOptions): void {
