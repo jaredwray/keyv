@@ -394,6 +394,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 */
 	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		if (this.isCluster()) {
+			/* c8 ignore next 2 */
 			throw new Error('iterator is not supported for clusters at this time');
 		} else {
 			yield * this.iteratorClient(namespace);
@@ -445,15 +446,8 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			const client = await this.getClient();
 
 			do {
-				// Use SCAN to find keys incrementally in batches
-
-				let result;
-				if ((this._client as any).scan === undefined) {
-					throw new Error('SCAN is not supported by the Redis Cluster Client');
-				} else {
-					// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-					result = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
-				}
+				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
+				const result = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
 
 				cursor = result.cursor.toString();
 				let {keys} = result;
