@@ -383,6 +383,10 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		return key;
 	}
 
+	/**
+	 * Is the client a cluster.
+	 * @returns {boolean} - true if the client is a cluster, false if not
+	 */
 	public isCluster(): boolean {
 		return this.isClientCluster(this._client);
 	}
@@ -401,6 +405,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		}
 	}
 
+	/**
+	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
+	 * @param {string} [namespace] - the namespace to iterate over
+	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
+	 */
 	public async * iteratorClient<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const client = await this.getClient();
 		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
@@ -427,6 +436,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		} while (cursor !== '0');
 	}
 
+	/**
+	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
+	 * @param {string} [namespace] - the namespace to iterate over
+	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
+	 */
 	public async * iteratorCluster<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const client = this._client as RedisClusterType;
 		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
@@ -442,7 +456,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 	/**
 	 * Clear all keys in the store.
-	 * IMPORTANT: this can cause performance issues if there are a large number of keys in the store. Use with caution as not recommended for production.
+	 * IMPORTANT: this can cause performance issues if there are a large number of keys in the store and worse with clusters. Use with caution as not recommended for production.
 	 * If a namespace is not set it will clear all keys with no prefix.
 	 * If a namespace is set it will clear all keys with that namespace.
 	 * @returns {Promise<void>}
