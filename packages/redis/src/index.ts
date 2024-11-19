@@ -579,7 +579,7 @@ export function createKeyv(connect?: string | RedisClientOptions | RedisClientTy
 }
 
 export {
-	createClient, createCluster, type RedisClientOptions, type RedisClientType,
+	createClient, createCluster, type RedisClientOptions, type RedisClientType, type RedisClusterType, type RedisClusterOptions,
 } from 'redis';
 
 export {
