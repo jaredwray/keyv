@@ -83,8 +83,6 @@ describe('KeyvRedis', () => {
 	test('should be able to get and set opts', async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.opts = {namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000};
-		const client = await keyvRedis.getClient() as RedisClientType;
-		console.log(client.options);
 
 		expect(keyvRedis.opts).toEqual({
 			namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000, dialect: 'redis', url: 'redis://localhost:6379',
@@ -380,20 +378,5 @@ describe('KeyvRedis Iterators', () => {
 		expect(values).toContain('bar3');
 
 		await keyvRedis.disconnect();
-	});
-});
-
-describe('KeyvRedis Cluster', () => {
-	test('should be able to connect to a cluster', async () => {
-		const cluster = createCluster({
-			rootNodes: [
-				{
-					url: 'redis://localhost:6379',
-				},
-			],
-			useReplicas: true,
-		});
-
-		const keyvRedis = new KeyvRedis(cluster);
 	});
 });

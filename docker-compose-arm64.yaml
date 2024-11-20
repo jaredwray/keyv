@@ -95,3 +95,25 @@ services:
     ports:
       - 2379:2379
       - 2380:2380
+  redis-node-1:
+    image: redis:latest
+    command: ["sh", "-c", "redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly no"]
+    ports:
+      - "7001:6379"
+  redis-node-2:
+    image: redis:latest
+    command: ["sh", "-c", "redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly no"]
+    ports:
+      - "7002:6379"
+  redis-node-3:
+    image: redis:latest
+    command: ["sh", "-c", "redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly no"]
+    ports:
+      - "7003:6379"
+  redis-setup:
+    image: redis:latest
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+    entrypoint: [ "sh", "-c", "sleep 5 && echo yes | redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 --cluster-replicas 0" ]

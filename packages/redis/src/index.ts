@@ -1,6 +1,6 @@
 import EventEmitter from 'node:events';
 import {
-	createClient, type RedisClientType, type RedisClientOptions, type RedisClusterType,
+	createClient, createCluster, type RedisClientType, type RedisClientOptions, type RedisClusterType,
 	type RedisClusterOptions,
 	type RedisModules,
 	type RedisFunctions,
@@ -78,7 +78,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			} else if ((connect as any).connect !== undefined) {
 				this._client = this.isClientCluster(connect as RedisClientConnectionType) ? connect as RedisClusterType : connect as RedisClientType;
 			} else if (connect instanceof Object) {
-				this._client = createClient(connect as RedisClientOptions) as RedisClientType;
+				this._client = (connect as any).rootNodes === undefined ? createClient(connect as RedisClientOptions) as RedisClientType : createCluster(connect as RedisClusterOptions) as RedisClusterType;
 			}
 		}
 
@@ -397,12 +397,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
 	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
-		if (this.isCluster()) {
-			/* c8 ignore next 2 */
-			throw new Error('iterator is not supported for clusters at this time');
-		} else {
-			yield * this.iteratorClient(namespace);
-		}
+		yield * (this.isCluster() ? this.iteratorCluster(namespace) : this.iteratorClient(namespace));
 	}
 
 	/**
@@ -567,6 +562,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			do {
 				// Use sendCommand to execute SCAN directly on the shard node
 				const client = createClient(node);
+
 				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
 				const response = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
 
