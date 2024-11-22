@@ -397,7 +397,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
 	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
-		yield * (this.isCluster() ? this.iteratorCluster(namespace) : this.iteratorClient(namespace));
+		if (this.isCluster()) {
+			throw new Error('Iterating over keys in a cluster is not supported.');
+		} else {
+			yield * this.iteratorClient<Value>(namespace);
+		}
 	}
 
 	/**
@@ -429,24 +433,6 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 				}
 			}
 		} while (cursor !== '0');
-	}
-
-	/**
-	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
-	 * @param {string} [namespace] - the namespace to iterate over
-	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
-	 */
-	public async * iteratorCluster<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
-		const client = this._client as RedisClusterType;
-		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
-		const keys = await this.clusterWideScan(client, match);
-
-		for (const key of keys) {
-			// eslint-disable-next-line no-await-in-loop
-			const value = await client.get(key);
-			const keyWithoutPrefix = this.getKeyWithoutPrefix(key, namespace);
-			yield [keyWithoutPrefix, value as Value | undefined];
-		}
 	}
 
 	/**
@@ -500,18 +486,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	}
 
 	private async clearNamespaceCluster(namespace?: string): Promise<void> {
-		const client = this._client as RedisClusterType;
-		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
-		const keys = await this.clusterWideScan(client, match);
-
-		if (keys.length > 0) {
-			// eslint-disable-next-line unicorn/prefer-ternary
-			if (this._useUnlink) {
-				await client.unlink(keys);
-			} else {
-				await client.del(keys);
-			}
-		}
+		throw new Error('Clearing all keys in a cluster is not supported.');
 	}
 
 	private isClientCluster(client: RedisClientConnectionType): boolean {
@@ -549,30 +524,6 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		this._client.on('error', error => {
 			this.emit('error', error);
 		});
-	}
-
-	private async clusterWideScan(client: RedisClusterType, match: string): Promise<string[]> {
-		const keys: string[] = [];
-		const nodes = client.masters; // Get all master nodes in the cluster
-		const batchSize = this._clearBatchSize;
-
-		for (const node of nodes) {
-			let cursor = '0';
-
-			do {
-				// Use sendCommand to execute SCAN directly on the shard node
-				const client = createClient(node);
-
-				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-				const response = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
-
-				const {cursor: newCursor, keys: scannedKeys} = response;
-				cursor = newCursor.toString();
-				keys.push(...scannedKeys);
-			} while (cursor !== '0');
-		}
-
-		return keys;
 	}
 }
 

@@ -47,15 +47,54 @@ describe('KeyvRedis Cluster', () => {
 
 		const keyvRedis = new KeyvRedis(cluster);
 
-		const undefinedResult = await keyvRedis.get('test-cl');
+		await keyvRedis.delete('test-cl1');
+
+		const undefinedResult = await keyvRedis.get('test-cl1');
 		expect(undefinedResult).toBeUndefined();
 
-		await keyvRedis.set('test-cl', 'test');
+		await keyvRedis.set('test-cl1', 'test');
 
-		const result = await keyvRedis.get('test-cl');
+		const result = await keyvRedis.get('test-cl1');
 
 		expect(result).toBe('test');
 
-		await keyvRedis.delete('test-cl');
+		await keyvRedis.delete('test-cl1');
+	});
+
+	test('should thrown an error on clear', async () => {
+		const cluster = createCluster(defaultClusterOptions);
+
+		const keyvRedis = new KeyvRedis(cluster);
+
+		let errorThrown = false;
+		try {
+			await keyvRedis.clear();
+		} catch (error) {
+			expect(error).toBeDefined();
+			errorThrown = true;
+		}
+
+		expect(errorThrown).toBe(true);
+	});
+
+	test('should throw an error on iterator', async () => {
+		const cluster = createCluster(defaultClusterOptions);
+
+		const keyvRedis = new KeyvRedis(cluster);
+
+		let errorThrown = false;
+		try {
+			const keys = [];
+			const values = [];
+			for await (const [key, value] of keyvRedis.iterator('foo')) {
+				keys.push(key);
+				values.push(value);
+			}
+		} catch (error) {
+			expect(error).toBeDefined();
+			errorThrown = true;
+		}
+
+		expect(errorThrown).toBe(true);
 	});
 });
