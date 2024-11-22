@@ -69,7 +69,7 @@ services:
       REDIS_HOST: redis
     ports:
       - 6379:6379
-  keyv_redis_1:
+  keyv_redis_tls_1:
     image: redis:latest
     command: redis-server --port 0 --tls-port 6380 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no
     environment:
@@ -95,3 +95,4 @@ services:
     ports:
       - 2379:2379
       - 2380:2380
+  

@@ -10,7 +10,7 @@ You can contribute changes to this repo by opening a pull request:
 
 1) After forking this repository to your Git account, make the proposed changes on your forked branch.
 2) Run tests and linting locally.
-	- [Install and run Docker](https://docs.docker.com/get-docker/) if you aren't already.
+	- [Install and run Docker](https://docs.docker.com/get-docker/) if you aren't already. NOTE: on docker set `enable host networking` to true as it is required for the tests in redis clustering.
 	- Run `pnpm test:services:start`, allow for the services to come up.
 	- Run `pnpm test`.
 3) Commit your changes and push them to your forked repository.

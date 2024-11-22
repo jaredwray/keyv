@@ -1,5 +1,11 @@
 import EventEmitter from 'node:events';
-import {createClient, type RedisClientType, type RedisClientOptions} from 'redis';
+import {
+	createClient, createCluster, type RedisClientType, type RedisClientOptions, type RedisClusterType,
+	type RedisClusterOptions,
+	type RedisModules,
+	type RedisFunctions,
+	type RedisScripts,
+} from 'redis';
 import {Keyv, type KeyvStoreAdapter} from 'keyv';
 
 export type KeyvRedisOptions = {
@@ -47,9 +53,12 @@ export type KeyvRedisEntry<T> = {
 	 */
 	ttl?: number;
 };
+
+export type RedisClientConnectionType = RedisClientType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>;
+
 // eslint-disable-next-line unicorn/prefer-event-target
 export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
-	private _client: RedisClientType = createClient() as RedisClientType;
+	private _client: RedisClientConnectionType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = '::';
 	private _clearBatchSize = 1000;
@@ -60,35 +69,34 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @param {string | RedisClientOptions | RedisClientType} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
 	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
 	 */
-	constructor(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions) {
+	constructor(connect?: string | RedisClientOptions | RedisClusterOptions | RedisClientConnectionType, options?: KeyvRedisOptions) {
 		super();
 
 		if (connect) {
 			if (typeof connect === 'string') {
 				this._client = createClient({url: connect}) as RedisClientType;
-			} else if ((connect as RedisClientType).connect !== undefined) {
-				this._client = connect as RedisClientType;
+			} else if ((connect as any).connect !== undefined) {
+				this._client = this.isClientCluster(connect as RedisClientConnectionType) ? connect as RedisClusterType : connect as RedisClientType;
 			} else if (connect instanceof Object) {
-				this._client = createClient(connect as RedisClientOptions) as RedisClientType;
+				this._client = (connect as any).rootNodes === undefined ? createClient(connect as RedisClientOptions) as RedisClientType : createCluster(connect as RedisClusterOptions) as RedisClusterType;
 			}
 		}
 
 		this.setOptions(options);
-
 		this.initClient();
 	}
 
 	/**
 	 * Get the Redis client.
 	 */
-	public get client(): RedisClientType {
+	public get client(): RedisClientConnectionType {
 		return this._client;
 	}
 
 	/**
 	 * Set the Redis client.
 	 */
-	public set client(value: RedisClientType) {
+	public set client(value: RedisClientConnectionType) {
 		this._client = value;
 		this.initClient();
 	}
@@ -97,13 +105,20 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * Get the options for the adapter.
 	 */
 	public get opts(): KeyvRedisPropertyOptions {
-		return {
+		let url = '';
+		if ((this._client as RedisClientType).options) {
+			url = (this._client as RedisClientType).options?.url ?? 'redis://localhost:6379';
+		}
+
+		const results: KeyvRedisPropertyOptions = {
 			namespace: this._namespace,
 			keyPrefixSeparator: this._keyPrefixSeparator,
 			clearBatchSize: this._clearBatchSize,
 			dialect: 'redis',
-			url: this._client?.options?.url ?? 'redis://localhost:6379',
+			url,
 		};
+
+		return results;
 	}
 
 	/**
@@ -176,7 +191,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	/**
 	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
 	 */
-	public async getClient(): Promise<RedisClientType> {
+	public async getClient(): Promise<RedisClientConnectionType> {
 		if (!this._client.isOpen) {
 			await this._client.connect();
 		}
@@ -369,17 +384,38 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	}
 
 	/**
+	 * Is the client a cluster.
+	 * @returns {boolean} - true if the client is a cluster, false if not
+	 */
+	public isCluster(): boolean {
+		return this.isClientCluster(this._client);
+	}
+
+	/**
 	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
 	 * @param {string} [namespace] - the namespace to iterate over
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
 	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
+		if (this.isCluster()) {
+			throw new Error('Iterating over keys in a cluster is not supported.');
+		} else {
+			yield * this.iteratorClient<Value>(namespace);
+		}
+	}
+
+	/**
+	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
+	 * @param {string} [namespace] - the namespace to iterate over
+	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
+	 */
+	public async * iteratorClient<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const client = await this.getClient();
 		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
 		let cursor = '0';
 		do {
 			// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-			const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, TYPE: 'string'});
+			const result = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, TYPE: 'string'});
 			cursor = result.cursor.toString();
 			let {keys} = result;
 
@@ -401,13 +437,13 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 	/**
 	 * Clear all keys in the store.
-	 * IMPORTANT: this can cause performance issues if there are a large number of keys in the store. Use with caution as not recommended for production.
+	 * IMPORTANT: this can cause performance issues if there are a large number of keys in the store and worse with clusters. Use with caution as not recommended for production.
 	 * If a namespace is not set it will clear all keys with no prefix.
 	 * If a namespace is set it will clear all keys with that namespace.
 	 * @returns {Promise<void>}
 	 */
 	public async clear(): Promise<void> {
-		await this.clearNamespace(this._namespace);
+		await (this.isCluster() ? this.clearNamespaceCluster(this._namespace) : this.clearNamespace(this._namespace));
 	}
 
 	private async clearNamespace(namespace?: string): Promise<void> {
@@ -418,9 +454,8 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			const client = await this.getClient();
 
 			do {
-				// Use SCAN to find keys incrementally in batches
 				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-				const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
+				const result = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
 
 				cursor = result.cursor.toString();
 				let {keys} = result;
@@ -448,6 +483,18 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		} catch (error) {
 			this.emit('error', error);
 		}
+	}
+
+	private async clearNamespaceCluster(namespace?: string): Promise<void> {
+		throw new Error('Clearing all keys in a cluster is not supported.');
+	}
+
+	private isClientCluster(client: RedisClientConnectionType): boolean {
+		if ((client as any).options === undefined && (client as any).scan === undefined) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private setOptions(options?: KeyvRedisOptions): void {
@@ -493,7 +540,7 @@ export function createKeyv(connect?: string | RedisClientOptions | RedisClientTy
 }
 
 export {
-	createClient, createCluster, type RedisClientOptions, type RedisClientType,
+	createClient, createCluster, type RedisClientOptions, type RedisClientType, type RedisClusterType, type RedisClusterOptions,
 } from 'redis';
 
 export {
