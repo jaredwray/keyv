@@ -25,6 +25,7 @@ By default, everything is stored in memory; you can optionally also install a st
 
 ```sh
 npm install --save @keyv/redis
+npm install --save @keyv/valkey
 npm install --save @keyv/memcache
 npm install --save @keyv/mongo
 npm install --save @keyv/sqlite
