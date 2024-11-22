@@ -1,0 +1,39 @@
+x-redis-cluster-base: &redis-cluster-base
+  image: docker.io/bitnami/redis-cluster:latest
+  network_mode: host
+
+services:
+    redis-cluster-1:
+        container_name: redis-cluster-1
+        <<: *redis-cluster-base
+        environment:
+            - 'ALLOW_EMPTY_PASSWORD=yes'
+            - 'REDIS_NODES=127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003'
+            - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+            - 'REDIS_CLUSTER_ANNOUNCE_IP=127.0.0.1'
+            - 'REDIS_PORT_NUMBER=7001'
+
+    redis-cluster-2:
+        container_name: redis-cluster-2
+        <<: *redis-cluster-base
+        environment:
+            - 'ALLOW_EMPTY_PASSWORD=yes'
+            - 'REDIS_NODES=127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003'
+            - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+            - 'REDIS_CLUSTER_ANNOUNCE_IP=127.0.0.1'
+            - 'REDIS_PORT_NUMBER=7002'
+
+    redis-cluster-3:
+        container_name: redis-cluster-3
+        <<: *redis-cluster-base
+        depends_on:
+            - redis-cluster-1
+            - redis-cluster-2
+        environment:
+            - 'ALLOW_EMPTY_PASSWORD=yes'
+            - 'REDIS_NODES=127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003'
+            - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+            - 'REDIS_CLUSTER_ANNOUNCE_IP=127.0.0.1'
+            - 'REDIS_PORT_NUMBER=7003'
+            - 'REDIS_CLUSTER_REPLICAS=0'
+            - 'REDIS_CLUSTER_CREATOR=yes'

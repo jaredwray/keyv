@@ -43,14 +43,20 @@ describe('KeyvRedis Cluster', () => {
 	});
 
 	test('should be able to set a value', async () => {
+
 		const cluster = createCluster(defaultClusterOptions);
 
 		const keyvRedis = new KeyvRedis(cluster);
+
+		const undefinedResult = await keyvRedis.get('test-cl');
+		expect(undefinedResult).toBeUndefined();
 
 		await keyvRedis.set('test-cl', 'test');
 
 		const result = await keyvRedis.get('test-cl');
 
 		expect(result).toBe('test');
+
+		await keyvRedis.delete('test-cl');
 	});
 });
