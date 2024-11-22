@@ -43,7 +43,6 @@ describe('KeyvRedis Cluster', () => {
 	});
 
 	test('should be able to set a value', async () => {
-
 		const cluster = createCluster(defaultClusterOptions);
 
 		const keyvRedis = new KeyvRedis(cluster);
