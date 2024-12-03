@@ -225,7 +225,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **hasMany** - Check if multiple keys exist.
 * **delete** - Delete a key.
 * **deleteMany** - Delete multiple keys.
-* **clear** - Clear all keys. If the `namespace` is set it will only clear keys with that namespace.
+* **clear** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace.
 * **disconnect** - Disconnect from the Redis server.
 * **iterator** - Create a new iterator for the keys.
 
