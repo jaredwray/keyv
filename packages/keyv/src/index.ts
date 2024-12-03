@@ -88,6 +88,7 @@ const iterableAdapters = [
 	'mysql',
 	'mongo',
 	'redis',
+	'valkey',
 ];
 
 export class Keyv<GenericValue = any> extends EventManager {
