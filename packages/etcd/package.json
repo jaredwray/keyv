@@ -73,7 +73,7 @@
 	"devDependencies": {
 		"@keyv/test-suite": "*",
 		"c8": "^10.1.2",
-		"keyv": "*",
+		"keyv": "workspace:*",
 		"requirable": "^1.0.5",
 		"rimraf": "^6.0.1",
 		"ts-node": "^10.9.2",
