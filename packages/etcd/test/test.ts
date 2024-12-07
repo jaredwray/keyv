@@ -46,11 +46,11 @@ test.it('disable ttl using default url', t => {
 
 test.it('enable ttl using url', t => {
 	const store = new KeyvEtcd({
-		url: '127.0.0.1:2379:2379',
+		url: '127.0.0.1:2379',
 		ttl: 1000,
 	});
 	t.expect(store.opts).toEqual({
-		url: '127.0.0.1:2379:2379',
+		url: '127.0.0.1:2379',
 		ttl: 1000,
 		dialect: 'etcd',
 	});
