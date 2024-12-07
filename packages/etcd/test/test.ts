@@ -1,6 +1,6 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
-import keyvTestSuite from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import KeyvEtcd from '../src/index';
 
 const etcdUrl = 'etcd://127.0.0.1:2379';
@@ -8,6 +8,7 @@ const etcdUrl = 'etcd://127.0.0.1:2379';
 const store = () => new KeyvEtcd({uri: etcdUrl, busyTimeout: 3000});
 
 keyvTestSuite(test, Keyv, store);
+keyvIteratorTests(test, Keyv, store);
 
 test.beforeEach(async () => {
 	const keyv = new KeyvEtcd(etcdUrl);
@@ -18,6 +19,7 @@ test.it('default options', t => {
 	const store = new KeyvEtcd();
 	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
+		dialect: 'etcd',
 	});
 });
 
@@ -26,6 +28,7 @@ test.it('enable ttl using default url', t => {
 	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: 1000,
+		dialect: 'etcd',
 	});
 	t.expect(store.ttlSupport).toBeTruthy();
 });
@@ -36,8 +39,22 @@ test.it('disable ttl using default url', t => {
 	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: true,
+		dialect: 'etcd',
 	});
 	t.expect(store.ttlSupport).toBeFalsy();
+});
+
+test.it('enable ttl using url', t => {
+	const store = new KeyvEtcd({
+		url: '127.0.0.1:2379',
+		ttl: 1000,
+	});
+	t.expect(store.opts).toEqual({
+		url: '127.0.0.1:2379',
+		ttl: 1000,
+		dialect: 'etcd',
+	});
+	t.expect(store.ttlSupport).toBeTruthy();
 });
 
 test.it('enable ttl using url and options', t => {
@@ -45,6 +62,7 @@ test.it('enable ttl using url and options', t => {
 	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: 1000,
+		dialect: 'etcd',
 	});
 	t.expect(store.ttlSupport).toBeTruthy();
 });
@@ -55,6 +73,7 @@ test.it('disable ttl using url and options', t => {
 	t.expect(store.opts).toEqual({
 		url: '127.0.0.1:2379',
 		ttl: true,
+		dialect: 'etcd',
 	});
 	t.expect(store.ttlSupport).toBeFalsy();
 });

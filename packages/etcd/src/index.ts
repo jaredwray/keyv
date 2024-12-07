@@ -10,6 +10,7 @@ export type KeyvEtcdOptions = {
 	uri?: string;
 	ttl?: number;
 	busyTimeout?: number;
+	dialect?: 'etcd';
 };
 
 export class KeyvEtcd<Value = any> extends EventEmitter {
@@ -42,6 +43,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 			url: '127.0.0.1:2379',
 			...url,
 			...options,
+			dialect: 'etcd',
 		};
 
 		this.opts.url = this.opts.url!.replace(/^etcd:\/\//, '');
