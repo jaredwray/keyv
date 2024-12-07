@@ -76,15 +76,15 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@keyv/serialize": "*"
+		"@keyv/serialize": "workspace:*"
 	},
 	"devDependencies": {
-		"@keyv/compress-brotli": "*",
-		"@keyv/compress-gzip": "*",
-		"@keyv/memcache": "*",
-		"@keyv/mongo": "*",
-		"@keyv/sqlite": "*",
-		"@keyv/test-suite": "*",
+		"@keyv/compress-brotli": "workspace:*",
+		"@keyv/compress-gzip": "workspace:*",
+		"@keyv/memcache": "workspace:*",
+		"@keyv/mongo": "workspace:*",
+		"@keyv/sqlite": "workspace:*",
+		"@keyv/test-suite": "workspace:*",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",

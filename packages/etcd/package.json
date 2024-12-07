@@ -71,7 +71,7 @@
 		"etcd3": "^1.1.2"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "*",
+		"@keyv/test-suite": "workspace:*",
 		"c8": "^10.1.2",
 		"keyv": "workspace:*",
 		"requirable": "^1.0.5",
