@@ -71,9 +71,9 @@
 		"etcd3": "^1.1.2"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "workspace:*",
+		"@keyv/test-suite": "workspace:^",
 		"c8": "^10.1.2",
-		"keyv": "workspace:*",
+		"keyv": "workspace:^",
 		"requirable": "^1.0.5",
 		"rimraf": "^6.0.1",
 		"ts-node": "^10.9.2",

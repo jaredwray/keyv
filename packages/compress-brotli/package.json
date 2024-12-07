@@ -53,12 +53,12 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@keyv/serialize": "workspace:*",
+		"@keyv/serialize": "workspace:^",
 		"compress-brotli": "^1.3.12",
 		"keyv": "^5.2.1"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "workspace:*",
+		"@keyv/test-suite": "workspace:^",
 		"c8": "^10.1.2",
 		"rimraf": "^6.0.1",
 		"xo": "^0.59.3"

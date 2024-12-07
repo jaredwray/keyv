@@ -51,13 +51,13 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "@keyv/serialize": "workspace:*",
-    "keyv": "workspace:*",
+    "@keyv/serialize": "workspace:^",
+    "keyv": "workspace:^",
     "@types/pako": "^2.0.3",
     "pako": "^2.1.0"
   },
   "devDependencies": {
-    "@keyv/test-suite": "workspace:*",
+    "@keyv/test-suite": "workspace:^",
     "rimraf": "^6.0.1",
     "tsd": "^0.31.2",
     "xo": "^0.59.3"
