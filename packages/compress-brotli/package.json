@@ -61,7 +61,7 @@
 		"@keyv/test-suite": "workspace:^",
 		"c8": "^10.1.2",
 		"rimraf": "^6.0.1",
-		"xo": "^0.59.3"
+		"xo": "^0.60.0"
 	},
 	"tsd": {
 		"directory": "test"
