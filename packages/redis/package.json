@@ -51,7 +51,7 @@
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
 		"vitest": "^2.1.5",
-		"xo": "^0.59.3"
+		"xo": "^0.60.0"
 	},
 	"tsd": {
 		"directory": "test"
