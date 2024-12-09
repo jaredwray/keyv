@@ -8,8 +8,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build:keyv:serialize": "cd packages/serialize && pnpm build",
-    "build:keyv": "cd packages/keyv && pnpm build",
+    "build:keyv:serialize": "pnpm recursive --filter=@keyv/serialize run build",
+    "build:keyv": "pnpm recursive --filter=keyv run build",
     "build": "pnpm build:keyv:serialize && pnpm build:keyv && pnpm recursive --filter=!keyv run build",
     "test": "c8 --reporter=lcov pnpm -r --workspace-concurrency 1 test:ci",
     "test:services:start": "chmod +x ./test-services-start.sh && ./test-services-start.sh",
