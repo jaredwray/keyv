@@ -14,7 +14,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
-		"prepare": "pnpm build",
+		"prepublishOnly": "pnpm build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./dist ./test/testdb.sqlite"
@@ -66,9 +66,9 @@
 		"vitest": "^2.1.4"
 	},
 	"devDependencies": {
-		"@keyv/compress-brotli": "*",
+		"@keyv/compress-brotli": "workspace:^",
 		"@types/json-bigint": "^1.0.4",
-		"keyv": "*",
+		"keyv": "workspace:^",
 		"rimraf": "^6.0.1"
 	}
 }

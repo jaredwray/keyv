@@ -14,7 +14,7 @@
 	},
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
-		"prepare": "pnpm build",
+		"prepublishOnly": "pnpm build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
@@ -41,11 +41,11 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"keyv": "*",
+		"keyv": "workspace:^",
 		"redis": "^4.7.0"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "*",
+		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^2.1.5",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
