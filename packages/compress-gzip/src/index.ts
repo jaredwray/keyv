@@ -33,6 +33,7 @@ export class KeyvGzip {
 			return {value: await this.decompress(value as pako.Data), expires};
 		}
 
+		/* c8 ignore next 1 */
 		return {value: undefined, expires: undefined};
 	}
 }
