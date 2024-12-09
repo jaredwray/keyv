@@ -14,7 +14,7 @@
 	},
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
-		"prepare": "pnpm build",
+		"prepublishOnly": "pnpm build",
 		"test": "xo --fix && vitest run --coverage",
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist"
@@ -61,10 +61,10 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"sqlite3": "^5.1.7",
-		"keyv": "*"
+		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@keyv/test-suite": "*",
+		"@keyv/test-suite": "workspace:^",
 		"rimraf": "^6.0.1",
 		"tsd": "^0.31.2",
 		"xo": "^0.59.3"

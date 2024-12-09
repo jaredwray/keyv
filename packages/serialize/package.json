@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
-    "prepare": "pnpm build",
+    "prepublishOnly": "pnpm build",
     "test": "xo --fix && vitest run --coverage",
     "test:ci": "xo && vitest --run --sequence.setupFiles=list",
     "clean": "rimraf ./node_modules ./coverage ./dist"
@@ -60,7 +60,7 @@
     "buffer": "^6.0.3"
   },
   "devDependencies": {
-    "@keyv/test-suite": "*",
+    "@keyv/test-suite": "workspace:^",
     "keyv": "^5.0.0",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
