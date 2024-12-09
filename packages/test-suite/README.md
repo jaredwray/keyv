@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/@keyv/test-suite.svg)](https://www.npmjs.com/package/@keyv/test-suite)
 [![npm](https://img.shields.io/npm/dm/@keyv/test-suite)](https://npmjs.com/package/@keyv/test-suite)
 
-Complete [AVA](https://github.com/avajs/ava) test suite to test a [Keyv](https://github.com/jaredwray/keyv) storage adapter for API compliance.
+Complete [Vitest](https://vitest.dev/) test suite to test a [Keyv](https://github.com/jaredwray/keyv) storage adapter for API compliance.
 
 ## Usage
 
