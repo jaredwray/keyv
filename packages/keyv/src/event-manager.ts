@@ -44,7 +44,7 @@ class EventManager {
 	public off(event: string, listener: EventListener): void {
 		const listeners = this._eventListeners.get(event) ?? [];
 		const index = listeners.indexOf(listener);
-		if (index > -1) {
+		if (index !== -1) {
 			listeners.splice(index, 1);
 		}
 
