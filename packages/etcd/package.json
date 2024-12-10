@@ -21,12 +21,6 @@
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-object-from-entries": "off",
-			"unicorn/prefer-node-protocol": "off",
-			"n/file-extension-in-import": "off",
-			"@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
-			"import/extensions": "off",
-			"@typescript-eslint/no-confusing-void-expression": "off",
 			"@typescript-eslint/promise-function-async": "off",
 			"eslint-comments/no-unused-disable": "off",
 			"unicorn/prefer-event-target": "off",
