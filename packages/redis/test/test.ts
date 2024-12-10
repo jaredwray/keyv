@@ -3,7 +3,7 @@ import {
 } from 'vitest';
 import {createClient, type RedisClientType} from 'redis';
 import {delay} from '@keyv/test-suite';
-import KeyvRedis, {createKeyv, createCluster} from '../src/index.js';
+import KeyvRedis, {createKeyv} from '../src/index.js';
 
 describe('KeyvRedis', () => {
 	test('should be a class', () => {
@@ -60,12 +60,14 @@ describe('KeyvRedis', () => {
 			keyPrefixSeparator: '->',
 			clearBatchSize: 100,
 			useUnlink: true,
+			noNamespaceAffectsAll: true,
 		};
 		const keyvRedis = new KeyvRedis(uri, options);
 		expect(keyvRedis.namespace).toBe('test');
 		expect(keyvRedis.keyPrefixSeparator).toBe('->');
 		expect(keyvRedis.clearBatchSize).toBe(100);
 		expect(keyvRedis.useUnlink).toBe(true);
+		expect(keyvRedis.noNamespaceAffectsAll).toBe(true);
 	});
 
 	test('should be able to get and set properties', () => {
@@ -82,10 +84,12 @@ describe('KeyvRedis', () => {
 
 	test('should be able to get and set opts', async () => {
 		const keyvRedis = new KeyvRedis();
-		keyvRedis.opts = {namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000};
+		keyvRedis.opts = {
+			namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000, noNamespaceAffectsAll: true,
+		};
 
 		expect(keyvRedis.opts).toEqual({
-			namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000, dialect: 'redis', url: 'redis://localhost:6379',
+			namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000, dialect: 'redis', url: 'redis://localhost:6379', noNamespaceAffectsAll: true,
 		});
 	});
 });
@@ -278,6 +282,36 @@ describe('KeyvRedis Namespace', () => {
 		await keyvRedis.disconnect();
 	});
 
+	test('should not clear all with no namespace if noNamespaceAffectsAll is false', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.noNamespaceAffectsAll = false;
+
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.set('foo91', 'bar');
+		keyvRedis.namespace = undefined;
+		await keyvRedis.set('foo912', 'bar2');
+		await keyvRedis.set('foo913', 'bar3');
+		await keyvRedis.clear();
+		keyvRedis.namespace = 'ns1';
+		const value = await keyvRedis.get('foo91');
+		expect(value).toBeDefined();
+	});
+
+	test('should clear all with no namespace if noNamespaceAffectsAll is true', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.noNamespaceAffectsAll = true;
+
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.set('foo91', 'bar');
+		keyvRedis.namespace = undefined;
+		await keyvRedis.set('foo912', 'bar2');
+		await keyvRedis.set('foo913', 'bar3');
+		await keyvRedis.clear();
+		keyvRedis.namespace = 'ns1';
+		const value = await keyvRedis.get('foo91');
+		expect(value).toBeUndefined();
+	});
+
 	test('should clear namespace but not other ones', async () => {
 		const keyvRedis = new KeyvRedis();
 		const client = await keyvRedis.getClient() as RedisClientType;
@@ -378,5 +412,60 @@ describe('KeyvRedis Iterators', () => {
 		expect(values).toContain('bar3');
 
 		await keyvRedis.disconnect();
+	});
+
+	test('should be able to iterate over all keys if namespace is undefined and noNamespaceAffectsAll is true', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.noNamespaceAffectsAll = true;
+
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.set('foo1', 'bar1');
+		keyvRedis.namespace = 'ns2';
+		await keyvRedis.set('foo2', 'bar2');
+		keyvRedis.namespace = undefined;
+		await keyvRedis.set('foo3', 'bar3');
+
+		const keys = [];
+		const values = [];
+		for await (const [key, value] of keyvRedis.iterator()) {
+			keys.push(key);
+			values.push(value);
+		}
+
+		expect(keys).toContain('ns1::foo1');
+		expect(keys).toContain('ns2::foo2');
+		expect(keys).toContain('foo3');
+		expect(values).toContain('bar1');
+		expect(values).toContain('bar2');
+		expect(values).toContain('bar3');
+	});
+
+	test('should only iterate over keys with no namespace if name is undefined set and noNamespaceAffectsAll is false', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.noNamespaceAffectsAll = false;
+
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.set('foo1', 'bar1');
+		keyvRedis.namespace = 'ns2';
+		await keyvRedis.set('foo2', 'bar2');
+		keyvRedis.namespace = undefined;
+		await keyvRedis.set('foo3', 'bar3');
+
+		const keys = [];
+		const values = [];
+		for await (const [key, value] of keyvRedis.iterator()) {
+			keys.push(key);
+			values.push(value);
+		}
+
+		expect(keys).toContain('foo3');
+		expect(values).toContain('bar3');
+
+		expect(keys).not.toContain('foo1');
+		expect(keys).not.toContain('ns1::foo1');
+		expect(keys).not.toContain('ns2::foo2');
+		expect(keys).not.toContain('foo2');
+		expect(values).not.toContain('bar1');
+		expect(values).not.toContain('bar2');
 	});
 });

@@ -26,6 +26,12 @@ export type KeyvRedisOptions = {
 	 */
 	useUnlink?: boolean;
 
+	/**
+	 * Whether to allow clearing all keys when no namespace is set.
+	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * Defaults to `false`.
+	 */
+	noNamespaceAffectsAll?: boolean;
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
@@ -63,6 +69,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	private _keyPrefixSeparator = '::';
 	private _clearBatchSize = 1000;
 	private _useUnlink = true;
+	private _noNamespaceAffectsAll = false;
 
 	/**
 	 * KeyvRedis constructor.
@@ -114,6 +121,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			namespace: this._namespace,
 			keyPrefixSeparator: this._keyPrefixSeparator,
 			clearBatchSize: this._clearBatchSize,
+			noNamespaceAffectsAll: this._noNamespaceAffectsAll,
 			dialect: 'redis',
 			url,
 		};
@@ -186,6 +194,23 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 */
 	public set useUnlink(value: boolean) {
 		this._useUnlink = value;
+	}
+
+	/**
+	 * Get if no namespace affects all keys.
+	 * Whether to allow clearing all keys when no namespace is set.
+	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * @default false
+	 */
+	public get noNamespaceAffectsAll(): boolean {
+		return this._noNamespaceAffectsAll;
+	}
+
+	/**
+	 * Set if not namespace affects all keys.
+	 */
+	public set noNamespaceAffectsAll(value: boolean) {
+		this._noNamespaceAffectsAll = value;
 	}
 
 	/**
@@ -419,7 +444,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			cursor = result.cursor.toString();
 			let {keys} = result;
 
-			if (!namespace) {
+			if (!namespace && !this._noNamespaceAffectsAll) {
 				keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
 			}
 
@@ -448,6 +473,12 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 	private async clearNamespace(namespace?: string): Promise<void> {
 		try {
+			if (!namespace && this._noNamespaceAffectsAll) {
+				const client = await this.getClient() as RedisClientType;
+				await client.flushDb();
+				return;
+			}
+
 			let cursor = '0';
 			const batchSize = this._clearBatchSize;
 			const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
@@ -479,6 +510,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 					}
 				}
 			} while (cursor !== '0');
+
 		/* c8 ignore next 3 */
 		} catch (error) {
 			this.emit('error', error);
@@ -516,6 +548,10 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 		if (options.useUnlink !== undefined) {
 			this._useUnlink = options.useUnlink;
+		}
+
+		if (options.noNamespaceAffectsAll !== undefined) {
+			this._noNamespaceAffectsAll = options.noNamespaceAffectsAll;
 		}
 	}
 

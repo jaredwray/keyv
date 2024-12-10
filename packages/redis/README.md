@@ -113,7 +113,7 @@ NOTE: If you plan to do many clears or deletes, it is recommended to read the [P
 # Performance Considerations
 
 With namespaces being prefix based it is critical to understand some of the performance considerations we have made:
-* `clear()` - We use the `SCAN` command to iterate over keys. This is a non-blocking command that is more efficient than `KEYS`. In addition we are using `UNLINK` by default instead of `DEL`. Even with that if you are iterating over a large dataset it can still be slow. It is highly recommended to use the `namespace` option to limit the keys that are being cleared and if possible to not use the `clear()` method in high performance environments.
+* `clear()` - We use the `SCAN` command to iterate over keys. This is a non-blocking command that is more efficient than `KEYS`. In addition we are using `UNLINK` by default instead of `DEL`. Even with that if you are iterating over a large dataset it can still be slow. It is highly recommended to use the `namespace` option to limit the keys that are being cleared and if possible to not use the `clear()` method in high performance environments. If you don't set namespaces, you can enable `noNamespaceAffectsAll` to clear all keys using the `FLUSHDB` command which is faster and can be used in production environments.
 
 * `delete()` - By default we are now using `UNLINK` instead of `DEL` for deleting keys. This is a non-blocking command that is more efficient than `DEL`. If you are deleting a large number of keys it is recommended to use the `deleteMany()` method instead of `delete()`.
 
@@ -217,6 +217,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **keyPrefixSeparator** - The separator to use between the namespace and key.
 * **clearBatchSize** - The number of keys to delete in a single batch.
 * **useUnlink** - Use the `UNLINK` command for deleting keys isntead of `DEL`.
+* **noNamespaceAffectsAll**: Whether to allow clearing all keys when no namespace is set (default is `false`).
 * **set** - Set a key.
 * **setMany** - Set multiple keys.
 * **get** - Get a key.
@@ -225,9 +226,9 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **hasMany** - Check if multiple keys exist.
 * **delete** - Delete a key.
 * **deleteMany** - Delete multiple keys.
-* **clear** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace.
+* **clear** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
 * **disconnect** - Disconnect from the Redis server.
-* **iterator** - Create a new iterator for the keys. If the namespace is not set it will iterate over all keys that are not prefixed with a namespace.
+* **iterator** - Create a new iterator for the keys. If the namespace is not set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
 
 # Migrating from v3 to v4
 

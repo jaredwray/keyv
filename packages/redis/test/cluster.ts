@@ -31,7 +31,7 @@ describe('KeyvRedis Cluster', () => {
 		expect(keyvRedis.isCluster()).toBe(true);
 	});
 
-	test('shoudl be able to set the redis cluster client', async () => {
+	test('should be able to set the redis cluster client', async () => {
 		const cluster = createCluster(defaultClusterOptions);
 
 		const keyvRedis = new KeyvRedis();
@@ -61,7 +61,7 @@ describe('KeyvRedis Cluster', () => {
 		await keyvRedis.delete('test-cl1');
 	});
 
-	test('should thrown an error on clear', async () => {
+	test('should throw an error on clear', async () => {
 		const cluster = createCluster(defaultClusterOptions);
 
 		const keyvRedis = new KeyvRedis(cluster);
