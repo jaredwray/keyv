@@ -196,12 +196,12 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		this._useUnlink = value;
 	}
 
-/**
- * Get if no namespace affects all keys.
- * Whether to allow clearing all keys when no namespace is set.
- * If set to true and no namespace is set, iterate() will return all keys.
- * @default false
- */
+	/**
+	 * Get if no namespace affects all keys.
+	 * Whether to allow clearing all keys when no namespace is set.
+	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * @default false
+	 */
 	public get noNamespaceAffectsAll(): boolean {
 		return this._noNamespaceAffectsAll;
 	}
