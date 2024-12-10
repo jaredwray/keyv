@@ -19,16 +19,6 @@
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
 	},
-	"ava": {
-		"require": [
-			"requirable",
-			"ts-node/register"
-		],
-		"extensions": [
-			"js",
-			"ts"
-		]
-	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/jaredwray/keyv.git"
