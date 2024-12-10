@@ -19,11 +19,6 @@
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
 	},
-	"xo": {
-		"rules": {
-			"import/no-extraneous-dependencies": "off"
-		}
-	},
 	"ava": {
 		"require": [
 			"requirable",
