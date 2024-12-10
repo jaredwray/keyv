@@ -1,6 +1,7 @@
 import * as test from 'vitest';
-import Keyv from 'keyv';
+import {Keyv} from 'keyv';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
+// eslint-disable-next-line import/no-named-as-default
 import KeyvEtcd from '../src/index';
 
 const etcdUrl = 'etcd://127.0.0.1:2379';
