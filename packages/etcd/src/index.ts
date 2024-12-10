@@ -1,9 +1,9 @@
-import {EventEmitter} from 'events';
+import {EventEmitter} from 'node:events';
 import {Etcd3, type Lease} from 'etcd3';
 import type {StoredData} from 'keyv';
 import type {
 	ClearOutput, DeleteManyOutput, DeleteOutput, GetOutput, HasOutput, SetOutput,
-} from './types';
+} from './types.js';
 
 export type KeyvEtcdOptions = {
 	url?: string;
@@ -13,6 +13,7 @@ export type KeyvEtcdOptions = {
 	dialect?: 'etcd';
 };
 
+// eslint-disable-next-line unicorn/prefer-event-target
 export class KeyvEtcd<Value = any> extends EventEmitter {
 	public ttlSupport: boolean;
 	public opts: KeyvEtcdOptions;
@@ -53,6 +54,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 		});
 
 		// Https://github.com/microsoft/etcd3/issues/105
+		// eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
 		this.client.getRoles().catch(error => this.emit('error', error));
 
 		if (this.ttlSupport) {
@@ -142,7 +144,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 	}
 
 	async disconnect() {
-		return this.client.close();
+		this.client.close();
 	}
 }
 

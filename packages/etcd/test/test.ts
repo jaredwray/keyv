@@ -1,7 +1,7 @@
 import * as test from 'vitest';
-import Keyv from 'keyv';
+import {Keyv} from 'keyv';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
-import KeyvEtcd from '../src/index';
+import KeyvEtcd from '../src/index.js';
 
 const etcdUrl = 'etcd://127.0.0.1:2379';
 
@@ -100,14 +100,19 @@ test.it('.delete() with key as number', async t => {
 
 test.it('.clear() with default namespace', async t => {
 	const store = new KeyvEtcd(etcdUrl);
-	t.expect(await store.set('foo', 'bar')).toBe(undefined);
+	await store.set('foo', 'bar');
+	const result = await store.get('foo') as string;
+	t.expect(result).toBe('bar');
+	await store.clear();
+	const result2 = await store.get('foo') as string;
+	t.expect(result2).toBe(null);
 });
 
 test.it('.clear() with namespace', async t => {
 	const store = new KeyvEtcd(etcdUrl);
 	store.namespace = 'key1';
 	await store.set(`${store.namespace}:key`, 'bar');
-	t.expect(await store.clear()).toBeUndefined();
+	await store.clear();
 	t.expect(await store.get(`${store.namespace}:key`)).toBe(null);
 });
 
