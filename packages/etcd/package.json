@@ -21,9 +21,6 @@
 	},
 	"xo": {
 		"rules": {
-			"@typescript-eslint/promise-function-async": "off",
-			"eslint-comments/no-unused-disable": "off",
-			"unicorn/prefer-event-target": "off",
 			"import/no-extraneous-dependencies": "off"
 		}
 	},

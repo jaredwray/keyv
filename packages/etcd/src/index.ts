@@ -13,6 +13,7 @@ export type KeyvEtcdOptions = {
 	dialect?: 'etcd';
 };
 
+// eslint-disable-next-line unicorn/prefer-event-target
 export class KeyvEtcd<Value = any> extends EventEmitter {
 	public ttlSupport: boolean;
 	public opts: KeyvEtcdOptions;
