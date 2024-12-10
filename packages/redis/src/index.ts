@@ -518,7 +518,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	}
 
 	private async clearNamespaceCluster(namespace?: string): Promise<void> {
-			throw new Error('Clearing all keys in a cluster is not supported.');
+		throw new Error('Clearing all keys in a cluster is not supported.');
 	}
 
 	private isClientCluster(client: RedisClientConnectionType): boolean {
