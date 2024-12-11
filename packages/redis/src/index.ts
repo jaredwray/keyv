@@ -435,6 +435,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
 	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
+		// When instance is not a cluster, it will only have one client
 		const clients = await this.getMasterNodes();
 
 		for (const client of clients) {
