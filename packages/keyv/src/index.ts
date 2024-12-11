@@ -550,6 +550,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			result = await store.set(keyPrefixed, serializedValue, ttl);
 		} catch (error) {
 			result = false;
+			this.emit('error', error);
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
