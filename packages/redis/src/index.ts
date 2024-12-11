@@ -515,7 +515,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 	/**
 	 * Get many keys. If the instance is a cluster, it will do multiple MGET calls
-	 * by separating the keys by slot to solve the CROSS-SLOT error.
+	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
 	 */
 	private async mGetWithClusterSupport<T = any>(keys: string[]): Promise<Array<T | undefined>> {
 		const slotMap = this.getSlotMap(keys);
@@ -535,7 +535,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 	/**
 	 * Clear all keys in the store with a specific namespace. If the instance is a cluster, it will clear all keys
-	 * by separating the keys by slot to solve the CROSS-SLOT error.
+	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
 	 */
 	private async clearWithClusterSupport(keys: string[]): Promise<void> {
 		if (keys.length > 0) {
