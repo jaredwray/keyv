@@ -544,10 +544,18 @@ export class Keyv<GenericValue = any> extends EventManager {
 		const formattedValue = {value, expires};
 		const serializedValue = await this.serializeData(formattedValue);
 
-		await store.set(keyPrefixed, serializedValue, ttl);
+		let result = true;
+
+		try {
+			result = await store.set(keyPrefixed, serializedValue, ttl);
+		} catch (error) {
+			result = false;
+		}
+
 		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
 		this.stats.set();
-		return true;
+
+		return result;
 	}
 
 	/**
