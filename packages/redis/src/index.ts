@@ -7,6 +7,7 @@ import {
 	type RedisScripts,
 } from 'redis';
 import {Keyv, type KeyvStoreAdapter} from 'keyv';
+import calculateSlot from 'cluster-key-slot';
 
 export type KeyvRedisOptions = {
 	/**
@@ -417,16 +418,17 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	}
 
 	/**
-	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
-	 * @param {string} [namespace] - the namespace to iterate over
-	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
+	 * Get the master nodes in the cluster. If not a cluster, it will return the single client.
+	 *
+	 * @returns {Promise<RedisClientType[]>} - array of master nodes
 	 */
-	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
+	public async getMasterNodes(): Promise<RedisClientType[]> {
 		if (this.isCluster()) {
-			throw new Error('Iterating over keys in a cluster is not supported.');
-		} else {
-			yield * this.iteratorClient<Value>(namespace);
+			const cluster = await this.getClient() as RedisClusterType;
+			return Promise.all(cluster.masters.map(async main => cluster.nodeClient(main)));
 		}
+
+		return [await this.getClient() as RedisClientType];
 	}
 
 	/**
@@ -434,30 +436,33 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @param {string} [namespace] - the namespace to iterate over
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
-	public async * iteratorClient<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
-		const client = await this.getClient();
-		const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
-		let cursor = '0';
-		do {
-			// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-			const result = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, TYPE: 'string'});
-			cursor = result.cursor.toString();
-			let {keys} = result;
+	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
+		const clients = await this.getMasterNodes();
 
-			if (!namespace && !this._noNamespaceAffectsAll) {
-				keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
-			}
+		for (const client of clients) {
+			const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
+			let cursor = '0';
+			do {
+				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
+				const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, TYPE: 'string'});
+				cursor = result.cursor.toString();
+				let {keys} = result;
 
-			if (keys.length > 0) {
-				// eslint-disable-next-line no-await-in-loop
-				const values = await client.mGet(keys);
-				for (const [i] of keys.entries()) {
-					const key = this.getKeyWithoutPrefix(keys[i], namespace);
-					const value = values ? values[i] : undefined;
-					yield [key, value as Value | undefined];
+				if (!namespace && !this._noNamespaceAffectsAll) {
+					keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
 				}
-			}
-		} while (cursor !== '0');
+
+				if (keys.length > 0) {
+					// eslint-disable-next-line no-await-in-loop
+					const values = await this.mGetWithClusterSupport(keys, client);
+					for (const [i] of keys.entries()) {
+						const key = this.getKeyWithoutPrefix(keys[i], namespace);
+						const value = values ? values[i] : undefined;
+						yield [key, value as Value | undefined];
+					}
+				}
+			} while (cursor !== '0');
+		}
 	}
 
 	/**
@@ -468,57 +473,102 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @returns {Promise<void>}
 	 */
 	public async clear(): Promise<void> {
-		await (this.isCluster() ? this.clearNamespaceCluster(this._namespace) : this.clearNamespace(this._namespace));
-	}
-
-	private async clearNamespace(namespace?: string): Promise<void> {
 		try {
-			if (!namespace && this._noNamespaceAffectsAll) {
-				const client = await this.getClient() as RedisClientType;
-				await client.flushDb();
-				return;
-			}
+			// When instance is not a cluster, it will only have one client
+			const clients = await this.getMasterNodes();
 
-			let cursor = '0';
-			const batchSize = this._clearBatchSize;
-			const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
-			const client = await this.getClient();
-
-			do {
-				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-				const result = await (client as RedisClientType).scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
-
-				cursor = result.cursor.toString();
-				let {keys} = result;
-
-				if (keys.length === 0) {
-					continue;
+			await Promise.all(clients.map(async client => {
+				if (!this._namespace && this._noNamespaceAffectsAll) {
+					await client.flushDb();
+					return;
 				}
 
-				if (!namespace) {
-					keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
-				}
+				let cursor = '0';
+				const batchSize = this._clearBatchSize;
+				const match = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}*` : '*';
+				const deletePromises = [];
 
-				if (keys.length > 0) {
-					// eslint-disable-next-line unicorn/prefer-ternary
-					if (this._useUnlink) {
-						// eslint-disable-next-line no-await-in-loop
-						await client.unlink(keys);
-					} else {
-						// eslint-disable-next-line no-await-in-loop
-						await client.del(keys);
+				do {
+					// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
+					const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
+
+					cursor = result.cursor.toString();
+					let {keys} = result;
+
+					if (keys.length === 0) {
+						continue;
 					}
-				}
-			} while (cursor !== '0');
 
+					if (!this._namespace) {
+						keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
+					}
+
+					deletePromises.push(this.clearWithClusterSupport(keys, client));
+				} while (cursor !== '0');
+
+				await Promise.all(deletePromises);
+			}));
 		/* c8 ignore next 3 */
 		} catch (error) {
 			this.emit('error', error);
 		}
 	}
 
-	private async clearNamespaceCluster(namespace?: string): Promise<void> {
-		throw new Error('Clearing all keys in a cluster is not supported.');
+	/**
+	 * Clear all keys in the store with a specific namespace. If the instance is a cluster, it will clear all keys
+	 * by separating the keys by slot to solve the CROSS-SLOT error.
+	 */
+	private async mGetWithClusterSupport(keys: string[], client: RedisClientType): Promise<Array<string | undefined> | undefined> {
+		if (keys.length > 0) {
+			const slotMap = this.getSlotMap(keys);
+
+			const valueMap = new Map<string, string | undefined>();
+			await Promise.all(Array.from(slotMap.values(), async keys => {
+				const values = await client.mGet(keys);
+				for (const [index, value] of values.entries()) {
+					valueMap.set(keys[index], value ?? undefined);
+				}
+			}));
+
+			return keys.map(key => valueMap.get(key));
+		}
+	}
+
+	/**
+	 * Clear all keys in the store with a specific namespace. If the instance is a cluster, it will clear all keys
+	 * by separating the keys by slot to solve the CROSS-SLOT error.
+	 */
+	private async clearWithClusterSupport(keys: string[], client: RedisClientType): Promise<void> {
+		if (keys.length > 0) {
+			const slotMap = this.getSlotMap(keys);
+
+			await Promise.all(Array.from(slotMap.values(), async keys =>
+				this._useUnlink ? client.unlink(keys) : client.del(keys),
+			));
+		}
+	}
+
+	/**
+	 * Group keys by their slot.
+	 *
+	 * @param {string[]} keys - the keys to group
+	 * @returns {Map<number, string[]>} - map of slot to keys
+	 */
+	private getSlotMap(keys: string[]) {
+		const slotMap = new Map<number, string[]>();
+		if (this.isCluster()) {
+			for (const key of keys) {
+				const slot = calculateSlot(key);
+				const slotKeys = slotMap.get(slot) ?? [];
+				slotKeys.push(key);
+				slotMap.set(slot, slotKeys);
+			}
+		} else {
+			// Non-clustered client supports CROSS-SLOT multi-key command
+			slotMap.set(0, keys);
+		}
+
+		return slotMap;
 	}
 
 	private isClientCluster(client: RedisClientConnectionType): boolean {

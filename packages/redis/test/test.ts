@@ -377,7 +377,7 @@ describe('KeyvRedis Iterators', () => {
 		await keyvRedis.set('foo952', 'bar2');
 		await keyvRedis.set('foo953', 'bar3');
 		const keys = [];
-		for await (const [key, value] of keyvRedis.iterator()) {
+		for await (const [key] of keyvRedis.iterator()) {
 			keys.push(key);
 		}
 

@@ -117,7 +117,7 @@ With namespaces being prefix based it is critical to understand some of the perf
 
 * `delete()` - By default we are now using `UNLINK` instead of `DEL` for deleting keys. This is a non-blocking command that is more efficient than `DEL`. If you are deleting a large number of keys it is recommended to use the `deleteMany()` method instead of `delete()`.
 
-* `clearBatchSize` - The `clearBatchSize` option is set to `1000` by default. This is because Redis has a limit of 1000 keys that can be deleted in a single batch. 
+* `clearBatchSize` - The `clearBatchSize` option is set to `1000` by default. This is because Redis has a limit of 1000 keys that can be deleted in a single batch. If no namespace is defined and noNamespaceAffectsAll is set to `true` this option will be ignored and the `FLUSHDB` command will be used instead.
 
 * `useUnlink` - This option is set to `true` by default. This is because `UNLINK` is a non-blocking command that is more efficient than `DEL`. If you are not using `UNLINK` and are doing a lot of deletes it is recommended to set this option to `true`.
 
@@ -182,8 +182,6 @@ const cluster = createCluster({
 
 const keyv = new Keyv({ store: new KeyvRedis(cluster) });
 ```
-
-There are some features that are not supported in clustering such as `clear()` and `iterator()`. This is because the `SCAN` command is not supported in clustering. If you need to clear or delete keys you can use the `deleteMany()` method.
 
 You can learn more about the `createCluster` function in the [documentation](https://github.com/redis/node-redis/blob/master/docs/clustering.md) at https://github.com/redis/node-redis/tree/master/docs. 
 
