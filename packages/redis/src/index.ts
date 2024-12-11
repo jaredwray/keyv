@@ -316,16 +316,14 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @returns {Promise<Array<string | undefined>>} - array of values or undefined if the key does not exist
 	 */
 	public async getMany<T>(keys: string[]): Promise<Array<T | undefined>> {
-		const client = await this.getClient();
-		const multi = client.multi();
-		for (const key of keys) {
-			const prefixedKey = this.createKeyPrefix(key, this._namespace);
-			multi.get(prefixedKey);
+		if (keys.length === 0) {
+			return [];
 		}
 
-		const values = await multi.exec();
+		keys = keys.map(key => this.createKeyPrefix(key, this._namespace));
+		const values = await this.mGetWithClusterSupport<T>(keys);
 
-		return values.map(value => value === null ? undefined : value as T);
+		return values;
 	}
 
 	/**
@@ -454,11 +452,11 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 				if (keys.length > 0) {
 					// eslint-disable-next-line no-await-in-loop
-					const values = await this.mGetWithClusterSupport(keys, client);
-					for (const [i] of keys.entries()) {
+					const values = await this.mGetWithClusterSupport<Value>(keys);
+					for (const i of keys.keys()) {
 						const key = this.getKeyWithoutPrefix(keys[i], namespace);
-						const value = values ? values[i] : undefined;
-						yield [key, value as Value | undefined];
+						const value = values[i];
+						yield [key, value];
 					}
 				}
 			} while (cursor !== '0');
@@ -503,7 +501,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 						keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
 					}
 
-					deletePromises.push(this.clearWithClusterSupport(keys, client));
+					deletePromises.push(this.clearWithClusterSupport(keys));
 				} while (cursor !== '0');
 
 				await Promise.all(deletePromises);
@@ -518,34 +516,51 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * Clear all keys in the store with a specific namespace. If the instance is a cluster, it will clear all keys
 	 * by separating the keys by slot to solve the CROSS-SLOT error.
 	 */
-	private async mGetWithClusterSupport(keys: string[], client: RedisClientType): Promise<Array<string | undefined> | undefined> {
-		if (keys.length > 0) {
-			const slotMap = this.getSlotMap(keys);
+	private async mGetWithClusterSupport<T = any>(keys: string[]): Promise<Array<T | undefined>> {
+		const slotMap = this.getSlotMap(keys);
 
-			const valueMap = new Map<string, string | undefined>();
-			await Promise.all(Array.from(slotMap.values(), async keys => {
-				const values = await client.mGet(keys);
-				for (const [index, value] of values.entries()) {
-					valueMap.set(keys[index], value ?? undefined);
-				}
-			}));
+		const valueMap = new Map<string, string | undefined>();
+		await Promise.all(Array.from(slotMap.entries(), async ([slot, keys]) => {
+			const client = await this.getSlotMaster(slot);
 
-			return keys.map(key => valueMap.get(key));
-		}
+			const values = await client.mGet(keys);
+			for (const [index, value] of values.entries()) {
+				valueMap.set(keys[index], value ?? undefined);
+			}
+		}));
+
+		return keys.map(key => valueMap.get(key) as T | undefined);
 	}
 
 	/**
 	 * Clear all keys in the store with a specific namespace. If the instance is a cluster, it will clear all keys
 	 * by separating the keys by slot to solve the CROSS-SLOT error.
 	 */
-	private async clearWithClusterSupport(keys: string[], client: RedisClientType): Promise<void> {
+	private async clearWithClusterSupport(keys: string[]): Promise<void> {
 		if (keys.length > 0) {
 			const slotMap = this.getSlotMap(keys);
 
-			await Promise.all(Array.from(slotMap.values(), async keys =>
-				this._useUnlink ? client.unlink(keys) : client.del(keys),
-			));
+			await Promise.all(Array.from(slotMap.entries(), async ([slot, keys]) => {
+				const client = await this.getSlotMaster(slot);
+
+				return this._useUnlink ? client.unlink(keys) : client.del(keys);
+			}));
 		}
+	}
+
+	/**
+	 * Returns the master node client for a given slot or the instance's client if it's not a cluster.
+	 */
+	private async getSlotMaster(slot: number): Promise<RedisClientType> {
+		const connection = await this.getClient();
+
+		if (this.isCluster()) {
+			const cluster = connection as RedisClusterType;
+			const mainNode = cluster.slots[slot].master;
+			return cluster.nodeClient(mainNode);
+		}
+
+		return connection as RedisClientType;
 	}
 
 	/**
@@ -564,7 +579,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 				slotMap.set(slot, slotKeys);
 			}
 		} else {
-			// Non-clustered client supports CROSS-SLOT multi-key command
+			// Non-clustered client supports CROSS-SLOT multi-key command so we set arbitrary slot 0
 			slotMap.set(0, keys);
 		}
 
