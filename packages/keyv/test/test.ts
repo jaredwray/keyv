@@ -784,7 +784,6 @@ test.it('Keyv can iterate with useKeyPrefix false', async t => {
 	await keyv.set('foo1', 'bar1');
 	await keyv.set('foo2', 'bar2');
 	const keys = [];
-	console.log('iterator=', keyv.iterator);
 	if (keyv.iterator !== undefined) {
 		for await (const [key, value] of keyv.iterator('')) {
 			keys.push(key);
@@ -822,4 +821,15 @@ test.it('Keyv deserlize will return undefined if not string', async t => {
 	const complexObject = {foo: 'bar', fizz: 'buzz'};
 	const result = await keyv.deserializeData({value: complexObject});
 	t.expect(result).toBeUndefined();
+});
+
+test.it('should emit error if set fails', async t => {
+	const store = new Map();
+	store.set = test.vi.fn().mockRejectedValue(new Error('store set error'));
+	const keyv = new Keyv(store);
+	const errorHandler = test.vi.fn();
+	keyv.on('error', errorHandler);
+	const result = await keyv.set('foo', 'bar');
+	t.expect(result).toBe(false);
+	t.expect(errorHandler).toHaveBeenCalledWith(new Error('store set error'));
 });

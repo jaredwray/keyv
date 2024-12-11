@@ -549,7 +549,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 		try {
 			result = await store.set(keyPrefixed, serializedValue, ttl);
 		} catch (error) {
-			/* c8 ignore next 3 */
 			result = false;
 			this.emit('error', error);
 		}
