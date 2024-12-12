@@ -642,7 +642,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (event === 'error' && !this.opts.emitErrors) {
 			return;
 		}
-		
+
 		super.emit(event, ...args);
 }
 
