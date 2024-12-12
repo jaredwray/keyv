@@ -862,3 +862,13 @@ test.it('should handle error on store delete', async t => {
 	t.expect(result).toBe(false);
 	t.expect(errorHandler).toHaveBeenCalledWith(new Error('store delete error'));
 });
+
+test.it('should handle error on store clear', async t => {
+	const store = new Map();
+	store.clear = test.vi.fn().mockRejectedValue(new Error('store clear error'));
+	const keyv = new Keyv(store);
+	const errorHandler = test.vi.fn();
+	keyv.on('error', errorHandler);
+	await keyv.clear();
+	t.expect(errorHandler).toHaveBeenCalledWith(new Error('store clear error'));
+});
