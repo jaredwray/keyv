@@ -176,7 +176,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				throw new Error('Invalid storage adapter');
 			}
 
-			if (typeof this._store.on === 'function' && this.opts.emitErrors) {
+			if (typeof this._store.on === 'function') {
 				this._store.on('error', (error: any) => this.emit('error', error));
 			}
 
@@ -220,7 +220,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this._store = store;
 			this.opts.store = store;
 
-			if (typeof store.on === 'function' && this.opts.emitErrors) {
+			if (typeof store.on === 'function') {
 				store.on('error', (error: any) => this.emit('error', error));
 			}
 
@@ -637,6 +637,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return store.disconnect();
 		}
 	}
+
+	public emit(event: string, ...args: any[]): void {
+    if (event === 'error' && !this.opts.emitErrors) return;
+
+    super.emit(event, ...args);
+}
 
 	public async serializeData<T>(data: DeserializedData<T>): Promise<string | DeserializedData<T>> {
 		if (!this._serialize) {
