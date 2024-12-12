@@ -64,7 +64,7 @@ export type KeyvRedisEntry<T> = {
 export type RedisClientConnectionType = RedisClientType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>;
 
 // eslint-disable-next-line unicorn/prefer-event-target
-export default class KeyvRedis<T = any> extends EventEmitter implements KeyvStoreAdapter {
+export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapter {
 	private _client: RedisClientConnectionType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = '::';

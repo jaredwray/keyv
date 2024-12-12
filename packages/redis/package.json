@@ -15,8 +15,8 @@
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
-		"test": "xo --fix && vitest run --coverage",
-		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
+		"test": "xo --fix && vitest run --coverage --typecheck",
+		"test:ci": "xo && vitest --run --sequence.setupFiles=list --typecheck",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
 	},
 	"repository": {
