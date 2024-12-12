@@ -668,13 +668,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 	}
 
-	public emit(event: string, ...args: any[]): void {
+	public emit(event: string, ...arguments_: any[]): void {
 		if (event === 'error' && !this.opts.emitErrors) {
 			return;
 		}
 
-		super.emit(event, ...args);
-}
+		super.emit(event, ...arguments_);
+	}
 
 	public async serializeData<T>(data: DeserializedData<T>): Promise<string | DeserializedData<T>> {
 		if (!this._serialize) {
