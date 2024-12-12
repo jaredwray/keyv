@@ -833,3 +833,21 @@ test.it('should emit error if set fails', async t => {
 	t.expect(result).toBe(false);
 	t.expect(errorHandler).toHaveBeenCalledWith(new Error('store set error'));
 });
+
+test.it('should return when value equals non boolean', async t => {
+	const store = new Map();
+	// @ts-expect-error
+	store.set = () => 'foo';
+	const keyv = new Keyv(store);
+	const result = await keyv.set('foo111', 'bar111');
+	t.expect(result).toBe(true);
+});
+
+test.it('should return store set value equals non boolean', async t => {
+	const store = new Map();
+	// @ts-expect-error
+	store.set = () => true;
+	const keyv = new Keyv(store);
+	const result = await keyv.set('foo1112', 'bar1112');
+	t.expect(result).toBe(true);
+});
