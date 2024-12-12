@@ -208,6 +208,13 @@ describe('KeyvRedis Methods', () => {
 		await keyvRedis.disconnect();
 	});
 
+	test('should be able to call getMany with an empty array', async () => {
+		const keyvRedis = new KeyvRedis();
+		const values = await keyvRedis.getMany([]);
+		expect(values).toEqual([]);
+		await keyvRedis.disconnect();
+	});
+
 	test('should be able to delete many with namespace', async () => {
 		const keyvRedis = new KeyvRedis();
 		await keyvRedis.setMany([{key: 'foo-dm1', value: 'bar'}, {key: 'foo-dm2', value: 'bar2'}, {key: 'foo-dm3', value: 'bar3', ttl: 5}]);
@@ -377,7 +384,7 @@ describe('KeyvRedis Iterators', () => {
 		await keyvRedis.set('foo952', 'bar2');
 		await keyvRedis.set('foo953', 'bar3');
 		const keys = [];
-		for await (const [key, value] of keyvRedis.iterator()) {
+		for await (const [key] of keyvRedis.iterator()) {
 			keys.push(key);
 		}
 

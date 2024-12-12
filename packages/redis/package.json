@@ -41,6 +41,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
+		"cluster-key-slot": "^1.1.2",
 		"keyv": "workspace:^",
 		"redis": "^4.7.0"
 	},
