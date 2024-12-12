@@ -883,3 +883,14 @@ test.it('should handle error on store has / get', async t => {
 	t.expect(result).toBe(false);
 	t.expect(errorHandler).toHaveBeenCalledWith(new Error('store has error'));
 });
+
+test.it('should not emit error with opts.emitErrors false', async t => {
+	const store = new Map();
+	store.set = test.vi.fn().mockRejectedValue(new Error('store set error'));
+	const keyv = new Keyv({store, emitErrors: false});
+	const errorHandler = test.vi.fn();
+	keyv.on('error', errorHandler);
+	const result = await keyv.set('foo', 'bar');
+	t.expect(result).toBe(false);
+	t.expect(errorHandler).not.toHaveBeenCalled();
+});
