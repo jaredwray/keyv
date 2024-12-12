@@ -321,7 +321,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 		}
 
 		keys = keys.map(key => this.createKeyPrefix(key, this._namespace));
-		const values = await this.mGetWithClusterSupport<T>(keys);
+		const values = await this.mget<T>(keys);
 
 		return values;
 	}
@@ -453,7 +453,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 				if (keys.length > 0) {
 					// eslint-disable-next-line no-await-in-loop
-					const values = await this.mGetWithClusterSupport<Value>(keys);
+					const values = await this.mget<Value>(keys);
 					for (const i of keys.keys()) {
 						const key = this.getKeyWithoutPrefix(keys[i], namespace);
 						const value = values[i];
@@ -517,7 +517,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * Get many keys. If the instance is a cluster, it will do multiple MGET calls
 	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
 	 */
-	private async mGetWithClusterSupport<T = any>(keys: string[]): Promise<Array<T | undefined>> {
+	private async mget<T = any>(keys: string[]): Promise<Array<T | undefined>> {
 		const slotMap = this.getSlotMap(keys);
 
 		const valueMap = new Map<string, string | undefined>();
