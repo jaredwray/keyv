@@ -176,7 +176,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				throw new Error('Invalid storage adapter');
 			}
 
-			if (typeof this._store.on === 'function' && this.opts.emitErrors) {
+			if (typeof this._store.on === 'function') {
 				this._store.on('error', (error: any) => this.emit('error', error));
 			}
 
@@ -220,7 +220,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this._store = store;
 			this.opts.store = store;
 
-			if (typeof store.on === 'function' && this.opts.emitErrors) {
+			if (typeof store.on === 'function') {
 				store.on('error', (error: any) => this.emit('error', error));
 			}
 
@@ -547,7 +547,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		let result = true;
 
 		try {
-			await store.set(keyPrefixed, serializedValue, ttl);
+			const value = await store.set(keyPrefixed, serializedValue, ttl);
+
+			if (typeof value === 'boolean') {
+				result = value;
+			}
 		} catch (error) {
 			result = false;
 			this.emit('error', error);
@@ -583,9 +587,23 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		const keyPrefixed = this._getKeyPrefix(key);
 		this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
-		const result = await store.delete(keyPrefixed);
+
+		let result = true;
+
+		try {
+			const value = await store.delete(keyPrefixed);
+
+			if (typeof value === 'boolean') {
+				result = value;
+			}
+		} catch (error) {
+			result = false;
+			this.emit('error', error);
+		}
+
 		this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: result});
 		this.stats.delete();
+
 		return result;
 	}
 
@@ -596,7 +614,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 	async clear(): Promise<void> {
 		this.emit('clear');
 		const {store} = this.opts;
-		await store.clear();
+
+		try {
+			await store.clear();
+		} catch (error) {
+			this.emit('error', error);
+		}
 	}
 
 	/**
@@ -611,7 +634,14 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return store.has(keyPrefixed);
 		}
 
-		const rawData = await store.get(keyPrefixed) as any;
+		let rawData: any;
+
+		try {
+			rawData = await store.get(keyPrefixed);
+		} catch (error) {
+			this.emit('error', error);
+		}
+
 		if (rawData) {
 			const data = await this.deserializeData(rawData) as any;
 			if (data) {
@@ -636,6 +666,14 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (typeof store.disconnect === 'function') {
 			return store.disconnect();
 		}
+	}
+
+	public emit(event: string, ...arguments_: any[]): void {
+		if (event === 'error' && !this.opts.emitErrors) {
+			return;
+		}
+
+		super.emit(event, ...arguments_);
 	}
 
 	public async serializeData<T>(data: DeserializedData<T>): Promise<string | DeserializedData<T>> {
