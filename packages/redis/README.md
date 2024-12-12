@@ -26,6 +26,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 # Table of Contents
 * [Usage](#usage)
 * [Namespaces](#namespaces)
+* [Typescript](#typescript)
 * [Performance Considerations](#performance-considerations)
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
@@ -109,6 +110,34 @@ keyv.namespace = 'my-namespace';
 ```
 
 NOTE: If you plan to do many clears or deletes, it is recommended to read the [Performance Considerations](#performance-considerations) section.
+
+## Typescript
+
+When initializing `KeyvRedis`, you can specify the type of the values you are storing and you can also specify types when calling methods:
+
+```typescript
+import Keyv from 'keyv';
+import KeyvRedis, { createClient } from '@keyv/redis';
+
+
+interface User {
+  id: number
+  name: string
+}
+
+const redis = createClient('redis://user:pass@localhost:6379');
+
+const keyvRedis = new KeyvRedis<User>(redis);
+const keyv = new Keyv({ store: keyvRedis });
+
+await keyv.set("user:1", { id: 1, name: "Alice" })
+const user = await keyv.get("user:1")
+console.log(user.name) // 'Alice'
+
+// specify types when calling methods
+const user = await keyv.get<User>("user:1")
+console.log(user.name) // 'Alice'
+```
 
 # Performance Considerations
 

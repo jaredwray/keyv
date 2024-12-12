@@ -64,7 +64,7 @@ export type KeyvRedisEntry<T> = {
 export type RedisClientConnectionType = RedisClientType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>;
 
 // eslint-disable-next-line unicorn/prefer-event-target
-export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter {
+export default class KeyvRedis<T = any> extends EventEmitter implements KeyvStoreAdapter {
 	private _client: RedisClientConnectionType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = '::';
@@ -299,7 +299,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @param {string} key - the key to get
 	 * @returns {Promise<string | undefined>} - the value or undefined if the key does not exist
 	 */
-	public async get<T>(key: string): Promise<T | undefined> {
+	public async get<U = T>(key: string): Promise<U | undefined> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
 		const value = await client.get(key);
@@ -307,7 +307,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 			return undefined;
 		}
 
-		return value as T;
+		return value as U;
 	}
 
 	/**
@@ -315,13 +315,13 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @param {Array<string>} keys - the keys to get
 	 * @returns {Promise<Array<string | undefined>>} - array of values or undefined if the key does not exist
 	 */
-	public async getMany<T>(keys: string[]): Promise<Array<T | undefined>> {
+	public async getMany<U = T>(keys: string[]): Promise<Array<U | undefined>> {
 		if (keys.length === 0) {
 			return [];
 		}
 
 		keys = keys.map(key => this.createKeyPrefix(key, this._namespace));
-		const values = await this.mget<T>(keys);
+		const values = await this.mget<U>(keys);
 
 		return values;
 	}
@@ -434,7 +434,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 	 * @param {string} [namespace] - the namespace to iterate over
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
-	public async * iterator<Value>(namespace?: string): AsyncGenerator<[string, Value | undefined], void, unknown> {
+	public async * iterator<U = T>(namespace?: string): AsyncGenerator<[string, U | undefined], void, unknown> {
 		// When instance is not a cluster, it will only have one client
 		const clients = await this.getMasterNodes();
 
@@ -453,7 +453,7 @@ export default class KeyvRedis extends EventEmitter implements KeyvStoreAdapter 
 
 				if (keys.length > 0) {
 					// eslint-disable-next-line no-await-in-loop
-					const values = await this.mget<Value>(keys);
+					const values = await this.mget<U>(keys);
 					for (const i of keys.keys()) {
 						const key = this.getKeyWithoutPrefix(keys[i], namespace);
 						const value = values[i];
