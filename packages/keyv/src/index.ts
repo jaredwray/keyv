@@ -547,7 +547,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 		let result = true;
 
 		try {
-			await store.set(keyPrefixed, serializedValue, ttl);
+			const value = await store.set(keyPrefixed, serializedValue, ttl);
+			if (typeof value === 'boolean') result = value;
 		} catch (error) {
 			result = false;
 			this.emit('error', error);
