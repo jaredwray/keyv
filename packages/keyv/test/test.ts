@@ -851,3 +851,14 @@ test.it('should return store set value equals non boolean', async t => {
 	const result = await keyv.set('foo1112', 'bar1112');
 	t.expect(result).toBe(true);
 });
+
+test.it('should handle error on store delete', async t => {
+	const store = new Map();
+	store.delete = test.vi.fn().mockRejectedValue(new Error('store delete error'));
+	const keyv = new Keyv(store);
+	const errorHandler = test.vi.fn();
+	keyv.on('error', errorHandler);
+	const result = await keyv.delete('foo55');
+	t.expect(result).toBe(false);
+	t.expect(errorHandler).toHaveBeenCalledWith(new Error('store delete error'));
+});
