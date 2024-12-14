@@ -144,8 +144,9 @@ await cache.get('foo'); // 'cache'
 
 # Events
 
-Keyv is a custom `EventEmitter` and will emit an `'error'` event if there is an error.\
-To disable this behaviour, set the `emitErrors` to `false` in the constructor options.
+Keyv is a custom `EventEmitter` and will emit an `'error'` event if there is an error.
+If there is no listener for the `'error'` event, an uncaught exception will be thrown.
+To disable the `'error'` event, pass `emitErrors: false` in the constructor options.
 
 ```js
 const keyv = new Keyv({ emitErrors: false });
