@@ -97,7 +97,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 
 		for (const key of keys) {
 			const rowIndex = rows.findIndex((row: {id: string}) => row.id === key);
-			results.push(rowIndex > -1 ? rows[rowIndex].value as StoredData<Value> : undefined);
+			results.push(rowIndex === -1 ? undefined : rows[rowIndex].value as StoredData<Value>);
 		}
 
 		return results;
