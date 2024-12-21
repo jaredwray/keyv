@@ -61,12 +61,12 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^",
-    "keyv": "^5.0.0",
+    "keyv": "workspace:^",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsd": "^0.31.1",
     "typescript": "^5.5.4",
-    "xo": "^0.59.3"
+    "xo": "^0.60.0"
   },
   "tsd": {
     "directory": "test"
