@@ -64,8 +64,8 @@
     "keyv": "workspace:^",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
-    "tsd": "^0.31.1",
-    "typescript": "^5.5.4",
+    "tsd": "^0.31.2",
+    "typescript": "^5.7.2",
     "xo": "^0.60.0"
   },
   "tsd": {
