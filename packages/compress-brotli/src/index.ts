@@ -12,6 +12,7 @@ export class KeyvBrotli {
 	}
 
 	async compress(value: any, options?: BrotliOptions): CompressResult {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 		return this.brotli.compress(value, options);
 	}
 

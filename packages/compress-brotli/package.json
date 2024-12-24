@@ -21,13 +21,7 @@
 	},
 	"xo": {
 		"rules": {
-			"import/no-named-as-default": "off",
-			"unicorn/prefer-module": "off",
-			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/consistent-type-definitions": "off",
-			"@typescript-eslint/no-unsafe-argument": "off",
-			"import/extensions": "off",
-			"import/no-extraneous-dependencies": "off"
+			"@typescript-eslint/no-unsafe-assignment": 0
 		}
 	},
 	"repository": {
@@ -59,8 +53,10 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
+		"@vitest/coverage-v8": "^2.1.8",
 		"c8": "^10.1.2",
 		"rimraf": "^6.0.1",
+		"vitest": "^2.1.8",
 		"xo": "^0.60.0"
 	},
 	"tsd": {

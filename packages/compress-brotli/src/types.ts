@@ -14,18 +14,18 @@ export type Serialize = {
 	expires?: number;
 };
 
-export interface Options {
+export type Options = {
 	compressOptions?: BrotliOptions;
 	decompressOptions?: BrotliOptions;
 	enable?: boolean;
 	serialize?: any;
 	deserialize?: any;
 	iltorb?: any;
-}
+};
 
-export interface Brotli {
+export type Brotli = {
 	serialize: BrotliSerialize<SerializeResult>;
 	deserialize: BrotliDeserialize<DeserializeResult>;
 	compress: (data: InputType, options?: BrotliOptions) => CompressResult;
 	decompress: (data: InputType, options?: BrotliOptions) => DecompressResult;
-}
+};

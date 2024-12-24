@@ -1,7 +1,7 @@
 import zlib from 'node:zlib';
 import v8 from 'node:v8';
 import * as test from 'vitest';
-import Keyv, {type KeyvStoreAdapter} from 'keyv';
+import {Keyv} from 'keyv';
 import KeyvBrotli from '../src/index.js';
 
 type MyType = {
@@ -11,7 +11,6 @@ type MyType = {
 
 test.it('default options', async t => {
 	const keyv = new Keyv({
-		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
 		compression: new KeyvBrotli(),
 	});
 
