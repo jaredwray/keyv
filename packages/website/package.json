@@ -10,7 +10,7 @@
     "test:ci": "echo 'no tests needed'",
     "test": "echo 'no tests needed'",
     "generate-docs": "rimraf ./dist && tsx ./src/docs.ts",
-    "build": "pnpm website:build",
+    "build": "echo 'no build needed'",
     "website:build": "pnpm generate-docs && docula build",
     "build-serve": "pnpm clean && pnpm generate-docs && docula serve",
     "clean": "rimraf ./dist ./docs/compression ./docs/test-suite ./docs/storage-adapters",
