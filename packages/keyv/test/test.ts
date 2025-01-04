@@ -1,11 +1,11 @@
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import tk from 'timekeeper';
-import KeyvSqlite from '@keyv/sqlite';
-import KeyvMongo from '@keyv/mongo';
-import KeyvBrotli from '@keyv/compress-brotli';
-import KeyvGzip from '@keyv/compress-gzip';
-import KeyvMemcache from '@keyv/memcache';
+import {KeyvSqlite} from '@keyv/sqlite';
+import {KeyvMongo} from '@keyv/mongo';
+import {KeyvBrotli} from '@keyv/compress-brotli';
+import {KeyvGzip} from '@keyv/compress-gzip';
+import {KeyvMemcache} from '@keyv/memcache';
 import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw, type CompressionAdapter} from '../src/index.js';
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
