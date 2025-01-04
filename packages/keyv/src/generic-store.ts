@@ -158,9 +158,9 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 		try {
 			for (const key of keys) {
 				const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
-				this._store.delete(keyPrefix)
+				this._store.delete(keyPrefix);
 			}
-		} catch (error) {
+		} catch {
 			return false;
 		}
 
