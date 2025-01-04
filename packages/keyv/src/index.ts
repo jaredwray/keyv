@@ -38,7 +38,7 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
 export type IEventEmitter = {
-	on(event: string, listener: (...arguments_: any[]) => void): this;
+	on(event: string, listener: (...arguments_: any[]) => void): IEventEmitter;
 };
 
 export type KeyvStoreAdapter = {

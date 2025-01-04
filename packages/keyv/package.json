@@ -21,7 +21,6 @@
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-event-target": "off",
 			"import/no-extraneous-dependencies": "off",
 			"import/extensions": "off",
 			"@typescript-eslint/ban-ts-comment": "off",
