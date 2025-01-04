@@ -21,7 +21,6 @@
 	},
 	"xo": {
 		"rules": {
-			"import/extensions": "off",
 			"@typescript-eslint/ban-ts-comment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",
 			"@typescript-eslint/no-for-in-array": "off",
