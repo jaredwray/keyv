@@ -154,9 +154,16 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 		return values;
 	}
 
-	async deleteMany(key: string[]): Promise<boolean> {
-		const promises = key.map(async key_ => this.delete(key_));
-		await Promise.all(promises);
+	async deleteMany(keys: string[]): Promise<boolean> {
+		try {
+			for (const key of keys) {
+				const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+				this._store.delete(keyPrefix)
+			}
+		} catch (error) {
+			return false;
+		}
+
 		return true;
 	}
 
