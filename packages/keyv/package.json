@@ -21,7 +21,6 @@
 	},
 	"xo": {
 		"rules": {
-			"import/no-extraneous-dependencies": "off",
 			"import/extensions": "off",
 			"@typescript-eslint/ban-ts-comment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",
@@ -79,9 +78,11 @@
 		"@keyv/mongo": "workspace:^",
 		"@keyv/sqlite": "workspace:^",
 		"@keyv/test-suite": "workspace:^",
+		"@vitest/coverage-v8": "^2.1.8",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
+		"vitest": "^2.1.8",
 		"xo": "^0.60.0"
 	},
 	"tsd": {
