@@ -141,6 +141,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
 		super();
 		options ??= {};
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		store ??= {} as KeyvOptions;
 
 		this.opts = {

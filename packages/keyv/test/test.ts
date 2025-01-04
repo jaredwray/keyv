@@ -188,6 +188,7 @@ test.it('Keyv supports async serializer/deserializer', async t => {
 test.it('Keyv should wait for the expired get', async t => {
 	t.expect.assertions(4);
 	const _store = new Map();
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 	const store = {
 		get: async (key: string) => _store.get(key),
 		set(key: string, value: any) {
