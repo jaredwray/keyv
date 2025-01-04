@@ -160,7 +160,8 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 				const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
 				this._store.delete(keyPrefix);
 			}
-		} catch {
+		} catch (error) {
+			this.emit('error', error);
 			return false;
 		}
 
