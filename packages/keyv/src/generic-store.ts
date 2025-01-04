@@ -147,6 +147,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
 		const values = [];
 		for (const key of keys) {
+			// eslint-disable-next-line no-await-in-loop
 			const value = await this.get(key);
 			values.push(value as T);
 		}

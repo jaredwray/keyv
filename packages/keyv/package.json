@@ -21,26 +21,12 @@
 	},
 	"xo": {
 		"rules": {
-			"unicorn/prefer-module": "off",
-			"unicorn/prefer-node-protocol": "off",
-			"@typescript-eslint/consistent-type-definitions": "off",
-			"unicorn/no-typeof-undefined": "off",
-			"unicorn/prefer-event-target": "off",
-			"import/no-extraneous-dependencies": "off",
-			"import/extensions": "off",
 			"@typescript-eslint/ban-ts-comment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/no-for-in-array": "off",
-			"guard-for-in": "off",
-			"no-await-in-loop": "off",
 			"@typescript-eslint/no-unsafe-return": "off",
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-argument": "off",
-			"@typescript-eslint/naming-convention": "off",
-			"@typescript-eslint/consistent-type-assertions": "off",
-			"@typescript-eslint/no-confusing-void-expression": "off",
-			"@typescript-eslint/no-var-requires": "off",
-			"@typescript-eslint/prefer-ts-expect-error": "off"
+			"@typescript-eslint/no-confusing-void-expression": "off"
 		}
 	},
 	"repository": {
@@ -84,9 +70,11 @@
 		"@keyv/mongo": "workspace:^",
 		"@keyv/sqlite": "workspace:^",
 		"@keyv/test-suite": "workspace:^",
+		"@vitest/coverage-v8": "^2.1.8",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
+		"vitest": "^2.1.8",
 		"xo": "^0.60.0"
 	},
 	"tsd": {

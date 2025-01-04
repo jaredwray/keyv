@@ -9,12 +9,12 @@ export type DeserializedData<Value> = {
 	expires?: number | null;
 };
 
-export interface CompressionAdapter {
+export type CompressionAdapter = {
 	compress(value: any, options?: any): Promise<any>;
 	decompress(value: any, options?: any): Promise<any>;
 	serialize<Value>(data: DeserializedData<Value>): Promise<string> | string;
 	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
-}
+};
 
 export type Serialize = <Value>(data: DeserializedData<Value>) => Promise<string> | string;
 
@@ -37,11 +37,12 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
-export interface IEventEmitter {
-	on(event: string, listener: (...arguments_: any[]) => void): this;
-}
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export type IEventEmitter = {
+	on(event: string, listener: (...arguments_: any[]) => void): IEventEmitter;
+};
 
-export interface KeyvStoreAdapter extends IEventEmitter {
+export type KeyvStoreAdapter = {
 	opts: any;
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
@@ -55,7 +56,7 @@ export interface KeyvStoreAdapter extends IEventEmitter {
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
-}
+} & IEventEmitter;
 
 export type KeyvOptions = {
 	/** Emit errors */
@@ -78,6 +79,7 @@ export type KeyvOptions = {
 	useKeyPrefix?: boolean;
 };
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 type KeyvOptions_ = Omit<KeyvOptions, 'store'> & {store: KeyvStoreAdapter | Map<any, any> & KeyvStoreAdapter};
 
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
@@ -139,6 +141,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
 		super();
 		options ??= {};
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		store ??= {} as KeyvOptions;
 
 		this.opts = {
@@ -465,10 +468,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
 
 			const result = [];
+			// eslint-disable-next-line guard-for-in, @typescript-eslint/no-for-in-array
 			for (const index in rawData) {
 				let row = rawData[index];
 
 				if ((typeof row === 'string')) {
+					// eslint-disable-next-line no-await-in-loop
 					row = await this.deserializeData<Value>(row);
 				}
 
@@ -478,6 +483,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				}
 
 				if (isDataExpired(row as DeserializedData<Value>)) {
+					// eslint-disable-next-line no-await-in-loop
 					await this.delete(key[index]);
 					result.push(undefined);
 					continue;
@@ -525,7 +531,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
-		if (typeof ttl === 'undefined') {
+		if (ttl === undefined) {
 			ttl = this._ttl;
 		}
 

@@ -39,7 +39,7 @@ class HooksManager extends EventManager {
 				try {
 					handler(data);
 				} catch (error) {
-					this.emit('error', new Error(`Error in hook handler for event "${event}": ${(<Error>error).message}`));
+					this.emit('error', new Error(`Error in hook handler for event "${event}": ${(error as Error).message}`));
 				}
 			}
 		}
