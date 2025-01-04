@@ -151,4 +151,20 @@ describe('Keyv Generic Delete / Clear Operations', () => {
 		expect(await keyv.get('key2')).toBe(undefined);
 		expect(await keyv.get('key3')).toBe('value3');
 	});
+
+	test('should emit error on delete many keys', async () => {
+		const store = new Map();
+		store.delete = () => {
+			throw new Error('delete error');
+		};
+
+		const keyv = new KeyvGenericStore(store);
+		let errorEmitted = false;
+		keyv.on('error', error => {
+			expect(error.message).toBe('delete error');
+			errorEmitted = true;
+		});
+		await keyv.deleteMany(['key1', 'key2']);
+		expect(errorEmitted).toBe(true);
+	});
 });
