@@ -29,7 +29,6 @@
 			"@typescript-eslint/naming-convention": "off",
 			"@typescript-eslint/consistent-type-assertions": "off",
 			"@typescript-eslint/no-confusing-void-expression": "off",
-			"@typescript-eslint/no-var-requires": "off",
 			"@typescript-eslint/prefer-ts-expect-error": "off"
 		}
 	},
