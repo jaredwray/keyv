@@ -9,12 +9,12 @@ export type DeserializedData<Value> = {
 	expires?: number | null;
 };
 
-export interface CompressionAdapter {
+export type CompressionAdapter = {
 	compress(value: any, options?: any): Promise<any>;
 	decompress(value: any, options?: any): Promise<any>;
 	serialize<Value>(data: DeserializedData<Value>): Promise<string> | string;
 	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
-}
+};
 
 export type Serialize = <Value>(data: DeserializedData<Value>) => Promise<string> | string;
 
@@ -37,11 +37,11 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
-export interface IEventEmitter {
+export type IEventEmitter = {
 	on(event: string, listener: (...arguments_: any[]) => void): this;
-}
+};
 
-export interface KeyvStoreAdapter extends IEventEmitter {
+export type KeyvStoreAdapter = {
 	opts: any;
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
@@ -55,7 +55,7 @@ export interface KeyvStoreAdapter extends IEventEmitter {
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
-}
+} & IEventEmitter;
 
 export type KeyvOptions = {
 	/** Emit errors */
