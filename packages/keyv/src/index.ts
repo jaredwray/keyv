@@ -465,6 +465,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
 
 			const result = [];
+			// eslint-disable-next-line guard-for-in
 			for (const index in rawData) {
 				let row = rawData[index];
 
