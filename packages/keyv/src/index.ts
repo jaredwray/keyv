@@ -525,7 +525,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
-		if (typeof ttl === 'undefined') {
+		if (ttl === undefined) {
 			ttl = this._ttl;
 		}
 
