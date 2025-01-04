@@ -469,6 +469,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				let row = rawData[index];
 
 				if ((typeof row === 'string')) {
+					// eslint-disable-next-line no-await-in-loop
 					row = await this.deserializeData<Value>(row);
 				}
 
@@ -478,6 +479,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				}
 
 				if (isDataExpired(row as DeserializedData<Value>)) {
+					// eslint-disable-next-line no-await-in-loop
 					await this.delete(key[index]);
 					result.push(undefined);
 					continue;
