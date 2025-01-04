@@ -404,8 +404,8 @@ test.it('iterator should exists with url', t => {
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with compression',
 	async t => {
-		const KeyvStore = new Map();
-		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
+		const keyvStore = new Map();
+		const keyv1 = new Keyv({store: keyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
 		const map1 = new Map(
 			Array.from({length: 5})
 				.fill(0)
@@ -417,7 +417,7 @@ test.it(
 		}
 
 		await Promise.all(toResolve);
-		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
+		const keyv2 = new Keyv({store: keyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
 		const map2 = new Map(
 			Array.from({length: 5})
 				.fill(0)
@@ -443,9 +443,9 @@ test.it(
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces',
 	async t => {
-		const KeyvStore = new Map();
+		const keyvStore = new Map();
 
-		const keyv1 = new Keyv({store: KeyvStore, namespace: 'keyv1'});
+		const keyv1 = new Keyv({store: keyvStore, namespace: 'keyv1'});
 		const map1 = new Map(
 			Array.from({length: 5})
 				.fill(0)
@@ -458,7 +458,7 @@ test.it(
 
 		await Promise.all(toResolve);
 
-		const keyv2 = new Keyv({store: KeyvStore, namespace: 'keyv2'});
+		const keyv2 = new Keyv({store: keyvStore, namespace: 'keyv2'});
 		const map2 = new Map(
 			Array.from({length: 5})
 				.fill(0)
@@ -484,14 +484,14 @@ test.it(
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer',
 	async t => {
-		const KeyvStore = new Map();
+		const keyvStore = new Map();
 
 		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
 
 		const deserialize = (data: string) => JSON.parse(data);
 
 		const keyv1 = new Keyv({
-			store: KeyvStore, serialize, deserialize, namespace: 'keyv1',
+			store: keyvStore, serialize, deserialize, namespace: 'keyv1',
 		});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -506,7 +506,7 @@ test.it(
 		await Promise.all(toResolve);
 
 		const keyv2 = new Keyv({
-			store: KeyvStore, serialize, deserialize, namespace: 'keyv2',
+			store: keyvStore, serialize, deserialize, namespace: 'keyv2',
 		});
 		const map2 = new Map(
 			Array.from({length: 5})
@@ -533,13 +533,13 @@ test.it(
 test.it(
 	'keyv iterator() doesn\'t yield values from other namespaces with custom serializer/deserializer and compression',
 	async t => {
-		const KeyvStore = new Map();
+		const keyvStore = new Map();
 
 		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
 		const deserialize = (data: string) => JSON.parse(data);
 
 		const keyv1 = new Keyv({
-			store: KeyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip(),
+			store: keyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip(),
 		});
 		const map1 = new Map(
 			Array.from({length: 5})
@@ -554,7 +554,7 @@ test.it(
 		await Promise.all(toResolve);
 
 		const keyv2 = new Keyv({
-			store: KeyvStore, serialize, deserialize, namespace: 'keyv2',
+			store: keyvStore, serialize, deserialize, namespace: 'keyv2',
 		});
 		const map2 = new Map(
 			Array.from({length: 5})

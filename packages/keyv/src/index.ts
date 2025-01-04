@@ -37,6 +37,7 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export type IEventEmitter = {
 	on(event: string, listener: (...arguments_: any[]) => void): IEventEmitter;
 };
@@ -78,6 +79,7 @@ export type KeyvOptions = {
 	useKeyPrefix?: boolean;
 };
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 type KeyvOptions_ = Omit<KeyvOptions, 'store'> & {store: KeyvStoreAdapter | Map<any, any> & KeyvStoreAdapter};
 
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
