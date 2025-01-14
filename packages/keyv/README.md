@@ -235,16 +235,18 @@ keyv.deserialize = undefined;
 
 The official storage adapters are covered by [over 150 integration tests](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml) to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.
 
-Database | Adapter | Native TTL
----|---|---
-Redis | [@keyv/redis](https://github.com/jaredwray/keyv/tree/master/packages/redis) | Yes
-Valkey | [@keyv/valkey](https://github.com/jaredwray/keyv/tree/master/packages/valkey) | Yes
-MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/master/packages/mongo) | Yes 
-SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/packages/sqlite) | No 
-PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/packages/postgres) | No 
-MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mysql) | No 
-Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes
-Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) | Yes
+Database | Adapter | Native TTL | Internal TTL
+---|---|---|---
+Redis | [@keyv/redis](https://github.com/jaredwray/keyv/tree/master/packages/redis) | Yes | No
+Valkey | [@keyv/valkey](https://github.com/jaredwray/keyv/tree/master/packages/valkey) | Yes | No
+MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/master/packages/mongo) | Yes | No
+SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/packages/sqlite) | No | Yes
+PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/packages/postgres) | No | No
+MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mysql) | No | No
+Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes | No
+Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) | Yes | No
+
+The difference between `Native TTL` and `Internal TTL` is that `Native TTL` is handled by the database itself and `Internal TTL` is handled by storage adapter.
 
 # Third-party Storage Adapters
 
