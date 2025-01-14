@@ -246,7 +246,7 @@ MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mys
 Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes | No
 Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) | Yes | No
 
-The difference between `Native TTL` and `Internal TTL` is that `Native TTL` is handled by the database itself and `Internal TTL` is handled by storage adapter.
+Note: `Native TTL` handles by the database itself, `Internal TTL` is handled by storage adapter.
 
 # Third-party Storage Adapters
 
