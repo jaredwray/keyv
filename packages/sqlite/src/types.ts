@@ -20,3 +20,9 @@ export type Db = {
 	query: DbQuery;
 	close: DbClose;
 };
+
+export type Row<T> = {
+	key: string;
+	value: T;
+	expire: number;
+}
