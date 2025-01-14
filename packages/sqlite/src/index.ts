@@ -3,6 +3,7 @@ import {promisify} from 'util';
 import Keyv, {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import sqlite3 from 'sqlite3';
 import {
+	Row,
 	type Db, type DbClose, type DbQuery, type KeyvSqliteOptions,
 } from './types';
 
@@ -17,7 +18,7 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 	constructor(keyvOptions?: KeyvSqliteOptions | string) {
 		super();
-		this.ttlSupport = false;
+		this.ttlSupport = true;
 		let options: KeyvSqliteOptions = {
 			dialect: 'sqlite',
 			uri: 'sqlite://:memory:',
@@ -59,7 +60,14 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 		this.opts.table = toString(this.opts.table!);
 
-		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
+		const createTable = `
+		CREATE TABLE IF NOT EXISTS ${this.opts.table} (
+			key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY,
+			value TEXT,
+			expire INTEGER
+		);
+		CREATE INDEX IF NOT EXISTS index_expire_${this.opts.table} ON ${this.opts.table} (expire);
+		`;
 
 		// @ts-expect-error - db is
 		const connected: Promise<DB> = this.opts.connect!()
@@ -74,38 +82,52 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 	async get<Value>(key: string) {
 		const select = `SELECT * FROM ${this.opts.table!} WHERE key = ?`;
-		const rows = await this.query(select, key);
-		const row = rows[0];
-		if (row === undefined) {
+		const now = Date.now();
+
+		let rows: Row<Value>[] = await this.query(select, key)
+		const fetchedNumber = rows.length;
+		rows = rows.filter((row) => !row.expire || row.expire > now);
+
+		// Schedule cleanup if some keys are expired
+		if (fetchedNumber > rows.length) {
+			process.nextTick(() => this.cleanExpired().catch((error) => this.emit('error', error)));
+		}
+
+		if (rows.length === 0) {
 			return undefined;
 		}
 
-		return row.value as Value;
+		return rows[0].value;
 	}
 
 	async getMany<Value>(keys: string[]) {
 		const select = `SELECT * FROM ${this.opts.table!} WHERE key IN (SELECT value FROM json_each(?))`;
-		const rows = await this.query(select, JSON.stringify(keys));
+		const now = Date.now();
+		
+		let rows: Row<Value>[] = await this.query(select, JSON.stringify(keys));
+		const fetchedNumber = rows.length;
+		rows = rows.filter((row) => !row.expire || row.expire > now);
 
-		return keys.map(key => {
-			const row = rows.find((row: {key: string; value: Value}) => row.key === key);
-			return (row ? row.value : undefined) as StoredData<Value | undefined>;
-		});
+		// Schedule cleanup if some keys are expired
+		if (fetchedNumber > rows.length) {
+			process.nextTick(() => this.cleanExpired().catch((error) => this.emit('error', error)));
+		}
+
+		const rowsMap = new Map(rows.map((row) => [row.key, row]));
+		return keys.map(key => rowsMap.get(key)?.value);
 	}
 
-	async set(key: string, value: any) {
-		const upsert = `INSERT INTO ${this.opts.table!} (key, value)
-			VALUES(?, ?) 
-			ON CONFLICT(key) 
-			DO UPDATE SET value=excluded.value;`;
-		return this.query(upsert, key, value);
+	async set(key: string, value: any, ttl?: number) {
+		const upsert = `INSERT OR REPLACE INTO ${this.opts.table!} (key, value, expire) VALUES`;
+		const expire = ttl ? Date.now() + ttl : null;
+		await this.query(upsert, key, value, expire);
 	}
 
 	async delete(key: string) {
 		const select = `SELECT * FROM ${this.opts.table!} WHERE key = ?`;
 		const del = `DELETE FROM ${this.opts.table!} WHERE key = ?`;
 
-		const rows = await this.query(select, key);
+		const rows: Row<any>[] = await this.query(select, key);
 		const row = rows[0];
 		if (row === undefined) {
 			return false;
@@ -163,6 +185,12 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 	async disconnect() {
 		await this.close();
+	}
+
+	private async cleanExpired() {
+		const del = `DELETE FROM ${this.opts.table!} WHERE expire IS NOT NULL AND expire < ?`;
+		const now = Date.now();
+		await this.query(del, now);
 	}
 }
 
