@@ -1,6 +1,6 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
-import keyvTestSuite from '@keyv/test-suite';
+import keyvTestSuite, { delay } from '@keyv/test-suite';
 import KeyvSqlite, {createKeyv} from '../src/index.js';
 
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
@@ -39,6 +39,15 @@ test.it('getMany will return multiple values', async t => {
 	const values = await keyv.getMany(['foo', 'foo1', 'foo2']);
 	t.expect(values).toStrictEqual(['bar', 'bar1', 'bar2']);
 });
+
+test.it('should be able to set a ttl', async t => {
+	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
+	await keyv.clear();
+	await keyv.set('foo', 'bar', 10);
+	await delay(15);
+	const value = await keyv.get('foo');
+	t.expect(value).toBe(undefined);
+})
 
 test.it('deleteMany will delete multiple records', async t => {
 	const keyv = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
