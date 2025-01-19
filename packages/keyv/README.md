@@ -289,14 +289,30 @@ The following are third-party storage adapters compatible with Keyv:
 
 # Compression
 
-Keyv supports `gzip` and `brotli` compression. To enable compression, pass the `compress` option to the constructor.
+Keyv supports `gzip`, `brotli` and lz4-napi compression. To enable compression, pass the `compress` option to the constructor.
 
 ```js
 import Keyv from 'keyv';
 import KeyvGzip from '@keyv/compress-gzip';
 
 const keyvGzip = new KeyvGzip();
-const keyv = new Keyv({ compression: KeyvGzip });
+const keyv = new Keyv({ compression: keyvGzip });
+```
+
+```js
+import Keyv from 'keyv';
+import KeyvBrotli from '@keyv/compress-brotli';
+
+const keyvBrotli = new KeyvBrotli();
+const keyv = new Keyv({ compression: keyvBrotli });
+```
+
+```js
+import Keyv from 'keyv';
+import KeyvLz4Napi from '@keyv/compress-lz4-napi';
+
+const keyvLz4Napi = new KeyvLz4Napi();
+const keyv = new Keyv({ compression: keyvLz4Napi });
 ```
 
 You can also pass a custom compression function to the `compression` option. Following the pattern of the official compression adapters.

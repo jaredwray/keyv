@@ -5,6 +5,7 @@ import {KeyvSqlite} from '@keyv/sqlite';
 import {KeyvMongo} from '@keyv/mongo';
 import {KeyvBrotli} from '@keyv/compress-brotli';
 import {KeyvGzip} from '@keyv/compress-gzip';
+import {KeyvLz4Napi} from '@keyv/compress-lz4-napi';
 import {KeyvMemcache} from '@keyv/memcache';
 import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw, type CompressionAdapter} from '../src/index.js';
 
@@ -393,6 +394,12 @@ test.it('pass compress options', async t => {
 
 test.it('compress/decompress with gzip', async t => {
 	const keyv = new Keyv({store: new Map(), compression: new KeyvGzip()});
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+});
+
+test.it('compress/decompress with lz4-napi', async t => {
+	const keyv = new Keyv({store: new Map(), compression: new KeyvLz4Napi()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
