@@ -289,7 +289,7 @@ The following are third-party storage adapters compatible with Keyv:
 
 # Compression
 
-Keyv supports `gzip`, `brotli` and lz4-napi compression. To enable compression, pass the `compress` option to the constructor.
+Keyv supports `gzip`, `brotli` and `lz4` compression. To enable compression, pass the `compress` option to the constructor.
 
 ```js
 import Keyv from 'keyv';

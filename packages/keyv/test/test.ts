@@ -398,7 +398,7 @@ test.it('compress/decompress with gzip', async t => {
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
 
-test.it('compress/decompress with lz4-napi', async t => {
+test.it('compress/decompress with lz4', async t => {
 	const keyv = new Keyv({store: new Map(), compression: new KeyvLz4()});
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
