@@ -309,10 +309,10 @@ const keyv = new Keyv({ compression: keyvBrotli });
 
 ```js
 import Keyv from 'keyv';
-import KeyvLz4Napi from '@keyv/compress-lz4-napi';
+import KeyvLz4 from '@keyv/compress-lz4';
 
-const keyvLz4Napi = new KeyvLz4Napi();
-const keyv = new Keyv({ compression: keyvLz4Napi });
+const keyvLz4 = new KeyvLz4();
+const keyv = new Keyv({ compression: keyvLz4 });
 ```
 
 You can also pass a custom compression function to the `compression` option. Following the pattern of the official compression adapters.

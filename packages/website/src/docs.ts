@@ -14,7 +14,7 @@ async function main() {
 async function copyStorageAdapters() {
     const packagesPath = await getRelativePackagePath();
     const storageAdapters = await fs.promises.readdir(`${packagesPath}`);
-    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "compress-lz4-napi", "test-suite", ".DS_Store", "serialize", "third-party"];
+    const filterList = ["keyv", "website", "compress-brotli", "compress-gzip", "compress-lz4", "test-suite", ".DS_Store", "serialize", "third-party"];
 
     for (const storageAdapter of storageAdapters) {
         if((filterList.indexOf(storageAdapter) > -1) !== true ) {

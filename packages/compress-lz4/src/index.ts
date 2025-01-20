@@ -2,7 +2,7 @@ import {compress, uncompress} from 'lz4-napi';
 import {defaultDeserialize, defaultSerialize} from '@keyv/serialize';
 import {type Deserialize, type Serialize} from 'types';
 
-export class KeyvLz4Napi {
+export class KeyvLz4 {
 	constructor(private readonly dictionary?: string) {}
 
 	async compress(data: string): Promise<Uint8Array> {
@@ -37,4 +37,4 @@ export class KeyvLz4Napi {
 	}
 }
 
-export default KeyvLz4Napi;
+export default KeyvLz4;

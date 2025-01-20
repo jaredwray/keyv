@@ -65,7 +65,7 @@
 	},
 	"devDependencies": {
 		"@keyv/compress-brotli": "workspace:^",
-		"@keyv/compress-lz4-napi": "workspace:^",
+		"@keyv/compress-lz4": "workspace:^",
 		"@keyv/compress-gzip": "workspace:^",
 		"@keyv/memcache": "workspace:^",
 		"@keyv/mongo": "workspace:^",

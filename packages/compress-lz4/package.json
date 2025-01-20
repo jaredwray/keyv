@@ -1,5 +1,5 @@
 {
-	"name": "@keyv/compress-lz4-napi",
+	"name": "@keyv/compress-lz4",
 	"version": "0.1.0",
 	"description": "lz4-napi compression for keyv",
 	"type": "module",
