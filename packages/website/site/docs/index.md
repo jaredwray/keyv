@@ -165,7 +165,7 @@ await users.clear();
 
 ## 6. Advanced - Enable Compression
 
-Keyv supports both `gzip` and `brotli` methods of compression. Before you can enable compression, you will need to install the compression package:
+Keyv supports both `gzip`, `brotli` and lz4-napi methods of compression. Before you can enable compression, you will need to install the compression package:
 
 ```sh
 npm install --save keyv @keyv/compress-gzip
@@ -180,6 +180,26 @@ const Keyv = require('keyv');
 
 const keyvGzip = new KeyvGzip();
 const keyv = new Keyv({ compression: KeyvGzip });
+```
+
+### Example - Enable Brotli compression
+
+```js
+import Keyv from 'keyv';
+import KeyvBrotli from '@keyv/compress-brotli';
+
+const keyvBrotli = new KeyvBrotli();
+const keyv = new Keyv({ compression: keyvBrotli });
+```
+
+### Example - Enable lz4-napi compression
+
+```js
+import Keyv from 'keyv';
+import KeyvLz4 from '@keyv/compress-lz4';
+
+const keyvLz4 = new KeyvLz4();
+const keyv = new Keyv({ compression: keyvLz4 });
 ```
 
 You can also pass a custom compression function to the compression option. Custom compression functions must follow the pattern of the official compression adapter (see below for further information).

@@ -1,7 +1,7 @@
 {
-	"name": "keyv",
-	"version": "5.2.3",
-	"description": "Simple key-value storage with support for multiple backends",
+	"name": "@keyv/compress-lz4",
+	"version": "0.1.0",
+	"description": "lz4-napi compression for keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
 	"module": "dist/index.js",
@@ -19,70 +19,51 @@
 		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist"
 	},
-	"xo": {
-		"rules": {
-			"@typescript-eslint/ban-ts-comment": "off",
-			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/no-unsafe-return": "off",
-			"@typescript-eslint/no-unsafe-assignment": "off",
-			"@typescript-eslint/no-unsafe-argument": "off",
-			"@typescript-eslint/no-confusing-void-expression": "off"
-		}
-	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/jaredwray/keyv.git"
 	},
 	"keywords": [
+		"compress",
+		"lz4-napi",
+		"lz4",
+		"snappy",
+		"keyv",
+		"storage",
+		"adapter",
 		"key",
 		"value",
 		"store",
 		"cache",
-		"ttl",
-		"key-value",
-		"storage",
-		"backend",
-		"adapter",
-		"redis",
-		"mongodb",
-		"sqlite",
-		"mysql",
-		"postgresql",
-		"memory",
-		"node-cache",
-		"lru-cache",
-		"lru",
-		"cache-manager"
+		"ttl"
 	],
-	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+	"author": "Blockcoders Engineering <hello@blockcoders.io>",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/jaredwray/keyv/issues"
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@keyv/serialize": "workspace:^"
+		"@keyv/serialize": "workspace:^",
+		"lz4-napi": "^2.8.0",
+		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@keyv/compress-brotli": "workspace:^",
-		"@keyv/compress-lz4": "workspace:^",
-		"@keyv/compress-gzip": "workspace:^",
-		"@keyv/memcache": "workspace:^",
-		"@keyv/mongo": "workspace:^",
-		"@keyv/sqlite": "workspace:^",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^2.1.8",
+		"c8": "^10.1.3",
 		"rimraf": "^6.0.1",
-		"timekeeper": "^2.3.1",
-		"tsd": "^0.31.2",
 		"vitest": "^2.1.8",
 		"xo": "^0.60.0"
 	},
 	"tsd": {
 		"directory": "test"
 	},
+	"engines": {
+		"node": ">= 18"
+	},
 	"files": [
 		"dist",
-		"LISCENCE"
+		"LICENSE"
 	]
 }
