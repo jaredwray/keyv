@@ -79,9 +79,9 @@ If there is already an adapter that you would like to add, please post an issue 
 
 ### Compression Adapters
 
-* [brotli](https://github.com/jaredwray/keyv/tree/main/packages/compress-brotli): Brotli compression adapter
-* [Gzip](https://github.com/jaredwray/keyv/tree/main/packages/compress-gzip): Gzip compression adapter
-* [lz4](https://github.com/jaredwray/keyv/tree/main/packages/compress-lz4): lz4-napi compression adapter
+* [brotli](https://github.com/jaredwray/keyv/tree/main/packages/compress-brotli): brotli compression adapter
+* [gzip](https://github.com/jaredwray/keyv/tree/main/packages/compress-gzip): gzip compression adapter
+* [lz4](https://github.com/jaredwray/keyv/tree/main/packages/compress-lz4): lz4 compression adapter
 
 ### Third-party Storage Adapters
 
