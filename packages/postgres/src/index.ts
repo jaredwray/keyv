@@ -32,10 +32,11 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			table: 'keyv',
 			schema: 'public',
 			keySize: 255,
+			unlogged: false,
 			...options,
 		};
 
-		let createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
+		let createTable = `CREATE${this.opts.unlogged ? ' UNLOGGED ' : ' '}TABLE IF NOT EXISTS ${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 
 		if (this.opts.schema !== 'public') {
 			createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema!}; ${createTable}`;
