@@ -51,6 +51,12 @@ import {createKeyv} from '@keyv/postgres';
 const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', table: 'cache', schema: 'keyv' });
 ```
 
+For using of [unlogged](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-UNLOGGED) Postgres table rather than logged pass `useUnloggedTable` option.
+
+```js
+const keyv = new Keyv(new KeyvPostgres('postgresql://user:pass@localhost:5432/dbname'), { table: 'cache', useUnloggedTable: true });
+```
+
 ## Testing
 
 When testing you can use our `docker compose` postgresql instance by having docker installed and running. This will start a postgres server, run the tests, and stop the server:

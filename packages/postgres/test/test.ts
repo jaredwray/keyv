@@ -85,7 +85,7 @@ test.it('helper to create Keyv instance with postgres', async t => {
 });
 
 test.it('test unlogged table', async t => {
-	const keyv = createKeyv({uri: postgresUri, unlogged: true});
+	const keyv = createKeyv({uri: postgresUri, useUnloggedTable: true});
 	t.expect(await keyv.set('foo', 'bar')).toBe(true);
 	t.expect(await keyv.get('foo')).toBe('bar');
 });
