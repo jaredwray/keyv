@@ -14,6 +14,12 @@ test.beforeEach(async () => {
 	await keyv.clear();
 });
 
+test.it('should be able to pass in just uri as string', async t => {
+	const keyv = new KeyvPostgres(postgresUri);
+	await keyv.set('foo', 'bar');
+	t.expect(await keyv.get('foo')).toBe('bar');
+});
+
 test.it('test schema as non public', async t => {
 	const keyv1 = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', schema: 'keyvtest1'});
 	const keyv2 = new KeyvPostgres({uri: 'postgresql://postgres:postgres@localhost:5432/keyv_test', schema: 'keyvtest2'});

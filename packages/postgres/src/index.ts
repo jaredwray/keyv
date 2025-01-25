@@ -12,13 +12,24 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	opts: KeyvPostgresOptions;
 	query: Query;
 	namespace?: string;
-	constructor(options?: KeyvPostgresOptions) {
+	constructor(options?: KeyvPostgresOptions | string) {
 		super();
 		this.ttlSupport = false;
-		options = {
-			dialect: 'postgres',
-			uri: 'postgresql://localhost:5432', ...options,
-		};
+
+		if (typeof options === 'string') {
+			const uri = options;
+			options = {
+				dialect: 'postgres',
+				uri,
+			};
+			console.log('options', options);
+		} else {
+			options = {
+				dialect: 'postgres',
+				uri: 'postgresql://localhost:5432',
+				...options,
+			};
+		}
 
 		const connect = async () => {
 			const conn = pool(options!.uri!, options);
