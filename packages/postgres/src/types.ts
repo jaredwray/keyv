@@ -27,6 +27,7 @@ export type KeyvPostgresOptions = {
 	ssl?: any;
 	dialect?: string;
 	iterationLimit?: number;
+	useUnloggedTable?: boolean;
 } & PoolConfig;
 
 export type Query = (sqlString: string, values?: any) => Promise<any[]>;

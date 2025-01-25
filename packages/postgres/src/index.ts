@@ -12,13 +12,24 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	opts: KeyvPostgresOptions;
 	query: Query;
 	namespace?: string;
-	constructor(options?: KeyvPostgresOptions) {
+	constructor(options?: KeyvPostgresOptions | string) {
 		super();
 		this.ttlSupport = false;
-		options = {
-			dialect: 'postgres',
-			uri: 'postgresql://localhost:5432', ...options,
-		};
+
+		if (typeof options === 'string') {
+			const uri = options;
+			options = {
+				dialect: 'postgres',
+				uri,
+			};
+			console.log('options', options);
+		} else {
+			options = {
+				dialect: 'postgres',
+				uri: 'postgresql://localhost:5432',
+				...options,
+			};
+		}
 
 		const connect = async () => {
 			const conn = pool(options!.uri!, options);
@@ -35,7 +46,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			...options,
 		};
 
-		let createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
+		let createTable = `CREATE${this.opts.useUnloggedTable ? ' UNLOGGED ' : ' '}TABLE IF NOT EXISTS ${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 
 		if (this.opts.schema !== 'public') {
 			createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema!}; ${createTable}`;
