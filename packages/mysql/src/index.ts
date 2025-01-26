@@ -6,7 +6,8 @@ import {
 } from './types';
 import {endPool, pool} from './pool';
 
-const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'table', 'ttl', 'uri']);
+const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'useInternalScheduler',
+    'table', 'ttl', 'uri']);
 
 type QueryType<T> = Promise<T extends
 mysql.RowDataPacket[][] |
@@ -18,13 +19,12 @@ mysql.ResultSetHeader
 	: never>;
 
 export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
-	ttlSupport: boolean;
+	ttlSupport = false;
 	opts: KeyvMysqlOptions;
 	namespace?: string;
 	query: <T>(sqlString: string) => QueryType<T>;
 	constructor(keyvOptions?: KeyvMysqlOptions | string) {
 		super();
-		this.ttlSupport = false;
 
 		let options: KeyvMysqlOptions = {
 			dialect: 'mysql',
@@ -46,6 +46,9 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			),
 		);
 
+        this.ttlSupport = !!mysqlOptions.useInternalScheduler;
+
+        delete mysqlOptions.useInternalScheduler;
 		delete mysqlOptions.namespace;
 		delete mysqlOptions.serialize;
 		delete mysqlOptions.deserialize;
@@ -63,10 +66,21 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			keySize: 255, ...options,
 		};
 
+		const ttlScheduler: string[] = [
+            `SET GLOBAL event_scheduler = ON;`,
+            `DROP EVENT IF EXISTS delete_expired_keys;`,
+            `CREATE EVENT delete_expired_keys ON SCHEDULE EVERY 30 SECOND
+            DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT( value, '$.expiration' ) < UNIX_TIMESTAMP();`]
+
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 
 		const connected = connection().then(async query => {
 			await query(createTable);
+            if (this.ttlSupport) {
+                for (const ttlCmd of ttlScheduler) {
+                    await query(ttlCmd);
+                }
+            }
 			return query;
 		}).catch(error => this.emit('error', error));
 
