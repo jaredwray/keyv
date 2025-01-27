@@ -69,7 +69,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const ttlScheduler: string[] = [
             `SET GLOBAL event_scheduler = ON;`,
             `DROP EVENT IF EXISTS delete_expired_keys;`,
-            `CREATE EVENT delete_expired_keys ON SCHEDULE EVERY 30 SECOND
+            `CREATE EVENT IF NOT EXISTS delete_expired_keys ON SCHEDULE EVERY 30 SECOND
             DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT( value, '$.expiration' ) < UNIX_TIMESTAMP();`]
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
