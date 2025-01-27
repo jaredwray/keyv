@@ -26,7 +26,7 @@ keyv.on('error', handleConnectionError);
 ```
 
 You can specify a custom table with the `table` option and the primary key size with `keySize`.
-If you want to use native MySQL scheduler to delete expired keys, you can enable `useInternalScheduler`.
+If you want to use native MySQL scheduler to delete expired keys, you can specify `intervalExpiration` in seconds.
 
 e.g:
 
@@ -37,7 +37,7 @@ import KeyvMysql from '@keyv/mysql';
 const keyv = new Keyv(new KeyvMysql('mysql://user:pass@localhost:3306/dbname'), {
   table: 'cache',
   keySize: 255,
-  useInternalScheduler: true
+  intervalExpiration: 60
 });
 ```
 

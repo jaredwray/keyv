@@ -5,6 +5,6 @@ export type KeyvMysqlOptions = {
 	uri?: string;
 	table?: string;
 	keySize?: number;
-	useInternalScheduler?: boolean;
+	intervalExpiration?: number;
 	iterationLimit?: string | number;
 } & ConnectionOptions;

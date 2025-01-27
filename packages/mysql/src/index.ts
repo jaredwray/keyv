@@ -6,8 +6,7 @@ import {
 } from './types';
 import {endPool, pool} from './pool';
 
-const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'useInternalScheduler',
-    'table', 'ttl', 'uri']);
+const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'table', 'ttl', 'uri']);
 
 type QueryType<T> = Promise<T extends
 mysql.RowDataPacket[][] |
@@ -40,15 +39,14 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			};
 		}
 
+		this.ttlSupport = !!options.intervalExpiration
+
 		const mysqlOptions = Object.fromEntries(
 			Object.entries(options).filter(
 				([k]) => !keyvMysqlKeys.has(k),
 			),
 		);
 
-        this.ttlSupport = !!mysqlOptions.useInternalScheduler;
-
-        delete mysqlOptions.useInternalScheduler;
 		delete mysqlOptions.namespace;
 		delete mysqlOptions.serialize;
 		delete mysqlOptions.deserialize;
@@ -69,7 +67,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const ttlScheduler: string[] = [
             `SET GLOBAL event_scheduler = ON;`,
             `DROP EVENT IF EXISTS delete_expired_keys;`,
-            `CREATE EVENT IF NOT EXISTS delete_expired_keys ON SCHEDULE EVERY 30 SECOND
+            `CREATE EVENT IF NOT EXISTS delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
             DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT( value, '$.expiration' ) < UNIX_TIMESTAMP();`]
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
