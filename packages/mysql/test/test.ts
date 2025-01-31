@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests, delay} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMysql from '../src/index';
 import {parseConnectionString} from '../src/pool';
@@ -115,4 +115,20 @@ test.it('close connection successfully', async t => {
 	} catch {
 		t.expect(true).toBeTruthy();
 	}
+});
+
+test.it('set intervalExpiration to 0 results in no event creation', async t => {
+	const keyv = new KeyvMysql({uri, intervalExpiration: 0});
+	t.expect(keyv.ttlSupport).toBe(false);
+});
+
+test.it('set intervalExpiration to 1 second', async t => {
+	const keyv = new KeyvMysql({uri, intervalExpiration: 1});
+	await keyv.set('foo-interval1', 'bar-interval1');
+	const value1 = await keyv.get('foo-interval1');
+	t.expect(keyv.ttlSupport).toBe(true);
+	t.expect(value1).toBe('bar-interval1');
+	await delay(1100);
+	const value2 = await keyv.get('foo-interval1');
+	t.expect(value2).toBeUndefined();
 });
