@@ -18,7 +18,7 @@ $ cd nestjs-keyv-cache
 ```
 ## 2. Installing Keyv and its Dependencies
 
-To begin, install Keyv and a storage adapter of your choice. In this example, we'll use SQLite:
+To begin, install Keyv and a storage adapter of your choice. In this example, we'll use Redis:
 ```bash
 $ npm install cacheable @keyv/redis --save
 ```
