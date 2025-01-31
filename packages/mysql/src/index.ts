@@ -39,7 +39,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			};
 		}
 
-		this.ttlSupport = !!options.intervalExpiration
+		this.ttlSupport = Boolean(options.intervalExpiration);
 
 		const mysqlOptions = Object.fromEntries(
 			Object.entries(options).filter(
@@ -65,20 +65,23 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		};
 
 		const ttlScheduler: string[] = [
-            `SET GLOBAL event_scheduler = ON;`,
-            `DROP EVENT IF EXISTS delete_expired_keys;`,
-            `CREATE EVENT IF NOT EXISTS delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
-            DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT( value, '$.expiration' ) < UNIX_TIMESTAMP();`]
+			'SET GLOBAL event_scheduler = ON;',
+			'DROP EVENT IF EXISTS delete_expired_keys;',
+			`CREATE EVENT IF NOT EXISTS delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
+            DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT( value, '$.expiration' ) < UNIX_TIMESTAMP();`,
+		];
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 
 		const connected = connection().then(async query => {
 			await query(createTable);
-            if (this.ttlSupport) {
-                for (const ttlCmd of ttlScheduler) {
-                    await query(ttlCmd);
-                }
-            }
+			if (this.ttlSupport) {
+				for (const ttlCmd of ttlScheduler) {
+					// eslint-disable-next-line no-await-in-loop
+					await query(ttlCmd);
+				}
+			}
+
 			return query;
 		}).catch(error => this.emit('error', error));
 
