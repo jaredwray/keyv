@@ -66,7 +66,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			keySize: 255, ...options,
 		};
 
-		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT, expires TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`;
 
 		const connected = connection().then(async query => {
 			await query(createTable);
@@ -74,7 +74,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				await query('SET GLOBAL event_scheduler = ON;');
 				await query('DROP EVENT IF EXISTS keyv_delete_expired_keys;');
 				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
-					DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT(value, '$.expires' ) < UNIX_TIMESTAMP();`);
+					DO DELETE FROM ${this.opts.table!} WHERE UNIX_TIMESTAMP(expires) < UNIX_TIMESTAMP();`);
 			}
 
 			return query;

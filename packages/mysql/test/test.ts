@@ -124,11 +124,10 @@ test.it('set intervalExpiration to 0 results in no event creation', async t => {
 
 test.it('set intervalExpiration to 1 second', async t => {
 	const keyv = new KeyvMysql({uri, intervalExpiration: 1});
-	await keyv.set('foo-interval1', `{"value":"bar-interval1","expires":${Date.now() / 1000}}`);
+	await keyv.set('foo-interval1', 'bar-interval1');
 	const value1 = await keyv.get('foo-interval1');
 	t.expect(keyv.ttlSupport).toBe(true);
-	const parsedValue = JSON.parse(value1 as string).value;
-	t.expect(parsedValue).toBe('bar-interval1');
+	t.expect(value1).toBe('bar-interval1');
 	await delay(1100);
 	const value2 = await keyv.get('foo-interval1');
 	t.expect(value2).toBeUndefined();
