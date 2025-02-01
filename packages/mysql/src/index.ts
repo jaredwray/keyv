@@ -74,7 +74,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				await query('SET GLOBAL event_scheduler = ON;');
 				await query('DROP EVENT IF EXISTS keyv_delete_expired_keys;');
 				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
-					DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT( value, '$.expiration' ) < UNIX_TIMESTAMP();`);
+					DO DELETE FROM ${this.opts.table!} WHERE JSON_EXTRACT( CAST(value AS JSON), '$.expiration' ) < UNIX_TIMESTAMP();`);
 			}
 
 			return query;
