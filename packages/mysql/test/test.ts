@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
+import keyvTestSuite, {keyvIteratorTests, delay} from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvMysql from '../src/index';
 import {parseConnectionString} from '../src/pool';
@@ -115,4 +115,26 @@ test.it('close connection successfully', async t => {
 	} catch {
 		t.expect(true).toBeTruthy();
 	}
+});
+
+test.it('set intervalExpiration to 0 results in no event creation', async t => {
+	const keyv = new KeyvMysql({uri, intervalExpiration: 0});
+	t.expect(keyv.ttlSupport).toBe(false);
+});
+
+test.it('set intervalExpiration to 1 second', async t => {
+	const keyvMySql = new KeyvMysql({uri, intervalExpiration: 1});
+	const keyv = new Keyv({store: keyvMySql});
+	// Ttl: 1s
+	await keyv.set('foo-interval1', 'bar-interval1', 1000);
+	// No ttl -> undefined -> (expires:null) -> infinite
+	await keyv.set('foo-interval-no-ttl', 'bar-interval-no-ttl');
+	const value1 = await keyv.get('foo-interval1');
+	t.expect(keyvMySql.ttlSupport).toBe(true);
+	t.expect(value1).toBe('bar-interval1');
+	await delay(1100);
+	const value2 = await keyv.get('foo-interval1');
+	t.expect(value2).toBeUndefined();
+	const value3 = await keyv.get('foo-interval-no-ttl');
+	t.expect(value3).toBe('bar-interval-no-ttl');
 });

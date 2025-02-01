@@ -18,13 +18,12 @@ mysql.ResultSetHeader
 	: never>;
 
 export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
-	ttlSupport: boolean;
+	ttlSupport = false;
 	opts: KeyvMysqlOptions;
 	namespace?: string;
 	query: <T>(sqlString: string) => QueryType<T>;
 	constructor(keyvOptions?: KeyvMysqlOptions | string) {
 		super();
-		this.ttlSupport = false;
 
 		let options: KeyvMysqlOptions = {
 			dialect: 'mysql',
@@ -38,6 +37,10 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				...options,
 				...keyvOptions,
 			};
+		}
+
+		if (options.intervalExpiration !== undefined && options.intervalExpiration > 0) {
+			this.ttlSupport = true;
 		}
 
 		const mysqlOptions = Object.fromEntries(
@@ -63,10 +66,18 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			keySize: 255, ...options,
 		};
 
-		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT)`;
 
 		const connected = connection().then(async query => {
 			await query(createTable);
+			if (this.opts.intervalExpiration !== undefined && this.opts.intervalExpiration > 0) {
+				await query('SET GLOBAL event_scheduler = ON;');
+				await query('DROP EVENT IF EXISTS keyv_delete_expired_keys;');
+				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
+					DO DELETE FROM ${this.opts.table!}
+					WHERE CAST(value->'$.expires' AS UNSIGNED) BETWEEN 1 AND UNIX_TIMESTAMP(NOW(3)) * 1000;`);
+			}
+
 			return query;
 		}).catch(error => this.emit('error', error));
 
