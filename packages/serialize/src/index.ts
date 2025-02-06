@@ -28,10 +28,9 @@ export const defaultSerialize = (data: any): string => {
 		// eslint-disable-next-line guard-for-in
 		for (const k in data) {
 			const ignore = typeof data[k] === 'function' || (!array && data[k] === undefined);
-			// eslint-disable-next-line no-prototype-builtins
-			if (!data.hasOwnProperty(k) || ignore) {
-				continue;
-			}
+			if (!Object.prototype.hasOwnProperty.call(data, k) || ignore) {
+        continue;
+      }
 
 			if (!first) {
 				s += ',';
