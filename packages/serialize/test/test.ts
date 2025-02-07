@@ -71,6 +71,14 @@ test.it('defaultSerialize detects base64 on string', t => {
 	t.expect(result.encoded.toString()).toBe('hello world');
 });
 
+test.it('defaultSerialize accepts objects created with null', t => {
+	const json = Object.create(null);
+	json.someKey = 'value';
+
+	const result = defaultSerialize<{someKey: string}>(json);
+	t.expect(result).toStrictEqual('{"someKey":"value"}');
+});
+
 test.it('removes the first colon from strings not prefixed by base64', t => {
 	const json = JSON.stringify({
 		simple: ':hello',
