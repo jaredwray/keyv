@@ -29,5 +29,8 @@
     "vitest": "^2.1.5",
     "webpack": "^5.97.1",
     "xo": "^0.60.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "protobufjs", "sqlite325h", "sqlite3"]
   }
 }

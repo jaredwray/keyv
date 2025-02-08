@@ -34,7 +34,7 @@ Then, update the cache.module.ts file to import and configure Keyv:
 ```javascript
 import { Module } from '@nestjs/common';
 import { Cacheable } from 'cacheable';
-import {createKeyv} from '@keyv/redis';
+import { createKeyv } from '@keyv/redis';
 
 @Module({
   providers: [
