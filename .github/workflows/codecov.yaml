@@ -26,6 +26,9 @@ jobs:
       - name: Start Services
         run: pnpm test:services:start
 
+      - name: Approve Builds
+        run: pnpm approve-builds
+
       - name: Install Dependencies  
         run: pnpm install
 

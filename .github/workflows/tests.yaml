@@ -26,11 +26,11 @@ jobs:
       - name: Start Services
         run: pnpm test:services:start
 
-      - name: Install Dependencies  
-        run: pnpm install
-
       - name: Approve Builds
         run: pnpm approve-builds
+
+      - name: Install Dependencies  
+        run: pnpm install
 
       - name: Build
         run: pnpm build
