@@ -45,11 +45,11 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^3.0.2",
+		"@vitest/coverage-v8": "^3.0.5",
 		"keyv": "workspace:^",
 		"rimraf": "^6.0.1",
 		"typescript": "^5.7.3",
-		"vitest": "^3.0.2",
+		"vitest": "^3.0.5",
 		"xo": "^0.60.0"
 	},
 	"tsd": {
