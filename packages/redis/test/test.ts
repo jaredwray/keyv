@@ -475,4 +475,10 @@ describe('KeyvRedis Iterators', () => {
 		expect(values).not.toContain('bar1');
 		expect(values).not.toContain('bar2');
 	});
+
+	test('should be able to pass undefined on connect to get localhost', async () => {
+		const keyv = createKeyv();
+		const keyvRedis = keyv.store as KeyvRedis<string>;
+		expect((keyvRedis.client as RedisClientType).options?.url).toBe('redis://localhost:6379');
+	});
 });
