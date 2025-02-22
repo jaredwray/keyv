@@ -31,6 +31,12 @@ export enum KeyvHooks {
 	POST_DELETE = 'postDelete',
 }
 
+export type KeyvItem = {
+	key: string;
+	value: any;
+	expires?: number;
+};
+
 export type StoredDataNoRaw<Value> = Value | undefined;
 
 export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
@@ -55,6 +61,7 @@ export type KeyvStoreAdapter = {
 	): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
+	setMany?(data: KeyvItem[]): Promise<boolean[]>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
@@ -567,6 +574,15 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this.stats.set();
 
 		return result;
+	}
+
+	async setMany<Value = GenericValue>(data: Record<string, Value>, ttl?: number): Promise<boolean[]> {
+		let results: boolean[] = [];
+
+		
+
+
+		return results;
 	}
 
 	/**

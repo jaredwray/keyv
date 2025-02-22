@@ -64,9 +64,10 @@
 		"@keyv/serialize": "workspace:^"
 	},
 	"devDependencies": {
+		"@faker-js/faker": "^9.5.0",
 		"@keyv/compress-brotli": "workspace:^",
-		"@keyv/compress-lz4": "workspace:^",
 		"@keyv/compress-gzip": "workspace:^",
+		"@keyv/compress-lz4": "workspace:^",
 		"@keyv/memcache": "workspace:^",
 		"@keyv/mongo": "workspace:^",
 		"@keyv/sqlite": "workspace:^",
