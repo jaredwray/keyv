@@ -3,6 +3,7 @@ import {
 } from 'vitest';
 import {faker} from '@faker-js/faker';
 import {Keyv} from '../src/index.js';
+import {createKeyv} from '../src/generic-store.js';
 
 describe('Keyv', async () => {
 	type TestData = {
@@ -10,10 +11,11 @@ describe('Keyv', async () => {
 		value: string;
 	};
 
-	const testData: TestData[] = [];
+	let testData: TestData[] = [];
 
 	beforeEach(() => {
-		for (let i = 0; i < 10; i++) {
+		testData = [];
+		for (let i = 0; i < 5; i++) {
 			testData.push({
 				key: faker.string.alphanumeric(10),
 				value: faker.string.alphanumeric(10),
@@ -35,6 +37,15 @@ describe('Keyv', async () => {
 
 		test('returns multiple responses on in memory storage', async () => {
 			const keyv = new Keyv();
+			const result = await keyv.setMany(testData);
+			expect(result.length).toEqual(testData.length);
+			const resultValue = await keyv.get(testData[0].key);
+			expect(resultValue).toEqual(testData[0].value);
+		});
+
+		test('should use the store to set multiple keys', async () => {
+			const map = new Map();
+			const keyv = createKeyv(map);
 			const result = await keyv.setMany(testData);
 			expect(result.length).toEqual(testData.length);
 			const resultValue = await keyv.get(testData[0].key);

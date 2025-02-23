@@ -590,8 +590,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		try {
 			// If the store has a setMany method then use it
-			if (this.opts.store.setMany) {
-				results = await this.opts.store.setMany(entries);
+			if (this._store.setMany !== undefined) {
+				results = await this._store.setMany(entries);
 				return results;
 			}
 
