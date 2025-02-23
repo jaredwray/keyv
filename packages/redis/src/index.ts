@@ -253,9 +253,10 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 		for (const {key, value, ttl} of entries) {
 			const prefixedKey = this.createKeyPrefix(key, this._namespace);
 			if (ttl) {
-				// eslint-disable-next-line @typescript-eslint/naming-convention
+				// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unsafe-argument
 				multi.set(prefixedKey, value, {PX: ttl});
 			} else {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				multi.set(prefixedKey, value);
 			}
 		}
