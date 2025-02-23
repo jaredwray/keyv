@@ -585,9 +585,26 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return result;
 	}
 
-	async setMany<Value = GenericValue>(data: KeyvEntry[]): Promise<boolean[]> {
+	async setMany<Value = GenericValue>(entries: KeyvEntry[]): Promise<boolean[]> {
 		let results: boolean[] = [];
 
+		try {
+			// If the store has a setMany method then use it
+			if (this.opts.store.setMany) {
+				results = await this.opts.store.setMany(entries);
+				return results;
+			}
+
+			const promises: Promise[] = [];
+			for (const entry of entries) {
+				promises.push(this.set(entry.key, entry.value, entry.ttl));
+			}
+
+			results = await Promise.allSettled(promises);
+		} catch (error) {
+			this.emit('error', error);
+			results = entries.map(() => false);
+		}
 
 		return results;
 	}
