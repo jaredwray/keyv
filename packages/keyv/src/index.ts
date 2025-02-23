@@ -595,12 +595,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 				return results;
 			}
 
-			const promises: Promise[] = [];
+			const promises: Promise<boolean>[] = [];
 			for (const entry of entries) {
 				promises.push(this.set(entry.key, entry.value, entry.ttl));
 			}
 
-			results = await Promise.allSettled(promises);
+			const promiseResults = await Promise.allSettled(promises);
+			results = promiseResults.map(result => (result as PromiseFulfilledResult<any>).value);
 		} catch (error) {
 			this.emit('error', error);
 			results = entries.map(() => false);
