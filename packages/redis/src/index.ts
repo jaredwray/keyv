@@ -6,7 +6,7 @@ import {
 	type RedisFunctions,
 	type RedisScripts,
 } from 'redis';
-import {Keyv, type KeyvStoreAdapter} from 'keyv';
+import {Keyv, type KeyvStoreAdapter, type KeyvEntry} from 'keyv';
 import calculateSlot from 'cluster-key-slot';
 
 export type KeyvRedisOptions = {
@@ -245,9 +245,9 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 
 	/**
 	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
-	 * @param {Array<KeyvRedisEntry<string>>} entries - the key value pairs to set with optional ttl
+	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
-	public async setMany(entries: Array<KeyvRedisEntry<string>>): Promise<void> {
+	public async setMany(entries: KeyvEntry[]): Promise<boolean[]> {
 		const client = await this.getClient();
 		const multi = client.multi();
 		for (const {key, value, ttl} of entries) {
@@ -261,6 +261,8 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 		}
 
 		await multi.exec();
+
+		return entries.map(() => true);
 	}
 
 	/**
