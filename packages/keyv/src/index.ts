@@ -31,6 +31,21 @@ export enum KeyvHooks {
 	POST_DELETE = 'postDelete',
 }
 
+export type KeyvEntry = {
+	/**
+	 * Key to set.
+	 */
+	key: string;
+	/**
+	 * Value to set.
+	 */
+	value: any;
+	/**
+	 * Time to live in milliseconds.
+	 */
+	ttl?: number;
+};
+
 export type StoredDataNoRaw<Value> = Value | undefined;
 
 export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
@@ -55,6 +70,7 @@ export type KeyvStoreAdapter = {
 	): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
+	setMany?(data: KeyvEntry[]): Promise<boolean[]>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
@@ -523,12 +539,18 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Set an item to the store
-	 * @param {string} key the key to use
+	 * @param {string | Array<KeyvEntry>} key the key to use. If you pass in an array of KeyvEntry it will set many items
 	 * @param {Value} value the value of the key
 	 * @param {number} [ttl] time to live in milliseconds
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
-	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
+	async set<Value = GenericValue>(key: KeyvEntry[]): Promise<boolean[]>;
+	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean>;
+	async set<Value = GenericValue>(key: string | KeyvEntry[], value?: Value, ttl?: number): Promise<boolean | boolean[]> {
+		if (Array.isArray(key)) {
+			return this.setMany(key);
+		}
+
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (ttl === undefined) {
@@ -567,6 +589,31 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this.stats.set();
 
 		return result;
+	}
+
+	async setMany<Value = GenericValue>(entries: KeyvEntry[]): Promise<boolean[]> {
+		let results: boolean[] = [];
+
+		try {
+			// If the store has a setMany method then use it
+			if (this._store.setMany !== undefined) {
+				results = await this._store.setMany(entries);
+				return results;
+			}
+
+			const promises: Array<Promise<boolean>> = [];
+			for (const entry of entries) {
+				promises.push(this.set(entry.key, entry.value, entry.ttl));
+			}
+
+			const promiseResults = await Promise.allSettled(promises);
+			results = promiseResults.map(result => (result as PromiseFulfilledResult<any>).value);
+		} catch (error) {
+			this.emit('error', error);
+			results = entries.map(() => false);
+		}
+
+		return results;
 	}
 
 	/**

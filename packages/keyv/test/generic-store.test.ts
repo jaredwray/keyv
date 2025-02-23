@@ -84,7 +84,16 @@ describe('Keyv Generic set / get / has Operations', () => {
 		const store = new Map();
 		const keyv = new KeyvGenericStore(store);
 		await keyv.set('key1', 'value1');
-		expect(await keyv.get('key1')).toBe('value1');
+		expect(await keyv.get('key1')).toStrictEqual({value: 'value1', expires: undefined});
+	});
+
+	test('should set many keys', async () => {
+		const store = new Map();
+		const keyv = new KeyvGenericStore(store);
+		const result = await keyv.setMany([{key: 'key1', value: 'value1'}, {key: 'key2', value: 'value2'}]);
+		expect(await keyv.get('key1')).toStrictEqual({expires: undefined, value: 'value1'});
+		expect(await keyv.get('key2')).toStrictEqual({expires: undefined, value: 'value2'});
+		expect(result.length).toBe(2);
 	});
 
 	test('should get undefined for a non-existent key', async () => {
@@ -116,9 +125,9 @@ describe('Keyv Generic set / get / has Operations', () => {
 		await keyv.set('key2', 'value2');
 		await keyv.set('key3', 'value3');
 		const values = await keyv.getMany(['key1', 'key2', 'key3', 'key4']);
-		expect(values[0] as string).toBe('value1');
-		expect(values[1] as string).toBe('value2');
-		expect(values[2] as string).toBe('value3');
+		expect(values[0]).toStrictEqual({value: 'value1', expires: undefined});
+		expect(values[1]).toStrictEqual({value: 'value2', expires: undefined});
+		expect(values[2]).toStrictEqual({value: 'value3', expires: undefined});
 		expect(values[3]).toBe(undefined);
 	});
 });
@@ -149,7 +158,7 @@ describe('Keyv Generic Delete / Clear Operations', () => {
 		await keyv.deleteMany(['key1', 'key2']);
 		expect(await keyv.get('key1')).toBe(undefined);
 		expect(await keyv.get('key2')).toBe(undefined);
-		expect(await keyv.get('key3')).toBe('value3');
+		expect(await keyv.get('key3')).toStrictEqual({value: 'value3', expires: undefined});
 	});
 
 	test('should emit error on delete many keys', async () => {
