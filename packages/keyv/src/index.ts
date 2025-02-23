@@ -585,10 +585,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return result;
 	}
 
-	async setMany<Value = GenericValue>(data: Record<string, Value>, ttl?: number): Promise<boolean[]> {
+	async setMany<Value = GenericValue>(data: KeyvEntry[]): Promise<boolean[]> {
 		let results: boolean[] = [];
-
-
 
 
 		return results;
