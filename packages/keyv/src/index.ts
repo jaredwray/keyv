@@ -595,7 +595,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				return results;
 			}
 
-			const promises: Promise<boolean>[] = [];
+			const promises: Array<Promise<boolean>> = [];
 			for (const entry of entries) {
 				promises.push(this.set(entry.key, entry.value, entry.ttl));
 			}
