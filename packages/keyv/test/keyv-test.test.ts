@@ -51,5 +51,22 @@ describe('Keyv', async () => {
 			const resultValue = await keyv.get(testData[0].key);
 			expect(resultValue).toEqual(testData[0].value);
 		});
+
+		test('should emit and return false on error', async () => {
+			const map = new Map();
+			map.set = () => {
+				throw new Error('Test Error');
+			};
+
+			const keyv = createKeyv(map);
+			let errorEmitted = false;
+			keyv.on('error', () => {
+				errorEmitted = true;
+			});
+
+			const result = await keyv.setMany(testData);
+			expect(result).toEqual([false, false, false, false, false]);
+			expect(errorEmitted).toBe(true);
+		});
 	});
 });
