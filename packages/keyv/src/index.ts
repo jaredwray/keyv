@@ -539,12 +539,18 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Set an item to the store
-	 * @param {string} key the key to use
+	 * @param {string | Array<KeyvEntry>} key the key to use. If you pass in an array of KeyvEntry it will set many items
 	 * @param {Value} value the value of the key
 	 * @param {number} [ttl] time to live in milliseconds
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
-	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
+	async set<Value = GenericValue>(key: KeyvEntry[]): Promise<boolean[]>;
+	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean>;
+	async set<Value = GenericValue>(key: string | KeyvEntry[], value?: Value, ttl?: number): Promise<boolean | boolean[]> {
+		if (Array.isArray(key)) {
+			return this.setMany(key);
+		}
+
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (ttl === undefined) {
