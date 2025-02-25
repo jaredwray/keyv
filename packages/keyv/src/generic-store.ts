@@ -1,5 +1,7 @@
 import EventManager from './event-manager.js';
-import {type KeyvStoreAdapter, type StoredData} from './index.js';
+import {
+	Keyv, type KeyvStoreAdapter, type KeyvEntry, type StoredData,
+} from './index.js';
 
 export type KeyvGenericStoreOptions = {
 	namespace?: string | (() => string);
@@ -121,13 +123,25 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 			return undefined;
 		}
 
-		return data.value as T;
+		return data as T;
 	}
 
-	async set(key: string, value: any, ttl?: number) {
+	async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
 		const data = {value, expires: ttl ? Date.now() + ttl : undefined};
 		this._store.set(keyPrefix, data, ttl);
+		return true;
+	}
+
+	async setMany(entries: KeyvEntry[]): Promise<boolean[]> {
+		const results: boolean[] = [];
+		for (const entry of entries) {
+			// eslint-disable-next-line no-await-in-loop
+			const result = await this.set(entry.key, entry.value, entry.ttl);
+			results.push(result);
+		}
+
+		return results;
 	}
 
 	async delete(key: string): Promise<boolean> {
@@ -149,10 +163,10 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 		for (const key of keys) {
 			// eslint-disable-next-line no-await-in-loop
 			const value = await this.get(key);
-			values.push(value as T);
+			values.push(value);
 		}
 
-		return values;
+		return values as Array<StoredData<T | undefined>>;
 	}
 
 	async deleteMany(keys: string[]): Promise<boolean> {
@@ -173,4 +187,16 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	iterator<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
 		throw new Error('Method not implemented.');
 	}
+}
+
+/**
+ * Create a Keyv instance with a generic store that is optimized for in-memory storage.
+ * This removes Keyv serialization and deserialization overhead, keyPrefix from Keyv.
+ */
+export function createKeyv(store: Map<any, any> | KeyvMapType, options?: KeyvGenericStoreOptions) {
+	const genericStore = new KeyvGenericStore(store, options);
+	const keyv = new Keyv({store: genericStore, useKeyPrefix: false});
+	keyv.serialize = undefined;
+	keyv.deserialize = undefined;
+	return keyv;
 }
