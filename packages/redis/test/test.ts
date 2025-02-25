@@ -481,4 +481,18 @@ describe('KeyvRedis Iterators', () => {
 		const keyvRedis = keyv.store as KeyvRedis<string>;
 		expect((keyvRedis.client as RedisClientType).options?.url).toBe('redis://localhost:6379');
 	});
+
+	test('should go to the RedisClientOptions if passed in', async () => {
+		const keyvRedis = new KeyvRedis({
+			socket: {
+				host: 'localhost',
+				port: 6379,
+				reconnectStrategy(times: number) {
+					return Math.min(times * 50, 2000);
+				},
+			},
+		});
+
+		expect((keyvRedis.client as RedisClientType).options?.socket?.reconnectStrategy).toBeDefined();
+	});
 });
