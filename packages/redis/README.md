@@ -255,7 +255,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **delete** - Delete a key.
 * **deleteMany** - Delete multiple keys.
 * **clear** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
-* **disconnect** - Disconnect from the Redis server.
+* **disconnect** - Disconnect from the Redis server using `Quit` command. If you set `force` to `true` it will force the disconnect.
 * **iterator** - Create a new iterator for the keys. If the namespace is not set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
 
 # Using Custom Redis Client Events
