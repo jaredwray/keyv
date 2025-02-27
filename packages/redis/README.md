@@ -257,6 +257,31 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **disconnect** - Disconnect from the Redis server.
 * **iterator** - Create a new iterator for the keys. If the namespace is not set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
 
+# Using Custom Redis Client Events
+
+Keyv by default supports the `error` event across all storage adapters. If you want to listen to other events you can do so by accessing the `client` property of the `KeyvRedis` instance. Here is an example of how to do that:
+
+```js
+import {createKeyv} from '@keyv/redis';
+
+const keyv = createKeyv('redis://user:pass@localhost:6379');
+const redisClient = keyv.store.client;
+
+redisClient.on('connect', () => {
+  console.log('Redis client connected');
+});
+
+redisClient.on('reconnecting', () => {
+  console.log('Redis client reconnecting');
+});
+
+redisClient.on('end', () => {
+  console.log('Redis client disconnected');
+});
+```
+
+Here are some of the events you can listen to: https://www.npmjs.com/package/redis#events
+
 # Migrating from v3 to v4
 
 Overall the API is the same as v3 with additional options and performance improvements. Here are the main changes:
