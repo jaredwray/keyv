@@ -32,6 +32,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
 * [Clustering and TLS Support](#clustering-and-tls-support)
 * [API](#api)
+* [Using Custom Redis Client Events](#using-custom-redis-client-events)
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
 * [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
 * [License](#license)
