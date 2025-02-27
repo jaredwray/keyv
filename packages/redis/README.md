@@ -32,6 +32,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
 * [Clustering and TLS Support](#clustering-and-tls-support)
 * [API](#api)
+* [Using Custom Redis Client Events](#using-custom-redis-client-events)
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
 * [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
 * [License](#license)
@@ -256,6 +257,31 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **clear** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
 * **disconnect** - Disconnect from the Redis server.
 * **iterator** - Create a new iterator for the keys. If the namespace is not set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
+
+# Using Custom Redis Client Events
+
+Keyv by default supports the `error` event across all storage adapters. If you want to listen to other events you can do so by accessing the `client` property of the `KeyvRedis` instance. Here is an example of how to do that:
+
+```js
+import {createKeyv} from '@keyv/redis';
+
+const keyv = createKeyv('redis://user:pass@localhost:6379');
+const redisClient = keyv.store.client;
+
+redisClient.on('connect', () => {
+  console.log('Redis client connected');
+});
+
+redisClient.on('reconnecting', () => {
+  console.log('Redis client reconnecting');
+});
+
+redisClient.on('end', () => {
+  console.log('Redis client disconnected');
+});
+```
+
+Here are some of the events you can listen to: https://www.npmjs.com/package/redis#events
 
 # Migrating from v3 to v4
 
