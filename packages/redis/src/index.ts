@@ -376,7 +376,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 * Disconnect from the Redis server.
 	 * @returns {Promise<void>}
 	 * @param {boolean} [force] - it will send a quit command if false, otherwise it will send a disconnect command to forcefully disconnect.
-	 * @see {@link https://redis.io/docs/manual/commands/quit/}
+	 * @see {@link https://github.com/redis/node-redis/tree/master/packages/redis#disconnecting}
 	 */
 	public async disconnect(force?: boolean): Promise<void> {
 		if (this._client.isOpen) {
