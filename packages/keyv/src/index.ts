@@ -453,68 +453,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
 
 		if (isArray) {
-			this.hooks.trigger(KeyvHooks.PRE_GET_MANY, {keys: keyPrefixed});
-			if (store.getMany === undefined) {
-				const promises = (keyPrefixed as string[]).map(async key => {
-					const rawData = await store.get<Value>(key);
-					const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
-
-					if (deserializedRow === undefined || deserializedRow === null) {
-						return undefined;
-					}
-
-					if (isDataExpired(deserializedRow as DeserializedData<Value>)) {
-						await this.delete(key);
-						return undefined;
-					}
-
-					return (options?.raw) ? deserializedRow as StoredDataRaw<Value> : (deserializedRow as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
-				});
-
-				const deserializedRows = await Promise.allSettled(promises);
-				const result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
-				this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
-				if (result.length > 0) {
-					this.stats.hit();
-				}
-
-				return result;
+			if (options?.raw === true) {
+				return this.getMany<Value>(key, {raw: true});
 			}
 
-			const rawData = await store.getMany<Value>(keyPrefixed as string[]);
-
-			const result = [];
-			// eslint-disable-next-line guard-for-in, @typescript-eslint/no-for-in-array
-			for (const index in rawData) {
-				let row = rawData[index];
-
-				if ((typeof row === 'string')) {
-					// eslint-disable-next-line no-await-in-loop
-					row = await this.deserializeData<Value>(row);
-				}
-
-				if (row === undefined || row === null) {
-					result.push(undefined);
-					continue;
-				}
-
-				if (isDataExpired(row as DeserializedData<Value>)) {
-					// eslint-disable-next-line no-await-in-loop
-					await this.delete(key[index]);
-					result.push(undefined);
-					continue;
-				}
-
-				const value = (options?.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
-				result.push(value);
-			}
-
-			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
-			if (result.length > 0) {
-				this.stats.hit();
-			}
-
-			return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
+			return this.getMany<Value>(key, {raw: false});
 		}
 
 		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
@@ -535,6 +478,78 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this.hooks.trigger(KeyvHooks.POST_GET, {key: keyPrefixed, value: deserializedData});
 		this.stats.hit();
 		return (options?.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
+	}
+
+	public async getMany<Value = GenericValue>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
+	public async getMany<Value = GenericValue>(key: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
+	public async getMany<Value = GenericValue>(key: string[], options?: {raw: boolean}): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
+		const {store} = this.opts;
+		const keyPrefixed = this._getKeyPrefixArray(key);
+
+		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
+
+		this.hooks.trigger(KeyvHooks.PRE_GET_MANY, {keys: keyPrefixed});
+		if (store.getMany === undefined) {
+			const promises = (keyPrefixed).map(async key => {
+				const rawData = await store.get<Value>(key);
+				const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
+
+				if (deserializedRow === undefined || deserializedRow === null) {
+					return undefined;
+				}
+
+				if (isDataExpired(deserializedRow as DeserializedData<Value>)) {
+					await this.delete(key);
+					return undefined;
+				}
+
+				return (options?.raw) ? deserializedRow as StoredDataRaw<Value> : (deserializedRow as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+			});
+
+			const deserializedRows = await Promise.allSettled(promises);
+			const result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+			if (result.length > 0) {
+				this.stats.hit();
+			}
+
+			return result;
+		}
+
+		const rawData = await store.getMany<Value>(keyPrefixed);
+
+		const result = [];
+		// eslint-disable-next-line guard-for-in, @typescript-eslint/no-for-in-array
+		for (const index in rawData) {
+			let row = rawData[index];
+
+			if ((typeof row === 'string')) {
+				// eslint-disable-next-line no-await-in-loop
+				row = await this.deserializeData<Value>(row);
+			}
+
+			if (row === undefined || row === null) {
+				result.push(undefined);
+				continue;
+			}
+
+			if (isDataExpired(row as DeserializedData<Value>)) {
+				// eslint-disable-next-line no-await-in-loop
+				await this.delete(key[index]);
+				result.push(undefined);
+				continue;
+			}
+
+			const value = (options?.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+			result.push(value);
+		}
+
+		this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+		if (result.length > 0) {
+			this.stats.hit();
+		}
+
+		return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 	}
 
 	/**
@@ -621,21 +636,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {string | string[]} key the key to be deleted. if an array it will delete many items
 	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
 	 */
-	async delete(key: string | string[]): Promise<boolean> {
+	public async delete(key: string | string[]): Promise<boolean> {
 		const {store} = this.opts;
 		if (Array.isArray(key)) {
-			const keyPrefixed = this._getKeyPrefixArray(key);
-			this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
-			if (store.deleteMany !== undefined) {
-				return store.deleteMany(keyPrefixed);
-			}
-
-			const promises = keyPrefixed.map(async key => store.delete(key));
-
-			const results = await Promise.allSettled(promises);
-			const returnResult = results.every(x => (x as PromiseFulfilledResult<any>).value === true);
-			this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: returnResult});
-			return returnResult;
+			return this.deleteMany(key);
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
@@ -658,6 +662,27 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this.stats.delete();
 
 		return result;
+	}
+
+	public async deleteMany(key: string[]): Promise<boolean> {
+		try {
+			const {store} = this.opts;
+			const keyPrefixed = this._getKeyPrefixArray(key);
+			this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
+			if (store.deleteMany !== undefined) {
+				return await store.deleteMany(keyPrefixed);
+			}
+
+			const promises = keyPrefixed.map(async key => store.delete(key));
+
+			const results = await Promise.allSettled(promises);
+			const returnResult = results.every(x => (x as PromiseFulfilledResult<any>).value === true);
+			this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: returnResult});
+			return returnResult;
+		} catch (error) {
+			this.emit('error', error);
+			return false;
+		}
 	}
 
 	/**
