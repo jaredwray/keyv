@@ -65,6 +65,7 @@ export type KeyvStoreAdapter = {
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
+	hasMany?(keys: string[]): Promise<boolean[]>;
 	getMany?<Value>(
 		keys: string[]
 	): Promise<Array<StoredData<Value | undefined>>>;
@@ -720,7 +721,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {string} key the key to check
 	 * @returns {boolean} will return true if the key exists
 	 */
-	async has(key: string): Promise<boolean> {
+	public async has(key: string[]): Promise<boolean[]>;
+	public async has(key: string): Promise<boolean>;
+	public async has(key: string | string[]): Promise<boolean | boolean[]> {
+		if (Array.isArray(key)) {
+			return this.hasMany(key);
+		}
+
 		const keyPrefixed = this._getKeyPrefix(key);
 		const {store} = this.opts;
 		if (store.has !== undefined && !(store instanceof Map)) {
@@ -747,6 +754,27 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Check if many keys exist
+	 * @param {string[]} keys the keys to check
+	 * @returns {boolean[]} will return an array of booleans if the keys exist
+	 */
+	public async hasMany(keys: string[]): Promise<boolean[]> {
+		const keyPrefixed = this._getKeyPrefixArray(keys);
+		const {store} = this.opts;
+		if (store.hasMany !== undefined) {
+			return store.hasMany(keyPrefixed);
+		}
+
+		const results: boolean[] = [];
+		for (const key of keyPrefixed) {
+			// eslint-disable-next-line no-await-in-loop
+			results.push(await this.has(key));
+		}
+
+		return results;
 	}
 
 	/**
