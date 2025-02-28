@@ -107,11 +107,19 @@ describe('Keyv', async () => {
 			expect(result.length).toBe(5);
 		});
 
-		test('should set many items and then get them', async () => {
+		test('should set many items and then get them with get', async () => {
 			const keyv = createKeyv(new Map());
 			await keyv.setMany(testData);
 			const result = await keyv.get(testKeys);
 			expect(result.length).toBe(5);
+		});
+
+		test('should set many items and then get them raw', async () => {
+			const keyv = createKeyv(new Map());
+			await keyv.setMany(testData);
+			const result = await keyv.getMany(testKeys, {raw: true});
+			expect(result.length).toBe(5);
+			expect(result[0]?.value).toBe(testData[0].value);
 		});
 	});
 });
