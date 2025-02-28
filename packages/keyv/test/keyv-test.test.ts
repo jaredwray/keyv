@@ -13,6 +13,8 @@ describe('Keyv', async () => {
 
 	let testData: TestData[] = [];
 
+	let testKeys: string[] = [];
+
 	beforeEach(() => {
 		testData = [];
 		for (let i = 0; i < 5; i++) {
@@ -21,6 +23,8 @@ describe('Keyv', async () => {
 				value: faker.string.alphanumeric(10),
 			});
 		}
+
+		testKeys = testData.map(data => data.key);
 	});
 
 	describe('setMany', async () => {
@@ -73,6 +77,49 @@ describe('Keyv', async () => {
 			const keyv = createKeyv(new Map());
 			const result = await keyv.set(testData);
 			expect(result.length).toBe(5);
+		});
+	});
+
+	describe('deleteMany', async () => {
+		test('should emit and return false on error', async () => {
+			const map = new Map();
+			const keyv = createKeyv(map);
+			keyv.store.deleteMany = () => {
+				throw new Error('Test Error');
+			};
+
+			let errorEmitted = false;
+			keyv.on('error', () => {
+				errorEmitted = true;
+			});
+
+			const result = await keyv.deleteMany(testKeys);
+			expect(result).toEqual(false);
+			expect(errorEmitted).toBe(true);
+		});
+	});
+
+	describe('getMany', async () => {
+		test('should set many items and then get them', async () => {
+			const keyv = createKeyv(new Map());
+			await keyv.setMany(testData);
+			const result = await keyv.getMany(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should set many items and then get them with get', async () => {
+			const keyv = createKeyv(new Map());
+			await keyv.setMany(testData);
+			const result = await keyv.get(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should set many items and then get them raw', async () => {
+			const keyv = createKeyv(new Map());
+			await keyv.setMany(testData);
+			const result = await keyv.getMany(testKeys, {raw: true});
+			expect(result.length).toBe(5);
+			expect(result[0]?.value).toBe(testData[0].value);
 		});
 	});
 });
