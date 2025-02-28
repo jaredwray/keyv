@@ -423,9 +423,17 @@ By default keys are persistent. You can set an expiry TTL in milliseconds.
 
 Returns a promise which resolves to `true`.
 
+## .setMany(entries)
+
+Set multiple values using KeyvEntrys `{ key: string, value: any, ttl?: number }`.
+
 ## .get(key, [options])
 
 Returns a promise which resolves to the retrieved value.
+
+## .getMany(keys, [options])
+
+Returns a promise which resolves to an array of retrieved values.
 
 ### options.raw
 
@@ -441,6 +449,10 @@ This contains the TTL timestamp.
 Deletes an entry.
 
 Returns a promise which resolves to `true` if the key existed, `false` if not.
+
+## .deleteMany(keys)
+Deletes multiple entries.
+Returns a promise which resolves to an array of booleans indicating if the key existed or not.
 
 ## .clear()
 

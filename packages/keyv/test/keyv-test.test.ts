@@ -122,4 +122,35 @@ describe('Keyv', async () => {
 			expect(result[0]?.value).toBe(testData[0].value);
 		});
 	});
+
+	describe('hasMany', async () => {
+		test('should set many items and then check if they exist', async () => {
+			const keyv = createKeyv(new Map());
+			await keyv.setMany(testData);
+			const result = await keyv.hasMany(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should use the store hasMany function', async () => {
+			const map = new Map();
+			const keyv = createKeyv(map);
+			keyv.store.hasMany = async () => [true, true, true, true, true];
+
+			await keyv.setMany(testData);
+			const result = await keyv.has(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should be able to get less on hasMany', async () => {
+			const keyv = createKeyv(new Map());
+			await keyv.setMany(testData);
+			const resultList = await keyv.hasMany(testKeys);
+			expect(resultList.length).toBe(5);
+			const deleteResult = await keyv.delete(testData[0].key);
+			expect(deleteResult).toBe(true);
+			const result = await keyv.hasMany(testKeys);
+			expect(result.length).toBe(5);
+			expect(result[0]).toBe(false);
+		});
+	});
 });
