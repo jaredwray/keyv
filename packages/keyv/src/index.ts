@@ -439,7 +439,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	/**
 	 * Get the Value of a Key
 	 * @param {string | string[]} key passing in a single key or multiple as an array
-	 * @param [options] can pass in to return the raw value by setting { raw: true }
+	 * @param {{raw: boolean} | undefined} options can pass in to return the raw value by setting { raw: true }
 	 */
 	async get<Value = GenericValue>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;
 	async get<Value = GenericValue>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
@@ -480,11 +480,16 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return (options?.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
 	}
 
-	public async getMany<Value = GenericValue>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
-	public async getMany<Value = GenericValue>(key: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
-	public async getMany<Value = GenericValue>(key: string[], options?: {raw: boolean}): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
+	/**
+	 * Get many values of keys
+	 * @param {string[]} keys passing in a single key or multiple as an array
+	 * @param {{raw: boolean} | undefined} options can pass in to return the raw value by setting { raw: true }
+	 */
+	public async getMany<Value = GenericValue>(keys: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
+	public async getMany<Value = GenericValue>(keys: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
+	public async getMany<Value = GenericValue>(keys: string[], options?: {raw: boolean}): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
 		const {store} = this.opts;
-		const keyPrefixed = this._getKeyPrefixArray(key);
+		const keyPrefixed = this._getKeyPrefixArray(keys);
 
 		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
 
@@ -535,7 +540,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 			if (isDataExpired(row as DeserializedData<Value>)) {
 				// eslint-disable-next-line no-await-in-loop
-				await this.delete(key[index]);
+				await this.delete(keys[index]);
 				result.push(undefined);
 				continue;
 			}
@@ -606,6 +611,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return result;
 	}
 
+	/**
+	 * Set many items to the store
+	 * @param {Array<KeyvEntry>} entries the entries to set
+	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
+	 */
 	async setMany<Value = GenericValue>(entries: KeyvEntry[]): Promise<boolean[]> {
 		let results: boolean[] = [];
 
@@ -664,10 +674,15 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return result;
 	}
 
-	public async deleteMany(key: string[]): Promise<boolean> {
+	/**
+	 * Delete many items from the store
+	 * @param {string[]} keys the keys to be deleted
+	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
+	 */
+	public async deleteMany(keys: string[]): Promise<boolean> {
 		try {
 			const {store} = this.opts;
-			const keyPrefixed = this._getKeyPrefixArray(key);
+			const keyPrefixed = this._getKeyPrefixArray(keys);
 			this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
 			if (store.deleteMany !== undefined) {
 				return await store.deleteMany(keyPrefixed);
