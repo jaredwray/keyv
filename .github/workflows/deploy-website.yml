@@ -38,12 +38,7 @@ jobs:
       run: pnpm website:build
 
     - name: Publish to Cloudflare Pages
-      uses: cloudflare/pages-action@1
+      uses: cloudflare/wrangler-action@v3
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: b09b24c345713c704e71dea8bd81f713
-        projectName: keyv
-        branch: main
-        directory: packages/website/dist
-        gitHubToken: ${{ secrets.GH_TOKEN }}
-        wranglerVersion: '3'
+        command: pages deploy packages/website/dist --project-name=keyv --branch=main
