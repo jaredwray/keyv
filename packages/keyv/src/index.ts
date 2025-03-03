@@ -62,7 +62,7 @@ export type KeyvStoreAdapter = {
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	set(key: string, value: any, ttl?: number): any;
-	setMany?(values: { key: string; value: any; ttl?: number; }[]): Promise<void>;
+	setMany?(values: Array<{key: string; value: any; ttl?: number}>): Promise<void>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;

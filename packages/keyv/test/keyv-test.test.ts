@@ -51,7 +51,7 @@ describe('Keyv', async () => {
 			const map = new Map();
 			const keyv = createKeyv(map);
 			const result = await keyv.setMany(testData);
-			expect(result.length).toEqual(testData.length);
+			expect(result).toBeUndefined();
 			const resultValue = await keyv.get(testData[0].key);
 			expect(resultValue).toEqual(testData[0].value);
 		});

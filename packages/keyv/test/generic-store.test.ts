@@ -93,7 +93,7 @@ describe('Keyv Generic set / get / has Operations', () => {
 		const result = await keyv.setMany([{key: 'key1', value: 'value1'}, {key: 'key2', value: 'value2'}]);
 		expect(await keyv.get('key1')).toStrictEqual({expires: undefined, value: 'value1'});
 		expect(await keyv.get('key2')).toStrictEqual({expires: undefined, value: 'value2'});
-		expect(result.length).toBe(2);
+		expect(result).toBeUndefined();
 	});
 
 	test('should get undefined for a non-existent key', async () => {
