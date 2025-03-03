@@ -62,6 +62,7 @@ export type KeyvStoreAdapter = {
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	set(key: string, value: any, ttl?: number): any;
+	setMany(values: Array<{key: string; value: any; ttl?: number}>): Promise<void>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
@@ -71,7 +72,6 @@ export type KeyvStoreAdapter = {
 	): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
-	setMany?(data: KeyvEntry[]): Promise<boolean[]>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
@@ -565,9 +565,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {number} [ttl] time to live in milliseconds
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
-	async set<Value = GenericValue>(key: KeyvEntry[]): Promise<boolean[]>;
+	async set<Value = GenericValue>(key: KeyvEntry[]): Promise<boolean>;
 	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean>;
-	async set<Value = GenericValue>(key: string | KeyvEntry[], value?: Value, ttl?: number): Promise<boolean | boolean[]> {
+	async set<Value = GenericValue>(key: string | KeyvEntry[], value?: Value, ttl?: number): Promise<boolean> {
 		if (Array.isArray(key)) {
 			return this.setMany(key);
 		}
@@ -615,16 +615,20 @@ export class Keyv<GenericValue = any> extends EventManager {
 	/**
 	 * Set many items to the store
 	 * @param {Array<KeyvEntry>} entries the entries to set
-	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
+	 * @returns {boolean} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
-	async setMany<Value = GenericValue>(entries: KeyvEntry[]): Promise<boolean[]> {
-		let results: boolean[] = [];
+	async setMany<Value = GenericValue>(entries: KeyvEntry[]): Promise<boolean> {
+		let results = false;
 
 		try {
+			if (entries.length === 0) {
+				return true;
+			}
+
 			// If the store has a setMany method then use it
 			if (this._store.setMany !== undefined) {
 				results = await this._store.setMany(entries);
-				return results;
+				return true;
 			}
 
 			const promises: Array<Promise<boolean>> = [];
@@ -633,10 +637,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 			}
 
 			const promiseResults = await Promise.allSettled(promises);
-			results = promiseResults.map(result => (result as PromiseFulfilledResult<any>).value);
+			results = true;
 		} catch (error) {
 			this.emit('error', error);
-			results = entries.map(() => false);
+			results = false;
 		}
 
 		return results;
