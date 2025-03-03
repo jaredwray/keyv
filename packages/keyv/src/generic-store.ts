@@ -133,15 +133,13 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 		return true;
 	}
 
-	async setMany(entries: KeyvEntry[]): Promise<boolean[]> {
+	async setMany(entries: KeyvEntry[]): Promise<void> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			// eslint-disable-next-line no-await-in-loop
 			const result = await this.set(entry.key, entry.value, entry.ttl);
 			results.push(result);
 		}
-
-		return results;
 	}
 
 	async delete(key: string): Promise<boolean> {

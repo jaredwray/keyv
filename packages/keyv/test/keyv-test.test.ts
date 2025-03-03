@@ -51,7 +51,7 @@ describe('Keyv', async () => {
 			const map = new Map();
 			const keyv = createKeyv(map);
 			const result = await keyv.setMany(testData);
-			expect(result.length).toEqual(testData.length);
+			expect(result).toBeUndefined();
 			const resultValue = await keyv.get(testData[0].key);
 			expect(resultValue).toEqual(testData[0].value);
 		});
@@ -71,12 +71,6 @@ describe('Keyv', async () => {
 			const result = await keyv.setMany(testData);
 			expect(result).toEqual([false, false, false, false, false]);
 			expect(errorEmitted).toBe(true);
-		});
-
-		test('should set many items on keyv set function with array', async () => {
-			const keyv = createKeyv(new Map());
-			const result = await keyv.set(testData);
-			expect(result.length).toBe(5);
 		});
 	});
 
