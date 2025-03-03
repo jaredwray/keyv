@@ -247,7 +247,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<boolean[]> {
+	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		const client = await this.getClient();
 		const multi = client.multi();
 		for (const {key, value, ttl} of entries) {
@@ -262,8 +262,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 		}
 
 		await multi.exec();
-
-		return entries.map(() => true);
 	}
 
 	/**

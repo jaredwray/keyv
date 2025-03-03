@@ -72,12 +72,6 @@ describe('Keyv', async () => {
 			expect(result).toEqual([false, false, false, false, false]);
 			expect(errorEmitted).toBe(true);
 		});
-
-		test('should set many items on keyv set function with array', async () => {
-			const keyv = createKeyv(new Map());
-			const result = await keyv.set(testData);
-			expect(result.length).toBe(5);
-		});
 	});
 
 	describe('deleteMany', async () => {

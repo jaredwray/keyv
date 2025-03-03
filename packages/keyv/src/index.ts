@@ -62,6 +62,7 @@ export type KeyvStoreAdapter = {
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	set(key: string, value: any, ttl?: number): any;
+	setMany?(values: { key: string; value: any; ttl?: number; }[]): Promise<void>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
@@ -71,7 +72,6 @@ export type KeyvStoreAdapter = {
 	): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
-	setMany?(data: KeyvEntry[]): Promise<boolean[]>;
 	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
@@ -565,13 +565,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {number} [ttl] time to live in milliseconds
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
-	async set<Value = GenericValue>(key: KeyvEntry[]): Promise<boolean[]>;
-	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean>;
-	async set<Value = GenericValue>(key: string | KeyvEntry[], value?: Value, ttl?: number): Promise<boolean | boolean[]> {
-		if (Array.isArray(key)) {
-			return this.setMany(key);
-		}
-
+	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
 		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
 		const keyPrefixed = this._getKeyPrefix(key);
 		if (ttl === undefined) {
