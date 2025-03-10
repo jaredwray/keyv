@@ -218,8 +218,12 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
-		if (!this._client.isOpen) {
-			await this._client.connect();
+		try {
+			if (!this._client.isOpen) {
+				await this._client.connect();
+			}
+		} catch (error) {
+			this.emit('error', error);
 		}
 
 		return this._client;
