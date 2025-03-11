@@ -27,6 +27,24 @@ describe('Keyv', async () => {
 		testKeys = testData.map(data => data.key);
 	});
 
+	describe('constructor', async () => {
+		test('should be able to create a new instance', async () => {
+			const keyv = new Keyv();
+			expect(keyv).toBeDefined();
+		});
+
+		test('should be able to create a new instance with a store', async () => {
+			const keyv = new Keyv(new Map());
+			expect(keyv).toBeDefined();
+		});
+
+		test('when setting store property with undefined it should default to Map', async () => {
+			const store = undefined;
+			const keyv = new Keyv({store});
+			expect(keyv.store).toBeInstanceOf(Map);
+		});
+	});
+
 	describe('setMany', async () => {
 		test('the function exists', async () => {
 			const keyv = new Keyv();
