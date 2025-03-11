@@ -180,7 +180,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			};
 		}
 
-		this._store = this.opts.store;
+		this._store = this.opts.store ?? new Map();
 
 		this._compression = this.opts.compression;
 
