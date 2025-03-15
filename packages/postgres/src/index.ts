@@ -22,7 +22,6 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 				dialect: 'postgres',
 				uri,
 			};
-			console.log('options', options);
 		} else {
 			options = {
 				dialect: 'postgres',
