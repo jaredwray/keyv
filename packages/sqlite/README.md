@@ -52,5 +52,5 @@ const keyv = createKeyv('sqlite://path/to/database.sqlite');
 
 ## License
 
-[MIT © Jared Wray](LISCENCE)
+[MIT © Jared Wray](LICENCE)
 
