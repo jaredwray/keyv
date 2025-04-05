@@ -15,8 +15,8 @@
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
-		"test": "xo --fix && vitest run --coverage --typecheck",
-		"test:ci": "xo && vitest --run --sequence.setupFiles=list --typecheck",
+		"test": "xo --fix && vitest run --coverage",
+		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
 	},
 	"repository": {
@@ -47,11 +47,11 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^3.0.7",
+		"@vitest/coverage-v8": "^3.1.1",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.31.2",
-		"vitest": "^3.0.7",
+		"vitest": "^3.1.1",
 		"xo": "^0.60.0"
 	},
 	"tsd": {

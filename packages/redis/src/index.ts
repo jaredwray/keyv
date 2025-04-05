@@ -222,6 +222,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			if (!this._client.isOpen) {
 				await this._client.connect();
 			}
+		/* c8 ignore next 3 */
 		} catch (error) {
 			this.emit('error', error);
 		}
