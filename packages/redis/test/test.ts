@@ -18,6 +18,8 @@ describe('KeyvRedis', () => {
 	test('should be able to create Keyv instance', async () => {
 		const keyv = createKeyv('redis://localhost:6379', {namespace: 'test'});
 		expect(keyv).toBeDefined();
+		expect(keyv.namespace).toBe('test');
+		expect(keyv.store.namespace).toBe('test');
 		await keyv.set('mykey', 'myvalue');
 		await keyv.set('mykey2', {foo: 'bar'});
 		const value = await keyv.get<string>('mykey');
