@@ -54,7 +54,7 @@ Here is the same example but with the `Keyv` instance created with the `createKe
 ```js
 import { createKeyv } from '@keyv/redis';
 
-const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
+const keyv = createKeyv('redis://user:pass@localhost:6379');
 ```
 
 You only have to import the `@keyv/redis` library if you are using the `createKeyv` function. 🎉 Otherwise, you can import `Keyv` and `@keyv/redis` independently.
@@ -82,26 +82,28 @@ const redisOptions = {
 const keyv = new Keyv(new KeyvRedis(redisOptions));
 ```
 
-Or you can create a new Redis instance and pass it in with `KeyvOptions`:
+Or you can create a new Redis instance and pass it in with `KeyvOptions` such as setting the `store`:
 
 ```js
 import Keyv from 'keyv';
 import KeyvRedis, { createClient } from '@keyv/redis';
 
-const redis = createClient('redis://user:pass@localhost:6379', { namespace: 'my-namespace'});
+const redis = createClient('redis://user:pass@localhost:6379');
 const keyvRedis = new KeyvRedis(redis);
-const keyv = new Keyv({ store: keyvRedis });
+const keyv = new Keyv({ store: keyvRedis});
 ```
 
 # Namespaces
 
-You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a namespace:
+You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a `namespace` with the `store` option:
 
 ```js
 import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
+import KeyvRedis, { createClient } from '@keyv/redis';
 
-const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { namespace: 'my-namespace' }));
+const redis = createClient('redis://user:pass@localhost:6379');
+const keyvRedis = new KeyvRedis(redis);
+const keyv = new Keyv({ store: keyvRedis, namespace: 'my-namespace' });
 ```
 
 This will prefix all keys with `my-namespace:`. You can also set the namespace after the fact:
