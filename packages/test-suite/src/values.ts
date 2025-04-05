@@ -2,7 +2,7 @@ import {Buffer} from 'buffer';
 import type * as Vitest from 'vitest';
 import type KeyvModule from 'keyv';
 import JSONbig from 'json-bigint';
-import BigNumber from "bignumber.js";
+import BigNumber from 'bignumber.js';
 import type {KeyvStoreFn} from './types';
 
 const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
