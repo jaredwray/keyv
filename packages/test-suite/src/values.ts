@@ -80,7 +80,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 			errorObject = error;
 			t.expect((error as Error).message).toBe('symbol cannot be serialized');
 		}
-		
+
 		t.expect((errorObject as Error).message).toBe('symbol cannot be serialized');
 	});
 
