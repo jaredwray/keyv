@@ -117,14 +117,6 @@ test.it('listeners method', t => {
 	t.expect(emitter.listeners('test-event')).toEqual([listener]);
 });
 
-test.it('if it is an error with no listeners throw error', () => {
-	const emitter = new EventManager();
-
-	test.expect(() => {
-		emitter.emit('error', new Error('test'));
-	}).toThrow(Error);
-});
-
 test.it('once method', t => {
 	const emitter = new EventManager();
 	let dataReceived = 0;

@@ -582,6 +582,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (typeof value === 'symbol') {
 			this.emit('error', 'symbol cannot be serialized');
+			throw new Error('symbol cannot be serialized');
 		}
 
 		const formattedValue = {value, expires};
