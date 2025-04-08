@@ -73,12 +73,14 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		const keyv = new Keyv({store: store()});
 		const value = Symbol('value');
 
-		const error = await (new Promise(resolve => {
-			keyv.set('foo', value).catch(error => {
-				resolve(error.context);
-			});
-		}));
-		t.expect(error).toBe('symbol cannot be serialized');
+		let errorObject;
+		try {
+			await keyv.set('foo', value);
+		} catch (error) {
+			errorObject = error;
+			t.expect((error as Error).message).toBe('symbol cannot be serialized');
+		}
+		t.expect((errorObject as Error).message).toBe('symbol cannot be serialized');
 	});
 
 	test.it('value can be BigInt using other serializer/deserializer', async t => {

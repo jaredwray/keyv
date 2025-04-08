@@ -70,15 +70,6 @@ class EventManager {
 			for (const listener of listeners) {
 				listener(...arguments_);
 			}
-		} else if (event === 'error') {
-			// If it's an 'error' event with no listeners, throw the error.
-			if (arguments_[0] instanceof Error) {
-				throw arguments_[0]; // Throws the error object if the first arg is an error
-			} else {
-				const error = new CustomError(arguments_[0]);
-				error.context = arguments_[0];
-				throw error;
-			}
 		}
 	}
 
@@ -99,22 +90,6 @@ class EventManager {
 	// Set the maximum number of listeners for a single event
 	public setMaxListeners(n: number): void {
 		this._maxListeners = n;
-	}
-}
-
-class CustomError extends Error {
-	public context: any;
-
-	constructor(message: string, context?: any) {
-		super(message);
-		this.context = context;
-
-		// Maintains proper stack trace for where our error was thrown (only available on V8)
-		if (Error.captureStackTrace) {
-			Error.captureStackTrace(this, CustomError);
-		}
-
-		this.name = this.constructor.name;
 	}
 }
 
