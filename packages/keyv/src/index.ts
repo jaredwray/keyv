@@ -566,32 +566,33 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
 	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
-		this.hooks.trigger(KeyvHooks.PRE_SET, {key, value, ttl});
-		const keyPrefixed = this._getKeyPrefix(key);
-		if (ttl === undefined) {
-			ttl = this._ttl;
+		const data = {key, value, ttl};
+		this.hooks.trigger(KeyvHooks.PRE_SET, data);
+		const keyPrefixed = this._getKeyPrefix(data.key);
+		if (data.ttl === undefined) {
+			data.ttl = this._ttl;
 		}
 
-		if (ttl === 0) {
-			ttl = undefined;
+		if (data.ttl === 0) {
+			data.ttl = undefined;
 		}
 
 		const {store} = this.opts;
 
-		const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
+		const expires = (typeof data.ttl === 'number') ? (Date.now() + data.ttl) : null;
 
-		if (typeof value === 'symbol') {
+		if (typeof data.value === 'symbol') {
 			this.emit('error', 'symbol cannot be serialized');
 			throw new Error('symbol cannot be serialized');
 		}
 
-		const formattedValue = {value, expires};
+		const formattedValue = {value: data.value, expires};
 		const serializedValue = await this.serializeData(formattedValue);
 
 		let result = true;
 
 		try {
-			const value = await store.set(keyPrefixed, serializedValue, ttl);
+			const value = await store.set(keyPrefixed, serializedValue, data.ttl);
 
 			if (typeof value === 'boolean') {
 				result = value;
