@@ -229,7 +229,7 @@ import Keyv, { KeyvHooks } from 'keyv';
 ```js
 //PRE_SET hook
 const keyv = new Keyv();
-keyv.hooks.addHandler(KeyvHooks.PRE_SET, (key, value) => console.log(`Setting key ${key} to ${value}`));
+keyv.hooks.addHandler(KeyvHooks.PRE_SET, (data) => console.log(`Setting key ${data.key} to ${data.value}`));
 
 //POST_SET hook
 const keyv = new Keyv();
@@ -240,9 +240,10 @@ In these examples you can also manipulate the value before it is set. For exampl
 
 ```js
 const keyv = new Keyv();
-keyv.hooks.addHandler(KeyvHooks.PRE_SET, (key, value) => {
-  console.log(`Setting key ${key} to ${value}`);
-  key = `prefix-${key}`;
+keyv.hooks.addHandler(KeyvHooks.PRE_SET, (data) => {
+  console.log(`Manipulating key ${data.key} and ${data.value}`);
+  data.key = `prefix-${data.key}`;
+  data.value = `prefix-${data.value}`;
 });
 ```
 
