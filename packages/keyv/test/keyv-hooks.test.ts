@@ -1,4 +1,5 @@
 import * as test from 'vitest';
+import {faker} from '@faker-js/faker';
 import {KeyvSqlite} from '@keyv/sqlite';
 import Keyv, {KeyvHooks} from '../src/index.js';
 
@@ -10,6 +11,21 @@ test.it('PRE_SET hook', async t => {
 	});
 	t.expect(keyv.hooks.handlers.size).toBe(1);
 	await keyv.set('foo', 'bar');
+});
+
+test.it('PRE_SET hook with manipulation', async t => {
+	const keyId = faker.string.alphanumeric(10);
+	const newKeyId = `${keyId}1`;
+	const keyValue = faker.lorem.sentence();
+	const keyv = new Keyv();
+	keyv.hooks.addHandler(KeyvHooks.PRE_SET, data => {
+		data.key = newKeyId;
+	});
+	t.expect(keyv.hooks.handlers.size).toBe(1);
+	await keyv.set(keyId, keyValue);
+
+	const value = await keyv.get(newKeyId);
+	t.expect(value).toBe(keyValue);
 });
 
 test.it('POST_SET hook', async t => {
