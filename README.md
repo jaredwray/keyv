@@ -65,7 +65,7 @@ If there is already an adapter that you would like to add, please post an issue 
 * [keyv](https://github.com/jaredwray/keyv/tree/main/packages/keyv): Simple key-value storage with support for multiple backends
 * [test-suite](https://github.com/jaredwray/keyv/tree/main/packages/test-suite): Test suite for Keyv API compliance
 
-### Storage Adapters
+### Storage Adapters in this Repository
 
 * [etcd](https://github.com/jaredwray/keyv/tree/main/packages/etcd): Etcd storage adapter
 * [memcache](https://github.com/jaredwray/keyv/tree/main/packages/memcache): Memcache storage adapter
@@ -76,7 +76,7 @@ If there is already an adapter that you would like to add, please post an issue 
 * [valkey](https://github.com/jaredwray/keyv/tree/main/packages/valkey): Valkey (Open Source Redis) storage adapter
 * [sqlite](https://github.com/jaredwray/keyv/tree/main/packages/sqlite): SQLite storage adapter
 
-### Compression Adapters
+### Compression Adapters in this Repository
 
 * [brotli](https://github.com/jaredwray/keyv/tree/main/packages/compress-brotli): brotli compression adapter
 * [gzip](https://github.com/jaredwray/keyv/tree/main/packages/compress-gzip): gzip compression adapter
@@ -101,4 +101,4 @@ Here are the storage adapters that are not in this repository but compatible wit
 
 ## License
 
-MIT © Jared Wray
+[MIT © Jared Wray](./LICENSE)
