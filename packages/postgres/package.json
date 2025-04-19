@@ -60,12 +60,12 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.14.0",
+		"pg": "8.14.1",
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
-		"@types/pg": "^8.11.11",
+		"@types/pg": "^8.11.13",
 		"rimraf": "^6.0.1",
 		"tsd": "^0.32.0",
 		"xo": "^0.60.0"
