@@ -37,6 +37,12 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
 * [License](#license)
 
+# Installation
+
+```bash
+npm install --save keyv @keyv/redis
+```
+
 # Usage
 
 Here is a standard use case where we implement `Keyv` and `@keyv/redis`:
