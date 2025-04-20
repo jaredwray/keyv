@@ -45,7 +45,9 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"@keyv/serialize": "workspace:^",
-		"lz4-napi": "^2.8.0",
+		"lz4-napi": "^2.8.0"
+	},
+	"peerDependencies": {
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
