@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/postgres",
-	"version": "2.1.3",
+	"version": "2.1.4",
 	"description": "PostgreSQL storage adapter for Keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
@@ -60,7 +60,9 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.14.1",
+		"pg": "8.14.1"
+	},
+	"peerDependencies": {
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
