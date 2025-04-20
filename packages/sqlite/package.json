@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/sqlite",
-	"version": "4.0.2",
+	"version": "4.0.3",
 	"description": "SQLite storage adapter for Keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
@@ -60,7 +60,9 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"sqlite3": "^5.1.7",
+		"sqlite3": "^5.1.7"
+	},
+	"peerDependencies": {
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
