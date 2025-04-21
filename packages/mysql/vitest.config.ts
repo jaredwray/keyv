@@ -1,4 +1,11 @@
-import {defineConfig, mergeConfig} from 'vitest/config';
-import vitestConfig from '../../vitest.general.config';
+import {defineConfig} from 'vitest/config';
 
-export default mergeConfig(vitestConfig, defineConfig({}));
+export default defineConfig({
+	test: {
+		include: ['test/*.ts'],
+		coverage: {
+			reporter: ['json', 'lcov', 'text'],
+			reportOnFailure: true,
+		},
+	},
+});
