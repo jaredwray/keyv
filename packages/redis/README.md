@@ -294,7 +294,7 @@ Here are some of the events you can listen to: https://www.npmjs.com/package/red
 # Migrating from v3 to v4
 
 Overall the API is the same as v3 with additional options and performance improvements. Here are the main changes:
-* The `ioredis` library has been removed in favor of the `redis` aka `node-redis` library. If you want to use ioredis you can use `@keyv/keyval`
+* The `ioredis` library has been removed in favor of the `redis` aka `node-redis` library. If you want to use ioredis you can use `@keyv/valkey`
 * The `useUnlink` option has been added to use `UNLINK` instead of `DEL` and set to true by default.
 * The `clearBatchSize` option has been added to set the number of keys to delete in a single batch.
 * The `clear()` and `delete()` methods now use `UNLINK` instead of `DEL`. If you want to use `DEL` you can set the `useUnlink` option to `false`.
