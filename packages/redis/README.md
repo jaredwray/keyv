@@ -10,7 +10,7 @@
 Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 # Features
-* Built on top of [redis](https://npmjs.com/package/redis).
+* Built on top of [@redis/client](https://npmjs.com/package/@redis/client).
 * TTL is handled directly by Redis.
 * Supports Redis Clusters.
 * Url connection string support or pass in your Redis Options
