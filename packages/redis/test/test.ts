@@ -1,7 +1,7 @@
 import {
 	describe, test, expect, beforeEach,
 } from 'vitest';
-import {createClient, type RedisClientType} from 'redis';
+import {createClient, type RedisClientType} from '@redis/client';
 import {delay} from '@keyv/test-suite';
 import KeyvRedis, {createKeyv} from '../src/index.js';
 
