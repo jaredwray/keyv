@@ -5,7 +5,7 @@ import {
 	type RedisModules,
 	type RedisFunctions,
 	type RedisScripts,
-} from 'redis';
+} from '@redis/client';
 import {Keyv, type KeyvStoreAdapter, type KeyvEntry} from 'keyv';
 import calculateSlot from 'cluster-key-slot';
 
@@ -113,9 +113,12 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 * Get the options for the adapter.
 	 */
 	public get opts(): KeyvRedisPropertyOptions {
-		let url = '';
+		let url = 'redis://localhost:6379';
 		if ((this._client as RedisClientType).options) {
-			url = (this._client as RedisClientType).options?.url ?? 'redis://localhost:6379';
+			const redisUrl = (this._client as RedisClientType).options?.url;
+			if (redisUrl) {
+				url = redisUrl;
+			}
 		}
 
 		const results: KeyvRedisPropertyOptions = {
@@ -652,7 +655,7 @@ export function createKeyv(connect?: string | RedisClientOptions | RedisClientTy
 
 export {
 	createClient, createCluster, type RedisClientOptions, type RedisClientType, type RedisClusterType, type RedisClusterOptions,
-} from 'redis';
+} from '@redis/client';
 
 export {
 	Keyv,
