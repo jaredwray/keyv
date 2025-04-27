@@ -84,6 +84,29 @@ describe('KeyvRedis', () => {
 		expect(keyvRedis.useUnlink).toBe(false);
 	});
 
+	test('keyPrefixSeparator should be able to set to blank string', () => {
+		const keyvRedis = new KeyvRedis('redis://localhost:6379', {keyPrefixSeparator: ''});
+		expect(keyvRedis.keyPrefixSeparator).toBe('');
+		keyvRedis.keyPrefixSeparator = '->';
+		expect(keyvRedis.keyPrefixSeparator).toBe('->');
+		keyvRedis.keyPrefixSeparator = '';
+		expect(keyvRedis.keyPrefixSeparator).toBe('');
+	});
+
+	test('clearBatchSize should not set if 0 or less than', () => {
+		const keyvRedis = new KeyvRedis('redis://localhost:6379', {clearBatchSize: 0});
+		expect(keyvRedis.clearBatchSize).toBe(1000);
+		keyvRedis.clearBatchSize = 200;
+		expect(keyvRedis.clearBatchSize).toBe(200);
+		let error = '';
+		keyvRedis.on('error', message => {
+			error = message as string;
+		});
+		keyvRedis.clearBatchSize = -1;
+		expect(error).toBe('clearBatchSize must be greater than 0');
+		expect(keyvRedis.clearBatchSize).toBe(200);
+	});
+
 	test('should be able to get and set opts', async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.opts = {
