@@ -250,8 +250,8 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **constructor([connection], [options])**
 * **namespace** - The namespace to use for the keys.
 * **client** - The Redis client instance.
-* **keyPrefixSeparator** - The separator to use between the namespace and key.
-* **clearBatchSize** - The number of keys to delete in a single batch.
+* **keyPrefixSeparator** - The separator to use between the namespace and key. It can be set to a blank string.
+* **clearBatchSize** - The number of keys to delete in a single batch. Has to be greater than 0. Default is `1000`.
 * **useUnlink** - Use the `UNLINK` command for deleting keys isntead of `DEL`.
 * **noNamespaceAffectsAll**: Whether to allow clearing all keys when no namespace is set (default is `false`).
 * **set** - Set a key.

@@ -182,7 +182,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 * Set the number of keys to delete in a single batch.
 	 */
 	public set clearBatchSize(value: number) {
-		this._clearBatchSize = value;
+		if (value > 0) {
+			this._clearBatchSize = value;
+		} else {
+			this.emit('error', 'clearBatchSize must be greater than 0');
+		}
 	}
 
 	/**
@@ -615,11 +619,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			this._namespace = options.namespace;
 		}
 
-		if (options.keyPrefixSeparator) {
+		if (options.keyPrefixSeparator !== undefined) {
 			this._keyPrefixSeparator = options.keyPrefixSeparator;
 		}
 
-		if (options.clearBatchSize) {
+		if (options.clearBatchSize !== undefined && options.clearBatchSize > 0) {
 			this._clearBatchSize = options.clearBatchSize;
 		}
 
