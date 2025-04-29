@@ -619,7 +619,25 @@ export class Keyv<GenericValue = any> extends EventManager {
 		try {
 			// If the store has a setMany method then use it
 			if (this._store.setMany !== undefined) {
-				results = await this._store.setMany(entries);
+				const serializedEntries = await Promise.all(entries.map(async ({ key, value, ttl }) => {
+					if (ttl === undefined) {
+						ttl = this._ttl;
+					}
+					if (ttl === 0) {
+						ttl = undefined;
+					}
+					const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : null;
+
+					if (typeof value === 'symbol') {
+						this.emit('error', 'symbol cannot be serialized');
+						throw new Error('symbol cannot be serialized');
+					}
+
+					const formattedValue = { value, expires };
+					const serializedValue = await this.serializeData(formattedValue);
+					return { key, value: serializedValue, ttl };
+				}));
+				results = await this._store.setMany(serializedEntries);
 				return results;
 			}
 
