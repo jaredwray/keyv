@@ -31,6 +31,16 @@
     "xo": "^0.60.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "protobufjs", "sqlite325h", "sqlite3"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "protobufjs",
+      "sqlite325h",
+      "sqlite3"
+    ]
+  },
+  "dependencies": {
+    "@redis/client": "^1.6.0",
+    "cluster-key-slot": "^1.1.2",
+    "keyv": "^5.3.3"
   }
 }

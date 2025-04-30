@@ -91,6 +91,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 		}
 
 		this.setOptions(options);
+		console.log('🛠 constructor: this._namespace =', this._namespace);
 		this.initClient();
 	}
 
@@ -246,6 +247,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async set(key: string, value: string, ttl?: number): Promise<void> {
 		const client = await this.getClient();
 		key = this.createKeyPrefix(key, this._namespace);
+		console.log('🧩 set(): using key =', key, 'with namespace =', this._namespace);
 		// eslint-disable-next-line unicorn/prefer-ternary
 		if (ttl) {
 			// eslint-disable-next-line @typescript-eslint/naming-convention
@@ -615,7 +617,10 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			return;
 		}
 
+		console.log('➡️ setOptions called with:', options);
+
 		if (options.namespace) {
+			console.log('✅ setting namespace to:', options.namespace);
 			this._namespace = options.namespace;
 		}
 
@@ -651,10 +656,14 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
  * @returns {Keyv} - Keyv instance with the Redis adapter
  */
 export function createKeyv(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions): Keyv {
-	connect ??= 'redis://localhost:6379';
-	const adapter = new KeyvRedis(connect, options);
-	const keyv = new Keyv({store: adapter, namespace: options?.namespace, useKeyPrefix: false});
-	return keyv;
+    connect ??= 'redis://localhost:6379';
+    const adapter = new KeyvRedis(connect, options);
+
+    return new Keyv({
+        store: adapter,
+        namespace: options?.namespace, 
+        useKeyPrefix: false,
+    });
 }
 
 export {
