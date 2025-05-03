@@ -64,7 +64,7 @@
 		"@keyv/serialize": "workspace:^"
 	},
 	"devDependencies": {
-		"@faker-js/faker": "^9.6.0",
+		"@faker-js/faker": "^9.7.0",
 		"@keyv/compress-brotli": "workspace:^",
 		"@keyv/compress-gzip": "workspace:^",
 		"@keyv/compress-lz4": "workspace:^",
@@ -75,7 +75,7 @@
 		"@vitest/coverage-v8": "^3.1.2",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
-		"tsd": "^0.31.2",
+		"tsd": "^0.32.0",
 		"vitest": "^3.1.2",
 		"xo": "^0.60.0"
 	},
