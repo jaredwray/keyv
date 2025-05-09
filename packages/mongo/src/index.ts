@@ -11,7 +11,7 @@ import {
 	type Options,
 } from './types.js';
 
-const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect']);
+const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect', 'db']);
 export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = false;
 	opts: Options;
