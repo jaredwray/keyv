@@ -4,7 +4,7 @@ import Keyv from 'keyv';
 import {KeyvMongoOptions} from 'types';
 import KeyvMongo from '../src/index.js';
 
-const options = {serverSelectionTimeoutMS: 5000};
+const options = {serverSelectionTimeoutMS: 5000, db: 'keyvdb'};
 const mongoURL = 'mongodb://127.0.0.1:27017';
 const store = () => new KeyvMongo(mongoURL, options);
 
