@@ -69,7 +69,7 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 		this.query = async (sqlString, ...parameter) => connected
 			.then(async database => database.query(sqlString, ...parameter));
 
-		this.close = async () => connected.then(database => database.close);
+		this.close = async () => connected.then(database => database.close());
 	}
 
 	async get<Value>(key: string) {
