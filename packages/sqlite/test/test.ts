@@ -115,12 +115,7 @@ test.it('close connection successfully', async t => {
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
 	await keyv.disconnect();
-	try {
-		await keyv.get('foo');
-		t.expect.fail();
-	} catch {
-		t.expect(true).toBeTruthy();
-	}
+	await t.expect(async () => keyv.get('foo')).rejects.toThrow();
 });
 
 test.it('handling namespaces with multiple keyv instances', async t => {
