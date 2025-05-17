@@ -12,8 +12,8 @@
     "build:keyv": "pnpm recursive --filter=keyv run build",
     "build": "pnpm build:keyv:serialize && pnpm build:keyv && pnpm recursive --filter '!keyv' --filter '!@keyv/serialize' run build",
     "test": "c8 --reporter=lcov pnpm -r --workspace-concurrency 1 test:ci",
-    "test:services:start": "chmod +x ./test-services-start.sh && ./test-services-start.sh",
-    "test:services:stop": "chmod +x ./test-services-stop.sh && ./test-services-stop.sh",
+    "test:services:start": "chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh",
+    "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
     "website:build": "pnpm recursive --filter @keyv/website run website:build",
     "website:serve": "pnpm recursive --filter @keyv/website run website:serve",
     "clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean"
