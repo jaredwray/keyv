@@ -60,14 +60,14 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "8.14.1"
+		"pg": "8.16.0"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
-		"@types/pg": "^8.11.13",
+		"@types/pg": "^8.15.2",
 		"rimraf": "^6.0.1",
 		"tsd": "^0.32.0",
 		"xo": "^0.60.0"
