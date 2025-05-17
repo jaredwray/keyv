@@ -9,16 +9,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [ '20' ]
-    name: Node ${{ matrix.node }}
+    name: Node 22
     steps:
       - uses: actions/checkout@v4
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 22
       
       - name: Install pnpm
         run: npm install -g pnpm

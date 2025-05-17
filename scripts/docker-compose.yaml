@@ -10,7 +10,7 @@ services:
       - 5432:5432/tcp
   keyv_postgres_1:
     build:
-      context: packages/postgres
+      context: ../packages/postgres
       dockerfile: Dockerfile.ssl
     command: postgres -c 'max_connections=200' -c 'ssl=on' -c 'ssl_cert_file=/keyv_postgres_ssl/server.crt' -c 'ssl_key_file=/keyv_postgres_ssl/server.key' -c 'hba_file=/keyv_postgres_ssl/pg_hba.conf' -c "listen_addresses=*"
     environment:
@@ -49,7 +49,7 @@ services:
       - "3307:3306"
     volumes:
       - type: bind
-        source: ./packages/mysql/test/certs
+        source: ../packages/mysql/test/certs
         target: /etc/certs/
     restart: always
     environment:
@@ -69,7 +69,7 @@ services:
       REDIS_HOST: redis
     ports:
       - 6379:6379
-  keyv_redis_tls_1:
+  keyv_redis_1:
     image: redis:latest
     command: redis-server --port 0 --tls-port 6380 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no
     environment:
@@ -77,7 +77,7 @@ services:
     ports:
       - 6380:6380
     volumes:
-      - ./packages/redis/tls:/tls
+      - ../packages/redis/tls:/tls
   keyv_mongo:
     image: mongo:latest
     restart: always
@@ -89,10 +89,8 @@ services:
       - "11211:11211"
   keyv_etcd:
     image: bitnami/etcd:latest
-    platform: linux/arm64/v8
     environment:
       - ALLOW_NONE_AUTHENTICATION=yes
     ports:
       - 2379:2379
       - 2380:2380
-  
