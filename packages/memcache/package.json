@@ -63,10 +63,12 @@
 		"buffer": "^6.0.3",
 		"memjs": "^1.3.2"
 	},
+	"peerDependencies": {
+		"keyv": "workspace:^"
+	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
 		"@types/memjs": "^1.3.3",
-		"keyv": "workspace:^",
 		"rimraf": "^6.0.1",
 		"ts-node": "^10.9.2",
 		"tsd": "^0.32.0",
