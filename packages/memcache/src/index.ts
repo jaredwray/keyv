@@ -73,6 +73,7 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		}
 
 		return Promise.allSettled(promises)
+			// eslint-disable-next-line promise/prefer-await-to-then
 			.then(values => {
 				const data: Array<StoredData<Value>> = [];
 				for (const value of values) {
@@ -92,7 +93,7 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 			options.expires = options.ttl = Math.floor(ttl / 1000); // Moving to seconds
 		}
 
-		// eslint-disable-next-line @typescript-eslint/ban-types
+		// eslint-disable-next-line @typescript-eslint/no-restricted-types
 		await this.client.set(this.formatKey(key), value as unknown as Buffer, options);
 	}
 

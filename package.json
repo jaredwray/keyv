@@ -31,6 +31,12 @@
     "xo": "^0.60.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "protobufjs", "sqlite325h", "sqlite3"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "protobufjs",
+      "sqlite3",
+      "sqlite325h",
+      "unrs-resolver"
+    ]
   }
 }
