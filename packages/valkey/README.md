@@ -55,7 +55,7 @@ Or reuse a previous Redis instance:
 
 ```js
 import Keyv from 'keyv';
-import Redis from 'ioredis';
+import Redis from 'iovalkey';
 import KeyvValkey from '@keyv/valkey';
 
 const redis = new Redis('redis://user:pass@localhost:6379');
@@ -67,7 +67,7 @@ Or reuse a previous Redis cluster:
 
 ```js
 import Keyv from 'keyv';
-import Redis from 'ioredis';
+import Redis from 'iovalkey';
 import KeyvValkey from '@keyv/valkey';
 
 const redis = new Redis.Cluster('redis://user:pass@localhost:6379');
