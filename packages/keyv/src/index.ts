@@ -5,8 +5,8 @@ import StatsManager from './stats-manager.js';
 
 export type DeserializedData<Value> = {
 	value?: Value;
-	// eslint-disable-next-line @typescript-eslint/ban-types
-	expires?: number | null;
+
+	expires?: number | undefined;
 };
 
 export type CompressionAdapter = {
@@ -579,7 +579,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		const {store} = this.opts;
 
-		const expires = (typeof data.ttl === 'number') ? (Date.now() + data.ttl) : null;
+		const expires = (typeof data.ttl === 'number') ? (Date.now() + data.ttl) : undefined;
 
 		if (typeof data.value === 'symbol') {
 			this.emit('error', 'symbol cannot be serialized');
