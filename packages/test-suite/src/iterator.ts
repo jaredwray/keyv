@@ -1,7 +1,7 @@
 import type * as Vitest from 'vitest';
 import type KeyvModule from 'keyv';
-import type {KeyvStoreFn} from './types';
-import {delay} from './helper';
+import type {KeyvStoreFn} from './types.js';
+import {delay} from './helper.js';
 
 const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
@@ -17,11 +17,9 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 
 	test.it('iterator() iterates over all values', async t => {
 		const keyv = new Keyv({store: store()});
-		const map = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((_x, i) => [String(i), String(i + 10)]),
-		);
+		const map = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((_x, i) => [String(i), String(i + 10)]));
 		const toResolve = [];
 		for (const [key, value] of map) {
 			toResolve.push(keyv.set(key, value));
@@ -43,11 +41,9 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 			const keyvStore = store();
 
 			const keyv1 = new Keyv({store: keyvStore, namespace: 'keyv1'});
-			const map1 = new Map(
-				Array.from({length: 5})
-					.fill(0)
-					.map((_x, i) => [String(i), String(i + 10)]),
-			);
+			const map1 = new Map(Array.from({length: 5})
+				.fill(0)
+				.map((_x, i) => [String(i), String(i + 10)]));
 			const toResolve = [];
 			for (const [key, value] of map1) {
 				toResolve.push(keyv1.set(key, value));
@@ -56,11 +52,9 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 			await Promise.all(toResolve);
 
 			const keyv2 = new Keyv({store: keyvStore, namespace: 'keyv2'});
-			const map2 = new Map(
-				Array.from({length: 5})
-					.fill(0)
-					.map((_x, i) => [String(i), String(i + 11)]),
-			);
+			const map2 = new Map(Array.from({length: 5})
+				.fill(0)
+				.map((_x, i) => [String(i), String(i + 11)]));
 			toResolve.length = 0;
 			for (const [key, value] of map2) {
 				toResolve.push(keyv2.set(key, value));
@@ -81,11 +75,9 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 		'iterator() doesn\'t yield expired values, and deletes them',
 		async t => {
 			const keyv = new Keyv({store: store()});
-			const map = new Map(
-				Array.from({length: 5})
-					.fill(0)
-					.map((_x, i) => [String(i), String(i + 10)]),
-			);
+			const map = new Map(Array.from({length: 5})
+				.fill(0)
+				.map((_x, i) => [String(i), String(i + 10)]));
 			const toResolve = [];
 			for (const [key, value] of map) {
 				toResolve.push(keyv.set(key, value, 200));
