@@ -14,6 +14,10 @@
 npm install --save @keyv/memcache
 ```
 
+## Keyv Compression is not Supported
+
+This package does not support compression. If you need compression, please use the `@keyv/redis` or another service package instead.
+
 ## Usage
 
 ```js
