@@ -95,8 +95,6 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 			} catch (error) {
 				/* c8 ignore next 4 */
 				this.emit('error', error);
-				// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-				reject(error);
 			}
 		});
 	}
