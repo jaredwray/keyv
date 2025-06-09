@@ -86,6 +86,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			} else if ((connect as any).connect !== undefined) {
 				this._client = this.isClientCluster(connect as RedisClientConnectionType) ? connect as RedisClusterType : connect as RedisClientType;
 			} else if (connect instanceof Object) {
+				// eslint-disable-next-line @stylistic/max-len
 				this._client = (connect as any).rootNodes === undefined ? createClient(connect as RedisClientOptions) as RedisClientType : createCluster(connect as RedisClusterOptions) as RedisClusterType;
 			}
 		}
