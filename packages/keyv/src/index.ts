@@ -446,6 +446,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	async get<Value = GenericValue>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
 	async get<Value = GenericValue>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
 	async get<Value = GenericValue>(key: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
+	// eslint-disable-next-line @stylistic/max-len
 	async get<Value = GenericValue>(key: string | string[], options?: {raw: boolean}): Promise<StoredDataNoRaw<Value> | Array<StoredDataNoRaw<Value>> | StoredDataRaw<Value> | Array<StoredDataRaw<Value>>> {
 		const {store} = this.opts;
 		const isArray = Array.isArray(key);
@@ -569,9 +570,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 		const data = {key, value, ttl};
 		this.hooks.trigger(KeyvHooks.PRE_SET, data);
 		const keyPrefixed = this._getKeyPrefix(data.key);
-		if (data.ttl === undefined) {
-			data.ttl = this._ttl;
-		}
+
+		data.ttl ??= this._ttl;
 
 		if (data.ttl === 0) {
 			data.ttl = undefined;

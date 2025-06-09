@@ -16,9 +16,7 @@ const storeExtended = () => {
 	return new MapExtend(new Map(), {timeout: 1000});
 };
 
-// @ts-expect-error - KeyvStoreAdapter
 keyvTestSuite(test, Keyv, storeExtended);
-// @ts-expect-error - KeyvStoreAdapter
 keyvIteratorTests(test, Keyv, storeExtended);
 // @ts-expect-error - compression
 keyvCompresstionTests(test, new KeyvBrotli());
