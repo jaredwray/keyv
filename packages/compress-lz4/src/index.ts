@@ -1,3 +1,4 @@
+import {Buffer} from 'node:buffer';
 import {compress, uncompress} from 'lz4-napi';
 import {defaultDeserialize, defaultSerialize} from '@keyv/serialize';
 import {type Deserialize, type Serialize} from 'types';
