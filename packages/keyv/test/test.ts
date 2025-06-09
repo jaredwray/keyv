@@ -31,7 +31,7 @@ test.it('Keyv accepts storage adapters', async t => {
 	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
-	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar'});
 	t.expect(store.size).toBe(1);
 });
 
@@ -49,7 +49,7 @@ test.it('Keyv accepts storage adapters instead of options', async t => {
 	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
-	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar'});
 	t.expect(store.size).toBe(1);
 });
 
@@ -60,7 +60,7 @@ test.it('Keyv allows get and set the store via property', async t => {
 	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
-	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar'});
 	t.expect(store.size).toBe(1);
 	t.expect(keyv.store).toBe(store);
 });
@@ -72,7 +72,7 @@ test.it('Keyv should throw if invalid storage or Map on store property', async t
 	t.expect(store.size).toBe(0);
 	await keyv.set('foo', 'bar');
 	t.expect(await keyv.get('foo')).toBe('bar');
-	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar', expires: null});
+	t.expect(await keyv.get('foo', {raw: true})).toEqual({value: 'bar'});
 	t.expect(store.size).toBe(1);
 	t.expect(keyv.store).toBe(store);
 
@@ -282,9 +282,9 @@ test.it('keyv.get([keys]) should return array values', async t => {
 
 	const rawValues = await keyv.get<string>(['foo', 'foo1', 'foo2'], {raw: true});
 	t.expect(Array.isArray(rawValues)).toBeTruthy();
-	t.expect(rawValues[0]).toEqual({value: 'bar', expires: null});
-	t.expect(rawValues[1]).toEqual({value: 'bar1', expires: null});
-	t.expect(rawValues[2]).toEqual({value: 'bar2', expires: null});
+	t.expect(rawValues[0]).toEqual({value: 'bar'});
+	t.expect(rawValues[1]).toEqual({value: 'bar1'});
+	t.expect(rawValues[2]).toEqual({value: 'bar2'});
 });
 
 test.it('keyv.get([keys]) should return array value undefined when expires', async t => {
@@ -346,8 +346,8 @@ test.it('keyv.get([keys]) should return array raw values sqlite', async t => {
 	await keyv.set('foo1', 'bar1');
 	const values = await keyv.get<string>(['foo', 'foo1'], {raw: true}) as Array<StoredDataNoRaw<string>>;
 	t.expect(Array.isArray(values)).toBeTruthy();
-	t.expect(values[0]).toEqual({value: 'bar', expires: null});
-	t.expect(values[1]).toEqual({value: 'bar1', expires: null});
+	t.expect(values[0]).toEqual({value: 'bar'});
+	t.expect(values[1]).toEqual({value: 'bar1'});
 });
 
 test.it('keyv.get([keys]) should return array raw values undefined sqlite', async t => {
@@ -414,11 +414,9 @@ test.it(
 	async t => {
 		const keyvStore = new Map();
 		const keyv1 = new Keyv({store: keyvStore, namespace: 'keyv1', compression: new KeyvGzip()});
-		const map1 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), String(i + 10)]),
-		);
+		const map1 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), String(i + 10)]));
 		const toResolve = [];
 		for (const [key, value] of map1) {
 			toResolve.push(keyv1.set(key, value));
@@ -426,11 +424,9 @@ test.it(
 
 		await Promise.all(toResolve);
 		const keyv2 = new Keyv({store: keyvStore, namespace: 'keyv2', compression: new KeyvGzip()});
-		const map2 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), String(i + 11)]),
-		);
+		const map2 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), String(i + 11)]));
 		toResolve.length = 0;
 		for (const [key, value] of map2) {
 			toResolve.push(keyv2.set(key, value));
@@ -454,11 +450,9 @@ test.it(
 		const keyvStore = new Map();
 
 		const keyv1 = new Keyv({store: keyvStore, namespace: 'keyv1'});
-		const map1 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), String(i + 10)]),
-		);
+		const map1 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), String(i + 10)]));
 		const toResolve = [];
 		for (const [key, value] of map1) {
 			toResolve.push(keyv1.set(key, value));
@@ -467,11 +461,9 @@ test.it(
 		await Promise.all(toResolve);
 
 		const keyv2 = new Keyv({store: keyvStore, namespace: 'keyv2'});
-		const map2 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), i + 11]),
-		);
+		const map2 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), i + 11]));
 		toResolve.length = 0;
 		for (const [key, value] of map2) {
 			toResolve.push(keyv2.set(key, value));
@@ -501,11 +493,9 @@ test.it(
 		const keyv1 = new Keyv({
 			store: keyvStore, serialize, deserialize, namespace: 'keyv1',
 		});
-		const map1 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), String(i + 10)]),
-		);
+		const map1 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), String(i + 10)]));
 		const toResolve = [];
 		for (const [key, value] of map1) {
 			toResolve.push(keyv1.set(key, value));
@@ -516,11 +506,9 @@ test.it(
 		const keyv2 = new Keyv({
 			store: keyvStore, serialize, deserialize, namespace: 'keyv2',
 		});
-		const map2 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), i + 11]),
-		);
+		const map2 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), i + 11]));
 		toResolve.length = 0;
 		for (const [key, value] of map2) {
 			toResolve.push(keyv2.set(key, value));
@@ -549,11 +537,9 @@ test.it(
 		const keyv1 = new Keyv({
 			store: keyvStore, serialize, deserialize, namespace: 'keyv1', compression: new KeyvGzip(),
 		});
-		const map1 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), String(i + 10)]),
-		);
+		const map1 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), String(i + 10)]));
 		const toResolve = [];
 		for (const [key, value] of map1) {
 			toResolve.push(keyv1.set(key, value));
@@ -564,11 +550,9 @@ test.it(
 		const keyv2 = new Keyv({
 			store: keyvStore, serialize, deserialize, namespace: 'keyv2',
 		});
-		const map2 = new Map(
-			Array.from({length: 5})
-				.fill(0)
-				.map((x, i) => [String(i), i + 11]),
-		);
+		const map2 = new Map(Array.from({length: 5})
+			.fill(0)
+			.map((x, i) => [String(i), i + 11]));
 		toResolve.length = 0;
 		for (const [key, value] of map2) {
 			toResolve.push(keyv2.set(key, value));
