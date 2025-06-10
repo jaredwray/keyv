@@ -69,9 +69,9 @@ describe('Keyv', async () => {
 			const map = new Map();
 			const keyv = createKeyv(map);
 			const result = await keyv.setMany(testData);
-			expect(result).toBeUndefined();
+			expect(result).toEqual([true, true, true, true, true]);
 			const resultValue = await keyv.get(testData[0].key);
-			expect(resultValue).toEqual(testData[0].value);
+			expect(resultValue.value).toEqual(testData[0].value);
 		});
 
 		test('should emit and return false on error', async () => {
@@ -131,7 +131,7 @@ describe('Keyv', async () => {
 			await keyv.setMany(testData);
 			const result = await keyv.getMany(testKeys, {raw: true});
 			expect(result.length).toBe(5);
-			expect(result[0]?.value).toBe(testData[0].value);
+			expect(result[0]?.value.value).toBe(testData[0].value);
 		});
 	});
 
