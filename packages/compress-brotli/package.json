@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/compress-brotli",
-	"version": "2.0.4",
+	"version": "2.0.5",
 	"description": "brotli compression for keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
