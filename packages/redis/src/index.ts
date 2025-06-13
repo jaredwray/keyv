@@ -654,7 +654,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 export function createKeyv(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions): Keyv {
 	connect ??= 'redis://localhost:6379';
 	const adapter = new KeyvRedis(connect, options);
-	const keyv = new Keyv({store: adapter, namespace: options?.namespace, useKeyPrefix: false});
+	const keyv = new Keyv(adapter, {namespace: options?.namespace, useKeyPrefix: false});
 	return keyv;
 }
 
