@@ -20,7 +20,7 @@ In the past this would have worked but now you need to pass in the store either 
 ```js
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
-const keyv = new Keyv(new KeyvRedis({ uri: 'redis://user:pass@localhost:6379' }));
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
 ```
 
 ## An example with options
@@ -28,7 +28,7 @@ When passing in options you can do the following using the `store` parameter:
 ```js
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
-const keyv = new Keyv({ store: new KeyvRedis({ uri: 'redis://user:pass@localhost:6379' }), namespace: 'my-namespace' });
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379',{ namespace: 'my-namespace' }));
 ```
 
 ## Removing support for Nodejs 18 and below
