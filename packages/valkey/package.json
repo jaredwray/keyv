@@ -62,7 +62,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"iovalkey": "^0.3.1"
+		"iovalkey": "^0.3.3"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
