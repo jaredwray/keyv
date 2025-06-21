@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import Redis from 'iovalkey';
-import {Keyv, type KeyvStoreAdapter, type StoredData} from 'keyv';
+import Keyv, {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import {
 	type KeyvValkeyOptions,
 	type KeyvUriOptions,
