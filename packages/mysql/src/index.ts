@@ -3,17 +3,19 @@ import mysql from 'mysql2';
 import type {KeyvStoreAdapter, StoredData} from 'keyv';
 import {
 	type KeyvMysqlOptions,
-} from './types';
-import {endPool, pool} from './pool';
+} from './types.js';
+import {endPool, pool} from './pool.js';
 
 const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'table', 'ttl', 'uri']);
 
 type QueryType<T> = Promise<T extends
-mysql.RowDataPacket[][] |
-mysql.RowDataPacket[] |
-mysql.OkPacket |
-mysql.OkPacket[] |
-mysql.ResultSetHeader
+	mysql.RowDataPacket[][] |
+	mysql.RowDataPacket[] |
+	// eslint-disable-next-line @typescript-eslint/no-deprecated
+	mysql.OkPacket |
+	// eslint-disable-next-line @typescript-eslint/no-deprecated
+	mysql.OkPacket[] |
+	mysql.ResultSetHeader
 	? T
 	: never>;
 
@@ -43,11 +45,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			this.ttlSupport = true;
 		}
 
-		const mysqlOptions = Object.fromEntries(
-			Object.entries(options).filter(
-				([k]) => !keyvMysqlKeys.has(k),
-			),
-		);
+		const mysqlOptions = Object.fromEntries(Object.entries(options).filter(([k]) => !keyvMysqlKeys.has(k)));
 
 		delete mysqlOptions.namespace;
 		delete mysqlOptions.serialize;
