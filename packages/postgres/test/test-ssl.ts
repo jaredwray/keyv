@@ -1,6 +1,6 @@
 import * as test from 'vitest';
-import {endPool} from '../src/pool';
-import KeyvPostgres from '../src/index';
+import {endPool} from '../src/pool.js';
+import KeyvPostgres from '../src/index.js';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5433/keyv_test';
 

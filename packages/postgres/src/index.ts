@@ -1,11 +1,11 @@
 import EventEmitter from 'events';
 import Keyv, {type KeyvStoreAdapter} from 'keyv';
 import {type DatabaseError} from 'pg';
-import {endPool, pool} from './pool';
+import {endPool, pool} from './pool.js';
 import {
 	type KeyvPostgresOptions,
 	type Query,
-} from './types';
+} from './types.js';
 
 export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
@@ -45,7 +45,8 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			...options,
 		};
 
-		let createTable = `CREATE${this.opts.useUnloggedTable ? ' UNLOGGED ' : ' '}TABLE IF NOT EXISTS ${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
+		let createTable = `CREATE${this.opts.useUnloggedTable ? ' UNLOGGED ' : ' '}TABLE IF NOT EXISTS 
+		${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 
 		if (this.opts.schema !== 'public') {
 			createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema!}; ${createTable}`;

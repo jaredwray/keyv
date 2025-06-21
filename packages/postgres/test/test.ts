@@ -1,7 +1,7 @@
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvPostgres, {createKeyv} from '../src/index';
+import KeyvPostgres, {createKeyv} from '../src/index.js';
 
 const postgresUri = 'postgresql://postgres:postgres@localhost:5432/keyv_test';
 
