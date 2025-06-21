@@ -16,7 +16,7 @@
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
 		"test": "xo --fix && vitest run --coverage",
-		"test:ci": "xo && vitest --run --sequence.setupFiles=list",
+		"test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./dist ./test/testdb.sqlite"
 	},
 	"xo": {
