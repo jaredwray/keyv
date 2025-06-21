@@ -6,6 +6,9 @@ on:
   release:
     types: [released]
 
+permissions:
+  contents: write
+
 jobs:
   setup-build-deploy:
     name: Deploy Website
