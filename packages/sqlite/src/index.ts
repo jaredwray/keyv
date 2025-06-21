@@ -4,7 +4,7 @@ import Keyv, {type KeyvStoreAdapter, type StoredData} from 'keyv';
 import sqlite3 from 'sqlite3';
 import {
 	type Db, type DbClose, type DbQuery, type KeyvSqliteOptions,
-} from './types';
+} from './types.js';
 
 const toString = (input: string) => String(input).search(/^[a-zA-Z]+$/) < 0 ? '_' + input : input;
 

@@ -10,10 +10,10 @@ export type KeyvSqliteOptions = {
 	db?: string;
 	iterationLimit?: number | string;
 	connect?: () => Promise<
-	{
-		query: DbQuery;
-		close: DbClose;
-	}>;
+		{
+			query: DbQuery;
+			close: DbClose;
+		}>;
 };
 
 export type Db = {
