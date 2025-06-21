@@ -1,8 +1,6 @@
 name: deploy-website
 
 on:
-  push:
-    branches: [ main ]
   release:
     types: [released]
 
