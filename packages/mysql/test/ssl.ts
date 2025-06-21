@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as test from 'vitest';
-import KeyvMysql from '../src/index';
+import KeyvMysql from '../src/index.js';
 
 const options = {
 	ssl: {

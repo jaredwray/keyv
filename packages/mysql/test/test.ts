@@ -1,8 +1,8 @@
 import * as test from 'vitest';
 import keyvTestSuite, {keyvIteratorTests, delay} from '@keyv/test-suite';
 import Keyv from 'keyv';
-import KeyvMysql from '../src/index';
-import {parseConnectionString} from '../src/pool';
+import KeyvMysql from '../src/index.js';
+import {parseConnectionString} from '../src/pool.js';
 
 const uri = 'mysql://root@localhost:3306/keyv_test';
 
