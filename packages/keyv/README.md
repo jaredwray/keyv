@@ -53,14 +53,6 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 	- [.deleteMany(keys)](#deletemanykeys)
 	- [.clear()](#clear)
 	- [.iterator()](#iterator)
-- [API - Properties](#api---properties)
-  - [.namespace](#namespace-1)
-  - [.ttl](#ttl-1)
-  - [.store](#store-1)
-  - [.serialize](#serialize-1)
-  - [.deserialize](#deserialize-1)
-  - [.compression](#compression-1)
-  - [.useKeyPrefix](#usekeyprefix-1)
 - [How to Contribute](#how-to-contribute)
 - [License](#license)
 
@@ -621,6 +613,22 @@ const keyv = new Keyv({ useKeyPrefix: false });
 console.log(keyv.useKeyPrefix); // false
 keyv.useKeyPrefix = true;
 console.log(keyv.useKeyPrefix); // true
+```
+
+With many of the storage adapters you will also need to set the `namespace` option to `undefined` to have it work correctly. This is because in `v5` we started the transition to having the storage adapter handle the namespacing and `Keyv` will no longer handle it internally via KeyPrefixing. Here is an example of doing ith with `KeyvSqlite`:
+
+```js
+import Keyv from 'keyv';
+import KeyvSqlite from '@keyv/sqlite';
+
+const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
+const keyv = new Keyv({ store });
+keyv.useKeyPrefix = false; // disable key prefixing
+store.namespace = undefined; // disable namespacing in the storage adapter
+
+await keyv.set('foo', 'bar'); // true
+await keyv.get('foo'); // 'bar'
+await keyv.clear();
 ```
 
 # How to Contribute
