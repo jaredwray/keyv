@@ -54,7 +54,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 		});
 
 		// Https://github.com/microsoft/etcd3/issues/105
-		// eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable
+		// eslint-disable-next-line @typescript-eslint/use-unknown-in-catch-callback-variable, promise/prefer-await-to-then
 		this.client.getRoles().catch(error => this.emit('error', error));
 
 		if (this.ttlSupport) {
@@ -75,6 +75,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 		}
 
 		return Promise.allSettled(promises)
+		// eslint-disable-next-line promise/prefer-await-to-then
 			.then(values => {
 				const data: Array<StoredData<Value>> = [];
 				for (const value of values) {
@@ -107,6 +108,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 			return false;
 		}
 
+		// eslint-disable-next-line promise/prefer-await-to-then
 		return this.client.delete().key(key).then(key => key.deleted !== '0');
 	}
 
@@ -117,6 +119,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 		}
 
 		// @ts-expect-error - x is an object
+		// eslint-disable-next-line promise/prefer-await-to-then
 		return Promise.allSettled(promises).then(values => values.every(x => x.value === true));
 	}
 
@@ -124,6 +127,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 		const promise = this.namespace
 			? this.client.delete().prefix(this.namespace)
 			: this.client.delete().all();
+		// eslint-disable-next-line promise/prefer-await-to-then
 		return promise.then(() => undefined);
 	}
 
@@ -133,6 +137,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 			.prefix(namespace ? namespace + ':' : '')
 			.keys();
 
+		// eslint-disable-next-line @typescript-eslint/await-thenable
 		for await (const key of iterator) {
 			const value = await this.get(key);
 			yield [key, value];
