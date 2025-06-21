@@ -6,8 +6,6 @@ import {
 	type KeyvUriOptions,
 } from './types.js';
 
-export const createKeyv = <Value>(uri: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions) => new Keyv<Value>({store: new KeyvValkey(uri, options)});
-
 class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = true;
 	namespace?: string;
@@ -158,6 +156,19 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	async disconnect() {
 		return this.redis.disconnect();
 	}
+}
+
+/**
+ * Will create a Keyv instance with the Valkey adapter.
+ * @param {KeyvValkeyOptions | KeyvUriOptions} connect - How to connect to the Valkey server. If string pass in the url, if object pass in the options.
+ * @param {KeyvValkeyOptions} options - Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
+ * @returns {Keyv} - Keyv instance with the Redis adapter
+ */
+export function createKeyv(connect?: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions): Keyv {
+	connect ??= 'redis://localhost:6379';
+	const adapter = new KeyvValkey(connect, options);
+	const keyv = new Keyv(adapter);
+	return keyv;
 }
 
 export default KeyvValkey;
