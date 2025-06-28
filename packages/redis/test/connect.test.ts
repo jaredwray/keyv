@@ -2,8 +2,7 @@ import process from 'node:process';
 import {
 	describe, test, expect,
 } from 'vitest';
-import {delay} from '@keyv/test-suite';
-import KeyvRedis, {createKeyv} from '../src/index.js';
+import KeyvRedis from '../src/index.js';
 
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
 const redisBadUri = process.env.REDIS_BAD_URI ?? 'redis://localhost:6378';
