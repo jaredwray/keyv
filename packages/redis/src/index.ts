@@ -736,8 +736,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 
 		if (options.connectTimeout !== undefined && options.connectTimeout > 0) {
 			this._connectTimeout = options.connectTimeout;
-		} else if (options.connectTimeout !== undefined) {
-			this.emit('error', 'connectTimeout must be greater than 0');
 		}
 	}
 

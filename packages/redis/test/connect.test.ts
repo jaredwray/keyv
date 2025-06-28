@@ -41,6 +41,11 @@ describe('connect', () => {
 		expect(errorMessage).toBe('connectTimeout must be greater than 0');
 	});
 
+	test('fails to set connectTimeout to 0 on KeyvRedisOptions', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {connectTimeout: 0});
+		expect(keyvRedis.connectTimeout).toBe(200); // Default value
+	});
+
 	test('should gracefully fail on set with bad redis uri', async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri);
 		let errorMessage = '';
@@ -134,6 +139,20 @@ describe('connect', () => {
 		});
 
 		await expect(keyvRedis.delete(faker.string.uuid())).resolves.toBe(false);
+		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
+	});
+
+	test('should gracefully handle deleteMany with bad redis uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let errorMessage = '';
+
+		keyvRedis.on('error', error => {
+			expect(error).toBeDefined();
+			errorMessage = error.message;
+		});
+
+		const keys = [faker.string.uuid(), faker.string.uuid()];
+		await expect(keyvRedis.deleteMany(keys)).resolves.toBe(false);
 		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
 	});
 });
