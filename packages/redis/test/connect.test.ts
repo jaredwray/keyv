@@ -41,7 +41,7 @@ describe('connect', () => {
 		expect(errorMessage).toBe('connectTimeout must be greater than 0');
 	});
 
-	test('shoudl gracefully fail on set with bad redis uri', async () => {
+	test('should gracefully fail on set with bad redis uri', async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri);
 		let errorMessage = '';
 		keyvRedis.on('error', error => {
@@ -49,6 +49,37 @@ describe('connect', () => {
 			errorMessage = error.message;
 		});
 		await expect(keyvRedis.set(faker.string.uuid(), faker.lorem.sentence())).resolves.toBeUndefined();
+		expect(errorMessage).toBe('Redis client is not connected');
+	});
+
+	test('should gracefully fail on setMany with bad redis uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let errorMessage = '';
+
+		keyvRedis.on('error', error => {
+			expect(error).toBeDefined();
+			errorMessage = error.message;
+		});
+
+		const data = [
+			{key: faker.string.uuid(), value: faker.lorem.sentence()},
+			{key: faker.string.uuid(), value: faker.lorem.sentence()},
+		];
+
+		await expect(keyvRedis.setMany(data)).resolves.toBeUndefined();
+		expect(errorMessage).toBe('Redis client is not connected');
+	});
+
+	test('should gracefully hanlde has with bad redis uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let errorMessage = '';
+
+		keyvRedis.on('error', error => {
+			expect(error).toBeDefined();
+			errorMessage = error.message;
+		});
+
+		await expect(keyvRedis.has(faker.string.uuid())).resolves.toBe(false);
 		expect(errorMessage).toBe('Redis client is not connected');
 	});
 });
