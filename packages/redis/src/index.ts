@@ -411,13 +411,18 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async getMany<U = T>(keys: string[]): Promise<Array<U | undefined>> {
 		if (keys.length === 0) {
-			return [];
+			return []; // Return empty array if no keys are provided
 		}
 
 		keys = keys.map(key => this.createKeyPrefix(key, this._namespace));
-		const values = await this.mget<U>(keys);
+		try {
+			const values = await this.mget<U>(keys);
 
-		return values;
+			return values;
+		} catch (error) {
+			this.emit('error', error);
+			return Array.from({length: keys.length}).fill(undefined) as Array<U | undefined>;
+		}
 	}
 
 	/**
@@ -660,6 +665,9 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	private async getSlotMaster(slot: number): Promise<RedisClientType> {
 		const connection = await this.getClient();
+		if (!connection) {
+			throw new Error(RedisErrorMessages.RedisClientNotConnected);
+		}
 
 		if (this.isCluster()) {
 			const cluster = connection as RedisClusterType;

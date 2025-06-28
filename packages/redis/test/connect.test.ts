@@ -109,4 +109,18 @@ describe('connect', () => {
 		await expect(keyvRedis.get(faker.string.uuid())).resolves.toBeUndefined();
 		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
 	});
+
+	test('should gracefully handle getMany with bad redis uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let errorMessage = '';
+
+		keyvRedis.on('error', error => {
+			expect(error).toBeDefined();
+			errorMessage = error.message;
+		});
+
+		const keys = [faker.string.uuid(), faker.string.uuid()];
+		await expect(keyvRedis.getMany(keys)).resolves.toEqual([undefined, undefined]);
+		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
+	});
 });
