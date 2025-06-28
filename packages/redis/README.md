@@ -26,9 +26,10 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 # Table of Contents
 * [Usage](#usage)
 * [Namespaces](#namespaces)
-* [Typescript](#typescript)
+* [Using Generic Types](#using-generic-types)
 * [Performance Considerations](#performance-considerations)
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
+* [Gracefully Handling Connection Errors, Retries, and Timeouts](#gracefully-handling-connection-errors-retries-and-timeouts)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
 * [Clustering and TLS Support](#clustering-and-tls-support)
 * [API](#api)
@@ -99,6 +100,71 @@ const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis});
 ```
 
+# Keyv Redis Options
+
+You can pass in options to the `KeyvRedis` constructor. Here are the available options:
+
+```typescript
+export type KeyvRedisOptions = {
+	/**
+	 * Namespace for the current instance.
+	 */
+	namespace?: string;
+	/**
+	 * Separator to use between namespace and key.
+	 */
+	keyPrefixSeparator?: string;
+	/**
+	 * Number of keys to delete in a single batch.
+	 */
+	clearBatchSize?: number;
+	/**
+	 * Enable Unlink instead of using Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 */
+	useUnlink?: boolean;
+
+	/**
+	 * Whether to allow clearing all keys when no namespace is set.
+	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * Defaults to `false`.
+	 */
+	noNamespaceAffectsAll?: boolean;
+
+	/**
+	 * Timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
+	 * Defaults to `200`.
+	 */
+	connectTimeout?: number;
+};
+```
+You can pass these options when creating a new `KeyvRedis` instance:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyvRedis = new KeyvRedis({
+  namespace: 'my-namespace',
+  keyPrefixSeparator: ':',
+  clearBatchSize: 1000,
+  useUnlink: true,
+  noNamespaceAffectsAll: false,
+  connectTimeout: 200
+});
+
+const keyv = new Keyv({ store: keyvRedis });
+```
+
+You can also set these options after the fact by using the `KeyvRedis` instance properties:
+
+```js
+import {createKeyv} from '@keyv/redis';
+
+const keyv = createKeyv('redis://user:pass@localhost:6379');
+keyv.store.namespace = 'my-namespace';
+```
+
+
 # Namespaces
 
 You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a `namespace` with the `store` option:
@@ -120,7 +186,7 @@ keyv.namespace = 'my-namespace';
 
 NOTE: If you plan to do many clears or deletes, it is recommended to read the [Performance Considerations](#performance-considerations) section.
 
-## Typescript
+## Using Generic Types
 
 When initializing `KeyvRedis`, you can specify the type of the values you are storing and you can also specify types when calling methods:
 
@@ -129,7 +195,7 @@ import Keyv from 'keyv';
 import KeyvRedis, { createClient } from '@keyv/redis';
 
 
-interface User {
+type User {
   id: number
   name: string
 }
@@ -173,6 +239,38 @@ If you are deleting or clearing a large number of keys you can disable this by s
 const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useUnlink: false }));
 // Or
 keyv.useUnlink = false;
+```
+
+# Gracefully Handling Connection Errors, Retries, and Timeouts
+
+When using `@keyv/redis`, it is important to handle connection errors gracefully. You can do this by listening to the `error` event on the `KeyvRedis` instance. Here is an example of how to do that:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
+keyv.on('error', (error) => {
+  console.error('error', error);
+});
+```
+
+We also attempt to connect to Redis and have a `connectTimeout` option that defaults to `200ms`. If the connection is not established within this time, it will emit an error. You can catch this error and handle it accordingly.
+
+On `get`, `getMany`, `set`, `setMany`, `delete`, `deleteMany`, and `clear` methods, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
+
+If you pass in just a `uri` connection string we will automatically create a Redis client for you with the following reconnect strategy:
+
+```typescript
+export const defaultReconnectStrategy = (attempts: number): number | Error => {
+	// Exponential backoff base: double each time, capped at 2s.
+	// Parentheses make it clear we do (2 ** attempts) first, then * 100
+	const backoff = Math.min((2 ** attempts) * 100, 2000);
+
+	// Add random jitter of up to ±50ms to avoid thundering herds:
+	const jitter = (Math.random() - 0.5) * 100;
+
+	return backoff + jitter;
+};
 ```
 
 # Using Cacheable with Redis
