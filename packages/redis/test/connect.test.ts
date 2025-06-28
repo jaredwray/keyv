@@ -3,6 +3,7 @@ import process from 'node:process';
 import {
 	describe, test, expect,
 } from 'vitest';
+import {faker} from '@faker-js/faker';
 import KeyvRedis from '../src/index.js';
 
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
@@ -38,5 +39,16 @@ describe('connect', () => {
 		keyvRedis.connectTimeout = 0; // Attempt to set to 0
 		expect(keyvRedis.connectTimeout).toBe(200); // Default value
 		expect(errorMessage).toBe('connectTimeout must be greater than 0');
+	});
+
+	test('shoudl gracefully fail on set with bad redis uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let errorMessage = '';
+		keyvRedis.on('error', error => {
+			expect(error).toBeDefined();
+			errorMessage = error.message;
+		});
+		await expect(keyvRedis.set(faker.string.uuid(), faker.lorem.sentence())).resolves.toBeUndefined();
+		expect(errorMessage).toBe('Redis client is not connected');
 	});
 });
