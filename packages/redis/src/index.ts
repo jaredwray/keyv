@@ -67,6 +67,13 @@ export type KeyvRedisEntry<T> = {
 	ttl?: number;
 };
 
+export enum RedisErrorMessages {
+	/**
+	 * Error message when the Redis client is not connected.
+	 */
+	RedisClientNotConnected = 'Redis client is not connected or has failed to connect',
+}
+
 export type RedisClientConnectionType = RedisClientType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>;
 
 // eslint-disable-next-line unicorn/prefer-event-target
@@ -267,7 +274,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			// Race a short timeout against connect, so we never hang indefinitely
 			// eslint-disable-next-line promise/param-names, no-promise-executor-return
 			const timeoutPromise = new Promise((resolves, reject) => setTimeout(() => {
-				reject(new Error('Redis connect timeout'));
+				reject(new Error(RedisErrorMessages.RedisClientNotConnected));
 			}, this._connectTimeout));
 
 			await Promise.race([
@@ -295,7 +302,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async set(key: string, value: string, ttl?: number): Promise<void> {
 		const client = await this.getClient();
 		if (!client) {
-			this.emit('error', new Error('Redis client is not connected'));
+			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
 			return;
 		}
 
@@ -316,7 +323,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		const client = await this.getClient();
 		if (!client) {
-			this.emit('error', new Error('Redis client is not connected'));
+			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
 			return;
 		}
 
@@ -343,7 +350,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		if (!client) {
-			this.emit('error', new Error('Redis client is not connected'));
+			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
 			return false;
 		}
 
@@ -361,8 +368,8 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const client = await this.getClient();
 		if (!client) {
-			this.emit('error', new Error('Redis client is not connected'));
-			return [];
+			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
+			return Array.from({length: keys.length}).fill(false) as boolean[];
 		}
 
 		const multi = client.multi();
@@ -384,7 +391,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async get<U = T>(key: string): Promise<U | undefined> {
 		const client = await this.getClient();
 		if (!client) {
-			this.emit('error', new Error('Redis client is not connected'));
+			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
 			return undefined;
 		}
 
@@ -421,7 +428,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		if (!client) {
-			this.emit('error', new Error('Redis client is not connected'));
+			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
 			return false;
 		}
 
@@ -441,7 +448,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 		let result = false;
 		const client = await this.getClient();
 		if (!client) {
-			this.emit('error', new Error('Redis client is not connected'));
+			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
 			return false;
 		}
 

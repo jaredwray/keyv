@@ -4,7 +4,7 @@ import {
 	describe, test, expect,
 } from 'vitest';
 import {faker} from '@faker-js/faker';
-import KeyvRedis from '../src/index.js';
+import KeyvRedis, {RedisErrorMessages} from '../src/index.js';
 
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
 const redisBadUri = process.env.REDIS_BAD_URI ?? 'redis://localhost:6378';
@@ -49,7 +49,7 @@ describe('connect', () => {
 			errorMessage = error.message;
 		});
 		await expect(keyvRedis.set(faker.string.uuid(), faker.lorem.sentence())).resolves.toBeUndefined();
-		expect(errorMessage).toBe('Redis client is not connected');
+		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
 	});
 
 	test('should gracefully fail on setMany with bad redis uri', async () => {
@@ -67,7 +67,7 @@ describe('connect', () => {
 		];
 
 		await expect(keyvRedis.setMany(data)).resolves.toBeUndefined();
-		expect(errorMessage).toBe('Redis client is not connected');
+		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
 	});
 
 	test('should gracefully hanlde has with bad redis uri', async () => {
@@ -80,6 +80,20 @@ describe('connect', () => {
 		});
 
 		await expect(keyvRedis.has(faker.string.uuid())).resolves.toBe(false);
-		expect(errorMessage).toBe('Redis client is not connected');
+		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
+	});
+
+	test('should gracefully handle hasMany with bad redis uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let errorMessage = '';
+
+		keyvRedis.on('error', error => {
+			expect(error).toBeDefined();
+			errorMessage = error.message;
+		});
+
+		const keys = [faker.string.uuid(), faker.string.uuid()];
+		await expect(keyvRedis.hasMany(keys)).resolves.toEqual([false, false]);
+		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
 	});
 });
