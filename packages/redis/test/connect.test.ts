@@ -123,4 +123,17 @@ describe('connect', () => {
 		await expect(keyvRedis.getMany(keys)).resolves.toEqual([undefined, undefined]);
 		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
 	});
+
+	test('should gracefully handle delete with bad redis uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let errorMessage = '';
+
+		keyvRedis.on('error', error => {
+			expect(error).toBeDefined();
+			errorMessage = error.message;
+		});
+
+		await expect(keyvRedis.delete(faker.string.uuid())).resolves.toBe(false);
+		expect(errorMessage).toBe(RedisErrorMessages.RedisClientNotConnected);
+	});
 });
