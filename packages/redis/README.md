@@ -29,6 +29,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Using Generic Types](#using-generic-types)
 * [Performance Considerations](#performance-considerations)
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
+* [Gracefully Handling Connection Errors, Retries, and Timeouts](#gracefully-handling-connection-errors-retries-and-timeouts)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
 * [Clustering and TLS Support](#clustering-and-tls-support)
 * [API](#api)
@@ -238,6 +239,38 @@ If you are deleting or clearing a large number of keys you can disable this by s
 const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useUnlink: false }));
 // Or
 keyv.useUnlink = false;
+```
+
+# Gracefully Handling Connection Errors, Retries, and Timeouts
+
+When using `@keyv/redis`, it is important to handle connection errors gracefully. You can do this by listening to the `error` event on the `KeyvRedis` instance. Here is an example of how to do that:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'));
+keyv.on('error', (error) => {
+  console.error('error', error);
+});
+```
+
+We also attempt to connect to Redis and have a `connectTimeout` option that defaults to `200ms`. If the connection is not established within this time, it will emit an error. You can catch this error and handle it accordingly.
+
+On `get`, `getMany`, `set`, `setMany`, `delete`, `deleteMany`, and `clear` methods, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
+
+If you pass in just a `uri` connection string we will automatically create a Redis client for you with the following reconnect strategy:
+
+```typescript
+export const defaultReconnectStrategy = (attempts: number): number | Error => {
+	// Exponential backoff base: double each time, capped at 2s.
+	// Parentheses make it clear we do (2 ** attempts) first, then * 100
+	const backoff = Math.min((2 ** attempts) * 100, 2000);
+
+	// Add random jitter of up to ±50ms to avoid thundering herds:
+	const jitter = (Math.random() - 0.5) * 100;
+
+	return backoff + jitter;
+};
 ```
 
 # Using Cacheable with Redis
