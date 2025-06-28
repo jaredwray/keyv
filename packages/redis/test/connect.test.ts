@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import process from 'node:process';
 import {
 	describe, test, expect,
@@ -16,5 +17,26 @@ describe('connect', () => {
 	test('fails to connect to bad redis uri', async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri);
 		await expect(keyvRedis.getClient()).rejects.toThrow();
+	});
+
+	test('can set connectTimeout', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {connectTimeout: 1000});
+		expect(keyvRedis.connectTimeout).toBe(1000);
+		await expect(keyvRedis.getClient()).resolves.toBeDefined();
+		keyvRedis.connectTimeout = 5000; // Reset to default for other tests
+		expect(keyvRedis.connectTimeout).toBe(5000);
+		await expect(keyvRedis.getClient()).resolves.toBeDefined();
+	});
+
+	test('fails to set connectTimeout to 0', async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		let errorMessage = '';
+		keyvRedis.on('error', error => {
+			expect(error).toBe('connectTimeout must be greater than 0');
+			errorMessage = error;
+		});
+		keyvRedis.connectTimeout = 0; // Attempt to set to 0
+		expect(keyvRedis.connectTimeout).toBe(200); // Default value
+		expect(errorMessage).toBe('connectTimeout must be greater than 0');
 	});
 });

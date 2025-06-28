@@ -26,7 +26,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 # Table of Contents
 * [Usage](#usage)
 * [Namespaces](#namespaces)
-* [Typescript](#typescript)
+* [Using Generic Types](#using-generic-types)
 * [Performance Considerations](#performance-considerations)
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
@@ -99,6 +99,71 @@ const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis});
 ```
 
+# Keyv Redis Options
+
+You can pass in options to the `KeyvRedis` constructor. Here are the available options:
+
+```typescript
+export type KeyvRedisOptions = {
+	/**
+	 * Namespace for the current instance.
+	 */
+	namespace?: string;
+	/**
+	 * Separator to use between namespace and key.
+	 */
+	keyPrefixSeparator?: string;
+	/**
+	 * Number of keys to delete in a single batch.
+	 */
+	clearBatchSize?: number;
+	/**
+	 * Enable Unlink instead of using Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 */
+	useUnlink?: boolean;
+
+	/**
+	 * Whether to allow clearing all keys when no namespace is set.
+	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * Defaults to `false`.
+	 */
+	noNamespaceAffectsAll?: boolean;
+
+	/**
+	 * Timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
+	 * Defaults to `200`.
+	 */
+	connectTimeout?: number;
+};
+```
+You can pass these options when creating a new `KeyvRedis` instance:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyvRedis = new KeyvRedis({
+  namespace: 'my-namespace',
+  keyPrefixSeparator: ':',
+  clearBatchSize: 1000,
+  useUnlink: true,
+  noNamespaceAffectsAll: false,
+  connectTimeout: 200
+});
+
+const keyv = new Keyv({ store: keyvRedis });
+```
+
+You can also set these options after the fact by using the `KeyvRedis` instance properties:
+
+```js
+import {createKeyv} from '@keyv/redis';
+
+const keyv = createKeyv('redis://user:pass@localhost:6379');
+keyv.store.namespace = 'my-namespace';
+```
+
+
 # Namespaces
 
 You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a `namespace` with the `store` option:
@@ -120,7 +185,7 @@ keyv.namespace = 'my-namespace';
 
 NOTE: If you plan to do many clears or deletes, it is recommended to read the [Performance Considerations](#performance-considerations) section.
 
-## Typescript
+## Using Generic Types
 
 When initializing `KeyvRedis`, you can specify the type of the values you are storing and you can also specify types when calling methods:
 
@@ -129,7 +194,7 @@ import Keyv from 'keyv';
 import KeyvRedis, { createClient } from '@keyv/redis';
 
 
-interface User {
+type User {
   id: number
   name: string
 }

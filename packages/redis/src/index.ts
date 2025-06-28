@@ -33,6 +33,12 @@ export type KeyvRedisOptions = {
 	 * Defaults to `false`.
 	 */
 	noNamespaceAffectsAll?: boolean;
+
+	/**
+	 * Timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
+	 * Defaults to `200`.
+	 */
+	connectTimeout?: number;
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
@@ -71,6 +77,8 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	private _clearBatchSize = 1000;
 	private _useUnlink = true;
 	private _noNamespaceAffectsAll = false;
+	private _connectTimeout = 200; // Timeout for connecting to Redis in milliseconds
+	private _reconnectClient = false; // Whether to reconnect the client
 
 	/**
 	 * KeyvRedis constructor.
@@ -223,19 +231,59 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	}
 
 	/**
+	 * Get the timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
+	 * @default 200
+	 */
+	public get connectTimeout(): number {
+		return this._connectTimeout;
+	}
+
+	/**
+	 * Set the timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
+	 * @default 200
+	 */
+	public set connectTimeout(value: number) {
+		if (value > 0) {
+			this._connectTimeout = value;
+			this._reconnectClient = true; // Set to true to reconnect with the new timeout
+		} else {
+			this.emit('error', 'connectTimeout must be greater than 0');
+		}
+	}
+
+	/**
 	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
 	 */
-	public async getClient(): Promise<RedisClientConnectionType> {
-		try {
-			if (!this._client.isOpen) {
-				await this._client.connect();
-			}
-		/* c8 ignore next 3 */
-		} catch (error) {
-			this.emit('error', error);
+	public async getClient(): Promise<RedisClientConnectionType | undefined> {
+		if (this._client.isOpen && !this._reconnectClient) {
+			return this._client;
 		}
 
-		return this._client;
+		if (this._reconnectClient && this._client.isOpen) {
+			await this._client.disconnect();
+		}
+
+		try {
+			// Race a short timeout against connect, so we never hang indefinitely
+			// eslint-disable-next-line promise/param-names, no-promise-executor-return
+			const timeoutPromise = new Promise((resolves, reject) => setTimeout(() => {
+				reject(new Error('Redis connect timeout'));
+			}, this._connectTimeout));
+
+			await Promise.race([
+				this._client.connect(),
+				timeoutPromise,
+			]);
+
+			this._reconnectClient = false; // Reset reconnect flag after successful connection
+			this.initClient();
+
+			return this._client;
+		} catch (error) {
+			this.emit('error', error);
+			// Mark “no Redis” by returning null
+			return undefined;
+		}
 	}
 
 	/**
@@ -246,6 +294,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async set(key: string, value: string, ttl?: number): Promise<void> {
 		const client = await this.getClient();
+		if (!client) {
+			this.emit('error', new Error('Redis client is not connected'));
+			return;
+		}
+
 		key = this.createKeyPrefix(key, this._namespace);
 		// eslint-disable-next-line unicorn/prefer-ternary
 		if (ttl) {
@@ -262,6 +315,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		const client = await this.getClient();
+		if (!client) {
+			this.emit('error', new Error('Redis client is not connected'));
+			return;
+		}
+
 		const multi = client.multi();
 		for (const {key, value, ttl} of entries) {
 			const prefixedKey = this.createKeyPrefix(key, this._namespace);
@@ -284,6 +342,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
+		if (!client) {
+			this.emit('error', new Error('Redis client is not connected'));
+			return false;
+		}
+
 		key = this.createKeyPrefix(key, this._namespace);
 		const exists = await client.exists(key);
 
@@ -297,6 +360,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const client = await this.getClient();
+		if (!client) {
+			this.emit('error', new Error('Redis client is not connected'));
+			return [];
+		}
+
 		const multi = client.multi();
 		for (const key of keys) {
 			const prefixedKey = this.createKeyPrefix(key, this._namespace);
@@ -315,6 +383,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async get<U = T>(key: string): Promise<U | undefined> {
 		const client = await this.getClient();
+		if (!client) {
+			this.emit('error', new Error('Redis client is not connected'));
+			return undefined;
+		}
+
 		key = this.createKeyPrefix(key, this._namespace);
 		const value = await client.get(key);
 		if (value === null) {
@@ -347,6 +420,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
+		if (!client) {
+			this.emit('error', new Error('Redis client is not connected'));
+			return false;
+		}
+
 		key = this.createKeyPrefix(key, this._namespace);
 		let deleted = 0;
 		deleted = await (this._useUnlink ? client.unlink(key) : client.del(key));
@@ -362,6 +440,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		let result = false;
 		const client = await this.getClient();
+		if (!client) {
+			this.emit('error', new Error('Redis client is not connected'));
+			return false;
+		}
+
 		const multi = client.multi();
 		for (const key of keys) {
 			const prefixedKey = this.createKeyPrefix(key, this._namespace);
@@ -634,6 +717,12 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 
 		if (options.noNamespaceAffectsAll !== undefined) {
 			this._noNamespaceAffectsAll = options.noNamespaceAffectsAll;
+		}
+
+		if (options.connectTimeout !== undefined && options.connectTimeout > 0) {
+			this._connectTimeout = options.connectTimeout;
+		} else if (options.connectTimeout !== undefined) {
+			this.emit('error', 'connectTimeout must be greater than 0');
 		}
 	}
 
