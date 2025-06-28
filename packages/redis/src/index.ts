@@ -74,6 +74,17 @@ export enum RedisErrorMessages {
 	RedisClientNotConnected = 'Redis client is not connected or has failed to connect',
 }
 
+export const defaultReconnectStrategy = (attempts: number): number | Error => {
+	// Exponential backoff base: double each time, capped at 2s.
+	// Parentheses make it clear we do (2 ** attempts) first, then * 100
+	const backoff = Math.min((2 ** attempts) * 100, 2000);
+
+	// Add random jitter of up to ±50ms to avoid thundering herds:
+	const jitter = (Math.random() - 0.5) * 100;
+
+	return backoff + jitter;
+};
+
 export type RedisClientConnectionType = RedisClientType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>;
 
 // eslint-disable-next-line unicorn/prefer-event-target
@@ -95,9 +106,14 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	constructor(connect?: string | RedisClientOptions | RedisClusterOptions | RedisClientConnectionType, options?: KeyvRedisOptions) {
 		super();
 
+		// Build the socket reconnect strategy
+		const socket = {
+			reconnectStrategy: defaultReconnectStrategy,
+		};
+
 		if (connect) {
 			if (typeof connect === 'string') {
-				this._client = createClient({url: connect}) as RedisClientType;
+				this._client = createClient({url: connect, socket}) as RedisClientType;
 			} else if ((connect as any).connect !== undefined) {
 				this._client = this.isClientCluster(connect as RedisClientConnectionType) ? connect as RedisClusterType : connect as RedisClientType;
 			} else if (connect instanceof Object) {
@@ -618,7 +634,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 
 				await Promise.all(deletePromises);
 			}));
-		/* c8 ignore next 3 */
+			/* c8 ignore next 3 */
 		} catch (error) {
 			this.emit('error', error);
 		}
@@ -740,9 +756,21 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	}
 
 	private initClient(): void {
-		/* c8 ignore next 3 */
+		/* c8 ignore next 10 */
 		this._client.on('error', error => {
 			this.emit('error', error);
+		});
+
+		this._client.on('connect', () => {
+			this.emit('connect', this._client);
+		});
+
+		this._client.on('disconnect', () => {
+			this.emit('disconnect', this._client);
+		});
+
+		this._client.on('reconnecting', reconnectInfo => {
+			this.emit('reconnecting', reconnectInfo);
 		});
 	}
 }
