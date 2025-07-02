@@ -46,6 +46,24 @@ describe('resiliency', () => {
 		expect(keyvRedis.connectTimeout).toBe(200); // Default value
 	});
 
+	test('should be able to set throwOnConnectError', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnConnectError: true});
+		expect(keyvRedis.throwOnConnectError).toBe(true);
+		await expect(keyvRedis.getClient()).resolves.toBeDefined();
+		keyvRedis.throwOnConnectError = false; // Reset to default for other tests
+		expect(keyvRedis.throwOnConnectError).toBe(false);
+		await expect(keyvRedis.getClient()).resolves.toBeDefined();
+	});
+
+	test('should be able to set throwOnError', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnError: true});
+		expect(keyvRedis.throwOnError).toBe(true);
+		await expect(keyvRedis.getClient()).resolves.toBeDefined();
+		keyvRedis.throwOnError = false; // Reset to default for other tests
+		expect(keyvRedis.throwOnError).toBe(false);
+		await expect(keyvRedis.getClient()).resolves.toBeDefined();
+	});
+
 	test('should gracefully fail on set with bad redis uri', async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri);
 		let errorMessage = '';
