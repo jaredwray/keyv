@@ -39,6 +39,24 @@ export type KeyvRedisOptions = {
 	 * Defaults to `200`.
 	 */
 	connectTimeout?: number;
+
+	/**
+	 * If true, it will throw an error when the client fails to connect. This is the default behavior as without
+	 * this, the client will not throw an error and all of your operations will fail silently.
+	 * If false, it will not throw an error when the client fails to connect and will return no-op responses on
+	 * all operations until the client connects successfully.
+	 * @default true
+	 */
+	throwOnConnectError?: boolean;
+
+	/**
+	 * This is used to throw an error if at any point there is a failure. Use this if you want to
+	 * ensure that all operations are successful and you want to handle errors. By default, this is
+	 * set to false so that it does not throw an error on every operation and instead emits an error event
+	 * and returns no-op responses.
+	 * @default false
+	 */
+	throwOnError?: boolean;
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
@@ -97,6 +115,8 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	private _noNamespaceAffectsAll = false;
 	private _connectTimeout = 200; // Timeout for connecting to Redis in milliseconds
 	private _reconnectClient = false; // Whether to reconnect the client
+	private _throwOnConnectError = true; // Whether to throw an error on connect failure
+	private _throwOnError = false; // Whether to throw an error on every operation
 
 	/**
 	 * KeyvRedis constructor.
@@ -272,6 +292,45 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 		} else {
 			this.emit('error', 'connectTimeout must be greater than 0');
 		}
+	}
+
+	/**
+	 * Get if the client will throw an error when it fails to connect.
+	 * If false, it will not throw an error when the client fails to connect and will return no-op responses on
+	 * all operations until the client connects successfully.
+	 * @default true
+	 */
+	public get throwOnConnectError(): boolean {
+		return this._throwOnConnectError;
+	}
+
+	/**
+	 * Set if the client will throw an error when it fails to connect.
+	 * If false, it will not throw an error when the client fails to connect and will return no-op responses on
+	 * all operations until the client connects successfully.
+	 */
+	public set throwOnConnectError(value: boolean) {
+		this._throwOnConnectError = value;
+	}
+
+	/**
+	 * Get if the client will throw an error when it fails to connect.
+	 * If false, it will not throw an error when the client fails to connect and will return no-op responses on
+	 * all operations until the client connects successfully.
+	 * @default true
+	 */
+	public get throwOnError(): boolean {
+		return this._throwOnError;
+	}
+
+	/**
+	 * Set if the client will throw an error when it fails to connect.
+	 * If false, it will not throw an error when the client fails to connect and will return no-op responses on
+	 * all operations until the client connects successfully.
+	 * @default true
+	 */
+	public set throwOnError(value: boolean) {
+		this._throwOnError = value;
 	}
 
 	/**
@@ -752,6 +811,14 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 
 		if (options.connectTimeout !== undefined && options.connectTimeout > 0) {
 			this._connectTimeout = options.connectTimeout;
+		}
+
+		if (options.throwOnConnectError !== undefined) {
+			this._throwOnConnectError = options.throwOnConnectError;
+		}
+
+		if (options.throwOnError !== undefined) {
+			this._throwOnError = options.throwOnError;
 		}
 	}
 

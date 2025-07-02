@@ -9,7 +9,7 @@ import KeyvRedis, {RedisErrorMessages} from '../src/index.js';
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
 const redisBadUri = process.env.REDIS_BAD_URI ?? 'redis://localhost:6378';
 
-describe('connect', () => {
+describe('resiliency', () => {
 	test('connects to redis', async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		expect(keyvRedis.client).toBeDefined();
