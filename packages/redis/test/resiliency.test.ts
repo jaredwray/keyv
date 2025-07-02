@@ -56,16 +56,16 @@ describe('resiliency', () => {
 	});
 
 	test('should be able to set throwOnError', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwOnError: true});
-		expect(keyvRedis.throwOnError).toBe(true);
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnOperationError: true});
+		expect(keyvRedis.throwOnOperationError).toBe(true);
 		await expect(keyvRedis.getClient()).resolves.toBeDefined();
-		keyvRedis.throwOnError = false; // Reset to default for other tests
-		expect(keyvRedis.throwOnError).toBe(false);
+		keyvRedis.throwOnOperationError = false; // Reset to default for other tests
+		expect(keyvRedis.throwOnOperationError).toBe(false);
 		await expect(keyvRedis.getClient()).resolves.toBeDefined();
 	});
 
 	test('should gracefully fail on set with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 		keyvRedis.on('error', error => {
 			expect(error).toBeDefined();
@@ -76,7 +76,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully fail on setMany with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {
@@ -94,7 +94,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully hanlde has with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {
@@ -107,7 +107,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully handle hasMany with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {
@@ -121,7 +121,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully handle get with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {
@@ -134,7 +134,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully handle getMany with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {
@@ -148,7 +148,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully handle delete with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {
@@ -161,7 +161,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully handle deleteMany with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {
@@ -175,7 +175,7 @@ describe('resiliency', () => {
 	});
 
 	test('should gracefully handle clear with bad redis uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false});
 		let errorMessage = '';
 
 		keyvRedis.on('error', error => {

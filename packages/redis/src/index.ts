@@ -56,7 +56,7 @@ export type KeyvRedisOptions = {
 	 * and returns no-op responses.
 	 * @default false
 	 */
-	throwOnError?: boolean;
+	throwOnOperationError?: boolean;
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
@@ -90,6 +90,11 @@ export enum RedisErrorMessages {
 	 * Error message when the Redis client is not connected.
 	 */
 	RedisClientNotConnected = 'Redis client is not connected or has failed to connect',
+
+	/**
+	 * Error message when the Redis client is not connected and throwOnConnectError is set to true.
+	 */
+	RedisClientNotConnectedThrown = 'Redis client is not connected or has failed to connect. This is thrown because throwOnConnectError is set to true.',
 }
 
 export const defaultReconnectStrategy = (attempts: number): number | Error => {
@@ -116,7 +121,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	private _connectTimeout = 200; // Timeout for connecting to Redis in milliseconds
 	private _reconnectClient = false; // Whether to reconnect the client
 	private _throwOnConnectError = true; // Whether to throw an error on connect failure
-	private _throwOnError = false; // Whether to throw an error on every operation
+	private _throwOnOperationError = false; // Whether to throw an error on every operation
 
 	/**
 	 * KeyvRedis constructor.
@@ -319,8 +324,8 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 * all operations until the client connects successfully.
 	 * @default true
 	 */
-	public get throwOnError(): boolean {
-		return this._throwOnError;
+	public get throwOnOperationError(): boolean {
+		return this._throwOnOperationError;
 	}
 
 	/**
@@ -329,8 +334,8 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 * all operations until the client connects successfully.
 	 * @default true
 	 */
-	public set throwOnError(value: boolean) {
-		this._throwOnError = value;
+	public set throwOnOperationError(value: boolean) {
+		this._throwOnOperationError = value;
 	}
 
 	/**
@@ -363,7 +368,11 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			return this._client;
 		} catch (error) {
 			this.emit('error', error);
-			// Mark “no Redis” by returning null
+			// Mark “no Redis” by returning undefined
+			if (this._throwOnConnectError) {
+				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown);
+			}
+
 			return undefined;
 		}
 	}
@@ -381,13 +390,20 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			return;
 		}
 
-		key = this.createKeyPrefix(key, this._namespace);
-		// eslint-disable-next-line unicorn/prefer-ternary
-		if (ttl) {
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			await client.set(key, value, {PX: ttl});
-		} else {
-			await client.set(key, value);
+		try {
+			key = this.createKeyPrefix(key, this._namespace);
+			// eslint-disable-next-line unicorn/prefer-ternary
+			if (ttl) {
+				// eslint-disable-next-line @typescript-eslint/naming-convention
+				await client.set(key, value, {PX: ttl});
+			} else {
+				await client.set(key, value);
+			}
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwOnOperationError) {
+				throw error;
+			}
 		}
 	}
 
@@ -817,8 +833,8 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			this._throwOnConnectError = options.throwOnConnectError;
 		}
 
-		if (options.throwOnError !== undefined) {
-			this._throwOnError = options.throwOnError;
+		if (options.throwOnOperationError !== undefined) {
+			this._throwOnOperationError = options.throwOnOperationError;
 		}
 	}
 
