@@ -1,0 +1,38 @@
+import process from 'node:process';
+import {
+	describe, test, expect,
+} from 'vitest';
+import KeyvRedis, {RedisErrorMessages} from '../src/index.js';
+
+const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
+const redisBadUri = process.env.REDIS_BAD_URI ?? 'redis://localhost:6378';
+
+describe('getClient', () => {
+	test('should get client that is connected', async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		const client = await keyvRedis.getClient();
+		expect(client).toBeDefined();
+	});
+
+	test('should get client that is connected with default timeout', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {connectionTimeout: 2000});
+		expect(keyvRedis.connectionTimeout).toBe(2000);
+		keyvRedis.connectionTimeout = undefined; // Reset to default
+		expect(keyvRedis.connectionTimeout).toBe(undefined);
+		const client = await keyvRedis.getClient();
+		expect(client).toBeDefined();
+	});
+
+	test('should throw an error if not connected', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
+		let didError = false;
+		try {
+			await keyvRedis.getClient();
+		} catch (error) {
+			didError = true;
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
+		}
+
+		expect(didError).toBe(true);
+	});
+});
