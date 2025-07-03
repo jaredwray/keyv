@@ -1,4 +1,3 @@
-import EventEmitter from 'node:events';
 import {
 	createClient, createCluster, type RedisClientType, type RedisClientOptions, type RedisClusterType,
 	type RedisClusterOptions,
@@ -6,6 +5,7 @@ import {
 	type RedisFunctions,
 	type RedisScripts,
 } from '@redis/client';
+import {Hookified} from 'hookified';
 import {Keyv, type KeyvStoreAdapter, type KeyvEntry} from 'keyv';
 import calculateSlot from 'cluster-key-slot';
 
@@ -35,10 +35,31 @@ export type KeyvRedisOptions = {
 	noNamespaceAffectsAll?: boolean;
 
 	/**
-	 * Timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
-	 * Defaults to `200`.
+	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
+	 * set to true so that it throws an error when trying to connect to the Redis server fails.
 	 */
-	connectTimeout?: number;
+	throwOnConnectError?: boolean;
+
+	/**
+	 * This is used to throw an error if at any point there is a failure. Use this if you want to
+	 * ensure that all operations are successful and you want to handle errors. By default, this is
+	 * set to false so that it does not throw an error on every operation and instead emits an error event
+	 * and returns no-op responses.
+	 * @default false
+	 */
+	throwErrors?: boolean;
+
+	/**
+	 * Connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default
+	 * @default undefined
+	 */
+	connectionTimeout?: number;
+
+	/**
+	 * Command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default
+	 * @default undefined
+	 */
+	commandTimeout?: number;
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
@@ -69,9 +90,9 @@ export type KeyvRedisEntry<T> = {
 
 export enum RedisErrorMessages {
 	/**
-	 * Error message when the Redis client is not connected.
+	 * Error message when the Redis client is not connected and throwOnConnectError is set to true.
 	 */
-	RedisClientNotConnected = 'Redis client is not connected or has failed to connect',
+	RedisClientNotConnectedThrown = 'Redis client is not connected or has failed to connect. This is thrown because throwOnConnectError is set to true.',
 }
 
 export const defaultReconnectStrategy = (attempts: number): number | Error => {
@@ -87,16 +108,17 @@ export const defaultReconnectStrategy = (attempts: number): number | Error => {
 
 export type RedisClientConnectionType = RedisClientType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts>;
 
-// eslint-disable-next-line unicorn/prefer-event-target
-export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapter {
+export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter {
 	private _client: RedisClientConnectionType = createClient() as RedisClientType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = '::';
 	private _clearBatchSize = 1000;
 	private _useUnlink = true;
 	private _noNamespaceAffectsAll = false;
-	private _connectTimeout = 200; // Timeout for connecting to Redis in milliseconds
-	private _reconnectClient = false; // Whether to reconnect the client
+	private _throwOnConnectError = true;
+	private _throwErrors = false;
+	private _connectionTimeout: number | undefined;
+	private _commandTimeout: number | undefined;
 
 	/**
 	 * KeyvRedis constructor.
@@ -108,7 +130,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 
 		// Build the socket reconnect strategy
 		const socket = {
-			reconnectStrategy: defaultReconnectStrategy,
+			reconnectStrategy: defaultReconnectStrategy, // Default timeout for the connection
 		};
 
 		if (connect) {
@@ -254,59 +276,106 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	}
 
 	/**
-	 * Get the timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
-	 * @default 200
+	 * Get if throwOnConnectError is set to true.
+	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
+	 * set to true so that it throws an error when trying to connect to the Redis server fails.
+	 * @default true
 	 */
-	public get connectTimeout(): number {
-		return this._connectTimeout;
+	public get throwOnConnectError(): boolean {
+		return this._throwOnConnectError;
 	}
 
 	/**
-	 * Set the timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
-	 * @default 200
+	 * Set if throwOnConnectError is set to true.
+	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
+	 * set to true so that it throws an error when trying to connect to the Redis server fails.
 	 */
-	public set connectTimeout(value: number) {
-		if (value > 0) {
-			this._connectTimeout = value;
-			this._reconnectClient = true; // Set to true to reconnect with the new timeout
-		} else {
-			this.emit('error', 'connectTimeout must be greater than 0');
-		}
+	public set throwOnConnectError(value: boolean) {
+		this._throwOnConnectError = value;
+	}
+
+	/**
+	 * Get if throwErrors is set to true.
+	 * This is used to throw an error if at any point there is a failure. Use this if you want to
+	 * ensure that all operations are successful and you want to handle errors. By default, this is
+	 * set to false so that it does not throw an error on every operation and instead emits an error event
+	 * and returns no-op responses.
+	 * @default false
+	 */
+	public get throwErrors(): boolean {
+		return this._throwErrors;
+	}
+
+	/**
+	 * Set if throwErrors is set to true.
+	 * This is used to throw an error if at any point there is a failure. Use this if you want to
+	 * ensure that all operations are successful and you want to handle errors. By default, this is
+	 * set to false so that it does not throw an error on every operation and instead emits an error event
+	 * and returns no-op responses.
+	 */
+	public set throwErrors(value: boolean) {
+		this._throwErrors = value;
+	}
+
+	/**
+	 * Get the connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
+	 */
+	public get connectionTimeout(): number | undefined {
+		return this._connectionTimeout;
+	}
+
+	/**
+	 * Set the connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
+	 */
+	public set connectionTimeout(value: number | undefined) {
+		this._connectionTimeout = value;
+	}
+
+	/**
+	 * Get the command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
+	 */
+	public get commandTimeout(): number | undefined {
+		return this._commandTimeout;
+	}
+
+	/**
+	 * Set the command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
+	 */
+	public set commandTimeout(value: number | undefined) {
+		this._commandTimeout = value;
 	}
 
 	/**
 	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
 	 */
-	public async getClient(): Promise<RedisClientConnectionType | undefined> {
-		if (this._client.isOpen && !this._reconnectClient) {
+	public async getClient(): Promise<RedisClientConnectionType> {
+		if (this._client.isOpen) {
 			return this._client;
-		}
-
-		if (this._reconnectClient && this._client.isOpen) {
-			await this._client.disconnect();
 		}
 
 		try {
-			// Race a short timeout against connect, so we never hang indefinitely
-			// eslint-disable-next-line promise/param-names, no-promise-executor-return
-			const timeoutPromise = new Promise((resolves, reject) => setTimeout(() => {
-				reject(new Error(RedisErrorMessages.RedisClientNotConnected));
-			}, this._connectTimeout));
-
-			await Promise.race([
-				this._client.connect(),
-				timeoutPromise,
-			]);
-
-			this._reconnectClient = false; // Reset reconnect flag after successful connection
-			this.initClient();
-
-			return this._client;
+			if (this._connectionTimeout === undefined) {
+				await this._client.connect();
+			} else {
+				await Promise.race([
+					this._client.connect(),
+					this.createTimeoutPromise(this._connectionTimeout),
+				]);
+			}
 		} catch (error) {
 			this.emit('error', error);
-			// Mark “no Redis” by returning null
-			return undefined;
+			if (this._throwOnConnectError) {
+				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown);
+			}
 		}
+
+		this.initClient();
+
+		return this._client;
 	}
 
 	/**
@@ -317,18 +386,34 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async set(key: string, value: string, ttl?: number): Promise<void> {
 		const client = await this.getClient();
-		if (!client) {
-			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
-			return;
-		}
 
-		key = this.createKeyPrefix(key, this._namespace);
-		// eslint-disable-next-line unicorn/prefer-ternary
-		if (ttl) {
-			// eslint-disable-next-line @typescript-eslint/naming-convention
-			await client.set(key, value, {PX: ttl});
-		} else {
-			await client.set(key, value);
+		try {
+			key = this.createKeyPrefix(key, this._namespace);
+
+			if (ttl) {
+				if (this._commandTimeout === undefined) {
+					// eslint-disable-next-line @typescript-eslint/naming-convention
+					await client.set(key, value, {PX: ttl});
+				} else {
+					await Promise.race([
+						// eslint-disable-next-line @typescript-eslint/naming-convention
+						client.set(key, value, {PX: ttl}),
+						this.createTimeoutPromise(this._commandTimeout),
+					]);
+				}
+			} else if (this._commandTimeout === undefined) {
+				await client.set(key, value);
+			} else {
+				await Promise.race([
+					client.set(key, value),
+					this.createTimeoutPromise(this._commandTimeout),
+				]);
+			}
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
+			}
 		}
 	}
 
@@ -338,10 +423,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		const client = await this.getClient();
-		if (!client) {
-			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
-			return;
-		}
 
 		const multi = client.multi();
 		for (const {key, value, ttl} of entries) {
@@ -365,10 +446,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
-		if (!client) {
-			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
-			return false;
-		}
 
 		key = this.createKeyPrefix(key, this._namespace);
 		const exists = await client.exists(key);
@@ -383,10 +460,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const client = await this.getClient();
-		if (!client) {
-			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
-			return Array.from({length: keys.length}).fill(false) as boolean[];
-		}
 
 		const multi = client.multi();
 		for (const key of keys) {
@@ -406,12 +479,9 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async get<U = T>(key: string): Promise<U | undefined> {
 		const client = await this.getClient();
-		if (!client) {
-			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
-			return undefined;
-		}
 
 		key = this.createKeyPrefix(key, this._namespace);
+
 		const value = await client.get(key);
 		if (value === null) {
 			return undefined;
@@ -435,6 +505,7 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			const values = await this.mget<U>(keys);
 
 			return values;
+		/* c8 ignore next 5 */
 		} catch (error) {
 			this.emit('error', error);
 			return Array.from({length: keys.length}).fill(undefined) as Array<U | undefined>;
@@ -448,10 +519,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
-		if (!client) {
-			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
-			return false;
-		}
 
 		key = this.createKeyPrefix(key, this._namespace);
 		let deleted = 0;
@@ -468,10 +535,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		let result = false;
 		const client = await this.getClient();
-		if (!client) {
-			this.emit('error', new Error(RedisErrorMessages.RedisClientNotConnected));
-			return false;
-		}
 
 		const multi = client.multi();
 		for (const key of keys) {
@@ -681,9 +744,6 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 	 */
 	private async getSlotMaster(slot: number): Promise<RedisClientType> {
 		const connection = await this.getClient();
-		if (!connection) {
-			throw new Error(RedisErrorMessages.RedisClientNotConnected);
-		}
 
 		if (this.isCluster()) {
 			const cluster = connection as RedisClusterType;
@@ -750,17 +810,25 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 			this._noNamespaceAffectsAll = options.noNamespaceAffectsAll;
 		}
 
-		if (options.connectTimeout !== undefined && options.connectTimeout > 0) {
-			this._connectTimeout = options.connectTimeout;
+		if (options.throwOnConnectError !== undefined) {
+			this._throwOnConnectError = options.throwOnConnectError;
+		}
+
+		if (options.throwErrors !== undefined) {
+			this._throwErrors = options.throwErrors;
+		}
+
+		if (options.connectionTimeout !== undefined) {
+			this._connectionTimeout = options.connectionTimeout;
+		}
+
+		if (options.commandTimeout !== undefined) {
+			this._commandTimeout = options.commandTimeout;
 		}
 	}
 
 	private initClient(): void {
 		/* c8 ignore next 10 */
-		this._client.on('error', error => {
-			this.emit('error', error);
-		});
-
 		this._client.on('connect', () => {
 			this.emit('connect', this._client);
 		});
@@ -772,6 +840,18 @@ export default class KeyvRedis<T> extends EventEmitter implements KeyvStoreAdapt
 		this._client.on('reconnecting', reconnectInfo => {
 			this.emit('reconnecting', reconnectInfo);
 		});
+	}
+
+	private async createTimeoutPromise(timeoutMs: number): Promise<never> {
+		// eslint-disable-next-line promise/param-names
+		return new Promise<never>((_, reject) =>
+			// eslint-disable-next-line no-promise-executor-return
+			setTimeout(
+				() => {
+					reject(new Error(`Redis timed out after ${timeoutMs}ms`));
+				},
+				timeoutMs,
+			));
 	}
 }
 

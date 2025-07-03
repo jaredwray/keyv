@@ -42,7 +42,8 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"@redis/client": "^1.6.0",
-		"cluster-key-slot": "^1.1.2"
+		"cluster-key-slot": "^1.1.2",
+		"hookified": "^1.10.0"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
