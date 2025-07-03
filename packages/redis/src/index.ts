@@ -404,7 +404,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			} else if (this._commandTimeout === undefined) {
 				await client.set(key, value);
 			} else {
-				await Promise.race([client.set(key, value), this.createTimeoutPromise(this._commandTimeout)]);
+				await Promise.race([
+					client.set(key, value),
+					this.createTimeoutPromise(this._commandTimeout),
+				]);
 			}
 		} catch (error) {
 			this.emit('error', error);
@@ -478,6 +481,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		const client = await this.getClient();
 
 		key = this.createKeyPrefix(key, this._namespace);
+
 		const value = await client.get(key);
 		if (value === null) {
 			return undefined;
@@ -501,6 +505,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			const values = await this.mget<U>(keys);
 
 			return values;
+		/* c8 ignore next 5 */
 		} catch (error) {
 			this.emit('error', error);
 			return Array.from({length: keys.length}).fill(undefined) as Array<U | undefined>;

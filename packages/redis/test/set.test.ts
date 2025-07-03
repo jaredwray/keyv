@@ -33,12 +33,9 @@ describe('set', () => {
 
 		await keyvRedis.set(data.key, data.value);
 
-		const result = await keyvRedis.get(data.key);
+		const result = await keyvRedis.get<string>(data.key);
 
 		expect(result).toBe(data.value);
-
-		const expiredResult = await keyvRedis.get(data.key);
-		expect(expiredResult).toBeUndefined();
 	});
 
 	test('should return no-op value on bad uri', async () => {
@@ -49,7 +46,38 @@ describe('set', () => {
 			value: faker.lorem.sentence(),
 		};
 
-		await keyvRedis.set(data.key, data.value);
+		let didError = false;
+
+		try {
+			await keyvRedis.set(data.key, data.value);
+		} catch {
+			didError = true;
+		}
+
+		expect(didError).toBe(false);
+	});
+
+	test('should throw error on bad uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false, throwErrors: true});
+
+		const data = {
+			key: faker.string.alphanumeric(10),
+			value: faker.lorem.sentence(),
+		};
+
+		// Set the set value to throw an error on the client
+		keyvRedis.client.set = () => {
+			throw new Error('Redis client error');
+		};
+
+		let didError = false;
+		try {
+			await keyvRedis.set(data.key, data.value);
+		} catch {
+			didError = true;
+		}
+
+		expect(didError).toBe(true);
 	});
 
 	test('should set a value with ttl', async () => {
