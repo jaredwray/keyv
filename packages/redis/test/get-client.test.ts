@@ -23,6 +23,13 @@ describe('getClient', () => {
 		expect(client).toBeDefined();
 	});
 
+	test('should get client that is connected with timeout', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {connectionTimeout: 2000});
+		expect(keyvRedis.connectionTimeout).toBe(2000);
+		const client = await keyvRedis.getClient();
+		expect(client).toBeDefined();
+	});
+
 	test('should throw an error if not connected', async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri);
 		let didError = false;

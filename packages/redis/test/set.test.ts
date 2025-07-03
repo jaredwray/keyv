@@ -24,6 +24,23 @@ describe('set', () => {
 		expect(result).toBe(data.value);
 	});
 
+	test('should set a value and commandTimeout', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {commandTimeout: 1000});
+		const data = {
+			key: faker.string.alphanumeric(10),
+			value: faker.lorem.sentence(),
+		};
+
+		await keyvRedis.set(data.key, data.value);
+
+		const result = await keyvRedis.get(data.key);
+
+		expect(result).toBe(data.value);
+
+		const expiredResult = await keyvRedis.get(data.key);
+		expect(expiredResult).toBeUndefined();
+	});
+
 	test('should return no-op value on bad uri', async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false, commandTimeout: 500});
 
@@ -55,8 +72,8 @@ describe('set', () => {
 		expect(expiredResult).toBeUndefined();
 	});
 
-	test('should set a value with ttl', async () => {
-		const keyvRedis = new KeyvRedis(redisUri);
+	test('should set a value with ttl and commandTimeout', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {commandTimeout: 1000});
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),

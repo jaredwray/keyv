@@ -29,4 +29,16 @@ describe('properties', () => {
 		keyvRedis.throwErrors = true;
 		expect(keyvRedis.throwErrors).toBe(true);
 	});
+
+	test('should get and set commandTimeout', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {commandTimeout: 1000});
+		const client = await keyvRedis.getClient();
+		expect(client).toBeDefined();
+
+		expect(keyvRedis.commandTimeout).toBe(1000);
+		keyvRedis.commandTimeout = 2000;
+		expect(keyvRedis.commandTimeout).toBe(2000);
+		keyvRedis.commandTimeout = undefined;
+		expect(keyvRedis.commandTimeout).toBeUndefined();
+	});
 });
