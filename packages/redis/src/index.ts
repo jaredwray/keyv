@@ -50,12 +50,14 @@ export type KeyvRedisOptions = {
 	throwErrors?: boolean;
 
 	/**
-	 * Connection timeout in milliseconds. Default is 2000 (2 seconds). If undefined, it will use the default
+	 * Connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default
+	 * @default undefined
 	 */
 	connectionTimeout?: number;
 
 	/**
-	 * Command timeout in milliseconds. Default is 2000 (2 seconds). If undefined, it will use the default
+	 * Command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default
+	 * @default undefined
 	 */
 	commandTimeout?: number;
 };
@@ -115,8 +117,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	private _noNamespaceAffectsAll = false;
 	private _throwOnConnectError = true;
 	private _throwErrors = false;
-	private _connectionTimeout: number | undefined = 2000; // Default connection timeout in milliseconds
-	private _commandTimeout: number | undefined = 2000; // Default command timeout in milliseconds
+	private _connectionTimeout: number | undefined;
+	private _commandTimeout: number | undefined;
 
 	/**
 	 * KeyvRedis constructor.
@@ -316,28 +318,32 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	}
 
 	/**
-	 * Get the connection timeout in milliseconds. Default is 2000 (2 seconds). If undefined, it will use the default.
+	 * Get the connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
 	 */
 	public get connectionTimeout(): number | undefined {
 		return this._connectionTimeout;
 	}
 
 	/**
-	 * Set the connection timeout in milliseconds. Default is 2000 (2 seconds). If undefined, it will use the default.
+	 * Set the connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
 	 */
 	public set connectionTimeout(value: number | undefined) {
 		this._connectionTimeout = value;
 	}
 
 	/**
-	 * Get the command timeout in milliseconds. Default is 2000 (2 seconds). If undefined, it will use the default.
+	 * Get the command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
 	 */
 	public get commandTimeout(): number | undefined {
 		return this._commandTimeout;
 	}
 
 	/**
-	 * Set the command timeout in milliseconds. Default is 2000 (2 seconds). If undefined, it will use the default.
+	 * Set the command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default.
+	 * @default undefined
 	 */
 	public set commandTimeout(value: number | undefined) {
 		this._commandTimeout = value;
