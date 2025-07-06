@@ -75,6 +75,7 @@ npm install --save @keyv/postgres
 npm install --save @keyv/mysql
 npm install --save @keyv/etcd
 npm install --save @keyv/memcache
+npm install --save @keyv/dynamo
 ```
 
 First, create a new Keyv instance. 
@@ -278,6 +279,7 @@ PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/pack
 MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mysql) | No 
 Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes
 Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) | Yes
+DynamoDB | [@keyv/dynamo](https://github.com/jaredwray/keyv/tree/master/packages/dynamo) | Yes 
 
 # Third-party Storage Adapters
 
@@ -310,7 +312,6 @@ The following are third-party storage adapters compatible with Keyv:
 
 - [quick-lru](https://github.com/sindresorhus/quick-lru) - Simple "Least Recently Used" (LRU) cache
 - [keyv-file](https://github.com/zaaack/keyv-file) - File system storage adapter for Keyv
-- [keyv-dynamodb](https://www.npmjs.com/package/keyv-dynamodb) - DynamoDB storage adapter for Keyv
 - [keyv-lru](https://www.npmjs.com/package/keyv-lru) - LRU storage adapter for Keyv
 - [keyv-null](https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
 - [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv

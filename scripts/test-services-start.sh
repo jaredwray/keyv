@@ -11,3 +11,5 @@ else
   # Call non-ARM command
   docker compose -f ./scripts/docker-compose.yaml -f ./scripts/docker-compose-redis-cluster.yaml --project-name keyv --parallel 1 up -d
 fi
+
+chmod +x ./scripts/create-dynamo-table.sh && ./scripts/create-dynamo-table.sh > /dev/null 2>&1
