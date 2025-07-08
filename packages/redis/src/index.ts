@@ -510,6 +510,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		/* c8 ignore next 5 */
 		} catch (error) {
 			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
+			}
+
 			return Array.from({length: keys.length}).fill(undefined) as Array<U | undefined>;
 		}
 	}

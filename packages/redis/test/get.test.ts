@@ -83,12 +83,59 @@ describe('get', () => {
 		let result: string | undefined = '';
 		try {
 			result = await keyvRedis.get(data.key);
-		} catch (error) {
+		} catch {
 			didError = true;
 		}
 
 		expect(didError).toBe(false);
 		expect(result).toBeUndefined();
 		vi.spyOn(keyvRedis.client, 'get').mockRestore();
+	});
+
+	test('should throw and error on getMany client error', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+
+		const data = {
+			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
+		};
+
+		vi.spyOn(keyvRedis.client, 'mGet').mockImplementation(() => {
+			throw new Error('Redis client error');
+		});
+
+		let didError = false;
+		try {
+			await keyvRedis.getMany(data.keys);
+		} catch (error) {
+			didError = true;
+			expect((error as Error).message).toBe('Redis client error');
+		}
+
+		expect(didError).toBe(true);
+		vi.spyOn(keyvRedis.client, 'mGet').mockRestore();
+	});
+
+	test('should not throw and error on getMany client error', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: false});
+
+		const data = {
+			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
+		};
+
+		vi.spyOn(keyvRedis.client, 'mGet').mockImplementation(() => {
+			throw new Error('Redis client error');
+		});
+
+		let didError = false;
+		let result: Array<string | undefined> = [];
+		try {
+			result = await keyvRedis.getMany(data.keys);
+		} catch {
+			didError = true;
+		}
+
+		expect(didError).toBe(false);
+		expect(result).toEqual([undefined, undefined]);
+		vi.spyOn(keyvRedis.client, 'mGet').mockRestore();
 	});
 });
