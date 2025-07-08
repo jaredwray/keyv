@@ -422,10 +422,19 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
 
-		key = this.createKeyPrefix(key, this._namespace);
-		const exists = await client.exists(key);
+		try {
+			key = this.createKeyPrefix(key, this._namespace);
+			const exists = await client.exists(key);
 
-		return exists === 1;
+			return exists === 1;
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
+			}
+
+			return false; // Return false if an error occurs
+		}
 	}
 
 	/**
@@ -436,15 +445,24 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const client = await this.getClient();
 
-		const multi = client.multi();
-		for (const key of keys) {
-			const prefixedKey = this.createKeyPrefix(key, this._namespace);
-			multi.exists(prefixedKey);
+		try {
+			const multi = client.multi();
+			for (const key of keys) {
+				const prefixedKey = this.createKeyPrefix(key, this._namespace);
+				multi.exists(prefixedKey);
+			}
+
+			const results = await multi.exec();
+
+			return results.map(result => result === 1);
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
+			}
+
+			return Array.from({length: keys.length}).fill(false) as boolean[];
 		}
-
-		const results = await multi.exec();
-
-		return results.map(result => result === 1);
 	}
 
 	/**

@@ -8,7 +8,7 @@ import KeyvRedis from '../src/index.js';
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
 const redisBadUri = process.env.REDIS_BAD_URI ?? 'redis://localhost:6378';
 
-describe('getMany', () => {
+describe('get', () => {
 	test('should get many values', async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		const data = {
