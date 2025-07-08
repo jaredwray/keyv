@@ -1,5 +1,9 @@
 #!/bin/bash
 
+export AWS_ACCESS_KEY_ID=dummyAccessKeyId
+export AWS_SECRET_ACCESS_KEY=dummySecretAccessKey
+export AWS_REGION=local
+
 # Set local DynamoDB endpoint
 ENDPOINT_URL="http://localhost:8000"
 
@@ -7,9 +11,9 @@ ENDPOINT_URL="http://localhost:8000"
 echo "Waiting for DynamoDB to be ready..."
 MAX_RETRIES=30
 RETRY_COUNT=0
-
+aws dynamodb list-tables --endpoint-url $ENDPOINT_URL
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if aws dynamodb list-tables --endpoint-url $ENDPOINT_URL --region us-east-1 >/dev/null 2>&1; then
+    if aws dynamodb list-tables --endpoint-url $ENDPOINT_URL > /dev/null 2>&1; then
         echo "DynamoDB is ready!"
         break
     else

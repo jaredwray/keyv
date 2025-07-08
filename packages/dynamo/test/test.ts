@@ -1,10 +1,17 @@
+import process from 'node:process';
 import * as test from 'vitest';
 import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'keyv';
 import KeyvDynamo from '../src/index.js';
 
+process.env.AWS_ACCESS_KEY_ID = 'dummyAccessKeyId';
+process.env.AWS_SECRET_ACCESS_KEY = 'dummySecretAccessKey';
+process.env.AWS_REGION = 'local';
+
 const dynamoURL = 'http://localhost:8000';
-const keyvDynamodb = new KeyvDynamo(dynamoURL);
+const keyvDynamodb = new KeyvDynamo({
+  endpoint: dynamoURL,
+});
 const store = () => new KeyvDynamo(dynamoURL);
 
 keyvTestSuite(test, Keyv, store);
@@ -16,12 +23,13 @@ test.beforeEach(async () => {
 
 test.it('should be able to create a keyv instance', t => {
   const keyv = new Keyv<string>({store: keyvDynamodb});
-  t.expect({uri: dynamoURL}).toEqual({uri: dynamoURL});
+  t.expect(keyv.store.opts.endpoint).toEqual(dynamoURL);
 });
 
 test.it('should be able to create a keyv instance with namespace', t => {
-  const keyv = new Keyv<string>({store: keyvDynamodb, namespace: 'test'});
-  t.expect({uri: dynamoURL, namespace: 'test'}).toEqual({uri: dynamoURL, namespace: 'test'});
+  const keyv = new Keyv<string>({store: new KeyvDynamo({endpoint: dynamoURL, namespace: 'test'})});
+  t.expect(keyv.store.opts.endpoint).toEqual(dynamoURL);
+  t.expect(keyv.store.opts.namespace).toEqual('test');
 });
 
 test.it('.clear() entire cache store with default namespace', async t => {
