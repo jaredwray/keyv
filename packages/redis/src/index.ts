@@ -526,11 +526,20 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
 
-		key = this.createKeyPrefix(key, this._namespace);
-		let deleted = 0;
-		deleted = await (this._useUnlink ? client.unlink(key) : client.del(key));
+		try {
+			key = this.createKeyPrefix(key, this._namespace);
+			let deleted = 0;
+			deleted = await (this._useUnlink ? client.unlink(key) : client.del(key));
 
-		return deleted > 0;
+			return deleted > 0;
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
+			}
+
+			return false; // Return false if an error occurs
+		}
 	}
 
 	/**
@@ -542,21 +551,28 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		let result = false;
 		const client = await this.getClient();
 
-		const multi = client.multi();
-		for (const key of keys) {
-			const prefixedKey = this.createKeyPrefix(key, this._namespace);
-			if (this._useUnlink) {
-				multi.unlink(prefixedKey);
-			} else {
-				multi.del(prefixedKey);
+		try {
+			const multi = client.multi();
+			for (const key of keys) {
+				const prefixedKey = this.createKeyPrefix(key, this._namespace);
+				if (this._useUnlink) {
+					multi.unlink(prefixedKey);
+				} else {
+					multi.del(prefixedKey);
+				}
 			}
-		}
 
-		const results = await multi.exec();
+			const results = await multi.exec();
 
-		for (const deleted of results) {
-			if (typeof deleted === 'number' && deleted > 0) {
-				result = true;
+			for (const deleted of results) {
+				if (typeof deleted === 'number' && deleted > 0) {
+					result = true;
+				}
+			}
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
 			}
 		}
 
