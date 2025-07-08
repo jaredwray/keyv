@@ -1,6 +1,6 @@
 import process from 'node:process';
 import {
-	describe, test, expect,
+	describe, test, expect, vi,
 } from 'vitest';
 import {faker} from '@faker-js/faker';
 import {delay} from '@keyv/test-suite';
@@ -24,22 +24,8 @@ describe('set', () => {
 		expect(result).toBe(data.value);
 	});
 
-	test('should set a value and commandTimeout', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {commandTimeout: 1000});
-		const data = {
-			key: faker.string.alphanumeric(10),
-			value: faker.lorem.sentence(),
-		};
-
-		await keyvRedis.set(data.key, data.value);
-
-		const result = await keyvRedis.get<string>(data.key);
-
-		expect(result).toBe(data.value);
-	});
-
-	test('should return no-op value on bad uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false, commandTimeout: 500});
+	test('should throw error on bad uri', async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri);
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -54,7 +40,7 @@ describe('set', () => {
 			didError = true;
 		}
 
-		expect(didError).toBe(false);
+		expect(didError).toBe(true);
 	});
 
 	test('should throw error on bad uri', async () => {
@@ -100,8 +86,8 @@ describe('set', () => {
 		expect(expiredResult).toBeUndefined();
 	});
 
-	test('should set a value with ttl and commandTimeout', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {commandTimeout: 1000});
+	test('should set a value with ttl', async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
@@ -118,5 +104,53 @@ describe('set', () => {
 
 		const expiredResult = await keyvRedis.get(data.key);
 		expect(expiredResult).toBeUndefined();
+	});
+
+	test('show throw on redis client set and get error', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+
+		const data = {
+			key: faker.string.alphanumeric(10),
+			value: faker.lorem.sentence(),
+		};
+
+		// Mock the set method to throw an error
+		vi.spyOn(keyvRedis.client, 'set').mockImplementation(() => {
+			throw new Error('Redis set error');
+		});
+
+		let didError = false;
+		try {
+			await keyvRedis.set(data.key, data.value);
+		} catch {
+			didError = true;
+		}
+
+		expect(didError).toBe(true);
+		vi.spyOn(keyvRedis.client, 'set').mockRestore();
+	});
+
+	test('show throw on redis client setMany and get error', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+
+		const data = {
+			key: faker.string.alphanumeric(10),
+			value: faker.lorem.sentence(),
+		};
+
+		// Mock the set method to throw an error
+		vi.spyOn(keyvRedis.client, 'multi').mockImplementation(() => {
+			throw new Error('Redis setMany error');
+		});
+
+		let didError = false;
+		try {
+			await keyvRedis.setMany([data, data, data]);
+		} catch {
+			didError = true;
+		}
+
+		expect(didError).toBe(true);
+		vi.spyOn(keyvRedis.client, 'multi').mockRestore();
 	});
 });

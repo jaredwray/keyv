@@ -8,6 +8,7 @@ import {
 import {Hookified} from 'hookified';
 import {Keyv, type KeyvStoreAdapter, type KeyvEntry} from 'keyv';
 import calculateSlot from 'cluster-key-slot';
+import {th} from '@faker-js/faker/.';
 
 export type KeyvRedisOptions = {
 	/**
@@ -50,16 +51,10 @@ export type KeyvRedisOptions = {
 	throwErrors?: boolean;
 
 	/**
-	 * Connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default
-	 * @default undefined
+	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
+	 * If set, it will throw an error if the connection does not succeed within the specified time.
 	 */
 	connectionTimeout?: number;
-
-	/**
-	 * Command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default
-	 * @default undefined
-	 */
-	commandTimeout?: number;
 };
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
@@ -118,7 +113,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	private _throwOnConnectError = true;
 	private _throwErrors = false;
 	private _connectionTimeout: number | undefined;
-	private _commandTimeout: number | undefined;
 
 	/**
 	 * KeyvRedis constructor.
@@ -334,22 +328,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	}
 
 	/**
-	 * Get the command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default.
-	 * @default undefined
-	 */
-	public get commandTimeout(): number | undefined {
-		return this._commandTimeout;
-	}
-
-	/**
-	 * Set the command timeout in milliseconds such as 1000 (1 second). Default is undefined. If undefined, it will use the default.
-	 * @default undefined
-	 */
-	public set commandTimeout(value: number | undefined) {
-		this._commandTimeout = value;
-	}
-
-	/**
 	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
@@ -390,24 +368,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		try {
 			key = this.createKeyPrefix(key, this._namespace);
 
+			// eslint-disable-next-line unicorn/prefer-ternary
 			if (ttl) {
-				if (this._commandTimeout === undefined) {
-					// eslint-disable-next-line @typescript-eslint/naming-convention
-					await client.set(key, value, {PX: ttl});
-				} else {
-					await Promise.race([
-						// eslint-disable-next-line @typescript-eslint/naming-convention
-						client.set(key, value, {PX: ttl}),
-						this.createTimeoutPromise(this._commandTimeout),
-					]);
-				}
-			} else if (this._commandTimeout === undefined) {
-				await client.set(key, value);
+				// eslint-disable-next-line @typescript-eslint/naming-convention
+				await client.set(key, value, {PX: ttl});
 			} else {
-				await Promise.race([
-					client.set(key, value),
-					this.createTimeoutPromise(this._commandTimeout),
-				]);
+				await client.set(key, value);
 			}
 		} catch (error) {
 			this.emit('error', error);
@@ -424,19 +390,26 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		const client = await this.getClient();
 
-		const multi = client.multi();
-		for (const {key, value, ttl} of entries) {
-			const prefixedKey = this.createKeyPrefix(key, this._namespace);
-			if (ttl) {
-				// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unsafe-argument
-				multi.set(prefixedKey, value, {PX: ttl});
-			} else {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-				multi.set(prefixedKey, value);
+		try {
+			const multi = client.multi();
+			for (const {key, value, ttl} of entries) {
+				const prefixedKey = this.createKeyPrefix(key, this._namespace);
+				if (ttl) {
+					// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unsafe-argument
+					multi.set(prefixedKey, value, {PX: ttl});
+				} else {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+					multi.set(prefixedKey, value);
+				}
+			}
+
+			await multi.exec();
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
 			}
 		}
-
-		await multi.exec();
 	}
 
 	/**
@@ -821,10 +794,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		if (options.connectionTimeout !== undefined) {
 			this._connectionTimeout = options.connectionTimeout;
 		}
-
-		if (options.commandTimeout !== undefined) {
-			this._commandTimeout = options.commandTimeout;
-		}
 	}
 
 	private initClient(): void {
@@ -848,6 +817,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			// eslint-disable-next-line no-promise-executor-return
 			setTimeout(
 				() => {
+					/* c8 ignore next 3 */
 					reject(new Error(`Redis timed out after ${timeoutMs}ms`));
 				},
 				timeoutMs,
