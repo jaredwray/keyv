@@ -2,7 +2,8 @@ import process from 'node:process';
 import {
 	describe, test, expect,
 } from 'vitest';
-import KeyvRedis, {RedisErrorMessages} from '../src/index.js';
+import {faker} from '@faker-js/faker';
+import KeyvRedis, {createKeyv, RedisErrorMessages} from '../src/index.js';
 
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
 const redisBadUri = process.env.REDIS_BAD_URI ?? 'redis://localhost:6378';
@@ -35,6 +36,19 @@ describe('getClient', () => {
 		let didError = false;
 		try {
 			await keyvRedis.getClient();
+		} catch (error) {
+			didError = true;
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
+		}
+
+		expect(didError).toBe(true);
+	});
+
+	test('should throw an error if not connected with Keyv', async () => {
+		const keyvRedis = createKeyv(redisBadUri);
+		let didError = false;
+		try {
+			await keyvRedis.get(faker.string.alphanumeric(10));
 		} catch (error) {
 			didError = true;
 			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
