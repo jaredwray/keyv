@@ -473,14 +473,23 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	public async get<U = T>(key: string): Promise<U | undefined> {
 		const client = await this.getClient();
 
-		key = this.createKeyPrefix(key, this._namespace);
+		try {
+			key = this.createKeyPrefix(key, this._namespace);
 
-		const value = await client.get(key);
-		if (value === null) {
-			return undefined;
+			const value = await client.get(key);
+			if (value === null) {
+				return undefined;
+			}
+
+			return value as U;
+		} catch (error) {
+			this.emit('error', error);
+			if (this._throwErrors) {
+				throw error;
+			}
+
+			return undefined; // Return undefined if an error occurs
 		}
-
-		return value as U;
 	}
 
 	/**
