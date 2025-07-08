@@ -29,7 +29,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Using Generic Types](#using-generic-types)
 * [Performance Considerations](#performance-considerations)
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
-* [Gracefully Handling Connection Errors, Retries, and Timeouts](#gracefully-handling-connection-errors-retries-and-timeouts)
+* [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
 * [Clustering and TLS Support](#clustering-and-tls-support)
 * [API](#api)
@@ -131,10 +131,26 @@ export type KeyvRedisOptions = {
 	noNamespaceAffectsAll?: boolean;
 
 	/**
-	 * Timeout for connecting to Redis in milliseconds. This is used to prevent hanging indefinitely when connecting to Redis.
-	 * Defaults to `200`.
+	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
+	 * set to true so that it throws an error when trying to connect to the Redis server fails.
 	 */
-	connectTimeout?: number;
+	throwOnConnectError?: boolean;
+
+	/**
+	 * This is used to throw an error if at any point there is a failure. Use this if you want to
+	 * ensure that all operations are successful and you want to handle errors. By default, this is
+	 * set to false so that it does not throw an error on every operation and instead emits an error event
+	 * and returns no-op responses.
+	 * @default false
+	 */
+	throwErrors?: boolean;
+
+	/**
+	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
+	 * If set, it will throw an error if the connection does not succeed within the specified time.
+   * @default undefined
+	 */
+	connectionTimeout?: number;
 };
 ```
 You can pass these options when creating a new `KeyvRedis` instance:
@@ -241,7 +257,7 @@ const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useUnl
 keyv.useUnlink = false;
 ```
 
-# Gracefully Handling Connection Errors, Retries, and Timeouts
+# Gracefully Handling Errors and Timeouts
 
 When using `@keyv/redis`, it is important to handle connection errors gracefully. You can do this by listening to the `error` event on the `KeyvRedis` instance. Here is an example of how to do that:
 
@@ -254,11 +270,13 @@ keyv.on('error', (error) => {
 });
 ```
 
-We also attempt to connect to Redis and have a `connectTimeout` option that defaults to `200ms`. If the connection is not established within this time, it will emit an error. You can catch this error and handle it accordingly.
+By default, the `KeyvRedis` instance will `throw an error` if the connection fails to connect. You can disable this behavior by setting the `throwOnConnectError` option to `false` when creating the `KeyvRedis` instance:
 
-On `get`, `getMany`, `set`, `setMany`, `delete`, `deleteMany`, and `clear` methods, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
+On `get`, `getMany`, `set`, `setMany`, `delete`, and `deleteMany`, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
 
-If you pass in just a `uri` connection string we will automatically create a Redis client for you with the following reconnect strategy:
+If you want to handle connection errors, retries, and timeouts more gracefully, you can use the `throwErrors` option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:
+
+There is a default `Reconnect Strategy` if you pass in just a `uri` connection string we will automatically create a Redis client for you with the following reconnect strategy:
 
 ```typescript
 export const defaultReconnectStrategy = (attempts: number): number | Error => {

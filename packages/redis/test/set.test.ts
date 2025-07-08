@@ -71,7 +71,7 @@ describe('set', () => {
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
-			ttl: 100, // 100 milliseconds
+			ttl: 40, // 40 milliseconds
 		};
 
 		await keyvRedis.set(data.key, data.value, data.ttl);
@@ -80,7 +80,7 @@ describe('set', () => {
 
 		expect(result).toBe(data.value);
 
-		await delay(200); // Wait for ttl to expire
+		await delay(80); // Wait for ttl to expire
 
 		const expiredResult = await keyvRedis.get(data.key);
 		expect(expiredResult).toBeUndefined();
@@ -91,7 +91,7 @@ describe('set', () => {
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
-			ttl: 100, // 100 milliseconds
+			ttl: 40, // 40 milliseconds
 		};
 
 		await keyvRedis.set(data.key, data.value, data.ttl);
@@ -100,7 +100,7 @@ describe('set', () => {
 
 		expect(result).toBe(data.value);
 
-		await delay(200); // Wait for ttl to expire
+		await delay(80); // Wait for ttl to expire
 
 		const expiredResult = await keyvRedis.get(data.key);
 		expect(expiredResult).toBeUndefined();
