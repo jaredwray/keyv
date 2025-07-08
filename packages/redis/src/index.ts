@@ -53,6 +53,7 @@ export type KeyvRedisOptions = {
 	/**
 	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
 	 * If set, it will throw an error if the connection does not succeed within the specified time.
+	 * @default undefined
 	 */
 	connectionTimeout?: number;
 };
@@ -174,6 +175,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			keyPrefixSeparator: this._keyPrefixSeparator,
 			clearBatchSize: this._clearBatchSize,
 			noNamespaceAffectsAll: this._noNamespaceAffectsAll,
+			useUnlink: this._useUnlink,
+			throwOnConnectError: this._throwOnConnectError,
+			throwErrors: this._throwErrors,
+			connectionTimeout: this._connectionTimeout,
 			dialect: 'redis',
 			url,
 		};

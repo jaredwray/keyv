@@ -114,7 +114,15 @@ describe('KeyvRedis', () => {
 		};
 
 		expect(keyvRedis.opts).toEqual({
-			namespace: 'test', keyPrefixSeparator: ':1', clearBatchSize: 2000, dialect: 'redis', url: 'redis://localhost:6379', noNamespaceAffectsAll: true,
+			namespace: 'test',
+			keyPrefixSeparator: ':1',
+			clearBatchSize: 2000,
+			dialect: 'redis',
+			url: 'redis://localhost:6379',
+			noNamespaceAffectsAll: true,
+			throwErrors: false,
+			throwOnConnectError: true,
+			useUnlink: true,
 		});
 	});
 });
