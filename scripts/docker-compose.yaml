@@ -94,3 +94,17 @@ services:
     ports:
       - 2379:2379
       - 2380:2380
+  keyv_dynamo:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - 8000:8000
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'if [ "$(curl -s -o /dev/null -I -w ''%{http_code}'' http://localhost:8000)" == "400" ]; then exit 0; else exit 1; fi',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

@@ -1,0 +1,83 @@
+{
+  "name": "@keyv/dynamo",
+  "version": "1.0.0",
+  "description": "DynamoDB storage adapter for Keyv",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
+    "prepublishOnly": "pnpm build",
+    "test": "xo --fix && vitest run --coverage",
+    "test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+    "clean": "rimraf ./node_modules ./coverage ./dist"
+  },
+  "xo": {
+    "space": true,
+    "rules": {
+      "import/no-named-as-default": "off",
+      "unicorn/prefer-module": "off",
+      "unicorn/prefer-event-target": "off",
+      "unicorn/no-array-reduce": "off",
+      "unicorn/prefer-object-from-entries": "off",
+      "unicorn/prefer-node-protocol": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "import/extensions": "off",
+      "@typescript-eslint/consistent-type-imports": "off",
+      "@typescript-eslint/naming-convention": "off",
+      "@typescript-eslint/no-floating-promises": "off",
+      "import/no-extraneous-dependencies": "off",
+      "@typescript-eslint/no-confusing-void-expression": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "promise/prefer-await-to-then": "off"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/keyv.git"
+  },
+  "keywords": [
+    "dynamo",
+    "dynamodb",
+    "keyv",
+    "storage",
+    "adapter",
+    "key",
+    "value",
+    "store",
+    "cache",
+    "ttl"
+  ],
+  "author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/keyv/issues"
+  },
+  "homepage": "https://github.com/jaredwray/keyv",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.835.0",
+    "@aws-sdk/lib-dynamodb": "^3.835.0"
+  },
+  "devDependencies": {
+    "@keyv/test-suite": "workspace:^",
+    "keyv": "workspace:^",
+    "vitest": "^3.2.4"
+  },
+  "tsd": {
+    "directory": "test"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ]
+}
