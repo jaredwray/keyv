@@ -651,7 +651,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		if (this.isCluster()) {
 			const cluster = await this.getClient() as RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
 			const nodes = cluster.masters.map(async main => cluster.nodeClient(main));
-			return Promise.all(nodes as RedisClientType[]);
+			return Promise.all(nodes) as Promise<RedisClientType[]>;
 		}
 
 		return [await this.getClient() as RedisClientType];
