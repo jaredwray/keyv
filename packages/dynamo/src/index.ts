@@ -5,6 +5,7 @@ import {
   DynamoDB,
   DynamoDBClientConfig,
   ResourceNotFoundException,
+  ResourceInUseException,
   UpdateTimeToLiveCommand,
   waitUntilTableExists,
 } from '@aws-sdk/client-dynamodb';
@@ -177,26 +178,36 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
   }
 
   private async createTable(tableName: string): Promise<void> {
-    await this.client.send(new CreateTableCommand({
-      TableName: tableName,
-      KeySchema: [{AttributeName: 'id', KeyType: 'HASH'}],
-      AttributeDefinitions: [{AttributeName: 'id', AttributeType: 'S'}],
-      BillingMode: 'PAY_PER_REQUEST',
-    }));
+    try {
+      await this.client.send(new CreateTableCommand({
+        TableName: tableName,
+        KeySchema: [{AttributeName: 'id', KeyType: 'HASH'}],
+        AttributeDefinitions: [{AttributeName: 'id', AttributeType: 'S'}],
+        BillingMode: 'PAY_PER_REQUEST',
+      }));
 
-    await waitUntilTableExists(
-      {client: this.client, maxWaitTime: 60},
-      {TableName: tableName},
-    );
+      await waitUntilTableExists(
+        {client: this.client, maxWaitTime: 60},
+        {TableName: tableName},
+      );
 
-    // Configure TTL after table is created
-    await this.client.send(new UpdateTimeToLiveCommand({
-      TableName: tableName,
-      TimeToLiveSpecification: {
-        AttributeName: 'expiresAt',
-        Enabled: true,
-      },
-    }));
+      await this.client.send(new UpdateTimeToLiveCommand({
+        TableName: tableName,
+        TimeToLiveSpecification: {
+          AttributeName: 'expiresAt',
+          Enabled: true,
+        },
+      }));
+    } catch (error) {
+      if (error instanceof ResourceInUseException) {
+        await waitUntilTableExists(
+          {client: this.client, maxWaitTime: 60},
+          {TableName: tableName},
+        );
+      } else {
+        throw error;
+      }
+    }
   }
 }
 
