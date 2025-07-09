@@ -21,6 +21,15 @@ test.beforeEach(async () => {
   await keyv.clear();
 });
 
+test.it('should ensure table creation', async t => {
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'newTable'});
+  await store.set('test:key1', 'value1');
+  await t.expect(store.get('test:key1')).resolves.toBe('value1');
+
+  await store.set('test:key2', 'value2');
+  await t.expect(store.get('test:key2')).resolves.toBe('value2');
+});
+
 test.it('should be able to create a keyv instance', t => {
   const keyv = new Keyv<string>({store: keyvDynamodb});
   t.expect(keyv.store.opts.endpoint).toEqual(dynamoURL);
@@ -48,8 +57,8 @@ test.it('.clear() an empty store should not fail', async t => {
   await store.clear();
 });
 
-test.it('should emit error if there is no table previously created', async t => {
-  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'invalid_table'});
+test.it('should emit unknown error (invalid table name', async t => {
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'invalid_table%&#@'});
 
   const expectedError = new Promise((_resolve, reject) => {
     store.on('error', reject);

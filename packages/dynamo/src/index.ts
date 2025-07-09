@@ -1,8 +1,12 @@
 import EventEmitter from 'events';
 import {
+  CreateTableCommand,
   DescribeTableCommand,
   DynamoDB,
   DynamoDBClientConfig,
+  ResourceNotFoundException,
+  UpdateTimeToLiveCommand,
+  waitUntilTableExists,
 } from '@aws-sdk/client-dynamodb';
 import {
   BatchGetCommandInput,
@@ -21,6 +25,7 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
   namespace?: string;
   opts: Omit<KeyvDynamoOptions, 'tableName'> & {tableName: string};
   private readonly client: DynamoDBDocument;
+  private readonly tableReady: Promise<void>;
 
   constructor(options: KeyvDynamoOptions | string) {
     super();
@@ -37,16 +42,14 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
 
     this.client = DynamoDBDocument.from(new DynamoDB(this.opts));
 
-    this.checkTableExists(this.opts.tableName).catch((error: unknown) => {
+    this.tableReady = this.ensureTable(this.opts.tableName).catch((error: unknown) => {
       this.emit('error', error);
     });
   }
 
-  async checkTableExists(tableName: string): Promise<void> {
-    await this.client.send(new DescribeTableCommand({TableName: tableName}));
-  }
-
   async set(key: string, value: unknown, ttl?: number) {
+    await this.tableReady;
+
     const sixHoursFromNowEpoch = Math.floor((Date.now() + this.sixHoursInMilliseconds) / 1000);
 
     const expiresAt
@@ -67,6 +70,8 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async get<Value>(key: string): Promise<StoredData<Value>> {
+    await this.tableReady;
+
     const getInput: GetCommandInput = {
       TableName: this.opts.tableName,
       Key: {
@@ -78,6 +83,8 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async delete(key: string) {
+    await this.tableReady;
+
     const deleteInput: DeleteCommandInput = {
       TableName: this.opts.tableName,
       Key: {
@@ -91,6 +98,8 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>> {
+    await this.tableReady;
+
     const batchGetInput: BatchGetCommandInput = {
       RequestItems: {
         [this.opts.tableName]: {
@@ -108,6 +117,8 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async deleteMany(keys: string[]) {
+    await this.tableReady;
+
     if (keys.length === 0) {
       return false;
     }
@@ -136,6 +147,8 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
   }
 
   async clear() {
+    await this.tableReady;
+
     const scanResult = await this.client.scan({
       TableName: this.opts.tableName,
     });
@@ -149,6 +162,41 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
     return (output.Items ?? [])
       .map(item => item[keyProperty])
       .filter(key => key.startsWith(this.namespace ?? ''));
+  }
+
+  private async ensureTable(tableName: string): Promise<void> {
+    try {
+      await this.client.send(new DescribeTableCommand({TableName: tableName}));
+    } catch (error) {
+      if (error instanceof ResourceNotFoundException) {
+        await this.createTable(tableName);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  private async createTable(tableName: string): Promise<void> {
+    await this.client.send(new CreateTableCommand({
+      TableName: tableName,
+      KeySchema: [{AttributeName: 'id', KeyType: 'HASH'}],
+      AttributeDefinitions: [{AttributeName: 'id', AttributeType: 'S'}],
+      BillingMode: 'PAY_PER_REQUEST',
+    }));
+
+    await waitUntilTableExists(
+      {client: this.client, maxWaitTime: 60},
+      {TableName: tableName},
+    );
+
+    // Configure TTL after table is created
+    await this.client.send(new UpdateTimeToLiveCommand({
+      TableName: tableName,
+      TimeToLiveSpecification: {
+        AttributeName: 'expiresAt',
+        Enabled: true,
+      },
+    }));
   }
 }
 
