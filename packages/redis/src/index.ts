@@ -8,7 +8,6 @@ import {
 import {Hookified} from 'hookified';
 import {Keyv, type KeyvStoreAdapter, type KeyvEntry} from 'keyv';
 import calculateSlot from 'cluster-key-slot';
-import {th} from '@faker-js/faker/.';
 
 export type KeyvRedisOptions = {
 	/**
@@ -592,7 +591,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 */
 	public async disconnect(force?: boolean): Promise<void> {
 		if (this._client.isOpen) {
-			await (force ? this._client.disconnect() : this._client.quit());
+			if(force) {
+				await this._client.destroy();
+			} else {
+				await this._client.close();
+			}
 		}
 	}
 
@@ -706,7 +709,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 
 				do {
 					// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-					const result = await client.scan(Number.parseInt(cursor, 10), {MATCH: match, COUNT: batchSize, TYPE: 'string'});
+					const result = await client.scan(cursor, {MATCH: match, COUNT: batchSize, TYPE: 'string'});
 
 					cursor = result.cursor.toString();
 					let {keys} = result;
