@@ -76,7 +76,7 @@
 		"tsup": "^8.5.0",
 		"typescript": "^5.8.3",
 		"vitest": "^3.2.3",
-		"xo": "^1.1.0"
+		"xo": "^1.1.1"
 	},
 	"tsd": {
 		"directory": "test"
