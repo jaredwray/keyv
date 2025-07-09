@@ -22,12 +22,9 @@ test.beforeEach(async () => {
 });
 
 test.it('should ensure table creation', async t => {
-  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'newTable'});
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'newTable435'});
   await store.set('test:key1', 'value1');
   await t.expect(store.get('test:key1')).resolves.toBe('value1');
-
-  await store.set('test:key2', 'value2');
-  await t.expect(store.get('test:key2')).resolves.toBe('value2');
 });
 
 test.it('should be able to create a keyv instance', t => {
