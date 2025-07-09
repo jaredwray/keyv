@@ -5,13 +5,28 @@ import {type RedisClientType} from '@redis/client';
 import {delay} from '@keyv/test-suite';
 import KeyvRedis from '../src/index.js';
 
-describe('KeyvRedis Namespace', () => {
+describe('Namespace', () => {
 	beforeEach(async () => {
 		const keyvRedis = new KeyvRedis();
 		const client = await keyvRedis.getClient() as RedisClientType;
 		await client.flushDb();
 		await keyvRedis.disconnect();
 	});
+
+	test('if there is a namespace on key prefix', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.namespace = 'ns1';
+		const key = keyvRedis.createKeyPrefix('foo77', 'ns2');
+		expect(key).toBe('ns2::foo77');
+	});
+
+	test('if no namespace on key prefix and no default namespace', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.namespace = undefined;
+		const key = keyvRedis.createKeyPrefix('foo78');
+		expect(key).toBe('foo78');
+	});
+
 	test('should clear with no namespace', async () => {
 		const keyvRedis = new KeyvRedis();
 		await keyvRedis.set('foo90', 'bar');

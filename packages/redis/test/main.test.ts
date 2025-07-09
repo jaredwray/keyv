@@ -1,14 +1,15 @@
 import process from 'node:process';
 import {
-	describe, test, expect,
+	describe, test, expect, beforeEach
 } from 'vitest';
 import {createClient, type RedisClientType} from '@redis/client';
+import {delay} from '@keyv/test-suite';
 import KeyvRedis, {createKeyv} from '../src/index.js';
 
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
 
 describe('KeyvRedis', () => {
-test('should be a class', () => {
+	test('should be a class', () => {
 		expect(KeyvRedis).toBeInstanceOf(Function);
 	});
 
@@ -149,5 +150,44 @@ test('should be a class', () => {
 		expect(keyvRedis.throwErrors).toBe(false);
 		keyvRedis.throwErrors = true;
 		expect(keyvRedis.throwErrors).toBe(true);
+	});
+});
+
+describe('KeyvRedis Methods', () => {
+	beforeEach(async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient() as RedisClientType;
+		await client.flushDb();
+		await keyvRedis.disconnect();
+	});
+	test('should be able to connect, set, delete, and disconnect', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('foo', 'bar');
+		const value = await keyvRedis.get('foo');
+		expect(value).toBe('bar');
+		const deleted = await keyvRedis.delete('foo');
+		expect(deleted).toBe(true);
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to connect, set, delete, and disconnect using useUnlink to false', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.useUnlink = false;
+		await keyvRedis.set('foo', 'bar');
+		const value = await keyvRedis.get('foo');
+		expect(value).toBe('bar');
+		const deleted = await keyvRedis.delete('foo');
+		expect(deleted).toBe(true);
+		await keyvRedis.disconnect();
+	});
+
+	test('should do nothing if no keys on clear', async () => {
+		const keyvRedis = new KeyvRedis();
+		const client = await keyvRedis.getClient() as RedisClientType;
+		await client.flushDb();
+		await keyvRedis.clear();
+		keyvRedis.namespace = 'ns1';
+		await keyvRedis.clear();
+		await keyvRedis.disconnect();
 	});
 });

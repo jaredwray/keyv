@@ -52,9 +52,9 @@ describe('set', () => {
 		};
 
 		// Set the set value to throw an error on the client
-		keyvRedis.client.set = () => {
+		vi.spyOn(keyvRedis.client, 'set').mockImplementation(() => {
 			throw new Error('Redis client error');
-		};
+		});
 
 		let didError = false;
 		try {
@@ -152,5 +152,27 @@ describe('set', () => {
 
 		expect(didError).toBe(true);
 		vi.spyOn(keyvRedis.client, 'multi').mockRestore();
+	});
+
+	test('should be able to set a ttl', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('foo76', 'bar', 10);
+		await delay(15);
+		const value = await keyvRedis.get('foo76');
+		expect(value).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to set many keys', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-many1', value: 'bar'}, {key: 'foo-many2', value: 'bar2'}, {key: 'foo-many3', value: 'bar3', ttl: 5}]);
+		const value = await keyvRedis.get('foo-many1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-many2');
+		expect(value2).toBe('bar2');
+		await delay(10);
+		const value3 = await keyvRedis.get('foo-many3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
 	});
 });

@@ -152,4 +152,38 @@ describe('delete', () => {
 		expect(didError).toBe(true);
 		vi.spyOn(keyvRedis.client, 'multi').mockRestore();
 	});
+
+	test('should return false on delete if key does not exist', async () => {
+		const keyvRedis = new KeyvRedis();
+		const deleted = await keyvRedis.delete('foo');
+		expect(deleted).toBe(false);
+		await keyvRedis.disconnect();
+	});
+
+test('should be able to delete many with namespace', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-dm1', value: 'bar'}, {key: 'foo-dm2', value: 'bar2'}, {key: 'foo-dm3', value: 'bar3', ttl: 5}]);
+		await keyvRedis.deleteMany(['foo-dm2', 'foo-dm3']);
+		const value = await keyvRedis.get('foo-dm1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-dm2');
+		expect(value2).toBeUndefined();
+		const value3 = await keyvRedis.get('foo-dm3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to delete many with namespace with useUnlink false', async () => {
+		const keyvRedis = new KeyvRedis();
+		keyvRedis.useUnlink = false;
+		await keyvRedis.setMany([{key: 'foo-dm1', value: 'bar'}, {key: 'foo-dm2', value: 'bar2'}, {key: 'foo-dm3', value: 'bar3', ttl: 5}]);
+		await keyvRedis.deleteMany(['foo-dm2', 'foo-dm3']);
+		const value = await keyvRedis.get('foo-dm1');
+		expect(value).toBe('bar');
+		const value2 = await keyvRedis.get('foo-dm2');
+		expect(value2).toBeUndefined();
+		const value3 = await keyvRedis.get('foo-dm3');
+		expect(value3).toBeUndefined();
+		await keyvRedis.disconnect();
+	});
 });
