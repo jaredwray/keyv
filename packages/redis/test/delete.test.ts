@@ -160,7 +160,7 @@ describe('delete', () => {
 		await keyvRedis.disconnect();
 	});
 
-test('should be able to delete many with namespace', async () => {
+	test('should be able to delete many with namespace', async () => {
 		const keyvRedis = new KeyvRedis();
 		await keyvRedis.setMany([{key: 'foo-dm1', value: 'bar'}, {key: 'foo-dm2', value: 'bar2'}, {key: 'foo-dm3', value: 'bar3', ttl: 5}]);
 		await keyvRedis.deleteMany(['foo-dm2', 'foo-dm3']);

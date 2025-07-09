@@ -1,6 +1,6 @@
 import process from 'node:process';
 import {
-	describe, test, expect, beforeEach
+	describe, test, expect, beforeEach,
 } from 'vitest';
 import {createClient, type RedisClientType} from '@redis/client';
 import {delay} from '@keyv/test-suite';
