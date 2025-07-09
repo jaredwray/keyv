@@ -6,6 +6,7 @@ export default defineConfig({
 		coverage: {
 			reporter: ['json', 'lcov', 'text'],
 			reportOnFailure: true,
+			exclude: ['src/types.ts', 'dist', 'vitest.config.ts'],
 		},
 	},
 });
