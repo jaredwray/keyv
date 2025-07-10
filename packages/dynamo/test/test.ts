@@ -2,6 +2,7 @@ import process from 'node:process';
 import * as test from 'vitest';
 import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'keyv';
+import {UpdateTimeToLiveCommand, ResourceNotFoundException} from '@aws-sdk/client-dynamodb';
 import KeyvDynamo from '../src/index.js';
 
 process.env.AWS_ACCESS_KEY_ID = 'dummyAccessKeyId';
@@ -19,6 +20,12 @@ keyvTestSuite(test, Keyv, store);
 test.beforeEach(async () => {
   const keyv = store();
   await keyv.clear();
+});
+
+test.it('should ensure table creation', async t => {
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'newTable'});
+  await store.set('test:key1', 'value1');
+  await t.expect(store.get('test:key1')).resolves.toBe('value1');
 });
 
 test.it('should be able to create a keyv instance', t => {
@@ -48,8 +55,8 @@ test.it('.clear() an empty store should not fail', async t => {
   await store.clear();
 });
 
-test.it('should emit error if there is no table previously created', async t => {
-  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'invalid_table'});
+test.it('should emit error when not ResourceNotFoundException on ensureTable', async t => {
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'invalid_table%&#@'});
 
   const expectedError = new Promise((_resolve, reject) => {
     store.on('error', reject);
@@ -76,4 +83,39 @@ test.it('should handle namespace filtering when namespace is undefined', async t
   await store.set('test:key1', 'value1');
 
   t.expect(await store.clear()).toBeUndefined();
+});
+
+test.it('should handle ResourceInUseException when table already exists (fallback to wait for table to be created)', async t => {
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'resourceInUseExceptionTable'});
+
+  const originalSend = (store as any).client.send;
+  (store as any).client.send = test.vi.fn().mockImplementation(command => {
+    if (command.constructor.name === 'CreateTableCommand') {
+      // Call CreateTableCommand twice to trigger the ResourceInUseException
+      originalSend.call((store as any).client, command);
+    }
+
+    return originalSend.call((store as any).client, command);
+  });
+
+  await store.set('test:key1', 'value1');
+  (store as any).client.send = originalSend;
+  await t.expect(store.get('test:key1')).resolves.toBe('value1');
+});
+
+test.it('should throw error when not ResourceInUseException on create table', async t => {
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'anyTable'});
+
+  const originalSend = (store as any).client.send;
+  (store as any).client.send = test.vi.fn().mockImplementation(command => {
+    // Force error on UpdateTimeToLiveCommand
+    if (command.constructor.name === 'UpdateTimeToLiveCommand') {
+      return originalSend.call((store as any).client, new UpdateTimeToLiveCommand({...command, TableName: 'failTimeToLive'}));
+    }
+
+    return originalSend.call((store as any).client, command);
+  });
+
+  await t.expect(store.set('test:key1', 'value1')).rejects.toThrow(ResourceNotFoundException);
+  (store as any).client.send = originalSend;
 });
