@@ -4,6 +4,7 @@ import {
 	vi,
 } from 'vitest';
 import {faker} from '@faker-js/faker';
+import {delay} from '@keyv/test-suite';
 import KeyvRedis from '../src/index.js';
 
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
@@ -137,5 +138,21 @@ describe('get', () => {
 		expect(didError).toBe(false);
 		expect(result).toEqual([undefined, undefined]);
 		vi.spyOn(keyvRedis.client, 'mGet').mockRestore();
+	});
+
+	test('should be able to get many keys', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-get-many1', value: 'bar'}, {key: 'foo-get-many2', value: 'bar2'}, {key: 'foo-get-many3', value: 'bar3', ttl: 5}]);
+		await delay(10);
+		const values = await keyvRedis.getMany(['foo-get-many1', 'foo-get-many2', 'foo-get-many3']);
+		expect(values).toEqual(['bar', 'bar2', undefined]);
+		await keyvRedis.disconnect();
+	});
+
+	test('should be able to call getMany with an empty array', async () => {
+		const keyvRedis = new KeyvRedis();
+		const values = await keyvRedis.getMany([]);
+		expect(values).toEqual([]);
+		await keyvRedis.disconnect();
 	});
 });

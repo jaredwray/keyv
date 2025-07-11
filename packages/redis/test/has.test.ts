@@ -3,6 +3,7 @@ import {
 	describe, test, expect, vi,
 } from 'vitest';
 import {faker} from '@faker-js/faker';
+import {delay} from '@keyv/test-suite';
 import KeyvRedis, {RedisErrorMessages} from '../src/index.js';
 
 const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
@@ -147,5 +148,29 @@ describe('has', () => {
 
 		expect(didError).toBe(true);
 		vi.spyOn(keyvRedis.client, 'multi').mockRestore();
+	});
+
+	test('should be able to has many keys', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.setMany([{key: 'foo-has-many1', value: 'bar'}, {key: 'foo-has-many2', value: 'bar2'}, {key: 'foo-has-many3', value: 'bar3', ttl: 5}]);
+		await delay(10);
+		const exists = await keyvRedis.hasMany(['foo-has-many1', 'foo-has-many2', 'foo-has-many3']);
+		expect(exists).toEqual([true, true, false]);
+		await keyvRedis.disconnect();
+	});
+
+	test('should return true on has if key exists', async () => {
+		const keyvRedis = new KeyvRedis();
+		await keyvRedis.set('hasfoo189', 'bar');
+		const exists = await keyvRedis.has('hasfoo189');
+		expect(exists).toBe(true);
+		await keyvRedis.disconnect();
+	});
+
+	test('should return false on has if key does not exist', async () => {
+		const keyvRedis = new KeyvRedis();
+		const exists = await keyvRedis.has('hasfoo2');
+		expect(exists).toBe(false);
+		await keyvRedis.disconnect();
 	});
 });
