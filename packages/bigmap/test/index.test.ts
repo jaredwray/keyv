@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-array-for-each */
 import {describe, expect, it} from 'vitest';
 import {faker} from '@faker-js/faker';
 import {BigMap} from '../src/index.js';
@@ -69,6 +70,31 @@ describe('BigMap Methods', () => {
 });
 
 describe('BigMap Iterators', () => {
+	it('should iterate using for..of', () => {
+		const bigMap = new BigMap<string, number>();
+
+		const dataSet = [
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+		];
+		for (const data of dataSet) {
+			bigMap.set(data.key, data.value);
+		}
+
+		const entries: Array<[string, number]> = [];
+		for (const [key, value] of bigMap) {
+			entries.push([key, value]);
+		}
+
+		expect(entries).toEqual([[dataSet[0].key, dataSet[0].value], [dataSet[1].key, dataSet[1].value]]);
+	});
+
 	it('should iterate over keys', () => {
 		const bigMap = new BigMap<string, number>();
 
@@ -95,7 +121,7 @@ describe('BigMap Iterators', () => {
 		expect(keys).toEqual([dataSet[0].key, dataSet[1].key]);
 	});
 
-	it('should iterate over entries with forEach', () => {
+	it('should iterate over entries', () => {
 		const bigMap = new BigMap<string, number>();
 
 		const dataSet = [
@@ -119,6 +145,32 @@ describe('BigMap Iterators', () => {
 		}
 
 		expect(entries).toEqual([[dataSet[0].key, dataSet[0].value], [dataSet[1].key, dataSet[1].value]]);
+	});
+
+	it('should iterate over keys for forEach function', () => {
+		const bigMap = new BigMap<string, number>();
+
+		const dataSet = [
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+		];
+
+		for (const data of dataSet) {
+			bigMap.set(data.key, data.value);
+		}
+
+		const keys: string[] = [];
+		bigMap.forEach((value, key) => {
+			keys.push(key);
+		});
+
+		expect(keys).toEqual([dataSet[0].key, dataSet[1].key]);
 	});
 
 	it('should iterate over entries with for..of', () => {
@@ -145,5 +197,31 @@ describe('BigMap Iterators', () => {
 		}
 
 		expect(entries).toEqual([[dataSet[0].key, dataSet[0].value], [dataSet[1].key, dataSet[1].value]]);
+	});
+
+	it('should iterate over values', () => {
+		const bigMap = new BigMap<string, number>();
+
+		const dataSet = [
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+		];
+
+		for (const data of dataSet) {
+			bigMap.set(data.key, data.value);
+		}
+
+		const values: number[] = [];
+		for (const value of bigMap.values()) {
+			values.push(value);
+		}
+
+		expect(values).toEqual([dataSet[0].value, dataSet[1].value]);
 	});
 });
