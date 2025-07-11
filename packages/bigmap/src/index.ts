@@ -21,8 +21,12 @@ export type BigMapOptions<K, V> = {
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private readonly map: Map<K, V>;
 
-	constructor() {
-		super();
+	/**
+	 * Creates an instance of BigMap.
+	 * @param {BigMapOptions<K, V>} [options] - Optional configuration options for the BigMap.
+	 */
+	constructor(options?: BigMapOptions<K, V>) {
+		super(options);
 		this.map = new Map<K, V>();
 	}
 
@@ -30,7 +34,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * Returns an iterable of key-value pairs in the map.
 	 * @returns {IterableIterator<[K, V]>} An iterable of key-value pairs in the map.
 	 */
-	entries(): IterableIterator<[K, V]> {
+	public entries(): IterableIterator<[K, V]> {
 		return this.map.entries();
 	}
 
@@ -38,7 +42,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * Returns an iterable of keys in the map.
 	 * @returns {IterableIterator<K>} An iterable of keys in the map.
 	 */
-	keys(): IterableIterator<K> {
+	public keys(): IterableIterator<K> {
 		return this.map.keys();
 	}
 
@@ -46,7 +50,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * Returns an iterable of values in the map.
 	 * @returns {IterableIterator<V>} An iterable of values in the map.
 	 */
-	values(): IterableIterator<V> {
+	public values(): IterableIterator<V> {
 		return this.map.values();
 	}
 
@@ -54,7 +58,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * Returns an iterator that iterates over the key-value pairs in the map.
 	 * @returns {IterableIterator<[K, V]>} An iterator that iterates over the key-value pairs in the map.
 	 */
-	[Symbol.iterator](): IterableIterator<[K, V]> {
+	public [Symbol.iterator](): IterableIterator<[K, V]> {
 		return this.map[Symbol.iterator]();
 	}
 
@@ -62,7 +66,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * Clears all entries in the map.
 	 * @returns {void} This method does not return a value.
 	 */
-	clear(): void {
+	public clear(): void {
 		this.map.clear();
 	}
 
@@ -71,7 +75,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {K} key - The key of the entry to delete.
 	 * @returns {boolean} Returns true if the entry was deleted, false if the key was not found.
 	 */
-	delete(key: K): boolean {
+	public delete(key: K): boolean {
 		return this.map.delete(key);
 	}
 
@@ -80,7 +84,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {function} callbackfn - The function to execute for each key-value pair.
 	 * @param {any} [thisArg] - An optional value to use as `this` when executing the callback.
 	 */
-	forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: any): void {
+	public forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: any): void {
 		// eslint-disable-next-line unicorn/no-array-for-each, unicorn/no-array-callback-reference, unicorn/no-array-method-this-argument
 		this.map.forEach(callbackfn, thisArg);
 	}
@@ -90,7 +94,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {K} key - The key of the entry to get.
 	 * @returns {V | undefined} The value associated with the key, or undefined if the key does not exist.
 	 */
-	get(key: K): V | undefined {
+	public get(key: K): V | undefined {
 		return this.map.get(key);
 	}
 
@@ -99,7 +103,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {K} key - The key to check for existence.
 	 * @returns {boolean} Returns true if the key exists, false otherwise.
 	 */
-	has(key: K): boolean {
+	public has(key: K): boolean {
 		return this.map.has(key);
 	}
 
@@ -109,7 +113,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {V} value - The value to set for the entry.
 	 * @returns {Map<K, V>} The map instance.
 	 */
-	set(key: K, value: V): Map<K, V> {
+	public set(key: K, value: V): Map<K, V> {
 		this.map.set(key, value);
 		return this.map;
 	}
@@ -118,7 +122,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * Gets the number of entries in the map.
 	 * @returns {number} The number of entries in the map.
 	 */
-	get size(): number {
+	public get size(): number {
 		return this.map.size;
 	}
 }
