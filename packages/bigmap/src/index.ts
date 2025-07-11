@@ -17,12 +17,22 @@ export type MapInterfacee<K, V> = {
 export type StoreHashAlgorithmFunction = ((key: string, storeSize: number) => number);
 
 export type BigMapOptions<K, V> = {
+	/**
+	 * Optional size of the store. The default is 4 maps objects.
+	 * @default 4
+	 */
+	storeSize?: number;
+	/**
+	 * Optional hash function to use for storing keys.
+	 * @default undefined
+	 */
 	hashFunction?: StoreHashAlgorithmFunction;
 } & HookifiedOptions;
 
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private readonly map: Map<K, V>;
 	private _size = 0;
+	private _storeSize = 4;
 
 	/**
 	 * Creates an instance of BigMap.
@@ -31,6 +41,36 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	constructor(options?: BigMapOptions<K, V>) {
 		super(options);
 		this.map = new Map<K, V>();
+		if (options?.storeSize !== undefined) {
+			if (options.storeSize < 1) {
+				throw new Error('Store size must be at least 1.');
+			}
+
+			this.storeSize = options.storeSize;
+		}
+	}
+
+	/**
+	 * Gets the number of maps in the store.
+	 * @returns {number} The number of maps in the store.
+	 */
+	public get storeSize(): number {
+		return this._storeSize;
+	}
+
+	/**
+	 * Sets the number of maps in the store. If the size is less than 1, an error is thrown.
+	 * If you change the store size it will clear all entries.
+	 * @param {number} size - The new size of the store.
+	 * @throws {Error} If the size is less than 1.
+	 */
+	public set storeSize(size: number) {
+		if (size < 1) {
+			throw new Error('Store size must be at least 1.');
+		}
+
+		this._storeSize = size;
+		this.clear();
 	}
 
 	/**

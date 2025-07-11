@@ -8,6 +8,49 @@ describe('BigMap Instance', () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap).toBeInstanceOf(BigMap);
 	});
+
+	it('should initialize with an empty map', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.size).toBe(0);
+		expect(bigMap.get('nonExistingKey')).toBeUndefined();
+		expect(bigMap.has('nonExistingKey')).toBe(false);
+	});
+
+	it('should allow setting a custom store size', () => {
+		const customSize = 10;
+		const bigMap = new BigMap<string, number>({storeSize: customSize});
+		expect(bigMap.storeSize).toBe(customSize);
+	});
+
+	it('should default store size to 4', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.storeSize).toBe(4);
+	});
+
+	it('should throw an error when store size is set to less than 1', () => {
+		expect(() => {
+			const bigMap = new BigMap<string, number>({storeSize: 0});
+		}).toThrow('Store size must be at least 1.');
+	});
+
+	it('should throw an error when setting store size less than 1', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(() => {
+			bigMap.storeSize = 0;
+		}).toThrow('Store size must be at least 1.');
+	});
+
+	it('should clear entries when store size is set', () => {
+		const bigMap = new BigMap<string, number>();
+		bigMap.set('key1', 1);
+		bigMap.set('key2', 2);
+		expect(bigMap.size).toBe(2);
+
+		bigMap.storeSize = 5; // This should clear the map
+		expect(bigMap.size).toBe(0);
+		expect(bigMap.get('key1')).toBeUndefined();
+		expect(bigMap.get('key2')).toBeUndefined();
+	});
 });
 
 describe('BigMap Methods', () => {
