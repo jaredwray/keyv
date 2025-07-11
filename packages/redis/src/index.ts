@@ -816,11 +816,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	}
 
 	private isClientCluster(client: RedisClientConnectionType): boolean {
-		if ((client as any).options === undefined && (client as any).scan === undefined) {
-			return true;
-		}
-
-		return false;
+		return (client as any).slots !== undefined;
 	}
 
 	private setOptions(options?: KeyvRedisOptions): void {
