@@ -22,6 +22,74 @@ describe('BigMap Methods', () => {
 		expect(bigMap.get(data.key)).toBe(data.value);
 	});
 
+	it('should handle size with multiple sets, deletes, and clears', () => {
+		const bigMap = new BigMap<string, number>();
+		const dataSet = [
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+			{
+				key: faker.string.alpha(5),
+				value: faker.number.int({min: 1, max: 100}),
+			},
+		];
+
+		dataSet.forEach(item => {
+			bigMap.set(item.key, item.value);
+		});
+
+		expect(bigMap.size).toBe(dataSet.length);
+
+		// Delete one item
+		bigMap.delete(dataSet[0].key);
+		expect(bigMap.size).toBe(dataSet.length - 1);
+
+		// Delete fake key
+		expect(bigMap.delete('nonExistingKey')).toBe(false);
+		expect(bigMap.size).toBe(dataSet.length - 1);
+
+		// Add a new item
+		const newItem = {
+			key: faker.string.alpha(5),
+			value: faker.number.int({min: 1, max: 100}),
+		};
+		bigMap.set(newItem.key, newItem.value);
+		expect(bigMap.size).toBe(dataSet.length);
+
+		// Set the same key again
+		bigMap.set(dataSet[1].key, dataSet[1].value);
+		expect(bigMap.size).toBe(dataSet.length);
+
+		// Set a new key
+		const anotherNewItem = {
+			key: faker.string.alpha(5),
+			value: faker.number.int({min: 1, max: 100}),
+		};
+		bigMap.set(anotherNewItem.key, anotherNewItem.value);
+		expect(bigMap.size).toBe(dataSet.length + 1);
+
+		// Delete multiple items
+		bigMap.delete(dataSet[2].key);
+		bigMap.delete(dataSet[3].key);
+		expect(bigMap.size).toBe(dataSet.length - 1);
+
+		// Clear the map
+		bigMap.clear();
+		expect(bigMap.size).toBe(0);
+		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
+		expect(bigMap.has(dataSet[0].key)).toBe(false);
+		expect(bigMap.delete(dataSet[0].key)).toBe(false);
+	});
+
 	it('should return undefined for non-existing keys', () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap.get('nonExistingKey')).toBeUndefined();

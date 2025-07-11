@@ -14,12 +14,15 @@ export type MapInterfacee<K, V> = {
 	set(key: K, value: V): Map<K, V>;
 };
 
+export type StoreHashAlgorithmFunction = ((key: string, storeSize: number) => number);
+
 export type BigMapOptions<K, V> = {
-	hashFunction?: (key: K) => number;
+	hashFunction?: StoreHashAlgorithmFunction;
 } & HookifiedOptions;
 
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private readonly map: Map<K, V>;
+	private _size = 0;
 
 	/**
 	 * Creates an instance of BigMap.
@@ -68,6 +71,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	public clear(): void {
 		this.map.clear();
+		this._size = 0;
 	}
 
 	/**
@@ -76,7 +80,12 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {boolean} Returns true if the entry was deleted, false if the key was not found.
 	 */
 	public delete(key: K): boolean {
-		return this.map.delete(key);
+		const deleted = this.map.delete(key);
+		if (deleted) {
+			this._size--;
+		}
+
+		return deleted;
 	}
 
 	/**
@@ -114,6 +123,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {Map<K, V>} The map instance.
 	 */
 	public set(key: K, value: V): Map<K, V> {
+		if (!this.map.has(key)) {
+			this._size++;
+		}
+
 		this.map.set(key, value);
 		return this.map;
 	}
@@ -123,6 +136,6 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {number} The number of entries in the map.
 	 */
 	public get size(): number {
-		return this.map.size;
+		return this._size;
 	}
 }
