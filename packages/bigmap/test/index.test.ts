@@ -3,22 +3,23 @@ import {describe, expect, it} from 'vitest';
 import {faker} from '@faker-js/faker';
 import {BigMap, defaultHashFunction} from '../src/index.js';
 
-function getFake<T>(type: 'string' | 'number', amount = 1): Array<{key: string; value: T}> {
-	if (type === 'string') {
+enum FakeDataType {
+	STRING = 'string',
+	NUMBER = 'number',
+}
+
+function getFake<T>(type: FakeDataType, amount = 1): Array<{key: string; value: T}> {
+	if (type === FakeDataType.STRING) {
 		return Array.from({length: amount}, () => ({
 			key: faker.string.alpha(5),
 			value: faker.string.alpha(10) as T,
 		}));
 	}
 
-	if (type === 'number') {
-		return Array.from({length: amount}, () => ({
-			key: faker.string.alpha(5),
-			value: faker.number.int({min: 1, max: 100}) as T,
-		}));
-	}
-
-	return [];
+	return Array.from({length: amount}, () => ({
+		key: faker.string.alpha(5),
+		value: faker.number.int({min: 1, max: 100}) as T,
+	}));
 }
 
 describe('BigMap Instance', () => {
@@ -77,7 +78,7 @@ describe('BigMap Instance', () => {
 	it('should clear entries when store size is set', () => {
 		const bigMap = new BigMap<string, number>();
 
-		const dataSet = getFake<number>('number', 2);
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
 		dataSet.forEach(item => {
 			bigMap.set(item.key, item.value);
 		});
@@ -95,7 +96,7 @@ describe('BigMap Methods', () => {
 	it('should set and get values', () => {
 		const bigMap = new BigMap<string, string>();
 
-		const dataSet = getFake<string>('string', 1);
+		const dataSet = getFake<string>(FakeDataType.STRING, 1);
 		dataSet.forEach(item => {
 			bigMap.set(item.key, item.value);
 		});
