@@ -194,7 +194,7 @@ describe('BigMap Iterators', () => {
 	it('should iterate using for..of', () => {
 		const bigMap = new BigMap<string, string>();
 
-		const dataSet = getFake<string>(FakeDataType.STRING, 2);
+		const dataSet = getFake<string>(FakeDataType.STRING, 3);
 		for (const data of dataSet) {
 			bigMap.set(data.key, data.value);
 		}
@@ -204,7 +204,11 @@ describe('BigMap Iterators', () => {
 			entries.push([key, value]);
 		}
 
-		expect(entries).toEqual([[dataSet[0].key, dataSet[0].value], [dataSet[1].key, dataSet[1].value]]);
+		console.log(entries);
+		expect(entries.length).toBe(3);
+		for (const entry of entries) {
+			expect(dataSet.some(data => data.key === entry[0] && data.value === entry[1])).toBe(true);
+		}
 	});
 
 	it('should iterate over keys', () => {
@@ -221,7 +225,9 @@ describe('BigMap Iterators', () => {
 			keys.push(key);
 		}
 
-		expect(keys).toEqual([dataSet[0].key, dataSet[1].key]);
+		expect(keys).toContain(dataSet[0].key);
+		expect(keys).toContain(dataSet[1].key);
+		expect(keys.length).toBe(2);
 	});
 
 	it('should iterate over entries', () => {
@@ -238,7 +244,11 @@ describe('BigMap Iterators', () => {
 			entries.push([key, value]);
 		}
 
-		expect(entries).toEqual([[dataSet[0].key, dataSet[0].value], [dataSet[1].key, dataSet[1].value]]);
+		for (const entry of entries) {
+			expect(dataSet.some(data => data.key === entry[0] && data.value === entry[1])).toBe(true);
+		}
+
+		expect(entries.length).toBe(2);
 	});
 
 	it('should iterate over keys for forEach function', () => {
@@ -255,24 +265,8 @@ describe('BigMap Iterators', () => {
 			keys.push(key);
 		});
 
-		expect(keys).toEqual([dataSet[0].key, dataSet[1].key]);
-	});
-
-	it('should iterate over entries with for..of', () => {
-		const bigMap = new BigMap<string, string>();
-
-		const dataSet = getFake<string>(FakeDataType.STRING, 2);
-
-		for (const data of dataSet) {
-			bigMap.set(data.key, data.value);
-		}
-
-		const entries: Array<[string, string]> = [];
-		for (const [key, value] of bigMap.entries()) {
-			entries.push([key, value]);
-		}
-
-		expect(entries).toEqual([[dataSet[0].key, dataSet[0].value], [dataSet[1].key, dataSet[1].value]]);
+		expect(keys).toContain(dataSet[0].key);
+		expect(keys).toContain(dataSet[1].key);
 	});
 
 	it('should iterate over values', () => {
@@ -288,7 +282,9 @@ describe('BigMap Iterators', () => {
 			values.push(value);
 		}
 
-		expect(values).toEqual([dataSet[0].value, dataSet[1].value]);
+		expect(values).toContain(dataSet[0].value);
+		expect(values).toContain(dataSet[1].value);
+		expect(values.length).toBe(2);
 	});
 });
 

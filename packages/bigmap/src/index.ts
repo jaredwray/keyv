@@ -50,7 +50,6 @@ export type BigMapOptions<K, V> = {
 } & HookifiedOptions;
 
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
-	private readonly map: Map<K, V>;
 	private _size = 0;
 	private _storeSize = 4;
 	private _store = Array.from({length: this._storeSize}, () => new Map<K, V>());
@@ -62,7 +61,6 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	constructor(options?: BigMapOptions<K, V>) {
 		super(options);
-		this.map = new Map<K, V>();
 		if (options?.storeSize !== undefined) {
 			if (options.storeSize < 1) {
 				throw new Error('Store size must be at least 1.');
@@ -116,6 +114,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		this._storeHashFunction = hashFunction ?? defaultHashFunction;
 	}
 
+	/**
+	 * Gets the store, which is an array of maps.
+	 * @returns {Array<Map<K, V>>} The array of maps in the store.
+	 */
 	public get store(): Array<Map<K, V>> {
 		return this._store;
 	}
@@ -161,7 +163,13 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {IterableIterator<[K, V]>} An iterable of key-value pairs in the map.
 	 */
 	public entries(): IterableIterator<[K, V]> {
-		return this.map.entries();
+		const entries: Array<[K, V]> = [];
+		for (const store of this._store) {
+			// eslint-disable-next-line unicorn/no-array-for-each
+			store.forEach((value, key) => entries.push([key, value]));
+		}
+
+		return entries[Symbol.iterator]();
 	}
 
 	/**
@@ -169,7 +177,13 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {IterableIterator<K>} An iterable of keys in the map.
 	 */
 	public keys(): IterableIterator<K> {
-		return this.map.keys();
+		const keys: K[] = [];
+		for (const store of this._store) {
+			// eslint-disable-next-line unicorn/no-array-for-each
+			store.forEach((_, key) => keys.push(key));
+		}
+
+		return keys[Symbol.iterator]();
 	}
 
 	/**
@@ -177,7 +191,13 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {IterableIterator<V>} An iterable of values in the map.
 	 */
 	public values(): IterableIterator<V> {
-		return this.map.values();
+		const values: V[] = [];
+		for (const store of this._store) {
+			// eslint-disable-next-line unicorn/no-array-for-each
+			store.forEach(value => values.push(value));
+		}
+
+		return values[Symbol.iterator]();
 	}
 
 	/**
@@ -185,7 +205,13 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {IterableIterator<[K, V]>} An iterator that iterates over the key-value pairs in the map.
 	 */
 	public [Symbol.iterator](): IterableIterator<[K, V]> {
-		return this.map[Symbol.iterator]();
+		const entries: Array<[K, V]> = [];
+		for (const store of this._store) {
+			// eslint-disable-next-line unicorn/no-array-for-each
+			store.forEach((value, key) => entries.push([key, value]));
+		}
+
+		return entries[Symbol.iterator]();
 	}
 
 	/**
@@ -193,7 +219,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {void} This method does not return a value.
 	 */
 	public clear(): void {
-		this.map.clear();
+		for (const store of this._store) {
+			store.clear();
+		}
+
 		this._size = 0;
 	}
 
@@ -203,7 +232,8 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {boolean} Returns true if the entry was deleted, false if the key was not found.
 	 */
 	public delete(key: K): boolean {
-		const deleted = this.map.delete(key);
+		const store = this.getStore(key);
+		const deleted = store.delete(key);
 		if (deleted) {
 			this._size--;
 		}
@@ -217,8 +247,12 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {any} [thisArg] - An optional value to use as `this` when executing the callback.
 	 */
 	public forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: any): void {
-		// eslint-disable-next-line unicorn/no-array-for-each, unicorn/no-array-callback-reference, unicorn/no-array-method-this-argument
-		this.map.forEach(callbackfn, thisArg);
+		// eslint-disable-next-line unicorn/no-array-for-each
+		this._store.forEach(store => {
+			// eslint-disable-next-line unicorn/no-array-for-each, unicorn/no-array-callback-reference, unicorn/no-array-method-this-argument
+			store.forEach(callbackfn, thisArg);
+		});
+		// Note: NEED TO FIX THIS
 	}
 
 	/**
@@ -227,7 +261,8 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {V | undefined} The value associated with the key, or undefined if the key does not exist.
 	 */
 	public get(key: K): V | undefined {
-		return this.map.get(key);
+		const store = this.getStore(key);
+		return store.get(key);
 	}
 
 	/**
@@ -236,7 +271,8 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {boolean} Returns true if the key exists, false otherwise.
 	 */
 	public has(key: K): boolean {
-		return this.map.has(key);
+		const store = this.getStore(key);
+		return store.has(key);
 	}
 
 	/**
@@ -246,12 +282,13 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {Map<K, V>} The map instance.
 	 */
 	public set(key: K, value: V): Map<K, V> {
-		if (!this.map.has(key)) {
+		const store = this.getStore(key);
+		if (!store.has(key)) {
 			this._size++;
 		}
 
-		this.map.set(key, value);
-		return this.map;
+		store.set(key, value);
+		return store;
 	}
 
 	/**
