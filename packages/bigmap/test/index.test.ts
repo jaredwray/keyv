@@ -377,3 +377,24 @@ describe('BigMap Hash', () => {
 		expect(hash1).not.toBe(hash3);
 	});
 });
+
+describe('BigMap Store', () => {
+	it('should initialize the store with empty maps', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.store).toHaveLength(4);
+		for (const map of bigMap.store) {
+			expect(map).toBeInstanceOf(Map);
+		}
+	});
+
+	it('should get the correct store map by index', () => {
+		const bigMap = new BigMap<string, number>();
+		const map = bigMap.getStoreMap(0);
+		expect(map).toBeInstanceOf(Map);
+	});
+
+	it('should throw an error for invalid store map index', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(() => bigMap.getStoreMap(4)).toThrowError('Index out of bounds: 4. Valid range is 0 to 3.');
+	});
+});

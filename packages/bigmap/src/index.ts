@@ -53,6 +53,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private readonly map: Map<K, V>;
 	private _size = 0;
 	private _storeSize = 4;
+	private _store = Array.from({length: this._storeSize}, () => new Map<K, V>());
 	private _storeHashFunction?: StoreHashFunction;
 
 	/**
@@ -69,6 +70,8 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 
 			this.storeSize = options.storeSize;
 		}
+
+		this.initStore();
 
 		this._storeHashFunction = options?.storeHashFunction ?? defaultHashFunction;
 	}
@@ -94,6 +97,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 
 		this._storeSize = size;
 		this.clear();
+		this.initStore();
 	}
 
 	/**
@@ -110,6 +114,31 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	public set storeHashFunction(hashFunction: StoreHashFunction | undefined) {
 		this._storeHashFunction = hashFunction ?? defaultHashFunction;
+	}
+
+	public get store(): Array<Map<K, V>> {
+		return this._store;
+	}
+
+	/**
+	 * Gets the map at the specified index in the store.
+	 * @param {number} index - The index of the map to retrieve.
+	 * @returns {Map<K, V>} The map at the specified index.
+	 */
+	public getStoreMap(index: number): Map<K, V> {
+		if (index < 0 || index >= this._storeSize) {
+			throw new Error(`Index out of bounds: ${index}. Valid range is 0 to ${this._storeSize - 1}.`);
+		}
+
+		return this._store[index];
+	}
+
+	/**
+	 * Initializes the store with empty maps.
+	 * This method is called when the BigMap instance is created.
+	 */
+	public initStore(): void {
+		this._store = Array.from({length: this._storeSize}, () => new Map<K, V>());
 	}
 
 	/**
