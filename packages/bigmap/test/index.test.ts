@@ -278,17 +278,7 @@ describe('BigMap Iterators', () => {
 	it('should iterate over values', () => {
 		const bigMap = new BigMap<string, number>();
 
-		const dataSet = [
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-		];
-
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
 		for (const data of dataSet) {
 			bigMap.set(data.key, data.value);
 		}
@@ -367,9 +357,8 @@ describe('BigMap Store', () => {
 describe('BigMap Set / Get', () => {
 	it('should set and get values', () => {
 		const bigMap = new BigMap<string, number>();
-		const key = 'testKey';
-		const value = 42;
-		bigMap.set(key, value);
-		expect(bigMap.get(key)).toBe(value);
+		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
+		bigMap.set(data.key, data.value);
+		expect(bigMap.get(data.key)).toBe(data.value);
 	});
 });
