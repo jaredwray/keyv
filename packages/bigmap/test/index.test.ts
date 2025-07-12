@@ -40,6 +40,22 @@ describe('BigMap Instance', () => {
 		}).toThrow('Store size must be at least 1.');
 	});
 
+	it('should allow setting a custom hash function', () => {
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
+
+		const bigMap = new BigMap<string, number>({storeHashFunction: customHashFunction});
+		expect(bigMap.storeHashFunction).toBe(customHashFunction);
+		bigMap.storeHashFunction = undefined;
+		expect(bigMap.storeHashFunction).toBeUndefined();
+	});
+
+	it('should not throw an error when store size is set to 1', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(() => {
+			bigMap.storeSize = 1;
+		}).not.toThrow();
+	});
+
 	it('should clear entries when store size is set', () => {
 		const bigMap = new BigMap<string, number>();
 		bigMap.set('key1', 1);

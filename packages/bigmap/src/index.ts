@@ -14,7 +14,7 @@ export type MapInterfacee<K, V> = {
 	set(key: K, value: V): Map<K, V>;
 };
 
-export type StoreHashAlgorithmFunction = ((key: string, storeSize: number) => number);
+export type StoreHashFunction = ((key: string, storeSize: number) => number);
 
 export type BigMapOptions<K, V> = {
 	/**
@@ -26,13 +26,14 @@ export type BigMapOptions<K, V> = {
 	 * Optional hash function to use for storing keys.
 	 * @default undefined
 	 */
-	hashFunction?: StoreHashAlgorithmFunction;
+	storeHashFunction?: StoreHashFunction;
 } & HookifiedOptions;
 
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private readonly map: Map<K, V>;
 	private _size = 0;
 	private _storeSize = 4;
+	private _storeHashFunction?: StoreHashFunction;
 
 	/**
 	 * Creates an instance of BigMap.
@@ -47,6 +48,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 			}
 
 			this.storeSize = options.storeSize;
+		}
+
+		if (options?.storeHashFunction) {
+			this._storeHashFunction = options.storeHashFunction;
 		}
 	}
 
@@ -71,6 +76,22 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 
 		this._storeSize = size;
 		this.clear();
+	}
+
+	/**
+	 * Gets the hash function used for storing keys.
+	 * @returns {StoreHashFunction | undefined} The hash function used for storing keys, or undefined if not set.
+	 */
+	public get storeHashFunction(): StoreHashFunction | undefined {
+		return this._storeHashFunction;
+	}
+
+	/**
+	 * Sets the hash function used for storing keys.
+	 * @param {StoreHashFunction} hashFunction - The hash function to use for storing keys.
+	 */
+	public set storeHashFunction(hashFunction: StoreHashFunction | undefined) {
+		this._storeHashFunction = hashFunction;
 	}
 
 	/**
