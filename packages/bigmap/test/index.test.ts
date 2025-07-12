@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/no-array-for-each */
 import {get} from 'node:http';
 import {describe, expect, it} from 'vitest';
-import {faker} from '@faker-js/faker';
+import {de, faker} from '@faker-js/faker';
 import {BigMap, defaultHashFunction} from '../src/index.js';
 
 enum FakeDataType {
@@ -95,101 +95,6 @@ describe('BigMap Instance', () => {
 	});
 });
 
-describe('BigMap Methods', () => {
-	it('should set and get values', () => {
-		const bigMap = new BigMap<string, string>();
-
-		const dataSet = getFake<string>(FakeDataType.STRING, 1);
-		dataSet.forEach(item => {
-			bigMap.set(item.key, item.value);
-		});
-
-		expect(bigMap.get(dataSet[0].key)).toBe(dataSet[0].value);
-	});
-
-	it('should handle size with multiple sets, deletes, and clears', () => {
-		const bigMap = new BigMap<string, number>();
-
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 5);
-		dataSet.forEach(item => {
-			bigMap.set(item.key, item.value);
-		});
-
-		expect(bigMap.size).toBe(dataSet.length);
-
-		// Delete one item
-		bigMap.delete(dataSet[0].key);
-		expect(bigMap.size).toBe(dataSet.length - 1);
-
-		// Delete fake key
-		expect(bigMap.delete('nonExistingKey')).toBe(false);
-		expect(bigMap.size).toBe(dataSet.length - 1);
-
-		// Add a new item
-		const newItem = getFake<number>(FakeDataType.NUMBER, 1)[0];
-		bigMap.set(newItem.key, newItem.value);
-		expect(bigMap.size).toBe(dataSet.length);
-
-		// Set the same key again
-		bigMap.set(dataSet[1].key, dataSet[1].value);
-		expect(bigMap.size).toBe(dataSet.length);
-
-		// Set a new key
-		const anotherNewItem = getFake<number>(FakeDataType.NUMBER, 1)[0];
-		bigMap.set(anotherNewItem.key, anotherNewItem.value);
-		expect(bigMap.size).toBe(dataSet.length + 1);
-
-		// Delete multiple items
-		bigMap.delete(dataSet[2].key);
-		bigMap.delete(dataSet[3].key);
-		expect(bigMap.size).toBe(dataSet.length - 1);
-
-		// Clear the map
-		bigMap.clear();
-		expect(bigMap.size).toBe(0);
-		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
-		expect(bigMap.has(dataSet[0].key)).toBe(false);
-		expect(bigMap.delete(dataSet[0].key)).toBe(false);
-	});
-
-	it('should return undefined for non-existing keys', () => {
-		const bigMap = new BigMap<string, number>();
-		expect(bigMap.get('nonExistingKey')).toBeUndefined();
-	});
-
-	it('should delete keys', () => {
-		const bigMap = new BigMap<string, number>();
-		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
-
-		bigMap.set(data.key, data.value);
-		expect(bigMap.delete(data.key)).toBe(true);
-		expect(bigMap.get(data.key)).toBeUndefined();
-	});
-
-	it('should return false when deleting non-existing keys', () => {
-		const bigMap = new BigMap<string, number>();
-		expect(bigMap.delete('nonExistingKey')).toBe(false);
-	});
-
-	it('should check if a key exists', () => {
-		const bigMap = new BigMap<string, number>();
-		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
-
-		bigMap.set(data.key, data.value);
-		expect(bigMap.has(data.key)).toBe(true);
-		expect(bigMap.has('nonExistingKey')).toBe(false);
-	});
-
-	it('should clear all entries', () => {
-		const bigMap = new BigMap<string, number>();
-		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
-
-		bigMap.set(data.key, data.value);
-		bigMap.clear();
-		expect(bigMap.size).toBe(0);
-	});
-});
-
 describe('BigMap Iterators', () => {
 	it('should iterate using for..of', () => {
 		const bigMap = new BigMap<string, string>();
@@ -204,7 +109,6 @@ describe('BigMap Iterators', () => {
 			entries.push([key, value]);
 		}
 
-		console.log(entries);
 		expect(entries.length).toBe(3);
 		for (const entry of entries) {
 			expect(dataSet.some(data => data.key === entry[0] && data.value === entry[1])).toBe(true);
@@ -356,5 +260,69 @@ describe('BigMap Set / Get', () => {
 		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
 		bigMap.set(data.key, data.value);
 		expect(bigMap.get(data.key)).toBe(data.value);
+	});
+
+	it('should return undefined for non-existing keys', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.get('nonExistingKey')).toBeUndefined();
+	});
+
+	it('should do 500 sets and gets', () => {
+		const bigMap = new BigMap<string, number>();
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 500);
+
+		dataSet.forEach(item => {
+			bigMap.set(item.key, item.value);
+		});
+
+		dataSet.forEach(item => {
+			expect(bigMap.get(item.key)).toBe(item.value);
+		});
+	});
+});
+
+describe('BigMap Delete', () => {
+	it('should delete keys', () => {
+		const bigMap = new BigMap<string, number>();
+		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
+		bigMap.set(data.key, data.value);
+		expect(bigMap.delete(data.key)).toBe(true);
+		expect(bigMap.get(data.key)).toBeUndefined();
+	});
+
+	it('should return false when deleting non-existing keys', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.delete('nonExistingKey')).toBe(false);
+	});
+});
+
+describe('BigMap Has', () => {
+	it('should check if a key exists', () => {
+		const bigMap = new BigMap<string, number>();
+		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
+		bigMap.set(data.key, data.value);
+		expect(bigMap.has(data.key)).toBe(true);
+		expect(bigMap.has('nonExistingKey')).toBe(false);
+	});
+
+	it('should return false for non-existing keys', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.has('nonExistingKey')).toBe(false);
+	});
+});
+
+describe('BigMap Clear', () => {
+	it('should clear all entries', () => {
+		const bigMap = new BigMap<string, number>();
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
+		dataSet.forEach(item => {
+			bigMap.set(item.key, item.value);
+		});
+
+		expect(bigMap.size).toBe(2);
+		bigMap.clear();
+		expect(bigMap.size).toBe(0);
+		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
+		expect(bigMap.has(dataSet[0].key)).toBe(false);
 	});
 });
