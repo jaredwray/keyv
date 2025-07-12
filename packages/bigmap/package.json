@@ -1,0 +1,62 @@
+{
+	"name": "@keyv/bigmap",
+	"version": "1.0.0",
+	"description": "Bigmap for Keyv",
+	"type": "module",
+	"main": "dist/index.cjs",
+	"module": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"require": "./dist/index.cjs",
+			"import": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
+		"prepublishOnly": "pnpm build",
+		"test": "xo --fix && vitest run --coverage",
+		"test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+		"clean": "rimraf ./node_modules ./coverage ./dist"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"bigmap",
+		"keyv",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+		"hookified": "^1.10.0"
+	},
+	"devDependencies": {
+		"@faker-js/faker": "^9.9.0",
+		"@vitest/coverage-v8": "^3.2.4",
+		"rimraf": "^6.0.1",
+		"tsd": "^0.32.0",
+		"vitest": "^3.2.4",
+		"xo": "^1.1.1"
+	},
+	"tsd": {
+		"directory": "test"
+	},
+	"engines": {
+		"node": ">= 20"
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	]
+}
