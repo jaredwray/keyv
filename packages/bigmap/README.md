@@ -15,7 +15,7 @@
 * Ability to use your own hash function.
 * Built in Typescript and Generics for type safety.
 * Used as default in-memory store for `Keyv`.
-* Used as in-memory store for `@keyv/fs` (coming soon).
+* Used as in-memory store for `@keyv/fs`.
 * Used in `@cacheable/memory` for scalable in-memory caching.
 * Maintained regularly with a focus on performance and reliability.
 
