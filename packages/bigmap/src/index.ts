@@ -151,6 +151,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns The store for the specified key.
 	 */
 	public getStore(key: K): Map<K, V> {
+		if (this._storeSize === 1) {
+			return this.getStoreMap(0);
+		}
+
 		const storeSize = this._storeSize - 1; // Adjust for zero-based index
 
 		const index = this._storeHashFunction ? this._storeHashFunction(String(key), storeSize) : defaultHashFunction(String(key), storeSize);

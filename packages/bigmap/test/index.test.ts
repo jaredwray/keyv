@@ -226,6 +226,13 @@ describe('BigMap Store', () => {
 		}
 	});
 
+	it('should return index of 0 when store size is 1', () => {
+		const bigMap = new BigMap<string, number>({storeSize: 1});
+		expect(bigMap.getStoreMap(0)).toBeInstanceOf(Map);
+		expect(bigMap.storeSize).toBe(1);
+		expect(bigMap.getStore('key')).toBeDefined();
+	});
+
 	it('should get the correct store map by index', () => {
 		const bigMap = new BigMap<string, number>();
 		const map = bigMap.getStoreMap(0);
