@@ -142,6 +142,21 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	}
 
 	/**
+	 * Gets the store for a specific key.
+	 * The store is determined by applying the hash function to the key and the store size.
+	 * If the hash function is not set, it defaults to using the default hash function.
+	 * @param key - The key for which to get the store.
+	 * @returns The store for the specified key.
+	 */
+	public getStore(key: K): Map<K, V> {
+		const storeSize = this._storeSize - 1; // Adjust for zero-based index
+
+		const index = this._storeHashFunction ? this._storeHashFunction(String(key), storeSize) : defaultHashFunction(String(key), storeSize);
+
+		return this.getStoreMap(index);
+	}
+
+	/**
 	 * Returns an iterable of key-value pairs in the map.
 	 * @returns {IterableIterator<[K, V]>} An iterable of key-value pairs in the map.
 	 */

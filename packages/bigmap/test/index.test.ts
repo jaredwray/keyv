@@ -397,4 +397,20 @@ describe('BigMap Store', () => {
 		const bigMap = new BigMap<string, number>();
 		expect(() => bigMap.getStoreMap(4)).toThrowError('Index out of bounds: 4. Valid range is 0 to 3.');
 	});
+
+	it('should be able to get the store from getStore()', () => {
+		const bigMap = new BigMap<string, number>();
+		const key = 'testKey';
+		const store = bigMap.getStore(key);
+		expect(store).toBeInstanceOf(Map);
+	});
+
+	it('should get the store from a custom hash function', () => {
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
+		const bigMap = new BigMap<string, number>({storeHashFunction: customHashFunction});
+		const key = 'testKey';
+		const store = bigMap.getStore(key);
+		expect(store).toBeInstanceOf(Map);
+		expect(bigMap.storeHashFunction).toBe(customHashFunction);
+	});
 });
