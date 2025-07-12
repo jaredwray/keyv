@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/no-array-for-each */
 import {describe, expect, it} from 'vitest';
 import {faker} from '@faker-js/faker';
-import {BigMap} from '../src/index.js';
+import {BigMap, defaultHashFunction} from '../src/index.js';
 
 describe('BigMap Instance', () => {
 	it('should create an instance of BigMap', () => {
@@ -46,7 +46,7 @@ describe('BigMap Instance', () => {
 		const bigMap = new BigMap<string, number>({storeHashFunction: customHashFunction});
 		expect(bigMap.storeHashFunction).toBe(customHashFunction);
 		bigMap.storeHashFunction = undefined;
-		expect(bigMap.storeHashFunction).toBeUndefined();
+		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
 	});
 
 	it('should not throw an error when store size is set to 1', () => {
@@ -350,5 +350,30 @@ describe('BigMap Iterators', () => {
 		}
 
 		expect(values).toEqual([dataSet[0].value, dataSet[1].value]);
+	});
+});
+
+describe('BigMap Hash', () => {
+	it('should use the default hash function', () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
+	});
+
+	it('should use a custom hash function', () => {
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
+		const bigMap = new BigMap<string, number>({storeHashFunction: customHashFunction});
+		expect(bigMap.storeHashFunction).toBe(customHashFunction);
+	});
+
+	it('should return the same hash for the same key', () => {
+		const bigMap = new BigMap<string, number>();
+		const key = 'testKey';
+		const hash1 = bigMap.storeHashFunction?.(key, bigMap.storeSize);
+		const hash2 = bigMap.storeHashFunction?.(key, bigMap.storeSize);
+		expect(hash1).toBe(hash2);
+		// Test with a different key
+		const differentKey = 'differentKey';
+		const hash3 = bigMap.storeHashFunction?.(differentKey, bigMap.storeSize);
+		expect(hash1).not.toBe(hash3);
 	});
 });
