@@ -1,4 +1,5 @@
 /* eslint-disable unicorn/no-array-for-each */
+import {get} from 'node:http';
 import {describe, expect, it} from 'vitest';
 import {faker} from '@faker-js/faker';
 import {BigMap, defaultHashFunction} from '../src/index.js';
@@ -63,7 +64,9 @@ describe('BigMap Instance', () => {
 		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
 
 		const bigMap = new BigMap<string, number>({storeHashFunction: customHashFunction});
+
 		expect(bigMap.storeHashFunction).toBe(customHashFunction);
+
 		bigMap.storeHashFunction = undefined;
 		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
 	});
@@ -106,25 +109,8 @@ describe('BigMap Methods', () => {
 
 	it('should handle size with multiple sets, deletes, and clears', () => {
 		const bigMap = new BigMap<string, number>();
-		const dataSet = [
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-		];
 
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 5);
 		dataSet.forEach(item => {
 			bigMap.set(item.key, item.value);
 		});
@@ -140,10 +126,7 @@ describe('BigMap Methods', () => {
 		expect(bigMap.size).toBe(dataSet.length - 1);
 
 		// Add a new item
-		const newItem = {
-			key: faker.string.alpha(5),
-			value: faker.number.int({min: 1, max: 100}),
-		};
+		const newItem = getFake<number>(FakeDataType.NUMBER, 1)[0];
 		bigMap.set(newItem.key, newItem.value);
 		expect(bigMap.size).toBe(dataSet.length);
 
@@ -152,10 +135,7 @@ describe('BigMap Methods', () => {
 		expect(bigMap.size).toBe(dataSet.length);
 
 		// Set a new key
-		const anotherNewItem = {
-			key: faker.string.alpha(5),
-			value: faker.number.int({min: 1, max: 100}),
-		};
+		const anotherNewItem = getFake<number>(FakeDataType.NUMBER, 1)[0];
 		bigMap.set(anotherNewItem.key, anotherNewItem.value);
 		expect(bigMap.size).toBe(dataSet.length + 1);
 
@@ -179,10 +159,7 @@ describe('BigMap Methods', () => {
 
 	it('should delete keys', () => {
 		const bigMap = new BigMap<string, number>();
-		const data = {
-			key: faker.string.alphanumeric(10),
-			value: faker.number.int({min: 1, max: 100}),
-		};
+		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
 
 		bigMap.set(data.key, data.value);
 		expect(bigMap.delete(data.key)).toBe(true);
@@ -196,10 +173,7 @@ describe('BigMap Methods', () => {
 
 	it('should check if a key exists', () => {
 		const bigMap = new BigMap<string, number>();
-		const data = {
-			key: faker.string.alpha(5),
-			value: faker.number.int({min: 1, max: 100}),
-		};
+		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
 
 		bigMap.set(data.key, data.value);
 		expect(bigMap.has(data.key)).toBe(true);
@@ -208,10 +182,7 @@ describe('BigMap Methods', () => {
 
 	it('should clear all entries', () => {
 		const bigMap = new BigMap<string, number>();
-		const data = {
-			key: faker.string.alpha(5),
-			value: faker.number.int({min: 1, max: 100}),
-		};
+		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
 
 		bigMap.set(data.key, data.value);
 		bigMap.clear();
@@ -221,23 +192,14 @@ describe('BigMap Methods', () => {
 
 describe('BigMap Iterators', () => {
 	it('should iterate using for..of', () => {
-		const bigMap = new BigMap<string, number>();
+		const bigMap = new BigMap<string, string>();
 
-		const dataSet = [
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-		];
+		const dataSet = getFake<string>(FakeDataType.STRING, 2);
 		for (const data of dataSet) {
 			bigMap.set(data.key, data.value);
 		}
 
-		const entries: Array<[string, number]> = [];
+		const entries: Array<[string, string]> = [];
 		for (const [key, value] of bigMap) {
 			entries.push([key, value]);
 		}
@@ -248,16 +210,7 @@ describe('BigMap Iterators', () => {
 	it('should iterate over keys', () => {
 		const bigMap = new BigMap<string, number>();
 
-		const dataSet = [
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-		];
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
 
 		for (const data of dataSet) {
 			bigMap.set(data.key, data.value);
@@ -274,16 +227,7 @@ describe('BigMap Iterators', () => {
 	it('should iterate over entries', () => {
 		const bigMap = new BigMap<string, number>();
 
-		const dataSet = [
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-		];
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
 
 		for (const data of dataSet) {
 			bigMap.set(data.key, data.value);
@@ -298,18 +242,9 @@ describe('BigMap Iterators', () => {
 	});
 
 	it('should iterate over keys for forEach function', () => {
-		const bigMap = new BigMap<string, number>();
+		const bigMap = new BigMap<string, string>();
 
-		const dataSet = [
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-		];
+		const dataSet = getFake<string>(FakeDataType.STRING, 2);
 
 		for (const data of dataSet) {
 			bigMap.set(data.key, data.value);
@@ -324,24 +259,15 @@ describe('BigMap Iterators', () => {
 	});
 
 	it('should iterate over entries with for..of', () => {
-		const bigMap = new BigMap<string, number>();
+		const bigMap = new BigMap<string, string>();
 
-		const dataSet = [
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-			{
-				key: faker.string.alpha(5),
-				value: faker.number.int({min: 1, max: 100}),
-			},
-		];
+		const dataSet = getFake<string>(FakeDataType.STRING, 2);
 
 		for (const data of dataSet) {
 			bigMap.set(data.key, data.value);
 		}
 
-		const entries: Array<[string, number]> = [];
+		const entries: Array<[string, string]> = [];
 		for (const [key, value] of bigMap.entries()) {
 			entries.push([key, value]);
 		}
