@@ -30,6 +30,8 @@ npm install --save keyv @keyv/bigmap
 
 # Usage
 
+# Benchmarks
+
 # Contributing
 
 Please see our [contributing](https://github.com/jaredwray/keyv/blob/main/CONTRIBUTING.md) guide.

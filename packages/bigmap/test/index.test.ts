@@ -3,6 +3,24 @@ import {describe, expect, it} from 'vitest';
 import {faker} from '@faker-js/faker';
 import {BigMap, defaultHashFunction} from '../src/index.js';
 
+function getFake<T>(type: 'string' | 'number', amount = 1): Array<{key: string; value: T}> {
+	if (type === 'string') {
+		return Array.from({length: amount}, () => ({
+			key: faker.string.alpha(5),
+			value: faker.string.alpha(10) as T,
+		}));
+	}
+
+	if (type === 'number') {
+		return Array.from({length: amount}, () => ({
+			key: faker.string.alpha(5),
+			value: faker.number.int({min: 1, max: 100}) as T,
+		}));
+	}
+
+	return [];
+}
+
 describe('BigMap Instance', () => {
 	it('should create an instance of BigMap', () => {
 		const bigMap = new BigMap<string, number>();
@@ -58,27 +76,31 @@ describe('BigMap Instance', () => {
 
 	it('should clear entries when store size is set', () => {
 		const bigMap = new BigMap<string, number>();
-		bigMap.set('key1', 1);
-		bigMap.set('key2', 2);
+
+		const dataSet = getFake<number>('number', 2);
+		dataSet.forEach(item => {
+			bigMap.set(item.key, item.value);
+		});
+
 		expect(bigMap.size).toBe(2);
 
 		bigMap.storeSize = 5; // This should clear the map
 		expect(bigMap.size).toBe(0);
-		expect(bigMap.get('key1')).toBeUndefined();
-		expect(bigMap.get('key2')).toBeUndefined();
+		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
+		expect(bigMap.get(dataSet[1].key)).toBeUndefined();
 	});
 });
 
 describe('BigMap Methods', () => {
 	it('should set and get values', () => {
-		const bigMap = new BigMap<string, number>();
-		const data = {
-			key: faker.string.uuid(),
-			value: faker.number.int({min: 1, max: 100}),
-		};
+		const bigMap = new BigMap<string, string>();
 
-		bigMap.set(data.key, data.value);
-		expect(bigMap.get(data.key)).toBe(data.value);
+		const dataSet = getFake<string>('string', 1);
+		dataSet.forEach(item => {
+			bigMap.set(item.key, item.value);
+		});
+
+		expect(bigMap.get(dataSet[0].key)).toBe(dataSet[0].value);
 	});
 
 	it('should handle size with multiple sets, deletes, and clears', () => {
@@ -412,5 +434,15 @@ describe('BigMap Store', () => {
 		const store = bigMap.getStore(key);
 		expect(store).toBeInstanceOf(Map);
 		expect(bigMap.storeHashFunction).toBe(customHashFunction);
+	});
+});
+
+describe('BigMap Set / Get', () => {
+	it('should set and get values', () => {
+		const bigMap = new BigMap<string, number>();
+		const key = 'testKey';
+		const value = 42;
+		bigMap.set(key, value);
+		expect(bigMap.get(key)).toBe(value);
 	});
 });
