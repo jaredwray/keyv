@@ -45,7 +45,7 @@ describe('getClient', () => {
 	});
 
 	test('should throw an error if not connected with Keyv', async () => {
-		const keyv = createKeyv(redisBadUri);
+		const keyv = createKeyv(redisBadUri, {throwOnErrors: true});
 		let didError = false;
 		try {
 			await keyv.get(faker.string.alphanumeric(10));
