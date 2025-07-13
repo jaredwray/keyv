@@ -52,7 +52,7 @@ export type KeyvRedisOptions = {
 	 * and returns no-op responses.
 	 * @default false
 	 */
-	throwErrors?: boolean;
+	throwOnErrors?: boolean;
 
 	/**
 	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
@@ -122,7 +122,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	private _useUnlink = true;
 	private _noNamespaceAffectsAll = false;
 	private _throwOnConnectError = true;
-	private _throwErrors = false;
+	private _throwOnErrors = false;
 	private _connectionTimeout: number | undefined;
 
 	/**
@@ -186,7 +186,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			noNamespaceAffectsAll: this._noNamespaceAffectsAll,
 			useUnlink: this._useUnlink,
 			throwOnConnectError: this._throwOnConnectError,
-			throwErrors: this._throwErrors,
+			throwOnErrors: this._throwOnErrors,
 			connectionTimeout: this._connectionTimeout,
 			dialect: 'redis',
 			url,
@@ -303,26 +303,26 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	}
 
 	/**
-	 * Get if throwErrors is set to true.
+	 * Get if throwOnErrors is set to true.
 	 * This is used to throw an error if at any point there is a failure. Use this if you want to
 	 * ensure that all operations are successful and you want to handle errors. By default, this is
 	 * set to false so that it does not throw an error on every operation and instead emits an error event
 	 * and returns no-op responses.
 	 * @default false
 	 */
-	public get throwErrors(): boolean {
-		return this._throwErrors;
+	public get throwOnErrors(): boolean {
+		return this._throwOnErrors;
 	}
 
 	/**
-	 * Set if throwErrors is set to true.
+	 * Set if throwOnErrors is set to true.
 	 * This is used to throw an error if at any point there is a failure. Use this if you want to
 	 * ensure that all operations are successful and you want to handle errors. By default, this is
 	 * set to false so that it does not throw an error on every operation and instead emits an error event
 	 * and returns no-op responses.
 	 */
-	public set throwErrors(value: boolean) {
-		this._throwErrors = value;
+	public set throwOnErrors(value: boolean) {
+		this._throwOnErrors = value;
 	}
 
 	/**
@@ -394,7 +394,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			}
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 		}
@@ -423,7 +423,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			await multi.exec();
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 		}
@@ -444,7 +444,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			return exists === 1;
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 
@@ -472,7 +472,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			return results.map(result => typeof result === 'number' && result === 1);
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 
@@ -499,7 +499,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			return value as U;
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 
@@ -525,7 +525,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		/* c8 ignore next 5 */
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 
@@ -549,7 +549,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			return deleted > 0;
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 
@@ -586,7 +586,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			}
 		} catch (error) {
 			this.emit('error', error);
-			if (this._throwErrors) {
+			if (this._throwOnErrors) {
 				throw error;
 			}
 		}
@@ -849,8 +849,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			this._throwOnConnectError = options.throwOnConnectError;
 		}
 
-		if (options.throwErrors !== undefined) {
-			this._throwErrors = options.throwErrors;
+		if (options.throwOnErrors !== undefined) {
+			this._throwOnErrors = options.throwOnErrors;
 		}
 
 		if (options.connectionTimeout !== undefined) {
