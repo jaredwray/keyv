@@ -57,4 +57,5 @@ jobs:
                   ./packages/sqlite/coverage/lcov.info, \
                   ./packages/test-suite/coverage/lcov.info, \
                   ./packages/valkey/coverage/lcov.info, \
-                  ./packages/dynamo/coverage/lcov.info
+                  ./packages/dynamo/coverage/lcov.info \
+                  ./packages/bigmap/coverage/lcov.info
