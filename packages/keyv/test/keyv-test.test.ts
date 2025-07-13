@@ -173,5 +173,11 @@ describe('Keyv', async () => {
 			keyv.throwOnErrors = true;
 			await expect(keyv.deleteMany(testKeys)).rejects.toThrow('Test error');
 		});
+
+		test('should throw when setting multiple keys', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.setMany(testData)).rejects.toThrow('Test error');
+		});
 	});
 });

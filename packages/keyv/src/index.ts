@@ -712,10 +712,15 @@ export class Keyv<GenericValue = any> extends EventManager {
 				promises.push(this.set(entry.key, entry.value, entry.ttl));
 			}
 
-			const promiseResults = await Promise.allSettled(promises);
-			results = promiseResults.map(result => (result as PromiseFulfilledResult<any>).value);
+			const promiseResults = await Promise.all(promises);
+			results = promiseResults;
 		} catch (error) {
 			this.emit('error', error);
+
+			if (this._throwOnErrors) {
+				throw error;
+			}
+
 			results = entries.map(() => false);
 		}
 
