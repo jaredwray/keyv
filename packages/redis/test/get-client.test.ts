@@ -56,4 +56,17 @@ describe('getClient', () => {
 
 		expect(didError).toBe(true);
 	});
+
+	test('should throw an error if not connected with Keyv', async () => {
+		const keyv = createKeyv(redisBadUri, {throwOnConnectError: true});
+		let didError = false;
+		try {
+			await keyv.get(faker.string.alphanumeric(10));
+		} catch (error) {
+			didError = true;
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
+		}
+
+		expect(didError).toBe(true);
+	});
 });

@@ -904,6 +904,17 @@ export function createKeyv(connect?: string | RedisClientOptions | RedisClientTy
 	}
 
 	const keyv = new Keyv(adapter, {useKeyPrefix: false});
+
+	if (options?.throwOnConnectError) {
+		// Set the throwOnError in Keyv so it throws
+		keyv.throwOnErrors = true;
+	}
+
+	if (options?.throwOnErrors) {
+		// Set the throwOnError in Keyv so it throws
+		keyv.throwOnErrors = true;
+	}
+
 	keyv.namespace = undefined; // Ensure no namespace is set
 	return keyv;
 }

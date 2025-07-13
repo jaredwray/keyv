@@ -305,7 +305,7 @@ import KeyvRedis from '@keyv/redis';
 const keyv = new Keyv(new KeyvRedis('redis://bad-uri:1111', { throwOnConnectError: false }));
 keyv.throwOnErrors = true; // This will throw an error if the connection fails
 
-await keyv.set('key', 'value'); // this will throw the connection error
+await keyv.set('key', 'value'); // this will throw the connection error only.
 ```
 
 On `get`, `getMany`, `set`, `setMany`, `delete`, and `deleteMany`, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
