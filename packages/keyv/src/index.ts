@@ -5,7 +5,6 @@ import StatsManager from './stats-manager.js';
 
 export type DeserializedData<Value> = {
 	value?: Value;
-
 	expires?: number | undefined;
 };
 
