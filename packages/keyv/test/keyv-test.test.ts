@@ -1,7 +1,7 @@
 import {
 	describe, test, expect, beforeEach,
 } from 'vitest';
-import {faker} from '@faker-js/faker';
+import {faker, th} from '@faker-js/faker';
 import {Keyv} from '../src/index.js';
 
 describe('Keyv', async () => {
@@ -66,20 +66,106 @@ describe('Keyv', async () => {
 	});
 
 	describe('throwErrors', async () => {
-		test('should get the current throwErrors value', async () => {
-			const keyv = new Keyv(new Map());
-			expect(keyv.throwErrors).toBe(false);
+		const throwingStore = new Map();
+		throwingStore.get = () => {
+			throw new Error('Test error');
+		};
+
+		throwingStore.set = () => {
+			throw new Error('Test error');
+		};
+
+		throwingStore.delete = () => {
+			throw new Error('Test error');
+		};
+
+		throwingStore.clear = () => {
+			throw new Error('Test error');
+		};
+
+		throwingStore.has = () => {
+			throw new Error('Test error');
+		};
+
+		test('should get the current throwOnErrors value', async () => {
+			const keyv = new Keyv(throwingStore);
+			expect(keyv.throwOnErrors).toBe(false);
 		});
 
-		test('should set the throwErrors value', async () => {
-			const keyv = new Keyv(new Map());
-			keyv.throwErrors = true;
-			expect(keyv.throwErrors).toBe(true);
+		test('should set the throwOnErrors value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			expect(keyv.throwOnErrors).toBe(true);
 		});
 
-		test('should pass in the throwErrors option', async () => {
-			const keyv = new Keyv(new Map(), {throwErrors: true});
-			expect(keyv.throwErrors).toBe(true);
+		test('should pass in the throwOnErrors option', async () => {
+			const keyv = new Keyv({store: throwingStore, throwOnErrors: true});
+			expect(keyv.throwOnErrors).toBe(true);
+		});
+
+		test('should throw when setting a value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.set('key', 'value')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when setting a value with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+			expect(result).toBe(false);
+		});
+
+		test('should throw when getting a value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.get('key')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when getting a value with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.get(faker.string.alphanumeric(10));
+			expect(result).toBeUndefined();
+		});
+
+		test('should throw when deleting a value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.delete('key')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when deleting a value with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.delete(faker.string.alphanumeric(10));
+			expect(result).toBe(false);
+		});
+
+		test('should throw when clearing the store', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.clear()).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when clearing the store with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.clear();
+			expect(result).toBeUndefined();
+		});
+
+		test('should throw when checking if a key exists', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.has('key')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when checking if a key exists with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.has(faker.string.alphanumeric(10));
+			expect(result).toBe(false);
 		});
 	});
 });

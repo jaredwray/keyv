@@ -124,7 +124,7 @@ export type KeyvOptions = {
 	 * Will enable throwing errors on methods in addition to emitting them.
 	 * @default false
 	 */
-	throwErrors?: boolean;
+	throwOnErrors?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -170,7 +170,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	private _useKeyPrefix = true;
 
-	private _throwErrors = false;
+	private _throwOnErrors = false;
 
 	/**
 	 * Keyv Constructor
@@ -256,8 +256,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this._useKeyPrefix = this.opts.useKeyPrefix;
 		}
 
-		if (this.opts.throwErrors !== undefined) {
-			this._throwErrors = this.opts.throwErrors;
+		if (this.opts.throwOnErrors !== undefined) {
+			this._throwOnErrors = this.opts.throwOnErrors;
 		}
 	}
 
@@ -403,19 +403,19 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Get the current throwErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
-	 * @return {boolean} The current throwErrors value.
+	 * @return {boolean} The current throwOnErrors value.
 	 */
-	public get throwErrors(): boolean {
-		return this._throwErrors;
+	public get throwOnErrors(): boolean {
+		return this._throwOnErrors;
 	}
 
 	/**
-	 * Set the current throwErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
-	 * @param {boolean} value The throwErrors value to set.
+	 * Set the current throwOnErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * @param {boolean} value The throwOnErrors value to set.
 	 */
-	public set throwErrors(value: boolean) {
-		this._throwErrors = value;
-		this.opts.throwErrors = value;
+	public set throwOnErrors(value: boolean) {
+		this._throwOnErrors = value;
+		this.opts.throwOnErrors = value;
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
@@ -517,7 +517,15 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
-		const rawData = await store.get<Value>(keyPrefixed as string);
+		let rawData;
+		try {
+			rawData = await store.get<Value>(keyPrefixed as string);
+		} catch (error) {
+			if (this.throwOnErrors) {
+				throw error;
+			}
+		}
+
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
@@ -654,6 +662,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			result = false;
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
@@ -736,6 +747,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			result = false;
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: result});
@@ -766,6 +780,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return returnResult;
 		} catch (error) {
 			this.emit('error', error);
+
 			return false;
 		}
 	}
@@ -782,6 +797,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 			await store.clear();
 		} catch (error) {
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
 		}
 	}
 
@@ -809,6 +827,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 			rawData = await store.get(keyPrefixed);
 		} catch (error) {
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
+
+			return false;
 		}
 
 		if (rawData) {
