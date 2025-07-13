@@ -82,7 +82,7 @@ describe('has', () => {
 	});
 
 	test('should throw an error when throwErrors is true and an error occurs', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -105,7 +105,7 @@ describe('has', () => {
 	});
 
 	test('should not throw an error on hasMany when throwErrors is false', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: false});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: false});
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
@@ -128,7 +128,7 @@ describe('has', () => {
 	});
 
 	test('should throw an error on hasMany when throwErrors is true', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],

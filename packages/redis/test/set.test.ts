@@ -44,7 +44,7 @@ describe('set', () => {
 	});
 
 	test('should throw error on bad uri', async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false, throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisBadUri, {throwOnConnectError: false, throwOnErrors: true});
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -107,7 +107,7 @@ describe('set', () => {
 	});
 
 	test('show throw on redis client set and get error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -131,7 +131,7 @@ describe('set', () => {
 	});
 
 	test('show throw on redis client setMany and get error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			key: faker.string.alphanumeric(10),

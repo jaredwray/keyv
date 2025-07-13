@@ -72,7 +72,7 @@ describe('delete', () => {
 	});
 
 	test('should throw an error on client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -130,8 +130,8 @@ describe('delete', () => {
 		expect(didError).toBe(false);
 	});
 
-	test('should throw on getMany an error when throwErrors is true and an error occurs', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+	test('should throw on getMany an error when throwOnErrors is true and an error occurs', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			key: faker.string.alphanumeric(10),
