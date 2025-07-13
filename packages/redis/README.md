@@ -26,6 +26,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 # Table of Contents
 * [Usage](#usage)
 * [Namespaces](#namespaces)
+* [Fixing Double Prefixing of Keys](#fixing-double-prefixing-of-keys)
 * [Using Generic Types](#using-generic-types)
 * [Performance Considerations](#performance-considerations)
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
