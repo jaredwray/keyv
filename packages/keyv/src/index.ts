@@ -75,24 +75,56 @@ export type KeyvStoreAdapter = {
 } & IEventEmitter;
 
 export type KeyvOptions = {
-	/** Emit errors */
+	/**
+	 * Emit errors
+	 * @default true
+	*/
 	emitErrors?: boolean;
-	/** Namespace for the current instance. */
+	/**
+	 * Namespace for the current instance.
+	 * @default 'keyv'
+	*/
 	namespace?: string;
-	/** A custom serialization function. */
+	/**
+	 * A custom serialization function.
+	 * @default defaultSerialize using JSON.stringify
+	 */
 	serialize?: Serialize;
-	/** A custom deserialization function. */
+	/**
+	 * A custom deserialization function.
+	 * @default defaultDeserialize using JSON.parse
+	*/
 	deserialize?: Deserialize;
-	/** The storage adapter instance to be used by Keyv. */
+	/**
+	 * The storage adapter instance to be used by Keyv.
+	 * @default new Map() - in-memory store
+	 */
 	store?: KeyvStoreAdapter | Map<any, any> | any;
-	/** Default TTL. Can be overridden by specifying a TTL on `.set()`. */
+	/**
+	 * Default TTL. Can be overridden by specifying a TTL on `.set()`.
+	 * @default undefined
+	 */
 	ttl?: number;
-	/** Enable compression option **/
+	/**
+	 * Enable compression option
+	 * @default false
+	 */
 	compression?: CompressionAdapter | any;
-	/** Enable or disable statistics (default is false) */
+	/**
+	 * Enable or disable statistics (default is false)
+	 * @default false
+	 */
 	stats?: boolean;
-	/** Enable or disable key prefixing (default is true) */
+	/**
+	 * Enable or disable key prefixing (default is true)
+	 * @default true
+	 */
 	useKeyPrefix?: boolean;
+	/**
+	 * Will enable throwing errors on methods in addition to emitting them.
+	 * @default false
+	 */
+	throwErrors?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -137,6 +169,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _compression: CompressionAdapter | undefined;
 
 	private _useKeyPrefix = true;
+
+	private _throwErrors = false;
 
 	/**
 	 * Keyv Constructor
@@ -220,6 +254,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (this.opts.useKeyPrefix !== undefined) {
 			this._useKeyPrefix = this.opts.useKeyPrefix;
+		}
+
+		if (this.opts.throwErrors !== undefined) {
+			this._throwErrors = this.opts.throwErrors;
 		}
 	}
 
@@ -361,6 +399,23 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public set useKeyPrefix(value: boolean) {
 		this._useKeyPrefix = value;
 		this.opts.useKeyPrefix = value;
+	}
+
+	/**
+	 * Get the current throwErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * @return {boolean} The current throwErrors value.
+	 */
+	public get throwErrors(): boolean {
+		return this._throwErrors;
+	}
+
+	/**
+	 * Set the current throwErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * @param {boolean} value The throwErrors value to set.
+	 */
+	public set throwErrors(value: boolean) {
+		this._throwErrors = value;
+		this.opts.throwErrors = value;
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
