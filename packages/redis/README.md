@@ -191,16 +191,41 @@ import KeyvRedis, { createClient } from '@keyv/redis';
 
 const redis = createClient('redis://user:pass@localhost:6379');
 const keyvRedis = new KeyvRedis(redis);
-const keyv = new Keyv({ store: keyvRedis, namespace: 'my-namespace' });
+const keyv = new Keyv({ store: keyvRedis, namespace: 'my-namespace', useKeyPrefix: false });
 ```
 
-This will prefix all keys with `my-namespace:`. You can also set the namespace after the fact:
+To make this easier, you can use the `createKeyv` function which will automatically set the `namespace` option to the `KeyvRedis` instance:
+
+```js
+import { createKeyv } from '@keyv/redis';
+const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
+```
+
+This will prefix all keys with `my-namespace:` and will also set `useKeyPrefix` to `false`. This is done to avoid double prefixing of keys as we transition out of the legacy behavior in Keyv. You can also set the namespace after the fact:
 
 ```js
 keyv.namespace = 'my-namespace';
 ```
 
 NOTE: If you plan to do many clears or deletes, it is recommended to read the [Performance Considerations](#performance-considerations) section.
+
+# Fixing Double Prefixing of Keys
+
+If you are using `Keyv` with `@keyv/redis` as the storage adapter, you may notice that keys are being prefixed twice. This is because `Keyv` has a default prefixing behavior that is applied to all keys. To fix this, you can set the `useKeyPrefix` option to `false` when creating the `Keyv` instance:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'), { useKeyPrefix: false });
+```
+
+To make this easier, you can use the `createKeyv` function which will automatically set the `useKeyPrefix` option to `false`:
+
+```js
+import { createKeyv } from '@keyv/redis';
+const keyv = createKeyv('redis://user:pass@localhost:6379');
+```
 
 ## Using Generic Types
 
