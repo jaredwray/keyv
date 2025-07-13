@@ -167,5 +167,11 @@ describe('Keyv', async () => {
 			const result = await keyv.has(faker.string.alphanumeric(10));
 			expect(result).toBe(false);
 		});
+
+		test('should throw when deleting multiple keys', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.deleteMany(testKeys)).rejects.toThrow('Test error');
+		});
 	});
 });

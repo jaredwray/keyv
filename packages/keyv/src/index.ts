@@ -774,12 +774,16 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 			const promises = keyPrefixed.map(async key => store.delete(key));
 
-			const results = await Promise.allSettled(promises);
-			const returnResult = results.every(x => (x as PromiseFulfilledResult<any>).value === true);
+			const results = await Promise.all(promises);
+			const returnResult = results.every(Boolean);
 			this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: returnResult});
 			return returnResult;
 		} catch (error) {
 			this.emit('error', error);
+
+			if (this._throwOnErrors) {
+				throw error;
+			}
 
 			return false;
 		}
