@@ -360,11 +360,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			}
 		} catch (error) {
 			this.emit('error', error);
+
+			await this.disconnect(true);
+
 			if (this._throwOnConnectError) {
 				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown);
 			}
-
-			await this.disconnect(true);
 		}
 
 		this.initClient();
