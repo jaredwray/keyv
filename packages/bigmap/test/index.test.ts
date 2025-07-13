@@ -93,6 +93,23 @@ describe('BigMap Instance', () => {
 		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
 		expect(bigMap.get(dataSet[1].key)).toBeUndefined();
 	});
+
+	it('should have the correct store size', () => {
+		const bigMap = new BigMap<string, number>({storeSize: 3});
+		const dataSet = getFake<number>(FakeDataType.NUMBER, 50);
+		dataSet.forEach(item => {
+			bigMap.set(item.key, item.value);
+		});
+
+		expect(bigMap.size).toBe(50);
+
+		// Remove some items
+		for (let i = 0; i < 20; i++) {
+			bigMap.delete(dataSet[i].key);
+		}
+
+		expect(bigMap.size).toBe(30);
+	});
 });
 
 describe('BigMap Iterators', () => {
