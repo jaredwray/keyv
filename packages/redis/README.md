@@ -296,7 +296,17 @@ keyv.on('error', (error) => {
 });
 ```
 
-By default, the `KeyvRedis` instance will `throw an error` if the connection fails to connect. You can disable this behavior by setting the `throwOnConnectError` option to `false` when creating the `KeyvRedis` instance:
+By default, the `KeyvRedis` instance will `throw an error` if the connection fails to connect. You can disable this behavior by setting the `throwOnConnectError` option to `false` when creating the `KeyvRedis` instance. If you want this to throw you will need to also set the Keyv instance to `throwOnErrors: true`:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis('redis://bad-uri:1111', { throwOnConnectError: false }));
+keyv.throwOnErrors = true; // This will throw an error if the connection fails
+
+await keyv.set('key', 'value'); // this will throw the connection error
+```
 
 On `get`, `getMany`, `set`, `setMany`, `delete`, and `deleteMany`, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
 
