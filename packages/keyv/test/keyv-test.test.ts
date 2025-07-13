@@ -180,5 +180,11 @@ describe('Keyv', async () => {
 			const result = await keyv.setMany(testData);
 			expect(result).toEqual([false, false, false, false, false]);
 		});
+
+		test('should throw when deleting multiple values of delete', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.deleteMany(testKeys)).rejects.toThrow('Test error');
+		});
 	});
 });
