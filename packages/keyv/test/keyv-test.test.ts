@@ -167,5 +167,18 @@ describe('Keyv', async () => {
 			const result = await keyv.has(faker.string.alphanumeric(10));
 			expect(result).toBe(false);
 		});
+
+		test('should throw when setting multiple values of set', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.setMany(testData)).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when setting multiple values of set', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.setMany(testData);
+			expect(result).toEqual([false, false, false, false, false]);
+		});
 	});
 });
