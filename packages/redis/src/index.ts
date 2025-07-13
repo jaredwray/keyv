@@ -895,7 +895,15 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 export function createKeyv(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions): Keyv {
 	connect ??= 'redis://localhost:6379';
 	const adapter = new KeyvRedis(connect, options);
-	const keyv = new Keyv(adapter, {namespace: options?.namespace, useKeyPrefix: false});
+
+	if (options?.namespace) {
+		adapter.namespace = options.namespace;
+		const keyv = new Keyv(adapter, {namespace: options?.namespace, useKeyPrefix: false});
+		return keyv;
+	}
+
+	const keyv = new Keyv(adapter, {useKeyPrefix: false});
+	keyv.namespace = undefined; // Ensure no namespace is set
 	return keyv;
 }
 
