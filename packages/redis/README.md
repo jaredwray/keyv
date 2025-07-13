@@ -144,7 +144,7 @@ export type KeyvRedisOptions = {
 	 * and returns no-op responses.
 	 * @default false
 	 */
-	throwErrors?: boolean;
+	throwOnErrors?: boolean;
 
 	/**
 	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
@@ -296,11 +296,21 @@ keyv.on('error', (error) => {
 });
 ```
 
-By default, the `KeyvRedis` instance will `throw an error` if the connection fails to connect. You can disable this behavior by setting the `throwOnConnectError` option to `false` when creating the `KeyvRedis` instance:
+By default, the `KeyvRedis` instance will `throw an error` if the connection fails to connect. You can disable this behavior by setting the `throwOnConnectError` option to `false` when creating the `KeyvRedis` instance. If you want this to throw you will need to also set the Keyv instance to `throwOnErrors: true`:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis('redis://bad-uri:1111', { throwOnConnectError: false }));
+keyv.throwOnErrors = true; // This will throw an error if the connection fails
+
+await keyv.set('key', 'value'); // this will throw the connection error only.
+```
 
 On `get`, `getMany`, `set`, `setMany`, `delete`, and `deleteMany`, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
 
-If you want to handle connection errors, retries, and timeouts more gracefully, you can use the `throwErrors` option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:
+If you want to handle connection errors, retries, and timeouts more gracefully, you can use the `throwOnErrors` option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:
 
 There is a default `Reconnect Strategy` if you pass in just a `uri` connection string we will automatically create a Redis client for you with the following reconnect strategy:
 

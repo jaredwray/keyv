@@ -5,7 +5,6 @@ import StatsManager from './stats-manager.js';
 
 export type DeserializedData<Value> = {
 	value?: Value;
-
 	expires?: number | undefined;
 };
 
@@ -76,24 +75,56 @@ export type KeyvStoreAdapter = {
 } & IEventEmitter;
 
 export type KeyvOptions = {
-	/** Emit errors */
+	/**
+	 * Emit errors
+	 * @default true
+	*/
 	emitErrors?: boolean;
-	/** Namespace for the current instance. */
+	/**
+	 * Namespace for the current instance.
+	 * @default 'keyv'
+	*/
 	namespace?: string;
-	/** A custom serialization function. */
+	/**
+	 * A custom serialization function.
+	 * @default defaultSerialize using JSON.stringify
+	 */
 	serialize?: Serialize;
-	/** A custom deserialization function. */
+	/**
+	 * A custom deserialization function.
+	 * @default defaultDeserialize using JSON.parse
+	*/
 	deserialize?: Deserialize;
-	/** The storage adapter instance to be used by Keyv. */
+	/**
+	 * The storage adapter instance to be used by Keyv.
+	 * @default new Map() - in-memory store
+	 */
 	store?: KeyvStoreAdapter | Map<any, any> | any;
-	/** Default TTL. Can be overridden by specifying a TTL on `.set()`. */
+	/**
+	 * Default TTL. Can be overridden by specifying a TTL on `.set()`.
+	 * @default undefined
+	 */
 	ttl?: number;
-	/** Enable compression option **/
+	/**
+	 * Enable compression option
+	 * @default false
+	 */
 	compression?: CompressionAdapter | any;
-	/** Enable or disable statistics (default is false) */
+	/**
+	 * Enable or disable statistics (default is false)
+	 * @default false
+	 */
 	stats?: boolean;
-	/** Enable or disable key prefixing (default is true) */
+	/**
+	 * Enable or disable key prefixing (default is true)
+	 * @default true
+	 */
 	useKeyPrefix?: boolean;
+	/**
+	 * Will enable throwing errors on methods in addition to emitting them.
+	 * @default false
+	 */
+	throwOnErrors?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -138,6 +169,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _compression: CompressionAdapter | undefined;
 
 	private _useKeyPrefix = true;
+
+	private _throwOnErrors = false;
 
 	/**
 	 * Keyv Constructor
@@ -221,6 +254,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (this.opts.useKeyPrefix !== undefined) {
 			this._useKeyPrefix = this.opts.useKeyPrefix;
+		}
+
+		if (this.opts.throwOnErrors !== undefined) {
+			this._throwOnErrors = this.opts.throwOnErrors;
 		}
 	}
 
@@ -364,6 +401,23 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this.opts.useKeyPrefix = value;
 	}
 
+	/**
+	 * Get the current throwErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * @return {boolean} The current throwOnErrors value.
+	 */
+	public get throwOnErrors(): boolean {
+		return this._throwOnErrors;
+	}
+
+	/**
+	 * Set the current throwOnErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * @param {boolean} value The throwOnErrors value to set.
+	 */
+	public set throwOnErrors(value: boolean) {
+		this._throwOnErrors = value;
+		this.opts.throwOnErrors = value;
+	}
+
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
 		const function_: IteratorFunction = async function * (this: any) {
 			for await (const [key, raw] of (typeof iterator === 'function'
@@ -463,7 +517,15 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
-		const rawData = await store.get<Value>(keyPrefixed as string);
+		let rawData;
+		try {
+			rawData = await store.get<Value>(keyPrefixed as string);
+		} catch (error) {
+			if (this.throwOnErrors) {
+				throw error;
+			}
+		}
+
 		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
@@ -600,6 +662,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			result = false;
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
@@ -682,6 +747,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			result = false;
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: result});
@@ -712,6 +780,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return returnResult;
 		} catch (error) {
 			this.emit('error', error);
+
 			return false;
 		}
 	}
@@ -728,6 +797,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 			await store.clear();
 		} catch (error) {
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
 		}
 	}
 
@@ -755,6 +827,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 			rawData = await store.get(keyPrefixed);
 		} catch (error) {
 			this.emit('error', error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
+
+			return false;
 		}
 
 		if (rawData) {

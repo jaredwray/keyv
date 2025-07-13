@@ -1,5 +1,8 @@
-import {describe, test, expect} from 'vitest';
-import {KeyvGenericStore} from '../src/generic-store.js';
+import {
+	describe, test, expect, beforeEach,
+} from 'vitest';
+import {fa, faker} from '@faker-js/faker';
+import {KeyvGenericStore, createKeyv} from '../src/generic-store.js';
 
 // eslint-disable-next-line no-promise-executor-return
 const sleep = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -175,5 +178,162 @@ describe('Keyv Generic Delete / Clear Operations', () => {
 		});
 		await keyv.deleteMany(['key1', 'key2']);
 		expect(errorEmitted).toBe(true);
+	});
+
+	test('should use the store to set multiple keys', async () => {
+		const map = new Map();
+		const keyv = createKeyv(map);
+
+		const testData = Array.from({length: 5}, () => ({
+			key: faker.string.uuid(),
+			value: faker.lorem.sentence(),
+		}));
+
+		const result = await keyv.setMany(testData);
+		expect(result).toEqual([true, true, true, true, true]);
+		const resultValue = await keyv.get(testData[0].key);
+		expect(resultValue.value).toEqual(testData[0].value);
+	});
+
+	test('should emit and return false on error', async () => {
+		const map = new Map();
+		map.set = () => {
+			throw new Error('Test Error');
+		};
+
+		const keyv = createKeyv(map);
+		let errorEmitted = false;
+		keyv.on('error', () => {
+			errorEmitted = true;
+		});
+
+		const testData = Array.from({length: 5}, () => ({
+			key: faker.string.uuid(),
+			value: faker.lorem.sentence(),
+		}));
+
+		const result = await keyv.setMany(testData);
+		expect(result).toEqual([false, false, false, false, false]);
+		expect(errorEmitted).toBe(true);
+	});
+
+	test('should emit and return false on error', async () => {
+		const map = new Map();
+		const keyv = createKeyv(map);
+		keyv.store.deleteMany = () => {
+			throw new Error('Test Error');
+		};
+
+		let errorEmitted = false;
+		keyv.on('error', () => {
+			errorEmitted = true;
+		});
+
+		const testKeys = Array.from({length: 5}, () => faker.string.uuid());
+
+		const result = await keyv.deleteMany(testKeys);
+		expect(result).toEqual(false);
+		expect(errorEmitted).toBe(true);
+	});
+
+	describe('getMany', async () => {
+		test('should set many items and then get them', async () => {
+			const keyv = createKeyv(new Map());
+
+			const testData = Array.from({length: 5}, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.sentence(),
+			}));
+
+			const testKeys = testData.map(data => data.key);
+
+			await keyv.setMany(testData);
+			const result = await keyv.getMany(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should set many items and then get them with get', async () => {
+			const keyv = createKeyv(new Map());
+
+			const testData = Array.from({length: 5}, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.sentence(),
+			}));
+
+			const testKeys = testData.map(data => data.key);
+
+			await keyv.setMany(testData);
+			const result = await keyv.get(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should set many items and then get them raw', async () => {
+			const keyv = createKeyv(new Map());
+
+			const testData = Array.from({length: 5}, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.sentence(),
+			}));
+
+			const testKeys = testData.map(data => data.key);
+
+			await keyv.setMany(testData);
+			const result = await keyv.getMany(testKeys, {raw: true});
+			expect(result.length).toBe(5);
+			expect(result[0]?.value.value).toBe(testData[0].value);
+		});
+	});
+
+	describe('hasMany', async () => {
+		test('should set many items and then check if they exist', async () => {
+			const keyv = createKeyv(new Map());
+
+			const testData = Array.from({length: 5}, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.sentence(),
+			}));
+
+			const testKeys = testData.map(data => data.key);
+
+			await keyv.setMany(testData);
+			const result = await keyv.hasMany(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should use the store hasMany function', async () => {
+			const map = new Map();
+			const keyv = createKeyv(map);
+			keyv.store.hasMany = async () => [true, true, true, true, true];
+
+			const testData = Array.from({length: 5}, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.sentence(),
+			}));
+
+			const testKeys = testData.map(data => data.key);
+
+			await keyv.setMany(testData);
+			const result = await keyv.has(testKeys);
+			expect(result.length).toBe(5);
+		});
+
+		test('should be able to get less on hasMany', async () => {
+			const testData = Array.from({length: 5}, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.sentence(),
+			}));
+
+			const testKeys = testData.map(data => data.key);
+
+			const keyv = createKeyv(new Map());
+			await keyv.setMany(testData);
+			const resultList = await keyv.hasMany(testKeys);
+			expect(resultList.length).toBe(5);
+			const deleteResult = await keyv.delete(testData[0].key);
+			expect(deleteResult).toBe(true);
+			const result = await keyv.hasMany(testKeys);
+			expect(result.length).toBe(5);
+			expect(result[0]).toBe(false);
+		});
 	});
 });

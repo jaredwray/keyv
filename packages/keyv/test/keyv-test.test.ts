@@ -1,9 +1,8 @@
 import {
 	describe, test, expect, beforeEach,
 } from 'vitest';
-import {faker} from '@faker-js/faker';
+import {faker, th} from '@faker-js/faker';
 import {Keyv} from '../src/index.js';
-import {createKeyv} from '../src/generic-store.js';
 
 describe('Keyv', async () => {
 	type TestData = {
@@ -64,105 +63,109 @@ describe('Keyv', async () => {
 			const resultValue = await keyv.get(testData[0].key);
 			expect(resultValue).toEqual(testData[0].value);
 		});
-
-		test('should use the store to set multiple keys', async () => {
-			const map = new Map();
-			const keyv = createKeyv(map);
-			const result = await keyv.setMany(testData);
-			expect(result).toEqual([true, true, true, true, true]);
-			const resultValue = await keyv.get(testData[0].key);
-			expect(resultValue.value).toEqual(testData[0].value);
-		});
-
-		test('should emit and return false on error', async () => {
-			const map = new Map();
-			map.set = () => {
-				throw new Error('Test Error');
-			};
-
-			const keyv = createKeyv(map);
-			let errorEmitted = false;
-			keyv.on('error', () => {
-				errorEmitted = true;
-			});
-
-			const result = await keyv.setMany(testData);
-			expect(result).toEqual([false, false, false, false, false]);
-			expect(errorEmitted).toBe(true);
-		});
 	});
 
-	describe('deleteMany', async () => {
-		test('should emit and return false on error', async () => {
-			const map = new Map();
-			const keyv = createKeyv(map);
-			keyv.store.deleteMany = () => {
-				throw new Error('Test Error');
-			};
+	describe('throwErrors', async () => {
+		const throwingStore = new Map();
+		throwingStore.get = () => {
+			throw new Error('Test error');
+		};
 
-			let errorEmitted = false;
-			keyv.on('error', () => {
-				errorEmitted = true;
-			});
+		throwingStore.set = () => {
+			throw new Error('Test error');
+		};
 
-			const result = await keyv.deleteMany(testKeys);
-			expect(result).toEqual(false);
-			expect(errorEmitted).toBe(true);
-		});
-	});
+		throwingStore.delete = () => {
+			throw new Error('Test error');
+		};
 
-	describe('getMany', async () => {
-		test('should set many items and then get them', async () => {
-			const keyv = createKeyv(new Map());
-			await keyv.setMany(testData);
-			const result = await keyv.getMany(testKeys);
-			expect(result.length).toBe(5);
-		});
+		throwingStore.clear = () => {
+			throw new Error('Test error');
+		};
 
-		test('should set many items and then get them with get', async () => {
-			const keyv = createKeyv(new Map());
-			await keyv.setMany(testData);
-			const result = await keyv.get(testKeys);
-			expect(result.length).toBe(5);
+		throwingStore.has = () => {
+			throw new Error('Test error');
+		};
+
+		test('should get the current throwOnErrors value', async () => {
+			const keyv = new Keyv(throwingStore);
+			expect(keyv.throwOnErrors).toBe(false);
 		});
 
-		test('should set many items and then get them raw', async () => {
-			const keyv = createKeyv(new Map());
-			await keyv.setMany(testData);
-			const result = await keyv.getMany(testKeys, {raw: true});
-			expect(result.length).toBe(5);
-			expect(result[0]?.value.value).toBe(testData[0].value);
-		});
-	});
-
-	describe('hasMany', async () => {
-		test('should set many items and then check if they exist', async () => {
-			const keyv = createKeyv(new Map());
-			await keyv.setMany(testData);
-			const result = await keyv.hasMany(testKeys);
-			expect(result.length).toBe(5);
+		test('should set the throwOnErrors value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			expect(keyv.throwOnErrors).toBe(true);
 		});
 
-		test('should use the store hasMany function', async () => {
-			const map = new Map();
-			const keyv = createKeyv(map);
-			keyv.store.hasMany = async () => [true, true, true, true, true];
-
-			await keyv.setMany(testData);
-			const result = await keyv.has(testKeys);
-			expect(result.length).toBe(5);
+		test('should pass in the throwOnErrors option', async () => {
+			const keyv = new Keyv({store: throwingStore, throwOnErrors: true});
+			expect(keyv.throwOnErrors).toBe(true);
 		});
 
-		test('should be able to get less on hasMany', async () => {
-			const keyv = createKeyv(new Map());
-			await keyv.setMany(testData);
-			const resultList = await keyv.hasMany(testKeys);
-			expect(resultList.length).toBe(5);
-			const deleteResult = await keyv.delete(testData[0].key);
-			expect(deleteResult).toBe(true);
-			const result = await keyv.hasMany(testKeys);
-			expect(result.length).toBe(5);
-			expect(result[0]).toBe(false);
+		test('should throw when setting a value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.set('key', 'value')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when setting a value with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+			expect(result).toBe(false);
+		});
+
+		test('should throw when getting a value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.get('key')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when getting a value with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.get(faker.string.alphanumeric(10));
+			expect(result).toBeUndefined();
+		});
+
+		test('should throw when deleting a value', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.delete('key')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when deleting a value with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.delete(faker.string.alphanumeric(10));
+			expect(result).toBe(false);
+		});
+
+		test('should throw when clearing the store', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.clear()).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when clearing the store with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.clear();
+			expect(result).toBeUndefined();
+		});
+
+		test('should throw when checking if a key exists', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = true;
+			await expect(keyv.has('key')).rejects.toThrow('Test error');
+		});
+
+		test('should not throw when checking if a key exists with throwOnErrors set to false', async () => {
+			const keyv = new Keyv(throwingStore);
+			keyv.throwOnErrors = false;
+			const result = await keyv.has(faker.string.alphanumeric(10));
+			expect(result).toBe(false);
 		});
 	});
 });

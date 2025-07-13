@@ -632,6 +632,34 @@ await keyv.get('foo'); // 'bar'
 await keyv.clear();
 ```
 
+## .throwOnErrors
+
+Type: `Boolean`<br />
+Default: `false`
+
+If set to `true`, Keyv will throw an error if any operation fails. This is useful if you want to ensure that all operations are successful and you want to handle errors.
+
+```js
+const keyv = new Keyv({ throwOnErrors: true });
+console.log(keyv.throwOnErrors); // true
+keyv.throwOnErrors = false;
+console.log(keyv.throwOnErrors); // false
+```
+
+A good example of this is with the `@keyv/redis` storage adapter. If you want to handle connection errors, retries, and timeouts more gracefully, you can use the `throwOnErrors` option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+// create redis instance that will throw on connection error
+const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379', { throwOnConnectErrors: true });
+
+const keyv = new Keyv({ store: keyvRedis, throwOnErrors: true });
+```
+
+What this does is it only throw on connection errors with the Redis client.
+
 # How to Contribute
 
 We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:

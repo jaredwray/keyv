@@ -123,7 +123,7 @@ describe('KeyvRedis', () => {
 			dialect: 'redis',
 			url: 'redis://localhost:6379',
 			noNamespaceAffectsAll: true,
-			throwErrors: false,
+			throwOnErrors: false,
 			throwOnConnectError: true,
 			useUnlink: true,
 		});
@@ -141,15 +141,15 @@ describe('KeyvRedis', () => {
 		expect(keyvRedis.throwOnConnectError).toBe(true);
 	});
 
-	test('should get and set throwErrors', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+	test('should get and set throwOnErrors', async () => {
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 		const client = await keyvRedis.getClient();
 		expect(client).toBeDefined();
-		expect(keyvRedis.throwErrors).toBe(true);
-		keyvRedis.throwErrors = false;
-		expect(keyvRedis.throwErrors).toBe(false);
-		keyvRedis.throwErrors = true;
-		expect(keyvRedis.throwErrors).toBe(true);
+		expect(keyvRedis.throwOnErrors).toBe(true);
+		keyvRedis.throwOnErrors = false;
+		expect(keyvRedis.throwOnErrors).toBe(false);
+		keyvRedis.throwOnErrors = true;
+		expect(keyvRedis.throwOnErrors).toBe(true);
 	});
 });
 

@@ -47,7 +47,7 @@ describe('get', () => {
 	});
 
 	test('should throw an error on client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -70,7 +70,7 @@ describe('get', () => {
 	});
 
 	test('should not throw an error on client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: false});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: false});
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -94,7 +94,7 @@ describe('get', () => {
 	});
 
 	test('should throw and error on getMany client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: true});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
@@ -117,7 +117,7 @@ describe('get', () => {
 	});
 
 	test('should not throw and error on getMany client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwErrors: false});
+		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: false});
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
