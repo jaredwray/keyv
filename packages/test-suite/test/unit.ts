@@ -1,6 +1,6 @@
 import * as test from 'vitest';
 import Keyv from 'keyv';
-import KeyvBrotli from '@keyv/compress-brotli';
+import {CompressionAdapter} from '../src/compression-adapter.js';
 import keyvTestSuite, {keyvIteratorTests, keyvCompresstionTests} from '../src/index.js';
 
 const storeExtended = () => {
@@ -19,4 +19,4 @@ const storeExtended = () => {
 keyvTestSuite(test, Keyv, storeExtended);
 keyvIteratorTests(test, Keyv, storeExtended);
 // @ts-expect-error - compression
-keyvCompresstionTests(test, new KeyvBrotli());
+keyvCompresstionTests(test, new CompressionAdapter());
