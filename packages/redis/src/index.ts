@@ -939,15 +939,14 @@ export function createKeyvNonBlocking(connect?: string | RedisClientOptions | Re
 	keyvStore.throwOnErrors = false;
 
 	const redisClient = keyvStore.client as RedisClientType;
-	if(redisClient.options) {
+	if (redisClient.options) {
 		redisClient.options.disableOfflineQueue = true;
-		if(redisClient.options.socket) {
+		if (redisClient.options.socket) {
 			redisClient.options.socket.reconnectStrategy = false;
 		}
 	}
 
 	keyv.throwOnErrors = false;
-
 
 	return keyv;
 }
