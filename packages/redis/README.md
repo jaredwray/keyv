@@ -25,6 +25,8 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 # Table of Contents
 * [Usage](#usage)
+* [Using the createKeyv function](#using-the-createkeyv-function)
+* [Using the createKeyvNonBlocking function](#using-the-createkeyvnonblocking-function)
 * [Namespaces](#namespaces)
 * [Fixing Double Prefixing of Keys](#fixing-double-prefixing-of-keys)
 * [Using Generic Types](#using-generic-types)
@@ -181,6 +183,30 @@ const keyv = createKeyv('redis://user:pass@localhost:6379');
 keyv.store.namespace = 'my-namespace';
 ```
 
+# Using the `createKeyv` function
+
+The `createKeyv` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store. It automatically sets the `useKeyPrefix` option to `false`. Here is an example of how to use it:
+
+```js
+import { createKeyv } from '@keyv/redis';
+const keyv = createKeyv('redis://user:pass@localhost:6379');
+```
+
+To use a namespace you can do it here and this will set Keyv up correctly to avoid the double namespace issue:
+
+```js
+import { createKeyv } from '@keyv/redis';
+const keyv = createKeyv('redis://user:pass@localhost:6379', {namespace: 'my-namespace'});
+```
+
+# Using the `createKeyvNonBlocking` function
+
+The `createKeyvNonBlocking` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store does what `createKeyv` does but also disables throwing errors, removes the offline queue redis functionality, and reconnect strategy so that when used as a secondary cache in libraries such as [cacheable](https://npmjs.org/package/cacheable) it does not block the primary cache. This is useful when you want to use Redis as a secondary cache and do not want to block the primary cache on connection errors or timeouts when using `nonBlocking`. Here is an example of how to use it:
+
+```js
+import { createKeyvNonBlocking } from '@keyv/redis';
+const keyv = createKeyvNonBlocking('redis://user:pass@localhost:6379');
+```
 
 # Namespaces
 
