@@ -1,5 +1,6 @@
 import {
 	describe, test, expect, beforeEach,
+    vi,
 } from 'vitest';
 import {faker, th} from '@faker-js/faker';
 import {Keyv} from '../src/index.js';
@@ -63,6 +64,17 @@ describe('Keyv', async () => {
 			const resultValue = await keyv.get(testData[0].key);
 			expect(resultValue).toEqual(testData[0].value);
 		});
+
+		test('does not call set when setMany is available', async () => {
+			const setManyMock = vi.fn((data: TestData[]) => data.map(() => true));
+			const store = Object.assign(new Map(), { setMany: setManyMock });
+			const setSpy = vi.spyOn(store, 'set');
+			const keyv = new Keyv(store);
+
+			await keyv.setMany(testData);
+			expect(setManyMock).toHaveBeenCalled();
+			expect(setSpy).not.toHaveBeenCalled();
+		})
 	});
 
 	describe('throwErrors', async () => {

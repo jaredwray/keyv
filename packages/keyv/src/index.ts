@@ -682,8 +682,16 @@ export class Keyv<GenericValue = any> extends EventManager {
 		let results: boolean[] = [];
 
 		try {
-			// If the store has a setMany method then use it
-			if (this._store.setMany !== undefined) {
+			// If the store doesn't have a setMany method then fall back to setting each entry individually
+			if (this._store.setMany === undefined) {
+				const promises: Array<Promise<boolean>> = [];
+				for (const entry of entries) {
+					promises.push(this.set(entry.key, entry.value, entry.ttl));
+				}
+
+				const promiseResults = await Promise.all(promises);
+				results = promiseResults;
+			} else {
 				const serializedEntries = await Promise.all(entries.map(async ({key, value, ttl}) => {
 					ttl ??= this._ttl;
 
@@ -706,14 +714,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 				}));
 				results = await this._store.setMany(serializedEntries);
 			}
-
-			const promises: Array<Promise<boolean>> = [];
-			for (const entry of entries) {
-				promises.push(this.set(entry.key, entry.value, entry.ttl));
-			}
-
-			const promiseResults = await Promise.all(promises);
-			results = promiseResults;
 		} catch (error) {
 			this.emit('error', error);
 
