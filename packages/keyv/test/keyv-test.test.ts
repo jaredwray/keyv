@@ -24,6 +24,12 @@ describe('Keyv', async () => {
 		}
 
 		testKeys = testData.map(data => data.key);
+
+		vi.useFakeTimers();
+
+		return () => {
+			vi.useRealTimers();
+		};
 	});
 
 	describe('constructor', async () => {
@@ -41,6 +47,61 @@ describe('Keyv', async () => {
 			const store = undefined;
 			const keyv = new Keyv({store});
 			expect(keyv.store).toBeInstanceOf(Map);
+		});
+	});
+
+	describe('getMany', () => {
+		test('the function exists', async () => {
+			const keyv = new Keyv();
+			expect(keyv.getMany).toBeDefined();
+		});
+
+		test('returns a promise that is empty if nothing is sent in', async () => {
+			const keyv = new Keyv();
+			const result = await keyv.getMany([]);
+			expect(result.length).toEqual(0);
+		});
+
+		test('returns multiple values on in memory storage', async () => {
+			const keyv = new Keyv();
+			await keyv.setMany(testData);
+			const result = await keyv.getMany(testKeys);
+			expect(result.length).toEqual(testData.length);
+			expect(result[0]).toEqual(testData[0].value);
+		});
+
+		test('does not call get when getMany is available', async () => {
+			const map = new Map();
+			const getManyMock = vi.fn((keys: string[]) => keys.map(key => map.get(key)));
+			const store = Object.assign(new Map(map), {getMany: getManyMock});
+			const getSpy = vi.spyOn(store, 'get');
+			const keyv = new Keyv({store, useKeyPrefix: false});
+
+			await keyv.getMany(testKeys);
+			expect(getManyMock).toHaveBeenCalled();
+			expect(getSpy).not.toHaveBeenCalled();
+		});
+
+		test('handles expired values correctly', async () => {
+			const deleteManyMock = vi.fn();
+			const store = Object.assign(new Map(), {
+				getMany(this: Map<string, any>, keys: string[]) {
+					return keys.map(key => this.get(key));
+				}, deleteMany: deleteManyMock,
+			});
+			const deleteSpy = vi.spyOn(store, 'delete');
+			// UseKeyPrefix is false so it's easy to check the keys that deleteMany is called with
+			const keyv = new Keyv({store, useKeyPrefix: false});
+			await keyv.setMany(testData.map(data => ({key: data.key, value: data.value, ttl: 1000})));
+			vi.advanceTimersByTime(1001);
+			const result = await keyv.getMany(testKeys);
+			expect(result.length).toEqual(testData.length);
+			// It should return undefined for expired keys
+			expect(result[0]).toBeUndefined();
+			// It should call deleteMany with all the keys at once
+			expect(deleteManyMock).toHaveBeenCalledWith(testKeys);
+			// It should not call delete for each key individually
+			expect(deleteSpy).not.toHaveBeenCalled();
 		});
 	});
 
@@ -65,7 +126,6 @@ describe('Keyv', async () => {
 		});
 
 		test('does not call set when setMany is available', async () => {
-			// eslint-disable-next-line max-nested-callbacks
 			const setManyMock = vi.fn((data: TestData[]) => data.map(() => true));
 			const store = Object.assign(new Map(), {setMany: setManyMock});
 			const setSpy = vi.spyOn(store, 'set');
