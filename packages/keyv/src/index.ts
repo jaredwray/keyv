@@ -588,6 +588,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		const rawData = await store.getMany<Value>(keyPrefixed);
 
 		const result = [];
+		const expiredKeys = [];
 		// eslint-disable-next-line guard-for-in, @typescript-eslint/no-for-in-array
 		for (const index in rawData) {
 			let row = rawData[index];
@@ -603,14 +604,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 			}
 
 			if (isDataExpired(row as DeserializedData<Value>)) {
-				// eslint-disable-next-line no-await-in-loop
-				await this.delete(keys[index]);
+				expiredKeys.push(keys[index]);
 				result.push(undefined);
 				continue;
 			}
 
 			const value = (options?.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
 			result.push(value);
+		}
+
+		if (expiredKeys.length > 0) {
+			await this.deleteMany(expiredKeys);
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
