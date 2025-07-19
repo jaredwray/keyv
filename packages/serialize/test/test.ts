@@ -75,7 +75,7 @@ test.it('defaultSerialize accepts objects created with null', t => {
 	const json = Object.create(null);
 	json.someKey = 'value';
 
-	const result = defaultSerialize<{someKey: string}>(json);
+	const result = defaultSerialize(json);
 	t.expect(result).toStrictEqual('{"someKey":"value"}');
 });
 
