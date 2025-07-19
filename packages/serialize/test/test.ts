@@ -66,7 +66,7 @@ test.it('defaultSerialize detects base64 on string', t => {
 	const json = JSON.stringify({
 		encoded: ':base64:aGVsbG8gd29ybGQ=', // "hello world" in base64
 	});
-	// eslint-disable-next-line @typescript-eslint/ban-types
+	// eslint-disable-next-line @typescript-eslint/no-restricted-types
 	const result = defaultDeserialize<{encoded: Buffer}>(json);
 	t.expect(result.encoded.toString()).toBe('hello world');
 });
