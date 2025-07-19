@@ -16,7 +16,8 @@ export const defaultSerialize = (data: any): string => {
 	}
 
 	if (data?.toJSON) {
-		data = data.toJSON();
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+		data = data.toJSON() as unknown as Record<string, any>;
 	}
 
 	if (typeof data === 'object') {

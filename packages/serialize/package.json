@@ -19,26 +19,6 @@
     "test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
     "clean": "rimraf ./node_modules ./coverage ./dist"
   },
-  "xo": {
-    "rules": {
-      "import/no-named-as-default": "off",
-      "unicorn/prefer-module": "off",
-      "unicorn/prefer-event-target": "off",
-      "unicorn/no-array-reduce": "off",
-      "n/prefer-global/process": "off",
-      "node/prefer-global/process": "off",
-      "unicorn/prefer-object-from-entries": "off",
-      "unicorn/prefer-node-protocol": "off",
-      "@typescript-eslint/consistent-type-imports": "off",
-      "@typescript-eslint/consistent-type-definitions": "off",
-      "@typescript-eslint/no-empty-function": "off",
-      "import/extensions": "off",
-      "no-promise-executor-return": "off",
-      "import/no-extraneous-dependencies": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off"
-    }
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jaredwray/keyv.git"

@@ -72,7 +72,7 @@ test.it('defaultSerialize detects base64 on string', t => {
 });
 
 test.it('defaultSerialize accepts objects created with null', t => {
-	const json = Object.create(null);
+	const json = Object.create(null) as Record<string, any>;
 	json.someKey = 'value';
 
 	const result = defaultSerialize(json);
