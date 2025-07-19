@@ -25,6 +25,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 # Table of Contents
 * [Usage](#usage)
+* [Migrating from v4 to v5](#migrating-from-v4-to-v5)
 * [Using the createKeyv function](#using-the-createkeyv-function)
 * [Using the createKeyvNonBlocking function](#using-the-createkeyvnonblocking-function)
 * [Namespaces](#namespaces)
@@ -102,6 +103,10 @@ const redis = createClient('redis://user:pass@localhost:6379');
 const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis});
 ```
+
+# Migrating from v4 to v5
+
+The major change from v4 to v5 is that we are now using v5 of the `@redis/client` library which has a new API. This means that some methods have changed but it should be a drop-in replacement for most use cases.
 
 # Keyv Redis Options
 
