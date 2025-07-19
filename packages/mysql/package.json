@@ -63,7 +63,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mysql2": "^3.14.1"
+		"mysql2": "^3.14.2"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
