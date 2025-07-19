@@ -1,4 +1,4 @@
-import {Buffer} from 'buffer';
+import {Buffer} from 'node:buffer';
 
 // Improved version of the deprecated `json-buffer` (https://github.com/dominictarr/json-buffer) package.
 // These default functionalities can be improved separately from the dependant packages.
@@ -16,7 +16,8 @@ export const defaultSerialize = (data: any): string => {
 	}
 
 	if (data?.toJSON) {
-		data = data.toJSON();
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+		data = data.toJSON() as unknown as Record<string, any>;
 	}
 
 	if (typeof data === 'object') {
@@ -52,8 +53,7 @@ export const defaultSerialize = (data: any): string => {
 	return JSON.stringify(data);
 };
 
-export const defaultDeserialize = <Value>(data: any) => JSON.parse(data as unknown as string, (
-	_, value) => {
+export const defaultDeserialize = <Value>(data: any) => JSON.parse(data as unknown as string, (_, value) => {
 	if (typeof value === 'string') {
 		if (value.startsWith(':base64:')) {
 			return Buffer.from(value.slice(8), 'base64');

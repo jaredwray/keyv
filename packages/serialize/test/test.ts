@@ -66,16 +66,16 @@ test.it('defaultSerialize detects base64 on string', t => {
 	const json = JSON.stringify({
 		encoded: ':base64:aGVsbG8gd29ybGQ=', // "hello world" in base64
 	});
-	// eslint-disable-next-line @typescript-eslint/ban-types
+	// eslint-disable-next-line @typescript-eslint/no-restricted-types
 	const result = defaultDeserialize<{encoded: Buffer}>(json);
 	t.expect(result.encoded.toString()).toBe('hello world');
 });
 
 test.it('defaultSerialize accepts objects created with null', t => {
-	const json = Object.create(null);
+	const json = Object.create(null) as Record<string, any>;
 	json.someKey = 'value';
 
-	const result = defaultSerialize<{someKey: string}>(json);
+	const result = defaultSerialize(json);
 	t.expect(result).toStrictEqual('{"someKey":"value"}');
 });
 
