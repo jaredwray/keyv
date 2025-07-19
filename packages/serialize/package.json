@@ -61,12 +61,14 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^",
+    "@vitest/coverage-v8": "^3.2.4",
     "keyv": "workspace:^",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsd": "^0.32.0",
     "typescript": "^5.8.3",
-    "xo": "^0.60.0"
+    "vitest": "^3.2.4",
+    "xo": "^1.2.1"
   },
   "tsd": {
     "directory": "test"

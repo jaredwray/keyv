@@ -52,8 +52,7 @@ export const defaultSerialize = (data: any): string => {
 	return JSON.stringify(data);
 };
 
-export const defaultDeserialize = <Value>(data: any) => JSON.parse(data as unknown as string, (
-	_, value) => {
+export const defaultDeserialize = <Value>(data: any) => JSON.parse(data as unknown as string, (_, value) => {
 	if (typeof value === 'string') {
 		if (value.startsWith(':base64:')) {
 			return Buffer.from(value.slice(8), 'base64');
