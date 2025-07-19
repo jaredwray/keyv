@@ -1,4 +1,4 @@
-import {Buffer} from 'buffer';
+import {Buffer} from 'node:buffer';
 
 // Improved version of the deprecated `json-buffer` (https://github.com/dominictarr/json-buffer) package.
 // These default functionalities can be improved separately from the dependant packages.
