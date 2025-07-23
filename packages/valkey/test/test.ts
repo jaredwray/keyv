@@ -2,7 +2,7 @@ import * as test from 'vitest';
 import tk from 'timekeeper';
 import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
 import Keyv from 'keyv';
-import Redis from 'iovalkey';
+import Redis, {type Cluster} from 'iovalkey';
 import KeyvValkey, {createKeyv} from '../src/index.js';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -110,14 +110,23 @@ test.it('should handle KeyvOptions without uri', t => {
 	const options = {
 		isCluster: true,
 	};
-	const keyv = new KeyvValkey(options);
+	const keyv = new KeyvValkey(options as Cluster);
 	t.expect(keyv.redis instanceof Redis).toBeTruthy();
 });
 
 test.it('should handle KeyvOptions with family option', t => {
 	const options = {
 		options: {},
-		family: 'IPv4',
+		family: 4,
+	};
+	const keyv = new KeyvValkey(options);
+	t.expect(keyv.redis instanceof Redis).toBeTruthy();
+});
+
+test.it('should handle RedisOptions', t => {
+	const options = {
+		db: 2,
+		connectionName: 'name',
 	};
 	const keyv = new KeyvValkey(options);
 	t.expect(keyv.redis instanceof Redis).toBeTruthy();

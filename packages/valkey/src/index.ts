@@ -17,11 +17,10 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		this.opts.useRedisSets = true;
 		this.opts.dialect = 'redis';
 
-		if (typeof uri !== 'string' && uri.options && ('family' in uri.options || uri.isCluster)) {
+		if (typeof uri !== 'string' && 'options' in uri && uri.options && ('family' in uri.options || uri.isCluster)) {
 			this.redis = uri;
 		} else {
 			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvValkeyOptions), ...options};
-			// @ts-expect-error - uri is a string or RedisOptions
 			this.redis = new Redis(options.uri!, options);
 		}
 
