@@ -1,8 +1,12 @@
+import process from 'node:process';
 import {describe, test, expect} from 'vitest';
 import {delay} from '@keyv/test-suite';
 import {faker} from '@faker-js/faker';
 import {KeyvGzip} from '@keyv/compress-gzip';
+import {KeyvMongo} from '@keyv/mongo';
 import {Keyv} from '../src/index.js';
+
+const mongoUri = process.env.MONGO_URI ?? 'mongodb://localhost:27017/keyv-test-raw';
 
 describe('Keyv Get Raw', async () => {
 	test('should return raw data', async () => {
@@ -116,6 +120,16 @@ describe('Keyv Get Many Raw', async () => {
 		await delay(100); // Wait for expiration
 		const results = await keyv.getManyRaw(keys);
 		expect(results).toEqual(Array.from({length: keys.length}).fill(undefined));
+	});
+
+	test('should get many with storage that supports getMany function', async () => {
+		const keyvMongo = new KeyvMongo({uri: mongoUri});
+		const keyv = new Keyv({store: keyvMongo});
+		const keys = Array.from({length: 5}, () => faker.string.alphanumeric(10));
+		const values = keys.map(() => faker.string.alphanumeric(10));
+		await Promise.all(keys.map(async (key, index) => keyv.set(key, values[index])));
+		const results = await keyv.getManyRaw(keys);
+		expect(results).toEqual(keys.map((key, index) => ({value: values[index]})));
 	});
 
 	test('sending in empty array should return empty array', async () => {

@@ -697,6 +697,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				if (row !== undefined && row !== null) {
 					// eslint-disable-next-line no-await-in-loop
 					result.push(await this.deserializeData<Value>(row));
+				/* c8 ignore next 3 */
 				} else {
 					result.push(undefined);
 				}
