@@ -49,6 +49,8 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 	- [.setMany(entries)](#setmanyentries)
 	- [.get(key, [options])](#getkey-options)
 	- [.getMany(keys, [options])](#getmanykeys-options)
+  - [.getRaw(key)](#getrawkey)
+  - [.getManyRaw(keys)](#getmanyrawkeys)
 	- [.delete(key)](#deletekey)
 	- [.deleteMany(keys)](#deletemanykeys)
 	- [.clear()](#clear)
@@ -469,7 +471,7 @@ Returns a promise which resolves to the retrieved value.
 
 Returns a promise which resolves to an array of retrieved values.
 
-### options.raw
+### options.raw - (Will be deprecated in v6)
 
 Type: `Boolean`<br />
 Default: `false`
@@ -477,6 +479,16 @@ Default: `false`
 If set to true the raw DB object Keyv stores internally will be returned instead of just the value.
 
 This contains the TTL timestamp.
+
+NOTE: This option will be deprecated in v6 and replaced with `.getRaw()` and `.getManyRaw()` methods.
+
+## .getRaw(key)
+
+Returns a promise which resolves to the raw stored data for the key or `undefined` if the key does not exist or is expired.
+
+## .getManyRaw(keys)
+
+Returns a promise which resolves to an array of raw stored data for the keys or `undefined` if the key does not exist or is expired.
 
 ## .delete(key)
 

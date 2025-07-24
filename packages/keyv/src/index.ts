@@ -629,6 +629,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
 	}
 
+	/**
+	 * Get the raw value of a key. This is the replacement for setting raw to true in the get() method.
+	 * @param {string} key the key to get
+	 * @returns {Promise<StoredDataRaw<Value> | undefined>} will return a StoredDataRaw<Value> or undefined if the key does not exist or is expired.
+	 */
 	public async getRaw<Value = GenericValue>(key: string): Promise<StoredDataRaw<Value> | undefined> {
 		const {store} = this.opts;
 		const keyPrefixed = this._getKeyPrefix(key);
@@ -662,6 +667,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		return deserializedData;
 	}
 
+	/**
+	 * Get the raw values of many keys. This is the replacement for setting raw to true in the getMany() method.
+	 * @param {string[]} keys the keys to get
+	 * @returns {Promise<Array<StoredDataRaw<Value>>>} will return an array of StoredDataRaw<Value> or undefined if the key does not exist or is expired.
+	*/
 	public async getManyRaw<Value = GenericValue>(keys: string[]): Promise<Array<StoredDataRaw<Value>>> {
 		const {store} = this.opts;
 		const keyPrefixed = this._getKeyPrefixArray(keys);
