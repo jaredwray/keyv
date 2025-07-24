@@ -1,4 +1,5 @@
 import * as test from 'vitest';
+import {faker} from '@faker-js/faker';
 import {delay} from '@keyv/test-suite';
 import tk from 'timekeeper';
 import {KeyvSqlite} from '@keyv/sqlite';
@@ -8,7 +9,6 @@ import {KeyvGzip} from '@keyv/compress-gzip';
 import {KeyvLz4} from '@keyv/compress-lz4';
 import {KeyvMemcache} from '@keyv/memcache';
 import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw, type CompressionAdapter} from '../src/index.js';
-import { faker } from '@faker-js/faker/locale/zu_ZA';
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 
@@ -308,12 +308,13 @@ test.it('keyv.get([keys]) should return array value undefined when expires sqlit
 	await keyv.clear();
 
 	const dataSet = [
-		{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10) },
-		{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10), ttl: 10 },
-		{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10) },
+		{key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10)},
+		{key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10), ttl: 10},
+		{key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10)},
 	];
 
-	for (const { key, value, ttl } of dataSet) {
+	for (const {key, value, ttl} of dataSet) {
+		// eslint-disable-next-line no-await-in-loop
 		await keyv.set(key, value, ttl);
 	}
 
