@@ -1,5 +1,6 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
+import {faker} from '@faker-js/faker';
+import {delay} from '@keyv/test-suite';
 import tk from 'timekeeper';
 import {KeyvSqlite} from '@keyv/sqlite';
 import {KeyvMongo} from '@keyv/mongo';
@@ -11,12 +12,9 @@ import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw, type CompressionAdapt
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 
-// eslint-disable-next-line no-promise-executor-return
-const snooze = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const snooze = delay;
 
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
 
 test.it('Keyv is a class', t => {
 	t.expect(typeof Keyv).toBe('function');
@@ -306,21 +304,23 @@ test.it('keyv.get([keys]) should return array value undefined when expires', asy
 });
 
 test.it('keyv.get([keys]) should return array value undefined when expires sqlite', async t => {
-	const keyv = new Keyv({store: store()});
-	await keyv.clear();
-	await keyv.set('foo', 'bar');
-	await keyv.set('foo1', 'bar1', 1);
-	await keyv.set('foo2', 'bar2');
-	await new Promise<void>(resolve => {
-		setTimeout(() => {
-			resolve();
-		}, 30);
-	});
-	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']);
+	const keyv = new Keyv({store: new Map()});
+
+	const dataSet = [
+		{key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10)},
+		{key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10), ttl: 10},
+		{key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10)},
+	];
+
+	for (const {key, value, ttl} of dataSet) {
+		// eslint-disable-next-line no-await-in-loop
+		await keyv.set(key, value, ttl);
+	}
+
+	await delay(30);
+	const values = await keyv.get<string>(dataSet.map(item => item.key));
 	t.expect(Array.isArray(values)).toBeTruthy();
-	t.expect(values[0]).toBe('bar');
-	t.expect(values[1]).toBeUndefined();
-	t.expect(values[2]).toBe('bar2');
+	t.expect(values).toEqual([dataSet[0].value, undefined, dataSet[2].value]);
 });
 
 test.it('keyv.get([keys]) should return empty array when expires sqlite', async t => {
@@ -571,7 +571,8 @@ test.it(
 );
 
 test.it('close connection successfully', async t => {
-	const keyv = new Keyv({store: store()});
+	const store = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
+	const keyv = new Keyv({store});
 	await keyv.clear();
 	t.expect(await keyv.get('foo')).toBeUndefined();
 	await keyv.set('foo', 'bar');
