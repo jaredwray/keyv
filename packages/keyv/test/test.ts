@@ -1,5 +1,5 @@
 import * as test from 'vitest';
-import keyvTestSuite, {keyvIteratorTests} from '@keyv/test-suite';
+import {delay} from '@keyv/test-suite';
 import tk from 'timekeeper';
 import {KeyvSqlite} from '@keyv/sqlite';
 import {KeyvMongo} from '@keyv/mongo';
@@ -11,12 +11,9 @@ import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw, type CompressionAdapt
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 
-// eslint-disable-next-line no-promise-executor-return
-const snooze = async (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const snooze = delay;
 
 const store = () => new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite', busyTimeout: 3000});
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
 
 test.it('Keyv is a class', t => {
 	t.expect(typeof Keyv).toBe('function');

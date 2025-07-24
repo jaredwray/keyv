@@ -1,4 +1,5 @@
 import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
+import {de} from '@faker-js/faker/.';
 import HooksManager from './hooks-manager.js';
 import EventManager from './event-manager.js';
 import StatsManager from './stats-manager.js';
@@ -26,6 +27,10 @@ export enum KeyvHooks {
 	POST_GET = 'postGet',
 	PRE_GET_MANY = 'preGetMany',
 	POST_GET_MANY = 'postGetMany',
+	PRE_GET_RAW = 'preGetRaw',
+	POST_GET_RAW = 'postGetRaw',
+	PRE_GET_MANY_RAW = 'preGetManyRaw',
+	POST_GET_MANY_RAW = 'postGetManyRaw',
 	PRE_DELETE = 'preDelete',
 	POST_DELETE = 'postDelete',
 }
@@ -623,6 +628,102 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
+	}
+
+	public async getRaw<Value = GenericValue>(key: string): Promise<StoredDataRaw<Value> | undefined> {
+		const {store} = this.opts;
+		const keyPrefixed = this._getKeyPrefix(key);
+
+		this.hooks.trigger(KeyvHooks.PRE_GET_RAW, {key: keyPrefixed});
+		const rawData = await store.get(keyPrefixed);
+
+		if (rawData === undefined || rawData === null) {
+			this.stats.miss();
+			return undefined;
+		}
+
+		// Check if the data is expired
+		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
+
+		if (
+			deserializedData !== undefined
+			&& (deserializedData as DeserializedData<Value>).expires !== undefined
+			&& (deserializedData as DeserializedData<Value>).expires !== null
+			&& (deserializedData as DeserializedData<Value>).expires! < Date.now()) {
+			this.stats.miss();
+			await this.delete(key);
+			return undefined;
+		}
+
+		// Add a hit
+		this.stats.hit();
+
+		this.hooks.trigger(KeyvHooks.POST_GET_RAW, {key: keyPrefixed, value: deserializedData});
+
+		return deserializedData;
+	}
+
+	public async getManyRaw<Value = GenericValue>(keys: string[]): Promise<Array<StoredDataRaw<Value>>> {
+		const {store} = this.opts;
+		const keyPrefixed = this._getKeyPrefixArray(keys);
+
+		if (keys.length === 0) {
+			const result = Array.from({length: keys.length}).fill(undefined);
+			// Add in misses
+			this.stats.misses += keys.length;
+			// Trigger the post get many raw hook
+			this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {keys: keyPrefixed, values: result});
+			return result;
+		}
+
+		let result: Array<StoredDataRaw<Value>> = [];
+		// Check to see if the store has a getMany method
+		if (store.getMany === undefined) {
+			// If not then we will get each key individually
+			const promises = keyPrefixed.map(async key => {
+				const rawData = await store.get<Value>(key);
+				if (rawData !== undefined && rawData !== null) {
+					return this.deserializeData<Value>(rawData as string);
+				}
+
+				return undefined;
+			});
+
+			const deserializedRows = await Promise.allSettled(promises);
+			result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+		} else {
+			const rawData = await store.getMany(keyPrefixed);
+
+			for (const row of rawData) {
+				if (row !== undefined && row !== null) {
+					// eslint-disable-next-line no-await-in-loop
+					result.push(await this.deserializeData<Value>(row));
+				} else {
+					result.push(undefined);
+				}
+			}
+		}
+
+		// Filter out any expired keys and delete them
+		const expiredKeys = [];
+		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
+
+		for (const [index, row] of result.entries()) {
+			if (row !== undefined && isDataExpired(row)) {
+				expiredKeys.push(keyPrefixed[index]);
+				result[index] = undefined;
+			}
+		}
+
+		if (expiredKeys.length > 0) {
+			await this.deleteMany(expiredKeys);
+		}
+
+		// Add in hits and misses
+		this.stats.hitsOrMisses(result);
+		// Trigger the post get many raw hook
+		this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {keys: keyPrefixed, values: result});
+		return result;
 	}
 
 	/**

@@ -1,7 +1,7 @@
 import {
-	describe, test, expect, beforeEach,
+	describe, test, expect,
 } from 'vitest';
-import {fa, faker} from '@faker-js/faker';
+import {faker} from '@faker-js/faker';
 import {KeyvGenericStore, createKeyv} from '../src/generic-store.js';
 
 // eslint-disable-next-line no-promise-executor-return
@@ -190,8 +190,8 @@ describe('Keyv Generic Delete / Clear Operations', () => {
 		}));
 
 		const result = await keyv.setMany(testData);
-		// TODO: KeyvStoreAdapter.setMany returns Promise<void> which makes it impossible to return an array of booleans
-		//  from Keyv.setMany, either it needs to be allowed to return void or KeyvStoreAdapter.setMany needs to be changed
+		// KeyvStoreAdapter.setMany returns Promise<void> which makes it impossible to return an array of booleans
+		// from Keyv.setMany, either it needs to be allowed to return void or KeyvStoreAdapter.setMany needs to be changed
 		// expect(result).toEqual([true, true, true, true, true]);
 		expect(result).toBeUndefined();
 		const resultValue = await keyv.get(testData[0].key);
