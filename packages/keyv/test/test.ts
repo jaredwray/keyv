@@ -571,7 +571,8 @@ test.it(
 );
 
 test.it('close connection successfully', async t => {
-	const keyv = new Keyv({store: store()});
+	const store = new KeyvSqlite({uri: 'sqlite://test/testdb.sqlite'});
+	const keyv = new Keyv({store});
 	await keyv.clear();
 	t.expect(await keyv.get('foo')).toBeUndefined();
 	await keyv.set('foo', 'bar');
