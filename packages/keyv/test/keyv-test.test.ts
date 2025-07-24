@@ -1,7 +1,7 @@
 import {
 	describe, test, expect, beforeEach, vi,
 } from 'vitest';
-import {faker, th} from '@faker-js/faker';
+import {faker} from '@faker-js/faker';
 import {Keyv} from '../src/index.js';
 
 describe('Keyv', async () => {

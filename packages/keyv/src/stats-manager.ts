@@ -42,6 +42,16 @@ class StatsManager extends EventManager {
 		}
 	}
 
+	public hitsOrMisses<T>(array: Array<T | undefined>): void {
+		for (const item of array) {
+			if (item === undefined) {
+				this.miss();
+			} else {
+				this.hit();
+			}
+		}
+	}
+
 	reset() {
 		this.hits = 0;
 		this.misses = 0;
