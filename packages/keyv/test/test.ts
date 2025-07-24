@@ -304,8 +304,7 @@ test.it('keyv.get([keys]) should return array value undefined when expires', asy
 });
 
 test.it('keyv.get([keys]) should return array value undefined when expires sqlite', async t => {
-	const keyv = new Keyv({store: store()});
-	await keyv.clear();
+	const keyv = new Keyv({store: new Map()});
 
 	const dataSet = [
 		{key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10)},
@@ -321,7 +320,6 @@ test.it('keyv.get([keys]) should return array value undefined when expires sqlit
 	await delay(30);
 	const values = await keyv.get<string>(dataSet.map(item => item.key));
 	t.expect(Array.isArray(values)).toBeTruthy();
-	console.log(values);
 	t.expect(values).toEqual([dataSet[0].value, undefined, dataSet[2].value]);
 });
 
