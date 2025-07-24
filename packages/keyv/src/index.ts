@@ -668,7 +668,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		const keyPrefixed = this._getKeyPrefixArray(keys);
 
 		if (keys.length === 0) {
-			const result = Array.from({length: keys.length}).fill(undefined);
+			const result = Array.from({length: keys.length}).fill(undefined) as Array<StoredDataRaw<Value>>;
 			// Add in misses
 			this.stats.misses += keys.length;
 			// Trigger the post get many raw hook
