@@ -322,9 +322,7 @@ test.it('keyv.get([keys]) should return array value undefined when expires sqlit
 	const values = await keyv.get<string>(dataSet.map(item => item.key));
 	t.expect(Array.isArray(values)).toBeTruthy();
 	console.log(values);
-	t.expect(values[0]).toBeDefined();
-	t.expect(values[1]).toBeUndefined();
-	t.expect(values[2]).toBeDefined();
+	t.expect(values).toEqual([dataSet[0].value, undefined, dataSet[2].value]);
 });
 
 test.it('keyv.get([keys]) should return empty array when expires sqlite', async t => {
