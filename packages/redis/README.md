@@ -40,6 +40,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Using Custom Redis Client Events](#using-custom-redis-client-events)
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
 * [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
+* [Using with NestJS](#using-with-nestjs)
 * [License](#license)
 
 # Installation
@@ -499,6 +500,165 @@ This will make it so the storage adapter `@keyv/redis` will handle the namespace
 # About Redis Sets and its Support in v4
 
 We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library.
+
+
+
+# Using with NestJS
+
+> You can integrate `@keyv/redis` with NestJS by creating a custom `CacheModule`. This allows you to use Keyv as a cache store in your application.
+
+### 1. Install Dependencies
+
+```bash
+npm install @keyv/redis keyv @nestjs/cache-manager cache-manager cacheable
+```
+
+### 2. Create a Cache Module
+
+Create a file `cache.module.ts`:
+
+```ts
+import { Module } from '@nestjs/common';
+import { CacheModule as NestCacheModule } from '@nestjs/cache-manager';
+import { createKeyv } from '@keyv/redis';
+
+@Module({
+  imports: [
+    NestCacheModule.registerAsync({
+      useFactory: () => ({
+        stores: [createKeyv('redis://localhost:6379')],
+      }),
+    }),
+  ],
+  providers: [],
+  exports: [],
+})
+export class CacheModule {}
+```
+
+### 3. Import the Cache Module in AppModule
+Update `app.module.ts`:
+
+```ts
+import { Module } from '@nestjs/common';
+import { CacheModule } from './modules/config/cache/cache.module';
+
+@Module({
+  imports: [
+    CacheModule, // Import your custom cache module
+    // other modules...
+  ],
+})
+export class AppModule {}
+```
+
+### 4. Create the Cache Service
+Create a file `cache.service.ts`:
+
+```ts
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable } from '@nestjs/common';
+import { Cache } from 'cache-manager';
+
+@Injectable()
+export class CacheService {
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+
+  async get<T>(key: string): Promise<T | undefined> {
+    return this.cacheManager.get<T>(key);
+  }
+
+  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+    await this.cacheManager.set(key, value, ttl);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.cacheManager.del(key);
+  }
+}
+```
+
+### 5. Register CacheService in CacheModule
+Update `cache.module.ts`:
+
+```ts
+import { Module } from '@nestjs/common';
+import { CacheModule as NestCacheModule } from '@nestjs/cache-manager';
+import { createKeyv } from '@keyv/redis';
+import { CacheService } from './services/cache.service';
+
+@Module({
+  imports: [
+    NestCacheModule.registerAsync({
+      useFactory: () => ({
+        stores: [createKeyv('redis://localhost:6379')],
+      }),
+    }),
+  ],
+  providers: [CacheService],
+  exports: [CacheService],
+})
+export class CacheModule {}
+```
+### 6. Import CacheModule in the Target Module (e.g. TaskModule)
+```ts
+import { Module } from '@nestjs/common';
+import { TaskService } from './task.service';
+import { TaskRepository } from './repositories/task.repository';
+import { CacheModule } from 'src/modules/config/cache/cache.module';
+
+@Module({
+  imports: [CacheModule],
+  providers: [TaskService, TaskRepository],
+})
+export class TaskModule {}
+```
+
+### 7. Using the Cache in a Service
+
+```ts
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { TaskRepository } from '../repositories/task.repository';
+import { TaskDto } from '../dto/task.dto';
+import { CacheService } from 'src/modules/config/cache/services/cache.service';
+
+@Injectable()
+export class TaskService {
+  constructor(
+    private readonly taskRepository: TaskRepository,
+    private readonly cache: CacheService, // Inject the CacheService
+  ) {}
+
+  async findById(id: number): Promise<TaskDto> {
+    const cacheKey = `task:${id}`;
+
+    // 1. Try to get from cache
+    const cached = await this.cache.get<TaskDto>(cacheKey);
+    
+	if (cached) {
+      return cached;
+    }
+
+    // 2. If not found in cache, fetch from database
+    const task = await this.taskRepository.findById(id);
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    // 3. Set in cache for future requests
+    await this.cache.set(cacheKey, task, 300 * 1000); // 5 minutes TTL
+    return task;
+  }
+}
+```
+
+
+You can learn more about caching in NestJS in the [official documentation](https://docs.nestjs.com/techniques/caching#in-memory-cache).
+
+
+---
+
 
 # License
 
