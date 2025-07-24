@@ -1,5 +1,4 @@
 import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
-import {de} from '@faker-js/faker/.';
 import HooksManager from './hooks-manager.js';
 import EventManager from './event-manager.js';
 import StatsManager from './stats-manager.js';

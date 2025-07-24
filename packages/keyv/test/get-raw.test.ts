@@ -117,4 +117,10 @@ describe('Keyv Get Many Raw', async () => {
 		const results = await keyv.getManyRaw(keys);
 		expect(results).toEqual(Array.from({length: keys.length}).fill(undefined));
 	});
+
+	test('sending in empty array should return empty array', async () => {
+		const keyv = new Keyv();
+		const results = await keyv.getManyRaw([]);
+		expect(results).toEqual([]);
+	});
 });
