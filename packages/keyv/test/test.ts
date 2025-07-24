@@ -8,6 +8,7 @@ import {KeyvGzip} from '@keyv/compress-gzip';
 import {KeyvLz4} from '@keyv/compress-lz4';
 import {KeyvMemcache} from '@keyv/memcache';
 import Keyv, {type KeyvStoreAdapter, type StoredDataNoRaw, type CompressionAdapter} from '../src/index.js';
+import { faker } from '@faker-js/faker/locale/zu_ZA';
 
 const keyvMemcache = new KeyvMemcache('localhost:11211');
 
@@ -305,19 +306,23 @@ test.it('keyv.get([keys]) should return array value undefined when expires', asy
 test.it('keyv.get([keys]) should return array value undefined when expires sqlite', async t => {
 	const keyv = new Keyv({store: store()});
 	await keyv.clear();
-	await keyv.set('foo', 'bar');
-	await keyv.set('foo1', 'bar1', 1);
-	await keyv.set('foo2', 'bar2');
-	await new Promise<void>(resolve => {
-		setTimeout(() => {
-			resolve();
-		}, 30);
-	});
-	const values = await keyv.get<string>(['foo', 'foo1', 'foo2']);
+
+	const dataSet = [
+		{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10) },
+		{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10), ttl: 10 },
+		{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10) },
+	];
+
+	for (const { key, value, ttl } of dataSet) {
+		await keyv.set(key, value, ttl);
+	}
+
+	await delay(30);
+	const values = await keyv.get<string>(dataSet.map(item => item.key));
 	t.expect(Array.isArray(values)).toBeTruthy();
-	t.expect(values[0]).toBe('bar');
+	t.expect(values[0]).toBe(dataSet[0].value);
 	t.expect(values[1]).toBeUndefined();
-	t.expect(values[2]).toBe('bar2');
+	t.expect(values[2]).toBe(dataSet[2].value);
 });
 
 test.it('keyv.get([keys]) should return empty array when expires sqlite', async t => {
