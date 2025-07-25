@@ -1,4 +1,5 @@
 import process from 'node:process';
+import {randomUUID} from 'node:crypto';
 import * as test from 'vitest';
 import keyvTestSuite from '@keyv/test-suite';
 import Keyv from 'keyv';
@@ -104,7 +105,7 @@ test.it('should handle ResourceInUseException when table already exists (fallbac
 });
 
 test.it('should throw error when not ResourceInUseException on create table', async t => {
-  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: 'anyTable'});
+  const store = new KeyvDynamo({endpoint: dynamoURL, tableName: randomUUID()});
 
   const originalSend = (store as any).client.send;
   (store as any).client.send = test.vi.fn().mockImplementation(command => {
