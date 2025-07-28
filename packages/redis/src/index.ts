@@ -1,9 +1,11 @@
 import {
-	createClient, createCluster,
+	createClient, createCluster, createSentinel,
 	type RedisClientType,
 	type RedisClientOptions,
 	type RedisClusterType,
 	type RedisClusterOptions,
+	type RedisSentinelType,
+	type RedisSentinelOptions,
 	type RedisModules,
 	type RedisFunctions,
 	type RedisScripts,
@@ -112,7 +114,10 @@ export type RedisConnectionClientType = RedisClientType | RedisClientType<RedisM
 // eslint-disable-next-line @stylistic/max-len
 export type RedisConnectionClusterType = RedisClusterType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions> | RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
 
-export type RedisClientConnectionType = RedisConnectionClientType | RedisConnectionClusterType;
+// eslint-disable-next-line @stylistic/max-len
+export type RedisConnectionSentinelType = RedisSentinelType | RedisSentinelType<RedisModules, RedisFunctions, RedisScripts, RespVersions> | RedisSentinelType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
+
+export type RedisClientConnectionType = RedisConnectionClientType | RedisConnectionClusterType | RedisConnectionSentinelType;
 
 export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter {
 	private _client: RedisClientConnectionType = createClient() as RedisConnectionClientType;
@@ -130,7 +135,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 * @param {string | RedisClientOptions | RedisClientType} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
 	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
 	 */
-	constructor(connect?: string | RedisClientOptions | RedisClusterOptions | RedisClientConnectionType, options?: KeyvRedisOptions) {
+	constructor(connect?: string | RedisClientOptions | RedisClusterOptions | RedisSentinelOptions | RedisClientConnectionType, options?: KeyvRedisOptions) {
 		super();
 
 		// Build the socket reconnect strategy
@@ -142,9 +147,21 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			if (typeof connect === 'string') {
 				this._client = createClient({url: connect, socket}) as RedisClientType;
 			} else if ((connect as any).connect !== undefined) {
-				this._client = this.isClientCluster(connect as RedisClientConnectionType) ? connect as RedisConnectionClusterType : connect as RedisClientType;
+				if (this.isClientSentinel(connect as RedisClientConnectionType)) {
+					this._client = connect as RedisConnectionSentinelType;
+				} else if (this.isClientCluster(connect as RedisClientConnectionType)) {
+					this._client = connect as RedisConnectionClusterType;
+				} else {
+					this._client = connect as RedisClientType;
+				}
 			} else if (connect instanceof Object) {
-				this._client = (connect as any).rootNodes === undefined ? createClient(connect as RedisClientOptions) as RedisClientType : createCluster(connect as RedisClusterOptions);
+				if ((connect as any).sentinelRootNodes !== undefined) {
+					this._client = createSentinel(connect as RedisSentinelOptions) as RedisSentinelType;
+				} else if ((connect as any).rootNodes === undefined) {
+					this._client = createClient(connect as RedisClientOptions) as RedisClientType;
+				} else {
+					this._client = createCluster(connect as RedisClusterOptions);
+				}
 			}
 		}
 
@@ -602,7 +619,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 */
 	public async disconnect(force?: boolean): Promise<void> {
 		if (this._client.isOpen) {
-			// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 			await (force ? this._client.destroy() : this._client.close());
 		}
 	}
@@ -641,6 +657,14 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 */
 	public isCluster(): boolean {
 		return this.isClientCluster(this._client);
+	}
+
+	/**
+	 * Is the client a sentinel.
+	 * @returns {boolean} - true if the client is a sentinel, false if not
+	 */
+	public isSentinel(): boolean {
+		return this.isClientSentinel(this._client);
 	}
 
 	/**
@@ -820,6 +844,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		return (client as any).slots !== undefined;
 	}
 
+	private isClientSentinel(client: RedisClientConnectionType): boolean {
+		return (client as any).getSentinelNode !== undefined;
+	}
+
 	private setOptions(options?: KeyvRedisOptions): void {
 		if (!options) {
 			return;
@@ -952,7 +980,7 @@ export function createKeyvNonBlocking(connect?: string | RedisClientOptions | Re
 }
 
 export {
-	createClient, createCluster, type RedisClientOptions, type RedisClientType, type RedisClusterType, type RedisClusterOptions,
+	createClient, createCluster, createSentinel, type RedisClientOptions, type RedisClientType, type RedisClusterType, type RedisSentinelType, type RedisClusterOptions,
 } from '@redis/client';
 
 export {
