@@ -35,7 +35,9 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
 * [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
-* [Clustering and TLS Support](#clustering-and-tls-support)
+* [Clustering](#clustering)
+* [Sentinel](#sentinel)
+* [TLS Support](#tls-support)
 * [API](#api)
 * [Using Custom Redis Client Events](#using-custom-redis-client-events)
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
@@ -380,9 +382,9 @@ const cache = new Cacheable( { secondary, nonBlocking: true } );
 
 This will make it so that the secondary does not block the primary cache and will be very fast. 🚀
 
-# Clustering and TLS Support
+# Clustering
 
-If you are using a Redis Cluster or need to use TLS, you can pass in the `redisOptions` directly. Here is an example of how to do that:
+If you are using a Redis Cluster, you can pass in the `redisOptions` directly. Here is an example of how to do that:
 
 ```js
 import Keyv from 'keyv';
@@ -405,9 +407,42 @@ const cluster = createCluster({
 const keyv = new Keyv({ store: new KeyvRedis(cluster) });
 ```
 
-You can learn more about the `createCluster` function in the [documentation](https://github.com/redis/node-redis/blob/master/docs/clustering.md) at https://github.com/redis/node-redis/tree/master/docs. 
+You can learn more about the `createCluster` function in the [documentation](https://github.com/redis/node-redis/blob/master/docs/clustering.md) at https://github.com/redis/node-redis/tree/master/docs.
 
-Here is an example of how to use TLS:
+# Sentinel
+
+If you are using Sentinel to provide high availability for your Redis instances, you can pass in the `redisOptions` directly. Here is an example of how to do that:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis, { createSentinel } from '@keyv/redis';
+
+const sentinel = createSentinel({
+    name: 'sentinel-db',
+    sentinelRootNodes: [
+      {
+        host: '127.0.0.1',
+        port: 26379,
+      },
+      {
+        host: '127.0.0.1',
+        port: 26380,
+      },
+      {
+        host: '127.0.0.1',
+        port: 26381,
+      },
+    ],
+});
+
+const keyv = new Keyv({ store: new KeyvRedis(sentinel) });
+```
+
+You can learn more about the `createSentinel` function in the [documentation](https://github.com/redis/node-redis/blob/master/docs/sentinel.md) at https://github.com/redis/node-redis/tree/master/docs.
+
+# TLS Support
+
+Here is an example of how to use TLS using the `redisOptions`:
 
 ```js
 import Keyv from 'keyv';

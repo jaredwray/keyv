@@ -1,0 +1,25 @@
+x-redis-sentinel-base: &redis-sentinel-base
+  image: docker.io/bitnami/redis-sentinel:latest
+  network_mode: host
+
+services:
+    redis-sentinel-1:
+        container_name: redis-sentinel-1
+        <<: *redis-sentinel-base
+        environment:
+            - 'REDIS_MASTER_HOST=localhost'
+            - 'REDIS_SENTINEL_PORT_NUMBER=26379'
+
+    redis-sentinel-2:
+        container_name: redis-sentinel-2
+        <<: *redis-sentinel-base
+        environment:
+            - 'REDIS_MASTER_HOST=localhost'
+            - 'REDIS_SENTINEL_PORT_NUMBER=26380'
+    
+    redis-sentinel-3:
+        container_name: redis-sentinel-3
+        <<: *redis-sentinel-base
+        environment:
+            - 'REDIS_MASTER_HOST=localhost'
+            - 'REDIS_SENTINEL_PORT_NUMBER=26381'
