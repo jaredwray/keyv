@@ -1,6 +1,6 @@
 {
 	"name": "keyv",
-	"version": "5.4.0",
+	"version": "5.5.0",
 	"description": "Simple key-value storage with support for multiple backends",
 	"type": "module",
 	"main": "dist/index.cjs",
@@ -77,7 +77,7 @@
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.32.0",
 		"vitest": "^3.2.4",
-		"xo": "^1.2.1"
+		"xo": "^1.2.0"
 	},
 	"tsd": {
 		"directory": "test"
