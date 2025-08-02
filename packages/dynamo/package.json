@@ -65,8 +65,8 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.835.0",
-    "@aws-sdk/lib-dynamodb": "^3.835.0"
+    "@aws-sdk/client-dynamodb": "^3.859.0",
+    "@aws-sdk/lib-dynamodb": "^3.859.0"
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^",
