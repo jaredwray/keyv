@@ -1,26 +1,36 @@
-import EventEmitter from 'events';
-import Redis from 'iovalkey';
-import Keyv, {type KeyvStoreAdapter, type StoredData} from 'keyv';
-import {
-	type KeyvValkeyOptions,
-	type KeyvUriOptions,
-} from './types.js';
+import EventEmitter from "node:events";
+import Redis from "iovalkey";
+import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
+import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = true;
 	namespace?: string;
 	opts: Record<string, unknown>;
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	redis: any;
-	constructor(uri: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions) {
+	constructor(
+		uri: KeyvValkeyOptions | KeyvUriOptions,
+		options?: KeyvValkeyOptions,
+	) {
 		super();
 		this.opts = {};
 		this.opts.useRedisSets = true;
-		this.opts.dialect = 'redis';
+		this.opts.dialect = "redis";
 
-		if (typeof uri !== 'string' && 'options' in uri && uri.options && ('family' in uri.options || uri.isCluster)) {
+		if (
+			typeof uri !== "string" &&
+			"options" in uri &&
+			uri.options &&
+			("family" in uri.options || uri.isCluster)
+		) {
 			this.redis = uri;
 		} else {
-			options = {...(typeof uri === 'string' ? {uri} : uri as KeyvValkeyOptions), ...options};
+			options = {
+				...(typeof uri === "string" ? { uri } : (uri as KeyvValkeyOptions)),
+				...options,
+			};
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			this.redis = new Redis(options.uri!, options);
 		}
 
@@ -28,11 +38,15 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			this.opts.useRedisSets = false;
 		}
 
-		this.redis.on('error', (error: Error) => this.emit('error', error));
+		this.redis.on("error", (error: Error) => this.emit("error", error));
 	}
 
 	_getNamespace(): string {
-		return `namespace:${this.namespace!}`;
+		if (this.namespace) {
+			return `namespace:${this.namespace}`;
+		}
+
+		return `namespace:`;
 	}
 
 	_getKeyName = (key: string): string => {
@@ -54,11 +68,14 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return value;
 	}
 
-	async getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>> {
+	async getMany<Value>(
+		keys: string[],
+	): Promise<Array<StoredData<Value | undefined>>> {
 		keys = keys.map(this._getKeyName);
 		return this.redis.mget(keys);
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
 		if (value === undefined) {
 			return undefined;
@@ -66,9 +83,10 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 
 		key = this._getKeyName(key);
 
+		// biome-ignore lint/suspicious/noExplicitAny: type format
 		const set = async (redis: any) => {
-			if (typeof ttl === 'number') {
-				await redis.set(key, value, 'PX', ttl);
+			if (typeof ttl === "number") {
+				await redis.set(key, value, "PX", ttl);
 			} else {
 				await redis.set(key, value);
 			}
@@ -87,6 +105,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	async delete(key: string) {
 		key = this._getKeyName(key);
 		let items = 0;
+		// biome-ignore lint/suspicious/noExplicitAny: allowed
 		const unlink = async (redis: any) => redis.unlink(key);
 
 		if (this.opts.useRedisSets) {
@@ -103,10 +122,10 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async deleteMany(keys: string[]) {
-		const deletePromises = keys.map(async key => this.delete(key));
+		const deletePromises = keys.map(async (key) => this.delete(key));
 		const results = await Promise.allSettled(deletePromises);
 		// @ts-expect-error - results is an array of objects with status and value
-		return results.every(result => result.value);
+		return results.every((result) => result.value);
 	}
 
 	async clear() {
@@ -127,16 +146,15 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		}
 	}
 
-	async * iterator(namespace?: string) {
+	async *iterator(namespace?: string) {
 		const scan = this.redis.scan.bind(this.redis);
 		const get = this.redis.mget.bind(this.redis);
-		let cursor = '0';
+		let cursor = "0";
 		do {
-			// eslint-disable-next-line no-await-in-loop
-			const [curs, keys] = await scan(cursor, 'MATCH', `${namespace!}:*`);
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
+			const [curs, keys] = await scan(cursor, "MATCH", `${namespace!}:*`);
 			cursor = curs;
 			if (keys.length > 0) {
-				// eslint-disable-next-line no-await-in-loop
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
 					const key = keys[i];
@@ -144,7 +162,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 					yield [key, value];
 				}
 			}
-		} while (cursor !== '0');
+		} while (cursor !== "0");
 	}
 
 	async has(key: string) {
@@ -163,12 +181,15 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
  * @param {KeyvValkeyOptions} options - Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
  * @returns {Keyv} - Keyv instance with the Redis adapter
  */
-export function createKeyv(connect?: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions): Keyv {
-	connect ??= 'redis://localhost:6379';
+export function createKeyv(
+	connect?: KeyvValkeyOptions | KeyvUriOptions,
+	options?: KeyvValkeyOptions,
+): Keyv {
+	connect ??= "redis://localhost:6379";
 	const adapter = new KeyvValkey(connect, options);
 	const keyv = new Keyv(adapter);
 	return keyv;
 }
 
 export default KeyvValkey;
-export type {KeyvValkeyOptions} from './types.js';
+export type { KeyvValkeyOptions } from "./types.js";
