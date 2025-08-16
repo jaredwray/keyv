@@ -1,13 +1,15 @@
-import EventEmitter from 'node:events';
-import {Buffer} from 'buffer';
-import memcache from 'memjs';
-import {KeyvStoreAdapter, StoredData} from 'keyv';
-import {defaultDeserialize} from '@keyv/serialize';
+import EventEmitter from "node:events";
+import { defaultDeserialize } from "@keyv/serialize";
+import type { Buffer } from "buffer";
+import type { KeyvStoreAdapter, StoredData } from "keyv";
+import memcache from "memjs";
 
 export type KeyvMemcacheOptions = {
 	url?: string;
 	expires?: number;
-} & memcache.ClientOptions & Record<string, any>;
+} & memcache.ClientOptions &
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	Record<string, any>;
 
 export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	public ttlSupport = true;
@@ -18,18 +20,16 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		super();
 
 		options = {
-			...((typeof uri === 'string') ? {uri} : uri),
+			...(typeof uri === "string" ? { uri } : uri),
 			...options,
 		};
 
 		if (options.uri && options.url === undefined) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			options.url = options.uri;
 		}
 
 		if (uri === undefined) {
-			uri = 'localhost:11211';
-			// eslint-disable-next-line no-multi-assign
+			uri = "localhost:11211";
 			options.url = options.uri = uri;
 		}
 
@@ -39,6 +39,7 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	_getNamespace(): string {
+		// biome-ignore lint/style/noNonNullAssertion: fix this
 		return `namespace:${this.namespace!}`;
 	}
 
@@ -46,7 +47,7 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		return new Promise((resolve, reject) => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
-					this.emit('error', error);
+					this.emit("error", error);
 					reject(error);
 				} else {
 					let value_: StoredData<Value>;
@@ -56,8 +57,9 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 							expires: 0,
 						};
 					} else {
-						// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-						value_ = (this.opts.deserialize ? this.opts.deserialize(value) : defaultDeserialize(value));
+						value_ = this.opts.deserialize
+							? this.opts.deserialize(value)
+							: defaultDeserialize(value);
 					}
 
 					resolve(value_);
@@ -72,36 +74,37 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 			promises.push(this.get(key));
 		}
 
-		return Promise.allSettled(promises)
-			// eslint-disable-next-line promise/prefer-await-to-then
-			.then(values => {
-				const data: Array<StoredData<Value>> = [];
-				for (const value of values) {
-					// @ts-expect-error - value is an object
-					data.push(value.value as StoredData<Value>);
-				}
+		return Promise.allSettled(promises).then((values) => {
+			const data: Array<StoredData<Value>> = [];
+			for (const value of values) {
+				// @ts-expect-error - value is an object
+				data.push(value.value as StoredData<Value>);
+			}
 
-				return data;
-			});
+			return data;
+		});
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
 		const options: KeyvMemcacheOptions = {};
 
 		if (ttl !== undefined) {
-			// eslint-disable-next-line no-multi-assign
 			options.expires = options.ttl = Math.floor(ttl / 1000); // Moving to seconds
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-restricted-types
-		await this.client.set(this.formatKey(key), value as unknown as Buffer, options);
+		await this.client.set(
+			this.formatKey(key),
+			value as unknown as Buffer,
+			options,
+		);
 	}
 
 	async delete(key: string): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			this.client.delete(this.formatKey(key), (error, success) => {
 				if (error) {
-					this.emit('error', error);
+					this.emit("error", error);
 					reject(error);
 				} else {
 					resolve(Boolean(success));
@@ -111,17 +114,17 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async deleteMany(keys: string[]) {
-		const promises = keys.map(async key => this.delete(key));
+		const promises = keys.map(async (key) => this.delete(key));
 		const results = await Promise.allSettled(promises);
 		// @ts-expect-error - x is an object
-		return results.every(x => x.value === true);
+		return results.every((x) => x.value === true);
 	}
 
 	async clear(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			this.client.flush(error => {
+			this.client.flush((error) => {
 				if (error) {
-					this.emit('error', error);
+					this.emit("error", error);
 					reject(error);
 				} else {
 					resolve(undefined);
@@ -134,14 +137,14 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		let result = key;
 
 		if (this.namespace) {
-			result = this.namespace.trim() + ':' + key.trim();
+			result = `${this.namespace.trim()}:${key.trim()}`;
 		}
 
 		return result;
 	}
 
 	async has(key: string): Promise<boolean> {
-		return new Promise(resolve => {
+		return new Promise((resolve) => {
 			this.client.get(this.formatKey(key), (error, value) => {
 				if (error) {
 					resolve(false);

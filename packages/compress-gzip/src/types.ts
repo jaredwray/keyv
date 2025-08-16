@@ -1,8 +1,8 @@
-import type {Data, DeflateFunctionOptions, InflateOptions} from 'pako';
+import type { Data, DeflateFunctionOptions, InflateOptions } from "pako";
 
 type PakoDeflateOptions = DeflateFunctionOptions;
 
-type PakoInflateOptions = InflateOptions & {to?: 'string'};
+type PakoInflateOptions = InflateOptions & { to?: "string" };
 
 export type Options = PakoDeflateOptions & PakoInflateOptions;
 

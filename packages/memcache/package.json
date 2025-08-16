@@ -15,27 +15,9 @@
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
-		"test": "xo --fix && vitest run --coverage",
-		"test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+		"test": "biome check --write && vitest run --coverage",
+		"test:ci": "biome check && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
-	},
-	"xo": {
-		"rules": {
-			"import/no-named-as-default": "off",
-			"unicorn/prefer-module": "off",
-			"unicorn/prefer-event-target": "off",
-			"unicorn/no-array-reduce": "off",
-			"n/prefer-global/process": "off",
-			"node/prefer-global/process": "off",
-			"unicorn/prefer-object-from-entries": "off",
-			"unicorn/prefer-node-protocol": "off",
-			"@typescript-eslint/consistent-type-imports": "off",
-			"@typescript-eslint/consistent-type-definitions": "off",
-			"@typescript-eslint/no-empty-function": "off",
-			"import/extensions": "off",
-			"no-promise-executor-return": "off",
-			"import/no-extraneous-dependencies": "off"
-		}
 	},
 	"repository": {
 		"type": "git",
@@ -67,6 +49,7 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.2.0",
 		"@keyv/compress-gzip": "workspace:^",
 		"@keyv/test-suite": "workspace:^",
 		"@types/memjs": "^1.3.3",
@@ -75,8 +58,7 @@
 		"tsd": "^0.32.0",
 		"tsup": "^8.5.0",
 		"typescript": "^5.9.2",
-		"vitest": "^3.2.4",
-		"xo": "^1.2.1"
+		"vitest": "^3.2.4"
 	},
 	"tsd": {
 		"directory": "test"

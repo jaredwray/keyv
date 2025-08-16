@@ -1,7 +1,7 @@
-import {type ConnectionOptions} from 'mysql2';
+import type { ConnectionOptions } from "mysql2";
 
 export type KeyvMysqlOptions = {
-	dialect?: 'mysql';
+	dialect?: "mysql";
 	uri?: string;
 	table?: string;
 	keySize?: number;

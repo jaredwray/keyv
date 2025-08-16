@@ -15,24 +15,9 @@
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
-		"test": "xo --fix && vitest run --coverage",
-		"test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+		"test": "biome check --write && vitest run --coverage",
+		"test:ci": "biome check && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./dist ./test/testdb.sqlite"
-	},
-	"xo": {
-		"rules": {
-			"import/no-named-as-default": "off",
-			"unicorn/prefer-module": "off",
-			"n/file-extension-in-import": "off",
-			"unicorn/prefer-node-protocol": "off",
-			"@typescript-eslint/no-unsafe-assignment": "off",
-			"@typescript-eslint/no-confusing-void-expression": "off",
-			"@typescript-eslint/no-unsafe-argument": "off",
-			"import/extensions": "off",
-			"import/no-extraneous-dependencies": "off",
-			"no-promise-executor-return": "off",
-			"@typescript-eslint/use-unknown-in-catch-callback-variable": "off"
-		}
 	},
 	"repository": {
 		"type": "git",
@@ -70,9 +55,10 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@types/json-bigint": "^1.0.4",
-		"rimraf": "^6.0.1",
+		"@biomejs/biome": "^2.2.0",
 		"@keyv/serialize": "workspace:^",
-		"lz4-napi": "^2.9.0"
+		"@types/json-bigint": "^1.0.4",
+		"lz4-napi": "^2.9.0",
+		"rimraf": "^6.0.1"
 	}
 }

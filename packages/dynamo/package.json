@@ -15,32 +15,9 @@
   "scripts": {
     "build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
     "prepublishOnly": "pnpm build",
-    "test": "xo --fix && vitest run --coverage",
-    "test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+    "test": "biome check --write && vitest run --coverage",
+    "test:ci": "biome check && vitest --run --sequence.setupFiles=list --coverage",
     "clean": "rimraf ./node_modules ./coverage ./dist"
-  },
-  "xo": {
-    "space": true,
-    "rules": {
-      "import/no-named-as-default": "off",
-      "unicorn/prefer-module": "off",
-      "unicorn/prefer-event-target": "off",
-      "unicorn/no-array-reduce": "off",
-      "unicorn/prefer-object-from-entries": "off",
-      "unicorn/prefer-node-protocol": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-return": "off",
-      "@typescript-eslint/no-unsafe-argument": "off",
-      "import/extensions": "off",
-      "@typescript-eslint/consistent-type-imports": "off",
-      "@typescript-eslint/naming-convention": "off",
-      "@typescript-eslint/no-floating-promises": "off",
-      "import/no-extraneous-dependencies": "off",
-      "@typescript-eslint/no-confusing-void-expression": "off",
-      "@typescript-eslint/no-empty-function": "off",
-      "promise/prefer-await-to-then": "off"
-    }
   },
   "repository": {
     "type": "git",
@@ -69,6 +46,7 @@
     "@aws-sdk/lib-dynamodb": "^3.859.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
     "@keyv/test-suite": "workspace:^",
     "keyv": "workspace:^",
     "vitest": "^3.2.4"

@@ -1,23 +1,31 @@
-import EventEmitter from 'events';
-import mysql from 'mysql2';
-import type {KeyvStoreAdapter, StoredData} from 'keyv';
-import {
-	type KeyvMysqlOptions,
-} from './types.js';
-import {endPool, pool} from './pool.js';
+// biome-ignore-all lint/style/noNonNullAssertion: need to fix
+import EventEmitter from "node:events";
+import type { KeyvStoreAdapter, StoredData } from "keyv";
+import mysql from "mysql2";
+import { endPool, pool } from "./pool.js";
+import type { KeyvMysqlOptions } from "./types.js";
 
-const keyvMysqlKeys = new Set(['adapter', 'compression', 'connect', 'dialect', 'keySize', 'table', 'ttl', 'uri']);
+const keyvMysqlKeys = new Set([
+	"adapter",
+	"compression",
+	"connect",
+	"dialect",
+	"keySize",
+	"table",
+	"ttl",
+	"uri",
+]);
 
-type QueryType<T> = Promise<T extends
-	mysql.RowDataPacket[][] |
-	mysql.RowDataPacket[] |
-	// eslint-disable-next-line @typescript-eslint/no-deprecated
-	mysql.OkPacket |
-	// eslint-disable-next-line @typescript-eslint/no-deprecated
-	mysql.OkPacket[] |
-	mysql.ResultSetHeader
-	? T
-	: never>;
+type QueryType<T> = Promise<
+	T extends
+		| mysql.RowDataPacket[][]
+		| mysql.RowDataPacket[]
+		| mysql.OkPacket
+		| mysql.OkPacket[]
+		| mysql.ResultSetHeader
+		? T
+		: never
+>;
 
 export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = false;
@@ -28,11 +36,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		super();
 
 		let options: KeyvMysqlOptions = {
-			dialect: 'mysql',
-			uri: 'mysql://localhost',
+			dialect: "mysql",
+			uri: "mysql://localhost",
 		};
 
-		if (typeof keyvOptions === 'string') {
+		if (typeof keyvOptions === "string") {
 			options.uri = keyvOptions;
 		} else {
 			options = {
@@ -41,11 +49,16 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			};
 		}
 
-		if (options.intervalExpiration !== undefined && options.intervalExpiration > 0) {
+		if (
+			options.intervalExpiration !== undefined &&
+			options.intervalExpiration > 0
+		) {
 			this.ttlSupport = true;
 		}
 
-		const mysqlOptions = Object.fromEntries(Object.entries(options).filter(([k]) => !keyvMysqlKeys.has(k)));
+		const mysqlOptions = Object.fromEntries(
+			Object.entries(options).filter(([k]) => !keyvMysqlKeys.has(k)),
+		);
 
 		delete mysqlOptions.namespace;
 		delete mysqlOptions.serialize;
@@ -60,24 +73,30 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		};
 
 		this.opts = {
-			table: 'keyv',
-			keySize: 255, ...options,
+			table: "keyv",
+			keySize: 255,
+			...options,
 		};
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT)`;
 
-		const connected = connection().then(async query => {
-			await query(createTable);
-			if (this.opts.intervalExpiration !== undefined && this.opts.intervalExpiration > 0) {
-				await query('SET GLOBAL event_scheduler = ON;');
-				await query('DROP EVENT IF EXISTS keyv_delete_expired_keys;');
-				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
+		const connected = connection()
+			.then(async (query) => {
+				await query(createTable);
+				if (
+					this.opts.intervalExpiration !== undefined &&
+					this.opts.intervalExpiration > 0
+				) {
+					await query("SET GLOBAL event_scheduler = ON;");
+					await query("DROP EVENT IF EXISTS keyv_delete_expired_keys;");
+					await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
 					DO DELETE FROM ${this.opts.table!}
 					WHERE CAST(value->'$.expires' AS UNSIGNED) BETWEEN 1 AND UNIX_TIMESTAMP(NOW(3)) * 1000;`);
-			}
+				}
 
-			return query;
-		}).catch(error => this.emit('error', error));
+				return query;
+			})
+			.catch((error) => this.emit("error", error));
 
 		this.query = async (sqlString: string) => {
 			const query = await connected;
@@ -105,13 +124,18 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const results: Array<StoredData<Value>> = [];
 
 		for (const key of keys) {
-			const rowIndex = rows.findIndex((row: {id: string}) => row.id === key);
-			results.push(rowIndex === -1 ? undefined : rows[rowIndex].value as StoredData<Value>);
+			const rowIndex = rows.findIndex((row: { id: string }) => row.id === key);
+			results.push(
+				rowIndex === -1
+					? undefined
+					: (rows[rowIndex].value as StoredData<Value>),
+			);
 		}
 
 		return results;
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any) {
 		const sql = `INSERT INTO ${this.opts.table!} (id, value)
 			VALUES(?, ?) 
@@ -148,17 +172,29 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 
 	async clear() {
 		const sql = `DELETE FROM ${this.opts.table!} WHERE id LIKE ?`;
-		const del = mysql.format(sql, [this.namespace ? `${this.namespace}:%` : '%']);
+		const del = mysql.format(sql, [
+			this.namespace ? `${this.namespace}:%` : "%",
+		]);
 
 		await this.query(del);
 	}
 
-	async * iterator(namespace?: string) {
-		const limit = Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
+	async *iterator(namespace?: string) {
+		const limit =
+			Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
 		// @ts-expect-error - iterate
-		async function * iterate(offset: number, options: KeyvMysqlOptions, query: <T>(sqlString: string) => QueryType<T>) {
+		async function* iterate(
+			offset: number,
+			options: KeyvMysqlOptions,
+			query: <T>(sqlString: string) => QueryType<T>,
+		) {
 			const sql = `SELECT * FROM ${options.table!} WHERE id LIKE ? LIMIT ? OFFSET ?`;
-			const select = mysql.format(sql, [`${namespace ? namespace + ':' : ''}%`, limit, offset]);
+			const select = mysql.format(sql, [
+				// biome-ignore lint/style/useTemplate: need to fix
+				`${namespace ? namespace + ":" : ""}%`,
+				limit,
+				offset,
+			]);
 			const entries: mysql.RowDataPacket[] = await query(select);
 			if (entries.length === 0) {
 				return;
@@ -169,10 +205,10 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				yield [entry.id, entry.value];
 			}
 
-			yield * iterate(offset, options, query);
+			yield* iterate(offset, options, query);
 		}
 
-		yield * iterate(0, this.opts, this.query);
+		yield* iterate(0, this.opts, this.query);
 	}
 
 	async has(key: string) {
@@ -187,4 +223,4 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvMysql;
-export type {KeyvMysqlOptions} from './types';
+export type { KeyvMysqlOptions } from "./types";

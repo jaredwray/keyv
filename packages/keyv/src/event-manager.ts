@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noExplicitAny: type format
 type EventListener = (...arguments_: any[]) => void;
 
 class EventManager {
@@ -27,7 +28,9 @@ class EventManager {
 
 		if (listeners) {
 			if (listeners.length >= this._maxListeners) {
-				console.warn(`MaxListenersExceededWarning: Possible event memory leak detected. ${listeners.length + 1} ${event} listeners added. Use setMaxListeners() to increase limit.`);
+				console.warn(
+					`MaxListenersExceededWarning: Possible event memory leak detected. ${listeners.length + 1} ${event} listeners added. Use setMaxListeners() to increase limit.`,
+				);
 			}
 
 			listeners.push(listener);
@@ -54,6 +57,7 @@ class EventManager {
 	}
 
 	public once(event: string, listener: EventListener): void {
+		// biome-ignore lint/suspicious/noExplicitAny: type format
 		const onceListener: EventListener = (...arguments_: any[]) => {
 			listener(...arguments_);
 			this.off(event, onceListener);
@@ -63,6 +67,7 @@ class EventManager {
 	}
 
 	// Emit an event
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public emit(event: string, ...arguments_: any[]): void {
 		const listeners = this._eventListeners.get(event);
 

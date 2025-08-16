@@ -1,20 +1,23 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: redis
 import {
-	createClient, createCluster, createSentinel,
-	type RedisClientType,
+	createClient,
+	createCluster,
+	createSentinel,
 	type RedisClientOptions,
-	type RedisClusterType,
+	type RedisClientType,
 	type RedisClusterOptions,
-	type RedisSentinelType,
-	type RedisSentinelOptions,
-	type RedisModules,
+	type RedisClusterType,
 	type RedisFunctions,
+	type RedisModules,
 	type RedisScripts,
+	type RedisSentinelOptions,
+	type RedisSentinelType,
 	type RespVersions,
 	type TypeMapping,
-} from '@redis/client';
-import {Hookified} from 'hookified';
-import {Keyv, type KeyvStoreAdapter, type KeyvEntry} from 'keyv';
-import calculateSlot from 'cluster-key-slot';
+} from "@redis/client";
+import calculateSlot from "cluster-key-slot";
+import { Hookified } from "hookified";
+import { Keyv, type KeyvEntry, type KeyvStoreAdapter } from "keyv";
 
 export type KeyvRedisOptions = {
 	/**
@@ -68,7 +71,7 @@ export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
 	/**
 	 * Dialect used by the adapter. This is legacy so Keyv knows what is iteratable.
 	 */
-	dialect: 'redis';
+	dialect: "redis";
 	/**
 	 * URL used to connect to the Redis server. This is legacy so Keyv knows what is iteratable.
 	 */
@@ -94,13 +97,13 @@ export enum RedisErrorMessages {
 	/**
 	 * Error message when the Redis client is not connected and throwOnConnectError is set to true.
 	 */
-	RedisClientNotConnectedThrown = 'Redis client is not connected or has failed to connect. This is thrown because throwOnConnectError is set to true.',
+	RedisClientNotConnectedThrown = "Redis client is not connected or has failed to connect. This is thrown because throwOnConnectError is set to true.",
 }
 
 export const defaultReconnectStrategy = (attempts: number): number | Error => {
 	// Exponential backoff base: double each time, capped at 2s.
 	// Parentheses make it clear we do (2 ** attempts) first, then * 100
-	const backoff = Math.min((2 ** attempts) * 100, 2000);
+	const backoff = Math.min(2 ** attempts * 100, 2000);
 
 	// Add random jitter of up to ±50ms to avoid thundering herds:
 	const jitter = (Math.random() - 0.5) * 100;
@@ -108,21 +111,52 @@ export const defaultReconnectStrategy = (attempts: number): number | Error => {
 	return backoff + jitter;
 };
 
-// eslint-disable-next-line @stylistic/max-len
-export type RedisConnectionClientType = RedisClientType | RedisClientType<RedisModules, RedisFunctions, RedisScripts, RespVersions> | RedisClientType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
+export type RedisConnectionClientType =
+	| RedisClientType
+	| RedisClientType<RedisModules, RedisFunctions, RedisScripts, RespVersions>
+	| RedisClientType<
+			RedisModules,
+			RedisFunctions,
+			RedisScripts,
+			RespVersions,
+			TypeMapping
+	  >;
 
-// eslint-disable-next-line @stylistic/max-len
-export type RedisConnectionClusterType = RedisClusterType | RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions> | RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
+export type RedisConnectionClusterType =
+	| RedisClusterType
+	| RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions>
+	| RedisClusterType<
+			RedisModules,
+			RedisFunctions,
+			RedisScripts,
+			RespVersions,
+			TypeMapping
+	  >;
 
-// eslint-disable-next-line @stylistic/max-len
-export type RedisConnectionSentinelType = RedisSentinelType | RedisSentinelType<RedisModules, RedisFunctions, RedisScripts, RespVersions> | RedisSentinelType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
+export type RedisConnectionSentinelType =
+	| RedisSentinelType
+	| RedisSentinelType<RedisModules, RedisFunctions, RedisScripts, RespVersions>
+	| RedisSentinelType<
+			RedisModules,
+			RedisFunctions,
+			RedisScripts,
+			RespVersions,
+			TypeMapping
+	  >;
 
-export type RedisClientConnectionType = RedisConnectionClientType | RedisConnectionClusterType | RedisConnectionSentinelType;
+export type RedisClientConnectionType =
+	| RedisConnectionClientType
+	| RedisConnectionClusterType
+	| RedisConnectionSentinelType;
 
-export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter {
-	private _client: RedisClientConnectionType = createClient() as RedisConnectionClientType;
+export default class KeyvRedis<T>
+	extends Hookified
+	implements KeyvStoreAdapter
+{
+	private _client: RedisClientConnectionType =
+		createClient() as RedisConnectionClientType;
 	private _namespace: string | undefined;
-	private _keyPrefixSeparator = '::';
+	private _keyPrefixSeparator = "::";
 	private _clearBatchSize = 1000;
 	private _useUnlink = true;
 	private _noNamespaceAffectsAll = false;
@@ -135,7 +169,15 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 * @param {string | RedisClientOptions | RedisClientType} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
 	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
 	 */
-	constructor(connect?: string | RedisClientOptions | RedisClusterOptions | RedisSentinelOptions | RedisClientConnectionType, options?: KeyvRedisOptions) {
+	constructor(
+		connect?:
+			| string
+			| RedisClientOptions
+			| RedisClusterOptions
+			| RedisSentinelOptions
+			| RedisClientConnectionType,
+		options?: KeyvRedisOptions,
+	) {
 		super();
 
 		// Build the socket reconnect strategy
@@ -144,8 +186,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		};
 
 		if (connect) {
-			if (typeof connect === 'string') {
-				this._client = createClient({url: connect, socket}) as RedisClientType;
+			if (typeof connect === "string") {
+				this._client = createClient({
+					url: connect,
+					socket,
+				}) as RedisClientType;
 			} else if ((connect as any).connect !== undefined) {
 				if (this.isClientSentinel(connect as RedisClientConnectionType)) {
 					this._client = connect as RedisConnectionSentinelType;
@@ -156,9 +201,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 				}
 			} else if (connect instanceof Object) {
 				if ((connect as any).sentinelRootNodes !== undefined) {
-					this._client = createSentinel(connect as RedisSentinelOptions) as RedisSentinelType;
+					this._client = createSentinel(
+						connect as RedisSentinelOptions,
+					) as RedisSentinelType;
 				} else if ((connect as any).rootNodes === undefined) {
-					this._client = createClient(connect as RedisClientOptions) as RedisClientType;
+					this._client = createClient(
+						connect as RedisClientOptions,
+					) as RedisClientType;
 				} else {
 					this._client = createCluster(connect as RedisClusterOptions);
 				}
@@ -188,7 +237,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 * Get the options for the adapter.
 	 */
 	public get opts(): KeyvRedisPropertyOptions {
-		let url = 'redis://localhost:6379';
+		let url = "redis://localhost:6379";
 		if ((this._client as RedisClientType).options) {
 			const redisUrl = (this._client as RedisClientType).options?.url;
 			if (redisUrl) {
@@ -205,7 +254,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			throwOnConnectError: this._throwOnConnectError,
 			throwOnErrors: this._throwOnErrors,
 			connectionTimeout: this._connectionTimeout,
-			dialect: 'redis',
+			dialect: "redis",
 			url,
 		};
 
@@ -264,7 +313,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		if (value > 0) {
 			this._clearBatchSize = value;
 		} else {
-			this.emit('error', 'clearBatchSize must be greater than 0');
+			this.emit("error", "clearBatchSize must be greater than 0");
 		}
 	}
 
@@ -376,7 +425,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 				]);
 			}
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 
 			await this.disconnect(true);
 
@@ -402,15 +451,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		try {
 			key = this.createKeyPrefix(key, this._namespace);
 
-			// eslint-disable-next-line unicorn/prefer-ternary
 			if (ttl) {
-				// eslint-disable-next-line @typescript-eslint/naming-convention
-				await client.set(key, value, {PX: ttl});
+				await client.set(key, value, { PX: ttl });
 			} else {
 				await client.set(key, value);
 			}
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -422,24 +469,22 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
-		const client = await this.getClient() as RedisClientType;
+		const client = (await this.getClient()) as RedisClientType;
 
 		try {
 			const multi = client.multi();
-			for (const {key, value, ttl} of entries) {
+			for (const { key, value, ttl } of entries) {
 				const prefixedKey = this.createKeyPrefix(key, this._namespace);
 				if (ttl) {
-					// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unsafe-argument
-					multi.set(prefixedKey, value, {PX: ttl});
+					multi.set(prefixedKey, value, { PX: ttl });
 				} else {
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 					multi.set(prefixedKey, value);
 				}
 			}
 
 			await multi.exec();
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -460,7 +505,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 
 			return exists === 1;
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -475,7 +520,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 * @returns {Promise<Array<boolean>>} - array of booleans for each key if it exists
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const client = await this.getClient() as RedisClientType;
+		const client = (await this.getClient()) as RedisClientType;
 
 		try {
 			const multi = client.multi();
@@ -486,14 +531,16 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 
 			const results = await multi.exec();
 
-			return results.map(result => typeof result === 'number' && result === 1);
+			return results.map(
+				(result) => typeof result === "number" && result === 1,
+			);
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
 
-			return Array.from({length: keys.length}).fill(false) as boolean[];
+			return Array.from({ length: keys.length }).fill(false) as boolean[];
 		}
 	}
 
@@ -515,7 +562,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 
 			return value as U;
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -534,19 +581,21 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			return []; // Return empty array if no keys are provided
 		}
 
-		keys = keys.map(key => this.createKeyPrefix(key, this._namespace));
+		keys = keys.map((key) => this.createKeyPrefix(key, this._namespace));
 		try {
 			const values = await this.mget<U>(keys);
 
 			return values;
-		/* c8 ignore next 5 */
+			/* c8 ignore next 5 */
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
 
-			return Array.from({length: keys.length}).fill(undefined) as Array<U | undefined>;
+			return Array.from({ length: keys.length }).fill(undefined) as Array<
+				U | undefined
+			>;
 		}
 	}
 
@@ -565,7 +614,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 
 			return deleted > 0;
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -581,7 +630,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		let result = false;
-		const client = await this.getClient() as RedisClientType;
+		const client = (await this.getClient()) as RedisClientType;
 
 		try {
 			const multi = client.multi();
@@ -597,12 +646,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			const results = await multi.exec();
 
 			for (const deleted of results) {
-				if (typeof deleted === 'number' && deleted > 0) {
+				if (typeof deleted === "number" && deleted > 0) {
 					result = true;
 				}
 			}
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -645,7 +694,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 */
 	public getKeyWithoutPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return key.replace(`${namespace}${this._keyPrefixSeparator}`, '');
+			return key.replace(`${namespace}${this._keyPrefixSeparator}`, "");
 		}
 
 		return key;
@@ -674,12 +723,20 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 */
 	public async getMasterNodes(): Promise<RedisClientType[]> {
 		if (this.isCluster()) {
-			const cluster = await this.getClient() as RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
-			const nodes = cluster.masters.map(async main => cluster.nodeClient(main));
+			const cluster = (await this.getClient()) as RedisClusterType<
+				RedisModules,
+				RedisFunctions,
+				RedisScripts,
+				RespVersions,
+				TypeMapping
+			>;
+			const nodes = cluster.masters.map(async (main) =>
+				cluster.nodeClient(main),
+			);
 			return Promise.all(nodes) as Promise<RedisClientType[]>;
 		}
 
-		return [await this.getClient() as RedisClientType];
+		return [(await this.getClient()) as RedisClientType];
 	}
 
 	/**
@@ -687,25 +744,30 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 	 * @param {string} [namespace] - the namespace to iterate over
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
-	public async * iterator<U = T>(namespace?: string): AsyncGenerator<[string, U | undefined], void, unknown> {
+	public async *iterator<U = T>(
+		namespace?: string,
+	): AsyncGenerator<[string, U | undefined], void, unknown> {
 		// When instance is not a cluster, it will only have one client
 		const clients = await this.getMasterNodes();
 
 		for (const client of clients) {
-			const match = namespace ? `${namespace}${this._keyPrefixSeparator}*` : '*';
-			let cursor = '0';
+			const match = namespace
+				? `${namespace}${this._keyPrefixSeparator}*`
+				: "*";
+			let cursor = "0";
 			do {
-				// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-				const result = await client.scan(cursor, {MATCH: match, TYPE: 'string'});
+				const result = await client.scan(cursor, {
+					MATCH: match,
+					TYPE: "string",
+				});
 				cursor = result.cursor.toString();
-				let {keys} = result;
+				let { keys } = result;
 
 				if (!namespace && !this._noNamespaceAffectsAll) {
-					keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
+					keys = keys.filter((key) => !key.includes(this._keyPrefixSeparator));
 				}
 
 				if (keys.length > 0) {
-					// eslint-disable-next-line no-await-in-loop
 					const values = await this.mget<U>(keys);
 					for (const i of keys.keys()) {
 						const key = this.getKeyWithoutPrefix(keys[i], namespace);
@@ -713,7 +775,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 						yield [key, value];
 					}
 				}
-			} while (cursor !== '0');
+			} while (cursor !== "0");
 		}
 	}
 
@@ -729,40 +791,49 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 			// When instance is not a cluster, it will only have one client
 			const clients = await this.getMasterNodes();
 
-			await Promise.all(clients.map(async client => {
-				if (!this._namespace && this._noNamespaceAffectsAll) {
-					await client.flushDb();
-					return;
-				}
-
-				let cursor = '0';
-				const batchSize = this._clearBatchSize;
-				const match = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}*` : '*';
-				const deletePromises = [];
-
-				do {
-					// eslint-disable-next-line no-await-in-loop, @typescript-eslint/naming-convention
-					const result = await client.scan(cursor, {MATCH: match, COUNT: batchSize, TYPE: 'string'});
-
-					cursor = result.cursor.toString();
-					let {keys} = result;
-
-					if (keys.length === 0) {
-						continue;
+			await Promise.all(
+				clients.map(async (client) => {
+					if (!this._namespace && this._noNamespaceAffectsAll) {
+						await client.flushDb();
+						return;
 					}
 
-					if (!this._namespace) {
-						keys = keys.filter(key => !key.includes(this._keyPrefixSeparator));
-					}
+					let cursor = "0";
+					const batchSize = this._clearBatchSize;
+					const match = this._namespace
+						? `${this._namespace}${this._keyPrefixSeparator}*`
+						: "*";
+					const deletePromises = [];
 
-					deletePromises.push(this.clearWithClusterSupport(keys));
-				} while (cursor !== '0');
+					do {
+						const result = await client.scan(cursor, {
+							MATCH: match,
+							COUNT: batchSize,
+							TYPE: "string",
+						});
 
-				await Promise.all(deletePromises);
-			}));
+						cursor = result.cursor.toString();
+						let { keys } = result;
+
+						if (keys.length === 0) {
+							continue;
+						}
+
+						if (!this._namespace) {
+							keys = keys.filter(
+								(key) => !key.includes(this._keyPrefixSeparator),
+							);
+						}
+
+						deletePromises.push(this.clearWithClusterSupport(keys));
+					} while (cursor !== "0");
+
+					await Promise.all(deletePromises);
+				}),
+			);
 			/* c8 ignore next 3 */
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 		}
 	}
 
@@ -774,16 +845,18 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		const slotMap = this.getSlotMap(keys);
 
 		const valueMap = new Map<string, string | undefined>();
-		await Promise.all(Array.from(slotMap.entries(), async ([slot, keys]) => {
-			const client = await this.getSlotMaster(slot);
+		await Promise.all(
+			Array.from(slotMap.entries(), async ([slot, keys]) => {
+				const client = await this.getSlotMaster(slot);
 
-			const values = await client.mGet(keys);
-			for (const [index, value] of values.entries()) {
-				valueMap.set(keys[index], value ?? undefined);
-			}
-		}));
+				const values = await client.mGet(keys);
+				for (const [index, value] of values.entries()) {
+					valueMap.set(keys[index], value ?? undefined);
+				}
+			}),
+		);
 
-		return keys.map(key => valueMap.get(key) as T | undefined);
+		return keys.map((key) => valueMap.get(key) as T | undefined);
 	}
 
 	/**
@@ -794,11 +867,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		if (keys.length > 0) {
 			const slotMap = this.getSlotMap(keys);
 
-			await Promise.all(Array.from(slotMap.entries(), async ([slot, keys]) => {
-				const client = await this.getSlotMaster(slot);
+			await Promise.all(
+				Array.from(slotMap.entries(), async ([slot, keys]) => {
+					const client = await this.getSlotMaster(slot);
 
-				return this._useUnlink ? client.unlink(keys) : client.del(keys);
-			}));
+					return this._useUnlink ? client.unlink(keys) : client.del(keys);
+				}),
+			);
 		}
 	}
 
@@ -809,7 +884,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 		const connection = await this.getClient();
 
 		if (this.isCluster()) {
-			const cluster = connection as RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
+			const cluster = connection as RedisClusterType<
+				RedisModules,
+				RedisFunctions,
+				RedisScripts,
+				RespVersions,
+				TypeMapping
+			>;
 			const mainNode = cluster.slots[slot].master;
 			return cluster.nodeClient(mainNode) as RedisClientType;
 		}
@@ -888,30 +969,26 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
 
 	private initClient(): void {
 		/* c8 ignore next 10 */
-		this._client.on('connect', () => {
-			this.emit('connect', this._client);
+		this._client.on("connect", () => {
+			this.emit("connect", this._client);
 		});
 
-		this._client.on('disconnect', () => {
-			this.emit('disconnect', this._client);
+		this._client.on("disconnect", () => {
+			this.emit("disconnect", this._client);
 		});
 
-		this._client.on('reconnecting', reconnectInfo => {
-			this.emit('reconnecting', reconnectInfo);
+		this._client.on("reconnecting", (reconnectInfo) => {
+			this.emit("reconnecting", reconnectInfo);
 		});
 	}
 
 	private async createTimeoutPromise(timeoutMs: number): Promise<never> {
-		// eslint-disable-next-line promise/param-names
 		return new Promise<never>((_, reject) =>
-			// eslint-disable-next-line no-promise-executor-return
-			setTimeout(
-				() => {
-					/* c8 ignore next 3 */
-					reject(new Error(`Redis timed out after ${timeoutMs}ms`));
-				},
-				timeoutMs,
-			));
+			setTimeout(() => {
+				/* c8 ignore next 3 */
+				reject(new Error(`Redis timed out after ${timeoutMs}ms`));
+			}, timeoutMs),
+		);
 	}
 }
 
@@ -921,13 +998,19 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStoreAdapter 
  * @param {KeyvRedisOptions} options - Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
  * @returns {Keyv} - Keyv instance with the Redis adapter
  */
-export function createKeyv(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions): Keyv {
-	connect ??= 'redis://localhost:6379';
+export function createKeyv(
+	connect?: string | RedisClientOptions | RedisClientType,
+	options?: KeyvRedisOptions,
+): Keyv {
+	connect ??= "redis://localhost:6379";
 	const adapter = new KeyvRedis(connect, options);
 
 	if (options?.namespace) {
 		adapter.namespace = options.namespace;
-		const keyv = new Keyv(adapter, {namespace: options?.namespace, useKeyPrefix: false});
+		const keyv = new Keyv(adapter, {
+			namespace: options?.namespace,
+			useKeyPrefix: false,
+		});
 
 		if (options?.throwOnConnectError) {
 			// Set the throwOnError in Keyv so it throws
@@ -942,7 +1025,7 @@ export function createKeyv(connect?: string | RedisClientOptions | RedisClientTy
 		return keyv;
 	}
 
-	const keyv = new Keyv(adapter, {useKeyPrefix: false});
+	const keyv = new Keyv(adapter, { useKeyPrefix: false });
 
 	if (options?.throwOnConnectError) {
 		// Set the throwOnError in Keyv so it throws
@@ -958,7 +1041,10 @@ export function createKeyv(connect?: string | RedisClientOptions | RedisClientTy
 	return keyv;
 }
 
-export function createKeyvNonBlocking(connect?: string | RedisClientOptions | RedisClientType, options?: KeyvRedisOptions): Keyv {
+export function createKeyvNonBlocking(
+	connect?: string | RedisClientOptions | RedisClientType,
+	options?: KeyvRedisOptions,
+): Keyv {
 	const keyv = createKeyv(connect, options);
 
 	const keyvStore = keyv.store as KeyvRedis<any>;
@@ -980,9 +1066,14 @@ export function createKeyvNonBlocking(connect?: string | RedisClientOptions | Re
 }
 
 export {
-	createClient, createCluster, createSentinel, type RedisClientOptions, type RedisClientType, type RedisClusterType, type RedisSentinelType, type RedisClusterOptions,
-} from '@redis/client';
+	createClient,
+	createCluster,
+	createSentinel,
+	type RedisClientOptions,
+	type RedisClientType,
+	type RedisClusterOptions,
+	type RedisClusterType,
+	type RedisSentinelType,
+} from "@redis/client";
 
-export {
-	Keyv,
-} from 'keyv';
+export { Keyv } from "keyv";

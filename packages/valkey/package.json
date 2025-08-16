@@ -15,26 +15,9 @@
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
-		"test": "xo --fix && vitest run --coverage",
-		"test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+		"test": "biome check --write && vitest run --coverage",
+		"test:ci": "biome check && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./dist"
-	},
-	"xo": {
-		"rules": {
-			"import/no-named-as-default": "off",
-			"unicorn/prefer-module": "off",
-			"unicorn/prefer-event-target": "off",
-			"unicorn/prefer-node-protocol": "off",
-			"unicorn/no-typeof-undefined": "off",
-			"import/extensions": "off",
-			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/no-unsafe-assignment": "off",
-			"@typescript-eslint/no-unsafe-return": "off",
-			"unicorn/prefer-ternary": "off",
-			"unicorn/no-array-callback-reference": "off",
-			"import/no-extraneous-dependencies": "off",
-			"@typescript-eslint/no-confusing-void-expression": "off"
-		}
 	},
 	"repository": {
 		"type": "git",
@@ -65,14 +48,14 @@
 		"iovalkey": "^0.3.3"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.2.0",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^3.2.4",
 		"keyv": "workspace:^",
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.33.0",
-		"vitest": "^3.2.4",
-		"xo": "^1.2.2"
+		"vitest": "^3.2.4"
 	},
 	"tsd": {
 		"directory": "test"

@@ -1,4 +1,5 @@
-import type {BrotliOptions, CompressCallback, InputType} from 'node:zlib';
+// biome-ignore-all lint/suspicious/noExplicitAny: required for this type
+import type { BrotliOptions, CompressCallback, InputType } from "node:zlib";
 
 export type CompressResult = Promise<Parameters<CompressCallback>[1]>;
 export type DecompressResult = Promise<any>;

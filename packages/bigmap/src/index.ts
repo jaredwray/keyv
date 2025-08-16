@@ -1,10 +1,14 @@
-import {Hookified, type HookifiedOptions} from 'hookified';
+import { Hookified, type HookifiedOptions } from "hookified";
 
 export type MapInterfacee<K, V> = {
 	readonly size: number;
 	clear(): void;
 	delete(key: K): boolean;
-	forEach(callbackfn: (value: V, key: K, map: MapInterfacee<K, V>) => void, thisArg?: any): void;
+	forEach(
+		callbackfn: (value: V, key: K, map: MapInterfacee<K, V>) => void,
+		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
+		thisArg?: any,
+	): void;
 	entries(): IterableIterator<[K, V]>;
 	keys(): IterableIterator<K>;
 	values(): IterableIterator<V>;
@@ -14,7 +18,7 @@ export type MapInterfacee<K, V> = {
 	set(key: K, value: V): Map<K, V>;
 };
 
-export type StoreHashFunction = ((key: string, storeSize: number) => number);
+export type StoreHashFunction = (key: string, storeSize: number) => number;
 
 export function defaultHashFunction(key: string, storeSize: number): number {
 	return djb2Hash(key, 0, storeSize - 1);
@@ -25,7 +29,6 @@ export function djb2Hash(string_: string, min = 0, max = 10): number {
 	let hash = 5381;
 
 	for (let i = 0; i < string_.length; i++) {
-		// eslint-disable-next-line no-bitwise, unicorn/prefer-code-point
 		hash = (hash * 33) ^ string_.charCodeAt(i); // 33 is a prime multiplier
 	}
 
@@ -36,7 +39,7 @@ export function djb2Hash(string_: string, min = 0, max = 10): number {
 	return min + (Math.abs(hash) % range);
 }
 
-export type BigMapOptions<K, V> = {
+export type BigMapOptions = {
 	/**
 	 * Optional size of the store. The default is 4 maps objects.
 	 * @default 4
@@ -51,18 +54,21 @@ export type BigMapOptions<K, V> = {
 
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private _storeSize = 4;
-	private _store = Array.from({length: this._storeSize}, () => new Map<K, V>());
+	private _store = Array.from(
+		{ length: this._storeSize },
+		() => new Map<K, V>(),
+	);
 	private _storeHashFunction?: StoreHashFunction;
 
 	/**
 	 * Creates an instance of BigMap.
 	 * @param {BigMapOptions<K, V>} [options] - Optional configuration options for the BigMap.
 	 */
-	constructor(options?: BigMapOptions<K, V>) {
+	constructor(options?: BigMapOptions) {
 		super(options);
 		if (options?.storeSize !== undefined) {
 			if (options.storeSize < 1) {
-				throw new Error('Store size must be at least 1.');
+				throw new Error("Store size must be at least 1.");
 			}
 
 			this.storeSize = options.storeSize;
@@ -89,7 +95,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	public set storeSize(size: number) {
 		if (size < 1) {
-			throw new Error('Store size must be at least 1.');
+			throw new Error("Store size must be at least 1.");
 		}
 
 		this._storeSize = size;
@@ -128,7 +134,9 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	public getStoreMap(index: number): Map<K, V> {
 		if (index < 0 || index >= this._storeSize) {
-			throw new Error(`Index out of bounds: ${index}. Valid range is 0 to ${this._storeSize - 1}.`);
+			throw new Error(
+				`Index out of bounds: ${index}. Valid range is 0 to ${this._storeSize - 1}.`,
+			);
 		}
 
 		return this._store[index];
@@ -139,7 +147,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * This method is called when the BigMap instance is created.
 	 */
 	public initStore(): void {
-		this._store = Array.from({length: this._storeSize}, () => new Map<K, V>());
+		this._store = Array.from(
+			{ length: this._storeSize },
+			() => new Map<K, V>(),
+		);
 	}
 
 	/**
@@ -156,7 +167,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 
 		const storeSize = this._storeSize - 1; // Adjust for zero-based index
 
-		const index = this._storeHashFunction ? this._storeHashFunction(String(key), storeSize) : defaultHashFunction(String(key), storeSize);
+		const index = this._storeHashFunction
+			? this._storeHashFunction(String(key), storeSize)
+			: /* c8 ignore next */
+				defaultHashFunction(String(key), storeSize);
 
 		return this.getStoreMap(index);
 	}
@@ -168,7 +182,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public entries(): IterableIterator<[K, V]> {
 		const entries: Array<[K, V]> = [];
 		for (const store of this._store) {
-			// eslint-disable-next-line unicorn/no-array-for-each
+			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
 			store.forEach((value, key) => entries.push([key, value]));
 		}
 
@@ -182,7 +196,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public keys(): IterableIterator<K> {
 		const keys: K[] = [];
 		for (const store of this._store) {
-			// eslint-disable-next-line unicorn/no-array-for-each
+			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
 			store.forEach((_, key) => keys.push(key));
 		}
 
@@ -196,8 +210,8 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public values(): IterableIterator<V> {
 		const values: V[] = [];
 		for (const store of this._store) {
-			// eslint-disable-next-line unicorn/no-array-for-each
-			store.forEach(value => values.push(value));
+			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
+			store.forEach((value) => values.push(value));
 		}
 
 		return values[Symbol.iterator]();
@@ -210,7 +224,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public [Symbol.iterator](): IterableIterator<[K, V]> {
 		const entries: Array<[K, V]> = [];
 		for (const store of this._store) {
-			// eslint-disable-next-line unicorn/no-array-for-each
+			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
 			store.forEach((value, key) => entries.push([key, value]));
 		}
 
@@ -244,10 +258,12 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {function} callbackfn - The function to execute for each key-value pair.
 	 * @param {any} [thisArg] - An optional value to use as `this` when executing the callback.
 	 */
-	public forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: any): void {
-		// eslint-disable-next-line unicorn/no-array-for-each
-		this._store.forEach(store => {
-			// eslint-disable-next-line unicorn/no-array-for-each, unicorn/no-array-callback-reference, unicorn/no-array-method-this-argument
+	public forEach(
+		callbackfn: (value: V, key: K, map: Map<K, V>) => void,
+		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
+		thisArg?: any,
+	): void {
+		this._store.forEach((store) => {
 			store.forEach(callbackfn, thisArg);
 		});
 		// Note: NEED TO FIX THIS

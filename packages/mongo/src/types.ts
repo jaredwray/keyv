@@ -1,7 +1,11 @@
-import {
-	type MongoClient,
-	type Collection, type Db, type GridFSBucket, type ReadPreference,
-} from 'mongodb';
+// biome-ignore-all lint/suspicious/noExplicitAny: type format
+import type {
+	Collection,
+	Db,
+	GridFSBucket,
+	MongoClient,
+	ReadPreference,
+} from "mongodb";
 
 export type Options = {
 	[key: string]: unknown;

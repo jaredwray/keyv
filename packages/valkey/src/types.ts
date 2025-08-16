@@ -1,4 +1,4 @@
-import {type Redis, type RedisOptions, type Cluster} from 'iovalkey';
+import type { Cluster, Redis, RedisOptions } from "iovalkey";
 
 export type KeyvValkeyOptions = RedisOptions & {
 	uri?: string;
