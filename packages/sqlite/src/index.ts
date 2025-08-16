@@ -48,13 +48,12 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 						resolve(database);
 					}
 				});
-			})
-				.then((database) => ({
-					// @ts-ignore
-					query: promisify(database.all).bind(database),
-					// @ts-ignore
-					close: promisify(database.close).bind(database),
-				}));
+			}).then((database) => ({
+				// @ts-expect-error
+				query: promisify(database.all).bind(database),
+				// @ts-expect-error
+				close: promisify(database.close).bind(database),
+			}));
 
 		this.opts = {
 			table: "keyv",
