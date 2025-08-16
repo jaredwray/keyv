@@ -38,6 +38,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Clustering](#clustering)
 * [Sentinel](#sentinel)
 * [TLS Support](#tls-support)
+* [Keyv Redis Options](#keyv-redis-options)
 * [API](#api)
 * [Using Custom Redis Client Events](#using-custom-redis-client-events)
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
@@ -79,21 +80,20 @@ Here you can pass in the Redis options directly:
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-const redisOptions = {
-  url: 'redis://localhost:6379', // The Redis server URL (use 'rediss' for TLS)
-  password: 'your_password', // Optional password if Redis has authentication enabled
+const uri = "redis://localhost:6379";
 
-  socket: {
-    host: 'localhost', // Hostname of the Redis server
-    port: 6379,        // Port number
-    reconnectStrategy: (retries) => Math.min(retries * 50, 2000), // Custom reconnect logic
-
-    tls: false, // Enable TLS if you need to connect over SSL
-    keepAlive: 30000, // Keep-alive timeout (in milliseconds)
-  }
+// NOTE: please use the settings that you need to configure. Check out Keyv Redis Options section
+const options = {
+  namespace: "test",
+  keyPrefixSeparator: "->",
+  clearBatchSize: 100,
+  useUnlink: true,
+  noNamespaceAffectsAll: true,
 };
 
-const keyv = new Keyv(new KeyvRedis(redisOptions));
+const keyvRedis = new KeyvRedis(uri, options);
+
+const keyv = new Keyv(keyvRedis);
 ```
 
 Or you can create a new Redis instance and pass it in with `KeyvOptions` such as setting the `store`:
@@ -465,6 +465,60 @@ const tlsOptions = {
 const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 ```
 
+# Keyv Redis Options
+
+Here are all the options that you can set on the constructor
+
+```ts
+export type KeyvRedisOptions = {
+	/**
+	 * Namespace for the current instance.
+	 */
+	namespace?: string;
+	/**
+	 * Separator to use between namespace and key.
+	 */
+	keyPrefixSeparator?: string;
+	/**
+	 * Number of keys to delete in a single batch.
+	 */
+	clearBatchSize?: number;
+	/**
+	 * Enable Unlink instead of using Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 */
+	useUnlink?: boolean;
+
+	/**
+	 * Whether to allow clearing all keys when no namespace is set.
+	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * Defaults to `false`.
+	 */
+	noNamespaceAffectsAll?: boolean;
+
+	/**
+	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
+	 * set to true so that it throws an error when trying to connect to the Redis server fails.
+	 */
+	throwOnConnectError?: boolean;
+
+	/**
+	 * This is used to throw an error if at any point there is a failure. Use this if you want to
+	 * ensure that all operations are successful and you want to handle errors. By default, this is
+	 * set to false so that it does not throw an error on every operation and instead emits an error event
+	 * and returns no-op responses.
+	 * @default false
+	 */
+	throwOnErrors?: boolean;
+
+	/**
+	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
+	 * If set, it will throw an error if the connection does not succeed within the specified time.
+	 * @default undefined
+	 */
+	connectionTimeout?: number;
+};
+```
+
 # API
 * **constructor([connection], [options])**
 * **namespace** - The namespace to use for the keys.
@@ -530,13 +584,9 @@ const keyv = new Keyv({ store: redis, namespace: 'my-namespace', useKeyPrefix: f
 
 This will make it so the storage adapter `@keyv/redis` will handle the namespace and not the `keyv` instance. If you leave it on it will just look duplicated like `my-namespace:my-namespace:key`.
 
-
-
 # About Redis Sets and its Support in v4
 
 We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library.
-
-
 
 # Using with NestJS
 
