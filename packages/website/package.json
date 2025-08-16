@@ -19,6 +19,6 @@
   "devDependencies": {
     "docula": "^0.13.1",
     "rimraf": "^6.0.1",
-    "tsx": "^4.20.3"
+    "tsx": "^4.20.4"
   }
 }
