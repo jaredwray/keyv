@@ -26,8 +26,7 @@
     "tsup": "^8.5.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4",
-    "webpack": "^5.101.2",
-    "xo": "^1.2.2"
+    "webpack": "^5.101.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
