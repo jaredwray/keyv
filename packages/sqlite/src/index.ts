@@ -49,9 +49,10 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 					}
 				});
 			})
-				// @ts-expect-error - db is unknown
 				.then((database) => ({
+					// @ts-ignore
 					query: promisify(database.all).bind(database),
+					// @ts-ignore
 					close: promisify(database.close).bind(database),
 				}));
 
