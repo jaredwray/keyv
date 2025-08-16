@@ -1,7 +1,7 @@
-import {defaultSerialize, defaultDeserialize} from '@keyv/serialize';
-import HooksManager from './hooks-manager.js';
-import EventManager from './event-manager.js';
-import StatsManager from './stats-manager.js';
+import { defaultDeserialize, defaultSerialize } from "@keyv/serialize";
+import EventManager from "./event-manager.js";
+import HooksManager from "./hooks-manager.js";
+import StatsManager from "./stats-manager.js";
 
 export type DeserializedData<Value> = {
 	value?: Value;
@@ -9,29 +9,43 @@ export type DeserializedData<Value> = {
 };
 
 export type CompressionAdapter = {
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	compress(value: any, options?: any): Promise<any>;
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	decompress(value: any, options?: any): Promise<any>;
 	serialize<Value>(data: DeserializedData<Value>): Promise<string> | string;
-	deserialize<Value>(data: string): Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
+	deserialize<Value>(
+		data: string,
+	):
+		| Promise<DeserializedData<Value> | undefined>
+		| DeserializedData<Value>
+		| undefined;
 };
 
-export type Serialize = <Value>(data: DeserializedData<Value>) => Promise<string> | string;
+export type Serialize = <Value>(
+	data: DeserializedData<Value>,
+) => Promise<string> | string;
 
-export type Deserialize = <Value>(data: string) => Promise<DeserializedData<Value> | undefined> | DeserializedData<Value> | undefined;
+export type Deserialize = <Value>(
+	data: string,
+) =>
+	| Promise<DeserializedData<Value> | undefined>
+	| DeserializedData<Value>
+	| undefined;
 
 export enum KeyvHooks {
-	PRE_SET = 'preSet',
-	POST_SET = 'postSet',
-	PRE_GET = 'preGet',
-	POST_GET = 'postGet',
-	PRE_GET_MANY = 'preGetMany',
-	POST_GET_MANY = 'postGetMany',
-	PRE_GET_RAW = 'preGetRaw',
-	POST_GET_RAW = 'postGetRaw',
-	PRE_GET_MANY_RAW = 'preGetManyRaw',
-	POST_GET_MANY_RAW = 'postGetManyRaw',
-	PRE_DELETE = 'preDelete',
-	POST_DELETE = 'postDelete',
+	PRE_SET = "preSet",
+	POST_SET = "postSet",
+	PRE_GET = "preGet",
+	POST_GET = "postGet",
+	PRE_GET_MANY = "preGetMany",
+	POST_GET_MANY = "postGetMany",
+	PRE_GET_RAW = "preGetRaw",
+	POST_GET_RAW = "postGetRaw",
+	PRE_GET_MANY_RAW = "preGetManyRaw",
+	POST_GET_MANY_RAW = "postGetManyRaw",
+	PRE_DELETE = "preDelete",
+	POST_DELETE = "postDelete",
 }
 
 export type KeyvEntry = {
@@ -42,6 +56,7 @@ export type KeyvEntry = {
 	/**
 	 * Value to set.
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	value: any;
 	/**
 	 * Time to live in milliseconds.
@@ -55,39 +70,46 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export type IEventEmitter = {
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	on(event: string, listener: (...arguments_: any[]) => void): IEventEmitter;
 };
 
 export type KeyvStoreAdapter = {
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	opts: any;
 	namespace?: string;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	set(key: string, value: any, ttl?: number): any;
-	setMany?(values: Array<{key: string; value: any; ttl?: number}>): Promise<void>;
+	setMany?(
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		values: Array<{ key: string; value: any; ttl?: number }>,
+	): Promise<void>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
 	hasMany?(keys: string[]): Promise<boolean[]>;
 	getMany?<Value>(
-		keys: string[]
+		keys: string[],
 	): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean>;
-	iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
+	iterator?<Value>(
+		namespace?: string,
+	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
 export type KeyvOptions = {
 	/**
 	 * Emit errors
 	 * @default true
-	*/
+	 */
 	emitErrors?: boolean;
 	/**
 	 * Namespace for the current instance.
 	 * @default 'keyv'
-	*/
+	 */
 	namespace?: string;
 	/**
 	 * A custom serialization function.
@@ -97,12 +119,13 @@ export type KeyvOptions = {
 	/**
 	 * A custom deserialization function.
 	 * @default defaultDeserialize using JSON.parse
-	*/
+	 */
 	deserialize?: Deserialize;
 	/**
 	 * The storage adapter instance to be used by Keyv.
 	 * @default new Map() - in-memory store
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	store?: KeyvStoreAdapter | Map<any, any> | any;
 	/**
 	 * Default TTL. Can be overridden by specifying a TTL on `.set()`.
@@ -113,6 +136,7 @@ export type KeyvOptions = {
 	 * Enable compression option
 	 * @default false
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	compression?: CompressionAdapter | any;
 	/**
 	 * Enable or disable statistics (default is false)
@@ -131,21 +155,25 @@ export type KeyvOptions = {
 	throwOnErrors?: boolean;
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
-type KeyvOptions_ = Omit<KeyvOptions, 'store'> & {store: KeyvStoreAdapter | Map<any, any> & KeyvStoreAdapter};
+type KeyvOptions_ = Omit<KeyvOptions, "store"> & {
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	store: KeyvStoreAdapter | (Map<any, any> & KeyvStoreAdapter);
+};
 
+// biome-ignore lint/suspicious/noExplicitAny: type format
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
 
 const iterableAdapters = [
-	'sqlite',
-	'postgres',
-	'mysql',
-	'mongo',
-	'redis',
-	'valkey',
-	'etcd',
+	"sqlite",
+	"postgres",
+	"mysql",
+	"mongo",
+	"redis",
+	"valkey",
+	"etcd",
 ];
 
+// biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends EventManager {
 	opts: KeyvOptions_;
 	iterator?: IteratorFunction;
@@ -165,6 +193,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	/**
 	 * Store
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	private _store: KeyvStoreAdapter | Map<any, any> | any = new Map();
 
 	private _serialize: Serialize | undefined = defaultSerialize;
@@ -181,7 +210,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
-	constructor(store?: KeyvStoreAdapter | KeyvOptions | Map<any, any>, options?: Omit<KeyvOptions, 'store'>);
+	constructor(
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		store?: KeyvStoreAdapter | KeyvOptions | Map<any, any>,
+		options?: Omit<KeyvOptions, "store">,
+	);
 	/**
 	 * Keyv Constructor
 	 * @param {KeyvOptions} options to be provided
@@ -192,14 +225,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {KeyvStoreAdapter | KeyvOptions} store
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
-	constructor(store?: KeyvStoreAdapter | KeyvOptions, options?: Omit<KeyvOptions, 'store'>) {
+	constructor(
+		store?: KeyvStoreAdapter | KeyvOptions,
+		options?: Omit<KeyvOptions, "store">,
+	) {
 		super();
 		options ??= {};
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		store ??= {} as KeyvOptions;
 
 		this.opts = {
-			namespace: 'keyv',
+			namespace: "keyv",
 			serialize: defaultSerialize,
 			deserialize: defaultDeserialize,
 			emitErrors: true,
@@ -221,7 +257,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		this._compression = this.opts.compression;
 
+		// biome-ignore lint/style/noNonNullAssertion: need to fix
 		this._serialize = this.opts.serialize!;
+		// biome-ignore lint/style/noNonNullAssertion: need to fix
 		this._deserialize = this.opts.deserialize!;
 
 		if (this.opts.namespace) {
@@ -230,21 +268,33 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (this._store) {
 			if (!this._isValidStorageAdapter(this._store)) {
-				throw new Error('Invalid storage adapter');
+				throw new Error("Invalid storage adapter");
 			}
 
-			if (typeof this._store.on === 'function') {
-				this._store.on('error', (error: any) => this.emit('error', error));
+			if (typeof this._store.on === "function") {
+				// biome-ignore lint/suspicious/noExplicitAny: type format
+				this._store.on("error", (error: any) => this.emit("error", error));
 			}
 
 			this._store.namespace = this._namespace;
 
 			// Attach iterators
-			// @ts-ignore
-			if (typeof this._store[Symbol.iterator] === 'function' && this._store instanceof Map) {
-				this.iterator = this.generateIterator((this._store as unknown as IteratorFunction));
-			} else if ('iterator' in this._store && this._store.opts && this._checkIterableAdapter()) {
-				this.iterator = this.generateIterator(this._store.iterator!.bind(this._store));
+			if (
+				typeof this._store[Symbol.iterator] === "function" &&
+				this._store instanceof Map
+			) {
+				this.iterator = this.generateIterator(
+					this._store as unknown as IteratorFunction,
+				);
+			} else if (
+				"iterator" in this._store &&
+				this._store.opts &&
+				this._checkIterableAdapter()
+			) {
+				this.iterator = this.generateIterator(
+					// biome-ignore lint/style/noNonNullAssertion: need to fix
+					this._store.iterator!.bind(this._store),
+				);
 			}
 		}
 
@@ -268,6 +318,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	/**
 	 * Get the current store
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public get store(): KeyvStoreAdapter | Map<any, any> | any {
 		return this._store;
 	}
@@ -276,26 +327,37 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Set the current store. This will also set the namespace, event error handler, and generate the iterator. If the store is not valid it will throw an error.
 	 * @param {KeyvStoreAdapter | Map<any, any> | any} store the store to set
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public set store(store: KeyvStoreAdapter | Map<any, any> | any) {
 		if (this._isValidStorageAdapter(store)) {
 			this._store = store;
 			this.opts.store = store;
 
-			if (typeof store.on === 'function') {
-				store.on('error', (error: any) => this.emit('error', error));
+			if (typeof store.on === "function") {
+				// biome-ignore lint/suspicious/noExplicitAny: type format
+				store.on("error", (error: any) => this.emit("error", error));
 			}
 
 			if (this._namespace) {
 				this._store.namespace = this._namespace;
 			}
 
-			if (typeof store[Symbol.iterator] === 'function' && store instanceof Map) {
-				this.iterator = this.generateIterator((store as unknown as IteratorFunction));
-			} else if ('iterator' in store && store.opts && this._checkIterableAdapter()) {
-				this.iterator = this.generateIterator(store.iterator!.bind(store));
+			if (
+				typeof store[Symbol.iterator] === "function" &&
+				store instanceof Map
+			) {
+				this.iterator = this.generateIterator(
+					store as unknown as IteratorFunction,
+				);
+			} else if (
+				"iterator" in store &&
+				store.opts &&
+				this._checkIterableAdapter()
+			) {
+				this.iterator = this.generateIterator(store.iterator?.bind(store));
 			}
 		} else {
-			throw new Error('Invalid storage adapter');
+			throw new Error("Invalid storage adapter");
 		}
 	}
 
@@ -423,16 +485,21 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
-		const function_: IteratorFunction = async function * (this: any) {
-			for await (const [key, raw] of (typeof iterator === 'function'
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		const function_: IteratorFunction = async function* (this: any) {
+			for await (const [key, raw] of typeof iterator === "function"
 				? iterator(this._store.namespace)
-				: iterator)) {
+				: iterator) {
 				const data = await this.deserializeData(raw);
-				if (this._useKeyPrefix && this._store.namespace && !key.includes(this._store.namespace)) {
+				if (
+					this._useKeyPrefix &&
+					this._store.namespace &&
+					!key.includes(this._store.namespace)
+				) {
 					continue;
 				}
 
-				if (typeof data.expires === 'number' && Date.now() > data.expires) {
+				if (typeof data.expires === "number" && Date.now() > data.expires) {
 					this.delete(key);
 					continue;
 				}
@@ -445,8 +512,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	_checkIterableAdapter(): boolean {
-		return iterableAdapters.includes((this._store.opts.dialect as string))
-			|| iterableAdapters.some(element => (this._store.opts.url as string).includes(element));
+		return (
+			iterableAdapters.includes(this._store.opts.dialect as string) ||
+			iterableAdapters.some((element) =>
+				(this._store.opts.url as string).includes(element),
+			)
+		);
 	}
 
 	_getKeyPrefix(key: string): string {
@@ -470,7 +541,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return keys;
 		}
 
-		return keys.map(key => `${this._namespace}:${key}`);
+		return keys.map((key) => `${this._namespace}:${key}`);
 	}
 
 	_getKeyUnprefix(key: string): string {
@@ -478,20 +549,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return key;
 		}
 
-		return key
-			.split(':')
-			.splice(1)
-			.join(':');
+		return key.split(":").splice(1).join(":");
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	_isValidStorageAdapter(store: KeyvStoreAdapter | any): boolean {
 		return (
-			store instanceof Map || (
-				typeof store.get === 'function'
-				&& typeof store.set === 'function'
-				&& typeof store.delete === 'function'
-				&& typeof store.clear === 'function'
-			)
+			store instanceof Map ||
+			(typeof store.get === "function" &&
+				typeof store.set === "function" &&
+				typeof store.delete === "function" &&
+				typeof store.clear === "function")
 		);
 	}
 
@@ -500,27 +568,51 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {string | string[]} key passing in a single key or multiple as an array
 	 * @param {{raw: boolean} | undefined} options can pass in to return the raw value by setting { raw: true }
 	 */
-	async get<Value = GenericValue>(key: string, options?: {raw: false}): Promise<StoredDataNoRaw<Value>>;
-	async get<Value = GenericValue>(key: string, options?: {raw: true}): Promise<StoredDataRaw<Value>>;
-	async get<Value = GenericValue>(key: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
-	async get<Value = GenericValue>(key: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
+	async get<Value = GenericValue>(
+		key: string,
+		options?: { raw: false },
+	): Promise<StoredDataNoRaw<Value>>;
+	async get<Value = GenericValue>(
+		key: string,
+		options?: { raw: true },
+	): Promise<StoredDataRaw<Value>>;
+	async get<Value = GenericValue>(
+		key: string[],
+		options?: { raw: false },
+	): Promise<Array<StoredDataNoRaw<Value>>>;
+	async get<Value = GenericValue>(
+		key: string[],
+		options?: { raw: true },
+	): Promise<Array<StoredDataRaw<Value>>>;
 	// eslint-disable-next-line @stylistic/max-len
-	async get<Value = GenericValue>(key: string | string[], options?: {raw: boolean}): Promise<StoredDataNoRaw<Value> | Array<StoredDataNoRaw<Value>> | StoredDataRaw<Value> | Array<StoredDataRaw<Value>>> {
-		const {store} = this.opts;
+	async get<Value = GenericValue>(
+		key: string | string[],
+		options?: { raw: boolean },
+	): Promise<
+		| StoredDataNoRaw<Value>
+		| Array<StoredDataNoRaw<Value>>
+		| StoredDataRaw<Value>
+		| Array<StoredDataRaw<Value>>
+	> {
+		const { store } = this.opts;
 		const isArray = Array.isArray(key);
-		const keyPrefixed = isArray ? this._getKeyPrefixArray(key) : this._getKeyPrefix(key);
+		const keyPrefixed = isArray
+			? this._getKeyPrefixArray(key)
+			: this._getKeyPrefix(key);
 
-		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
+		const isDataExpired = (data: DeserializedData<Value>): boolean =>
+			typeof data.expires === "number" && Date.now() > data.expires;
 
 		if (isArray) {
 			if (options?.raw === true) {
-				return this.getMany<Value>(key, {raw: true});
+				return this.getMany<Value>(key, { raw: true });
 			}
 
-			return this.getMany<Value>(key, {raw: false});
+			return this.getMany<Value>(key, { raw: false });
 		}
 
-		this.hooks.trigger(KeyvHooks.PRE_GET, {key: keyPrefixed});
+		this.hooks.trigger(KeyvHooks.PRE_GET, { key: keyPrefixed });
+		// biome-ignore lint/suspicious/noImplicitAnyLet: need to fix
 		let rawData;
 		try {
 			rawData = await store.get<Value>(keyPrefixed as string);
@@ -530,7 +622,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 			}
 		}
 
-		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
+		const deserializedData =
+			typeof rawData === "string" || this.opts.compression
+				? await this.deserializeData<Value>(rawData as string)
+				: rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
 			this.stats.miss();
@@ -543,9 +638,14 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return undefined;
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_GET, {key: keyPrefixed, value: deserializedData});
+		this.hooks.trigger(KeyvHooks.POST_GET, {
+			key: keyPrefixed,
+			value: deserializedData,
+		});
 		this.stats.hit();
-		return (options?.raw) ? deserializedData : (deserializedData as DeserializedData<Value>).value;
+		return options?.raw
+			? deserializedData
+			: (deserializedData as DeserializedData<Value>).value;
 	}
 
 	/**
@@ -553,19 +653,32 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {string[]} keys passing in a single key or multiple as an array
 	 * @param {{raw: boolean} | undefined} options can pass in to return the raw value by setting { raw: true }
 	 */
-	public async getMany<Value = GenericValue>(keys: string[], options?: {raw: false}): Promise<Array<StoredDataNoRaw<Value>>>;
-	public async getMany<Value = GenericValue>(keys: string[], options?: {raw: true}): Promise<Array<StoredDataRaw<Value>>>;
-	public async getMany<Value = GenericValue>(keys: string[], options?: {raw: boolean}): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
-		const {store} = this.opts;
+	public async getMany<Value = GenericValue>(
+		keys: string[],
+		options?: { raw: false },
+	): Promise<Array<StoredDataNoRaw<Value>>>;
+	public async getMany<Value = GenericValue>(
+		keys: string[],
+		options?: { raw: true },
+	): Promise<Array<StoredDataRaw<Value>>>;
+	public async getMany<Value = GenericValue>(
+		keys: string[],
+		options?: { raw: boolean },
+	): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
+		const { store } = this.opts;
 		const keyPrefixed = this._getKeyPrefixArray(keys);
 
-		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
+		const isDataExpired = (data: DeserializedData<Value>): boolean =>
+			typeof data.expires === "number" && Date.now() > data.expires;
 
-		this.hooks.trigger(KeyvHooks.PRE_GET_MANY, {keys: keyPrefixed});
+		this.hooks.trigger(KeyvHooks.PRE_GET_MANY, { keys: keyPrefixed });
 		if (store.getMany === undefined) {
-			const promises = (keyPrefixed).map(async key => {
+			const promises = keyPrefixed.map(async (key) => {
 				const rawData = await store.get<Value>(key);
-				const deserializedRow = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
+				const deserializedRow =
+					typeof rawData === "string" || this.opts.compression
+						? await this.deserializeData<Value>(rawData as string)
+						: rawData;
 
 				if (deserializedRow === undefined || deserializedRow === null) {
 					return undefined;
@@ -576,11 +689,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 					return undefined;
 				}
 
-				return (options?.raw) ? deserializedRow as StoredDataRaw<Value> : (deserializedRow as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+				return options?.raw
+					? (deserializedRow as StoredDataRaw<Value>)
+					: ((deserializedRow as DeserializedData<Value>)
+							.value as StoredDataNoRaw<Value>);
 			});
 
 			const deserializedRows = await Promise.allSettled(promises);
-			const result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+			const result = deserializedRows.map(
+				// biome-ignore lint/suspicious/noExplicitAny: type format
+				(row) => (row as PromiseFulfilledResult<any>).value,
+			);
 			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
 			if (result.length > 0) {
 				this.stats.hit();
@@ -597,7 +716,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		for (const index in rawData) {
 			let row = rawData[index];
 
-			if ((typeof row === 'string')) {
+			if (typeof row === "string") {
 				// eslint-disable-next-line no-await-in-loop
 				row = await this.deserializeData<Value>(row);
 			}
@@ -613,7 +732,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 				continue;
 			}
 
-			const value = (options?.raw) ? row as StoredDataRaw<Value> : (row as DeserializedData<Value>).value as StoredDataNoRaw<Value>;
+			const value = options?.raw
+				? (row as StoredDataRaw<Value>)
+				: ((row as DeserializedData<Value>).value as StoredDataNoRaw<Value>);
 			result.push(value);
 		}
 
@@ -626,7 +747,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 			this.stats.hit();
 		}
 
-		return result as (Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>);
+		return result as
+			| Array<StoredDataNoRaw<Value>>
+			| Array<StoredDataRaw<Value>>;
 	}
 
 	/**
@@ -634,11 +757,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {string} key the key to get
 	 * @returns {Promise<StoredDataRaw<Value> | undefined>} will return a StoredDataRaw<Value> or undefined if the key does not exist or is expired.
 	 */
-	public async getRaw<Value = GenericValue>(key: string): Promise<StoredDataRaw<Value> | undefined> {
-		const {store} = this.opts;
+	public async getRaw<Value = GenericValue>(
+		key: string,
+	): Promise<StoredDataRaw<Value> | undefined> {
+		const { store } = this.opts;
 		const keyPrefixed = this._getKeyPrefix(key);
 
-		this.hooks.trigger(KeyvHooks.PRE_GET_RAW, {key: keyPrefixed});
+		this.hooks.trigger(KeyvHooks.PRE_GET_RAW, { key: keyPrefixed });
 		const rawData = await store.get(keyPrefixed);
 
 		if (rawData === undefined || rawData === null) {
@@ -647,13 +772,19 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		// Check if the data is expired
-		const deserializedData = (typeof rawData === 'string' || this.opts.compression) ? await this.deserializeData<Value>(rawData as string) : rawData;
+		/* c8 ignore next 5 */
+		const deserializedData =
+			typeof rawData === "string" || this.opts.compression
+				? await this.deserializeData<Value>(rawData as string)
+				: rawData;
 
 		if (
-			deserializedData !== undefined
-			&& (deserializedData as DeserializedData<Value>).expires !== undefined
-			&& (deserializedData as DeserializedData<Value>).expires !== null
-			&& (deserializedData as DeserializedData<Value>).expires! < Date.now()) {
+			deserializedData !== undefined &&
+			(deserializedData as DeserializedData<Value>).expires !== undefined &&
+			(deserializedData as DeserializedData<Value>).expires !== null &&
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
+			(deserializedData as DeserializedData<Value>).expires! < Date.now()
+		) {
 			this.stats.miss();
 			await this.delete(key);
 			return undefined;
@@ -662,7 +793,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 		// Add a hit
 		this.stats.hit();
 
-		this.hooks.trigger(KeyvHooks.POST_GET_RAW, {key: keyPrefixed, value: deserializedData});
+		this.hooks.trigger(KeyvHooks.POST_GET_RAW, {
+			key: keyPrefixed,
+			value: deserializedData,
+		});
 
 		return deserializedData;
 	}
@@ -671,17 +805,24 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Get the raw values of many keys. This is the replacement for setting raw to true in the getMany() method.
 	 * @param {string[]} keys the keys to get
 	 * @returns {Promise<Array<StoredDataRaw<Value>>>} will return an array of StoredDataRaw<Value> or undefined if the key does not exist or is expired.
-	*/
-	public async getManyRaw<Value = GenericValue>(keys: string[]): Promise<Array<StoredDataRaw<Value>>> {
-		const {store} = this.opts;
+	 */
+	public async getManyRaw<Value = GenericValue>(
+		keys: string[],
+	): Promise<Array<StoredDataRaw<Value>>> {
+		const { store } = this.opts;
 		const keyPrefixed = this._getKeyPrefixArray(keys);
 
 		if (keys.length === 0) {
-			const result = Array.from({length: keys.length}).fill(undefined) as Array<StoredDataRaw<Value>>;
+			const result = Array.from({ length: keys.length }).fill(
+				undefined,
+			) as Array<StoredDataRaw<Value>>;
 			// Add in misses
 			this.stats.misses += keys.length;
 			// Trigger the post get many raw hook
-			this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {keys: keyPrefixed, values: result});
+			this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {
+				keys: keyPrefixed,
+				values: result,
+			});
 			return result;
 		}
 
@@ -689,7 +830,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		// Check to see if the store has a getMany method
 		if (store.getMany === undefined) {
 			// If not then we will get each key individually
-			const promises = keyPrefixed.map(async key => {
+			const promises = keyPrefixed.map(async (key) => {
 				const rawData = await store.get<Value>(key);
 				if (rawData !== undefined && rawData !== null) {
 					return this.deserializeData<Value>(rawData as string);
@@ -699,7 +840,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 			});
 
 			const deserializedRows = await Promise.allSettled(promises);
-			result = deserializedRows.map(row => (row as PromiseFulfilledResult<any>).value);
+			result = deserializedRows.map(
+				// biome-ignore lint/suspicious/noExplicitAny: type format
+				(row) => (row as PromiseFulfilledResult<any>).value,
+			);
 		} else {
 			const rawData = await store.getMany(keyPrefixed);
 
@@ -707,7 +851,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				if (row !== undefined && row !== null) {
 					// eslint-disable-next-line no-await-in-loop
 					result.push(await this.deserializeData<Value>(row));
-				/* c8 ignore next 3 */
+					/* c8 ignore next 3 */
 				} else {
 					result.push(undefined);
 				}
@@ -716,7 +860,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		// Filter out any expired keys and delete them
 		const expiredKeys = [];
-		const isDataExpired = (data: DeserializedData<Value>): boolean => typeof data.expires === 'number' && Date.now() > data.expires;
+		const isDataExpired = (data: DeserializedData<Value>): boolean =>
+			typeof data.expires === "number" && Date.now() > data.expires;
 
 		for (const [index, row] of result.entries()) {
 			if (row !== undefined && isDataExpired(row)) {
@@ -732,7 +877,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 		// Add in hits and misses
 		this.stats.hitsOrMisses(result);
 		// Trigger the post get many raw hook
-		this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {keys: keyPrefixed, values: result});
+		this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {
+			keys: keyPrefixed,
+			values: result,
+		});
 		return result;
 	}
 
@@ -743,8 +891,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {number} [ttl] time to live in milliseconds
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
-	async set<Value = GenericValue>(key: string, value: Value, ttl?: number): Promise<boolean> {
-		const data = {key, value, ttl};
+	async set<Value = GenericValue>(
+		key: string,
+		value: Value,
+		ttl?: number,
+	): Promise<boolean> {
+		const data = { key, value, ttl };
 		this.hooks.trigger(KeyvHooks.PRE_SET, data);
 		const keyPrefixed = this._getKeyPrefix(data.key);
 
@@ -754,16 +906,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 			data.ttl = undefined;
 		}
 
-		const {store} = this.opts;
+		const { store } = this.opts;
 
-		const expires = (typeof data.ttl === 'number') ? (Date.now() + data.ttl) : undefined;
+		const expires =
+			typeof data.ttl === "number" ? Date.now() + data.ttl : undefined;
 
-		if (typeof data.value === 'symbol') {
-			this.emit('error', 'symbol cannot be serialized');
-			throw new Error('symbol cannot be serialized');
+		if (typeof data.value === "symbol") {
+			this.emit("error", "symbol cannot be serialized");
+			throw new Error("symbol cannot be serialized");
 		}
 
-		const formattedValue = {value: data.value, expires};
+		const formattedValue = { value: data.value, expires };
 		const serializedValue = await this.serializeData(formattedValue);
 
 		let result = true;
@@ -771,18 +924,22 @@ export class Keyv<GenericValue = any> extends EventManager {
 		try {
 			const value = await store.set(keyPrefixed, serializedValue, data.ttl);
 
-			if (typeof value === 'boolean') {
+			if (typeof value === "boolean") {
 				result = value;
 			}
 		} catch (error) {
 			result = false;
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_SET, {key: keyPrefixed, value: serializedValue, ttl});
+		this.hooks.trigger(KeyvHooks.POST_SET, {
+			key: keyPrefixed,
+			value: serializedValue,
+			ttl,
+		});
 		this.stats.set();
 
 		return result;
@@ -793,7 +950,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {Array<KeyvEntry>} entries the entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
-	async setMany<Value = GenericValue>(entries: KeyvEntry[]): Promise<boolean[]> {
+	// biome-ignore lint/correctness/noUnusedVariables: type format
+	async setMany<Value = GenericValue>(
+		entries: KeyvEntry[],
+	): Promise<boolean[]> {
 		let results: boolean[] = [];
 
 		try {
@@ -807,30 +967,33 @@ export class Keyv<GenericValue = any> extends EventManager {
 				const promiseResults = await Promise.all(promises);
 				results = promiseResults;
 			} else {
-				const serializedEntries = await Promise.all(entries.map(async ({key, value, ttl}) => {
-					ttl ??= this._ttl;
+				const serializedEntries = await Promise.all(
+					entries.map(async ({ key, value, ttl }) => {
+						ttl ??= this._ttl;
 
-					/* c8 ignore next 3 */
-					if (ttl === 0) {
-						ttl = undefined;
-					}
+						/* c8 ignore next 3 */
+						if (ttl === 0) {
+							ttl = undefined;
+						}
 
-					const expires = (typeof ttl === 'number') ? (Date.now() + ttl) : undefined;
+						const expires =
+							typeof ttl === "number" ? Date.now() + ttl : undefined;
 
-					/* c8 ignore next 4 */
-					if (typeof value === 'symbol') {
-						this.emit('error', 'symbol cannot be serialized');
-						throw new Error('symbol cannot be serialized');
-					}
+						/* c8 ignore next 4 */
+						if (typeof value === "symbol") {
+							this.emit("error", "symbol cannot be serialized");
+							throw new Error("symbol cannot be serialized");
+						}
 
-					const formattedValue = {value, expires};
-					const serializedValue = await this.serializeData(formattedValue);
-					return {key, value: serializedValue, ttl};
-				}));
+						const formattedValue = { value, expires };
+						const serializedValue = await this.serializeData(formattedValue);
+						return { key, value: serializedValue, ttl };
+					}),
+				);
 				results = await this._store.setMany(serializedEntries);
 			}
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 
 			if (this._throwOnErrors) {
 				throw error;
@@ -848,31 +1011,34 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
 	 */
 	public async delete(key: string | string[]): Promise<boolean> {
-		const {store} = this.opts;
+		const { store } = this.opts;
 		if (Array.isArray(key)) {
 			return this.deleteMany(key);
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
+		this.hooks.trigger(KeyvHooks.PRE_DELETE, { key: keyPrefixed });
 
 		let result = true;
 
 		try {
 			const value = await store.delete(keyPrefixed);
 
-			if (typeof value === 'boolean') {
+			if (typeof value === "boolean") {
 				result = value;
 			}
 		} catch (error) {
 			result = false;
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: result});
+		this.hooks.trigger(KeyvHooks.POST_DELETE, {
+			key: keyPrefixed,
+			value: result,
+		});
 		this.stats.delete();
 
 		return result;
@@ -885,21 +1051,24 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		try {
-			const {store} = this.opts;
+			const { store } = this.opts;
 			const keyPrefixed = this._getKeyPrefixArray(keys);
-			this.hooks.trigger(KeyvHooks.PRE_DELETE, {key: keyPrefixed});
+			this.hooks.trigger(KeyvHooks.PRE_DELETE, { key: keyPrefixed });
 			if (store.deleteMany !== undefined) {
 				return await store.deleteMany(keyPrefixed);
 			}
 
-			const promises = keyPrefixed.map(async key => store.delete(key));
+			const promises = keyPrefixed.map(async (key) => store.delete(key));
 
 			const results = await Promise.all(promises);
 			const returnResult = results.every(Boolean);
-			this.hooks.trigger(KeyvHooks.POST_DELETE, {key: keyPrefixed, value: returnResult});
+			this.hooks.trigger(KeyvHooks.POST_DELETE, {
+				key: keyPrefixed,
+				value: returnResult,
+			});
 			return returnResult;
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 
 			if (this._throwOnErrors) {
 				throw error;
@@ -914,13 +1083,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {void}
 	 */
 	async clear(): Promise<void> {
-		this.emit('clear');
-		const {store} = this.opts;
+		this.emit("clear");
+		const { store } = this.opts;
 
 		try {
 			await store.clear();
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -940,17 +1109,18 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		const {store} = this.opts;
+		const { store } = this.opts;
 		if (store.has !== undefined && !(store instanceof Map)) {
 			return store.has(keyPrefixed);
 		}
 
+		// biome-ignore lint/suspicious/noExplicitAny: type format
 		let rawData: any;
 
 		try {
 			rawData = await store.get(keyPrefixed);
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -959,7 +1129,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		if (rawData) {
-			const data = await this.deserializeData(rawData) as any;
+			// biome-ignore lint/suspicious/noExplicitAny: type format
+			const data = (await this.deserializeData(rawData)) as any;
 			if (data) {
 				if (data.expires === undefined || data.expires === null) {
 					return true;
@@ -979,7 +1150,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const keyPrefixed = this._getKeyPrefixArray(keys);
-		const {store} = this.opts;
+		const { store } = this.opts;
 		if (store.hasMany !== undefined) {
 			return store.hasMany(keyPrefixed);
 		}
@@ -998,44 +1169,55 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {Promise<void>}
 	 */
 	async disconnect(): Promise<void> {
-		const {store} = this.opts;
-		this.emit('disconnect');
-		if (typeof store.disconnect === 'function') {
+		const { store } = this.opts;
+		this.emit("disconnect");
+		if (typeof store.disconnect === "function") {
 			return store.disconnect();
 		}
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public emit(event: string, ...arguments_: any[]): void {
-		if (event === 'error' && !this.opts.emitErrors) {
+		if (event === "error" && !this.opts.emitErrors) {
 			return;
 		}
 
 		super.emit(event, ...arguments_);
 	}
 
-	public async serializeData<T>(data: DeserializedData<T>): Promise<string | DeserializedData<T>> {
+	public async serializeData<T>(
+		data: DeserializedData<T>,
+	): Promise<string | DeserializedData<T>> {
 		if (!this._serialize) {
 			return data;
 		}
 
 		if (this._compression?.compress) {
-			return this._serialize({value: await this._compression.compress(data.value), expires: data.expires});
+			return this._serialize({
+				value: await this._compression.compress(data.value),
+				expires: data.expires,
+			});
 		}
 
 		return this._serialize(data);
 	}
 
-	public async deserializeData<T>(data: string | DeserializedData<T>): Promise<DeserializedData<T> | undefined> {
+	public async deserializeData<T>(
+		data: string | DeserializedData<T>,
+	): Promise<DeserializedData<T> | undefined> {
 		if (!this._deserialize) {
 			return data as DeserializedData<T>;
 		}
 
-		if (this._compression?.decompress && typeof data === 'string') {
+		if (this._compression?.decompress && typeof data === "string") {
 			const result = await this._deserialize(data);
-			return {value: await this._compression.decompress(result?.value), expires: result?.expires};
+			return {
+				value: await this._compression.decompress(result?.value),
+				expires: result?.expires,
+			};
 		}
 
-		if (typeof data === 'string') {
+		if (typeof data === "string") {
 			return this._deserialize(data);
 		}
 

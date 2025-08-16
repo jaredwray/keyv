@@ -1,5 +1,6 @@
-import EventManager from './event-manager.js';
+import EventManager from "./event-manager.js";
 
+// biome-ignore lint/suspicious/noExplicitAny: type format
 type HookHandler = (...arguments_: any[]) => void;
 
 class HooksManager extends EventManager {
@@ -32,6 +33,7 @@ class HooksManager extends EventManager {
 	}
 
 	// Triggers all handlers for a specific event with provided data
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	trigger(event: string, data: any) {
 		const eventHandlers = this._hookHandlers.get(event);
 		if (eventHandlers) {
@@ -39,7 +41,12 @@ class HooksManager extends EventManager {
 				try {
 					handler(data);
 				} catch (error) {
-					this.emit('error', new Error(`Error in hook handler for event "${event}": ${(error as Error).message}`));
+					this.emit(
+						"error",
+						new Error(
+							`Error in hook handler for event "${event}": ${(error as Error).message}`,
+						),
+					);
 				}
 			}
 		}

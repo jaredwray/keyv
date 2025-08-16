@@ -1,7 +1,11 @@
-import EventManager from './event-manager.js';
+// biome-ignore-all lint/suspicious/noExplicitAny: map type
+import EventManager from "./event-manager.js";
 import {
-	Keyv, type KeyvStoreAdapter, type KeyvEntry, type StoredData,
-} from './index.js';
+	Keyv,
+	type KeyvEntry,
+	type KeyvStoreAdapter,
+	type StoredData,
+} from "./index.js";
 
 export type KeyvGenericStoreOptions = {
 	namespace?: string | (() => string);
@@ -37,9 +41,12 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	private readonly _options?: KeyvGenericStoreOptions;
 	private _store: Map<any, any> | KeyvMapType;
 	private _namespace?: string | (() => string);
-	private _keySeparator = '::';
+	private _keySeparator = "::";
 
-	constructor(store: Map<any, any> | KeyvMapType, options?: KeyvGenericStoreOptions) {
+	constructor(
+		store: Map<any, any> | KeyvMapType,
+		options?: KeyvGenericStoreOptions,
+	) {
 		super();
 		this._store = store;
 		this._options = options;
@@ -82,7 +89,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	}
 
 	public getNamespace() {
-		if (typeof this._namespace === 'function') {
+		if (typeof this._namespace === "function") {
 			return this._namespace();
 		}
 
@@ -104,10 +111,10 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	public getKeyPrefixData(key: string) {
 		if (key.includes(this._keySeparator)) {
 			const [namespace, ...rest] = key.split(this._keySeparator);
-			return {namespace, key: rest.join(this._keySeparator)};
+			return { namespace, key: rest.join(this._keySeparator) };
 		}
 
-		return {key};
+		return { key };
 	}
 
 	async get<T>(key: string): Promise<StoredData<T> | undefined> {
@@ -128,7 +135,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 
 	async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
-		const data = {value, expires: ttl ? Date.now() + ttl : undefined};
+		const data = { value, expires: ttl ? Date.now() + ttl : undefined };
 		this._store.set(keyPrefix, data, ttl);
 		return true;
 	}
@@ -136,7 +143,6 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	async setMany(entries: KeyvEntry[]): Promise<void> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
-			// eslint-disable-next-line no-await-in-loop
 			const result = await this.set(entry.key, entry.value, entry.ttl);
 			results.push(result);
 		}
@@ -159,7 +165,6 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
 		const values = [];
 		for (const key of keys) {
-			// eslint-disable-next-line no-await-in-loop
 			const value = await this.get(key);
 			values.push(value);
 		}
@@ -174,7 +179,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 				this._store.delete(keyPrefix);
 			}
 		} catch (error) {
-			this.emit('error', error);
+			this.emit("error", error);
 			return false;
 		}
 
@@ -182,8 +187,11 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	}
 
 	/* c8 ignore next 14 */
-	iterator<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
-		throw new Error('Method not implemented.');
+	iterator<Value>(
+		// biome-ignore lint/correctness/noUnusedFunctionParameters: type format
+		namespace?: string,
+	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
+		throw new Error("Method not implemented.");
 	}
 }
 
@@ -191,9 +199,12 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
  * Create a Keyv instance with a generic store that is optimized for in-memory storage.
  * This removes Keyv serialization and deserialization overhead, keyPrefix from Keyv.
  */
-export function createKeyv(store: Map<any, any> | KeyvMapType, options?: KeyvGenericStoreOptions) {
+export function createKeyv(
+	store: Map<any, any> | KeyvMapType,
+	options?: KeyvGenericStoreOptions,
+) {
 	const genericStore = new KeyvGenericStore(store, options);
-	const keyv = new Keyv({store: genericStore, useKeyPrefix: false});
+	const keyv = new Keyv({ store: genericStore, useKeyPrefix: false });
 	keyv.serialize = undefined;
 	keyv.deserialize = undefined;
 	return keyv;

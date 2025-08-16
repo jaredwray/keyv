@@ -15,19 +15,9 @@
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
-		"test": "xo --fix && vitest run --coverage",
-		"test:ci": "xo && vitest --run --sequence.setupFiles=list --coverage",
+		"test": "biome check --write && vitest run --coverage",
+		"test:ci": "biome check && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist"
-	},
-	"xo": {
-		"rules": {
-			"@typescript-eslint/ban-ts-comment": "off",
-			"@typescript-eslint/no-unsafe-call": "off",
-			"@typescript-eslint/no-unsafe-return": "off",
-			"@typescript-eslint/no-unsafe-assignment": "off",
-			"@typescript-eslint/no-unsafe-argument": "off",
-			"@typescript-eslint/no-confusing-void-expression": "off"
-		}
 	},
 	"repository": {
 		"type": "git",
@@ -64,6 +54,7 @@
 		"@keyv/serialize": "workspace:^"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.2.0",
 		"@faker-js/faker": "^9.9.0",
 		"@keyv/compress-brotli": "workspace:^",
 		"@keyv/compress-gzip": "workspace:^",
@@ -76,8 +67,7 @@
 		"rimraf": "^6.0.1",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.32.0",
-		"vitest": "^3.2.4",
-		"xo": "^1.2.0"
+		"vitest": "^3.2.4"
 	},
 	"tsd": {
 		"directory": "test"
