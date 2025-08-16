@@ -74,18 +74,15 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 			promises.push(this.get(key));
 		}
 
-		return (
-			Promise.allSettled(promises)
-				.then((values) => {
-					const data: Array<StoredData<Value>> = [];
-					for (const value of values) {
-						// @ts-expect-error - value is an object
-						data.push(value.value as StoredData<Value>);
-					}
+		return Promise.allSettled(promises).then((values) => {
+			const data: Array<StoredData<Value>> = [];
+			for (const value of values) {
+				// @ts-expect-error - value is an object
+				data.push(value.value as StoredData<Value>);
+			}
 
-					return data;
-				})
-		);
+			return data;
+		});
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
