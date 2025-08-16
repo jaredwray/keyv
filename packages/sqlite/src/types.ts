@@ -1,4 +1,8 @@
-export type DbQuery = (sqlString: string, ...parameter: unknown[]) => Promise<any>;
+export type DbQuery = (
+	sqlString: string,
+	...parameter: unknown[]
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+) => Promise<any>;
 export type DbClose = () => Promise<void>;
 
 export type KeyvSqliteOptions = {
@@ -9,11 +13,10 @@ export type KeyvSqliteOptions = {
 	keySize?: number;
 	db?: string;
 	iterationLimit?: number | string;
-	connect?: () => Promise<
-		{
-			query: DbQuery;
-			close: DbClose;
-		}>;
+	connect?: () => Promise<{
+		query: DbQuery;
+		close: DbClose;
+	}>;
 };
 
 export type Db = {
