@@ -1,11 +1,11 @@
-import mysql, {type Pool} from 'mysql2';
+import mysql, { type Pool } from "mysql2";
 
 let mysqlPool: Pool | undefined;
 let globalUri: string | undefined;
 
 export const parseConnectionString = (connectionString: string) => {
 	// Handle # character as URL breaks when it is present
-	connectionString = connectionString.replace(/#/g, '%23');
+	connectionString = connectionString.replace(/#/g, "%23");
 	// Create a new URL object
 	const url = new URL(connectionString);
 
@@ -37,7 +37,7 @@ export const pool = (uri: string, options = {}) => {
 	}
 
 	const connectObject = parseConnectionString(uri);
-	const poolOptions = {...connectObject, ...options};
+	const poolOptions = { ...connectObject, ...options };
 
 	mysqlPool ??= mysql.createPool(poolOptions);
 	return mysqlPool.promise();

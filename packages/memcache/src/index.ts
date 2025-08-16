@@ -25,13 +25,11 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		};
 
 		if (options.uri && options.url === undefined) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			options.url = options.uri;
 		}
 
 		if (uri === undefined) {
 			uri = "localhost:11211";
-			// eslint-disable-next-line no-multi-assign
 			options.url = options.uri = uri;
 		}
 
@@ -59,7 +57,6 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 							expires: 0,
 						};
 					} else {
-						// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
 						value_ = this.opts.deserialize
 							? this.opts.deserialize(value)
 							: defaultDeserialize(value);
@@ -79,7 +76,6 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 
 		return (
 			Promise.allSettled(promises)
-				// eslint-disable-next-line promise/prefer-await-to-then
 				.then((values) => {
 					const data: Array<StoredData<Value>> = [];
 					for (const value of values) {
@@ -97,11 +93,9 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		const options: KeyvMemcacheOptions = {};
 
 		if (ttl !== undefined) {
-			// eslint-disable-next-line no-multi-assign
 			options.expires = options.ttl = Math.floor(ttl / 1000); // Moving to seconds
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-restricted-types
 		await this.client.set(
 			this.formatKey(key),
 			value as unknown as Buffer,

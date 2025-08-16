@@ -60,7 +60,6 @@ test.it("format key for no namespace", (t) => {
 });
 
 test.it("format key for namespace", (t) => {
-	// eslint-disable-next-line no-new
 	new Keyv({ store: keyvMemcache });
 	t.expect(keyvMemcache.formatKey("foo")).toBe("keyv:foo");
 });

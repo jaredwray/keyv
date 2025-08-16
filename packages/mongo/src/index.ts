@@ -63,7 +63,6 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					url = this.opts.url;
 				}
 
-				// eslint-disable-next-line new-cap
 				const client = new mongoClient(url, mongoOptions);
 				await client.connect();
 
