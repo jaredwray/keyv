@@ -1,8 +1,10 @@
-import {type StoredData} from 'keyv';
+import type { StoredData } from "keyv";
 
 export type GetOutput<Value> = Promise<Value | undefined>;
 
-export type GetManyOutput<Value> = Promise<Array<StoredData<Value | undefined> | undefined>>;
+export type GetManyOutput<Value> = Promise<
+	Array<StoredData<Value | undefined> | undefined>
+>;
 
 export type SetOutput = Promise<void>;
 
