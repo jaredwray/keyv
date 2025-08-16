@@ -26,7 +26,7 @@
     "typescript": "^5.8.3",
     "vitest": "^3.2.4",
     "webpack": "^5.100.2",
-    "xo": "^1.2.1"
+    "xo": "^1.2.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
