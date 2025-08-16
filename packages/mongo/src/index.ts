@@ -1,17 +1,26 @@
-import EventEmitter from 'events';
-import {Buffer} from 'buffer';
+import { Buffer } from "node:buffer";
+import EventEmitter from "node:events";
+import type { KeyvStoreAdapter, StoredData } from "keyv";
 import {
-	MongoClient as mongoClient, GridFSBucket, type WithId, type Document,
+	type Document,
+	GridFSBucket,
 	MongoServerError,
-} from 'mongodb';
-import {KeyvStoreAdapter, type StoredData} from 'keyv';
-import {
-	type KeyvMongoConnect,
-	type KeyvMongoOptions,
-	type Options,
-} from './types.js';
+	MongoClient as mongoClient,
+	type WithId,
+} from "mongodb";
+import type { KeyvMongoConnect, KeyvMongoOptions, Options } from "./types.js";
 
-const keyvMongoKeys = new Set(['url', 'collection', 'namespace', 'serialize', 'deserialize', 'uri', 'useGridFS', 'dialect', 'db']);
+const keyvMongoKeys = new Set([
+	"url",
+	"collection",
+	"namespace",
+	"serialize",
+	"deserialize",
+	"uri",
+	"useGridFS",
+	"dialect",
+	"db",
+]);
 export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = false;
 	opts: Options;
@@ -21,17 +30,17 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	constructor(url?: KeyvMongoOptions, options?: Options) {
 		super();
 		url ??= {};
-		if (typeof url === 'string') {
-			url = {url};
+		if (typeof url === "string") {
+			url = { url };
 		}
 
 		if (url.uri) {
-			url = {url: url.uri, ...url};
+			url = { url: url.uri, ...url };
 		}
 
 		this.opts = {
-			url: 'mongodb://127.0.0.1:27017',
-			collection: 'keyv',
+			url: "mongodb://127.0.0.1:27017",
+			collection: "keyv",
 			...url,
 			...options,
 		};
@@ -39,21 +48,17 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		delete this.opts.emitErrors;
 
 		const mongoOptions = Object.fromEntries(
-			Object.entries(this.opts).filter(
-				([k]) => !keyvMongoKeys.has(k),
-			),
+			Object.entries(this.opts).filter(([k]) => !keyvMongoKeys.has(k)),
 		);
 
 		this.opts = Object.fromEntries(
-			Object.entries(this.opts).filter(
-				([k]) => keyvMongoKeys.has(k),
-			),
+			Object.entries(this.opts).filter(([k]) => keyvMongoKeys.has(k)),
 		);
 
-		// eslint-disable-next-line no-async-promise-executor
-		this.connect = new Promise(async (resolve, reject) => {
+		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: need to fix
+		this.connect = new Promise(async (resolve, _reject) => {
 			try {
-				let url = '';
+				let url = "";
 				if (this.opts.url) {
 					url = this.opts.url;
 				}
@@ -71,30 +76,39 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					});
 					const store = database.collection(`${this.opts.collection}.files`);
 
-					await store.createIndex({uploadDate: -1});
-					await store.createIndex({'metadata.expiresAt': 1});
-					await store.createIndex({'metadata.lastAccessed': 1});
-					await store.createIndex({'metadata.filename': 1});
+					await store.createIndex({ uploadDate: -1 });
+					await store.createIndex({ "metadata.expiresAt": 1 });
+					await store.createIndex({ "metadata.lastAccessed": 1 });
+					await store.createIndex({ "metadata.filename": 1 });
 
 					resolve({
-						bucket, store, db: database, mongoClient: client,
+						bucket,
+						store,
+						db: database,
+						mongoClient: client,
 					});
 				} else {
-					let collection = 'keyv';
+					let collection = "keyv";
 					if (this.opts.collection) {
 						collection = this.opts.collection;
 					}
 
 					const store = database.collection(collection);
 
-					await store.createIndex({key: 1}, {unique: true, background: true});
-					await store.createIndex({expiresAt: 1}, {expireAfterSeconds: 0, background: true});
+					await store.createIndex(
+						{ key: 1 },
+						{ unique: true, background: true },
+					);
+					await store.createIndex(
+						{ expiresAt: 1 },
+						{ expireAfterSeconds: 0, background: true },
+					);
 
-					resolve({store, mongoClient: client});
+					resolve({ store, mongoClient: client });
 				}
 			} catch (error) {
 				/* c8 ignore next 4 */
-				this.emit('error', error);
+				this.emit("error", error);
 			}
 		});
 	}
@@ -103,34 +117,38 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		const client = await this.connect;
 
 		if (this.opts.useGridFS) {
-			await client.store.updateOne({
-				filename: key,
-			}, {
-				$set: {
-					'metadata.lastAccessed': new Date(),
+			await client.store.updateOne(
+				{
+					filename: key,
 				},
-			});
+				{
+					$set: {
+						"metadata.lastAccessed": new Date(),
+					},
+				},
+			);
 
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const stream = client.bucket!.openDownloadStreamByName(key);
 
-			return new Promise(resolve => {
+			return new Promise((resolve) => {
 				const resp: Uint8Array[] = [];
-				stream.on('error', () => {
+				stream.on("error", () => {
 					resolve(undefined);
 				});
 
-				stream.on('end', () => {
-					const data = Buffer.concat(resp).toString('utf8');
+				stream.on("end", () => {
+					const data = Buffer.concat(resp).toString("utf8");
 					resolve(data as StoredData<Value>);
 				});
 
-				stream.on('data', chunk => {
+				stream.on("data", (chunk) => {
 					resp.push(chunk as Uint8Array);
 				});
 			});
 		}
 
-		const document = await client.store.findOne({key: {$eq: key}});
+		const document = await client.store.findOne({ key: { $eq: key } });
 
 		if (!document) {
 			return undefined;
@@ -157,16 +175,21 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		}
 
 		const connect = await this.connect;
-		// @ts-expect-error eslint-disable-next-line
-		const values: Array<{key: string; value: StoredData<Value>}> = await connect.store.s.db.collection(this.opts.collection!)
-			.find({key: {$in: keys}})
-			.project({_id: 0, value: 1, key: 1})
-			.toArray();
+		const values: Array<{ key: string; value: StoredData<Value> }> =
+			// @ts-expect-error need to fix this `s`
+			await connect.store.s.db
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
+				.collection(this.opts.collection!)
+				.find({ key: { $in: keys } })
+				.project({ _id: 0, value: 1, key: 1 })
+				.toArray();
 
 		const results = [...keys];
 		let i = 0;
 		for (const key of keys) {
-			const rowIndex = values.findIndex((row: {key: string; value: unknown}) => row.key === key);
+			const rowIndex = values.findIndex(
+				(row: { key: string; value: unknown }) => row.key === key,
+			);
 
 			// @ts-expect-error - results type
 			results[i] = rowIndex > -1 ? values[rowIndex].value : undefined;
@@ -177,11 +200,14 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		return results as Array<StoredData<Value>>;
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
-		const expiresAt = typeof ttl === 'number' ? new Date(Date.now() + ttl) : null;
+		const expiresAt =
+			typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
 
 		if (this.opts.useGridFS) {
 			const client = await this.connect;
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const stream = client.bucket!.openUploadStream(key, {
 				metadata: {
 					expiresAt,
@@ -189,8 +215,8 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 				},
 			});
 
-			return new Promise(resolve => {
-				stream.on('finish', () => {
+			return new Promise((resolve) => {
+				stream.on("finish", () => {
 					resolve(stream);
 				});
 				stream.end(value);
@@ -199,14 +225,14 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 
 		const client = await this.connect;
 		await client.store.updateOne(
-			{key: {$eq: key}},
-			{$set: {key, value, expiresAt}},
-			{upsert: true},
+			{ key: { $eq: key } },
+			{ $set: { key, value, expiresAt } },
+			{ upsert: true },
 		);
 	}
 
 	async delete(key: string) {
-		if (typeof key !== 'string') {
+		if (typeof key !== "string") {
 			return false;
 		}
 
@@ -214,11 +240,13 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 
 		if (this.opts.useGridFS) {
 			try {
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
 				const connection = client.db!;
 				const bucket = new GridFSBucket(connection, {
 					bucketName: this.opts.collection,
 				});
-				const files = await bucket.find({filename: key}).toArray();
+				const files = await bucket.find({ filename: key }).toArray();
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
 				await client.bucket!.delete(files[0]._id);
 				return true;
 			} catch {
@@ -226,27 +254,31 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 			}
 		}
 
-		const object = await client.store.deleteOne({key: {$eq: key}});
+		const object = await client.store.deleteOne({ key: { $eq: key } });
 		return object.deletedCount > 0;
 	}
 
 	async deleteMany(keys: string[]) {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const connection = client.db!;
 			const bucket = new GridFSBucket(connection, {
 				bucketName: this.opts.collection,
 			});
-			const files = await bucket.find({filename: {$in: keys}}).toArray();
+			const files = await bucket.find({ filename: { $in: keys } }).toArray();
 			if (files.length === 0) {
 				return false;
 			}
 
-			await Promise.all(files.map(async file => client.bucket!.delete(file._id)));
+			await Promise.all(
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
+				files.map(async (file) => client.bucket!.delete(file._id)),
+			);
 			return true;
 		}
 
-		const object = await client.store.deleteMany({key: {$in: keys}});
+		const object = await client.store.deleteMany({ key: { $in: keys } });
 		return object.deletedCount > 0;
 	}
 
@@ -254,6 +286,7 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
 			try {
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
 				await client.bucket!.drop();
 			} catch (error: unknown) {
 				/* c8 ignore next 5 */
@@ -265,7 +298,7 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		}
 
 		await client.store.deleteMany({
-			key: {$regex: this.namespace ? `^${this.namespace}:*` : ''},
+			key: { $regex: this.namespace ? `^${this.namespace}:*` : "" },
 		});
 	}
 
@@ -274,18 +307,26 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 			return false;
 		}
 
-		return this.connect.then(async client => {
+		return this.connect.then(async (client) => {
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const connection = client.db!;
 			const bucket = new GridFSBucket(connection, {
 				bucketName: this.opts.collection,
 			});
 
-			return bucket.find({
-				'metadata.expiresAt': {
-					$lte: new Date(Date.now()),
-				},
-			}).toArray()
-				.then(async expiredFiles => Promise.all(expiredFiles.map(async file => client.bucket!.delete(file._id))).then(() => true));
+			return bucket
+				.find({
+					"metadata.expiresAt": {
+						$lte: new Date(Date.now()),
+					},
+				})
+				.toArray()
+				.then(async (expiredFiles) =>
+					Promise.all(
+						// biome-ignore lint/style/noNonNullAssertion: need to fix
+						expiredFiles.map(async (file) => client.bucket!.delete(file._id)),
+					).then(() => true),
+				);
 		});
 	}
 
@@ -295,42 +336,52 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		}
 
 		const client = await this.connect;
+		// biome-ignore lint/style/noNonNullAssertion: need to fix
 		const connection = client.db!;
 		const bucket = new GridFSBucket(connection, {
 			bucketName: this.opts.collection,
 		});
 
-		const lastAccessedFiles = await bucket.find({
-			'metadata.lastAccessed': {
-				$lte: new Date(Date.now() - (seconds * 1000)),
-			},
-		}).toArray();
+		const lastAccessedFiles = await bucket
+			.find({
+				"metadata.lastAccessed": {
+					$lte: new Date(Date.now() - seconds * 1000),
+				},
+			})
+			.toArray();
 
-		await Promise.all(lastAccessedFiles.map(async file => client.bucket!.delete(file._id)));
+		await Promise.all(
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
+			lastAccessedFiles.map(async (file) => client.bucket!.delete(file._id)),
+		);
 		return true;
 	}
 
-	async * iterator(namespace?: string) {
+	async *iterator(namespace?: string) {
 		const client = await this.connect;
-		const regexp = new RegExp(`^${namespace ? namespace + ':' : '.*'}`);
-		const iterator = (this.opts.useGridFS)
+		// biome-ignore lint/style/useTemplate: need to fix
+		const regexp = new RegExp(`^${namespace ? namespace + ":" : ".*"}`);
+		const iterator = this.opts.useGridFS
 			? client.store
-				.find({
-					filename: regexp,
-				})
-				.map(async (x: WithId<Document>) => [x.filename, await this.get(x.filename)])
+					.find({
+						filename: regexp,
+					})
+					.map(async (x: WithId<Document>) => [
+						x.filename,
+						await this.get(x.filename),
+					])
 			: client.store
-				.find({
-					key: regexp,
-				})
-				.map((x: WithId<Document>) => [x.key, x.value]);
+					.find({
+						key: regexp,
+					})
+					.map((x: WithId<Document>) => [x.key, x.value]);
 
-		yield * iterator;
+		yield* iterator;
 	}
 
 	async has(key: string) {
 		const client = await this.connect;
-		const filter = {[this.opts.useGridFS ? 'filename' : 'key']: {$eq: key}};
+		const filter = { [this.opts.useGridFS ? "filename" : "key"]: { $eq: key } };
 		const document = await client.store.count(filter);
 		return document !== 0;
 	}
@@ -342,4 +393,4 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 }
 
 export default KeyvMongo;
-export type {KeyvMongoOptions} from './types.js';
+export type { KeyvMongoOptions } from "./types.js";
