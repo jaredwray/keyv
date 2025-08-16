@@ -1,11 +1,14 @@
-import {type StoredData} from 'keyv';
-import {type PoolConfig} from 'pg';
+// biome-ignore-all lint/suspicious/noExplicitAny: type format
+import type { StoredData } from "keyv";
+import type { PoolConfig } from "pg";
 
 export type IteratorOutput = AsyncGenerator<any, void, any>;
 
 export type GetOutput<Value> = Promise<Value | undefined>;
 
-export type GetManyOutput<Value> = Promise<Array<StoredData<Value | undefined>>>;
+export type GetManyOutput<Value> = Promise<
+	Array<StoredData<Value | undefined>>
+>;
 
 export type SetOutput = Promise<any>;
 
