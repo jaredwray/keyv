@@ -1,17 +1,17 @@
-import {describe, test, expectTypeOf} from 'vitest';
-import KeyvRedis from '../src/index.js';
+import { describe, expectTypeOf, test } from "vitest";
+import KeyvRedis from "../src/index.js";
 
-describe('KeyvRedis Types', () => {
-	test('should be able to set adapter-level generic value type', async () => {
-		type Value = {foo: string};
+describe("KeyvRedis Types", () => {
+	test("should be able to set adapter-level generic value type", async () => {
+		type Value = { foo: string };
 
 		const keyvRedis = new KeyvRedis<Value>();
 
-		expectTypeOf(keyvRedis.get('foo')).toEqualTypeOf<
+		expectTypeOf(keyvRedis.get("foo")).toEqualTypeOf<
 			Promise<Value | undefined>
 		>();
 
-		expectTypeOf(keyvRedis.getMany(['foo', 'bar'])).toEqualTypeOf<
+		expectTypeOf(keyvRedis.getMany(["foo", "bar"])).toEqualTypeOf<
 			Promise<Array<Value | undefined>>
 		>();
 
@@ -20,18 +20,18 @@ describe('KeyvRedis Types', () => {
 		>();
 	});
 
-	test('should be able to set method-level generic value type', async () => {
-		type ValueFoo = {foo: string};
+	test("should be able to set method-level generic value type", async () => {
+		type ValueFoo = { foo: string };
 
-		type ValueBar = {bar: string};
+		type ValueBar = { bar: string };
 
 		const keyvRedis = new KeyvRedis<ValueFoo>();
 
-		expectTypeOf(keyvRedis.get<ValueBar>('foo')).toEqualTypeOf<
+		expectTypeOf(keyvRedis.get<ValueBar>("foo")).toEqualTypeOf<
 			Promise<ValueBar | undefined>
 		>();
 
-		expectTypeOf(keyvRedis.getMany<ValueBar>(['foo', 'bar'])).toEqualTypeOf<
+		expectTypeOf(keyvRedis.getMany<ValueBar>(["foo", "bar"])).toEqualTypeOf<
 			Promise<Array<ValueBar | undefined>>
 		>();
 

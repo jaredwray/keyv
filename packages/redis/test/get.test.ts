@@ -1,17 +1,13 @@
-import process from 'node:process';
-import {
-	describe, test, expect,
-	vi,
-} from 'vitest';
-import {faker} from '@faker-js/faker';
-import {delay} from '@keyv/test-suite';
-import KeyvRedis from '../src/index.js';
+import process from "node:process";
+import { faker } from "@faker-js/faker";
+import { delay } from "@keyv/test-suite";
+import { describe, expect, test, vi } from "vitest";
+import KeyvRedis from "../src/index.js";
 
-const redisUri = process.env.REDIS_URI ?? 'redis://localhost:6379';
-const redisBadUri = process.env.REDIS_BAD_URI ?? 'redis://localhost:6378';
+const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 
-describe('get', () => {
-	test('should get many values', async () => {
+describe("get", () => {
+	test("should get many values", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		const data = {
 			key1: faker.string.alphanumeric(10),
@@ -28,7 +24,7 @@ describe('get', () => {
 		expect(results).toEqual([data.value1, data.value2]);
 	});
 
-	test('should return undefined for keys that do not exist', async () => {
+	test("should return undefined for keys that do not exist", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		const data = {
 			key1: faker.string.alphanumeric(10),
@@ -40,21 +36,21 @@ describe('get', () => {
 		expect(results).toEqual([undefined, undefined]);
 	});
 
-	test('should handle empty array input', async () => {
+	test("should handle empty array input", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		const results = await keyvRedis.getMany([]);
 		expect(results).toEqual([]);
 	});
 
-	test('should throw an error on client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
+	test("should throw an error on client error", async () => {
+		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {
 			key: faker.string.alphanumeric(10),
 		};
 
-		vi.spyOn(keyvRedis.client, 'get').mockImplementation(() => {
-			throw new Error('Redis client error');
+		vi.spyOn(keyvRedis.client, "get").mockImplementation(() => {
+			throw new Error("Redis client error");
 		});
 
 		let didError = false;
@@ -62,26 +58,26 @@ describe('get', () => {
 			await keyvRedis.get(data.key);
 		} catch (error) {
 			didError = true;
-			expect((error as Error).message).toBe('Redis client error');
+			expect((error as Error).message).toBe("Redis client error");
 		}
 
 		expect(didError).toBe(true);
-		vi.spyOn(keyvRedis.client, 'get').mockRestore();
+		vi.spyOn(keyvRedis.client, "get").mockRestore();
 	});
 
-	test('should not throw an error on client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: false});
+	test("should not throw an error on client error", async () => {
+		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: false });
 
 		const data = {
 			key: faker.string.alphanumeric(10),
 		};
 
-		vi.spyOn(keyvRedis.client, 'get').mockImplementation(() => {
-			throw new Error('Redis client error');
+		vi.spyOn(keyvRedis.client, "get").mockImplementation(() => {
+			throw new Error("Redis client error");
 		});
 
 		let didError = false;
-		let result: string | undefined = '';
+		let result: string | undefined = "";
 		try {
 			result = await keyvRedis.get(data.key);
 		} catch {
@@ -90,18 +86,18 @@ describe('get', () => {
 
 		expect(didError).toBe(false);
 		expect(result).toBeUndefined();
-		vi.spyOn(keyvRedis.client, 'get').mockRestore();
+		vi.spyOn(keyvRedis.client, "get").mockRestore();
 	});
 
-	test('should throw and error on getMany client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: true});
+	test("should throw and error on getMany client error", async () => {
+		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
 		};
 
-		vi.spyOn(keyvRedis.client, 'mGet').mockImplementation(() => {
-			throw new Error('Redis client error');
+		vi.spyOn(keyvRedis.client, "mGet").mockImplementation(() => {
+			throw new Error("Redis client error");
 		});
 
 		let didError = false;
@@ -109,22 +105,22 @@ describe('get', () => {
 			await keyvRedis.getMany(data.keys);
 		} catch (error) {
 			didError = true;
-			expect((error as Error).message).toBe('Redis client error');
+			expect((error as Error).message).toBe("Redis client error");
 		}
 
 		expect(didError).toBe(true);
-		vi.spyOn(keyvRedis.client, 'mGet').mockRestore();
+		vi.spyOn(keyvRedis.client, "mGet").mockRestore();
 	});
 
-	test('should not throw and error on getMany client error', async () => {
-		const keyvRedis = new KeyvRedis(redisUri, {throwOnErrors: false});
+	test("should not throw and error on getMany client error", async () => {
+		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: false });
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
 		};
 
-		vi.spyOn(keyvRedis.client, 'mGet').mockImplementation(() => {
-			throw new Error('Redis client error');
+		vi.spyOn(keyvRedis.client, "mGet").mockImplementation(() => {
+			throw new Error("Redis client error");
 		});
 
 		let didError = false;
@@ -137,19 +133,27 @@ describe('get', () => {
 
 		expect(didError).toBe(false);
 		expect(result).toEqual([undefined, undefined]);
-		vi.spyOn(keyvRedis.client, 'mGet').mockRestore();
+		vi.spyOn(keyvRedis.client, "mGet").mockRestore();
 	});
 
-	test('should be able to get many keys', async () => {
+	test("should be able to get many keys", async () => {
 		const keyvRedis = new KeyvRedis();
-		await keyvRedis.setMany([{key: 'foo-get-many1', value: 'bar'}, {key: 'foo-get-many2', value: 'bar2'}, {key: 'foo-get-many3', value: 'bar3', ttl: 5}]);
+		await keyvRedis.setMany([
+			{ key: "foo-get-many1", value: "bar" },
+			{ key: "foo-get-many2", value: "bar2" },
+			{ key: "foo-get-many3", value: "bar3", ttl: 5 },
+		]);
 		await delay(10);
-		const values = await keyvRedis.getMany(['foo-get-many1', 'foo-get-many2', 'foo-get-many3']);
-		expect(values).toEqual(['bar', 'bar2', undefined]);
+		const values = await keyvRedis.getMany([
+			"foo-get-many1",
+			"foo-get-many2",
+			"foo-get-many3",
+		]);
+		expect(values).toEqual(["bar", "bar2", undefined]);
 		await keyvRedis.disconnect();
 	});
 
-	test('should be able to call getMany with an empty array', async () => {
+	test("should be able to call getMany with an empty array", async () => {
 		const keyvRedis = new KeyvRedis();
 		const values = await keyvRedis.getMany([]);
 		expect(values).toEqual([]);
