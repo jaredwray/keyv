@@ -44,7 +44,6 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			...options,
 		};
 
-		// eslint-disable-next-line @stylistic/max-len
 		let createTable = `CREATE${this.opts.useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
 
 		if (this.opts.schema !== "public") {
@@ -78,7 +77,6 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	async get(key: string) {
 		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const row = rows[0];
 		return row === undefined ? undefined : row.value;
 	}

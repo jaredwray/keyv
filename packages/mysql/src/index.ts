@@ -20,9 +20,7 @@ type QueryType<T> = Promise<
 	T extends
 		| mysql.RowDataPacket[][]
 		| mysql.RowDataPacket[]
-		// eslint-disable-next-line @typescript-eslint/no-deprecated
 		| mysql.OkPacket
-		// eslint-disable-next-line @typescript-eslint/no-deprecated
 		| mysql.OkPacket[]
 		| mysql.ResultSetHeader
 		? T

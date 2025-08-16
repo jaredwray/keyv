@@ -22,7 +22,7 @@ export const parseConnectionString = (connectionString: string) => {
 	for (const key of Object.keys(poolOptions)) {
 		// @ts-expect-error - poolOptions
 		if (poolOptions[key] === undefined) {
-			//  @ts-expect-error - @typescript-eslint/no-dynamic-delete
+			//  @ts-expect-error
 			delete poolOptions[key];
 		}
 	}
