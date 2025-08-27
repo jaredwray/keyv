@@ -842,18 +842,29 @@ export default class KeyvRedis<T>
 	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
 	 */
 	private async mget<T = any>(keys: string[]): Promise<Array<T | undefined>> {
-		const slotMap = await this.getSlotMapMaster(keys);
-
 		const valueMap = new Map<string, string | undefined>();
 
-		await Promise.all(
-			Array.from(slotMap.entries(), async ([client, keys]) => {
-				const values = await client.mGet(keys);
-				for (const [index, value] of values.entries()) {
-					valueMap.set(keys[index], value ?? undefined);
-				}
-			}),
-		);
+		if (this.isCluster()) {
+			// Group keys by slot first to ensure each MGET only contains keys from the same slot
+			const slotMap = this.getSlotMap(keys);
+
+			await Promise.all(
+				Array.from(slotMap.entries(), async ([slot, slotKeys]) => {
+					const client = await this.getSlotMaster(slot);
+					const values = await client.mGet(slotKeys);
+					for (const [index, value] of values.entries()) {
+						valueMap.set(slotKeys[index], value ?? undefined);
+					}
+				}),
+			);
+		} else {
+			// Non-cluster mode - can do all keys in one MGET
+			const client = (await this.getClient()) as RedisClientType;
+			const values = await client.mGet(keys);
+			for (const [index, value] of values.entries()) {
+				valueMap.set(keys[index], value ?? undefined);
+			}
+		}
 
 		return keys.map((key) => valueMap.get(key) as T | undefined);
 	}
@@ -895,29 +906,6 @@ export default class KeyvRedis<T>
 		}
 
 		return connection as RedisClientType;
-	}
-
-	/**
-	 * Group keys by their slot master
-	 *
-	 * @param {string[]} keys - the keys to group
-	 * @returns {Map<RedisClientType, string[]>} - map of slot to keys
-	 */
-	private async getSlotMapMaster(keys: string[]) {
-		const slotMap = this.getSlotMap(keys);
-		const slotMapMaster = new Map<RedisClientType, string[]>();
-
-		await Promise.all(
-			Array.from(slotMap.entries(), async ([slot, keys]) => {
-				const client = await this.getSlotMaster(slot);
-
-				const slotKeys = slotMapMaster.get(client) ?? [];
-				slotKeys.push(...keys);
-				slotMapMaster.set(client, slotKeys);
-			}),
-		);
-
-		return slotMapMaster;
 	}
 
 	/**
