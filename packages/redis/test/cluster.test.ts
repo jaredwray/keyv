@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vitest } from "vitest";
 import KeyvRedis, { createCluster } from "../src/index.js";
 
 const defaultClusterOptions = {
@@ -73,6 +73,31 @@ describe("KeyvRedis Cluster", () => {
 		await keyvRedis.delete("test-cl1");
 
 		await keyvRedis.disconnect();
+	});
+
+	test("should split getMany by slot to avoid CROSSSLOT errors", async () => {
+		const cluster = createCluster(defaultClusterOptions);
+		await cluster.connect();
+
+		const spies = cluster.masters.map((master) =>
+			vitest.spyOn(master.client, "mGet"),
+		);
+
+		const keyvRedis = new KeyvRedis(cluster);
+		// These keys may hash to different slots, so multiple mGet calls may be needed
+		await keyvRedis.getMany(["test-cl1", "test-cl2", "test-cl3", "test-cl4"]);
+
+		// Verify that mGet was called (may be multiple times per master if keys hash to different slots)
+		let totalCalls = 0;
+		spies.forEach((spy) => {
+			totalCalls += spy.mock.calls.length;
+		});
+
+		// Should have made at least one call
+		expect(totalCalls).toBeGreaterThan(0);
+
+		// Each call should only contain keys from the same slot (no CROSSSLOT errors)
+		// The test passes if no error was thrown during getMany
 	});
 
 	describe("KeyvRedis clear method", () => {
