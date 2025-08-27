@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vitest } from "vitest";
 import KeyvRedis, { createCluster } from "../src/index.js";
 
 const defaultClusterOptions = {
@@ -73,6 +73,22 @@ describe("KeyvRedis Cluster", () => {
 		await keyvRedis.delete("test-cl1");
 
 		await keyvRedis.disconnect();
+	});
+
+	test("should split getMany accross clusters without useless duplicate call", async () => {
+		const cluster = createCluster(defaultClusterOptions);
+		await cluster.connect();
+
+		const spies = cluster.masters.map((master) =>
+			vitest.spyOn(master.client, "mGet"),
+		);
+
+		const keyvRedis = new KeyvRedis(cluster);
+		await keyvRedis.getMany(["test-cl1", "test-cl2", "test-cl3", "test-cl4"]);
+
+		spies.forEach((spy) => {
+			expect(spy).toHaveBeenCalledTimes(1);
+		});
 	});
 
 	describe("KeyvRedis clear method", () => {

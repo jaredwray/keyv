@@ -842,13 +842,12 @@ export default class KeyvRedis<T>
 	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
 	 */
 	private async mget<T = any>(keys: string[]): Promise<Array<T | undefined>> {
-		const slotMap = this.getSlotMap(keys);
+		const slotMap = await this.getSlotMapMaster(keys);
 
 		const valueMap = new Map<string, string | undefined>();
-		await Promise.all(
-			Array.from(slotMap.entries(), async ([slot, keys]) => {
-				const client = await this.getSlotMaster(slot);
 
+		await Promise.all(
+			Array.from(slotMap.entries(), async ([client, keys]) => {
 				const values = await client.mGet(keys);
 				for (const [index, value] of values.entries()) {
 					valueMap.set(keys[index], value ?? undefined);
@@ -896,6 +895,29 @@ export default class KeyvRedis<T>
 		}
 
 		return connection as RedisClientType;
+	}
+
+	/**
+	 * Group keys by their slot master
+	 *
+	 * @param {string[]} keys - the keys to group
+	 * @returns {Map<RedisClientType, string[]>} - map of slot to keys
+	 */
+	private async getSlotMapMaster(keys: string[]) {
+		const slotMap = this.getSlotMap(keys);
+		const slotMapMaster = new Map<RedisClientType, string[]>();
+
+		await Promise.all(
+			Array.from(slotMap.entries(), async ([slot, keys]) => {
+				const client = await this.getSlotMaster(slot);
+
+				const slotKeys = slotMapMaster.get(client) ?? [];
+				slotKeys.push(...keys);
+				slotMapMaster.set(client, slotKeys);
+			}),
+		);
+
+		return slotMapMaster;
 	}
 
 	/**
