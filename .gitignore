@@ -109,3 +109,6 @@ packages/keyv/test.db
 
 # pnpm
 pnpm-lock.yaml
+
+# AI
+.claude
