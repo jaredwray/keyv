@@ -341,4 +341,141 @@ describe("KeyvRedis Cluster", () => {
 			expect(values).not.toContain("bar2");
 		});
 	});
+
+	describe("KeyvRedis Batch Operations", () => {
+		test("setMany should work with cluster mode without CROSSSLOT errors", async () => {
+			const cluster = createCluster(defaultClusterOptions);
+			const keyvRedis = new KeyvRedis(cluster);
+
+			// These keys may hash to different slots
+			const entries = [
+				{ key: "batch-key1", value: "value1" },
+				{ key: "batch-key2", value: "value2" },
+				{ key: "batch-key3", value: "value3" },
+				{ key: "batch-key4", value: "value4" },
+				{ key: "batch-key5", value: "value5" },
+			];
+
+			// Should not throw CROSSSLOT error
+			await expect(keyvRedis.setMany(entries)).resolves.toBeUndefined();
+
+			// Verify all keys were set
+			const values = await keyvRedis.getMany(entries.map((e) => e.key));
+			expect(values).toEqual([
+				"value1",
+				"value2",
+				"value3",
+				"value4",
+				"value5",
+			]);
+
+			await keyvRedis.disconnect();
+		});
+
+		test("hasMany should work with cluster mode without CROSSSLOT errors", async () => {
+			const cluster = createCluster(defaultClusterOptions);
+			const keyvRedis = new KeyvRedis(cluster);
+
+			// Set some keys first
+			await keyvRedis.set("has-key1", "value1");
+			await keyvRedis.set("has-key2", "value2");
+			await keyvRedis.set("has-key3", "value3");
+
+			// Check multiple keys that may hash to different slots
+			const keys = ["has-key1", "has-key2", "has-key3", "has-key4", "has-key5"];
+
+			// Should not throw CROSSSLOT error
+			const results = await keyvRedis.hasMany(keys);
+			expect(results).toEqual([true, true, true, false, false]);
+
+			await keyvRedis.disconnect();
+		});
+
+		test("deleteMany should work with cluster mode without CROSSSLOT errors", async () => {
+			const cluster = createCluster(defaultClusterOptions);
+			const keyvRedis = new KeyvRedis(cluster);
+
+			// Set some keys first
+			await keyvRedis.set("del-key1", "value1");
+			await keyvRedis.set("del-key2", "value2");
+			await keyvRedis.set("del-key3", "value3");
+			await keyvRedis.set("del-key4", "value4");
+			await keyvRedis.set("del-key5", "value5");
+
+			// Delete multiple keys that may hash to different slots
+			const keysToDelete = ["del-key1", "del-key2", "del-key3"];
+
+			// Should not throw CROSSSLOT error
+			const result = await keyvRedis.deleteMany(keysToDelete);
+			expect(result).toBe(true);
+
+			// Verify keys were deleted
+			const hasKeys = await keyvRedis.hasMany([
+				"del-key1",
+				"del-key2",
+				"del-key3",
+				"del-key4",
+				"del-key5",
+			]);
+			expect(hasKeys).toEqual([false, false, false, true, true]);
+
+			await keyvRedis.disconnect();
+		});
+
+		test("setMany with TTL should work with cluster mode", async () => {
+			const cluster = createCluster(defaultClusterOptions);
+			const keyvRedis = new KeyvRedis(cluster);
+
+			// These keys may hash to different slots
+			const entries = [
+				{ key: "ttl-key1", value: "value1", ttl: 5000 },
+				{ key: "ttl-key2", value: "value2", ttl: 5000 },
+				{ key: "ttl-key3", value: "value3", ttl: 5000 },
+			];
+
+			// Should not throw CROSSSLOT error
+			await expect(keyvRedis.setMany(entries)).resolves.toBeUndefined();
+
+			// Verify all keys were set
+			const values = await keyvRedis.getMany(entries.map((e) => e.key));
+			expect(values).toEqual(["value1", "value2", "value3"]);
+
+			await keyvRedis.disconnect();
+		});
+
+		test("deleteMany with useUnlink false should work with cluster mode", async () => {
+			const cluster = createCluster(defaultClusterOptions);
+			const keyvRedis = new KeyvRedis(cluster, { useUnlink: false });
+
+			// Set some keys first that may hash to different slots
+			await keyvRedis.set("del-unlink-key1", "value1");
+			await keyvRedis.set("del-unlink-key2", "value2");
+			await keyvRedis.set("del-unlink-key3", "value3");
+			await keyvRedis.set("del-unlink-key4", "value4");
+			await keyvRedis.set("del-unlink-key5", "value5");
+
+			// Delete multiple keys using del instead of unlink
+			const keysToDelete = [
+				"del-unlink-key1",
+				"del-unlink-key2",
+				"del-unlink-key3",
+			];
+
+			// Should not throw CROSSSLOT error and should use del command
+			const result = await keyvRedis.deleteMany(keysToDelete);
+			expect(result).toBe(true);
+
+			// Verify keys were deleted
+			const hasKeys = await keyvRedis.hasMany([
+				"del-unlink-key1",
+				"del-unlink-key2",
+				"del-unlink-key3",
+				"del-unlink-key4",
+				"del-unlink-key5",
+			]);
+			expect(hasKeys).toEqual([false, false, false, true, true]);
+
+			await keyvRedis.disconnect();
+		});
+	});
 });
