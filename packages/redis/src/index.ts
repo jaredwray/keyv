@@ -469,22 +469,62 @@ export default class KeyvRedis<T>
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
-		const client = (await this.getClient()) as RedisClientType;
-
 		try {
-			const multi = client.multi();
-			for (const { key, value, ttl } of entries) {
-				const prefixedKey = this.createKeyPrefix(key, this._namespace);
-				if (ttl) {
-					multi.set(prefixedKey, value, { PX: ttl });
-				} else {
-					multi.set(prefixedKey, value);
-				}
-			}
+			if (this.isCluster()) {
+				// Ensure cluster is connected first
+				await this.getClient();
 
-			await multi.exec();
+				// Group entries by slot to avoid CROSSSLOT errors
+				const slotMap = new Map<number, KeyvEntry[]>();
+				for (const entry of entries) {
+					const prefixedKey = this.createKeyPrefix(entry.key, this._namespace);
+					const slot = calculateSlot(prefixedKey);
+					const slotEntries = slotMap.get(slot) ?? [];
+					slotEntries.push(entry);
+					slotMap.set(slot, slotEntries);
+				}
+
+				// Execute multi for each slot group
+				await Promise.all(
+					Array.from(slotMap.entries(), async ([slot, slotEntries]) => {
+						const client = await this.getSlotMaster(slot);
+						const multi = client.multi();
+						for (const { key, value, ttl } of slotEntries) {
+							const prefixedKey = this.createKeyPrefix(key, this._namespace);
+							if (ttl) {
+								multi.set(prefixedKey, value, { PX: ttl });
+							} else {
+								multi.set(prefixedKey, value);
+							}
+						}
+						await multi.exec();
+					}),
+				);
+			} else {
+				// Non-cluster mode can use a single multi
+				const client = (await this.getClient()) as RedisClientType;
+				const multi = client.multi();
+				for (const { key, value, ttl } of entries) {
+					const prefixedKey = this.createKeyPrefix(key, this._namespace);
+					if (ttl) {
+						multi.set(prefixedKey, value, { PX: ttl });
+					} else {
+						multi.set(prefixedKey, value);
+					}
+				}
+				await multi.exec();
+			}
 		} catch (error) {
 			this.emit("error", error);
+			// Re-throw connection errors if throwOnConnectError is true
+			if (
+				this._throwOnConnectError &&
+				(error as Error).message ===
+					RedisErrorMessages.RedisClientNotConnectedThrown
+			) {
+				/* c8 ignore next 2 */
+				throw error;
+			}
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -520,22 +560,58 @@ export default class KeyvRedis<T>
 	 * @returns {Promise<Array<boolean>>} - array of booleans for each key if it exists
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const client = (await this.getClient()) as RedisClientType;
-
 		try {
-			const multi = client.multi();
-			for (const key of keys) {
-				const prefixedKey = this.createKeyPrefix(key, this._namespace);
-				multi.exists(prefixedKey);
-			}
-
-			const results = await multi.exec();
-
-			return results.map(
-				(result) => typeof result === "number" && result === 1,
+			const prefixedKeys = keys.map((key) =>
+				this.createKeyPrefix(key, this._namespace),
 			);
+
+			if (this.isCluster()) {
+				// Group keys by slot to avoid CROSSSLOT errors
+				const slotMap = this.getSlotMap(prefixedKeys);
+				const resultMap = new Map<string, boolean>();
+
+				await Promise.all(
+					Array.from(slotMap.entries(), async ([slot, slotKeys]) => {
+						const client = await this.getSlotMaster(slot);
+						const multi = client.multi();
+						for (const key of slotKeys) {
+							multi.exists(key);
+						}
+						const results = await multi.exec();
+						for (const [index, result] of results.entries()) {
+							resultMap.set(
+								slotKeys[index],
+								typeof result === "number" && result === 1,
+							);
+						}
+					}),
+				);
+
+				return prefixedKeys.map((key) => resultMap.get(key) ?? false);
+			} else {
+				// Non-cluster mode can use a single multi
+				const client = (await this.getClient()) as RedisClientType;
+				const multi = client.multi();
+				for (const key of prefixedKeys) {
+					multi.exists(key);
+				}
+
+				const results = await multi.exec();
+				return results.map(
+					(result) => typeof result === "number" && result === 1,
+				);
+			}
 		} catch (error) {
 			this.emit("error", error);
+			// Re-throw connection errors if throwOnConnectError is true
+			if (
+				this._throwOnConnectError &&
+				(error as Error).message ===
+					RedisErrorMessages.RedisClientNotConnectedThrown
+			) {
+				/* c8 ignore next 2 */
+				throw error;
+			}
 			if (this._throwOnErrors) {
 				throw error;
 			}
@@ -630,28 +706,64 @@ export default class KeyvRedis<T>
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		let result = false;
-		const client = (await this.getClient()) as RedisClientType;
 
 		try {
-			const multi = client.multi();
-			for (const key of keys) {
-				const prefixedKey = this.createKeyPrefix(key, this._namespace);
-				if (this._useUnlink) {
-					multi.unlink(prefixedKey);
-				} else {
-					multi.del(prefixedKey);
+			const prefixedKeys = keys.map((key) =>
+				this.createKeyPrefix(key, this._namespace),
+			);
+
+			if (this.isCluster()) {
+				// Group keys by slot to avoid CROSSSLOT errors
+				const slotMap = this.getSlotMap(prefixedKeys);
+
+				await Promise.all(
+					Array.from(slotMap.entries(), async ([slot, slotKeys]) => {
+						const client = await this.getSlotMaster(slot);
+						const multi = client.multi();
+						for (const key of slotKeys) {
+							if (this._useUnlink) {
+								multi.unlink(key);
+							} else {
+								multi.del(key);
+							}
+						}
+						const results = await multi.exec();
+						for (const deleted of results) {
+							if (typeof deleted === "number" && deleted > 0) {
+								result = true;
+							}
+						}
+					}),
+				);
+			} else {
+				// Non-cluster mode can use a single multi
+				const client = (await this.getClient()) as RedisClientType;
+				const multi = client.multi();
+				for (const key of prefixedKeys) {
+					if (this._useUnlink) {
+						multi.unlink(key);
+					} else {
+						multi.del(key);
+					}
 				}
-			}
 
-			const results = await multi.exec();
-
-			for (const deleted of results) {
-				if (typeof deleted === "number" && deleted > 0) {
-					result = true;
+				const results = await multi.exec();
+				for (const deleted of results) {
+					if (typeof deleted === "number" && deleted > 0) {
+						result = true;
+					}
 				}
 			}
 		} catch (error) {
 			this.emit("error", error);
+			// Re-throw connection errors if throwOnConnectError is true
+			if (
+				this._throwOnConnectError &&
+				(error as Error).message ===
+					RedisErrorMessages.RedisClientNotConnectedThrown
+			) {
+				throw error;
+			}
 			if (this._throwOnErrors) {
 				throw error;
 			}
