@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import process from "node:process";
 import {
+	ResourceInUseException,
 	ResourceNotFoundException,
 	UpdateTimeToLiveCommand,
 } from "@aws-sdk/client-dynamodb";
@@ -153,5 +154,61 @@ test.it(
 			.expect(store.set("test:key1", "value1"))
 			.rejects.toThrow(ResourceNotFoundException);
 		(store as any).client.send = originalSend;
+	},
+);
+
+test.it("should verify exposed client property", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	t.expect(store.client).toBeDefined();
+	t.expect(store.client).toHaveProperty("send");
+	t.expect(store.client).toHaveProperty("get");
+	t.expect(store.client).toHaveProperty("put");
+	t.expect(store.client).toHaveProperty("delete");
+	t.expect(store.client).toHaveProperty("batchGet");
+	t.expect(store.client).toHaveProperty("batchWrite");
+	t.expect(store.client).toHaveProperty("scan");
+});
+
+test.it(
+	"should handle ResourceInUseException and wait for table",
+	{ timeout: 10000 },
+	async (t) => {
+		const tableName = randomUUID();
+		const store = new KeyvDynamo({
+			endpoint: dynamoURL,
+			tableName,
+		});
+
+		// First create the table
+		await store.set("test:key1", "value1");
+
+		// Now create another store instance that will hit ResourceInUseException
+		const store2 = new KeyvDynamo({
+			endpoint: dynamoURL,
+			tableName,
+		});
+
+		const originalSend = (store2 as any).client.send;
+		let createTableCalled = false;
+		(store2 as any).client.send = test.vi
+			.fn()
+			.mockImplementation(async (command) => {
+				if (
+					command.constructor.name === "CreateTableCommand" &&
+					!createTableCalled
+				) {
+					createTableCalled = true;
+					throw new ResourceInUseException({
+						message: "Table already being created",
+						$metadata: {},
+					});
+				}
+				return originalSend.call((store2 as any).client, command);
+			});
+
+		// This should wait for the table to exist
+		await store2.set("test:key2", "value2");
+		t.expect(await store2.get("test:key2")).toBe("value2");
+		(store2 as any).client.send = originalSend;
 	},
 );

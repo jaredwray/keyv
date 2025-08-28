@@ -35,6 +35,18 @@ e.g:
 const keyv = new KeyvDynamo({ tableName: 'cacheTable' });
 ```
 
+### Accessing the DynamoDB Client
+
+The DynamoDB client is exposed as a property for advanced use cases:
+
+```js
+const store = new KeyvDynamo();
+const dynamoClient = store.client; // DynamoDBDocument instance
+
+// You can use the client directly for custom operations
+await dynamoClient.get({ TableName: 'keyv', Key: { id: 'myKey' } });
+```
+
 ## Usage with NestJS
 
 Since DynamoDB has a 400KB limit per item, compressing data can help in some cases.

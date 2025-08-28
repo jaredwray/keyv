@@ -25,7 +25,7 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
 	sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
 	namespace?: string;
 	opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
-	private readonly client: DynamoDBDocument;
+	readonly client: DynamoDBDocument;
 	private readonly tableReady: Promise<void>;
 
 	constructor(options: KeyvDynamoOptions | string) {
