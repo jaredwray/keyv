@@ -3,13 +3,15 @@ import { Buffer } from "node:buffer";
 // Improved version of the deprecated `json-buffer` (https://github.com/dominictarr/json-buffer) package.
 // These default functionalities can be improved separately from the dependant packages.
 // biome-ignore lint/suspicious/noExplicitAny: allowed
-export const defaultSerialize = (data: any): string => {
+const _serialize = (data: any, escapeColonStrings: boolean = true): string => {
 	if (data === undefined || data === null) {
 		return "null";
 	}
 
 	if (typeof data === "string") {
-		return JSON.stringify(data.startsWith(":") ? `:${data}` : data);
+		return JSON.stringify(
+			escapeColonStrings && data.startsWith(":") ? `:${data}` : data,
+		);
 	}
 
 	if (Buffer.isBuffer(data)) {
@@ -40,9 +42,9 @@ export const defaultSerialize = (data: any): string => {
 
 			first = false;
 			if (array) {
-				s += defaultSerialize(data[k]);
+				s += _serialize(data[k], escapeColonStrings);
 			} else if (data[k] !== undefined) {
-				s += `${defaultSerialize(k)}:${defaultSerialize(data[k])}`;
+				s += `${_serialize(k, false)}:${_serialize(data[k], escapeColonStrings)}`;
 			}
 		}
 
@@ -51,6 +53,11 @@ export const defaultSerialize = (data: any): string => {
 	}
 
 	return JSON.stringify(data);
+};
+
+// biome-ignore lint/suspicious/noExplicitAny: allowed
+export const defaultSerialize = (data: any): string => {
+	return _serialize(data, true);
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
