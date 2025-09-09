@@ -55,7 +55,7 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.0",
+		"@biomejs/biome": "^2.2.3",
 		"@keyv/serialize": "workspace:^",
 		"@types/json-bigint": "^1.0.4",
 		"lz4-napi": "^2.9.0",
