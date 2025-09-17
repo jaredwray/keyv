@@ -48,8 +48,8 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.0",
-		"@faker-js/faker": "^9.9.0",
+		"@biomejs/biome": "^2.2.4",
+		"@faker-js/faker": "^10.0.0",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^3.2.4",
 		"rimraf": "^6.0.1",
