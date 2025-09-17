@@ -20,9 +20,8 @@ type QueryType<T> = Promise<
 	T extends
 		| mysql.RowDataPacket[][]
 		| mysql.RowDataPacket[]
-		| mysql.OkPacket
-		| mysql.OkPacket[]
 		| mysql.ResultSetHeader
+		| mysql.ResultSetHeader[]
 		? T
 		: never
 >;
