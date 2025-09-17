@@ -43,19 +43,3 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_KEY }}
           verbose: true
-          files: ./packages/compress-brotli/coverage/lcov.info, \
-           ./packages/compress-gzip/coverage/lcov.info, \
-           ./packages/compress-lz4/coverage/lcov.info, \
-           ./packages/etcd/coverage/lcov.info, \
-           ./packages/keyv/coverage/lcov.info, \
-           ./packages/memcache/coverage/lcov.info, \
-           ./packages/mongo/coverage/lcov.info, \
-           ./packages/mysql/coverage/lcov.info, \
-           ./packages/postgres/coverage/lcov.info, \
-           ./packages/redis/coverage/lcov.info, \
-           ./packages/serialize/coverage/lcov.info, \
-           ./packages/sqlite/coverage/lcov.info, \
-           ./packages/test-suite/coverage/lcov.info, \
-           ./packages/valkey/coverage/lcov.info, \
-           ./packages/dynamo/coverage/lcov.info, \
-           ./packages/bigmap/coverage/lcov.info
