@@ -43,7 +43,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mysql2": "^3.14.3"
+		"mysql2": "^3.15.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.0",
