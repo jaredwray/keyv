@@ -1156,7 +1156,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		const results: boolean[] = [];
-		for (const key of keyPrefixed) {
+		for (const key of keys) {
 			// eslint-disable-next-line no-await-in-loop
 			results.push(await this.has(key));
 		}
