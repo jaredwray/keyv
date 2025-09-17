@@ -1,25 +1,58 @@
-x-redis-sentinel-base: &redis-sentinel-base
-  image: docker.io/bitnami/redis-sentinel:latest
-  network_mode: host
-
 services:
-    redis-sentinel-1:
-        container_name: redis-sentinel-1
-        <<: *redis-sentinel-base
-        environment:
-            - 'REDIS_MASTER_HOST=localhost'
-            - 'REDIS_SENTINEL_PORT_NUMBER=26379'
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    command: redis-server --port 6389
+    network_mode: host
+    volumes:
+      - redis-master-data:/data
 
-    redis-sentinel-2:
-        container_name: redis-sentinel-2
-        <<: *redis-sentinel-base
-        environment:
-            - 'REDIS_MASTER_HOST=localhost'
-            - 'REDIS_SENTINEL_PORT_NUMBER=26380'
-    
-    redis-sentinel-3:
-        container_name: redis-sentinel-3
-        <<: *redis-sentinel-base
-        environment:
-            - 'REDIS_MASTER_HOST=localhost'
-            - 'REDIS_SENTINEL_PORT_NUMBER=26381'
+  redis-replica:
+    image: redis:latest
+    container_name: redis-replica
+    command: redis-server --port 6390 --replicaof 127.0.0.1 6389
+    network_mode: host
+    depends_on:
+      - redis-master
+    volumes:
+      - redis-replica-data:/data
+
+  redis-sentinel-1:
+    image: redis:latest
+    container_name: redis-sentinel-1
+    command: sh -c "echo 'port 26379' > /tmp/sentinel.conf && echo 'sentinel monitor mymaster 127.0.0.1 6389 2' >> /tmp/sentinel.conf && echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf && echo 'sentinel parallel-syncs mymaster 1' >> /tmp/sentinel.conf && echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    network_mode: host
+    depends_on:
+      - redis-master
+      - redis-replica
+    volumes:
+      - redis-sentinel-1-data:/data
+
+  redis-sentinel-2:
+    image: redis:latest
+    container_name: redis-sentinel-2
+    command: sh -c "echo 'port 26380' > /tmp/sentinel.conf && echo 'sentinel monitor mymaster 127.0.0.1 6389 2' >> /tmp/sentinel.conf && echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf && echo 'sentinel parallel-syncs mymaster 1' >> /tmp/sentinel.conf && echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    network_mode: host
+    depends_on:
+      - redis-master
+      - redis-replica
+    volumes:
+      - redis-sentinel-2-data:/data
+
+  redis-sentinel-3:
+    image: redis:latest
+    container_name: redis-sentinel-3
+    command: sh -c "echo 'port 26381' > /tmp/sentinel.conf && echo 'sentinel monitor mymaster 127.0.0.1 6389 2' >> /tmp/sentinel.conf && echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf && echo 'sentinel parallel-syncs mymaster 1' >> /tmp/sentinel.conf && echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    network_mode: host
+    depends_on:
+      - redis-master
+      - redis-replica
+    volumes:
+      - redis-sentinel-3-data:/data
+
+volumes:
+  redis-master-data:
+  redis-replica-data:
+  redis-sentinel-1-data:
+  redis-sentinel-2-data:
+  redis-sentinel-3-data:

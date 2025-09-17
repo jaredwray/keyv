@@ -1,39 +1,44 @@
-x-redis-cluster-base: &redis-cluster-base
-  image: docker.io/bitnami/redis-cluster:latest
-  network_mode: host
-
 services:
-    redis-cluster-1:
-        container_name: redis-cluster-1
-        <<: *redis-cluster-base
-        environment:
-            - 'ALLOW_EMPTY_PASSWORD=yes'
-            - 'REDIS_NODES=127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003'
-            - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
-            - 'REDIS_CLUSTER_ANNOUNCE_IP=127.0.0.1'
-            - 'REDIS_PORT_NUMBER=7001'
+  redis-1:
+    image: redis:latest
+    container_name: redis-cluster-1
+    command: redis-server --port 7001 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7001 --cluster-announce-bus-port 17001
+    network_mode: host
+    volumes:
+      - redis-1-data:/data
 
-    redis-cluster-2:
-        container_name: redis-cluster-2
-        <<: *redis-cluster-base
-        environment:
-            - 'ALLOW_EMPTY_PASSWORD=yes'
-            - 'REDIS_NODES=127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003'
-            - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
-            - 'REDIS_CLUSTER_ANNOUNCE_IP=127.0.0.1'
-            - 'REDIS_PORT_NUMBER=7002'
+  redis-2:
+    image: redis:latest
+    container_name: redis-cluster-2
+    command: redis-server --port 7002 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7002 --cluster-announce-bus-port 17002
+    network_mode: host
+    volumes:
+      - redis-2-data:/data
 
-    redis-cluster-3:
-        container_name: redis-cluster-3
-        <<: *redis-cluster-base
-        depends_on:
-            - redis-cluster-1
-            - redis-cluster-2
-        environment:
-            - 'ALLOW_EMPTY_PASSWORD=yes'
-            - 'REDIS_NODES=127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003'
-            - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
-            - 'REDIS_CLUSTER_ANNOUNCE_IP=127.0.0.1'
-            - 'REDIS_PORT_NUMBER=7003'
-            - 'REDIS_CLUSTER_REPLICAS=0'
-            - 'REDIS_CLUSTER_CREATOR=yes'
+  redis-3:
+    image: redis:latest
+    container_name: redis-cluster-3
+    command: redis-server --port 7003 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7003 --cluster-announce-bus-port 17003
+    network_mode: host
+    volumes:
+      - redis-3-data:/data
+
+  redis-cluster-init:
+    image: redis:latest
+    container_name: redis-cluster-init
+    network_mode: host
+    depends_on:
+      - redis-1
+      - redis-2
+      - redis-3
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "sleep 5 && \
+      redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 --cluster-replicas 0 --cluster-yes && \
+      echo 'Cluster created successfully' && \
+      redis-cli -p 7001 cluster info"
+
+volumes:
+  redis-1-data:
+  redis-2-data:
+  redis-3-data:
