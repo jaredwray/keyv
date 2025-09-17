@@ -15,8 +15,10 @@
 	"scripts": {
 		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
-		"test": "biome check --write && vitest run --coverage",
-		"test:ci": "biome check && vitest --run --sequence.setupFiles=list --coverage",
+		"lint": "biome check --write --error-on-warnings",
+		"lint:ci": "biome check --error-on-warnings",
+		"test": "pnpm lint && vitest run --coverage",
+		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./dist ./test/testdb.sqlite"
 	},
 	"repository": {
