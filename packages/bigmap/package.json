@@ -55,7 +55,7 @@
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 20"
+		"node": ">= 18"
 	},
 	"files": [
 		"dist",
