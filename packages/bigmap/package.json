@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/bigmap",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Bigmap for Keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
