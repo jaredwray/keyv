@@ -987,7 +987,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 						const formattedValue = { value, expires };
 						const serializedValue = await this.serializeData(formattedValue);
-						return { key, value: serializedValue, ttl };
+						const keyPrefixed = this._getKeyPrefix(key);
+						return { key: keyPrefixed, value: serializedValue, ttl };
 					}),
 				);
 				results = await this._store.setMany(serializedEntries);
