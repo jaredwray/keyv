@@ -98,6 +98,7 @@ Here are the storage adapters that are not in this repository but compatible wit
 - [keyv-momento](https://github.com/momentohq/node-keyv-adaptor/) - Momento storage adapter for Keyv
 - [keyv-upstash](https://github.com/mahdavipanah/keyv-upstash) - Upstash Redis adapter for Keyv
 - [@resolid/keyv-sqlite](https://github.com/huijiewei/keyv-sqlite) - A new SQLite storage adapter for Keyv
+- [keyv-browser](https://github.com/zaaack/keyv-browser) - Browser storage adapter for Keyv, including localStorage and indexedDB.
 
 ## License
 
