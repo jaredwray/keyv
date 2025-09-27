@@ -50,9 +50,11 @@
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
     "@keyv/test-suite": "workspace:^",
-    "keyv": "workspace:^",
     "vitest": "^3.2.4"
   },
+  "peerDependencies": {
+		"keyv": "workspace:^"
+	},
   "tsd": {
     "directory": "test"
   },

@@ -9,7 +9,7 @@ import {
 import keyvTestSuite from "@keyv/test-suite";
 import Keyv from "keyv";
 import * as test from "vitest";
-import KeyvDynamo from "../src/index.js";
+import KeyvDynamo, { createKeyv } from "../src/index.js";
 
 process.env.AWS_ACCESS_KEY_ID = "dummyAccessKeyId";
 process.env.AWS_SECRET_ACCESS_KEY = "dummySecretAccessKey";
@@ -212,3 +212,101 @@ test.it(
 		(store2 as any).client.send = originalSend;
 	},
 );
+
+test.describe("createKeyv", () => {
+	test.it("should create Keyv instance with default options", (t) => {
+		const keyv = createKeyv();
+		t.expect(keyv).toBeDefined();
+		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
+		t.expect(keyv.namespace).toBeUndefined();
+		t.expect((keyv.store as KeyvDynamo).namespace).toBeUndefined();
+		t.expect(keyv.useKeyPrefix).toBe(false);
+	});
+
+	test.it("should create Keyv instance with string endpoint", (t) => {
+		const keyv = createKeyv(dynamoURL);
+		t.expect(keyv).toBeDefined();
+		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
+		t.expect(keyv.namespace).toBeUndefined();
+		t.expect((keyv.store as KeyvDynamo).namespace).toBeUndefined();
+		t.expect(keyv.useKeyPrefix).toBe(false);
+		t.expect((keyv.store as KeyvDynamo).opts.endpoint).toBe(dynamoURL);
+	});
+
+	test.it("should create Keyv instance with custom namespace", (t) => {
+		const namespace = "test-namespace";
+		const keyv = createKeyv({ endpoint: dynamoURL, namespace });
+		t.expect(keyv).toBeDefined();
+		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
+		t.expect(keyv.namespace).toBe(namespace);
+		t.expect((keyv.store as KeyvDynamo).namespace).toBe(namespace);
+		t.expect(keyv.useKeyPrefix).toBe(false);
+		t.expect((keyv.store as KeyvDynamo).opts.endpoint).toBe(dynamoURL);
+	});
+
+	test.it("should create Keyv instance with custom table name", (t) => {
+		const tableName = "custom-table";
+		const keyv = createKeyv({ endpoint: dynamoURL, tableName });
+		t.expect(keyv).toBeDefined();
+		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
+		t.expect(keyv.namespace).toBeUndefined();
+		t.expect((keyv.store as KeyvDynamo).namespace).toBeUndefined();
+		t.expect(keyv.useKeyPrefix).toBe(false);
+		t.expect((keyv.store as KeyvDynamo).opts.tableName).toBe(tableName);
+	});
+
+	test.it(
+		"should create Keyv instance with both namespace and table name",
+		(t) => {
+			const namespace = "test-namespace-2";
+			const tableName = "custom-table-2";
+			const keyv = createKeyv({ endpoint: dynamoURL, namespace, tableName });
+			t.expect(keyv).toBeDefined();
+			t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
+			t.expect(keyv.namespace).toBe(namespace);
+			t.expect((keyv.store as KeyvDynamo).namespace).toBe(namespace);
+			t.expect(keyv.useKeyPrefix).toBe(false);
+			t.expect((keyv.store as KeyvDynamo).opts.tableName).toBe(tableName);
+		},
+	);
+
+	test.it(
+		"should create functional Keyv instance that can store and retrieve values",
+		async (t) => {
+			const keyv = createKeyv({ endpoint: dynamoURL });
+			const key = `test-key-${randomUUID()}`;
+			const value = "test-value";
+
+			await keyv.set(key, value);
+			const retrieved = await keyv.get(key);
+			t.expect(retrieved).toBe(value);
+
+			await keyv.delete(key);
+			const deletedValue = await keyv.get(key);
+			t.expect(deletedValue).toBeUndefined();
+		},
+	);
+
+	test.it(
+		"should create functional Keyv instance with namespace that can store and retrieve values",
+		async (t) => {
+			const namespace = "test-ns";
+			const keyv = createKeyv({ endpoint: dynamoURL, namespace });
+			const key = `test-key-${randomUUID()}`;
+			const value = "test-value-with-namespace";
+
+			await keyv.set(key, value);
+			const retrieved = await keyv.get(key);
+			t.expect(retrieved).toBe(value);
+
+			// Create another Keyv instance with same namespace to verify it can access the same data
+			const keyv2 = createKeyv({ endpoint: dynamoURL, namespace });
+			const retrieved2 = await keyv2.get(key);
+			t.expect(retrieved2).toBe(value);
+
+			await keyv.delete(key);
+			const deletedValue = await keyv.get(key);
+			t.expect(deletedValue).toBeUndefined();
+		},
+	);
+});

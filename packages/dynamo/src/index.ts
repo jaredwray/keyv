@@ -18,7 +18,7 @@ import {
 	type PutCommandInput,
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
-import type { KeyvStoreAdapter, StoredData } from "keyv";
+import { Keyv, type KeyvStoreAdapter, type StoredData } from "keyv";
 
 export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport = true;
@@ -232,3 +232,28 @@ export type KeyvDynamoOptions = {
 	dialect?: string;
 	tableName?: string;
 } & DynamoDBClientConfig;
+
+/**
+ * Will create a Keyv instance with the DynamoDB adapter. This will also set the namespace and useKeyPrefix to false.
+ * @param options - Options for the adapter including DynamoDB client configuration and table settings.
+ * @returns {Keyv} - Keyv instance with the DynamoDB adapter
+ */
+export function createKeyv(options?: KeyvDynamoOptions | string): Keyv {
+	const adapter = new KeyvDynamo(options ?? {});
+
+	if (typeof options === "object" && options?.namespace) {
+		adapter.namespace = options.namespace;
+		const keyv = new Keyv(adapter, {
+			namespace: options.namespace,
+			useKeyPrefix: false,
+		});
+
+		return keyv;
+	}
+
+	const keyv = new Keyv(adapter, { useKeyPrefix: false });
+	keyv.namespace = undefined; // Ensure no namespace is set
+	return keyv;
+}
+
+export { Keyv } from "keyv";
