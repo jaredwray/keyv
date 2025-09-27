@@ -35,6 +35,20 @@ e.g:
 const keyv = new KeyvDynamo({ tableName: 'cacheTable' });
 ```
 
+### Using the `createKeyv` helper function
+
+The `createKeyv` function is a convenience method that creates a new Keyv instance with the DynamoDB adapter. It automatically sets `useKeyPrefix` to `false` to allow the adapter to handle key prefixing:
+
+```js
+import { createKeyv } from '@keyv/dynamo';
+
+const keyv = createKeyv({
+  endpoint: 'http://localhost:8000',
+  tableName: 'cacheTable',
+  namespace: 'my-app'
+});
+```
+
 ### Accessing the DynamoDB Client
 
 The DynamoDB client is exposed as a property for advanced use cases:
