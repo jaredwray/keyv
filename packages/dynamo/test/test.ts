@@ -309,4 +309,69 @@ test.describe("createKeyv", () => {
 			t.expect(deletedValue).toBeUndefined();
 		},
 	);
+
+	test.it("should handle various data types with createKeyv", async (t) => {
+		const keyv = createKeyv({ endpoint: dynamoURL });
+
+		// Test with string
+		const stringKey = `string-${randomUUID()}`;
+		const stringValue = `random-string-${randomUUID()}`;
+		await keyv.set(stringKey, stringValue);
+		t.expect(await keyv.get(stringKey)).toBe(stringValue);
+
+		// Test with number
+		const numberKey = `number-${randomUUID()}`;
+		const numberValue = Math.random() * 1000;
+		await keyv.set(numberKey, numberValue);
+		t.expect(await keyv.get(numberKey)).toBe(numberValue);
+
+		// Test with boolean
+		const boolKey = `bool-${randomUUID()}`;
+		const boolValue = Math.random() > 0.5;
+		await keyv.set(boolKey, boolValue);
+		t.expect(await keyv.get(boolKey)).toBe(boolValue);
+
+		// Test with object
+		const objectKey = `object-${randomUUID()}`;
+		const objectValue = {
+			id: randomUUID(),
+			name: `test-${randomUUID()}`,
+			count: Math.floor(Math.random() * 100),
+			active: Math.random() > 0.5,
+			nested: {
+				field1: `nested-${randomUUID()}`,
+				field2: Math.random() * 50,
+			},
+			array: [randomUUID(), randomUUID(), randomUUID()],
+		};
+		await keyv.set(objectKey, objectValue);
+		t.expect(await keyv.get(objectKey)).toEqual(objectValue);
+
+		// Test with array
+		const arrayKey = `array-${randomUUID()}`;
+		const arrayValue = [
+			randomUUID(),
+			Math.random() * 100,
+			Math.random() > 0.5,
+			{ id: randomUUID() },
+			[1, 2, 3],
+		];
+		await keyv.set(arrayKey, arrayValue);
+		t.expect(await keyv.get(arrayKey)).toEqual(arrayValue);
+
+		// Test with Date object
+		const dateKey = `date-${randomUUID()}`;
+		const dateValue = new Date();
+		await keyv.set(dateKey, dateValue);
+		const retrievedDate = await keyv.get(dateKey);
+		t.expect(retrievedDate).toBe(dateValue.toISOString());
+
+		// Clean up
+		await keyv.delete(stringKey);
+		await keyv.delete(numberKey);
+		await keyv.delete(boolKey);
+		await keyv.delete(objectKey);
+		await keyv.delete(arrayKey);
+		await keyv.delete(dateKey);
+	});
 });
