@@ -49,7 +49,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.4",
 		"@keyv/test-suite": "workspace:^",
-		"keyv": "^5.0.0",
+		"keyv": "workspace:^",
 		"rimraf": "^6.0.1",
 		"tsd": "^0.33.0"
 	},
