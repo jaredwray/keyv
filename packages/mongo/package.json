@@ -49,9 +49,11 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.4",
 		"@keyv/test-suite": "workspace:^",
-		"keyv": "workspace:^",
 		"rimraf": "^6.0.1",
 		"tsd": "^0.33.0"
+	},
+	"peerDependencies": {
+		"keyv": "workspace:^"
 	},
 	"tsd": {
 		"directory": "test"
