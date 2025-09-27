@@ -47,11 +47,11 @@
 		"mongodb": "^6.8.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.0",
+		"@biomejs/biome": "^2.2.4",
 		"@keyv/test-suite": "workspace:^",
 		"keyv": "^5.0.0",
 		"rimraf": "^6.0.1",
-		"tsd": "^0.31.1"
+		"tsd": "^0.33.0"
 	},
 	"tsd": {
 		"directory": "test"
