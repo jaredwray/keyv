@@ -44,14 +44,14 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mongodb": "^6.8.0"
+		"mongodb": "^6.20.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.0",
+		"@biomejs/biome": "^2.2.4",
 		"@keyv/test-suite": "workspace:^",
-		"keyv": "^5.0.0",
+		"keyv": "workspace:^",
 		"rimraf": "^6.0.1",
-		"tsd": "^0.31.1"
+		"tsd": "^0.33.0"
 	},
 	"tsd": {
 		"directory": "test"
