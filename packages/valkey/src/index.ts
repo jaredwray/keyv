@@ -50,6 +50,10 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	_getKeyName = (key: string): string => {
+		if (!this.opts.useRedisSets) {
+			return `${this._getNamespace()}:${key}`;
+		}
+
 		return key;
 	};
 
@@ -134,8 +138,9 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 				]);
 			}
 		} else {
-			const pattern = `${this._getNamespace()}:*`;
+			const pattern = `${this._getNamespace()}*`;
 			const keys: string[] = await this.redis.keys(pattern);
+			console.log(keys);
 			if (keys.length > 0) {
 				await this.redis.unlink(keys);
 			}

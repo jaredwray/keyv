@@ -148,8 +148,8 @@ test.it("clear method when useSets is false", async (t) => {
 
 	await keyv.clear();
 
-	const value = await keyv.get("demo");
-	const value2 = await keyv.get("demo2");
+	const value = await keyv.get("foo");
+	const value2 = await keyv.get("foo2");
 	t.expect(value).toBe(undefined);
 	t.expect(value2).toBe(undefined);
 });
