@@ -202,6 +202,29 @@ describe("BigMap Iterators", () => {
 		expect(keys).toContain(dataSet[1].key);
 	});
 
+	it("should pass the BigMap instance as third argument in forEach", () => {
+		const bigMap = new BigMap<string, number>();
+		bigMap.set("key1", 10);
+		bigMap.set("key2", 20);
+
+		bigMap.forEach((_value, _key, map) => {
+			expect(map).toBe(bigMap);
+		});
+	});
+
+	it("should apply thisArg correctly in forEach", () => {
+		const bigMap = new BigMap<string, number>();
+		bigMap.set("key1", 10);
+		bigMap.set("key2", 20);
+
+		const context = { sum: 0 };
+		bigMap.forEach(function (value) {
+			this.sum += value;
+		}, context);
+
+		expect(context.sum).toBe(30);
+	});
+
 	it("should iterate over values", () => {
 		const bigMap = new BigMap<string, number>();
 
@@ -295,6 +318,18 @@ describe("BigMap Store", () => {
 		const store = bigMap.getStore(key);
 		expect(store).toBeInstanceOf(Map);
 		expect(bigMap.storeHashFunction).toBe(customHashFunction);
+	});
+
+	it("should fallback to default hash function when storeHashFunction is undefined", () => {
+		const bigMap = new BigMap<string, number>();
+		// Force _storeHashFunction to be undefined by using Object.defineProperty
+		Object.defineProperty(bigMap, "_storeHashFunction", {
+			value: undefined,
+			writable: true,
+		});
+		const key = "testKey";
+		const store = bigMap.getStore(key);
+		expect(store).toBeInstanceOf(Map);
 	});
 });
 
