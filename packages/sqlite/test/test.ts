@@ -17,9 +17,9 @@ test.beforeEach(async () => {
 });
 
 test.it("table name can be numeric, alphabet, special case", (t) => {
-	// @ts-expect-error - table needs to be a string
 	let keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
+		// @ts-expect-error testing
 		table: 3000,
 	});
 	t.expect(keyv.opts.table).toBe("_3000");
@@ -30,11 +30,89 @@ test.it("table name can be numeric, alphabet, special case", (t) => {
 	});
 	t.expect(keyv.opts.table).toBe("sample");
 
+	// Special characters are now stripped for SQL injection prevention
 	keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		table: "$sample",
 	});
-	t.expect(keyv.opts.table).toBe("_$sample");
+	t.expect(keyv.opts.table).toBe("sample");
+
+	// Table name with only special characters should throw
+	t.expect(
+		() =>
+			new KeyvSqlite({
+				uri: "sqlite://test/testdb.sqlite",
+				table: "$$$",
+			}),
+	).toThrow("Invalid table name: must contain alphanumeric characters");
+});
+
+test.it("keySize validation throws on invalid values", (t) => {
+	// Test NaN
+	t.expect(
+		() =>
+			new KeyvSqlite({
+				uri: "sqlite://test/testdb.sqlite",
+				// @ts-expect-error - testing invalid keySize
+				keySize: "invalid",
+			}),
+	).toThrow("Invalid keySize: must be a positive number between 1 and 65535");
+
+	// Test zero
+	t.expect(
+		() =>
+			new KeyvSqlite({
+				uri: "sqlite://test/testdb.sqlite",
+				keySize: 0,
+			}),
+	).toThrow("Invalid keySize: must be a positive number between 1 and 65535");
+
+	// Test negative
+	t.expect(
+		() =>
+			new KeyvSqlite({
+				uri: "sqlite://test/testdb.sqlite",
+				keySize: -100,
+			}),
+	).toThrow("Invalid keySize: must be a positive number between 1 and 65535");
+
+	// Test too large
+	t.expect(
+		() =>
+			new KeyvSqlite({
+				uri: "sqlite://test/testdb.sqlite",
+				keySize: 70000,
+			}),
+	).toThrow("Invalid keySize: must be a positive number between 1 and 65535");
+
+	// Test Infinity
+	t.expect(
+		() =>
+			new KeyvSqlite({
+				uri: "sqlite://test/testdb.sqlite",
+				keySize: Infinity,
+			}),
+	).toThrow("Invalid keySize: must be a positive number between 1 and 65535");
+});
+
+test.it("keySize accepts valid values", (t) => {
+	const keyv1 = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		keySize: 100,
+	});
+	t.expect(keyv1.opts.keySize).toBe(100);
+
+	const keyv2 = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		keySize: 65535,
+	});
+	t.expect(keyv2.opts.keySize).toBe(65535);
+
+	const keyv3 = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		keySize: 1,
+	});
+	t.expect(keyv3.opts.keySize).toBe(1);
 });
 
 test.it("keyv options as a string", (t) => {

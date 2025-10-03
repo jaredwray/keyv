@@ -5,8 +5,13 @@ import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import sqlite3 from "sqlite3";
 import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
 
-const toTableString = (input: string) =>
-	String(input).search(/^[a-zA-Z]+$/) < 0 ? `_${input}` : input;
+const toTableString = (input: string) => {
+	const sanitized = String(input).replace(/[^a-zA-Z0-9_]/g, "");
+	if (sanitized.length === 0) {
+		throw new Error("Invalid table name: must contain alphanumeric characters");
+	}
+	return /^[a-zA-Z]/.test(sanitized) ? sanitized : `_${sanitized}`;
+};
 
 export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
@@ -63,7 +68,14 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 		this.opts.table = toTableString(this.opts.table!);
 
-		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${Number(this.opts.keySize)}) PRIMARY KEY, value TEXT )`;
+		const keySize = Number(this.opts.keySize);
+		if (!Number.isFinite(keySize) || keySize <= 0 || keySize > 65535) {
+			throw new Error(
+				"Invalid keySize: must be a positive number between 1 and 65535",
+			);
+		}
+
+		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${keySize}) PRIMARY KEY, value TEXT )`;
 
 		// @ts-expect-error - db is
 		const connected: Promise<DB> = this.opts.connect!()
