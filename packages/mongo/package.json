@@ -47,7 +47,7 @@
 		"mongodb": "^6.20.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.4",
+		"@biomejs/biome": "^2.2.5",
 		"@keyv/test-suite": "workspace:^",
 		"rimraf": "^6.0.1",
 		"tsd": "^0.33.0"
