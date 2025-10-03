@@ -118,7 +118,7 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		if (this.opts.useGridFS) {
 			await client.store.updateOne(
 				{
-					filename: key,
+					filename: String(key),
 				},
 				{
 					$set: {
