@@ -169,8 +169,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 
 		const index = this._storeHashFunction
 			? this._storeHashFunction(String(key), storeSize)
-			: /* c8 ignore next */
-				defaultHashFunction(String(key), storeSize);
+			: defaultHashFunction(String(key), storeSize);
 
 		return this.getStoreMap(index);
 	}
@@ -264,9 +263,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		thisArg?: any,
 	): void {
 		this._store.forEach((store) => {
-			store.forEach(callbackfn, thisArg);
+			store.forEach((value, key) => {
+				callbackfn.call(thisArg, value, key, this as unknown as Map<K, V>);
+			});
 		});
-		// Note: NEED TO FIX THIS
 	}
 
 	/**
