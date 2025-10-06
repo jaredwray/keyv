@@ -140,7 +140,6 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		} else {
 			const pattern = `${this._getNamespace()}*`;
 			const keys: string[] = await this.redis.keys(pattern);
-			console.log(keys);
 			if (keys.length > 0) {
 				await this.redis.unlink(keys);
 			}
