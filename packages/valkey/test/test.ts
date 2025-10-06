@@ -191,3 +191,43 @@ test.it("can create a full keyv instance with a uri", async (t) => {
 	await keyv.set("foo222", "bar222");
 	t.expect(await keyv.get("foo222")).toBe("bar222");
 });
+
+test.it(
+	"iterator should iterate over multiple keys in namespace",
+	async (t) => {
+		const redis = new Redis(redisURI);
+		const keyvRedis = new KeyvValkey(redis);
+		const keyv = new Keyv(keyvRedis, { namespace: "iterator-test" });
+
+		// Clear any existing keys
+		await keyv.clear();
+
+		// Set multiple keys
+		const testData = {
+			key1: "value1",
+			key2: "value2",
+			key3: "value3",
+			key4: "value4",
+		};
+
+		for (const [key, value] of Object.entries(testData)) {
+			await keyv.set(key, value);
+		}
+
+		// Iterate and collect all keys/values
+		const collected = new Map<string, string>();
+		for await (const [key, value] of keyvRedis.iterator("iterator-test")) {
+			collected.set(key, value);
+		}
+
+		// Validate all keys exist
+		t.expect(collected.size).toBe(Object.keys(testData).length);
+		for (const [key, value] of Object.entries(testData)) {
+			const fullKey = `iterator-test:${key}`;
+			t.expect(collected.has(fullKey)).toBe(true);
+			t.expect(collected.get(fullKey)).toBe(JSON.stringify({ value }));
+		}
+
+		await keyv.disconnect();
+	},
+);
