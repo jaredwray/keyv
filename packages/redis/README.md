@@ -170,13 +170,13 @@ You can pass these options when creating a new `KeyvRedis` instance:
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-const keyvRedis = new KeyvRedis({
+const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379', {
   namespace: 'my-namespace',
   keyPrefixSeparator: ':',
   clearBatchSize: 1000,
   useUnlink: true,
   noNamespaceAffectsAll: false,
-  connectTimeout: 200
+  connectionTimeout: 200
 });
 
 const keyv = new Keyv({ store: keyvRedis });
