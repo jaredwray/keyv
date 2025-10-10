@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/sqlite",
-	"version": "4.0.5",
+	"version": "4.0.6",
 	"description": "SQLite storage adapter for Keyv",
 	"type": "module",
 	"main": "dist/index.cjs",
@@ -50,7 +50,7 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.4",
+		"@biomejs/biome": "^2.2.5",
 		"@faker-js/faker": "^10.0.0",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^3.2.4",
