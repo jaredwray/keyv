@@ -51,7 +51,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.5",
-		"@faker-js/faker": "^10.0.0",
+		"@faker-js/faker": "^10.1.0",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^3.2.4",
 		"rimraf": "^6.0.1",
