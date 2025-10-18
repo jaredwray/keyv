@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
-import { BigMap, defaultHashFunction } from "../src/index.js";
+import { BigMap, createKeyv, defaultHashFunction } from "../src/index.js";
 
 enum FakeDataType {
 	STRING = "string",
@@ -403,5 +403,39 @@ describe("BigMap Clear", () => {
 		expect(bigMap.size).toBe(0);
 		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
 		expect(bigMap.has(dataSet[0].key)).toBe(false);
+	});
+});
+
+describe("createKeyv", () => {
+	it("should create a Keyv instance with BigMap adapter", () => {
+		const keyv = createKeyv();
+		expect(keyv).toBeDefined();
+		expect(keyv.store).toBeInstanceOf(BigMap);
+	});
+
+	it("should create a Keyv instance with custom options", () => {
+		const keyv = createKeyv({ storeSize: 8 });
+		expect(keyv).toBeDefined();
+		expect(keyv.store).toBeInstanceOf(BigMap);
+		expect((keyv.store as BigMap<string, unknown>).storeSize).toBe(8);
+	});
+
+	it("should work with set and get operations", async () => {
+		const keyv = createKeyv<string, number>();
+		await keyv.set("testKey", 123);
+		const value = await keyv.get<number>("testKey");
+		expect(value).toBe(123);
+	});
+
+	it("should work with custom hash function", async () => {
+		const customHashFunction = (key: string, storeSize: number) =>
+			key.length % storeSize;
+		const keyv = createKeyv({
+			storeSize: 4,
+			storeHashFunction: customHashFunction,
+		});
+		await keyv.set("test", "value");
+		const value = await keyv.get("test");
+		expect(value).toBe("value");
 	});
 });
