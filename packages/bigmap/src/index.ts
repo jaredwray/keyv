@@ -1,4 +1,5 @@
 import { Hookified, type HookifiedOptions } from "hookified";
+import { Keyv } from "keyv";
 
 export type MapInterfacee<K, V> = {
 	readonly size: number;
@@ -315,3 +316,19 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		return size;
 	}
 }
+
+/**
+ * Will create a Keyv instance with the BigMap adapter. This will also set the namespace and useKeyPrefix to false.
+ * @param {BigMapOptions} options - Options for the BigMap adapter such as storeSize and storeHashFunction.
+ * @returns {Keyv} - Keyv instance with the BigMap adapter
+ */
+export function createKeyv<K = string, V = unknown>(
+	options?: BigMapOptions,
+): Keyv {
+	const adapter = new BigMap<K, V>(options);
+	const keyv = new Keyv({ store: adapter });
+
+	return keyv;
+}
+
+export { Keyv } from "keyv";
