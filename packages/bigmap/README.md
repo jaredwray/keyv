@@ -32,6 +32,11 @@
 - [Advanced Features](#advanced-features)
   - [Type Safety with Generics](#type-safety-with-generics)
   - [Large-Scale Data](#large-scale-data)
+- [Using with Keyv](#using-with-keyv)
+  - [`createKeyv(options?)`](#createkeyvoptions)
+  - [With Custom Options](#with-custom-options)
+  - [Type Safety](#type-safety)
+  - [Integration with Keyv Ecosystem](#integration-with-keyv-ecosystem)
 - [API](#api)
 - [Constructor](#constructor)
 - [Properties](#properties)
@@ -194,6 +199,108 @@ for (let i = 0; i < 20000000; i++) {
 }
 
 console.log(bigMap.size); // 20000000
+```
+
+## Using with Keyv
+
+BigMap can be used as a storage adapter for [Keyv](https://github.com/jaredwray/keyv), providing a scalable in-memory store with TTL support.
+
+### `createKeyv(options?)`
+
+The `createKeyv` function creates a Keyv instance with BigMap as the storage adapter.
+
+**Parameters:**
+- `options` (optional): BigMap configuration options
+  - `storeSize` (number): Number of internal Map instances. Default: `4`
+  - `storeHashFunction` (StoreHashFunction): Custom hash function for key distribution
+
+**Returns:** `Keyv` instance with BigMap adapter
+
+**Example:**
+
+```typescript
+import { createKeyv } from '@keyv/bigmap';
+
+// Basic usage
+const keyv = createKeyv();
+
+// Set with TTL (in milliseconds)
+await keyv.set('user:123', { name: 'Alice', age: 30 }, 60000); // Expires in 60 seconds
+
+// Get value
+const user = await keyv.get('user:123');
+console.log(user); // { name: 'Alice', age: 30 }
+
+// Check if key exists
+const exists = await keyv.has('user:123');
+
+// Delete key
+await keyv.delete('user:123');
+
+// Clear all keys
+await keyv.clear();
+```
+
+### With Custom Options
+
+```typescript
+import { createKeyv } from '@keyv/bigmap';
+
+// Create with custom store size for better performance with millions of keys
+const keyv = createKeyv({ storeSize: 16 });
+
+// With custom hash function
+const keyv = createKeyv({
+  storeSize: 8,
+  storeHashFunction: (key, storeSize) => {
+    // Custom distribution logic
+    return key.length % storeSize;
+  }
+});
+```
+
+### Type Safety
+
+```typescript
+import { createKeyv } from '@keyv/bigmap';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
+
+const keyv = createKeyv<string, Product>();
+
+await keyv.set('product:1', {
+  id: '1',
+  name: 'Laptop',
+  price: 999
+});
+
+const product = await keyv.get<Product>('product:1');
+```
+
+### Integration with Keyv Ecosystem
+
+BigMap works seamlessly with the Keyv ecosystem:
+
+```typescript
+import { createKeyv } from '@keyv/bigmap';
+
+const cache = createKeyv({ storeSize: 16 });
+
+// Use with namespaces
+const users = cache.namespace('users');
+const products = cache.namespace('products');
+
+await users.set('123', { name: 'Alice' });
+await products.set('456', { name: 'Laptop' });
+
+// Iterate over keys
+for await (const [key, value] of cache.iterator()) {
+  console.log(key, value);
+}
 ```
 
 # API
