@@ -21,18 +21,38 @@
 
 - [Features](#features)
 - [Installation](#installation)
-- [Usage](#usage)
-  - [Basic Usage](#basic-usage)
-  - [Configuration Options](#configuration-options)
-    - [Custom Store Size](#custom-store-size)
-    - [Custom Hash Function](#custom-hash-function)
-  - [Iteration](#iteration)
-    - [For...of Loop](#forof-loop)
-    - [forEach](#foreach)
-    - [Keys, Values, and Entries](#keys-values-and-entries)
-  - [Advanced Features](#advanced-features)
-    - [Type Safety with Generics](#type-safety-with-generics)
-    - [Large-Scale Data](#large-scale-data)
+- [Overview](#overview)
+- [Basic Usage](#basic-usage)
+- [Custom Store Size](#custom-store-size)
+- [Custom Hash Function](#custom-hash-function)
+- [Iteration](#iteration)
+  - [For...of Loop](#forof-loop)
+  - [forEach](#foreach)
+  - [Keys, Values, and Entries](#keys-values-and-entries)
+- [Advanced Features](#advanced-features)
+  - [Type Safety with Generics](#type-safety-with-generics)
+  - [Large-Scale Data](#large-scale-data)
+- [API](#api)
+- [Constructor](#constructor)
+- [Properties](#properties)
+- [Methods](#methods)
+  - [`set(key, value)`](#setkey-value)
+  - [`get(key)`](#getkey)
+  - [`has(key)`](#haskey)
+  - [`delete(key)`](#deletekey)
+  - [`clear()`](#clear)
+  - [`forEach(callbackfn, thisArg?)`](#foreachcallbackfn-thisarg)
+  - [`keys()`](#keys)
+  - [`values()`](#values)
+  - [`entries()`](#entries)
+  - [`[Symbol.iterator]()`](#symboliterator)
+  - [`getStore(key)`](#getstorekey)
+  - [`getStoreMap(index)`](#getstoremapindex)
+  - [`initStore()`](#initstore)
+- [Types](#types)
+  - [`StoreHashFunction`](#storehashfunction)
+  - [`defaultHashFunction(key, storeSize)`](#defaulthashfunctionkey-storesize)
+  - [`djb2Hash(string, min?, max?)`](#djb2hashstring-min-max)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -42,11 +62,11 @@
 npm install --save keyv @keyv/bigmap
 ```
 
-# Usage
+# Overview
 
 BigMap is a scalable Map implementation that overcomes JavaScript's built-in Map limit of approximately 17 million entries. It uses a distributed hash approach with multiple internal Map instances.
 
-## Basic Usage
+# Basic Usage
 
 ```typescript
 import { BigMap } from '@keyv/bigmap';
@@ -74,9 +94,7 @@ console.log(bigMap.size); // 1
 bigMap.clear();
 ```
 
-## Configuration Options
-
-### Custom Store Size
+## Custom Store Size
 
 By default, BigMap uses 4 internal Map instances. You can configure this:
 
@@ -86,7 +104,7 @@ const bigMap = new BigMap<string, number>({ storeSize: 10 });
 
 **Note:** Changing the `storeSize` after initialization will clear all entries.
 
-### Custom Hash Function
+## Custom Hash Function
 
 Provide your own hash function for key distribution:
 
@@ -116,7 +134,7 @@ for (const [key, value] of bigMap) {
 }
 ```
 
-### forEach
+## forEach
 
 ```typescript
 bigMap.forEach((value, key) => {
@@ -130,7 +148,7 @@ bigMap.forEach(function(value) {
 }, context);
 ```
 
-### Keys, Values, and Entries
+## Keys, Values, and Entries
 
 ```typescript
 // Iterate over keys
@@ -176,6 +194,288 @@ for (let i = 0; i < 20000000; i++) {
 }
 
 console.log(bigMap.size); // 20000000
+```
+
+# API
+
+# Constructor
+
+ `new BigMap<K, V>(options?)`
+
+Creates a new BigMap instance.
+
+**Parameters:**
+- `options` (optional): Configuration options
+  - `storeSize` (number): Number of internal Map instances to use. Default: `4`. Must be at least 1.
+  - `storeHashFunction` (StoreHashFunction): Custom hash function for key distribution. Default: `defaultHashFunction`
+
+**Example:**
+```typescript
+const bigMap = new BigMap<string, number>();
+const customBigMap = new BigMap<string, number>({
+  storeSize: 10,
+  storeHashFunction: (key, storeSize) => key.length % storeSize
+});
+```
+
+## Properties
+
+| Property | Type | Access | Description |
+|----------|------|--------|-------------|
+| `size` | `number` | Read-only | Gets the total number of entries in the BigMap. |
+| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this will clear all entries. Default: `4` |
+| `storeHashFunction` | `StoreHashFunction \| undefined` | Read/Write | Gets or sets the hash function used for key distribution. |
+| `store` | `Array<Map<K, V>>` | Read-only | Gets the internal array of Map instances. |
+
+**Examples:**
+```typescript
+const bigMap = new BigMap<string, number>();
+
+// size property
+bigMap.set('key1', 100);
+console.log(bigMap.size); // 1
+
+// storeSize property
+console.log(bigMap.storeSize); // 4 (default)
+bigMap.storeSize = 8; // Changes size and clears all entries
+
+// storeHashFunction property
+bigMap.storeHashFunction = (key, storeSize) => key.length % storeSize;
+
+// store property
+console.log(bigMap.store.length); // 8
+```
+
+# Methods
+
+## `set(key, value)`
+
+Sets the value for a key in the map.
+
+**Parameters:**
+- `key` (K): The key to set
+- `value` (V): The value to associate with the key
+
+**Returns:** `Map<K, V>` - The internal Map instance where the key was stored
+
+**Example:**
+```typescript
+bigMap.set('user123', { name: 'Alice' });
+```
+
+## `get(key)`
+
+Gets the value associated with a key.
+
+**Parameters:**
+- `key` (K): The key to retrieve
+
+**Returns:** `V | undefined` - The value, or undefined if not found
+
+**Example:**
+```typescript
+const value = bigMap.get('user123');
+```
+
+## `has(key)`
+
+Checks if a key exists in the map.
+
+**Parameters:**
+- `key` (K): The key to check
+
+**Returns:** `boolean` - True if the key exists, false otherwise
+
+**Example:**
+```typescript
+if (bigMap.has('user123')) {
+  console.log('User exists');
+}
+```
+
+## `delete(key)`
+
+Deletes a key-value pair from the map.
+
+**Parameters:**
+- `key` (K): The key to delete
+
+**Returns:** `boolean` - True if the entry was deleted, false if the key was not found
+
+**Example:**
+```typescript
+const deleted = bigMap.delete('user123');
+```
+
+## `clear()`
+
+Removes all entries from the map.
+
+**Returns:** `void`
+
+**Example:**
+```typescript
+bigMap.clear();
+console.log(bigMap.size); // 0
+```
+
+## `forEach(callbackfn, thisArg?)`
+
+Executes a provided function once for each key-value pair.
+
+**Parameters:**
+- `callbackfn` (function): Function to execute for each entry
+  - `value` (V): The value of the current entry
+  - `key` (K): The key of the current entry
+  - `map` (Map<K, V>): The BigMap instance
+- `thisArg` (optional): Value to use as `this` when executing the callback
+
+**Returns:** `void`
+
+**Example:**
+```typescript
+bigMap.forEach((value, key) => {
+  console.log(`${key}: ${value}`);
+});
+
+// With custom context
+const context = { total: 0 };
+bigMap.forEach(function(value) {
+  this.total += value;
+}, context);
+```
+
+## `keys()`
+
+Returns an iterator of all keys in the map.
+
+**Returns:** `IterableIterator<K>`
+
+**Example:**
+```typescript
+for (const key of bigMap.keys()) {
+  console.log(key);
+}
+```
+
+## `values()`
+
+Returns an iterator of all values in the map.
+
+**Returns:** `IterableIterator<V>`
+
+**Example:**
+```typescript
+for (const value of bigMap.values()) {
+  console.log(value);
+}
+```
+
+## `entries()`
+
+Returns an iterator of all key-value pairs in the map.
+
+**Returns:** `IterableIterator<[K, V]>`
+
+**Example:**
+```typescript
+for (const [key, value] of bigMap.entries()) {
+  console.log(key, value);
+}
+```
+
+## `[Symbol.iterator]()`
+
+Returns an iterator for the map (same as `entries()`). Enables `for...of` loops.
+
+**Returns:** `IterableIterator<[K, V]>`
+
+**Example:**
+```typescript
+for (const [key, value] of bigMap) {
+  console.log(key, value);
+}
+```
+
+## `getStore(key)`
+
+Gets the internal Map instance for a specific key.
+
+**Parameters:**
+- `key` (K): The key to find the store for
+
+**Returns:** `Map<K, V>` - The internal Map instance
+
+**Example:**
+```typescript
+const store = bigMap.getStore('user123');
+```
+
+## `getStoreMap(index)`
+
+Gets the internal Map instance at a specific index.
+
+**Parameters:**
+- `index` (number): The index of the Map to retrieve (0 to storeSize - 1)
+
+**Returns:** `Map<K, V>` - The Map at the specified index
+
+**Throws:** Error if index is out of bounds
+
+**Example:**
+```typescript
+const firstMap = bigMap.getStoreMap(0);
+```
+
+## `initStore()`
+
+Initializes the internal store with empty Map instances. Called automatically during construction.
+
+**Returns:** `void`
+
+# Types
+
+## `StoreHashFunction`
+
+Type definition for custom hash functions.
+
+```typescript
+type StoreHashFunction = (key: string, storeSize: number) => number;
+```
+
+**Parameters:**
+- `key` (string): The key to hash (converted to string)
+- `storeSize` (number): The number of stores (adjusted for zero-based index)
+
+**Returns:** `number` - The index of the store to use (0 to storeSize - 1)
+
+## `defaultHashFunction(key, storeSize)`
+
+The default hash function using DJB2 algorithm.
+
+**Example:**
+```typescript
+import { defaultHashFunction } from '@keyv/bigmap';
+
+const index = defaultHashFunction('myKey', 4);
+```
+
+## `djb2Hash(string, min?, max?)`
+
+DJB2 hash algorithm implementation.
+
+**Parameters:**
+- `string` (string): The string to hash
+- `min` (number): Minimum value. Default: `0`
+- `max` (number): Maximum value. Default: `10`
+
+**Returns:** `number` - Hash value within the specified range
+
+**Example:**
+```typescript
+import { djb2Hash } from '@keyv/bigmap';
+
+const hash = djb2Hash('myKey', 0, 10);
 ```
 
 # Contributing
