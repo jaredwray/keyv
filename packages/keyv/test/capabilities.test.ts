@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
 	isKeyv,
 	isKeyvCompression,
+	isKeyvSerialization,
 	isKeyvStorage,
 } from "../src/capabilities.js";
 import { Keyv } from "../src/index.js";
@@ -578,6 +579,118 @@ describe("capabilities", () => {
 				keyvCompression: true,
 				compress: true,
 				decompress: true,
+			});
+		});
+	});
+
+	describe("isKeyvSerialization", () => {
+		test("should return all false for null", () => {
+			const result = isKeyvSerialization(null);
+			expect(result).toEqual({
+				keyvSerialization: false,
+				stringify: false,
+				parse: false,
+			});
+		});
+
+		test("should return all false for undefined", () => {
+			const result = isKeyvSerialization(undefined);
+			expect(result).toEqual({
+				keyvSerialization: false,
+				stringify: false,
+				parse: false,
+			});
+		});
+
+		test("should return all false for non-object types", () => {
+			const result = isKeyvSerialization("string");
+			expect(result).toEqual({
+				keyvSerialization: false,
+				stringify: false,
+				parse: false,
+			});
+		});
+
+		test("should return keyvSerialization: true for valid serialization adapter", () => {
+			const adapter = {
+				stringify: (obj: unknown) => JSON.stringify(obj),
+				parse: (data: string) => JSON.parse(data),
+			};
+			const result = isKeyvSerialization(adapter);
+			expect(result).toEqual({
+				keyvSerialization: true,
+				stringify: true,
+				parse: true,
+			});
+		});
+
+		test("should return keyvSerialization: false for object with only stringify", () => {
+			const adapter = {
+				stringify: (obj: unknown) => JSON.stringify(obj),
+			};
+			const result = isKeyvSerialization(adapter);
+			expect(result).toEqual({
+				keyvSerialization: false,
+				stringify: true,
+				parse: false,
+			});
+		});
+
+		test("should return keyvSerialization: false for object with only parse", () => {
+			const adapter = {
+				parse: (data: string) => JSON.parse(data),
+			};
+			const result = isKeyvSerialization(adapter);
+			expect(result).toEqual({
+				keyvSerialization: false,
+				stringify: false,
+				parse: true,
+			});
+		});
+
+		test("should handle empty object", () => {
+			const result = isKeyvSerialization({});
+			expect(result).toEqual({
+				keyvSerialization: false,
+				stringify: false,
+				parse: false,
+			});
+		});
+
+		test("should not detect properties that are not functions", () => {
+			const obj = {
+				stringify: "not a function",
+				parse: "not a function",
+			};
+			const result = isKeyvSerialization(obj);
+			expect(result).toEqual({
+				keyvSerialization: false,
+				stringify: false,
+				parse: false,
+			});
+		});
+
+		test("should detect JSON as serialization adapter", () => {
+			const result = isKeyvSerialization(JSON);
+			expect(result).toEqual({
+				keyvSerialization: true,
+				stringify: true,
+				parse: true,
+			});
+		});
+
+		test("should handle serialization adapter with additional properties", () => {
+			const adapter = {
+				stringify: (obj: unknown) => JSON.stringify(obj),
+				parse: (data: string) => JSON.parse(data),
+				compress: (data: string) => data,
+				decompress: (data: string) => data,
+			};
+			const result = isKeyvSerialization(adapter);
+			expect(result).toEqual({
+				keyvSerialization: true,
+				stringify: true,
+				parse: true,
 			});
 		});
 	});

@@ -39,6 +39,12 @@ export type IsKeyvCompressionResult = {
 	decompress: boolean;
 };
 
+export type IsKeyvSerializationResult = {
+	keyvSerialization: boolean;
+	stringify: boolean;
+	parse: boolean;
+};
+
 /**
  * Check if an object is a Keyv instance or has Keyv-like capabilities
  * @param obj - The object to check
@@ -311,11 +317,11 @@ export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
 	}
 
 	// Check for compress and decompress methods
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
 	const hasCompress =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
 		"compress" in obj && typeof (obj as any).compress === "function";
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
 	const hasDecompress =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
 		"decompress" in obj && typeof (obj as any).decompress === "function";
 
 	// Determine if it's a Keyv compression adapter
@@ -326,5 +332,60 @@ export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
 		keyvCompression: isKeyvCompressionAdapter,
 		compress: hasCompress,
 		decompress: hasDecompress,
+	};
+}
+
+/**
+ * Check if an object is a Keyv serialization adapter or has serialization capabilities
+ * @param obj - The object to check
+ * @returns An object with boolean properties for each serialization method
+ * @example
+ * ```typescript
+ * import { isKeyvSerialization } from 'keyv';
+ *
+ * const json = {
+ *   stringify: (obj) => JSON.stringify(obj),
+ *   parse: (str) => JSON.parse(str)
+ * };
+ * isKeyvSerialization(json);
+ * // { keyvSerialization: true, stringify: true, parse: true }
+ *
+ * isKeyvSerialization({});
+ * // { keyvSerialization: false, stringify: false, parse: false }
+ * ```
+ */
+export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
+	if (obj === null || obj === undefined) {
+		return {
+			keyvSerialization: false,
+			stringify: false,
+			parse: false,
+		};
+	}
+
+	if (typeof obj !== "object") {
+		return {
+			keyvSerialization: false,
+			stringify: false,
+			parse: false,
+		};
+	}
+
+	// Check for stringify and parse methods
+	const hasStringify =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"stringify" in obj && typeof (obj as any).stringify === "function";
+	const hasParse =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"parse" in obj && typeof (obj as any).parse === "function";
+
+	// Determine if it's a Keyv serialization adapter
+	// Must have both stringify and parse methods
+	const isKeyvSerializationAdapter = hasStringify && hasParse;
+
+	return {
+		keyvSerialization: isKeyvSerializationAdapter,
+		stringify: hasStringify,
+		parse: hasParse,
 	};
 }
