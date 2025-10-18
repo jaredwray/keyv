@@ -17,6 +17,28 @@ export type IsKeyvResult = {
 	iterator: boolean;
 };
 
+export type IsKeyvStorageResult = {
+	keyvStorage: boolean;
+	get: boolean;
+	set: boolean;
+	delete: boolean;
+	clear: boolean;
+	has: boolean;
+	getMany: boolean;
+	setMany: boolean;
+	deleteMany: boolean;
+	hasMany: boolean;
+	disconnect: boolean;
+	iterator: boolean;
+	namespace: boolean;
+};
+
+export type IsKeyvCompressionResult = {
+	keyvCompression: boolean;
+	compress: boolean;
+	decompress: boolean;
+};
+
 /**
  * Check if an object is a Keyv instance or has Keyv-like capabilities
  * @param obj - The object to check
@@ -139,5 +161,170 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 		hooks: hasHooks,
 		stats: hasStats,
 		iterator: hasIterator,
+	};
+}
+
+/**
+ * Check if an object is a Keyv storage adapter or has storage adapter-like capabilities
+ * @param obj - The object to check
+ * @returns An object with boolean properties for each storage adapter method/property
+ * @example
+ * ```typescript
+ * import { isKeyvStorage } from 'keyv';
+ *
+ * isKeyvStorage(new Map());
+ * // { keyvStorage: false, get: true, set: true, delete: true, clear: true, has: true,
+ * //   getMany: false, setMany: false, deleteMany: false, hasMany: false,
+ * //   disconnect: false, iterator: false, namespace: false }
+ *
+ * const adapter = new KeyvRedis();
+ * isKeyvStorage(adapter);
+ * // { keyvStorage: true, get: true, set: true, delete: true, clear: true, has: true,
+ * //   getMany: true, setMany: true, deleteMany: true, hasMany: true,
+ * //   disconnect: true, iterator: true, namespace: true }
+ * ```
+ */
+export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
+	if (obj === null || obj === undefined) {
+		return {
+			keyvStorage: false,
+			get: false,
+			set: false,
+			delete: false,
+			clear: false,
+			has: false,
+			getMany: false,
+			setMany: false,
+			deleteMany: false,
+			hasMany: false,
+			disconnect: false,
+			iterator: false,
+			namespace: false,
+		};
+	}
+
+	if (typeof obj !== "object") {
+		return {
+			keyvStorage: false,
+			get: false,
+			set: false,
+			delete: false,
+			clear: false,
+			has: false,
+			getMany: false,
+			setMany: false,
+			deleteMany: false,
+			hasMany: false,
+			disconnect: false,
+			iterator: false,
+			namespace: false,
+		};
+	}
+
+	// Check for each method/property
+	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+	const hasGet = "get" in obj && typeof (obj as any).get === "function";
+	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+	const hasSet = "set" in obj && typeof (obj as any).set === "function";
+	const hasDelete =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"delete" in obj && typeof (obj as any).delete === "function";
+	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+	const hasClear = "clear" in obj && typeof (obj as any).clear === "function";
+	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+	const hasHas = "has" in obj && typeof (obj as any).has === "function";
+	const hasGetMany =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"getMany" in obj && typeof (obj as any).getMany === "function";
+	const hasSetMany =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"setMany" in obj && typeof (obj as any).setMany === "function";
+	const hasDeleteMany =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"deleteMany" in obj && typeof (obj as any).deleteMany === "function";
+	const hasHasMany =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"hasMany" in obj && typeof (obj as any).hasMany === "function";
+	const hasDisconnect =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"disconnect" in obj && typeof (obj as any).disconnect === "function";
+	const hasIterator =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"iterator" in obj && typeof (obj as any).iterator === "function";
+	const hasNamespace = "namespace" in obj;
+
+	// Determine if it's a Keyv storage adapter based on core methods
+	// Must have: get, set, delete, clear (core required methods)
+	const isKeyvStorageAdapter = hasGet && hasSet && hasDelete && hasClear;
+
+	return {
+		keyvStorage: isKeyvStorageAdapter,
+		get: hasGet,
+		set: hasSet,
+		delete: hasDelete,
+		clear: hasClear,
+		has: hasHas,
+		getMany: hasGetMany,
+		setMany: hasSetMany,
+		deleteMany: hasDeleteMany,
+		hasMany: hasHasMany,
+		disconnect: hasDisconnect,
+		iterator: hasIterator,
+		namespace: hasNamespace,
+	};
+}
+
+/**
+ * Check if an object is a Keyv compression adapter or has compression capabilities
+ * @param obj - The object to check
+ * @returns An object with boolean properties for each compression method
+ * @example
+ * ```typescript
+ * import { isKeyvCompression } from 'keyv';
+ *
+ * const gzip = {
+ *   compress: (data) => compressSync(data),
+ *   decompress: (data) => decompressSync(data)
+ * };
+ * isKeyvCompression(gzip);
+ * // { keyvCompression: true, compress: true, decompress: true }
+ *
+ * isKeyvCompression({});
+ * // { keyvCompression: false, compress: false, decompress: false }
+ * ```
+ */
+export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
+	if (obj === null || obj === undefined) {
+		return {
+			keyvCompression: false,
+			compress: false,
+			decompress: false,
+		};
+	}
+
+	if (typeof obj !== "object") {
+		return {
+			keyvCompression: false,
+			compress: false,
+			decompress: false,
+		};
+	}
+
+	// Check for compress and decompress methods
+	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+	const hasCompress =
+		"compress" in obj && typeof (obj as any).compress === "function";
+	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+	const hasDecompress =
+		"decompress" in obj && typeof (obj as any).decompress === "function";
+
+	// Determine if it's a Keyv compression adapter
+	// Must have both compress and decompress methods
+	const isKeyvCompressionAdapter = hasCompress && hasDecompress;
+
+	return {
+		keyvCompression: isKeyvCompressionAdapter,
+		compress: hasCompress,
+		decompress: hasDecompress,
 	};
 }
