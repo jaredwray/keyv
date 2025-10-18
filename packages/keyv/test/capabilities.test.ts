@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
 	isKeyv,
 	isKeyvCompression,
+	isKeyvEncryption,
 	isKeyvSerialization,
 	isKeyvStorage,
 } from "../src/capabilities.js";
@@ -691,6 +692,122 @@ describe("capabilities", () => {
 				keyvSerialization: true,
 				stringify: true,
 				parse: true,
+			});
+		});
+	});
+
+	describe("isKeyvEncryption", () => {
+		test("should return all false for null", () => {
+			const result = isKeyvEncryption(null);
+			expect(result).toEqual({
+				keyvEncryption: false,
+				encrypt: false,
+				decrypt: false,
+			});
+		});
+
+		test("should return all false for undefined", () => {
+			const result = isKeyvEncryption(undefined);
+			expect(result).toEqual({
+				keyvEncryption: false,
+				encrypt: false,
+				decrypt: false,
+			});
+		});
+
+		test("should return all false for non-object types", () => {
+			const result = isKeyvEncryption("string");
+			expect(result).toEqual({
+				keyvEncryption: false,
+				encrypt: false,
+				decrypt: false,
+			});
+		});
+
+		test("should return keyvEncryption: true for valid encryption adapter", () => {
+			const adapter = {
+				encrypt: (data: string) => data,
+				decrypt: (data: string) => data,
+			};
+			const result = isKeyvEncryption(adapter);
+			expect(result).toEqual({
+				keyvEncryption: true,
+				encrypt: true,
+				decrypt: true,
+			});
+		});
+
+		test("should return keyvEncryption: false for object with only encrypt", () => {
+			const adapter = {
+				encrypt: (data: string) => data,
+			};
+			const result = isKeyvEncryption(adapter);
+			expect(result).toEqual({
+				keyvEncryption: false,
+				encrypt: true,
+				decrypt: false,
+			});
+		});
+
+		test("should return keyvEncryption: false for object with only decrypt", () => {
+			const adapter = {
+				decrypt: (data: string) => data,
+			};
+			const result = isKeyvEncryption(adapter);
+			expect(result).toEqual({
+				keyvEncryption: false,
+				encrypt: false,
+				decrypt: true,
+			});
+		});
+
+		test("should handle empty object", () => {
+			const result = isKeyvEncryption({});
+			expect(result).toEqual({
+				keyvEncryption: false,
+				encrypt: false,
+				decrypt: false,
+			});
+		});
+
+		test("should not detect properties that are not functions", () => {
+			const obj = {
+				encrypt: "not a function",
+				decrypt: "not a function",
+			};
+			const result = isKeyvEncryption(obj);
+			expect(result).toEqual({
+				keyvEncryption: false,
+				encrypt: false,
+				decrypt: false,
+			});
+		});
+
+		test("should detect async encryption functions", () => {
+			const adapter = {
+				encrypt: async (data: string) => data,
+				decrypt: async (data: string) => data,
+			};
+			const result = isKeyvEncryption(adapter);
+			expect(result).toEqual({
+				keyvEncryption: true,
+				encrypt: true,
+				decrypt: true,
+			});
+		});
+
+		test("should handle encryption adapter with additional properties", () => {
+			const adapter = {
+				encrypt: (data: string) => data,
+				decrypt: (data: string) => data,
+				algorithm: "AES-256-GCM",
+				key: "secret-key",
+			};
+			const result = isKeyvEncryption(adapter);
+			expect(result).toEqual({
+				keyvEncryption: true,
+				encrypt: true,
+				decrypt: true,
 			});
 		});
 	});

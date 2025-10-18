@@ -45,6 +45,12 @@ export type IsKeyvSerializationResult = {
 	parse: boolean;
 };
 
+export type IsKeyvEncryptionResult = {
+	keyvEncryption: boolean;
+	encrypt: boolean;
+	decrypt: boolean;
+};
+
 /**
  * Check if an object is a Keyv instance or has Keyv-like capabilities
  * @param obj - The object to check
@@ -387,5 +393,60 @@ export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
 		keyvSerialization: isKeyvSerializationAdapter,
 		stringify: hasStringify,
 		parse: hasParse,
+	};
+}
+
+/**
+ * Check if an object is a Keyv encryption adapter or has encryption capabilities
+ * @param obj - The object to check
+ * @returns An object with boolean properties for each encryption method
+ * @example
+ * ```typescript
+ * import { isKeyvEncryption } from 'keyv';
+ *
+ * const aes = {
+ *   encrypt: (data) => encryptAES(data),
+ *   decrypt: (data) => decryptAES(data)
+ * };
+ * isKeyvEncryption(aes);
+ * // { keyvEncryption: true, encrypt: true, decrypt: true }
+ *
+ * isKeyvEncryption({});
+ * // { keyvEncryption: false, encrypt: false, decrypt: false }
+ * ```
+ */
+export function isKeyvEncryption(obj: unknown): IsKeyvEncryptionResult {
+	if (obj === null || obj === undefined) {
+		return {
+			keyvEncryption: false,
+			encrypt: false,
+			decrypt: false,
+		};
+	}
+
+	if (typeof obj !== "object") {
+		return {
+			keyvEncryption: false,
+			encrypt: false,
+			decrypt: false,
+		};
+	}
+
+	// Check for encrypt and decrypt methods
+	const hasEncrypt =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"encrypt" in obj && typeof (obj as any).encrypt === "function";
+	const hasDecrypt =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"decrypt" in obj && typeof (obj as any).decrypt === "function";
+
+	// Determine if it's a Keyv encryption adapter
+	// Must have both encrypt and decrypt methods
+	const isKeyvEncryptionAdapter = hasEncrypt && hasDecrypt;
+
+	return {
+		keyvEncryption: isKeyvEncryptionAdapter,
+		encrypt: hasEncrypt,
+		decrypt: hasDecrypt,
 	};
 }
