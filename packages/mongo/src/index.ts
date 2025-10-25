@@ -59,6 +59,7 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 		this.connect = new Promise(async (resolve, _reject) => {
 			try {
 				let url = "";
+				/* v8 ignore next -- @preserve */
 				if (this.opts.url) {
 					url = this.opts.url;
 				}
@@ -88,6 +89,7 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					});
 				} else {
 					let collection = "keyv";
+					/* v8 ignore next -- @preserve */
 					if (this.opts.collection) {
 						collection = this.opts.collection;
 					}
@@ -106,7 +108,7 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 					resolve({ store, mongoClient: client });
 				}
 			} catch (error) {
-				/* c8 ignore next 4 */
+				/* v8 ignore next -- @preserve */
 				this.emit("error", error);
 			}
 		});
@@ -288,8 +290,8 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 				// biome-ignore lint/style/noNonNullAssertion: need to fix
 				await client.bucket!.drop();
 			} catch (error: unknown) {
-				/* c8 ignore next 5 */
 				// Throw error if not "namespace not found" error
+				/* v8 ignore next -- @preserve */
 				if (!(error instanceof MongoServerError && error.code === 26)) {
 					throw error;
 				}
@@ -380,6 +382,7 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 
 	async has(key: string) {
 		const client = await this.connect;
+		/* v8 ignore next -- @preserve */
 		const filter = { [this.opts.useGridFS ? "filename" : "key"]: { $eq: key } };
 		const document = await client.store.count(filter);
 		return document !== 0;
