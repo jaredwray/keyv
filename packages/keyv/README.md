@@ -34,6 +34,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - [Custom Serializers](#custom-serializers)
 - [Official Storage Adapters](#official-storage-adapters)
 - [Third-party Storage Adapters](#third-party-storage-adapters)
+- [Using BigMap to Scale](#using-bigmap-to-scale)
 - [Compression](#compression)
 - [API](#api)
   - [new Keyv([storage-adapter], [options]) or new Keyv([options])](#new-keyvstorage-adapter-options-or-new-keyvoptions)
@@ -327,6 +328,64 @@ The following are third-party storage adapters compatible with Keyv:
 - [keyv-null](https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
 - [keyv-upstash](https://github.com/mahdavipanah/keyv-upstash) - Upstash Redis adapter for Keyv
 - [quick-lru](https://github.com/sindresorhus/quick-lru) - Simple "Least Recently Used" (LRU) cache
+
+# Using BigMap to Scale
+
+## Understanding JavaScript Map Limitations
+
+JavaScript's built-in `Map` object has a practical limit of approximately **16.7 million entries** (2^24). When you try to store more entries than this limit, you'll encounter performance degradation or runtime errors. This limitation is due to how JavaScript engines internally manage Map objects.
+
+For applications that need to cache millions of entries in memory, this becomes a significant constraint. Common scenarios include:
+- High-traffic caching layers
+- Session stores for large-scale applications
+- In-memory data processing of large datasets
+- Real-time analytics with millions of data points
+
+## Why BigMap?
+
+`@keyv/bigmap` solves this limitation by using a **distributed hash approach** with multiple internal Map instances. Instead of storing all entries in a single Map, BigMap distributes entries across multiple Maps using a hash function. This allows you to scale beyond the 16.7 million entry limit while maintaining the familiar Map API.
+
+### Key Benefits:
+- **Scales beyond Map limits**: Store 20+ million entries without issues
+- **Map-compatible API**: Drop-in replacement for standard Map
+- **Performance**: Uses efficient DJB2 hashing for fast key distribution
+- **Type-safe**: Built with TypeScript and supports generics
+- **Customizable**: Configure store size and hash functions
+
+## Using BigMap with Keyv
+
+BigMap can be used directly with Keyv as a storage adapter, providing scalable in-memory storage with full TTL support.
+
+### Installation
+
+```bash
+npm install --save keyv @keyv/bigmap
+```
+
+### Basic Usage
+
+The simplest way to use BigMap with Keyv is through the `createKeyv` helper function:
+
+```js
+import { createKeyv } from '@keyv/bigmap';
+
+const keyv = createKeyv();
+
+// Set values with TTL (time in milliseconds)
+await keyv.set('user:1', { name: 'Alice', email: 'alice@example.com' }, 60000); // Expires in 60 seconds
+
+// Get values
+const user = await keyv.get('user:1');
+console.log(user); // { name: 'Alice', email: 'alice@example.com' }
+
+// Delete values
+await keyv.delete('user:1');
+
+// Clear all values
+await keyv.clear();
+```
+
+For more details about BigMap, see the [@keyv/bigmap documentation](https://github.com/jaredwray/keyv/tree/main/packages/bigmap).
 
 # Compression
 
