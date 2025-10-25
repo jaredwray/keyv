@@ -18,7 +18,6 @@
 * Maintained regularly with a focus on performance and reliability.
 
 # Table of Contents
-
 - [Features](#features)
 - [Installation](#installation)
 - [Overview](#overview)
@@ -26,38 +25,38 @@
 - [Custom Store Size](#custom-store-size)
 - [Custom Hash Function](#custom-hash-function)
 - [Iteration](#iteration)
-  - [For...of Loop](#forof-loop)
-  - [forEach](#foreach)
-  - [Keys, Values, and Entries](#keys-values-and-entries)
+	- [For...of Loop](#forof-loop)
+	- [forEach](#foreach)
+	- [Keys, Values, and Entries](#keys-values-and-entries)
 - [Advanced Features](#advanced-features)
-  - [Type Safety with Generics](#type-safety-with-generics)
-  - [Large-Scale Data](#large-scale-data)
+	- [Type Safety with Generics](#type-safety-with-generics)
+	- [Large-Scale Data](#large-scale-data)
 - [Using with Keyv](#using-with-keyv)
-  - [`createKeyv(options?)`](#createkeyvoptions)
-  - [With Custom Options](#with-custom-options)
-  - [Type Safety](#type-safety)
-  - [Integration with Keyv Ecosystem](#integration-with-keyv-ecosystem)
+	- [createKeyv](#createkeyv)
+	- [With Custom Options](#with-custom-options)
+	- [Type Safety](#type-safety)
+- [Integration with Keyv Ecosystem](#integration-with-keyv-ecosystem)
 - [API](#api)
-- [Constructor](#constructor)
-- [Properties](#properties)
-- [Methods](#methods)
-  - [`set(key, value)`](#setkey-value)
-  - [`get(key)`](#getkey)
-  - [`has(key)`](#haskey)
-  - [`delete(key)`](#deletekey)
-  - [`clear()`](#clear)
-  - [`forEach(callbackfn, thisArg?)`](#foreachcallbackfn-thisarg)
-  - [`keys()`](#keys)
-  - [`values()`](#values)
-  - [`entries()`](#entries)
-  - [`[Symbol.iterator]()`](#symboliterator)
-  - [`getStore(key)`](#getstorekey)
-  - [`getStoreMap(index)`](#getstoremapindex)
-  - [`initStore()`](#initstore)
-- [Types](#types)
-  - [`StoreHashFunction`](#storehashfunction)
-  - [`defaultHashFunction(key, storeSize)`](#defaulthashfunctionkey-storesize)
-  - [`djb2Hash(string, min?, max?)`](#djb2hashstring-min-max)
+	- [Constructor](#constructor)
+	- [Properties](#properties)
+	- [Methods](#methods)
+		- [set](#set)
+		- [get](#get)
+		- [has](#has)
+		- [delete](#delete)
+		- [clear](#clear)
+		- [forEach](#foreach)
+		- [keys](#keys)
+		- [values](#values)
+		- [entries](#entries)
+		- [Symbol.iterator](#symboliterator)
+		- [getStore](#getstorekey)
+		- [getStoreMap](#getstoremapindex)
+		- [initStore](#initstore)
+  - [Types](#types)
+	- [StoreHashFunction](#storehashfunction)
+	- [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
+	- [djb2Hash(string, min?, max?)](#djb2hashstring-min-max)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -99,7 +98,7 @@ console.log(bigMap.size); // 1
 bigMap.clear();
 ```
 
-## Custom Store Size
+# Custom Store Size
 
 By default, BigMap uses 4 internal Map instances. You can configure this:
 
@@ -109,7 +108,7 @@ const bigMap = new BigMap<string, number>({ storeSize: 10 });
 
 **Note:** Changing the `storeSize` after initialization will clear all entries.
 
-## Custom Hash Function
+# Custom Hash Function
 
 Provide your own hash function for key distribution:
 
@@ -123,11 +122,11 @@ const bigMap = new BigMap<string, string>({
 });
 ```
 
-## Iteration
+# Iteration
 
 BigMap supports all standard Map iteration methods:
 
-### For...of Loop
+## For...of Loop
 
 ```typescript
 const bigMap = new BigMap<string, number>();
@@ -172,9 +171,9 @@ for (const [key, value] of bigMap.entries()) {
 }
 ```
 
-## Advanced Features
+# Advanced Features
 
-### Type Safety with Generics
+## Type Safety with Generics
 
 ```typescript
 interface User {
@@ -186,7 +185,7 @@ const userMap = new BigMap<string, User>();
 userMap.set('user1', { id: 1, name: 'Alice' });
 ```
 
-### Large-Scale Data
+## Large-Scale Data
 
 BigMap is designed to handle millions of entries:
 
@@ -201,11 +200,11 @@ for (let i = 0; i < 20000000; i++) {
 console.log(bigMap.size); // 20000000
 ```
 
-## Using with Keyv
+# Using with Keyv
 
 BigMap can be used as a storage adapter for [Keyv](https://github.com/jaredwray/keyv), providing a scalable in-memory store with TTL support.
 
-### `createKeyv(options?)`
+## createKeyv
 
 The `createKeyv` function creates a Keyv instance with BigMap as the storage adapter.
 
@@ -241,7 +240,7 @@ await keyv.delete('user:123');
 await keyv.clear();
 ```
 
-### With Custom Options
+## With Custom Options
 
 ```typescript
 import { createKeyv } from '@keyv/bigmap';
@@ -259,7 +258,7 @@ const keyv = createKeyv({
 });
 ```
 
-### Type Safety
+## Type Safety
 
 ```typescript
 import { createKeyv } from '@keyv/bigmap';
@@ -281,7 +280,7 @@ await keyv.set('product:1', {
 const product = await keyv.get<Product>('product:1');
 ```
 
-### Integration with Keyv Ecosystem
+# Integration with Keyv Ecosystem
 
 BigMap works seamlessly with the Keyv ecosystem:
 
@@ -305,9 +304,9 @@ for await (const [key, value] of cache.iterator()) {
 
 # API
 
-# Constructor
+## Constructor
 
- `new BigMap<K, V>(options?)`
+`new BigMap<K, V>(options?)`
 
 Creates a new BigMap instance.
 
@@ -353,9 +352,9 @@ bigMap.storeHashFunction = (key, storeSize) => key.length % storeSize;
 console.log(bigMap.store.length); // 8
 ```
 
-# Methods
+## Methods
 
-## `set(key, value)`
+### set
 
 Sets the value for a key in the map.
 
@@ -370,7 +369,7 @@ Sets the value for a key in the map.
 bigMap.set('user123', { name: 'Alice' });
 ```
 
-## `get(key)`
+### get
 
 Gets the value associated with a key.
 
@@ -384,7 +383,7 @@ Gets the value associated with a key.
 const value = bigMap.get('user123');
 ```
 
-## `has(key)`
+### has
 
 Checks if a key exists in the map.
 
@@ -400,7 +399,7 @@ if (bigMap.has('user123')) {
 }
 ```
 
-## `delete(key)`
+### delete
 
 Deletes a key-value pair from the map.
 
@@ -414,7 +413,7 @@ Deletes a key-value pair from the map.
 const deleted = bigMap.delete('user123');
 ```
 
-## `clear()`
+### clear
 
 Removes all entries from the map.
 
@@ -426,7 +425,7 @@ bigMap.clear();
 console.log(bigMap.size); // 0
 ```
 
-## `forEach(callbackfn, thisArg?)`
+### forEach
 
 Executes a provided function once for each key-value pair.
 
@@ -434,7 +433,7 @@ Executes a provided function once for each key-value pair.
 - `callbackfn` (function): Function to execute for each entry
   - `value` (V): The value of the current entry
   - `key` (K): The key of the current entry
-  - `map` (Map<K, V>): The BigMap instance
+  - `map` (`Map<K, V>`): The BigMap instance
 - `thisArg` (optional): Value to use as `this` when executing the callback
 
 **Returns:** `void`
@@ -452,7 +451,7 @@ bigMap.forEach(function(value) {
 }, context);
 ```
 
-## `keys()`
+### keys
 
 Returns an iterator of all keys in the map.
 
@@ -465,7 +464,7 @@ for (const key of bigMap.keys()) {
 }
 ```
 
-## `values()`
+### values
 
 Returns an iterator of all values in the map.
 
@@ -478,7 +477,7 @@ for (const value of bigMap.values()) {
 }
 ```
 
-## `entries()`
+### entries
 
 Returns an iterator of all key-value pairs in the map.
 
@@ -491,7 +490,7 @@ for (const [key, value] of bigMap.entries()) {
 }
 ```
 
-## `[Symbol.iterator]()`
+### Symbol.iterator
 
 Returns an iterator for the map (same as `entries()`). Enables `for...of` loops.
 
@@ -504,7 +503,7 @@ for (const [key, value] of bigMap) {
 }
 ```
 
-## `getStore(key)`
+### getStore
 
 Gets the internal Map instance for a specific key.
 
@@ -518,7 +517,7 @@ Gets the internal Map instance for a specific key.
 const store = bigMap.getStore('user123');
 ```
 
-## `getStoreMap(index)`
+### getStoreMap
 
 Gets the internal Map instance at a specific index.
 
@@ -534,15 +533,15 @@ Gets the internal Map instance at a specific index.
 const firstMap = bigMap.getStoreMap(0);
 ```
 
-## `initStore()`
+### initStore
 
 Initializes the internal store with empty Map instances. Called automatically during construction.
 
 **Returns:** `void`
 
-# Types
+## Types
 
-## `StoreHashFunction`
+### StoreHashFunction
 
 Type definition for custom hash functions.
 
@@ -556,7 +555,7 @@ type StoreHashFunction = (key: string, storeSize: number) => number;
 
 **Returns:** `number` - The index of the store to use (0 to storeSize - 1)
 
-## `defaultHashFunction(key, storeSize)`
+### defaultHashFunction
 
 The default hash function using DJB2 algorithm.
 
@@ -567,7 +566,7 @@ import { defaultHashFunction } from '@keyv/bigmap';
 const index = defaultHashFunction('myKey', 4);
 ```
 
-## `djb2Hash(string, min?, max?)`
+### djb2Hash
 
 DJB2 hash algorithm implementation.
 
