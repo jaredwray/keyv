@@ -51,11 +51,11 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 			...options,
 			dialect: "etcd",
 		};
-
+		/* c8 ignore next -- @preserve */
 		if (this.opts.url) {
 			this.opts.url = this.opts.url?.replace(/^etcd:\/\//, "");
 		} else {
-			/* c8 ignore next 2 */
+			/* c8 ignore next -- @preserve */
 			this.opts.url = "127.0.0.1:2379";
 		}
 
