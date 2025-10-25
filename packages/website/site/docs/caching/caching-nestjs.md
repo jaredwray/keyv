@@ -42,7 +42,7 @@ import { createKeyv } from '@keyv/redis';
       provide: 'CACHE_INSTANCE',
       useFactory: () => {
         // If no namespace is set, the default is 'keyv', and keys are prefixed with 'keyv:'.
-        const secondary = createKeyv( 'redis://user:pass@localhost:6379', { namespace: 'keyv' });
+        const secondary = createKeyv('redis://user:pass@localhost:6379', { namespace: 'keyv' });
         return new Cacheable({ secondary, ttl: '4h' });
       },
     },
