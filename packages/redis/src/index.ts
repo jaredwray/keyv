@@ -22,6 +22,7 @@ import { Keyv, type KeyvEntry, type KeyvStoreAdapter } from "keyv";
 export type KeyvRedisOptions = {
 	/**
 	 * Namespace for the current instance.
+	 * Defaults to `keyv`
 	 */
 	namespace?: string;
 	/**
