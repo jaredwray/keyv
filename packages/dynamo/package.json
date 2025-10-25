@@ -15,10 +15,10 @@
   "scripts": {
     "build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
     "prepublishOnly": "pnpm build",
-		"lint": "biome check --write --error-on-warnings",
-		"lint:ci": "biome check --error-on-warnings",
-		"test": "pnpm lint && vitest run --coverage",
-		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+    "lint": "biome check --write --error-on-warnings",
+    "lint:ci": "biome check --error-on-warnings",
+    "test": "pnpm lint && vitest run --coverage",
+    "test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
     "clean": "rimraf ./node_modules ./coverage ./dist"
   },
   "repository": {
@@ -50,11 +50,12 @@
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
     "@keyv/test-suite": "workspace:^",
-    "vitest": "^3.2.4"
+    "@vitest/coverage-v8": "^4.0.3",
+    "vitest": "^4.0.3"
   },
   "peerDependencies": {
-		"keyv": "workspace:^"
-	},
+    "keyv": "workspace:^"
+  },
   "tsd": {
     "directory": "test"
   },

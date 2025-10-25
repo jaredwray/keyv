@@ -213,7 +213,7 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
 				}),
 			);
 		} catch (error) {
-			/* c8 ignore next 6 */
+			/* c8 ignore next -- @preserve */
 			if (error instanceof ResourceInUseException) {
 				await waitUntilTableExists(
 					{ client: this.client, maxWaitTime: 60 },
