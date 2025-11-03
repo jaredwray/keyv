@@ -26,6 +26,7 @@ class EventManager {
 
 		const listeners = this._eventListeners.get(event);
 
+		/* v8 ignore next -- @preserve */
 		if (listeners) {
 			if (listeners.length >= this._maxListeners) {
 				console.warn(

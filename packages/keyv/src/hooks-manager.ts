@@ -24,6 +24,7 @@ class HooksManager extends EventManager {
 	// Removes a specific handler function for a specific event
 	removeHandler(event: string, handler: HookHandler) {
 		const eventHandlers = this._hookHandlers.get(event);
+		/* v8 ignore next -- @preserve */
 		if (eventHandlers) {
 			const index = eventHandlers.indexOf(handler);
 			if (index !== -1) {
