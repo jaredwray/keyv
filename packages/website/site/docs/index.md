@@ -72,7 +72,7 @@ options | Object | N | The options object is also passed through to the storage 
 Parameter | Type | Required | Description
 ------------ | ------------- | ------------- | -------------
 namespace | String | N | Namespace for the current instance.  Default: 'keyv'
-ttl | Number | N | This is the default TTL, it can be overridden by specifying a TTL on .set().  Default: undefined
+ttl | Number | N | This is the default TTL, in milliseconds. It can be overridden by specifying a TTL on .set().  Default: undefined
 compression | @keyv/compress\-\<compression_package_name> | N | Compression package to use. See Compression for more details. Default: undefined.
 serialize | Function | N | A custom serialization function. Default: JSONB.stringify
 deserialize | Function | N | A custom deserialization function. Default: JSONB.parse
