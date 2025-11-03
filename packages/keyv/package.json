@@ -57,7 +57,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.3",
-		"@faker-js/faker": "^10.0.0",
+		"@faker-js/faker": "^10.1.0",
 		"@keyv/compress-brotli": "workspace:^",
 		"@keyv/compress-gzip": "workspace:^",
 		"@keyv/compress-lz4": "workspace:^",
