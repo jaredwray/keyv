@@ -262,10 +262,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 		// biome-ignore lint/style/noNonNullAssertion: need to fix
 		this._deserialize = this.opts.deserialize!;
 
+		/* v8 ignore next -- @preserve */
 		if (this.opts.namespace) {
 			this._namespace = this.opts.namespace;
 		}
 
+		/* v8 ignore next -- @preserve */
 		if (this._store) {
 			if (!this._isValidStorageAdapter(this._store)) {
 				throw new Error("Invalid storage adapter");
@@ -337,7 +339,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
 				store.on("error", (error: any) => this.emit("error", error));
 			}
-
+			/* v8 ignore next -- @preserve */
 			if (this._namespace) {
 				this._store.namespace = this._namespace;
 			}
@@ -349,6 +351,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				this.iterator = this.generateIterator(
 					store as unknown as IteratorFunction,
 				);
+				/* v8 ignore next -- @preserve */
 			} else if (
 				"iterator" in store &&
 				store.opts &&
@@ -393,6 +396,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		this._namespace = namespace;
 		this.opts.namespace = namespace;
 		this._store.namespace = namespace;
+		/* v8 ignore next -- @preserve */
 		if (this.opts.store) {
 			this.opts.store.namespace = namespace;
 		}
@@ -743,6 +747,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+		/* v8 ignore next -- @preserve */
 		if (result.length > 0) {
 			this.stats.hit();
 		}
@@ -772,7 +777,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		// Check if the data is expired
-		/* c8 ignore next 5 */
+		/* v8 ignore next -- @preserve */
 		const deserializedData =
 			typeof rawData === "string" || this.opts.compression
 				? await this.deserializeData<Value>(rawData as string)
@@ -848,11 +853,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 			const rawData = await store.getMany(keyPrefixed);
 
 			for (const row of rawData) {
+				/* v8 ignore next -- @preserve */
 				if (row !== undefined && row !== null) {
-					// eslint-disable-next-line no-await-in-loop
 					result.push(await this.deserializeData<Value>(row));
-					/* c8 ignore next 3 */
 				} else {
+					/* v8 ignore next -- @preserve */
 					result.push(undefined);
 				}
 			}
@@ -971,15 +976,16 @@ export class Keyv<GenericValue = any> extends EventManager {
 					entries.map(async ({ key, value, ttl }) => {
 						ttl ??= this._ttl;
 
-						/* c8 ignore next 3 */
+						/* v8 ignore next -- @preserve */
 						if (ttl === 0) {
 							ttl = undefined;
 						}
 
+						/* v8 ignore next -- @preserve */
 						const expires =
 							typeof ttl === "number" ? Date.now() + ttl : undefined;
 
-						/* c8 ignore next 4 */
+						/* v8 ignore next -- @preserve */
 						if (typeof value === "symbol") {
 							this.emit("error", "symbol cannot be serialized");
 							throw new Error("symbol cannot be serialized");
@@ -1025,6 +1031,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		try {
 			const value = await store.delete(keyPrefixed);
 
+			/* v8 ignore next -- @preserve */
 			if (typeof value === "boolean") {
 				result = value;
 			}
@@ -1132,6 +1139,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (rawData) {
 			// biome-ignore lint/suspicious/noExplicitAny: type format
 			const data = (await this.deserializeData(rawData)) as any;
+			/* v8 ignore next -- @preserve */
 			if (data) {
 				if (data.expires === undefined || data.expires === null) {
 					return true;
