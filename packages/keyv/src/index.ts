@@ -851,8 +851,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 				if (row !== undefined && row !== null) {
 					// eslint-disable-next-line no-await-in-loop
 					result.push(await this.deserializeData<Value>(row));
-					/* c8 ignore next 3 */
 				} else {
+					/* v8 ignore next -- @preserve */
 					result.push(undefined);
 				}
 			}
@@ -971,7 +971,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 					entries.map(async ({ key, value, ttl }) => {
 						ttl ??= this._ttl;
 
-						/* c8 ignore next 3 */
+						/* v8 ignore next -- @preserve */
 						if (ttl === 0) {
 							ttl = undefined;
 						}
@@ -979,7 +979,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 						const expires =
 							typeof ttl === "number" ? Date.now() + ttl : undefined;
 
-						/* c8 ignore next 4 */
+						/* v8 ignore next -- @preserve */
 						if (typeof value === "symbol") {
 							this.emit("error", "symbol cannot be serialized");
 							throw new Error("symbol cannot be serialized");
