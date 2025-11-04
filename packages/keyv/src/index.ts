@@ -128,7 +128,7 @@ export type KeyvOptions = {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	store?: KeyvStoreAdapter | Map<any, any> | any;
 	/**
-	 * Default TTL. Can be overridden by specifying a TTL on `.set()`.
+	 * Default TTL in milliseconds. Can be overridden by specifying a TTL on `.set()`.
 	 * @default undefined
 	 */
 	ttl?: number;
@@ -404,7 +404,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Get the current TTL.
-	 * @returns {number} The current TTL.
+	 * @returns {number} The current TTL in milliseconds.
 	 */
 	public get ttl(): number | undefined {
 		return this._ttl;
@@ -412,7 +412,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Set the current TTL.
-	 * @param {number} ttl The TTL to set.
+	 * @param {number} ttl The TTL to set in milliseconds.
 	 */
 	public set ttl(ttl: number | undefined) {
 		this.opts.ttl = ttl;
