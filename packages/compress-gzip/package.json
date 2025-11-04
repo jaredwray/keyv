@@ -55,7 +55,7 @@
     "@biomejs/biome": "^2.2.5",
     "@keyv/test-suite": "workspace:^",
     "@vitest/coverage-v8": "^4.0.6",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.0",
     "tsd": "^0.33.0",
     "vitest": "^4.0.6"
   },
