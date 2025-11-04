@@ -28,12 +28,13 @@ export class KeyvGzip {
 	}
 
 	async deserialize(data: string) {
+		/* v8 ignore next -- @preserve */
 		if (data) {
 			const { value, expires }: Serialize = defaultDeserialize(data);
 			return { value: await this.decompress(value as pako.Data), expires };
 		}
 
-		/* c8 ignore next 1 */
+		/* v8 ignore next -- @preserve */
 		return { value: undefined, expires: undefined };
 	}
 }
