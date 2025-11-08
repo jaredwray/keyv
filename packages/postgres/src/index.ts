@@ -28,15 +28,6 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			};
 		}
 
-		const connect = async () => {
-			const conn = pool(options!.uri!, options);
-			// biome-ignore lint/suspicious/noExplicitAny: type format
-			return async (sql: string, values?: any) => {
-				const data = await conn.query(sql, values);
-				return data.rows;
-			};
-		};
-
 		this.opts = {
 			table: "keyv",
 			schema: "public",
@@ -50,7 +41,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema!}; ${createTable}`;
 		}
 
-		const connected = connect()
+		const connected = this.connect()
 			.then(async (query) => {
 				try {
 					await query(createTable);
@@ -168,6 +159,15 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1 )`;
 		const rows = await this.query(exists, [key]);
 		return rows[0].exists;
+	}
+
+	async connect() {
+		const conn = pool(this.opts!.uri!, this.opts);
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		return async (sql: string, values?: any) => {
+			const data = await conn.query(sql, values);
+			return data.rows;
+		};
 	}
 
 	async disconnect() {
