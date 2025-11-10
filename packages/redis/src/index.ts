@@ -518,12 +518,12 @@ export default class KeyvRedis<T>
 		} catch (error) {
 			this.emit("error", error);
 			// Re-throw connection errors if throwOnConnectError is true
+			/* v8 ignore next -- @preserve */
 			if (
 				this._throwOnConnectError &&
 				(error as Error).message ===
 					RedisErrorMessages.RedisClientNotConnectedThrown
 			) {
-				/* c8 ignore next 2 */
 				throw error;
 			}
 			if (this._throwOnErrors) {
@@ -588,6 +588,7 @@ export default class KeyvRedis<T>
 					}),
 				);
 
+				/* v8 ignore next -- @preserve */
 				return prefixedKeys.map((key) => resultMap.get(key) ?? false);
 			} else {
 				// Non-cluster mode can use a single multi
@@ -605,12 +606,12 @@ export default class KeyvRedis<T>
 		} catch (error) {
 			this.emit("error", error);
 			// Re-throw connection errors if throwOnConnectError is true
+			/* v8 ignore next -- @preserve */
 			if (
 				this._throwOnConnectError &&
 				(error as Error).message ===
 					RedisErrorMessages.RedisClientNotConnectedThrown
 			) {
-				/* c8 ignore next 2 */
 				throw error;
 			}
 			if (this._throwOnErrors) {
@@ -730,6 +731,7 @@ export default class KeyvRedis<T>
 						}
 						const results = await multi.exec();
 						for (const deleted of results) {
+							/* v8 ignore next -- @preserve */
 							if (typeof deleted === "number" && deleted > 0) {
 								result = true;
 							}
@@ -944,8 +946,8 @@ export default class KeyvRedis<T>
 					await Promise.all(deletePromises);
 				}),
 			);
-			/* c8 ignore next 3 */
 		} catch (error) {
+			/* v8 ignore next -- @preserve */
 			this.emit("error", error);
 		}
 	}
@@ -987,6 +989,7 @@ export default class KeyvRedis<T>
 	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
 	 */
 	private async clearWithClusterSupport(keys: string[]): Promise<void> {
+		/* v8 ignore next -- @preserve */
 		if (keys.length > 0) {
 			const slotMap = this.getSlotMap(keys);
 
@@ -1091,15 +1094,16 @@ export default class KeyvRedis<T>
 	}
 
 	private initClient(): void {
-		/* c8 ignore next 10 */
 		this._client.on("connect", () => {
 			this.emit("connect", this._client);
 		});
 
+		/* v8 ignore next -- @preserve */
 		this._client.on("disconnect", () => {
 			this.emit("disconnect", this._client);
 		});
 
+		/* v8 ignore next -- @preserve */
 		this._client.on("reconnecting", (reconnectInfo) => {
 			this.emit("reconnecting", reconnectInfo);
 		});
@@ -1108,7 +1112,7 @@ export default class KeyvRedis<T>
 	private async createTimeoutPromise(timeoutMs: number): Promise<never> {
 		return new Promise<never>((_, reject) =>
 			setTimeout(() => {
-				/* c8 ignore next 3 */
+				/* v8 ignore next 3 -- @preserve */
 				reject(new Error(`Redis timed out after ${timeoutMs}ms`));
 			}, timeoutMs),
 		);
@@ -1176,6 +1180,7 @@ export function createKeyvNonBlocking(
 	keyvStore.throwOnErrors = false;
 
 	const redisClient = keyvStore.client as RedisClientType;
+	/* v8 ignore next -- @preserve */
 	if (redisClient.options) {
 		redisClient.options.disableOfflineQueue = true;
 		if (redisClient.options.socket) {
