@@ -51,10 +51,11 @@ const keyvValueTests = (
 		const buf = Buffer.from("bar");
 		await keyv.set("foo", buf);
 		const result = await keyv.get("foo");
+		/* v8 ignore next -- @preserve */
 		if (result !== undefined) {
 			t.expect(buf.equals(result)).toBeTruthy();
-			/* c8 ignore next 3 */
 		} else {
+			/* v8 ignore next -- @preserve */
 			t.expect(result).toBeDefined();
 		}
 	});
