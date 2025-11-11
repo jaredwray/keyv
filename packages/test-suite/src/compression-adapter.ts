@@ -39,7 +39,7 @@ export class CompressionAdapter {
 	}
 
 	private getDictionary() {
-		/* c8 ignore next 3 */
+		/* v8 ignore next -- @preserve */
 		if (this.dictionary) {
 			return Buffer.from(this.dictionary);
 		}

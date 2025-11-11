@@ -46,12 +46,12 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@vitest/coverage-v8": "^3.2.4",
+		"@vitest/coverage-v8": "^4.0.8",
 		"bignumber.js": "^9.3.1",
 		"json-bigint": "^1.0.0",
 		"sqlite3": "^5.1.7",
 		"timekeeper": "^2.3.1",
-		"vitest": "^3.2.4"
+		"vitest": "^4.0.8"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
