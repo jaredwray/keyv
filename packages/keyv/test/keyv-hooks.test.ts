@@ -124,3 +124,85 @@ test.it("POST_DELETE hook", async () => {
 	await keyv.set("foo", "bar");
 	await keyv.delete("foo");
 });
+
+test.it("PRE_GET hook", async () => {
+	const keyv = new Keyv();
+	keyv.hooks.addHandler(KeyvHooks.PRE_GET, (data) => {
+		test.expect(data.key).toBe("keyv:foo");
+	});
+	test.expect(keyv.hooks.handlers.size).toBe(1);
+	await keyv.set("foo", "bar");
+	await keyv.get("foo");
+});
+
+test.it("POST_GET hook on cache hit", async () => {
+	const keyv = new Keyv();
+	await keyv.set("foo", "bar");
+	keyv.hooks.addHandler(KeyvHooks.POST_GET, (data) => {
+		test.expect(data.key).toBe("keyv:foo");
+		test.expect(data.value).toEqual({ value: "bar" });
+	});
+	test.expect(keyv.hooks.handlers.size).toBe(1);
+	const value = await keyv.get("foo");
+	test.expect(value).toBe("bar");
+});
+
+test.it("POST_GET hook on cache miss", async () => {
+	const keyv = new Keyv();
+	keyv.hooks.addHandler(KeyvHooks.POST_GET, (data) => {
+		test.expect(data.key).toBe("keyv:nonexistent");
+		test.expect(data.value).toBeUndefined();
+	});
+	test.expect(keyv.hooks.handlers.size).toBe(1);
+	const value = await keyv.get("nonexistent");
+	test.expect(value).toBeUndefined();
+});
+
+test.it("POST_GET hook on expired key", async () => {
+	const keyv = new Keyv();
+	await keyv.set("foo", "bar", 1); // expires in 1ms
+	await new Promise((resolve) => setTimeout(resolve, 10)); // wait 10ms
+	keyv.hooks.addHandler(KeyvHooks.POST_GET, (data) => {
+		test.expect(data.key).toBe("keyv:foo");
+		test.expect(data.value).toBeUndefined();
+	});
+	test.expect(keyv.hooks.handlers.size).toBe(1);
+	const value = await keyv.get("foo");
+	test.expect(value).toBeUndefined();
+});
+
+test.it("POST_GET_RAW hook on cache hit", async () => {
+	const keyv = new Keyv();
+	await keyv.set("foo", "bar");
+	keyv.hooks.addHandler(KeyvHooks.POST_GET_RAW, (data) => {
+		test.expect(data.key).toBe("keyv:foo");
+		test.expect(data.value).toEqual({ value: "bar" });
+	});
+	test.expect(keyv.hooks.handlers.size).toBe(1);
+	const value = await keyv.getRaw("foo");
+	test.expect(value).toEqual({ value: "bar" });
+});
+
+test.it("POST_GET_RAW hook on cache miss", async () => {
+	const keyv = new Keyv();
+	keyv.hooks.addHandler(KeyvHooks.POST_GET_RAW, (data) => {
+		test.expect(data.key).toBe("keyv:nonexistent");
+		test.expect(data.value).toBeUndefined();
+	});
+	test.expect(keyv.hooks.handlers.size).toBe(1);
+	const value = await keyv.getRaw("nonexistent");
+	test.expect(value).toBeUndefined();
+});
+
+test.it("POST_GET_RAW hook on expired key", async () => {
+	const keyv = new Keyv();
+	await keyv.set("foo", "bar", 1); // expires in 1ms
+	await new Promise((resolve) => setTimeout(resolve, 10)); // wait 10ms
+	keyv.hooks.addHandler(KeyvHooks.POST_GET_RAW, (data) => {
+		test.expect(data.key).toBe("keyv:foo");
+		test.expect(data.value).toBeUndefined();
+	});
+	test.expect(keyv.hooks.handlers.size).toBe(1);
+	const value = await keyv.getRaw("foo");
+	test.expect(value).toBeUndefined();
+});

@@ -209,8 +209,12 @@ Keyv supports hooks for `get`, `set`, and `delete` methods. Hooks are useful for
 ```
 PRE_GET
 POST_GET
+PRE_GET_RAW
+POST_GET_RAW
 PRE_GET_MANY
 POST_GET_MANY
+PRE_GET_MANY_RAW
+POST_GET_MANY_RAW
 PRE_SET
 POST_SET
 PRE_DELETE
@@ -222,6 +226,37 @@ You can access this by importing `KeyvHooks` from the main Keyv package.
 ```js
 import Keyv, { KeyvHooks } from 'keyv';
 ```
+
+## Get Hooks
+
+The `POST_GET` and `POST_GET_RAW` hooks fire on both cache hits and misses. When a cache miss occurs (key doesn't exist or is expired), the hooks receive `undefined` as the value.
+
+```js
+// POST_GET hook - fires on both hits and misses
+const keyv = new Keyv();
+keyv.hooks.addHandler(KeyvHooks.POST_GET, (data) => {
+  if (data.value === undefined) {
+    console.log(`Cache miss for key: ${data.key}`);
+  } else {
+    console.log(`Cache hit for key: ${data.key}`, data.value);
+  }
+});
+
+await keyv.get('existing-key'); // Logs cache hit with value
+await keyv.get('missing-key');  // Logs cache miss with undefined
+```
+
+```js
+// POST_GET_RAW hook - same behavior as POST_GET
+const keyv = new Keyv();
+keyv.hooks.addHandler(KeyvHooks.POST_GET_RAW, (data) => {
+  console.log(`Key: ${data.key}, Value:`, data.value);
+});
+
+await keyv.getRaw('foo'); // Logs with value or undefined
+```
+
+## Set Hooks
 
 ```js
 //PRE_SET hook
@@ -245,6 +280,8 @@ keyv.hooks.addHandler(KeyvHooks.PRE_SET, (data) => {
 ```
 
 Now this key will have prefix- added to it before it is set.
+
+## Delete Hooks
 
 In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an `Array`. This is based on the fact that `delete` can accept a single key or an `Array` of keys.
 
