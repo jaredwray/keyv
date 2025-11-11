@@ -17,8 +17,8 @@
     "website:serve": "docula serve"
   },
   "devDependencies": {
-    "docula": "^0.30.0",
-    "rimraf": "^6.0.1",
+    "docula": "^0.31.0",
+    "rimraf": "^6.1.0",
     "tsx": "^4.20.6"
   }
 }
