@@ -57,10 +57,10 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.5",
+		"@biomejs/biome": "^2.3.5",
 		"@keyv/serialize": "workspace:^",
 		"@types/json-bigint": "^1.0.4",
 		"lz4-napi": "^2.9.0",
-		"rimraf": "^6.0.1"
+		"rimraf": "^6.1.0"
 	}
 }
