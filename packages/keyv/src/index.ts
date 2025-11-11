@@ -632,12 +632,20 @@ export class Keyv<GenericValue = any> extends EventManager {
 				: rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
+			this.hooks.trigger(KeyvHooks.POST_GET, {
+				key: keyPrefixed,
+				value: undefined,
+			});
 			this.stats.miss();
 			return undefined;
 		}
 
 		if (isDataExpired(deserializedData as DeserializedData<Value>)) {
 			await this.delete(key);
+			this.hooks.trigger(KeyvHooks.POST_GET, {
+				key: keyPrefixed,
+				value: undefined,
+			});
 			this.stats.miss();
 			return undefined;
 		}
@@ -772,6 +780,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 		const rawData = await store.get(keyPrefixed);
 
 		if (rawData === undefined || rawData === null) {
+			this.hooks.trigger(KeyvHooks.POST_GET_RAW, {
+				key: keyPrefixed,
+				value: undefined,
+			});
 			this.stats.miss();
 			return undefined;
 		}
@@ -790,6 +802,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			(deserializedData as DeserializedData<Value>).expires! < Date.now()
 		) {
+			this.hooks.trigger(KeyvHooks.POST_GET_RAW, {
+				key: keyPrefixed,
+				value: undefined,
+			});
 			this.stats.miss();
 			await this.delete(key);
 			return undefined;
