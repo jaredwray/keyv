@@ -123,11 +123,10 @@ const bigMap = new BigMap<string, string>({
 
 ## Using Hashery for Hash Functions
 
-[Hashery](https://github.com/jaredwray/hashery) is a powerful hashing library that provides multiple hash algorithms. You can use it for better key distribution:
+[Hashery](https://github.com/jaredwray/hashery) is a powerful hashing library that provides multiple hash algorithms. You can use it for better key distribution and it is available as an export:
 
 ```typescript
-import { BigMap } from '@keyv/bigmap';
-import { Hashery } from 'hashery';
+import { BigMap, Hashery } from '@keyv/bigmap';
 
 const hashery = new Hashery();
 
@@ -589,7 +588,7 @@ type StoreHashFunction = (key: string, storeSize: number) => number;
 
 ### defaultHashFunction
 
-The default hash function using DJB2 algorithm.
+The default hash function using DJB2 algorithm from [Hashery](https://npmjs.com/package/hashery):
 
 **Example:**
 ```typescript
