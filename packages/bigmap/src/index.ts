@@ -317,5 +317,5 @@ export function createKeyv<K = string, V = unknown>(
 	return keyv;
 }
 
-export { Keyv } from "keyv";
 export { Hashery } from "hashery";
+export { Keyv } from "keyv";
