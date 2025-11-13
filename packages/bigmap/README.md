@@ -53,10 +53,9 @@
 		- [getStore](#getstorekey)
 		- [getStoreMap](#getstoremapindex)
 		- [initStore](#initstore)
-  - [Types](#types)
-	- [StoreHashFunction](#storehashfunction)
-	- [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
-	- [djb2Hash(string, min?, max?)](#djb2hashstring-min-max)
+- [Types](#types)
+- [StoreHashFunction](#storehashfunction)
+- [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
 - [Contributing](#contributing)
 - [License](#license)
 
