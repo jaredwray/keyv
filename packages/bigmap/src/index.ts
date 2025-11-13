@@ -1,3 +1,4 @@
+import { Hashery } from "hashery";
 import { Hookified, type HookifiedOptions } from "hookified";
 import { Keyv } from "keyv";
 
@@ -22,22 +23,7 @@ export type MapInterfacee<K, V> = {
 export type StoreHashFunction = (key: string, storeSize: number) => number;
 
 export function defaultHashFunction(key: string, storeSize: number): number {
-	return djb2Hash(key, 0, storeSize - 1);
-}
-
-export function djb2Hash(string_: string, min = 0, max = 10): number {
-	// DJB2 hash algorithm
-	let hash = 5381;
-
-	for (let i = 0; i < string_.length; i++) {
-		hash = (hash * 33) ^ string_.charCodeAt(i); // 33 is a prime multiplier
-	}
-
-	// Calculate the range size
-	const range = max - min + 1;
-
-	// Return a value within the specified range
-	return min + (Math.abs(hash) % range);
+	return new Hashery().toNumberSync(key, { min: 0, max: storeSize - 1 });
 }
 
 export type BigMapOptions = {
@@ -331,4 +317,5 @@ export function createKeyv<K = string, V = unknown>(
 	return keyv;
 }
 
+export { Hashery } from "hashery";
 export { Keyv } from "keyv";

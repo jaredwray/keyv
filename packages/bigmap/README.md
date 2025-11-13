@@ -53,10 +53,9 @@
 		- [getStore](#getstorekey)
 		- [getStoreMap](#getstoremapindex)
 		- [initStore](#initstore)
-  - [Types](#types)
-	- [StoreHashFunction](#storehashfunction)
-	- [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
-	- [djb2Hash(string, min?, max?)](#djb2hashstring-min-max)
+- [Types](#types)
+- [StoreHashFunction](#storehashfunction)
+- [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -121,6 +120,38 @@ const bigMap = new BigMap<string, string>({
   storeHashFunction: customHashFunction
 });
 ```
+
+## Using Hashery for Hash Functions
+
+[Hashery](https://github.com/jaredwray/hashery) is a powerful hashing library that provides multiple hash algorithms. You can use it for better key distribution and it is available as an export:
+
+```typescript
+import { BigMap, Hashery } from '@keyv/bigmap';
+
+const hashery = new Hashery();
+
+// Using Hashery's toNumberSync for deterministic key distribution
+const bigMap = new BigMap<string, string>({
+  storeHashFunction: (key: string, storeSize: number) => {
+    return hashery.toNumberSync(key, { min: 0, max: storeSize - 1 });
+  }
+});
+
+// You can also use different algorithms
+const hasheryFnv1 = new Hashery({ defaultAlgorithmSync: 'fnv1' });
+
+const bigMapWithFnv1 = new BigMap<string, string>({
+  storeHashFunction: (key: string, storeSize: number) => {
+    return hasheryFnv1.toNumberSync(key, { min: 0, max: storeSize - 1 });
+  }
+});
+```
+
+Hashery supports multiple synchronous hash algorithms:
+- **djb2** - Fast hash function (default)
+- **fnv1** - Excellent distribution for hash tables
+- **murmer** - MurmurHash algorithm
+- **crc32** - Cyclic Redundancy Check
 
 # Iteration
 
@@ -557,7 +588,7 @@ type StoreHashFunction = (key: string, storeSize: number) => number;
 
 ### defaultHashFunction
 
-The default hash function using DJB2 algorithm.
+The default hash function using DJB2 algorithm from [Hashery](https://npmjs.com/package/hashery):
 
 **Example:**
 ```typescript
