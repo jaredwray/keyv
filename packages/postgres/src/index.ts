@@ -75,14 +75,9 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	async getMany(keys: string[]) {
 		const getMany = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
 		const rows = await this.query(getMany, [keys]);
-		const results = [];
+		const rowsMap = new Map(rows.map((row) => [row.key, row]));
 
-		for (const key of keys) {
-			const rowIndex = rows?.findIndex((row) => row.key === key);
-			results.push(rowIndex > -1 ? rows[rowIndex].value : undefined);
-		}
-
-		return results;
+		return keys.map((key) => rowsMap.get(key)?.value);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
