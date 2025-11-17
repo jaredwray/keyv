@@ -167,13 +167,13 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
 		await this.deleteMany(keys);
 	}
 
-	private extractKey(output: ScanCommandOutput, keyProperty = "id"): string[] {
+	public extractKey(output: ScanCommandOutput, keyProperty = "id"): string[] {
 		return (output.Items ?? [])
 			.map((item) => item[keyProperty])
 			.filter((key) => key.startsWith(this.namespace ?? ""));
 	}
 
-	private async ensureTable(tableName: string): Promise<void> {
+	public async ensureTable(tableName: string): Promise<void> {
 		try {
 			await this.client.send(
 				new DescribeTableCommand({ TableName: tableName }),
@@ -187,7 +187,7 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
 		}
 	}
 
-	private async createTable(tableName: string): Promise<void> {
+	public async createTable(tableName: string): Promise<void> {
 		try {
 			await this.client.send(
 				new CreateTableCommand({
