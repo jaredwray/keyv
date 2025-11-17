@@ -3,17 +3,23 @@
 	"version": "1.2.0",
 	"description": "Bigmap for Keyv",
 	"type": "module",
-	"main": "dist/index.cjs",
+	"main": "dist/index.js",
 	"module": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
-			"require": "./dist/index.cjs",
-			"import": "./dist/index.js"
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			},
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
 		}
 	},
 	"scripts": {
-		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean && cp dist/index.d.ts dist/index.d.cts",
 		"prepublishOnly": "pnpm build",
 		"lint": "biome check --write --error-on-warnings",
 		"lint:ci": "biome check --error-on-warnings",
