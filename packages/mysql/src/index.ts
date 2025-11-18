@@ -79,6 +79,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table!}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT)`;
 
+		/* v8 ignore next -- @preserve */
 		const connected = connection()
 			.then(async (query) => {
 				await query(createTable);
