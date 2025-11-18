@@ -105,3 +105,18 @@ test.it("test unlogged table", async (t) => {
 	t.expect(await keyv.set("foo", "bar")).toBe(true);
 	t.expect(await keyv.get("foo")).toBe("bar");
 });
+
+test.it(".setMany support", async (t) => {
+	const keyv = new KeyvPostgres(postgresUri);
+	await keyv.set("foo", "bar");
+	await keyv.setMany([
+		{ key: "foo", value: "bar" },
+		{ key: "foo2", value: "bar2" },
+		{ key: "foo3", value: "bar3" },
+	]);
+	t.expect(await keyv.getMany(["foo", "foo2", "foo3"])).toStrictEqual([
+		"bar",
+		"bar2",
+		"bar3",
+	]);
+});
