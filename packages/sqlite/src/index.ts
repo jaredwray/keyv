@@ -42,7 +42,7 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 		options.connect = async () =>
 			new Promise((resolve, reject) => {
 				const database = new sqlite3.Database(options.db!, (error) => {
-					/* c8 ignore next 2 */
+					/* v8 ignore next -- @preserve */
 					if (error) {
 						reject(error);
 					} else {
@@ -77,12 +77,15 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.opts.table}(key VARCHAR(${keySize}) PRIMARY KEY, value TEXT )`;
 
-		// @ts-expect-error - db is
-		const connected: Promise<DB> = this.opts.connect!()
+		/* v8 ignore next -- @preserve */
+		const connected: Promise<Db> = this.opts.connect!()
 			.then(async (database) =>
 				database.query(createTable).then(() => database as Db),
 			)
-			.catch((error) => this.emit("error", error));
+			.catch((error) => {
+				this.emit("error", error);
+				throw error;
+			});
 
 		this.query = async (sqlString, ...parameter) =>
 			connected.then(async (database) =>
