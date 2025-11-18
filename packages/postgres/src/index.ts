@@ -50,7 +50,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 						this.emit("error", error);
 					}
 
-					/* c8 ignore next 3 */
+					/* v8 ignore next -- @preserve */
 					return query;
 				}
 
