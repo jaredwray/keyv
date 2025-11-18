@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/noNonNullAssertion: need to fix
 import EventEmitter from "node:events";
-import Keyv, { type KeyvStoreAdapter } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStoreAdapter } from "keyv";
 import type { DatabaseError } from "pg";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
@@ -87,6 +87,20 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
       ON CONFLICT(key) 
       DO UPDATE SET value=excluded.value;`;
 		await this.query(upsert, [key, value]);
+	}
+
+	async setMany(entries: KeyvEntry[]) {
+		const keys = [];
+		const values = [];
+		for (const { key, value } of entries) {
+			keys.push(key);
+			values.push(value);
+		}
+		const upsert = `INSERT INTO ${this.opts.schema!}.${this.opts.table!} (key, value)
+      SELECT * FROM UNNEST($1::text[], $2::text[])
+      ON CONFLICT(key)
+      DO UPDATE SET value=excluded.value;`;
+		await this.query(upsert, [keys, values]);
 	}
 
 	async delete(key: string) {
