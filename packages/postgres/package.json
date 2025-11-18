@@ -57,11 +57,11 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.6",
+		"@biomejs/biome": "^2.3.6",
 		"@keyv/test-suite": "workspace:^",
-		"@types/pg": "^8.15.5",
+		"@types/pg": "^8.15.6",
 		"@vitest/coverage-v8": "^4.0.10",
-		"rimraf": "^6.0.1",
+		"rimraf": "^6.1.0",
 		"tsd": "^0.33.0",
 		"vitest": "^4.0.10"
 	},
