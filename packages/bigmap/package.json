@@ -19,7 +19,7 @@
 		}
 	},
 	"scripts": {
-		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean && cp dist/index.d.ts dist/index.d.cts",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
 		"prepublishOnly": "pnpm build",
 		"lint": "biome check --write --error-on-warnings",
 		"lint:ci": "biome check --error-on-warnings",
