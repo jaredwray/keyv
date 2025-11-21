@@ -212,7 +212,8 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async has(key: string) {
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.table!} WHERE id = '${key}' )`;
+		const sql = `SELECT EXISTS ( SELECT * FROM ${this.opts.table!} WHERE id = ? )`;
+		const exists = mysql.format(sql, [key]);
 		const rows = await this.query(exists);
 		return Object.values(rows[0])[0] === 1;
 	}

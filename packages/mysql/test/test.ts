@@ -141,3 +141,47 @@ test.it("set intervalExpiration to 1 second", async (t) => {
 	const value3 = await keyv.get("foo-interval-no-ttl");
 	t.expect(value3).toBe("bar-interval-no-ttl");
 });
+
+test.it(".has() prevents SQL injection with DROP TABLE", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	await keyv.set("safe-key", "value");
+	const result = await keyv.has("'; DROP TABLE keyv; --");
+	t.expect(result).toBe(false);
+	const safeKeyExists = await keyv.has("safe-key");
+	t.expect(safeKeyExists).toBe(true);
+});
+
+test.it(".has() handles keys with single quotes", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const keyWithQuote = "key'with'quotes";
+	await keyv.set(keyWithQuote, "value");
+	t.expect(await keyv.has(keyWithQuote)).toBe(true);
+});
+
+test.it(".has() prevents SQL injection with OR condition", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	await keyv.set("real-key", "value");
+	const result = await keyv.has("nonexistent' OR '1'='1");
+	t.expect(result).toBe(false);
+});
+
+test.it(".has() handles keys with special SQL characters", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const specialKeys = [
+		"key;with;semicolon",
+		"key--with--dashes",
+		"key/*comment*/",
+		"key\\with\\backslash",
+	];
+	for (const key of specialKeys) {
+		await keyv.set(key, "value");
+		t.expect(await keyv.has(key)).toBe(true);
+	}
+	t.expect(await keyv.has("nonexistent;key")).toBe(false);
+});
+
+test.it(".has() prevents UNION-based SQL injection", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const result = await keyv.has("' UNION SELECT 1 --");
+	t.expect(result).toBe(false);
+});
