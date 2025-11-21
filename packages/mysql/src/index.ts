@@ -5,6 +5,10 @@ import mysql from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
 
+/**
+ * Set of keys that are specific to Keyv MySQL configuration.
+ * These keys are filtered out when creating the MySQL connection options.
+ */
 const keyvMysqlKeys = new Set([
 	"adapter",
 	"compression",
@@ -26,11 +30,36 @@ type QueryType<T> = Promise<
 		: never
 >;
 
+/**
+ * MySQL storage adapter for Keyv.
+ * Provides a persistent key-value store using MySQL as the backend.
+ */
 export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
+	/**
+	 * Indicates whether TTL (Time To Live) support is enabled.
+	 * Set to true when intervalExpiration is configured.
+	 */
 	ttlSupport = false;
+
+	/**
+	 * Configuration options for the MySQL adapter.
+	 */
 	opts: KeyvMysqlOptions;
+
+	/**
+	 * Optional namespace for key prefixing.
+	 */
 	namespace?: string;
+
+	/**
+	 * Query function for executing SQL statements against the MySQL database.
+	 */
 	query: <T>(sqlString: string) => QueryType<T>;
+
+	/**
+	 * Creates a new KeyvMysql instance.
+	 * @param keyvOptions - Configuration options or connection URI string
+	 */
 	constructor(keyvOptions?: KeyvMysqlOptions | string) {
 		super();
 
@@ -105,6 +134,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		};
 	}
 
+	/**
+	 * Retrieves a value from the store by key.
+	 * @param key - The key to retrieve
+	 * @returns The stored value or undefined if not found
+	 */
 	async get<Value>(key: string) {
 		const sql = `SELECT * FROM ${this.opts.table!} WHERE id = ?`;
 		const select = mysql.format(sql, [key]);
@@ -115,6 +149,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		return row?.value as StoredData<Value>;
 	}
 
+	/**
+	 * Retrieves multiple values from the store by their keys.
+	 * @param keys - Array of keys to retrieve
+	 * @returns Array of stored values in the same order as the input keys, with undefined for missing keys
+	 */
 	async getMany<Value>(keys: string[]) {
 		const sql = `SELECT * FROM ${this.opts.table!} WHERE id IN (?)`;
 		const select = mysql.format(sql, [keys]);
@@ -135,16 +174,28 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		return results;
 	}
 
+	/**
+	 * Sets a value in the store for the given key.
+	 * If the key already exists, it will be updated.
+	 * @param key - The key to set
+	 * @param value - The value to store
+	 * @returns Promise that resolves when the operation completes
+	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any) {
 		const sql = `INSERT INTO ${this.opts.table!} (id, value)
-			VALUES(?, ?) 
+			VALUES(?, ?)
 			ON DUPLICATE KEY UPDATE value=?;`;
 		const insert = [key, value, value];
 		const upsert = mysql.format(sql, insert);
 		return this.query(upsert);
 	}
 
+	/**
+	 * Deletes a key-value pair from the store.
+	 * @param key - The key to delete
+	 * @returns True if the key existed and was deleted, false if the key did not exist
+	 */
 	async delete(key: string) {
 		const sql = `SELECT * FROM ${this.opts.table!} WHERE id = ?`;
 		const select = mysql.format(sql, [key]);
@@ -162,6 +213,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		return true;
 	}
 
+	/**
+	 * Deletes multiple key-value pairs from the store.
+	 * @param key - Array of keys to delete
+	 * @returns True if at least one key was deleted, false if no keys were found
+	 */
 	async deleteMany(key: string[]) {
 		const sql = `DELETE FROM ${this.opts.table!} WHERE id IN (?)`;
 		const del = mysql.format(sql, [key]);
@@ -170,6 +226,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		return result.affectedRows !== 0;
 	}
 
+	/**
+	 * Clears all entries from the store.
+	 * If a namespace is set, only entries within that namespace are cleared.
+	 * @returns Promise that resolves when the operation completes
+	 */
 	async clear() {
 		const sql = `DELETE FROM ${this.opts.table!} WHERE id LIKE ?`;
 		const del = mysql.format(sql, [
@@ -179,6 +240,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		await this.query(del);
 	}
 
+	/**
+	 * Returns an async iterator for iterating over all key-value pairs in the store.
+	 * @param namespace - Optional namespace to filter results
+	 * @yields Arrays containing [key, value] pairs
+	 */
 	async *iterator(namespace?: string) {
 		const limit =
 			Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
@@ -211,6 +277,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		yield* iterate(0, this.opts, this.query);
 	}
 
+	/**
+	 * Checks if a key exists in the store.
+	 * @param key - The key to check
+	 * @returns True if the key exists, false otherwise
+	 */
 	async has(key: string) {
 		const sql = `SELECT EXISTS ( SELECT * FROM ${this.opts.table!} WHERE id = ? )`;
 		const exists = mysql.format(sql, [key]);
@@ -218,6 +289,10 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		return Object.values(rows[0])[0] === 1;
 	}
 
+	/**
+	 * Disconnects from the MySQL database and closes the connection pool.
+	 * @returns Promise that resolves when disconnected
+	 */
 	async disconnect() {
 		endPool();
 	}
