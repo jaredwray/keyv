@@ -218,6 +218,14 @@ const keyv = createKeyvNonBlocking('redis://user:pass@localhost:6379');
 
 # Namespaces
 
+By default namespacing is turned off, this is done because it causes much more memory / performance usage for Redis.
+
+Redis does **not** treat colons (`:`) or namespaces as special—there are no hierarchical keys or namespace mechanics internally. The dramatic memory savings you see when removing prefixes like `namespace:` come from one thing: **key length**. Redis stores every key as a full string in memory, wrapped in an SDS structure and allocated by jemalloc. Longer keys (e.g., `namespace:key123`) fall into larger jemalloc size classes, require more bytes for the SDS header, and cause more fragmentation. Shorter keys (e.g., `key123`) fit into much smaller slabs, pack tightly, and result in far more stable and predictable memory usage.
+
+This means the colon is not the issue—**the extra characters are.** A key that goes from ~18 bytes to ~6 bytes can use *half the memory per key* once overhead, allocator classes, and fragmentation are considered. Multiply that by hundreds of thousands or millions of keys, and memory usage becomes significantly smaller and much more stable simply because the keys are shorter.
+
+## How to use Namespaces
+
 You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a `namespace` with the `store` option:
 
 ```js
