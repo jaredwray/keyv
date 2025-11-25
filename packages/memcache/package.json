@@ -61,12 +61,12 @@
 		"@keyv/compress-gzip": "workspace:^",
 		"@keyv/test-suite": "workspace:^",
 		"@types/memjs": "^1.3.3",
-		"@vitest/coverage-v8": "^4.0.3",
+		"@vitest/coverage-v8": "^4.0.14",
 		"rimraf": "^6.1.2",
 		"tsd": "^0.33.0",
 		"tsup": "^8.5.1",
 		"typescript": "^5.9.3",
-		"vitest": "^4.0.3"
+		"vitest": "^4.0.14"
 	},
 	"tsd": {
 		"directory": "test"
