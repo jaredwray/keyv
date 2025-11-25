@@ -52,10 +52,10 @@
 		"etcd3": "^1.1.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.0",
+		"@biomejs/biome": "^2.3.7",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^4.0.3",
-		"rimraf": "^6.0.1",
+		"rimraf": "^6.1.2",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.3"
 	},
