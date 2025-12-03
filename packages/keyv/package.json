@@ -62,7 +62,7 @@
 		"@keyv/serialize": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.3",
+		"@biomejs/biome": "^2.3.8",
 		"@faker-js/faker": "^10.1.0",
 		"@keyv/compress-brotli": "workspace:^",
 		"@keyv/compress-gzip": "workspace:^",
