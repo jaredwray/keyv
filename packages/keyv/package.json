@@ -71,11 +71,11 @@
 		"@keyv/mongo": "workspace:^",
 		"@keyv/sqlite": "workspace:^",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.0.6",
-		"rimraf": "^6.1.0",
+		"@vitest/coverage-v8": "^4.0.14",
+		"rimraf": "^6.1.2",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.33.0",
-		"vitest": "^4.0.6"
+		"vitest": "^4.0.14"
 	},
 	"tsd": {
 		"directory": "test"
