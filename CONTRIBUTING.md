@@ -25,5 +25,29 @@ You can contribute changes to this repo by opening a pull request:
 
 If you need more information on the steps to create a pull request, you can find a detailed walkthrough in the [Github documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork)
 
+# Updating Packages
+
+We use `pnpm outdated` to check for outdated dependencies across the monorepo. When updating packages, we follow a cautious approach to avoid potential issues with newly released versions.
+
+## Why We Use `minimumReleaseAge: 7200`
+
+In our `pnpm-workspace.yaml`, we have configured `minimumReleaseAge: 7200` (5 days in minutes). This setting ensures that when running `pnpm update`, only packages that have been published for at least 5 days will be considered for updates.
+
+This approach provides several benefits:
+
+1. **Stability**: Newly published packages may contain undiscovered bugs or breaking changes. Waiting 5 days allows the community to identify and report issues.
+2. **Security**: Malicious packages are often detected and removed within the first few days of publication. This delay provides a buffer against supply chain attacks.
+3. **Reliability**: It gives package maintainers time to publish patch releases if critical issues are found shortly after a release.
+
+To check for outdated packages:
+```bash
+pnpm outdated
+```
+
+To update packages (respecting the minimum release age):
+```bash
+pnpm update
+```
+
 # Code of Conduct
 Please refer to our [Code of Conduct](https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md) readme for how to contribute to this open source project and work within the community. 
