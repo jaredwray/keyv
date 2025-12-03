@@ -21,10 +21,10 @@
   "scripts": {
     "build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
     "prepublishOnly": "pnpm build",
-		"lint": "biome check --write --error-on-warnings",
-		"lint:ci": "biome check --error-on-warnings",
-		"test": "pnpm lint && vitest run --coverage",
-		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+    "lint": "biome check --write --error-on-warnings",
+    "lint:ci": "biome check --error-on-warnings",
+    "test": "pnpm lint && vitest run --coverage",
+    "test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
     "clean": "rimraf ./node_modules ./coverage ./dist"
   },
   "repository": {
@@ -45,7 +45,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "devDependencies": {
-    "@biomejs/biome": "^2.3.3",
+    "@biomejs/biome": "^2.3.8",
     "@keyv/test-suite": "workspace:^",
     "@vitest/coverage-v8": "^4.0.6",
     "keyv": "workspace:^",
