@@ -78,7 +78,7 @@ export type IEventEmitter = {
 export type KeyvStoreAdapter = {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	opts: any;
-	namespace?: string;
+	namespace?: string | undefined;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	set(key: string, value: any, ttl?: number): any;
