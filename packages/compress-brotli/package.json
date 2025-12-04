@@ -59,9 +59,9 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.0.6",
+		"@vitest/coverage-v8": "^4.0.14",
 		"rimraf": "^6.1.2",
-		"vitest": "^4.0.6"
+		"vitest": "^4.0.14"
 	},
 	"tsd": {
 		"directory": "test"
