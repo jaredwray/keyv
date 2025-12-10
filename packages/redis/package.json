@@ -60,11 +60,11 @@
 		"@biomejs/biome": "^2.3.8",
 		"@faker-js/faker": "^10.1.0",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.0.8",
+		"@vitest/coverage-v8": "^4.0.15",
 		"rimraf": "^6.1.2",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.33.0",
-		"vitest": "^4.0.8"
+		"vitest": "^4.0.15"
 	},
 	"tsd": {
 		"directory": "test"
