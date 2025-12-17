@@ -171,7 +171,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async connect() {
-		const conn = pool(this.opts!.uri!, this.opts);
+		const conn = pool(this.opts.uri!, this.opts);
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		return async (sql: string, values?: any) => {
 			const data = await conn.query(sql, values);
