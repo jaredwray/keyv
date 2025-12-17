@@ -57,7 +57,7 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.6",
+		"@biomejs/biome": "^2.3.9",
 		"@keyv/test-suite": "workspace:^",
 		"@types/pg": "^8.15.6",
 		"@vitest/coverage-v8": "^4.0.10",
