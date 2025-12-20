@@ -534,7 +534,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		// If the key is already prefixed, return it
-		if (key.startsWith(this._namespace)) {
+		if (key.startsWith(`${this._namespace}:`)) {
 			return key;
 		}
 
