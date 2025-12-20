@@ -263,4 +263,41 @@ describe("Keyv", async () => {
 			await expect(keyv.setMany(testData)).rejects.toThrow("Test error");
 		});
 	});
+
+	describe("iterator", () => {
+		test("should not increment 'deletes' stat indefinetly", async () => {
+			const keyv = new Keyv({
+				stats: true,
+			});
+
+			// Set an item that will expire in 100ms
+			const result = await keyv.set("foo", "bar", 100);
+			expect(result).toBe(true);
+			expect(keyv.stats.deletes).toBe(0);
+
+			// Now the item is expired
+			vi.advanceTimersByTime(101);
+
+			// No gets yet, so no deletes
+			expect(keyv.stats.deletes).toBe(0);
+
+			let iterationCount = 0;
+			// Get all items using iterator
+			for await (const _ of keyv.iterator?.(keyv) ?? []) {
+				// All items are expired, it doesn't enter the loop
+				iterationCount++;
+			}
+			expect(iterationCount).toBe(0);
+			expect(keyv.stats.deletes).toBe(1);
+
+			iterationCount = 0;
+			// Get all items using iterator
+			for await (const _ of keyv.iterator?.(keyv) ?? []) {
+				// All items are expired, it doesn't enter the loop
+				iterationCount++;
+			}
+			expect(iterationCount).toBe(0);
+			expect(keyv.stats.deletes).toBe(1);
+		});
+	});
 });
