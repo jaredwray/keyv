@@ -95,18 +95,24 @@ const keyvIteratorTests = (
 				toResolve.push(keyv.set(key, value, 200));
 			}
 
-			toResolve.push(keyv.set("foo", "bar"));
+			const nonExpiringKey = `foo-${Date.now()}`;
+			toResolve.push(keyv.set(nonExpiringKey, "bar"));
 
 			await Promise.all(toResolve);
 			await delay(250);
 			// @ts-expect-error - iterator
 			const iterator = keyv.iterator();
-			let entry = await iterator.next();
-			const [k, v] = entry.value;
-			t.expect(k).toBe("foo");
-			t.expect(v).toBe("bar");
-			entry = await iterator.next();
-			t.expect(entry.value).toBeUndefined();
+
+			// Collect all yielded entries (order is not guaranteed)
+			const entries: Array<[string, string]> = [];
+			for await (const entry of iterator) {
+				entries.push(entry);
+			}
+
+			// Should only yield the non-expired key
+			t.expect(entries.length).toBe(1);
+			t.expect(entries[0][0]).toBe(nonExpiringKey);
+			t.expect(entries[0][1]).toBe("bar");
 		},
 	);
 };
