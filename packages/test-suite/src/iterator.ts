@@ -92,14 +92,14 @@ const keyvIteratorTests = (
 			);
 			const toResolve = [];
 			for (const [key, value] of map) {
-				toResolve.push(keyv.set(key, value, 200));
+				toResolve.push(keyv.set(key, value, 100));
 			}
 
 			const nonExpiringKey = `foo-${Date.now()}`;
 			toResolve.push(keyv.set(nonExpiringKey, "bar"));
 
 			await Promise.all(toResolve);
-			await delay(250);
+			await delay(300);
 			// @ts-expect-error - iterator
 			const iterator = keyv.iterator();
 
