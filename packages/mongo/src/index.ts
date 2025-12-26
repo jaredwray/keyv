@@ -4,7 +4,6 @@ import type { KeyvStoreAdapter, StoredData } from "keyv";
 import {
 	type Document,
 	GridFSBucket,
-	MongoServerError,
 	MongoClient as mongoClient,
 	type WithId,
 } from "mongodb";
@@ -286,16 +285,8 @@ export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
 	async clear() {
 		const client = await this.connect;
 		if (this.opts.useGridFS) {
-			try {
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				await client.bucket!.drop();
-			} catch (error: unknown) {
-				// Throw error if not "namespace not found" error
-				/* v8 ignore next -- @preserve */
-				if (!(error instanceof MongoServerError && error.code === 26)) {
-					throw error;
-				}
-			}
+			// biome-ignore lint/style/noNonNullAssertion: need to fix
+			await client.bucket!.drop();
 		}
 
 		await client.store.deleteMany({
