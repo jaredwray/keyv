@@ -55,10 +55,10 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.5",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.0.3",
-		"rimraf": "^6.0.1",
+		"@vitest/coverage-v8": "^4.0.16",
+		"rimraf": "^6.1.2",
 		"tsd": "^0.33.0",
-		"vitest": "^4.0.3"
+		"vitest": "^4.0.16"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
