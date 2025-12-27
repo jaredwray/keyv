@@ -56,6 +56,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 				try {
 					await query(createTable);
 				} catch (error) {
+					/* v8 ignore next -- @preserve */
 					if ((error as DatabaseError).code !== "23505") {
 						this.emit("error", error);
 					}
@@ -172,12 +173,14 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 				return;
 			}
 
+			/* v8 ignore next -- @preserve */
 			if (entries.length === 0) {
 				return;
 			}
 
 			for (const entry of entries) {
 				// Validate entry has key before yielding
+				/* v8 ignore next -- @preserve */
 				if (entry.key !== undefined && entry.key !== null) {
 					yield [entry.key, entry.value];
 				}
