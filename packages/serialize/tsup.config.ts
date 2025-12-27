@@ -7,4 +7,7 @@ export default defineConfig({
 	clean: true,
 	platform: "node",
 	target: "node18",
+	esbuildOptions(options) {
+		options.external = ["node:buffer"];
+	},
 });
