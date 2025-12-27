@@ -167,13 +167,8 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			}
 
 			for (const entry of entries) {
-				// Validate entry has required fields before yielding
-				if (
-					entry.key !== undefined &&
-					entry.key !== null &&
-					entry.value !== undefined &&
-					entry.value !== null
-				) {
+				// Validate entry has key before yielding
+				if (entry.key !== undefined && entry.key !== null) {
 					yield [entry.key, entry.value];
 				}
 			}
