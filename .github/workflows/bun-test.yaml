@@ -1,0 +1,36 @@
+name: bun
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  bun-test:
+    runs-on: ubuntu-latest
+    name: Bun
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Keyv Package
+        run: pnpm build:keyv:serialize && pnpm build:keyv
+
+      - name: Run Keyv Tests with Bun
+        working-directory: packages/keyv
+        run: bun run vitest run --coverage
