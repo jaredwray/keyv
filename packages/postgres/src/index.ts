@@ -136,32 +136,55 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 
 	async *iterator(namespace?: string) {
 		const limit = Number.parseInt(String(this.opts.iterationLimit!), 10) || 10;
-		// @ts-expect-error - iterate
-		async function* iterate(
-			offset: number,
-			options: KeyvPostgresOptions,
-			query: Query,
-		) {
-			const select = `SELECT * FROM ${options.schema!}.${options.table!} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
-			const entries = await query(select, [
-				// biome-ignore lint/style/useTemplate: need to fix
-				`${namespace ? namespace + ":" : ""}%`,
-				limit,
-				offset,
-			]);
+
+		// Escape special LIKE pattern characters in namespace
+		const escapedNamespace = namespace
+			? `${namespace.replace(/[%_\\]/g, "\\$&")}:`
+			: "";
+		const pattern = `${escapedNamespace}%`;
+
+		let offset = 0;
+
+		while (true) {
+			let entries: Array<{ key: string; value: string }>;
+
+			try {
+				const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
+				entries = await this.query(select, [pattern, limit, offset]);
+			} catch (error) {
+				// Emit error with context for debugging
+				this.emit(
+					"error",
+					new Error(
+						`Iterator failed at offset ${offset}: ${(error as Error).message}`,
+					),
+				);
+				return;
+			}
+
 			if (entries.length === 0) {
 				return;
 			}
 
 			for (const entry of entries) {
-				offset += 1;
-				yield [entry.key, entry.value];
+				// Validate entry has required fields before yielding
+				if (
+					entry.key !== undefined &&
+					entry.key !== null &&
+					entry.value !== undefined &&
+					entry.value !== null
+				) {
+					yield [entry.key, entry.value];
+				}
 			}
 
-			yield* iterate(offset, options, query);
-		}
+			offset += entries.length;
 
-		yield* iterate(0, this.opts, this.query);
+			// If we got fewer entries than the limit, we've reached the end
+			if (entries.length < limit) {
+				return;
+			}
+		}
 	}
 
 	async has(key: string) {
