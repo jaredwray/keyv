@@ -13,7 +13,7 @@ permissions:
 jobs:
   bun-test:
     runs-on: ubuntu-latest
-    name: Bun
+    name: bun
     steps:
       - uses: actions/checkout@v4
 
