@@ -5,6 +5,16 @@ import type { DatabaseError } from "pg";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
 
+/**
+ * Escapes a PostgreSQL identifier (table/schema name) to prevent SQL injection.
+ * Uses double-quote escaping as per PostgreSQL standards.
+ */
+function escapeIdentifier(identifier: string): string {
+	// Replace any double quotes with two double quotes (PostgreSQL escape sequence)
+	// and wrap in double quotes
+	return `"${identifier.replace(/"/g, '""')}"`;
+}
+
 export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	ttlSupport: boolean;
 	opts: KeyvPostgresOptions;
@@ -149,7 +159,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			let entries: Array<{ key: string; value: string }>;
 
 			try {
-				const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
+				const select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
 				entries = await this.query(select, [pattern, limit, offset]);
 			} catch (error) {
 				// Emit error with context for debugging
