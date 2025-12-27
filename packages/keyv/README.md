@@ -324,6 +324,8 @@ DynamoDB | [@keyv/dynamo](https://github.com/jaredwray/keyv/tree/master/packages
 
 # Third-party Storage Adapters
 
+We love the community and the third-party storage adapters they have built. They enable Keyv to be used with even more backends and use cases.
+
 You can also use third-party storage adapters or build your own. Keyv will wrap these storage adapters in TTL functionality and handle complex types internally.
 
 ```js
@@ -349,22 +351,7 @@ const lru = new QuickLRU({ maxSize: 1000 });
 const keyv = new Keyv({ store: lru });
 ```
 
-The following are third-party storage adapters compatible with Keyv:
-
-- [@resolid/keyv-sqlite](https://github.com/huijiewei/keyv-sqlite) - A new SQLite storage adapter for Keyv
-- [keyv-arango](https://github.com/TimMikeladze/keyv-arango) - ArangoDB storage adapter for Keyv
-- [keyv-azuretable](https://github.com/howlowck/keyv-azuretable) - Azure Table Storage/API adapter for Keyv
-- [keyv-browser](https://github.com/zaaack/keyv-browser) - Browser storage adapter for Keyv, including localStorage and indexedDB.
-- [keyv-cloudflare](https://npm.im/keyv-cloudflare) - Storage adapter for Cloudflare Workers KV
-- [keyv-dynamodb](https://www.npmjs.com/package/keyv-dynamodb) - DynamoDB storage adapter for Keyv
-- [keyv-file](https://github.com/zaaack/keyv-file) - File system storage adapter for Keyv
-- [keyv-firestore ](https://github.com/goto-bus-stop/keyv-firestore) – Firebase Cloud Firestore adapter for Keyv
-- [keyv-lru](https://www.npmjs.com/package/keyv-lru) - LRU storage adapter for Keyv
-- [keyv-momento](https://github.com/momentohq/node-keyv-adaptor/) - Momento storage adapter for Keyv
-- [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) - Microsoft Sql Server adapter for Keyv
-- [keyv-null](https://www.npmjs.com/package/keyv-null) - Null storage adapter for Keyv
-- [keyv-upstash](https://github.com/mahdavipanah/keyv-upstash) - Upstash Redis adapter for Keyv
-- [quick-lru](https://github.com/sindresorhus/quick-lru) - Simple "Least Recently Used" (LRU) cache
+View the complete list of third-party storage adapters and learn how to build your own at https://keyv.org/docs/third-party-storage-adapters/
 
 # Using BigMap to Scale
 
