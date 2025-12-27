@@ -103,6 +103,7 @@ keyv.iml
 packages/website/site/docs/**
 !packages/website/site/docs/index.md
 !packages/website/site/docs/v4-to-v5.md
+!packages/website/site/docs/third-party-storage-adapters.md
 !packages/website/site/docs/caching/**
 packages/third-party/keyv-file.json
 packages/keyv/test.db
