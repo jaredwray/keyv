@@ -1,0 +1,36 @@
+name: deno
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  deno-test:
+    runs-on: ubuntu-latest
+    name: deno
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run Keyv Tests with Deno
+        working-directory: packages/keyv
+        run: deno test --allow-read --allow-env test/deno.test.ts

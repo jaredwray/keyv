@@ -5,6 +5,7 @@ export default defineConfig({
 		maxWorkers: 1,
 		fileParallelism: false,
 		include: ['test/*.ts'],
+		exclude: ['test/deno.test.ts'],
 		coverage: {
 			reporter: ['json', 'lcov', 'text'],
 			reportOnFailure: true,
