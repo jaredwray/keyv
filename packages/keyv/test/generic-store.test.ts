@@ -360,3 +360,119 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		});
 	});
 });
+
+describe("Keyv Generic Store Iterator", () => {
+	test("should iterate over all entries", async () => {
+		const store = new Map();
+		const keyv = new KeyvGenericStore(store);
+		await keyv.set("key1", "value1");
+		await keyv.set("key2", "value2");
+		await keyv.set("key3", "value3");
+
+		const entries: Array<[string, unknown]> = [];
+		for await (const entry of keyv.iterator()) {
+			entries.push(entry as [string, unknown]);
+		}
+
+		expect(entries.length).toBe(3);
+		expect(entries.map(([key]) => key).sort()).toEqual([
+			"key1",
+			"key2",
+			"key3",
+		]);
+	});
+
+	test("should filter by namespace", async () => {
+		const store = new Map();
+		const keyv = new KeyvGenericStore(store);
+
+		// Set entries with different namespaces manually
+		store.set("ns1::key1", { value: "value1", expires: undefined });
+		store.set("ns1::key2", { value: "value2", expires: undefined });
+		store.set("ns2::key3", { value: "value3", expires: undefined });
+
+		const entries: Array<[string, unknown]> = [];
+		for await (const entry of keyv.iterator("ns1")) {
+			entries.push(entry as [string, unknown]);
+		}
+
+		expect(entries.length).toBe(2);
+		expect(entries.map(([key]) => key).sort()).toEqual(["key1", "key2"]);
+	});
+
+	test("should skip expired entries and delete them", async () => {
+		const store = new Map();
+		const keyv = new KeyvGenericStore(store);
+
+		// Set a valid entry
+		await keyv.set("key1", "value1");
+
+		// Set an expired entry manually
+		store.set("key2", { value: "value2", expires: Date.now() - 1000 });
+
+		const entries: Array<[string, unknown]> = [];
+		for await (const entry of keyv.iterator()) {
+			entries.push(entry as [string, unknown]);
+		}
+
+		expect(entries.length).toBe(1);
+		expect(entries[0][0]).toBe("key1");
+
+		// Verify expired entry was deleted
+		expect(store.has("key2")).toBe(false);
+	});
+
+	test("should return empty iterator when store does not support entries", async () => {
+		const customStore = {
+			get: (_key: string) => undefined,
+			set: (_key: string, _value: unknown) => {},
+			delete: (_key: string) => true,
+			clear: () => {},
+			has: (_key: string) => false,
+		};
+
+		const keyv = new KeyvGenericStore(customStore);
+
+		const entries: Array<[string, unknown]> = [];
+		for await (const entry of keyv.iterator()) {
+			entries.push(entry as [string, unknown]);
+		}
+
+		expect(entries.length).toBe(0);
+	});
+
+	test("should strip namespace prefix from keys when iterating with namespace", async () => {
+		const store = new Map();
+		const keyv = new KeyvGenericStore(store, { namespace: "myns" });
+
+		await keyv.set("key1", "value1");
+		await keyv.set("key2", "value2");
+
+		const entries: Array<[string, unknown]> = [];
+		for await (const entry of keyv.iterator("myns")) {
+			entries.push(entry as [string, unknown]);
+		}
+
+		expect(entries.length).toBe(2);
+		// Keys should not have namespace prefix
+		expect(entries.map(([key]) => key).sort()).toEqual(["key1", "key2"]);
+	});
+
+	test("should work with custom key separator", async () => {
+		const store = new Map();
+		const keyv = new KeyvGenericStore(store, { keySeparator: ":" });
+
+		// Set entries with custom separator manually
+		store.set("ns1:key1", { value: "value1", expires: undefined });
+		store.set("ns1:key2", { value: "value2", expires: undefined });
+		store.set("ns2:key3", { value: "value3", expires: undefined });
+
+		const entries: Array<[string, unknown]> = [];
+		for await (const entry of keyv.iterator("ns1")) {
+			entries.push(entry as [string, unknown]);
+		}
+
+		expect(entries.length).toBe(2);
+		expect(entries.map(([key]) => key).sort()).toEqual(["key1", "key2"]);
+	});
+});

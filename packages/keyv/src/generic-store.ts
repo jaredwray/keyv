@@ -329,16 +329,41 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 
 	/**
 	 * Creates an async iterator for iterating over store entries.
+	 * If the underlying store does not support iteration, returns an empty generator.
 	 * @param namespace - Optional namespace to filter entries by
-	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding key-value pairs
-	 * @throws {Error} This method is not implemented for the generic store
+	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding [key, value] pairs
 	 */
-	/* c8 ignore next 14 */
-	iterator<Value>(
-		// biome-ignore lint/correctness/noUnusedFunctionParameters: type format
+	async *iterator<Value>(
 		namespace?: string,
 	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
-		throw new Error("Method not implemented.");
+		// Check if store supports iteration
+		if (typeof (this._store as Map<any, any>).entries !== "function") {
+			return;
+		}
+
+		const iterator = (this._store as Map<any, any>).entries();
+
+		for (const [key, data] of iterator) {
+			// Filter by namespace if provided
+			if (namespace) {
+				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {
+					continue;
+				}
+			}
+
+			// Check expiration
+			if (data?.expires && Date.now() > data.expires) {
+				this._store.delete(key);
+				continue;
+			}
+
+			// Extract the key without namespace prefix
+			const keyWithoutPrefix = namespace
+				? key.slice(namespace.length + this._keySeparator.length)
+				: key;
+
+			yield [keyWithoutPrefix, data?.value];
+		}
 	}
 }
 

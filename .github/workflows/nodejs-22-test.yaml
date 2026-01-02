@@ -1,4 +1,4 @@
-name: tests
+name: nodejs-22-test
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [ '20', '22' ]
+        node: [ '22' ]
     name: Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v4

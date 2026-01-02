@@ -1,0 +1,43 @@
+name: nodejs-20-test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [ '20' ]
+    name: Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Start Services
+        run: pnpm test:services:start
+
+      - name: Install Dependencies  
+        run: pnpm install
+
+      - name: Approve Builds
+        run: pnpm approve-builds
+
+      - name: Build
+        run: pnpm build
+        
+      - name: Test Packages
+        run: pnpm test
