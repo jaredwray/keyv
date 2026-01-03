@@ -1,4 +1,4 @@
-name: codecov
+name: tests
 
 on:
   workflow_dispatch:
@@ -8,18 +8,21 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Node 24
+    strategy:
+      matrix:
+        node: [ '24' ]
+    name: Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
       
       - name: Install pnpm
         run: npm install -g pnpm
@@ -38,9 +41,3 @@ jobs:
         
       - name: Test Packages
         run: pnpm test
-
-      - name: Code Coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_KEY }}
-          verbose: true
