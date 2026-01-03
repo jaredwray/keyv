@@ -103,10 +103,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	 * @param store - The underlying Map or Map-like object to use for storage
 	 * @param options - Configuration options for the store
 	 */
-	constructor(
-		store: KeyvMapType,
-		options?: KeyvGenericStoreOptions,
-	) {
+	constructor(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
 		super();
 		this._store = store;
 		this._options = options;
