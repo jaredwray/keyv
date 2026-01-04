@@ -25,12 +25,13 @@ export type KeyvGenericStoreOptions = {
 /**
  * Interface for a Map-like store that can be used with KeyvGenericStore.
  * This allows any object implementing these methods to be used as the underlying storage.
+ * Compatible with Map, QuickLRU, lru.min, and other LRU cache implementations.
  */
 export type KeyvMapType = {
 	/** Retrieves a value by key */
 	get: (key: string) => any;
-	/** Sets a value with an optional TTL (time-to-live) in milliseconds */
-	set: (key: string, value: any, ttl?: number) => void;
+	/** Sets a value with a key. Additional parameters (like TTL) vary by implementation. */
+	set: (key: string, value: any, ...args: any[]) => any;
 	/** Deletes a key from the store */
 	delete: (key: string) => boolean;
 	/** Clears all entries from the store */
@@ -93,7 +94,7 @@ export type KeyPrefixData = {
  */
 export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	private readonly _options?: KeyvGenericStoreOptions;
-	private _store: Map<any, any> | KeyvMapType;
+	private _store: KeyvMapType;
 	private _namespace?: string | (() => string);
 	private _keySeparator = "::";
 
@@ -102,10 +103,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	 * @param store - The underlying Map or Map-like object to use for storage
 	 * @param options - Configuration options for the store
 	 */
-	constructor(
-		store: Map<any, any> | KeyvMapType,
-		options?: KeyvGenericStoreOptions,
-	) {
+	constructor(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
 		super();
 		this._store = store;
 		this._options = options;
@@ -129,7 +127,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
 	/**
 	 * Sets the underlying store instance.
 	 */
-	public set store(store: Map<any, any> | KeyvMapType) {
+	public set store(store: KeyvMapType) {
 		this._store = store;
 	}
 
@@ -392,7 +390,7 @@ export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
  * ```
  */
 export function createKeyv(
-	store: Map<any, any> | KeyvMapType,
+	store: KeyvMapType,
 	options?: KeyvGenericStoreOptions,
 ) {
 	const genericStore = new KeyvGenericStore(store, options);
