@@ -30,7 +30,7 @@ describe("getClient", () => {
 	});
 
 	test("should throw an error if not connected", async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, { connectionTimeout: 500 });
 		keyvRedis.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
@@ -46,7 +46,10 @@ describe("getClient", () => {
 	});
 
 	test("should throw an error if not connected with Keyv", async () => {
-		const keyv = createKeyv(redisBadUri, { throwOnErrors: true });
+		const keyv = createKeyv(redisBadUri, {
+			throwOnErrors: true,
+			connectionTimeout: 500,
+		});
 		keyv.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
@@ -62,7 +65,10 @@ describe("getClient", () => {
 	});
 
 	test("should throw an error if not connected with Keyv", async () => {
-		const keyv = createKeyv(redisBadUri, { throwOnConnectError: true });
+		const keyv = createKeyv(redisBadUri, {
+			throwOnConnectError: true,
+			connectionTimeout: 500,
+		});
 		keyv.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
