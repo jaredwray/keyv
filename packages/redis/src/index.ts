@@ -986,6 +986,10 @@ export default class KeyvRedis<T>
 	}
 
 	private initClient(): void {
+		this._client.on("error", (error) => {
+			this.emit("error", error);
+		});
+
 		this._client.on("connect", () => {
 			this.emit("connect", this._client);
 		});

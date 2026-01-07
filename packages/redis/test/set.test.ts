@@ -23,7 +23,7 @@ describe("set", () => {
 	});
 
 	test("should throw error on bad uri", async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri);
+		const keyvRedis = new KeyvRedis(redisBadUri, { connectionTimeout: 500 });
 		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
@@ -46,6 +46,7 @@ describe("set", () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, {
 			throwOnConnectError: false,
 			throwOnErrors: true,
+			connectionTimeout: 500,
 		});
 		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
