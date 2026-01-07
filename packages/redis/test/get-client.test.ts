@@ -31,6 +31,7 @@ describe("getClient", () => {
 
 	test("should throw an error if not connected", async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri);
+		keyvRedis.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
 			await keyvRedis.getClient();
@@ -46,6 +47,7 @@ describe("getClient", () => {
 
 	test("should throw an error if not connected with Keyv", async () => {
 		const keyv = createKeyv(redisBadUri, { throwOnErrors: true });
+		keyv.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
 			await keyv.get(faker.string.alphanumeric(10));
@@ -61,6 +63,7 @@ describe("getClient", () => {
 
 	test("should throw an error if not connected with Keyv", async () => {
 		const keyv = createKeyv(redisBadUri, { throwOnConnectError: true });
+		keyv.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
 			await keyv.get(faker.string.alphanumeric(10));

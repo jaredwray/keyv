@@ -35,6 +35,7 @@ describe("delete", () => {
 
 	test("should throw on connection error", async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, { throwOnConnectError: true });
+		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -58,6 +59,7 @@ describe("delete", () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, {
 			throwOnConnectError: false,
 		});
+		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -98,6 +100,7 @@ describe("delete", () => {
 
 	test("should throw on deleteMany client error", async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, { throwOnConnectError: true });
+		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
@@ -120,6 +123,7 @@ describe("delete", () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, {
 			throwOnConnectError: false,
 		});
+		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
 			keys: [faker.string.alphanumeric(10), faker.string.alphanumeric(10)],
