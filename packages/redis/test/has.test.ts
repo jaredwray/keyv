@@ -34,7 +34,10 @@ describe("has", () => {
 	});
 
 	test("should throw on connection error", async () => {
-		const keyvRedis = new KeyvRedis(redisBadUri, { throwOnConnectError: true });
+		const keyvRedis = new KeyvRedis(redisBadUri, {
+			throwOnConnectError: true,
+			connectionTimeout: 500,
+		});
 		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
@@ -62,6 +65,7 @@ describe("has", () => {
 	test("should not throw on connection error when throwOnConnectError is false", async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, {
 			throwOnConnectError: false,
+			connectionTimeout: 500,
 		});
 		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
