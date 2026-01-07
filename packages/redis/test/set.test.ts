@@ -24,6 +24,7 @@ describe("set", () => {
 
 	test("should throw error on bad uri", async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri);
+		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
 			key: faker.string.alphanumeric(10),
@@ -46,6 +47,7 @@ describe("set", () => {
 			throwOnConnectError: false,
 			throwOnErrors: true,
 		});
+		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
 		const data = {
 			key: faker.string.alphanumeric(10),
