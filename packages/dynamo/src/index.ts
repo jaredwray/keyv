@@ -175,9 +175,16 @@ export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
 
 	public async ensureTable(tableName: string): Promise<void> {
 		try {
-			await this.client.send(
+			const response = await this.client.send(
 				new DescribeTableCommand({ TableName: tableName }),
 			);
+			// Table exists but may be in CREATING status - wait if needed
+			if (response.Table?.TableStatus !== "ACTIVE") {
+				await waitUntilTableExists(
+					{ client: this.client, maxWaitTime: 60 },
+					{ TableName: tableName },
+				);
+			}
 		} catch (error) {
 			if (error instanceof ResourceNotFoundException) {
 				await this.createTable(tableName);
