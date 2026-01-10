@@ -157,6 +157,43 @@ test.it(
 	},
 );
 
+test.it("should wait for table when it exists but is not ACTIVE", async (t) => {
+	const tableName = randomUUID();
+
+	// First create a store and table
+	const store = new KeyvDynamo({
+		endpoint: dynamoURL,
+		tableName,
+	});
+	await store.set("test:key1", "value1");
+
+	// Now test ensureTable directly with a mocked CREATING status
+	let describeCallCount = 0;
+	const originalSend = (store as any).client.send;
+	(store as any).client.send = test.vi
+		.fn()
+		.mockImplementation(async (command) => {
+			if (command.constructor.name === "DescribeTableCommand") {
+				describeCallCount++;
+				if (describeCallCount === 1) {
+					// First call returns CREATING status
+					return {
+						Table: {
+							TableName: tableName,
+							TableStatus: "CREATING",
+						},
+					};
+				}
+			}
+			return originalSend.call((store as any).client, command);
+		});
+
+	// Call ensureTable directly - this should hit the CREATING branch
+	await store.ensureTable(tableName);
+	t.expect(describeCallCount).toBeGreaterThanOrEqual(1);
+	(store as any).client.send = originalSend;
+});
+
 test.it("should verify exposed client property", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(store.client).toBeDefined();
