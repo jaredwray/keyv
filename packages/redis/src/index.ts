@@ -46,8 +46,7 @@ export default class KeyvRedis<T>
 	extends Hookified
 	implements KeyvStoreAdapter
 {
-	private _client: RedisClientConnectionType =
-		createClient() as RedisConnectionClientType;
+	private _client!: RedisClientConnectionType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = "::";
 	private _clearBatchSize = 1000;
@@ -105,6 +104,9 @@ export default class KeyvRedis<T>
 					this._client = createCluster(connect as RedisClusterOptions);
 				}
 			}
+		} else {
+			// No connect provided, create the default client here instead of at class field initialization
+			this._client = createClient({ socket }) as RedisConnectionClientType;
 		}
 
 		this.setOptions(options);
