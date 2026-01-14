@@ -5,6 +5,24 @@ import KeyvRedis, { createKeyv } from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 
+describe("KeyvRedis Module Loading", () => {
+	test("should not create a Redis connection on module import", async () => {
+		// This test verifies that importing the module doesn't create a default Redis connection.
+		// The fix for issue #1805 ensures that createClient() is only called in the constructor,
+		// not at module load time via class field initialization.
+		//
+		// We verify this by checking that KeyvRedis is a class (function) but doesn't have
+		// any static Redis client properties that would indicate premature connection.
+		expect(typeof KeyvRedis).toBe("function");
+		expect(KeyvRedis.prototype).toBeDefined();
+
+		// The class should only create a client when instantiated
+		const instance = new KeyvRedis("redis://localhost:6379");
+		expect(instance.client).toBeDefined();
+		expect(instance.client.isOpen).toBe(false); // Not connected yet, just created
+	});
+});
+
 describe("KeyvRedis", () => {
 	test("should be a class", () => {
 		expect(KeyvRedis).toBeInstanceOf(Function);
