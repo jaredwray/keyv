@@ -1,4 +1,4 @@
-# Agent.md
+# Agents
 
 ## Common Commands
 
