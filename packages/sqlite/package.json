@@ -56,13 +56,13 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.9",
-		"@faker-js/faker": "^10.1.0",
+		"@biomejs/biome": "^2.3.11",
+		"@faker-js/faker": "^10.2.0",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.0.15",
+		"@vitest/coverage-v8": "^4.0.17",
 		"rimraf": "^6.1.2",
 		"tsd": "^0.33.0",
-		"vitest": "^4.0.15"
+		"vitest": "^4.0.17"
 	},
 	"tsd": {
 		"directory": "test"
