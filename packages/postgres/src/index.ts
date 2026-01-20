@@ -154,20 +154,34 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			: "";
 		const pattern = `${escapedNamespace}%`;
 
-		let offset = 0;
+		// Use keyset pagination (cursor-based) instead of OFFSET to handle
+		// concurrent deletions during iteration without skipping entries
+		let lastKey: string | null = null;
 
 		while (true) {
 			let entries: Array<{ key: string; value: string }>;
 
 			try {
-				const select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
-				entries = await this.query(select, [pattern, limit, offset]);
+				let select: string;
+				let params: Array<string | number>;
+
+				if (lastKey === null) {
+					// First batch: no cursor constraint
+					select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 ORDER BY key LIMIT $2`;
+					params = [pattern, limit];
+				} else {
+					// Subsequent batches: use keyset pagination
+					select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 AND key > $2 ORDER BY key LIMIT $3`;
+					params = [pattern, lastKey, limit];
+				}
+
+				entries = await this.query(select, params);
 			} catch (error) {
 				// Emit error with context for debugging
 				this.emit(
 					"error",
 					new Error(
-						`Iterator failed at offset ${offset}: ${(error as Error).message}`,
+						`Iterator failed at cursor ${lastKey ?? "start"}: ${(error as Error).message}`,
 					),
 				);
 				return;
@@ -186,7 +200,8 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 				}
 			}
 
-			offset += entries.length;
+			// Update cursor to the last key processed
+			lastKey = entries[entries.length - 1].key;
 
 			// If we got fewer entries than the limit, we've reached the end
 			if (entries.length < limit) {

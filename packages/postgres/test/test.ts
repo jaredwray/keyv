@@ -181,7 +181,7 @@ test.it("iterator emits error and stops when query fails", async (t) => {
 
 		// Should have emitted an error with context
 		t.expect(errors.length).toBe(1);
-		t.expect(errors[0].message).toContain("Iterator failed at offset 0");
+		t.expect(errors[0].message).toContain("Iterator failed at cursor start");
 		t.expect(errors[0].message).toContain("Connection lost");
 
 		// Should have yielded no results

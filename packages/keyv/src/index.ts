@@ -504,7 +504,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				}
 
 				if (typeof data.expires === "number" && Date.now() > data.expires) {
-					this.delete(key);
+					await this.delete(key);
 					continue;
 				}
 
