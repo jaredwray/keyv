@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import Keyv from "keyv";
 import * as test from "vitest";
@@ -16,8 +17,10 @@ test.beforeEach(async () => {
 
 test.it("should be able to pass in just uri as string", async (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
+	const key = faker.string.alphanumeric(10);
+	const value = faker.lorem.sentence();
+	await keyv.set(key, value);
+	t.expect(await keyv.get(key)).toBe(value);
 });
 
 test.it("test schema as non public", async (t) => {
@@ -29,29 +32,41 @@ test.it("test schema as non public", async (t) => {
 		uri: "postgresql://postgres:postgres@localhost:5432/keyv_test",
 		schema: "keyvtest2",
 	});
-	await keyv1.set("footest11", "bar1");
-	await keyv2.set("footest22", "bar2");
-	t.expect(await keyv1.get("footest11")).toBe("bar1");
-	t.expect(await keyv2.get("footest22")).toBe("bar2");
+	const key1 = faker.string.alphanumeric(10);
+	const value1 = faker.lorem.sentence();
+	const key2 = faker.string.alphanumeric(10);
+	const value2 = faker.lorem.sentence();
+	await keyv1.set(key1, value1);
+	await keyv2.set(key2, value2);
+	t.expect(await keyv1.get(key1)).toBe(value1);
+	t.expect(await keyv2.get(key2)).toBe(value2);
 });
 
 test.it("iterator with default namespace", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.set("foo2", "bar2");
-	const iterator = keyv.iterator();
-	let entry = await iterator.next();
-	t.expect(entry.value?.[0]).toBe("foo");
-	t.expect(entry.value?.[1]).toBe("bar");
-	entry = await iterator.next();
-	t.expect(entry.value?.[0]).toBe("foo1");
-	t.expect(entry.value?.[1]).toBe("bar1");
-	entry = await iterator.next();
-	t.expect(entry.value?.[0]).toBe("foo2");
-	t.expect(entry.value?.[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	const key1 = faker.string.alphanumeric(10);
+	const value1 = faker.lorem.sentence();
+	const key2 = faker.string.alphanumeric(10);
+	const value2 = faker.lorem.sentence();
+	const key3 = faker.string.alphanumeric(10);
+	const value3 = faker.lorem.sentence();
+	await keyv.set(key1, value1);
+	await keyv.set(key2, value2);
+	await keyv.set(key3, value3);
+
+	const keys: string[] = [];
+	const values: string[] = [];
+	for await (const [key, value] of keyv.iterator()) {
+		keys.push(key);
+		values.push(value as string);
+	}
+
+	t.expect(keys).toContain(key1);
+	t.expect(keys).toContain(key2);
+	t.expect(keys).toContain(key3);
+	t.expect(values).toContain(value1);
+	t.expect(values).toContain(value2);
+	t.expect(values).toContain(value3);
 });
 
 test.it(".clear() with undefined namespace", async (t) => {
@@ -61,10 +76,11 @@ test.it(".clear() with undefined namespace", async (t) => {
 
 test.it("close connection successfully", async (t) => {
 	const keyv = store();
-	t.expect(await keyv.get("foo")).toBeUndefined();
+	const key = faker.string.alphanumeric(10);
+	t.expect(await keyv.get(key)).toBeUndefined();
 	await keyv.disconnect();
 	try {
-		await keyv.get("foo");
+		await keyv.get(key);
 		t.expect.fail();
 	} catch {
 		t.expect(true).toBeTruthy();
@@ -87,37 +103,51 @@ test.it(
 			namespace: "namespace-b",
 		});
 
-		t.expect(await keyvA.set("foo", "bar")).toBe(true);
-		t.expect(await keyvA.get("foo")).toBe("bar");
-		t.expect(await keyvB.set("foo", "baz")).toBe(true);
-		t.expect(await keyvB.get("foo")).toBe("baz");
+		const key = faker.string.alphanumeric(10);
+		const valueA = faker.lorem.sentence();
+		const valueB = faker.lorem.sentence();
+
+		t.expect(await keyvA.set(key, valueA)).toBe(true);
+		t.expect(await keyvA.get(key)).toBe(valueA);
+		t.expect(await keyvB.set(key, valueB)).toBe(true);
+		t.expect(await keyvB.get(key)).toBe(valueB);
 	},
 );
 
 test.it("helper to create Keyv instance with postgres", async (t) => {
 	const keyv = createKeyv({ uri: postgresUri });
-	t.expect(await keyv.set("foo", "bar")).toBe(true);
-	t.expect(await keyv.get("foo")).toBe("bar");
+	const key = faker.string.alphanumeric(10);
+	const value = faker.lorem.sentence();
+	t.expect(await keyv.set(key, value)).toBe(true);
+	t.expect(await keyv.get(key)).toBe(value);
 });
 
 test.it("test unlogged table", async (t) => {
 	const keyv = createKeyv({ uri: postgresUri, useUnloggedTable: true });
-	t.expect(await keyv.set("foo", "bar")).toBe(true);
-	t.expect(await keyv.get("foo")).toBe("bar");
+	const key = faker.string.alphanumeric(10);
+	const value = faker.lorem.sentence();
+	t.expect(await keyv.set(key, value)).toBe(true);
+	t.expect(await keyv.get(key)).toBe(value);
 });
 
 test.it(".setMany support", async (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
-	await keyv.set("foo", "bar");
+	const key1 = faker.string.alphanumeric(10);
+	const value1 = faker.lorem.sentence();
+	const key2 = faker.string.alphanumeric(10);
+	const value2 = faker.lorem.sentence();
+	const key3 = faker.string.alphanumeric(10);
+	const value3 = faker.lorem.sentence();
+	await keyv.set(key1, value1);
 	await keyv.setMany([
-		{ key: "foo", value: "bar" },
-		{ key: "foo2", value: "bar2" },
-		{ key: "foo3", value: "bar3" },
+		{ key: key1, value: value1 },
+		{ key: key2, value: value2 },
+		{ key: key3, value: value3 },
 	]);
-	t.expect(await keyv.getMany(["foo", "foo2", "foo3"])).toStrictEqual([
-		"bar",
-		"bar2",
-		"bar3",
+	t.expect(await keyv.getMany([key1, key2, key3])).toStrictEqual([
+		value1,
+		value2,
+		value3,
 	]);
 });
 
