@@ -58,6 +58,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.11",
+		"@faker-js/faker": "^10.2.0",
 		"@keyv/test-suite": "workspace:^",
 		"@types/pg": "^8.16.0",
 		"@vitest/coverage-v8": "^4.0.17",
