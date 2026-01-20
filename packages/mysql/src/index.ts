@@ -7,12 +7,16 @@ import type { KeyvMysqlOptions } from "./types.js";
 
 /**
  * Escapes a MySQL identifier (table/column name) to prevent SQL injection.
+ * Handles database-qualified names like "mydb.table" by escaping each segment.
  * Uses backtick escaping as per MySQL standards.
  */
 function escapeIdentifier(identifier: string): string {
-	// Replace any backticks with two backticks (MySQL escape sequence)
-	// and wrap in backticks
-	return `\`${identifier.replace(/`/g, "``")}\``;
+	// Split on '.' to handle database-qualified names (e.g., "mydb.cache")
+	// Escape each segment individually, then join with '.'
+	return identifier
+		.split(".")
+		.map((segment) => `\`${segment.replace(/`/g, "``")}\``)
+		.join(".");
 }
 
 /**
