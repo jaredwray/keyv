@@ -113,5 +113,3 @@ pnpm-lock.yaml
 
 # AI
 .claude
-claude.md
-agents.md
