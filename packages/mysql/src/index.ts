@@ -139,12 +139,14 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 
 				return query;
 			})
-			.catch((error) => this.emit("error", error));
+			.catch((error) => {
+				this.emit("error", error);
+				throw error;
+			});
 
-		this.query = async (sqlString: string) => {
+		this.query = async <T>(sqlString: string): QueryType<T> => {
 			const query = await connected;
-			// @ts-expect-error - query is not a boolean
-			return query(sqlString);
+			return query(sqlString) as QueryType<T>;
 		};
 	}
 
