@@ -242,39 +242,53 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 
 	/**
 	 * Returns an async iterator for iterating over all key-value pairs in the store.
+	 * Uses keyset pagination (cursor-based) to handle concurrent deletions without skipping entries.
 	 * @param namespace - Optional namespace to filter results
 	 * @yields Arrays containing [key, value] pairs
 	 */
 	async *iterator(namespace?: string) {
 		const limit =
 			Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
+		// biome-ignore lint/style/useTemplate: need to fix
+		const pattern = `${namespace ? namespace + ":" : ""}%`;
+
 		// @ts-expect-error - iterate
 		async function* iterate(
-			offset: number,
+			lastKey: string | null,
 			options: KeyvMysqlOptions,
 			query: <T>(sqlString: string) => QueryType<T>,
 		) {
-			const sql = `SELECT * FROM ${options.table!} WHERE id LIKE ? LIMIT ? OFFSET ?`;
-			const select = mysql.format(sql, [
-				// biome-ignore lint/style/useTemplate: need to fix
-				`${namespace ? namespace + ":" : ""}%`,
-				limit,
-				offset,
-			]);
-			const entries: mysql.RowDataPacket[] = await query(select);
+			let sql: string;
+			if (lastKey === null) {
+				// First batch: no cursor constraint
+				sql = mysql.format(
+					`SELECT * FROM ${options.table!} WHERE id LIKE ? ORDER BY id LIMIT ?`,
+					[pattern, limit],
+				);
+			} else {
+				// Subsequent batches: use keyset pagination
+				sql = mysql.format(
+					`SELECT * FROM ${options.table!} WHERE id LIKE ? AND id > ? ORDER BY id LIMIT ?`,
+					[pattern, lastKey, limit],
+				);
+			}
+
+			const entries: mysql.RowDataPacket[] = await query(sql);
 			if (entries.length === 0) {
 				return;
 			}
 
 			for (const entry of entries) {
-				offset += 1;
 				yield [entry.id, entry.value];
 			}
 
-			yield* iterate(offset, options, query);
+			// Continue with next batch using last key as cursor
+			if (entries.length === limit) {
+				yield* iterate(entries[entries.length - 1].id, options, query);
+			}
 		}
 
-		yield* iterate(0, this.opts, this.query);
+		yield* iterate(null, this.opts, this.query);
 	}
 
 	/**
