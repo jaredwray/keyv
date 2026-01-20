@@ -160,7 +160,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 			let entries: Array<{ key: string; value: string }>;
 
 			try {
-				const select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 LIMIT $2 OFFSET $3`;
+				const select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 ORDER BY key LIMIT $2 OFFSET $3`;
 				entries = await this.query(select, [pattern, limit, offset]);
 			} catch (error) {
 				// Emit error with context for debugging
