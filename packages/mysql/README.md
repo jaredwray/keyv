@@ -34,11 +34,12 @@ e.g:
 import Keyv from 'keyv';
 import KeyvMysql from '@keyv/mysql';
 
-const keyv = new Keyv(new KeyvMysql('mysql://user:pass@localhost:3306/dbname'), {
+const keyv = new Keyv(new KeyvMysql({
+  uri: 'mysql://user:pass@localhost:3306/dbname',
   table: 'cache',
   keySize: 255,
   intervalExpiration: 60
-});
+}));
 ```
 
 ## SSL
