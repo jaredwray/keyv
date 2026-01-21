@@ -123,28 +123,25 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const createTable = `CREATE TABLE IF NOT EXISTS ${escapeIdentifier(this.opts.table!)}(id VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT)`;
 
 		/* v8 ignore next -- @preserve */
-		const connected = connection()
-			.then(async (query) => {
-				await query(createTable);
-				if (
-					this.opts.intervalExpiration !== undefined &&
-					this.opts.intervalExpiration > 0
-				) {
-					await query("SET GLOBAL event_scheduler = ON;");
-					await query("DROP EVENT IF EXISTS keyv_delete_expired_keys;");
-					await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
+		const connected = connection().then(async (query) => {
+			await query(createTable);
+			if (
+				this.opts.intervalExpiration !== undefined &&
+				this.opts.intervalExpiration > 0
+			) {
+				await query("SET GLOBAL event_scheduler = ON;");
+				await query("DROP EVENT IF EXISTS keyv_delete_expired_keys;");
+				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
 					DO DELETE FROM ${escapeIdentifier(this.opts.table!)}
 					WHERE CAST(value->'$.expires' AS UNSIGNED) BETWEEN 1 AND UNIX_TIMESTAMP(NOW(3)) * 1000;`);
-				}
+			}
 
-				return query;
-			})
-			.catch((error) => this.emit("error", error));
+			return query;
+		});
 
-		this.query = async (sqlString: string) => {
+		this.query = async <T>(sqlString: string): QueryType<T> => {
 			const query = await connected;
-			// @ts-expect-error - query is not a boolean
-			return query(sqlString);
+			return query(sqlString) as QueryType<T>;
 		};
 	}
 
