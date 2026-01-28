@@ -1025,6 +1025,7 @@ export {
 	type RedisClientType,
 	type RedisClusterOptions,
 	type RedisClusterType,
+	type RedisSentinelOptions,
 	type RedisSentinelType,
 } from "@redis/client";
 export { Keyv } from "keyv";
