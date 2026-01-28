@@ -419,34 +419,42 @@ You can learn more about the `createCluster` function in the [documentation](htt
 
 # Sentinel
 
-If you are using Sentinel to provide high availability for your Redis instances, you can pass in the `redisOptions` directly. Here is an example of how to do that:
+If you are using Sentinel to provide high availability for your Redis instances, you can pass in the sentinel options directly to the `KeyvRedis` constructor:
 
 ```js
 import Keyv from 'keyv';
-import KeyvRedis, { createSentinel } from '@keyv/redis';
+import KeyvRedis from '@keyv/redis';
 
-const sentinel = createSentinel({
-    name: 'sentinel-db',
+const keyv = new Keyv({
+  store: new KeyvRedis({
+    name: 'mymaster',
     sentinelRootNodes: [
-      {
-        host: '127.0.0.1',
-        port: 26379,
-      },
-      {
-        host: '127.0.0.1',
-        port: 26380,
-      },
-      {
-        host: '127.0.0.1',
-        port: 26381,
-      },
+      { host: '127.0.0.1', port: 26379 },
+      { host: '127.0.0.1', port: 26380 },
+      { host: '127.0.0.1', port: 26381 },
     ],
+  }),
 });
-
-const keyv = new Keyv({ store: new KeyvRedis(sentinel) });
 ```
 
-You can learn more about the `createSentinel` function in the [documentation](https://github.com/redis/node-redis/blob/master/docs/sentinel.md) at https://github.com/redis/node-redis/tree/master/docs.
+For TypeScript users, the `RedisSentinelOptions` type is exported from the package:
+
+```typescript
+import KeyvRedis, { type RedisSentinelOptions } from '@keyv/redis';
+
+const sentinelOptions: RedisSentinelOptions = {
+  name: 'mymaster',
+  sentinelRootNodes: [
+    { host: '127.0.0.1', port: 26379 },
+    { host: '127.0.0.1', port: 26380 },
+    { host: '127.0.0.1', port: 26381 },
+  ],
+};
+
+const keyvRedis = new KeyvRedis(sentinelOptions);
+```
+
+You can learn more about Sentinel configuration in the [documentation](https://github.com/redis/node-redis/blob/master/docs/sentinel.md) at https://github.com/redis/node-redis/tree/master/docs.
 
 # TLS Support
 
