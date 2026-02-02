@@ -48,7 +48,7 @@ const keyv = new Keyv({ store: keyvSqlite });
 - `table` - The table name to use for storage (default: `'keyv'`)
 - `busyTimeout` - Sets a busy handler that sleeps for a specified amount of time when a table is locked
 - `wal` - Enable [Write-Ahead Logging](https://sqlite.org/wal.html) mode for better concurrency and performance (default: `false`)
-  - **Note:** WAL mode is not supported for in-memory databases (`:memory:`). A warning will be logged if you try to enable it for an in-memory database.
+  - **Note:** WAL mode is not supported for in-memory databases (`:memory:`). SQLite will silently ignore the WAL mode request and remain in "memory" journal mode.
 - `keySize` - The maximum key size in bytes (default: `255`, max: `65535`)
 
 You can also use a helper function to create `Keyv` with `KeyvSqlite` store.
