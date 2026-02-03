@@ -276,3 +276,40 @@ test.it("will create a Keyv instance with a store", (t) => {
 	const keyv = createKeyv("sqlite://test/testdb.sqlite");
 	t.expect(keyv).toBeInstanceOf(Keyv);
 });
+
+test.it("WAL mode can be enabled", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb-wal.sqlite",
+		wal: true,
+	});
+	const result = await keyv.query("PRAGMA journal_mode");
+	t.expect(result[0].journal_mode).toBe("wal");
+	await keyv.disconnect();
+});
+
+test.it("WAL mode is not enabled by default", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb-nowal.sqlite",
+	});
+	const result = await keyv.query("PRAGMA journal_mode");
+	t.expect(result[0].journal_mode).not.toBe("wal");
+	await keyv.disconnect();
+});
+
+test.it(
+	"WAL mode does not work with in-memory database (remains as memory mode)",
+	async (t) => {
+		const keyv = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			wal: true,
+		});
+		const result = await keyv.query("PRAGMA journal_mode");
+		// In-memory databases cannot use WAL mode, they remain in "memory" journal mode
+		t.expect(result[0].journal_mode).toBe("memory");
+		// But basic operations should still work
+		await keyv.set("test", "value");
+		const value = await keyv.get("test");
+		t.expect(value).toBe("value");
+		await keyv.disconnect();
+	},
+);
