@@ -25,7 +25,7 @@ const keyv = new Keyv(new KeyvSqlite('sqlite://path/to/database.sqlite'));
 keyv.on('error', handleConnectionError);
 ```
 
-You can specify the `table` and [`busyTimeout`](https://sqlite.org/c3ref/busy_timeout.html) option.
+You can specify the `table`, [`busyTimeout`](https://sqlite.org/c3ref/busy_timeout.html), and `wal` options.
 
 e.g:
 
@@ -35,11 +35,21 @@ import KeyvSqlite from '@keyv/sqlite';
 
 const keyvSqlite = new KeyvSqlite('sqlite://path/to/database.sqlite', {
   table: 'cache',
-  busyTimeout: 10000
+  busyTimeout: 10000,
+  wal: true // Enable WAL mode for better concurrency
 });
 
-const keyv = new Keyv({ store: keyvSqlite }); 
+const keyv = new Keyv({ store: keyvSqlite });
 ```
+
+### Options
+
+- `uri` - The SQLite database URI (default: `'sqlite://:memory:'`)
+- `table` - The table name to use for storage (default: `'keyv'`)
+- `busyTimeout` - Sets a busy handler that sleeps for a specified amount of time when a table is locked
+- `wal` - Enable [Write-Ahead Logging](https://sqlite.org/wal.html) mode for better concurrency and performance (default: `false`)
+  - **Note:** WAL mode is not supported for in-memory databases (`:memory:`). SQLite will silently ignore the WAL mode request and remain in "memory" journal mode.
+- `keySize` - The maximum key size in bytes (default: `255`, max: `65535`)
 
 You can also use a helper function to create `Keyv` with `KeyvSqlite` store.
 

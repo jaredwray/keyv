@@ -13,6 +13,8 @@ export type KeyvSqliteOptions = {
 	keySize?: number;
 	db?: string;
 	iterationLimit?: number | string;
+	/** Enable WAL (Write-Ahead Logging) mode. */
+	wal?: boolean;
 	connect?: () => Promise<{
 		query: DbQuery;
 		close: DbClose;

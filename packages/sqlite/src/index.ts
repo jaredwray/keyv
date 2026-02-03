@@ -40,7 +40,7 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 		options.db = options.uri!.replace(/^sqlite:\/\//, "");
 
 		options.connect = async () =>
-			new Promise((resolve, reject) => {
+			new Promise<sqlite3.Database>((resolve, reject) => {
 				const database = new sqlite3.Database(options.db!, (error) => {
 					/* v8 ignore next -- @preserve */
 					if (error) {
@@ -53,12 +53,21 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 						resolve(database);
 					}
 				});
-			}).then((database) => ({
-				// @ts-expect-error
-				query: promisify(database.all).bind(database),
-				// @ts-expect-error
-				close: promisify(database.close).bind(database),
-			}));
+			}).then(async (database) => {
+				const query = promisify(database.all).bind(database);
+				const close = promisify(database.close).bind(database);
+
+				if (options.wal) {
+					// WAL mode doesn't work with in-memory databases, but SQLite silently
+					// ignores the request and keeps "memory" mode, so we do the same
+					await query("PRAGMA journal_mode=WAL");
+				}
+
+				return {
+					query,
+					close,
+				};
+			});
 
 		this.opts = {
 			table: "keyv",
