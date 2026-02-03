@@ -85,3 +85,31 @@ Individual package tests:
 - Core package (`keyv`) depends only on `@keyv/serialize`
 - Storage adapters depend on `keyv` as peer dependency
 - Test suite depends on `keyv` and various testing utilities
+
+## Pull Request Guidelines
+
+### PR Title Format
+Use the following format for pull request titles:
+
+```
+{package} - {type}: {description}
+```
+
+**Examples:**
+- `sqlite - feat: Add WAL (Write-Ahead Logging) mode support`
+- `redis - fix: Connection timeout handling`
+- `keyv - docs: Update API documentation`
+- `mono - chore: Upgrade dependencies`
+
+**Package names:**
+- Use the package name (e.g., `sqlite`, `redis`, `postgres`, `keyv`, `serialize`)
+- Use `mono` for changes that affect the entire monorepo
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `chore`: Maintenance tasks (dependencies, CI, etc.)
+- `refactor`: Code refactoring
+- `test`: Test additions or changes
+- `perf`: Performance improvements
