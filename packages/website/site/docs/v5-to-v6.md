@@ -1,3 +1,8 @@
+---
+title: 'v5 to v6 Migration'
+order: 3
+---
+
 # Keyv v6 Migration Guide
 
 We are pleased to announce Keyv v6 with major enhancements and some breaking changes. This guide will help you understand how to migrate from v5 to v6. For most users, the transition will be straightforward.
@@ -670,7 +675,3 @@ If you encounter issues during migration:
 1. Check the [Keyv documentation](https://keyv.org)
 2. Search [existing issues](https://github.com/jaredwray/keyv/issues)
 3. Open a [new issue](https://github.com/jaredwray/keyv/issues/new) with details about your migration problem
-
----
-
-*Last updated: February 2026*
