@@ -313,3 +313,22 @@ test.it(
 		await keyv.disconnect();
 	},
 );
+
+test.it("WAL mode with in-memory database logs a warning", async (t) => {
+	const warnSpy = test.vi.spyOn(console, "warn").mockImplementation(() => {});
+
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://:memory:",
+		wal: true,
+	});
+
+	// Wait for the database to initialize (the warn happens during initialization)
+	await keyv.query("SELECT 1");
+
+	t.expect(warnSpy).toHaveBeenCalledWith(
+		"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
+	);
+
+	warnSpy.mockRestore();
+	await keyv.disconnect();
+});

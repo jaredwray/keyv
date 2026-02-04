@@ -58,9 +58,14 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 				const close = promisify(database.close).bind(database);
 
 				if (options.wal) {
-					// WAL mode doesn't work with in-memory databases, but SQLite silently
-					// ignores the request and keeps "memory" mode, so we do the same
-					await query("PRAGMA journal_mode=WAL");
+					const isInMemory = options.db === ":memory:" || options.db === "";
+					if (isInMemory) {
+						console.warn(
+							"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
+						);
+					} else {
+						await query("PRAGMA journal_mode=WAL");
+					}
 				}
 
 				return {
