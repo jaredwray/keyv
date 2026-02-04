@@ -563,7 +563,7 @@ Keyv v6 provides new functions to help identify adapters and capabilities.
 
 #### `isKeyv`
 
-Detects if an object is a Keyv instance and its version:
+Detects if an object is a Keyv instance by checking for Keyv-specific methods and properties:
 
 ```javascript
 import Keyv, { isKeyv } from 'keyv';
@@ -571,51 +571,55 @@ import Keyv, { isKeyv } from 'keyv';
 const keyv = new Keyv();
 
 isKeyv(new Map());
-// { keyv: false, version: undefined }
+// { keyv: false, get: true, set: true, delete: true, clear: true, has: true,
+//   getMany: false, setMany: false, deleteMany: false, hasMany: false,
+//   disconnect: false, getRaw: false, getManyRaw: false, hooks: false,
+//   stats: false, iterator: false }
 
 isKeyv(keyv);
-// { keyv: true, version: 'v6' }
+// { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
+//   getMany: true, setMany: true, deleteMany: true, hasMany: true,
+//   disconnect: true, getRaw: true, getManyRaw: true, hooks: true,
+//   stats: true, iterator: false }
 ```
 
-#### `getStoreCapabilities`
+The `keyv` property is `true` when the object has all core Keyv methods (`get`, `set`, `delete`, `clear`) plus `hooks` and `stats` properties.
 
-Detects adapter capabilities and compatibility:
+#### `isKeyvStorage`
+
+Detects if an object is a Keyv storage adapter by checking for required adapter methods:
 
 ```javascript
-import Keyv from 'keyv';
+import { isKeyvStorage } from 'keyv';
 
-const keyv = new Keyv();
+isKeyvStorage(new Map());
+// { keyvStorage: false, get: true, set: true, delete: true, clear: true,
+//   has: true, getMany: false, setMany: false, deleteMany: false,
+//   hasMany: false, disconnect: false, iterator: false, namespace: false }
 
-keyv.getStoreCapabilities(new Map());
-// {
-//   adapter: false,
-//   mapCompatible: true,
-//   iterable: true,
-//   hasNamespace: false,
-//   hasTtl: false
-// }
-
-keyv.getStoreCapabilities(redisAdapter);
-// {
-//   adapter: true,
-//   mapCompatible: false,
-//   iterable: true,
-//   hasNamespace: true,
-//   hasTtl: true
-// }
+isKeyvStorage(redisAdapter);
+// { keyvStorage: true, get: true, set: true, delete: true, clear: true,
+//   has: true, getMany: true, setMany: true, deleteMany: true,
+//   hasMany: true, disconnect: true, iterator: true, namespace: true }
 ```
 
-#### `isKeyvAdapter`
+The `keyvStorage` property is `true` when the object has all core storage adapter methods (`get`, `set`, `delete`, `clear`).
 
-Quick check to see if a store is a Keyv adapter:
+#### Additional Capability Checks
+
+Keyv v6 also provides functions for checking compression, serialization, and encryption adapters:
 
 ```javascript
-import Keyv from 'keyv';
+import { isKeyvCompression, isKeyvSerialization, isKeyvEncryption } from 'keyv';
 
-const keyv = new Keyv();
+isKeyvCompression(gzipAdapter);
+// { keyvCompression: true, compress: true, decompress: true }
 
-keyv.isKeyvAdapter(new Map()); // false
-keyv.isKeyvAdapter(redisAdapter); // true
+isKeyvSerialization(customSerializer);
+// { keyvSerialization: true, stringify: true, parse: true }
+
+isKeyvEncryption(aesAdapter);
+// { keyvEncryption: true, encrypt: true, decrypt: true }
 ```
 
 ---
