@@ -12,6 +12,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 ## Table of Contents
 
 - [Roadmap & Progress](#roadmap--progress)
+- [Quick Migration Guide](#quick-migration-guide)
 - [Breaking Changes](#breaking-changes)
   - [Namespace Overhaul](#namespace-overhaul)
   - [`opts` Property Removed](#opts-property-removed)
@@ -52,6 +53,30 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 | Documentation updates | NOT STARTED |
 | Storage adapter updates | NOT STARTED |
 | Release v6.0.0 | NOT STARTED |
+
+---
+
+## Quick Migration Guide
+
+For most users, migrating from v5 to v6 involves a few key changes:
+
+1. **Update property access** - Replace `keyv.opts.*` with direct property access (`keyv.namespace` instead of `keyv.opts.namespace`)
+
+2. **Update serialization** - Replace `serialize`/`deserialize` options with the new `serialization` adapter:
+   ```javascript
+   // v5
+   const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
+
+   // v6
+   import KeyvSerialize from '@keyv/serialize';
+   const keyv = new Keyv({ serialization: new KeyvSerialize() });
+   ```
+
+3. **Update raw value access** - Replace `get(key, { raw: true })` with `getRaw(key)` and `getMany(keys, { raw: true })` with `getManyRaw(keys)`
+
+4. **Handle new return types** - `deleteMany` and `setMany` now return `boolean[]` instead of a single `boolean`
+
+For detailed information on each change, see the sections below.
 
 ---
 
