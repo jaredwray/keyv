@@ -55,6 +55,7 @@ Unified versioning simplifies dependency management and ensures compatibility ac
   - [Returns `undefined` Instead of `null`](#returns-undefined-instead-of-null)
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
 - [New Features](#new-features)
+  - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
   - [Browser Compatibility](#browser-compatibility)
   - [Serialization Adapters](#serialization-adapters)
   - [Encryption Adapters](#encryption-adapters)
@@ -484,6 +485,14 @@ await keyv.set('key', { foo: 'bar' });
 ---
 
 ## New Features
+
+### Keyv v5 Maintenance Mode
+
+With the release of Keyv v6, Keyv v5 will move to maintenance mode. No major functionality will be added to Keyv v5. Only maintenance and security fixes will be applied going forward.
+
+We encourage all users to migrate to v6 to take advantage of the latest features and improvements. The `v5` branch will remain available in the mono repo for reference.
+
+---
 
 ### Browser Compatibility
 
