@@ -9,8 +9,37 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 **Important:** With the release of v6, Keyv v5 will move to maintenance mode. This means v5 will only receive security fixes and minor maintenance updates. We encourage all users to migrate to v6 to take advantage of the latest features and improvements.
 
+## Keyv v6 Versioning
+
+Starting with v6, all Keyv packages and adapters will use **unified versioning**. This means every package in the Keyv ecosystem will share the same version number and be released together.
+
+**What this means for you:**
+- All `@keyv/*` packages will have the same version (e.g., `keyv@6.0.0`, `@keyv/redis@6.0.0`, `@keyv/sqlite@6.0.0`)
+- When you upgrade Keyv, you can upgrade all adapters to the same version with confidence that they are compatible
+- No more wondering which adapter version works with which Keyv version
+
+**Example of unified versions:**
+```
+keyv: 6.0.0
+@keyv/redis: 6.0.0
+@keyv/sqlite: 6.0.0
+@keyv/postgres: 6.0.0
+@keyv/serialize: 6.0.0
+@keyv/compress-gzip: 6.0.0
+```
+
+This approach is used by many popular projects:
+- **[Vitest](https://vitest.dev)** - All packages in the Vitest monorepo share the same version
+- **[Babel](https://babeljs.io)** - All `@babel/*` packages are versioned together
+- **[Jest](https://jestjs.io)** - All Jest packages use unified versioning
+- **[Angular](https://angular.io)** - All `@angular/*` packages share the same version
+- **[Vue](https://vuejs.org)** - Vue and its companion packages are versioned together
+
+Unified versioning simplifies dependency management and ensures compatibility across the entire Keyv ecosystem.
+
 ## Table of Contents
 
+- [Keyv v6 Versioning](#keyv-v6-versioning)
 - [Roadmap & Progress](#roadmap--progress)
 - [Quick Migration Guide](#quick-migration-guide)
 - [Breaking Changes](#breaking-changes)
