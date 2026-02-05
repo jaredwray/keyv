@@ -7,7 +7,7 @@ order: 3
 
 We are pleased to announce Keyv v6 with major enhancements and some breaking changes. This guide will help you understand how to migrate from v5 to v6. For most users, the transition will be straightforward.
 
-**Important:** With the release of v6, Keyv v5 will move to maintenance mode. This means v5 will only receive security fixes and minor maintenance updates. We encourage all users to migrate to v6 to take advantage of the latest features and improvements.
+**Important:** With the release of v6, Keyv v5 will move to maintenance mode. This means v5 will only receive security fixes and minor maintenance updates. We encourage all users to migrate to v6 to take advantage of the latest features and improvements. You can view the `v5` branch in the the mono repo.
 
 ## Keyv v6 Versioning
 
