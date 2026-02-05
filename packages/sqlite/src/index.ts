@@ -39,26 +39,28 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 		options.db = options.uri!.replace(/^sqlite:\/\//, "");
 
-		options.connect = async () =>
-			new Promise((resolve, reject) => {
-				const database = new sqlite3.Database(options.db!, (error) => {
-					/* v8 ignore next -- @preserve */
-					if (error) {
-						reject(error);
-					} else {
-						if (options.busyTimeout) {
-							database.configure("busyTimeout", options.busyTimeout);
-						}
+		if (!options.connect) {
+			options.connect = async () =>
+				new Promise((resolve, reject) => {
+					const database = new sqlite3.Database(options.db!, (error) => {
+						/* v8 ignore next -- @preserve */
+						if (error) {
+							reject(error);
+						} else {
+							if (options.busyTimeout) {
+								database.configure("busyTimeout", options.busyTimeout);
+							}
 
-						resolve(database);
-					}
-				});
-			}).then((database) => ({
-				// @ts-expect-error
-				query: promisify(database.all).bind(database),
-				// @ts-expect-error
-				close: promisify(database.close).bind(database),
-			}));
+							resolve(database);
+						}
+					});
+				}).then((database) => ({
+					// @ts-expect-error
+					query: promisify(database.all).bind(database),
+					// @ts-expect-error
+					close: promisify(database.close).bind(database),
+				}));
+		}
 
 		this.opts = {
 			table: "keyv",
