@@ -3,9 +3,11 @@ title: 'v5 to v6 Migration'
 order: 3
 ---
 
-# Keyv v6 Migration Guide
+# Keyv v6 (In Progress)
 
 We are pleased to announce Keyv v6 with major enhancements and some breaking changes. This guide will help you understand how to migrate from v5 to v6. For most users, the transition will be straightforward.
+
+**Important:** With the release of v6, Keyv v5 will move to maintenance mode. This means v5 will only receive security fixes and minor maintenance updates. We encourage all users to migrate to v6 to take advantage of the latest features and improvements.
 
 ## Table of Contents
 
@@ -23,8 +25,6 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Returns `undefined` Instead of `null`](#returns-undefined-instead-of-null)
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
 - [New Features](#new-features)
-  - [Command Timeout at Keyv Level](#command-timeout-at-keyv-level)
-  - [In-Memory Uses `@keyv/bigmap` by Default](#in-memory-uses-keyvbigmap-by-default)
   - [Browser Compatibility](#browser-compatibility)
   - [Serialization Adapters](#serialization-adapters)
   - [Encryption Adapters](#encryption-adapters)
@@ -37,21 +37,21 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 | Task | Status |
 |------|--------|
-| Finalize namespace handling in storage adapters | :white_check_mark: Complete |
-| Remove `opts` property | :white_check_mark: Complete |
-| Integrate Hookified library | :white_check_mark: Complete |
-| Update `deleteMany` return type | :white_check_mark: Complete |
-| Update `setMany` signature and return type | :white_check_mark: Complete |
-| Add `getRaw` and `getManyRaw` methods | :white_check_mark: Complete |
-| Refactor iterator implementation | :white_check_mark: Complete |
-| Implement `KeyvGenericStore` | :white_check_mark: Complete |
-| Add serialization adapters | :white_check_mark: Complete |
-| Add encryption adapters | :white_check_mark: Complete |
-| Add compression interface standardization | :white_check_mark: Complete |
-| Browser compatibility | :white_check_mark: Complete |
-| Documentation updates | :construction: In Progress |
-| Storage adapter updates | :construction: In Progress |
-| Release v6.0.0 | :hourglass: Pending |
+| Finalize namespace handling in storage adapters | NOT STARTED |
+| Remove `opts` property | NOT STARTED |
+| Integrate Hookified library | NOT STARTED |
+| Update `deleteMany` return type | NOT STARTED |
+| Update `setMany` signature and return type | NOT STARTED |
+| Add `getRaw` and `getManyRaw` methods | NOT STARTED |
+| Refactor iterator implementation | NOT STARTED |
+| Implement `KeyvGenericStore` | NOT STARTED |
+| Add serialization adapters | NOT STARTED |
+| Add encryption adapters | NOT STARTED |
+| Add compression interface standardization | NOT STARTED |
+| Browser compatibility | NOT STARTED |
+| Documentation updates | NOT STARTED |
+| Storage adapter updates | NOT STARTED |
+| Release v6.0.0 | NOT STARTED |
 
 ---
 
@@ -431,25 +431,6 @@ await keyv.set('key', { foo: 'bar' });
 
 ## New Features
 
-### Command Timeout at Keyv Level
-
-<!-- TODO: Add documentation for command timeout feature -->
-
----
-
-### In-Memory Uses `@keyv/bigmap` by Default
-
-The default in-memory store now uses `@keyv/bigmap`, which provides better performance and handles larger datasets more efficiently than the standard `Map`.
-
-```javascript
-import Keyv from 'keyv';
-
-// Default store is now @keyv/bigmap
-const keyv = new Keyv();
-```
-
----
-
 ### Browser Compatibility
 
 Keyv v6 is now fully compatible with browser environments. You can use Keyv in frontend applications with appropriate storage adapters.
@@ -651,24 +632,6 @@ if (capabilities.mapCompatible && !capabilities.adapter) {
   console.log('This store will use KeyvGenericStore');
 }
 ```
-
----
-
-## Quick Migration Checklist
-
-- [ ] Remove `useKeyPrefix` and `keyPrefix` options
-- [ ] Replace `keyv.opts.*` with direct property access (`keyv.*`)
-- [ ] Replace `serialize`/`deserialize` options with `serialization` adapter
-- [ ] Update hook usage to Hookified syntax (`onHook`)
-- [ ] Update `deleteMany` handling to expect `boolean[]`
-- [ ] Update `setMany` to use `KeyvEntry[]` format and handle `boolean[]` return
-- [ ] Replace `get(key, { raw: true })` with `getRaw(key)`
-- [ ] Replace `getMany(keys, { raw: true })` with `getManyRaw(keys)`
-- [ ] Remove iterator arguments and add `isIterable()` checks
-- [ ] Remove `ttlSupport` from custom storage adapters
-- [ ] Update `null` checks to `undefined` checks
-- [ ] Update compression adapters to new interface
-- [ ] Add `error` event listener or set `throwOnErrors: false`
 
 ---
 
