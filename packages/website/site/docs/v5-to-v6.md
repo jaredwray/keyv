@@ -488,39 +488,16 @@ await keyv.set('key', { foo: 'bar' });
 
 ### `@keyv/memcache` Moves from `memjs` to `memcache`
 
-The `@keyv/memcache` package has switched its underlying Memcached client library from [`memjs`](https://www.npmjs.com/package/memjs) to [`memcache`](https://www.npmjs.com/package/memcache).
+The `@keyv/memcache` package will switch its underlying Memcached client library from [`memjs`](https://www.npmjs.com/package/memjs) to [`memcache`](https://www.npmjs.com/package/memcache).
 
 **Why the change:**
 - `memjs` uses the binary protocol and has not been actively maintained
-- `memcache` is actively maintained and provides a modern API with support for features such as consistent hashing, connection pooling, and hooks/events
+- `memcache` is actively maintained with a promise-based API and support for features such as consistent hashing, connection pooling, and hooks/events
 
 **What this means for you:**
 - If you are using `@keyv/memcache` through Keyv with default settings, **no changes are needed** — the adapter API remains the same
 - If you are passing `memjs`-specific client options through to the underlying client, you will need to update them to match the `memcache` client API
-- SASL authentication (supported by `memjs` via the binary protocol) is no longer available through the default client, as `memcache` uses the ASCII protocol
-
-**v5 (before):**
-```javascript
-import KeyvMemcache from '@keyv/memcache';
-
-// memjs-specific options were passed through
-const keyvMemcache = new KeyvMemcache('localhost:11211', {
-  retries: 2,
-  expires: 0,
-  failover: true,
-});
-```
-
-**v6 (after):**
-```javascript
-import KeyvMemcache from '@keyv/memcache';
-
-// memcache client options are now used
-const keyvMemcache = new KeyvMemcache('localhost:11211', {
-  maxConnections: 10,
-  reconnect: true,
-});
-```
+- SASL authentication (supported by `memjs` via the binary protocol) will no longer be available through the default client, as `memcache` uses the ASCII protocol
 
 ---
 
