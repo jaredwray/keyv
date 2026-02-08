@@ -497,7 +497,6 @@ The `@keyv/memcache` package will switch its underlying Memcached client library
 **What this means for you:**
 - If you are using `@keyv/memcache` through Keyv with default settings, **no changes are needed** — the adapter API remains the same
 - If you are passing `memjs`-specific client options through to the underlying client, you will need to update them to match the `memcache` client API
-- SASL authentication (supported by `memjs` via the binary protocol) will no longer be available through the default client, as `memcache` uses the ASCII protocol
 
 ---
 
