@@ -209,12 +209,22 @@ const keyv = createKeyv('redis://user:pass@localhost:6379', {namespace: 'my-name
 
 # Using the `createKeyvNonBlocking` function
 
-The `createKeyvNonBlocking` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store does what `createKeyv` does but also disables throwing errors, removes the offline queue redis functionality, and reconnect strategy so that when used as a secondary cache in libraries such as [cacheable](https://npmjs.org/package/cacheable) it does not block the primary cache. This is useful when you want to use Redis as a secondary cache and do not want to block the primary cache on connection errors or timeouts when using `nonBlocking`. Here is an example of how to use it:
+The `createKeyvNonBlocking` function creates a `Keyv` instance with the `@keyv/redis` store configured for best-effort, fail-fast usage. It builds on top of `createKeyv` with the following additional configuration:
+
+- **Error suppression** — Disables `throwOnConnectError` and `throwOnErrors` on both the Redis adapter and the Keyv instance. When Redis is unavailable, operations silently fail instead of throwing errors.
+- **Offline queue disabled** — Sets `disableOfflineQueue: true` on the Redis client. Commands issued while disconnected are rejected immediately rather than being queued for later execution.
+- **Reconnect strategy disabled** — Sets `reconnectStrategy: false` so the client does not attempt automatic reconnection.
+
+This makes it suitable for use as a secondary (L2) cache in libraries such as [cacheable](https://npmjs.org/package/cacheable), where you do not want Redis failures to block or break the primary cache layer.
+
+> **Note:** "Non-blocking" here means error suppression and fail-fast behavior — not fire-and-forget semantics. All operations (`get`, `set`, `delete`, etc.) still return promises. The difference is that when Redis is down, those promises will resolve with `undefined` or fail silently rather than throwing errors.
 
 ```js
 import { createKeyvNonBlocking } from '@keyv/redis';
 const keyv = createKeyvNonBlocking('redis://user:pass@localhost:6379');
 ```
+
+When used with [cacheable](https://npmjs.org/package/cacheable) as a secondary store, the `nonBlocking` option in Cacheable controls whether L2 writes are awaited or fire-and-forget. The `createKeyvNonBlocking` function complements this by ensuring that the Keyv instance itself does not throw when the Redis connection is lost. See the [Cacheable documentation](https://cacheable.org) for details on `nonBlocking` mode and `getOrSet` behavior.
 
 # Namespaces
 
