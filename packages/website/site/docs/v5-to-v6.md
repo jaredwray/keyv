@@ -54,6 +54,7 @@ Unified versioning simplifies dependency management and ensures compatibility ac
   - [Removed `.ttlSupport` from Storage Adapters](#removed-ttlsupport-from-storage-adapters)
   - [Returns `undefined` Instead of `null`](#returns-undefined-instead-of-null)
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
+  - [`@keyv/memcache` Moves from `memjs` to `memcache`](#keyvmemcache-moves-from-memjs-to-memcache)
 - [New Features](#new-features)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
   - [Browser Compatibility](#browser-compatibility)
@@ -82,6 +83,7 @@ Unified versioning simplifies dependency management and ensures compatibility ac
 | Browser compatibility | NOT STARTED |
 | Documentation updates | NOT STARTED |
 | Storage adapter updates | NOT STARTED |
+| Migrate `@keyv/memcache` from `memjs` to `memcache` | NOT STARTED |
 | Release v6.0.0 | NOT STARTED |
 
 ---
@@ -481,6 +483,20 @@ await keyv.set('key', { foo: 'bar' });
 ```
 
 > **Note:** Encryption and compression require string values. If your values are not strings, you must use `serialization`.
+
+---
+
+### `@keyv/memcache` Moves from `memjs` to `memcache`
+
+The `@keyv/memcache` package will switch its underlying Memcached client library from [`memjs`](https://www.npmjs.com/package/memjs) to [`memcache`](https://www.npmjs.com/package/memcache).
+
+**Why the change:**
+- `memjs` uses the binary protocol and has not been actively maintained
+- `memcache` is actively maintained with a promise-based API and support for features such as consistent hashing, connection pooling, and hooks/events
+
+**What this means for you:**
+- If you are using `@keyv/memcache` through Keyv with default settings, **no changes are needed** — the adapter API remains the same
+- If you are passing `memjs`-specific client options through to the underlying client, you will need to update them to match the `memcache` client API
 
 ---
 
