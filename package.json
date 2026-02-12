@@ -21,8 +21,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.0.18",
+    "js-yaml": "^4.1.1",
     "rimraf": "^6.1.2",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",

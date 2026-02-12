@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import yaml from "js-yaml";
 
 const rootDir = path.resolve(import.meta.dirname, "..");
 
@@ -12,14 +13,8 @@ console.log(`Syncing version: ${version}`);
 
 // Parse pnpm-workspace.yaml to get workspace globs
 const workspaceYamlPath = path.join(rootDir, "pnpm-workspace.yaml");
-const workspaceYaml = fs.readFileSync(workspaceYamlPath, "utf-8");
-const globs: string[] = [];
-for (const line of workspaceYaml.split("\n")) {
-	const match = line.match(/^\s+-\s+'(.+)'$/);
-	if (match) {
-		globs.push(match[1]);
-	}
-}
+const workspaceConfig = yaml.load(fs.readFileSync(workspaceYamlPath, "utf-8")) as { packages?: string[] };
+const globs: string[] = workspaceConfig.packages ?? [];
 
 // Ensure a resolved path is within the project root to prevent path traversal
 function safePath(unsafePath: string): string | undefined {
@@ -59,6 +54,7 @@ for (const glob of globs) {
 
 // Update each package.json
 let updated = 0;
+let skipped = 0;
 for (const dir of packageDirs) {
 	const pkgPath = path.join(dir, "package.json");
 	if (!fs.existsSync(pkgPath)) {
@@ -67,6 +63,12 @@ for (const dir of packageDirs) {
 
 	const raw = fs.readFileSync(pkgPath, "utf-8");
 	const pkg = JSON.parse(raw) as { name: string; version: string };
+
+	if (pkg.version === version) {
+		skipped++;
+		continue;
+	}
+
 	const oldVersion = pkg.version;
 	pkg.version = version;
 
@@ -78,4 +80,4 @@ for (const dir of packageDirs) {
 	updated++;
 }
 
-console.log(`\nUpdated ${updated} package(s) to version ${version}`);
+console.log(`\nDone: ${updated} updated, ${skipped} skipped (version ${version})`);
