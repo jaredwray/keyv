@@ -21,23 +21,37 @@ for (const line of workspaceYaml.split("\n")) {
 	}
 }
 
+// Ensure a resolved path is within the project root to prevent path traversal
+function safePath(unsafePath: string): string | undefined {
+	const resolved = path.resolve(rootDir, unsafePath);
+	if (!resolved.startsWith(rootDir + path.sep) && resolved !== rootDir) {
+		console.warn(`  Skipping path outside project root: ${unsafePath}`);
+		return undefined;
+	}
+
+	return resolved;
+}
+
 // Resolve globs to actual package directories
 const packageDirs: string[] = [];
 for (const glob of globs) {
 	if (glob.endsWith("/*")) {
 		// Wildcard glob — enumerate subdirectories
-		const parentDir = path.join(rootDir, glob.replace("/*", ""));
-		if (fs.existsSync(parentDir)) {
+		const parentDir = safePath(glob.replace("/*", ""));
+		if (parentDir && fs.existsSync(parentDir)) {
 			for (const entry of fs.readdirSync(parentDir, { withFileTypes: true })) {
 				if (entry.isDirectory()) {
-					packageDirs.push(path.join(parentDir, entry.name));
+					const dir = path.join(parentDir, entry.name);
+					if (safePath(path.relative(rootDir, dir))) {
+						packageDirs.push(dir);
+					}
 				}
 			}
 		}
 	} else {
 		// Exact path
-		const dir = path.join(rootDir, glob);
-		if (fs.existsSync(dir)) {
+		const dir = safePath(glob);
+		if (dir && fs.existsSync(dir)) {
 			packageDirs.push(dir);
 		}
 	}
