@@ -23,6 +23,9 @@ importers:
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -6336,14 +6339,6 @@ snapshots:
     optionalDependencies:
       vite: 7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0)
 
-  '@vitest/mocker@4.0.18(vite@7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))':
-    dependencies:
-      '@vitest/spy': 4.0.18
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
-
   '@vitest/pretty-format@4.0.18':
     dependencies:
       tinyrainbow: 3.0.3
@@ -9709,7 +9704,7 @@ snapshots:
   vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.18
-      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0))
       '@vitest/pretty-format': 4.0.18
       '@vitest/runner': 4.0.18
       '@vitest/snapshot': 4.0.18

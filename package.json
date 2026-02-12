@@ -1,6 +1,6 @@
 {
   "name": "@keyv/mono-repo",
-  "version": "1.0.0",
+  "version": "6.0.0-alpha.1",
   "type": "module",
   "description": "Keyv Mono Repo",
   "repository": "https://github.com/jaredwray/keyv.git",
@@ -16,7 +16,8 @@
     "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
     "website:build": "pnpm recursive --filter @keyv/website run website:build",
     "website:serve": "pnpm recursive --filter @keyv/website run website:serve",
-    "clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean"
+    "clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean",
+    "version:sync": "pnpm tsx scripts/version-sync.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
@@ -24,6 +25,7 @@
     "@vitest/coverage-v8": "^4.0.18",
     "rimraf": "^6.1.2",
     "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },

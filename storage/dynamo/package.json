@@ -1,6 +1,6 @@
 {
   "name": "@keyv/dynamo",
-  "version": "1.2.4",
+  "version": "6.0.0-alpha.1",
   "description": "DynamoDB storage adapter for Keyv",
   "type": "module",
   "main": "./dist/index.js",
