@@ -1,0 +1,83 @@
+import fs from "node:fs";
+import path from "node:path";
+import yaml from "js-yaml";
+
+const rootDir = path.resolve(import.meta.dirname, "..");
+
+// Read the root package.json version
+const rootPackagePath = path.join(rootDir, "package.json");
+const rootPackage = JSON.parse(fs.readFileSync(rootPackagePath, "utf-8")) as { version: string };
+const { version } = rootPackage;
+
+console.log(`Syncing version: ${version}`);
+
+// Parse pnpm-workspace.yaml to get workspace globs
+const workspaceYamlPath = path.join(rootDir, "pnpm-workspace.yaml");
+const workspaceConfig = yaml.load(fs.readFileSync(workspaceYamlPath, "utf-8")) as { packages?: string[] };
+const globs: string[] = workspaceConfig.packages ?? [];
+
+// Ensure a resolved path is within the project root to prevent path traversal
+function safePath(unsafePath: string): string | undefined {
+	const resolved = path.resolve(rootDir, unsafePath);
+	if (!resolved.startsWith(rootDir + path.sep) && resolved !== rootDir) {
+		console.warn(`  Skipping path outside project root: ${unsafePath}`);
+		return undefined;
+	}
+
+	return resolved;
+}
+
+// Resolve globs to actual package directories
+const packageDirs: string[] = [];
+for (const glob of globs) {
+	if (glob.endsWith("/*")) {
+		// Wildcard glob — enumerate subdirectories
+		const parentDir = safePath(glob.replace("/*", ""));
+		if (parentDir && fs.existsSync(parentDir)) {
+			for (const entry of fs.readdirSync(parentDir, { withFileTypes: true })) {
+				if (entry.isDirectory()) {
+					const dir = path.join(parentDir, entry.name);
+					if (safePath(path.relative(rootDir, dir))) {
+						packageDirs.push(dir);
+					}
+				}
+			}
+		}
+	} else {
+		// Exact path
+		const dir = safePath(glob);
+		if (dir && fs.existsSync(dir)) {
+			packageDirs.push(dir);
+		}
+	}
+}
+
+// Update each package.json
+let updated = 0;
+let skipped = 0;
+for (const dir of packageDirs) {
+	const pkgPath = path.join(dir, "package.json");
+	if (!fs.existsSync(pkgPath)) {
+		continue;
+	}
+
+	const raw = fs.readFileSync(pkgPath, "utf-8");
+	const pkg = JSON.parse(raw) as { name: string; version: string };
+
+	if (pkg.version === version) {
+		skipped++;
+		continue;
+	}
+
+	const oldVersion = pkg.version;
+	pkg.version = version;
+
+	// Preserve original formatting (detect indent)
+	const indent = raw.match(/^(\s+)"/m)?.[1] ?? "\t";
+	fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, indent) + "\n");
+
+	console.log(`  ${pkg.name}: ${oldVersion} → ${version}`);
+	updated++;
+}
+
+console.log(`\nDone: ${updated} updated, ${skipped} skipped (version ${version})`);

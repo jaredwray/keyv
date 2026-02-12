@@ -1,6 +1,6 @@
 {
 	"name": "keyv",
-	"version": "5.6.0",
+	"version": "6.0.0-alpha.1",
 	"description": "Simple key-value storage with support for multiple backends",
 	"type": "module",
 	"main": "dist/index.js",
