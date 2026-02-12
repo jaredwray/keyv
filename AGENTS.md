@@ -14,8 +14,8 @@
 - `pnpm test:services:stop` - Stop Docker services
 
 Individual package tests:
-- `cd packages/{package-name} && pnpm test` - Test specific package
-- `cd packages/{package-name} && pnpm test:ci` - Run CI tests for specific package
+- `cd {category}/{package-name} && pnpm test` - Test specific package (e.g., `cd storage/redis && pnpm test`)
+- `cd {category}/{package-name} && pnpm test:ci` - Run CI tests for specific package
 
 ### Linting and Code Quality
 - `biome check` - Check code with Biome linter
@@ -35,16 +35,16 @@ Individual package tests:
 
 ### Monorepo Structure
 - **Root**: Workspace configuration with pnpm
-- **packages/keyv**: Core Keyv library - the main key-value storage interface
-- **packages/serialize**: Serialization utilities (@keyv/serialize) - used by core and adapters
-- **packages/test-suite**: Shared test suite (@keyv/test-suite) for API compliance testing
-- **Storage Adapters**: Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB
-- **Compression Adapters**: Brotli, Gzip, LZ4
-- **packages/website**: Documentation website
+- **core/keyv**: Core Keyv library - the main key-value storage interface
+- **core/test-suite**: Shared test suite (@keyv/test-suite) for API compliance testing
+- **serialization/serialize**: Serialization utilities (@keyv/serialize) - used by core and adapters
+- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB, BigMap
+- **compression/**: Compression adapters - Brotli, Gzip, LZ4
+- **website**: Documentation website
 
 ### Key Architecture Concepts
 
-**Core Keyv Class** (`packages/keyv/src/index.ts`):
+**Core Keyv Class** (`core/keyv/src/index.ts`):
 - Extends EventManager for event emission
 - Uses HooksManager for pre/post operation hooks
 - Includes StatsManager for usage statistics

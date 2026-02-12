@@ -81,7 +81,7 @@ Temporary Items
 
 #Sqlite files
 *.sqlite
-packages/keyv/test/testdb.sqlite
+core/keyv/test/testdb.sqlite
 
 #test-suite
 dist
@@ -100,17 +100,13 @@ keyv.iml
 *.swp
 
 #website
-packages/website/site/docs/**
-!packages/website/site/docs/index.md
-!packages/website/site/docs/v4-to-v5.md
-!packages/website/site/docs/v5-to-v6.md
-!packages/website/site/docs/third-party-storage-adapters.md
-!packages/website/site/docs/caching/**
-packages/third-party/keyv-file.json
-packages/keyv/test.db
-
-# pnpm
-pnpm-lock.yaml
+website/site/docs/**
+!website/site/docs/index.md
+!website/site/docs/v4-to-v5.md
+!website/site/docs/v5-to-v6.md
+!website/site/docs/third-party-storage-adapters.md
+!website/site/docs/caching/**
+core/keyv/test.db
 
 # AI
 .claude

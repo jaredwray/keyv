@@ -35,5 +35,5 @@ jobs:
         run: pnpm build
 
       - name: Run Keyv Tests with Bun
-        working-directory: packages/keyv
+        working-directory: core/keyv
         run: bun run vitest run --coverage

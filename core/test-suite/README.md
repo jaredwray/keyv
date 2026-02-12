@@ -46,7 +46,7 @@ Set your test script in `package.json` to `vitest`.
 
 ## Example for Storage Adapters
 
-Take a look at [keyv/redis](https://github.com/jaredwray/keyv/tree/main/packages/redis) for an example of an existing storage adapter using `@keyv/test-suite`.
+Take a look at [keyv/redis](https://github.com/jaredwray/keyv/tree/main/storage/redis) for an example of an existing storage adapter using `@keyv/test-suite`.
 
 ## Testing Compression Adapters
 

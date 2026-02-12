@@ -318,15 +318,15 @@ The official storage adapters are covered by [over 150 integration tests](https:
 
 Database | Adapter | Native TTL
 ---|---|---
-Redis | [@keyv/redis](https://github.com/jaredwray/keyv/tree/master/packages/redis) | Yes
-Valkey | [@keyv/valkey](https://github.com/jaredwray/keyv/tree/master/packages/valkey) | Yes
-MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/master/packages/mongo) | Yes 
-SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/packages/sqlite) | No 
-PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/packages/postgres) | No 
-MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/packages/mysql) | No 
-Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/packages/etcd) | Yes
-Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/packages/memcache) | Yes
-DynamoDB | [@keyv/dynamo](https://github.com/jaredwray/keyv/tree/master/packages/dynamo) | Yes 
+Redis | [@keyv/redis](https://github.com/jaredwray/keyv/tree/master/storage/redis) | Yes
+Valkey | [@keyv/valkey](https://github.com/jaredwray/keyv/tree/master/storage/valkey) | Yes
+MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/master/storage/mongo) | Yes
+SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/master/storage/sqlite) | No
+PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/master/storage/postgres) | No
+MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/master/storage/mysql) | No
+Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/master/storage/etcd) | Yes
+Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/master/storage/memcache) | Yes
+DynamoDB | [@keyv/dynamo](https://github.com/jaredwray/keyv/tree/master/storage/dynamo) | Yes
 
 # Third-party Storage Adapters
 
@@ -415,7 +415,7 @@ await keyv.delete('user:1');
 await keyv.clear();
 ```
 
-For more details about BigMap, see the [@keyv/bigmap documentation](https://github.com/jaredwray/keyv/tree/main/packages/bigmap).
+For more details about BigMap, see the [@keyv/bigmap documentation](https://github.com/jaredwray/keyv/tree/main/storage/bigmap).
 
 # Compression
 

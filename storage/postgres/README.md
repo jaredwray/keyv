@@ -85,7 +85,7 @@ At the root of the Keyv mono repo:
 pnpm test:services:start
 ```
 
-To just test the postgres adapter go to the postgres directory (packages/postgres) and run:
+To just test the postgres adapter go to the postgres directory (storage/postgres) and run:
 ```shell
 pnpm test
 ```

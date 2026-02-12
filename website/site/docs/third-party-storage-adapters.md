@@ -47,7 +47,7 @@ We love the community and the third-party storage adapters they have built. We w
 Once your adapter is published to npm and tested, submit a pull request to add it to this page:
 
 1. Fork the [Keyv repository](https://github.com/jaredwray/keyv)
-2. Edit the file `packages/website/site/docs/third-party-storage-adapters.md`
+2. Edit the file `website/site/docs/third-party-storage-adapters.md`
 3. Add your adapter to the "Available Adapters" table in alphabetical order:
    ```markdown
    | [your-adapter-name](https://github.com/your-username/your-adapter) | Brief description of your adapter |
