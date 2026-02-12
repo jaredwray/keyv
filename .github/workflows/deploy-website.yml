@@ -39,4 +39,4 @@ jobs:
       uses: cloudflare/wrangler-action@v3
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        command: pages deploy packages/website/dist --project-name=keyv --branch=main
+        command: pages deploy website/dist --project-name=keyv --branch=main
