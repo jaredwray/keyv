@@ -188,7 +188,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Store
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private _store: KeyvStoreAdapter | Map<any, any> | any = new Map();
+	private _store: KeyvStoreAdapter = new Map() as any;
 
 	private _serialize: Serialize | undefined = defaultSerialize;
 	private _deserialize: Deserialize | undefined = defaultDeserialize;
@@ -200,10 +200,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _throwOnErrors = false;
 
 	private _emitErrors = true;
-
-	private get _storeAdapter(): KeyvStoreAdapter {
-		return this._store as KeyvStoreAdapter;
-	}
 
 	/**
 	 * Keyv Constructor
@@ -277,7 +273,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 			// Attach iterators
 			if (
-				typeof this._store[Symbol.iterator] === "function" &&
+				// biome-ignore lint/suspicious/noExplicitAny: need to check Map iterator
+				typeof (this._store as any)[Symbol.iterator] === "function" &&
 				this._store instanceof Map
 			) {
 				this.iterator = this.generateIterator(
@@ -608,7 +605,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		| StoredDataRaw<Value>
 		| Array<StoredDataRaw<Value>>
 	> {
-		const store = this._storeAdapter;
+		const store = this._store;
 		const isArray = Array.isArray(key);
 		const keyPrefixed = isArray
 			? this._getKeyPrefixArray(key)
@@ -687,7 +684,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		keys: string[],
 		options?: { raw: boolean },
 	): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
-		const store = this._storeAdapter;
+		const store = this._store;
 		const keyPrefixed = this._getKeyPrefixArray(keys);
 
 		const isDataExpired = (data: DeserializedData<Value>): boolean =>
@@ -783,7 +780,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public async getRaw<Value = GenericValue>(
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
-		const store = this._storeAdapter;
+		const store = this._store;
 		const keyPrefixed = this._getKeyPrefix(key);
 
 		this.hooks.trigger(KeyvHooks.PRE_GET_RAW, { key: keyPrefixed });
@@ -840,7 +837,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
-		const store = this._storeAdapter;
+		const store = this._store;
 		const keyPrefixed = this._getKeyPrefixArray(keys);
 
 		if (keys.length === 0) {
@@ -937,7 +934,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			data.ttl = undefined;
 		}
 
-		const store = this._storeAdapter;
+		const store = this._store;
 
 		const expires =
 			typeof data.ttl === "number" ? Date.now() + data.ttl : undefined;
@@ -1023,7 +1020,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 						return { key: keyPrefixed, value: serializedValue, ttl };
 					}),
 				);
-				results = await this._store.setMany(serializedEntries);
+				results = (await this._store.setMany(
+					serializedEntries,
+				)) as unknown as boolean[];
 			}
 		} catch (error) {
 			this.emit("error", error);
@@ -1044,7 +1043,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
 	 */
 	public async delete(key: string | string[]): Promise<boolean> {
-		const store = this._storeAdapter;
+		const store = this._store;
 		if (Array.isArray(key)) {
 			return this.deleteMany(key);
 		}
@@ -1085,7 +1084,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		try {
-			const store = this._storeAdapter;
+			const store = this._store;
 			const keyPrefixed = this._getKeyPrefixArray(keys);
 			this.hooks.trigger(KeyvHooks.PRE_DELETE, { key: keyPrefixed });
 			if (store.deleteMany !== undefined) {
@@ -1118,7 +1117,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	async clear(): Promise<void> {
 		this.emit("clear");
-		const store = this._storeAdapter;
+		const store = this._store;
 
 		try {
 			await store.clear();
@@ -1143,7 +1142,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		const store = this._storeAdapter;
+		const store = this._store;
 		if (store.has !== undefined && !(store instanceof Map)) {
 			return store.has(keyPrefixed);
 		}
@@ -1185,7 +1184,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const keyPrefixed = this._getKeyPrefixArray(keys);
-		const store = this._storeAdapter;
+		const store = this._store;
 		if (store.hasMany !== undefined) {
 			return store.hasMany(keyPrefixed);
 		}
@@ -1204,7 +1203,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {Promise<void>}
 	 */
 	async disconnect(): Promise<void> {
-		const store = this._storeAdapter;
+		const store = this._store;
 		this.emit("disconnect");
 		if (typeof store.disconnect === "function") {
 			return store.disconnect();
