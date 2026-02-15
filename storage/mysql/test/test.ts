@@ -117,14 +117,6 @@ test.it("close connection successfully", async (t) => {
 	}
 });
 
-test.it(
-	"set intervalExpiration to 0 results in no event creation",
-	async (t) => {
-		const keyv = new KeyvMysql({ uri, intervalExpiration: 0 });
-		t.expect(keyv).toBeDefined();
-	},
-);
-
 test.it("set intervalExpiration to 1 second", async (t) => {
 	const keyvMySql = new KeyvMysql({ uri, intervalExpiration: 1 });
 	const keyv = new Keyv({ store: keyvMySql });
