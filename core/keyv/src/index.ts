@@ -155,11 +155,6 @@ export type KeyvOptions = {
 	throwOnErrors?: boolean;
 };
 
-type KeyvOptions_ = Omit<KeyvOptions, "store"> & {
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	store: KeyvStoreAdapter | (Map<any, any> & KeyvStoreAdapter);
-};
-
 // biome-ignore lint/suspicious/noExplicitAny: type format
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
 
@@ -175,7 +170,6 @@ const iterableAdapters = [
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends EventManager {
-	opts: KeyvOptions_;
 	iterator?: IteratorFunction;
 	hooks = new HooksManager();
 	stats = new StatsManager(false);
@@ -204,6 +198,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _useKeyPrefix = true;
 
 	private _throwOnErrors = false;
+
+	private _emitErrors = true;
 
 	/**
 	 * Keyv Constructor
@@ -234,37 +230,32 @@ export class Keyv<GenericValue = any> extends EventManager {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		store ??= {} as KeyvOptions;
 
-		this.opts = {
+		const mergedOptions: KeyvOptions = {
 			namespace: "keyv",
 			serialize: defaultSerialize,
 			deserialize: defaultDeserialize,
 			emitErrors: true,
-			// @ts-expect-error - Map is not a KeyvStoreAdapter
-			store: new Map(),
 			...options,
 		};
 
 		if (store && (store as KeyvStoreAdapter).get) {
-			this.opts.store = store as KeyvStoreAdapter;
+			mergedOptions.store = store as KeyvStoreAdapter;
 		} else {
-			this.opts = {
-				...this.opts,
-				...store,
-			};
+			Object.assign(mergedOptions, store);
 		}
 
-		this._store = this.opts.store ?? new Map();
+		this._store = mergedOptions.store ?? new Map();
 
-		this._compression = this.opts.compression;
+		this._compression = mergedOptions.compression;
 
 		// biome-ignore lint/style/noNonNullAssertion: need to fix
-		this._serialize = this.opts.serialize!;
+		this._serialize = mergedOptions.serialize!;
 		// biome-ignore lint/style/noNonNullAssertion: need to fix
-		this._deserialize = this.opts.deserialize!;
+		this._deserialize = mergedOptions.deserialize!;
 
 		/* v8 ignore next -- @preserve */
-		if (this.opts.namespace) {
-			this._namespace = this.opts.namespace;
+		if (mergedOptions.namespace) {
+			this._namespace = mergedOptions.namespace;
 		}
 
 		/* v8 ignore next -- @preserve */
@@ -300,20 +291,24 @@ export class Keyv<GenericValue = any> extends EventManager {
 			}
 		}
 
-		if (this.opts.stats) {
-			this.stats.enabled = this.opts.stats;
+		if (mergedOptions.stats) {
+			this.stats.enabled = mergedOptions.stats;
 		}
 
-		if (this.opts.ttl) {
-			this._ttl = this.opts.ttl;
+		if (mergedOptions.ttl) {
+			this._ttl = mergedOptions.ttl;
 		}
 
-		if (this.opts.useKeyPrefix !== undefined) {
-			this._useKeyPrefix = this.opts.useKeyPrefix;
+		if (mergedOptions.useKeyPrefix !== undefined) {
+			this._useKeyPrefix = mergedOptions.useKeyPrefix;
 		}
 
-		if (this.opts.throwOnErrors !== undefined) {
-			this._throwOnErrors = this.opts.throwOnErrors;
+		if (mergedOptions.emitErrors !== undefined) {
+			this._emitErrors = mergedOptions.emitErrors;
+		}
+
+		if (mergedOptions.throwOnErrors !== undefined) {
+			this._throwOnErrors = mergedOptions.throwOnErrors;
 		}
 	}
 
@@ -333,7 +328,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public set store(store: KeyvStoreAdapter | Map<any, any> | any) {
 		if (this._isValidStorageAdapter(store)) {
 			this._store = store;
-			this.opts.store = store;
 
 			if (typeof store.on === "function") {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -394,12 +388,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public set namespace(namespace: string | undefined) {
 		this._namespace = namespace;
-		this.opts.namespace = namespace;
 		this._store.namespace = namespace;
-		/* v8 ignore next -- @preserve */
-		if (this.opts.store) {
-			this.opts.store.namespace = namespace;
-		}
 	}
 
 	/**
@@ -415,7 +404,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {number} ttl The TTL to set in milliseconds.
 	 */
 	public set ttl(ttl: number | undefined) {
-		this.opts.ttl = ttl;
 		this._ttl = ttl;
 	}
 
@@ -432,7 +420,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {Serialize} serialize The serialize function to set.
 	 */
 	public set serialize(serialize: Serialize | undefined) {
-		this.opts.serialize = serialize;
 		this._serialize = serialize;
 	}
 
@@ -449,7 +436,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @param {Deserialize} deserialize The deserialize function to set.
 	 */
 	public set deserialize(deserialize: Deserialize | undefined) {
-		this.opts.deserialize = deserialize;
 		this._deserialize = deserialize;
 	}
 
@@ -468,7 +454,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public set useKeyPrefix(value: boolean) {
 		this._useKeyPrefix = value;
-		this.opts.useKeyPrefix = value;
 	}
 
 	/**
@@ -485,7 +470,23 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public set throwOnErrors(value: boolean) {
 		this._throwOnErrors = value;
-		this.opts.throwOnErrors = value;
+	}
+
+	/**
+	 * Get the current emitErrors value. This will enable or disable emitting errors on methods.
+	 * @return {boolean} The current emitErrors value.
+	 * @default true
+	 */
+	public get emitErrors(): boolean {
+		return this._emitErrors;
+	}
+
+	/**
+	 * Set the current emitErrors value. This will enable or disable emitting errors on methods.
+	 * @param {boolean} value The emitErrors value to set.
+	 */
+	public set emitErrors(value: boolean) {
+		this._emitErrors = value;
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
@@ -603,7 +604,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		| StoredDataRaw<Value>
 		| Array<StoredDataRaw<Value>>
 	> {
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		const isArray = Array.isArray(key);
 		const keyPrefixed = isArray
 			? this._getKeyPrefixArray(key)
@@ -632,7 +633,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		const deserializedData =
-			typeof rawData === "string" || this.opts.compression
+			typeof rawData === "string" || this._compression
 				? await this.deserializeData<Value>(rawData as string)
 				: rawData;
 
@@ -682,7 +683,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		keys: string[],
 		options?: { raw: boolean },
 	): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		const keyPrefixed = this._getKeyPrefixArray(keys);
 
 		const isDataExpired = (data: DeserializedData<Value>): boolean =>
@@ -693,7 +694,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			const promises = keyPrefixed.map(async (key) => {
 				const rawData = await store.get<Value>(key);
 				const deserializedRow =
-					typeof rawData === "string" || this.opts.compression
+					typeof rawData === "string" || this._compression
 						? await this.deserializeData<Value>(rawData as string)
 						: rawData;
 
@@ -778,7 +779,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public async getRaw<Value = GenericValue>(
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		const keyPrefixed = this._getKeyPrefix(key);
 
 		this.hooks.trigger(KeyvHooks.PRE_GET_RAW, { key: keyPrefixed });
@@ -796,7 +797,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		// Check if the data is expired
 		/* v8 ignore next -- @preserve */
 		const deserializedData =
-			typeof rawData === "string" || this.opts.compression
+			typeof rawData === "string" || this._compression
 				? await this.deserializeData<Value>(rawData as string)
 				: rawData;
 
@@ -835,7 +836,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		const keyPrefixed = this._getKeyPrefixArray(keys);
 
 		if (keys.length === 0) {
@@ -932,7 +933,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			data.ttl = undefined;
 		}
 
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 
 		const expires =
 			typeof data.ttl === "number" ? Date.now() + data.ttl : undefined;
@@ -1039,7 +1040,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
 	 */
 	public async delete(key: string | string[]): Promise<boolean> {
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		if (Array.isArray(key)) {
 			return this.deleteMany(key);
 		}
@@ -1080,7 +1081,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		try {
-			const { store } = this.opts;
+			const store = this._store as KeyvStoreAdapter;
 			const keyPrefixed = this._getKeyPrefixArray(keys);
 			this.hooks.trigger(KeyvHooks.PRE_DELETE, { key: keyPrefixed });
 			if (store.deleteMany !== undefined) {
@@ -1113,7 +1114,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	async clear(): Promise<void> {
 		this.emit("clear");
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 
 		try {
 			await store.clear();
@@ -1138,7 +1139,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		const keyPrefixed = this._getKeyPrefix(key);
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		if (store.has !== undefined && !(store instanceof Map)) {
 			return store.has(keyPrefixed);
 		}
@@ -1180,7 +1181,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const keyPrefixed = this._getKeyPrefixArray(keys);
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		if (store.hasMany !== undefined) {
 			return store.hasMany(keyPrefixed);
 		}
@@ -1199,7 +1200,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * @returns {Promise<void>}
 	 */
 	async disconnect(): Promise<void> {
-		const { store } = this.opts;
+		const store = this._store as KeyvStoreAdapter;
 		this.emit("disconnect");
 		if (typeof store.disconnect === "function") {
 			return store.disconnect();
@@ -1208,7 +1209,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public emit(event: string, ...arguments_: any[]): void {
-		if (event === "error" && !this.opts.emitErrors) {
+		if (event === "error" && !this._emitErrors) {
 			return;
 		}
 

@@ -43,7 +43,7 @@ test.it("Keyv accepts storage adapters and options", async (t) => {
 	const keyv = new Keyv(store, { namespace: "test" });
 	t.expect(store.size).toBe(0);
 	await keyv.set("foo", "bar");
-	t.expect(keyv.opts.namespace).toBe("test");
+	t.expect(keyv.namespace).toBe("test");
 });
 
 test.it("Keyv accepts storage adapters instead of options", async (t) => {
@@ -731,7 +731,7 @@ test.it(
 	"Keyv has should return if adapter does not support has on expired",
 	async (t) => {
 		const keyv = new Keyv({ store: new Map() });
-		keyv.opts.store.has = undefined;
+		keyv.store.has = undefined;
 		await keyv.set("foo", "bar", 1000);
 		t.expect(await keyv.has("foo")).toBe(true);
 		await snooze(1100);
@@ -809,7 +809,7 @@ test.it(
 		t.expect(keyv.ttl).toBe(100);
 		keyv.ttl = 200;
 		t.expect(keyv.ttl).toBe(200);
-		t.expect(keyv.opts.ttl).toBe(200);
+		t.expect(keyv.ttl).toBe(200);
 	},
 );
 
@@ -820,10 +820,10 @@ test.it(
 		t.expect(keyv.ttl).not.toBeDefined();
 		keyv.ttl = 200;
 		t.expect(keyv.ttl).toBe(200);
-		t.expect(keyv.opts.ttl).toBe(200);
+		t.expect(keyv.ttl).toBe(200);
 		keyv.ttl = undefined;
 		t.expect(keyv.ttl).not.toBeDefined();
-		t.expect(keyv.opts.ttl).not.toBeDefined();
+		t.expect(keyv.ttl).not.toBeDefined();
 	},
 );
 
