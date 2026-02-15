@@ -14,7 +14,6 @@ const toTableString = (input: string) => {
 };
 
 export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
-	ttlSupport: boolean;
 	opts: KeyvSqliteOptions;
 	namespace?: string;
 	close: DbClose;
@@ -22,7 +21,6 @@ export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
 
 	constructor(keyvOptions?: KeyvSqliteOptions | string) {
 		super();
-		this.ttlSupport = false;
 		let options: KeyvSqliteOptions = {
 			dialect: "sqlite",
 			uri: "sqlite://:memory:",

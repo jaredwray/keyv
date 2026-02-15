@@ -21,7 +21,6 @@ import {
 import { Keyv, type KeyvStoreAdapter, type StoredData } from "keyv";
 
 export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
-	ttlSupport = true;
 	sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
 	namespace?: string;
 	opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };

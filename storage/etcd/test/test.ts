@@ -30,7 +30,7 @@ test.it("enable ttl using default url", (t) => {
 		ttl: 1000,
 		dialect: "etcd",
 	});
-	t.expect(store.ttlSupport).toBeTruthy();
+	t.expect(store.lease).toBeDefined();
 });
 
 test.it("disable ttl using default url", (t) => {
@@ -41,7 +41,7 @@ test.it("disable ttl using default url", (t) => {
 		ttl: true,
 		dialect: "etcd",
 	});
-	t.expect(store.ttlSupport).toBeFalsy();
+	t.expect(store.lease).toBeUndefined();
 });
 
 test.it("enable ttl using url", (t) => {
@@ -54,7 +54,7 @@ test.it("enable ttl using url", (t) => {
 		ttl: 1000,
 		dialect: "etcd",
 	});
-	t.expect(store.ttlSupport).toBeTruthy();
+	t.expect(store.lease).toBeDefined();
 });
 
 test.it("enable ttl using url and options", (t) => {
@@ -64,7 +64,7 @@ test.it("enable ttl using url and options", (t) => {
 		ttl: 1000,
 		dialect: "etcd",
 	});
-	t.expect(store.ttlSupport).toBeTruthy();
+	t.expect(store.lease).toBeDefined();
 });
 
 test.it("disable ttl using url and options", (t) => {
@@ -75,7 +75,7 @@ test.it("disable ttl using url and options", (t) => {
 		ttl: true,
 		dialect: "etcd",
 	});
-	t.expect(store.ttlSupport).toBeFalsy();
+	t.expect(store.lease).toBeUndefined();
 });
 
 async function sleep(ms: number): Promise<void> {

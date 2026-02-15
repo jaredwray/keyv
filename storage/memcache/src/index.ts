@@ -12,7 +12,6 @@ export type KeyvMemcacheOptions = {
 	Record<string, any>;
 
 export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
-	public ttlSupport = true;
 	public namespace?: string;
 	public client: memcache.Client;
 	public opts: KeyvMemcacheOptions;

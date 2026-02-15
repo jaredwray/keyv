@@ -4,7 +4,6 @@ import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
-	ttlSupport = true;
 	namespace?: string;
 	opts: Record<string, unknown>;
 	// biome-ignore lint/suspicious/noExplicitAny: type format
