@@ -21,7 +21,6 @@ const keyvMongoKeys = new Set([
 	"db",
 ]);
 export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
-	ttlSupport = false;
 	opts: Options;
 	connect: Promise<KeyvMongoConnect>;
 	namespace?: string;

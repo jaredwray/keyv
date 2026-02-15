@@ -117,14 +117,6 @@ test.it("close connection successfully", async (t) => {
 	}
 });
 
-test.it(
-	"set intervalExpiration to 0 results in no event creation",
-	async (t) => {
-		const keyv = new KeyvMysql({ uri, intervalExpiration: 0 });
-		t.expect(keyv.ttlSupport).toBe(false);
-	},
-);
-
 test.it("set intervalExpiration to 1 second", async (t) => {
 	const keyvMySql = new KeyvMysql({ uri, intervalExpiration: 1 });
 	const keyv = new Keyv({ store: keyvMySql });
@@ -133,7 +125,6 @@ test.it("set intervalExpiration to 1 second", async (t) => {
 	// No ttl -> undefined -> (expires:null) -> infinite
 	await keyv.set("foo-interval-no-ttl", "bar-interval-no-ttl");
 	const value1 = await keyv.get("foo-interval1");
-	t.expect(keyvMySql.ttlSupport).toBe(true);
 	t.expect(value1).toBe("bar-interval1");
 	await delay(1100);
 	const value2 = await keyv.get("foo-interval1");

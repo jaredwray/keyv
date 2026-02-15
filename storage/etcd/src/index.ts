@@ -20,7 +20,6 @@ export type KeyvEtcdOptions = {
 
 // biome-ignore lint/suspicious/noExplicitAny: any is allowed
 export class KeyvEtcd<Value = any> extends EventEmitter {
-	public ttlSupport: boolean;
 	public opts: KeyvEtcdOptions;
 	public client: Etcd3;
 	public lease?: Lease;
@@ -28,8 +27,6 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 
 	constructor(url?: KeyvEtcdOptions | string, options?: KeyvEtcdOptions) {
 		super();
-
-		this.ttlSupport = typeof options?.ttl === "number";
 
 		url ??= {};
 
@@ -39,10 +36,6 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 
 		if (url.uri) {
 			url = { url: url.uri, ...url };
-		}
-
-		if (url.ttl) {
-			this.ttlSupport = typeof url.ttl === "number";
 		}
 
 		this.opts = {
@@ -66,7 +59,7 @@ export class KeyvEtcd<Value = any> extends EventEmitter {
 		// Https://github.com/microsoft/etcd3/issues/105
 		this.client.getRoles().catch((error) => this.emit("error", error));
 
-		if (this.ttlSupport) {
+		if (typeof this.opts.ttl === "number") {
 			// biome-ignore lint/style/noNonNullAssertion: allowed
 			this.lease = this.client.lease(this.opts.ttl! / 1000, {
 				autoKeepAlive: false,

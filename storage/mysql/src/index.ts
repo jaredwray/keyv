@@ -50,12 +50,6 @@ type QueryType<T> = Promise<
  */
 export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	/**
-	 * Indicates whether TTL (Time To Live) support is enabled.
-	 * Set to true when intervalExpiration is configured.
-	 */
-	ttlSupport = false;
-
-	/**
 	 * Configuration options for the MySQL adapter.
 	 */
 	opts: KeyvMysqlOptions;
@@ -89,13 +83,6 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				...options,
 				...keyvOptions,
 			};
-		}
-
-		if (
-			options.intervalExpiration !== undefined &&
-			options.intervalExpiration > 0
-		) {
-			this.ttlSupport = true;
 		}
 
 		const mysqlOptions = Object.fromEntries(

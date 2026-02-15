@@ -16,13 +16,11 @@ function escapeIdentifier(identifier: string): string {
 }
 
 export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
-	ttlSupport: boolean;
 	opts: KeyvPostgresOptions;
 	query: Query;
 	namespace?: string;
 	constructor(options?: KeyvPostgresOptions | string) {
 		super();
-		this.ttlSupport = false;
 
 		if (typeof options === "string") {
 			const uri = options;
