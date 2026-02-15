@@ -1011,3 +1011,10 @@ test.it("should not emit error with opts.emitErrors false", async (t) => {
 	t.expect(result).toBe(false);
 	t.expect(errorHandler).not.toHaveBeenCalled();
 });
+
+test.it("should be able to get and set emitErrors via property", async (t) => {
+	const keyv = new Keyv({ store: new Map() });
+	t.expect(keyv.emitErrors).toBe(true);
+	keyv.emitErrors = false;
+	t.expect(keyv.emitErrors).toBe(false);
+});
