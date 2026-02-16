@@ -11,7 +11,8 @@ export default defineConfig({
 			exclude: [
 				'src/types.ts',
 				'vitest.config.ts',
-				'dist'
+				'dist',
+				'test'
 			]
 		},
 	},
