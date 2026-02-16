@@ -4,14 +4,15 @@ export default defineConfig({
 	test: {
 		maxWorkers: 1,
 		fileParallelism: false,
-		include: ['test/*.ts'],
+		include: ['test/*.test.ts'],
 		coverage: {
 			reporter: ['json', 'lcov', 'text'],
 			reportOnFailure: true,
 			exclude: [
 				'src/types.ts',
 				'vitest.config.ts',
-				'dist'
+				'dist',
+				'test'
 			]
 		},
 	},

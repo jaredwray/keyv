@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
-import { KeyvSqlite } from "@keyv/sqlite";
 import * as test from "vitest";
 import Keyv, { KeyvHooks } from "../src/index.js";
+import { createStore } from "./test-utils.js";
 
 test.it("PRE_SET hook", async (t) => {
 	const keyv = new Keyv();
@@ -92,8 +92,7 @@ test.it("POST_GET_MANY with manipulation", async () => {
 });
 
 test.it("POST_GET_MANY with getMany function", async () => {
-	const keyvSqlite = new KeyvSqlite({ uri: "sqlite://test.db" });
-	const keyv = new Keyv({ store: keyvSqlite });
+	const keyv = new Keyv({ store: createStore() });
 	const keys = ["foo", "foo1"];
 	await keyv.set("foo", "bar");
 	await keyv.set("foo1", "bar1");

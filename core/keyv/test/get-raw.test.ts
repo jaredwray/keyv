@@ -1,13 +1,7 @@
-import process from "node:process";
 import { faker } from "@faker-js/faker";
-import { KeyvGzip } from "@keyv/compress-gzip";
-import { KeyvMongo } from "@keyv/mongo";
-import { delay } from "@keyv/test-suite";
 import { describe, expect, test } from "vitest";
 import { Keyv } from "../src/index.js";
-
-const mongoUri =
-	process.env.MONGO_URI ?? "mongodb://localhost:27017/keyv-test-raw";
+import { createMockCompression, createStore, delay } from "./test-utils.js";
 
 describe("Keyv Get Raw", async () => {
 	test("should return raw data", async () => {
@@ -62,7 +56,7 @@ describe("Keyv Get Raw", async () => {
 	});
 
 	test("should be able to get raw data with compression", async () => {
-		const keyv = new Keyv({ compression: new KeyvGzip() });
+		const keyv = new Keyv({ compression: createMockCompression() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value);
@@ -150,8 +144,7 @@ describe("Keyv Get Many Raw", async () => {
 	});
 
 	test("should get many with storage that supports getMany function", async () => {
-		const keyvMongo = new KeyvMongo({ uri: mongoUri });
-		const keyv = new Keyv({ store: keyvMongo });
+		const keyv = new Keyv({ store: createStore() });
 		const keys = Array.from({ length: 5 }, () => faker.string.alphanumeric(10));
 		const values = keys.map(() => faker.string.alphanumeric(10));
 		await Promise.all(

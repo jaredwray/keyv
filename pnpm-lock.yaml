@@ -138,27 +138,6 @@ importers:
       '@faker-js/faker':
         specifier: ^10.2.0
         version: 10.2.0
-      '@keyv/compress-brotli':
-        specifier: workspace:^
-        version: link:../../compression/compress-brotli
-      '@keyv/compress-gzip':
-        specifier: workspace:^
-        version: link:../../compression/compress-gzip
-      '@keyv/compress-lz4':
-        specifier: workspace:^
-        version: link:../../compression/compress-lz4
-      '@keyv/memcache':
-        specifier: workspace:^
-        version: link:../../storage/memcache
-      '@keyv/mongo':
-        specifier: workspace:^
-        version: link:../../storage/mongo
-      '@keyv/sqlite':
-        specifier: workspace:^
-        version: link:../../storage/sqlite
-      '@keyv/test-suite':
-        specifier: workspace:^
-        version: link:../test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.18
         version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
@@ -229,15 +208,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.3.13
         version: 2.3.14
-      '@keyv/test-suite':
-        specifier: workspace:^
-        version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.18
         version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
-      keyv:
-        specifier: workspace:^
-        version: link:../../core/keyv
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
