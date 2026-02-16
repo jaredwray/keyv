@@ -1,35 +1,7 @@
 import { faker } from "@faker-js/faker";
 import * as test from "vitest";
-import Keyv, { KeyvHooks, type KeyvStoreAdapter } from "../src/index.js";
-
-// In-memory store adapter with getMany support
-const createStore = () => {
-	const map = new Map<string, unknown>();
-	const store = {
-		opts: { dialect: "", url: "" },
-		namespace: undefined as string | undefined,
-		async get(key: string) {
-			return map.get(key);
-		},
-		// biome-ignore lint/suspicious/noExplicitAny: test mock
-		async set(key: string, value: any, _ttl?: number) {
-			map.set(key, value);
-		},
-		async delete(key: string) {
-			return map.delete(key);
-		},
-		async clear() {
-			map.clear();
-		},
-		async getMany(keys: string[]) {
-			return keys.map((key) => map.get(key));
-		},
-		on() {
-			return store;
-		},
-	} as unknown as KeyvStoreAdapter;
-	return store;
-};
+import Keyv, { KeyvHooks } from "../src/index.js";
+import { createStore } from "./test-utils.js";
 
 test.it("PRE_SET hook", async (t) => {
 	const keyv = new Keyv();

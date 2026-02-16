@@ -1,60 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, test } from "vitest";
-import {
-	type CompressionAdapter,
-	Keyv,
-	type KeyvStoreAdapter,
-} from "../src/index.js";
-
-const delay = async (ms: number) =>
-	new Promise<void>((resolve) => {
-		setTimeout(resolve, ms);
-	});
-
-// Mock compression adapter for testing compression code paths
-const createMockCompression = (): CompressionAdapter => ({
-	async compress(value: unknown) {
-		return value;
-	},
-	async decompress(value: unknown) {
-		return value;
-	},
-	serialize(data: Record<string, unknown>) {
-		return JSON.stringify(data);
-	},
-	deserialize(data: string) {
-		return JSON.parse(data);
-	},
-});
-
-// In-memory store adapter with getMany support
-const createStore = () => {
-	const map = new Map<string, unknown>();
-	const store = {
-		opts: { dialect: "", url: "" },
-		namespace: undefined as string | undefined,
-		async get(key: string) {
-			return map.get(key);
-		},
-		// biome-ignore lint/suspicious/noExplicitAny: test mock
-		async set(key: string, value: any, _ttl?: number) {
-			map.set(key, value);
-		},
-		async delete(key: string) {
-			return map.delete(key);
-		},
-		async clear() {
-			map.clear();
-		},
-		async getMany(keys: string[]) {
-			return keys.map((key) => map.get(key));
-		},
-		on() {
-			return store;
-		},
-	} as unknown as KeyvStoreAdapter;
-	return store;
-};
+import { Keyv } from "../src/index.js";
+import { createMockCompression, createStore, delay } from "./test-utils.js";
 
 describe("Keyv Get Raw", async () => {
 	test("should return raw data", async () => {
