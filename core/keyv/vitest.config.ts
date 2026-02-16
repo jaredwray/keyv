@@ -4,7 +4,7 @@ export default defineConfig({
 	test: {
 		maxWorkers: 1,
 		fileParallelism: false,
-		include: ['test/*.test.ts', 'test/test.ts'],
+		include: ['test/*.test.ts'],
 		coverage: {
 			reporter: ['json', 'lcov', 'text'],
 			reportOnFailure: true,
