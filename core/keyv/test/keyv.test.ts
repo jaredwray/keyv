@@ -996,3 +996,51 @@ test.it("should be able to get and set emitErrors via property", async (t) => {
 	keyv.emitErrors = false;
 	t.expect(keyv.emitErrors).toBe(false);
 });
+
+test.it(
+	"should emit error and throw when setting a Symbol value",
+	async (t) => {
+		const keyv = new Keyv({ store: new Map() });
+		const errorHandler = test.vi.fn();
+		keyv.on("error", errorHandler);
+		await t
+			.expect(keyv.set("key", Symbol("test")))
+			.rejects.toThrow("symbol cannot be serialized");
+		t.expect(errorHandler).toHaveBeenCalledWith("symbol cannot be serialized");
+	},
+);
+
+test.it(
+	"should detect iterable adapter by URL when dialect is not set",
+	async (t) => {
+		const map = new Map<string, unknown>();
+		const store = {
+			opts: { url: "redis://localhost:6379" },
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+			async *iterator(namespace?: string) {
+				for (const [key, value] of map) {
+					if (!namespace || key.startsWith(namespace)) {
+						yield [key, value];
+					}
+				}
+			},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv(store as any);
+		t.expect(keyv.iterator).toBeDefined();
+	},
+);
