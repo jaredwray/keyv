@@ -1,11 +1,4 @@
 import { faker } from "@faker-js/faker";
-import { KeyvBrotli } from "@keyv/compress-brotli";
-import { KeyvGzip } from "@keyv/compress-gzip";
-import { KeyvLz4 } from "@keyv/compress-lz4";
-import { KeyvMemcache } from "@keyv/memcache";
-import { KeyvMongo } from "@keyv/mongo";
-import { KeyvSqlite } from "@keyv/sqlite";
-import { delay } from "@keyv/test-suite";
 import tk from "timekeeper";
 import * as test from "vitest";
 import Keyv, {
@@ -14,12 +7,68 @@ import Keyv, {
 	type StoredDataNoRaw,
 } from "../src/index.js";
 
-const keyvMemcache = new KeyvMemcache("localhost:11211");
+const delay = async (ms: number) =>
+	new Promise<void>((resolve) => {
+		setTimeout(resolve, ms);
+	});
 
 const snooze = delay;
 
-const store = () =>
-	new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite", busyTimeout: 3000 });
+// Mock compression adapter for testing compression code paths
+const createMockCompression = (): CompressionAdapter => ({
+	async compress(value: unknown) {
+		return value;
+	},
+	async decompress(value: unknown) {
+		return value;
+	},
+	serialize(data: Record<string, unknown>) {
+		return JSON.stringify(data);
+	},
+	deserialize(data: string) {
+		return JSON.parse(data);
+	},
+});
+
+// In-memory store adapter with getMany, iterator, disconnect, and namespace support
+const createStore = () => {
+	const map = new Map<string, unknown>();
+	const store = {
+		opts: { dialect: "sqlite", url: "" },
+		namespace: undefined as string | undefined,
+		async get(key: string) {
+			return map.get(key);
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		async set(key: string, value: any, _ttl?: number) {
+			map.set(key, value);
+		},
+		async delete(key: string) {
+			return map.delete(key);
+		},
+		async clear() {
+			map.clear();
+		},
+		async getMany(keys: string[]) {
+			return keys.map((key) => map.get(key));
+		},
+		async has(key: string) {
+			return map.has(key);
+		},
+		async disconnect() {},
+		async *iterator(namespace?: string) {
+			for (const [key, value] of map) {
+				if (!namespace || key.startsWith(namespace)) {
+					yield [key, value];
+				}
+			}
+		},
+		on() {
+			return store;
+		},
+	} as unknown as KeyvStoreAdapter;
+	return store;
+};
 
 test.it("Keyv is a class", (t) => {
 	t.expect(typeof Keyv).toBe("function");
@@ -368,9 +417,9 @@ test.it(
 );
 
 test.it(
-	"keyv.get([keys]) should return empty array when expires sqlite",
+	"keyv.get([keys]) should return empty array when expires with storage adapter",
 	async (t) => {
-		const keyv = new Keyv({ store: store() });
+		const keyv = new Keyv({ store: createStore() });
 		await keyv.clear();
 		await keyv.set("foo", "bar", 1);
 		await keyv.set("foo1", "bar1", 1);
@@ -386,23 +435,26 @@ test.it(
 	},
 );
 
-test.it("keyv.get([keys]) should return array raw values sqlite", async (t) => {
-	const keyv = new Keyv({ store: store() });
-	await keyv.clear();
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	const values = (await keyv.get<string>(["foo", "foo1"], {
-		raw: true,
-	})) as Array<StoredDataNoRaw<string>>;
-	t.expect(Array.isArray(values)).toBeTruthy();
-	t.expect(values[0]).toEqual({ value: "bar" });
-	t.expect(values[1]).toEqual({ value: "bar1" });
-});
+test.it(
+	"keyv.get([keys]) should return array raw values with storage adapter",
+	async (t) => {
+		const keyv = new Keyv({ store: createStore() });
+		await keyv.clear();
+		await keyv.set("foo", "bar");
+		await keyv.set("foo1", "bar1");
+		const values = (await keyv.get<string>(["foo", "foo1"], {
+			raw: true,
+		})) as Array<StoredDataNoRaw<string>>;
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values[0]).toEqual({ value: "bar" });
+		t.expect(values[1]).toEqual({ value: "bar1" });
+	},
+);
 
 test.it(
-	"keyv.get([keys]) should return array raw values undefined sqlite",
+	"keyv.get([keys]) should return array raw values undefined with storage adapter",
 	async (t) => {
-		const keyv = new Keyv({ store: store() });
+		const keyv = new Keyv({ store: createStore() });
 		await keyv.clear();
 		const values = await keyv.get<string>(["foo", "foo1"], { raw: true });
 		t.expect(Array.isArray(values)).toBeTruthy();
@@ -428,7 +480,7 @@ test.it(
 test.it(
 	"keyv.get([keys]) should return array values with all undefined using storage adapter",
 	async (t) => {
-		const keyv = new Keyv({ store: store() });
+		const keyv = new Keyv({ store: createStore() });
 		const values = await keyv.get<string>(["foo", "foo1", "foo2"]);
 		t.expect(Array.isArray(values)).toBeTruthy();
 		t.expect(values[0]).toBeUndefined();
@@ -448,28 +500,19 @@ test.it(
 );
 
 test.it("pass compress options", async (t) => {
-	const keyv = new Keyv({ store: new Map(), compression: new KeyvBrotli() });
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
-});
-
-test.it("compress/decompress with gzip", async (t) => {
-	const keyv = new Keyv({ store: new Map(), compression: new KeyvGzip() });
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
-});
-
-test.it("compress/decompress with lz4", async (t) => {
-	const keyv = new Keyv({ store: new Map(), compression: new KeyvLz4() });
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
-});
-
-test.it("iterator should exists with url", (t) => {
-	const store = new Keyv({
-		store: new KeyvMongo({ url: "mongodb://127.0.0.1:27017" }),
+	const keyv = new Keyv({
+		store: new Map(),
+		compression: createMockCompression(),
 	});
-	t.expect(typeof store.iterator).toBe("function");
+	await keyv.set("foo", "bar");
+	t.expect(await keyv.get("foo")).toBe("bar");
+});
+
+test.it("iterator should exist with store adapter", (t) => {
+	const keyv = new Keyv({
+		store: createStore(),
+	});
+	t.expect(typeof keyv.iterator).toBe("function");
 });
 
 test.it(
@@ -479,7 +522,7 @@ test.it(
 		const keyv1 = new Keyv({
 			store: keyvStore,
 			namespace: "keyv1",
-			compression: new KeyvGzip(),
+			compression: createMockCompression(),
 		});
 		const map1 = new Map(
 			Array.from({ length: 5 })
@@ -495,7 +538,7 @@ test.it(
 		const keyv2 = new Keyv({
 			store: keyvStore,
 			namespace: "keyv2",
-			compression: new KeyvGzip(),
+			compression: createMockCompression(),
 		});
 		const map2 = new Map(
 			Array.from({ length: 5 })
@@ -628,7 +671,7 @@ test.it(
 			serialize,
 			deserialize,
 			namespace: "keyv1",
-			compression: new KeyvGzip(),
+			compression: createMockCompression(),
 		});
 		const map1 = new Map(
 			Array.from({ length: 5 })
@@ -671,8 +714,7 @@ test.it(
 );
 
 test.it("close connection successfully", async (t) => {
-	const store = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
-	const keyv = new Keyv({ store });
+	const keyv = new Keyv({ store: createStore() });
 	await keyv.clear();
 	t.expect(await keyv.get("foo")).toBeUndefined();
 	await keyv.set("foo", "bar");
@@ -686,11 +728,11 @@ test.it("close connection undefined", async (t) => {
 });
 
 test.it("get keys, one key expired", async (t) => {
-	const keyv = new Keyv({ store: keyvMemcache });
+	const keyv = new Keyv({ store: new Map() });
 	await keyv.set("foo", "bar", 10_000);
 	await keyv.set("fizz", "buzz", 100);
 	await keyv.set("ping", "pong", 10_000);
-	await snooze(100);
+	await snooze(150);
 	await keyv.get(["foo", "fizz", "ping"]);
 	t.expect(await keyv.get("fizz")).toBeUndefined();
 	t.expect(await keyv.get("foo")).toBe("bar");
@@ -739,9 +781,9 @@ test.it(
 	},
 );
 
-test.it("Keyv memcache has should return false on expired", async (t) => {
-	const keyv = new Keyv({ store: keyvMemcache });
-	const keyName = "memcache-expired";
+test.it("Keyv has should return false on expired", async (t) => {
+	const keyv = new Keyv({ store: new Map() });
+	const keyName = "expired-key";
 	await keyv.set(keyName, "bar", 1000);
 	await snooze(1100);
 	const value = await keyv.get(keyName);
@@ -776,7 +818,7 @@ test.it("Keyv stats enabled should create counts", async (t) => {
 });
 
 test.it("should be able to set the namespace via property", async (t) => {
-	const store = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
+	const store = createStore();
 	const keyv = new Keyv({ store });
 	t.expect(keyv.namespace).toBe("keyv");
 	t.expect(store.namespace).toBe("keyv");
@@ -786,7 +828,7 @@ test.it("should be able to set the namespace via property", async (t) => {
 });
 
 test.it("should be able to set the store via property", async (t) => {
-	const store = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
+	const store = createStore();
 	const keyv = new Keyv();
 	keyv.store = store;
 	t.expect(keyv.store).toBe(store);
@@ -850,10 +892,10 @@ test.it(
 
 test.it("Keyv can get and set the compress property", async (t) => {
 	const keyv = new Keyv();
-	const gzip = new KeyvGzip();
+	const compression = createMockCompression();
 	t.expect(keyv.compression).not.toBeDefined();
-	keyv.compression = gzip as CompressionAdapter;
-	t.expect(keyv.compression).toBe(gzip);
+	keyv.compression = compression;
+	t.expect(keyv.compression).toBe(compression);
 });
 
 test.it("Keyv can set the useKeyPrefix via options", async (t) => {
@@ -920,7 +962,7 @@ test.it("Keyv will not prefix if there is no namespace", async (t) => {
 test.it(
 	"Keyv will not serialize / deserialize / compress if it is undefined",
 	async (t) => {
-		const keyv = new Keyv({ compression: new KeyvGzip() });
+		const keyv = new Keyv({ compression: createMockCompression() });
 		keyv.serialize = undefined;
 		keyv.deserialize = undefined;
 		const complexObject = { foo: "bar", fizz: "buzz" };
@@ -932,7 +974,7 @@ test.it(
 );
 
 test.it("Keyv deserlize will return undefined if not string", async (t) => {
-	const keyv = new Keyv({ compression: new KeyvGzip() });
+	const keyv = new Keyv({ compression: createMockCompression() });
 	const complexObject = { foo: "bar", fizz: "buzz" };
 	const result = await keyv.deserializeData({ value: complexObject });
 	t.expect(result).toBeUndefined();

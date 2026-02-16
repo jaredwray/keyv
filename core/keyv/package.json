@@ -64,13 +64,6 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.13",
 		"@faker-js/faker": "^10.2.0",
-		"@keyv/compress-brotli": "workspace:^",
-		"@keyv/compress-gzip": "workspace:^",
-		"@keyv/compress-lz4": "workspace:^",
-		"@keyv/memcache": "workspace:^",
-		"@keyv/mongo": "workspace:^",
-		"@keyv/sqlite": "workspace:^",
-		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^4.0.18",
 		"lru.min": "^1.1.1",
 		"quick-lru": "^7.0.0",

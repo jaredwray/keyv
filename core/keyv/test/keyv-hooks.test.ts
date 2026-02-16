@@ -1,7 +1,35 @@
 import { faker } from "@faker-js/faker";
-import { KeyvSqlite } from "@keyv/sqlite";
 import * as test from "vitest";
-import Keyv, { KeyvHooks } from "../src/index.js";
+import Keyv, { KeyvHooks, type KeyvStoreAdapter } from "../src/index.js";
+
+// In-memory store adapter with getMany support
+const createStore = () => {
+	const map = new Map<string, unknown>();
+	const store = {
+		opts: { dialect: "", url: "" },
+		namespace: undefined as string | undefined,
+		async get(key: string) {
+			return map.get(key);
+		},
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		async set(key: string, value: any, _ttl?: number) {
+			map.set(key, value);
+		},
+		async delete(key: string) {
+			return map.delete(key);
+		},
+		async clear() {
+			map.clear();
+		},
+		async getMany(keys: string[]) {
+			return keys.map((key) => map.get(key));
+		},
+		on() {
+			return store;
+		},
+	} as unknown as KeyvStoreAdapter;
+	return store;
+};
 
 test.it("PRE_SET hook", async (t) => {
 	const keyv = new Keyv();
@@ -92,8 +120,7 @@ test.it("POST_GET_MANY with manipulation", async () => {
 });
 
 test.it("POST_GET_MANY with getMany function", async () => {
-	const keyvSqlite = new KeyvSqlite({ uri: "sqlite://test.db" });
-	const keyv = new Keyv({ store: keyvSqlite });
+	const keyv = new Keyv({ store: createStore() });
 	const keys = ["foo", "foo1"];
 	await keyv.set("foo", "bar");
 	await keyv.set("foo1", "bar1");
