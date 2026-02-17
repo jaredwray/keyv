@@ -102,7 +102,7 @@ const keyv = new Keyv({ store: memcache});
 4. Fill in all mandatory fields as needed. You will need to set up a private service connection.
 5. To set up a private service connection, click the Set Up Connection button.
 6. Once required fields are complete, click the Create button to create the instance.
-7. Google provides further documentation for connecting to and managing your Memecached instance [here](https://cloud.google.com/memorystore/docs/memcached).
+7. Google provides further documentation for connecting to and managing your Memcached instance [here](https://cloud.google.com/memorystore/docs/memcached).
 
 ```js
 import Keyv from 'keyv';
