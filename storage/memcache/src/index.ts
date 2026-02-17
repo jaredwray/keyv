@@ -55,6 +55,7 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		}
 
 		this.opts = allOptions;
+		this.namespace = allOptions.namespace;
 
 		const { namespace: _namespace, ...memcacheOptions } = allOptions;
 		this.client = new Memcache(memcacheOptions);
