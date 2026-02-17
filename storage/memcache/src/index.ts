@@ -225,6 +225,18 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 }
 
+/**
+ * Creates a new Keyv instance backed by a Memcache store.
+ * @param uri - The memcache server URI (e.g., `'localhost:11211'`) or an options object.
+ * @param options - Additional configuration options, merged with the first argument if it is an object.
+ * @returns A configured Keyv instance using KeyvMemcache as the store.
+ *
+ * @example
+ * ```typescript
+ * const keyv = createKeyv('localhost:11211');
+ * await keyv.set('foo', 'bar');
+ * ```
+ */
 export const createKeyv = (
 	uri?: string | KeyvMemcacheOptions,
 	options?: KeyvMemcacheOptions,
