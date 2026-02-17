@@ -8,13 +8,9 @@ import { Memcache, type MemcacheOptions } from "memcache";
  * Extends the Memcache client options with additional Keyv-specific properties.
  */
 export type KeyvMemcacheOptions = {
-	/** The URL of the memcache server */
-	url?: string;
-	/** Default expiration time in seconds */
-	expires?: number;
-} & Partial<MemcacheOptions> &
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	Record<string, any>;
+	/** Optional namespace for key prefixing */
+	namespace?: string;
+} & MemcacheOptions;
 
 /**
  * Memcache storage adapter for Keyv.
@@ -46,30 +42,19 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		super();
 
 		const allOptions: KeyvMemcacheOptions = {
-			...(typeof uri === "object" ? uri : { uri }),
+			...(typeof uri === "object" ? uri : {}),
 			...options,
 		};
 
-		if (allOptions.uri && !allOptions.url) {
-			allOptions.url = allOptions.uri;
+		if (!allOptions.nodes) {
+			allOptions.nodes = typeof uri === "string" ? [uri] : ["localhost:11211"];
 		}
 
-		const connectionUri = allOptions.url || "localhost:11211";
-		allOptions.url = allOptions.uri = connectionUri;
-
 		this.opts = allOptions;
+		this.namespace = allOptions.namespace;
 
-		const { url, uri: _uri, expires, ...memcacheOptions } = allOptions;
-		this.client = new Memcache({ nodes: [connectionUri], ...memcacheOptions });
-	}
-
-	/**
-	 * Returns the formatted namespace string.
-	 * @returns The namespace in the format `'namespace:{namespace}'`
-	 */
-	_getNamespace(): string {
-		// biome-ignore lint/style/noNonNullAssertion: fix this
-		return `namespace:${this.namespace!}`;
+		const { namespace: _namespace, ...memcacheOptions } = allOptions;
+		this.client = new Memcache(memcacheOptions);
 	}
 
 	/**
@@ -178,34 +163,6 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Clears all data from the memcache server by flushing it.
-	 * Note: this flushes the entire server, not just the current namespace.
-	 */
-	async clear(): Promise<void> {
-		try {
-			await this.client.flush();
-		} catch (error) {
-			this.emit("error", error);
-			throw error;
-		}
-	}
-
-	/**
-	 * Formats a key by prepending the namespace if one is set.
-	 * @param key - The key to format
-	 * @returns The formatted key (e.g., `'namespace:key'`), or the original key if no namespace is set
-	 */
-	formatKey(key: string) {
-		let result = key;
-
-		if (this.namespace) {
-			result = `${this.namespace.trim()}:${key.trim()}`;
-		}
-
-		return result;
-	}
-
-	/**
 	 * Checks whether a key exists in the memcache server.
 	 * @param key - The key to check
 	 * @returns `true` if the key exists, `false` otherwise. Returns `false` on any error.
@@ -233,13 +190,53 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Clears all data from the memcache server by flushing it.
+	 * Note: this flushes the entire server, not just the current namespace.
+	 */
+	async clear(): Promise<void> {
+		try {
+			await this.client.flush();
+		} catch (error) {
+			this.emit("error", error);
+			throw error;
+		}
+	}
+
+	/**
 	 * Gracefully disconnects from the memcache server.
 	 */
 	async disconnect(): Promise<void> {
 		await this.client.disconnect();
 	}
+
+	/**
+	 * Formats a key by prepending the namespace if one is set.
+	 * @param key - The key to format
+	 * @returns The formatted key (e.g., `'namespace:key'`), or the original key if no namespace is set
+	 */
+	formatKey(key: string) {
+		let result = key;
+
+		if (this.namespace) {
+			result = `${this.namespace.trim()}:${key.trim()}`;
+		}
+
+		return result;
+	}
 }
 
+/**
+ * Creates a new Keyv instance backed by a Memcache store.
+ * @param uri - The memcache server URI (e.g., `'localhost:11211'`) or an options object.
+ * @param options - Additional configuration options, merged with the first argument if it is an object.
+ * @returns A configured Keyv instance using KeyvMemcache as the store.
+ *
+ * @example
+ * ```typescript
+ * const keyv = createKeyv('localhost:11211');
+ * await keyv.set('foo', 'bar');
+ * ```
+ */
 export const createKeyv = (
 	uri?: string | KeyvMemcacheOptions,
 	options?: KeyvMemcacheOptions,

@@ -34,7 +34,7 @@ test.it("keyv get / no expired", async (t) => {
 
 test.it("testing defaults", (t) => {
 	const m = new KeyvMemcache();
-	t.expect(m.opts.url).toBe("localhost:11211");
+	t.expect(m.opts.nodes).toEqual(["localhost:11211"]);
 });
 
 test.it("keyv clear", async (t) => {
@@ -49,10 +49,6 @@ test.it("keyv get", async (t) => {
 	t.expect(await keyv.get("foo")).toBeUndefined();
 	await keyv.set("foo", "bar");
 	t.expect(await keyv.get("foo")).toBe("bar");
-});
-
-test.it("get namespace", (t) => {
-	t.expect(keyvMemcache._getNamespace()).toBe("namespace:keyv");
 });
 
 test.it("format key for no namespace", (t) => {
@@ -269,6 +265,48 @@ test.it("disconnect should work", async (t) => {
 
 test.it("createKeyv returns a Keyv instance", (t) => {
 	const keyv = createKeyv(uri);
+	t.expect(keyv).toBeInstanceOf(Keyv);
+});
+
+test.it("constructor with string URI sets nodes", (t) => {
+	const m = new KeyvMemcache("myserver:11211");
+	t.expect(m.opts.nodes).toEqual(["myserver:11211"]);
+});
+
+test.it("constructor with options object containing nodes", (t) => {
+	const m = new KeyvMemcache({ nodes: ["server1:11211", "server2:11211"] });
+	t.expect(m.opts.nodes).toEqual(["server1:11211", "server2:11211"]);
+});
+
+test.it("constructor with options passes timeout to memcache client", (t) => {
+	const m = new KeyvMemcache({ nodes: [uri], timeout: 3000 });
+	t.expect(m.opts.timeout).toBe(3000);
+});
+
+test.it("constructor with options passes keepAlive to memcache client", (t) => {
+	const m = new KeyvMemcache({ nodes: [uri], keepAlive: false });
+	t.expect(m.opts.keepAlive).toBe(false);
+});
+
+test.it("constructor with options passes retries to memcache client", (t) => {
+	const m = new KeyvMemcache({ nodes: [uri], retries: 3, retryDelay: 200 });
+	t.expect(m.opts.retries).toBe(3);
+	t.expect(m.opts.retryDelay).toBe(200);
+});
+
+test.it("string URI with additional options merges correctly", (t) => {
+	const m = new KeyvMemcache(uri, { timeout: 2000 });
+	t.expect(m.opts.nodes).toEqual([uri]);
+	t.expect(m.opts.timeout).toBe(2000);
+});
+
+test.it("nodes from options takes precedence over string URI", (t) => {
+	const m = new KeyvMemcache("ignored:11211", { nodes: ["server1:11211"] });
+	t.expect(m.opts.nodes).toEqual(["server1:11211"]);
+});
+
+test.it("createKeyv with options passes them through", (t) => {
+	const keyv = createKeyv({ nodes: [uri], timeout: 3000 });
 	t.expect(keyv).toBeInstanceOf(Keyv);
 });
 
