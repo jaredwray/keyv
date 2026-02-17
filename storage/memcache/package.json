@@ -49,7 +49,6 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@keyv/serialize": "workspace:^",
 		"memcache": "^1.4.0"
 	},
 	"peerDependencies": {

@@ -139,7 +139,7 @@ test.it("keyvMemcache getMany", async (t) => {
 	const value = await keyvMemcache.getMany(["foo0", "Foo1"]);
 	t.expect(Array.isArray(value)).toBeTruthy();
 
-	t.expect(value[0]).toEqual({ expires: 0, value: undefined });
+	t.expect(value[0]).toBeUndefined();
 });
 
 test.it("keyvMemcache setMany", async (t) => {
