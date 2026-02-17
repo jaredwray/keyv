@@ -310,6 +310,9 @@ importers:
 
   storage/memcache:
     dependencies:
+      hookified:
+        specifier: ^1.13.0
+        version: 1.15.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -5323,13 +5326,13 @@ snapshots:
     dependencies:
       '@cacheable/utils': 2.3.2
       '@keyv/bigmap': 1.3.0(keyv@5.5.4)
-      hookified: 1.15.0
+      hookified: 1.15.1
       keyv: 5.5.4
 
   '@cacheable/net@2.0.4':
     dependencies:
       cacheable: 2.3.0
-      hookified: 1.15.0
+      hookified: 1.15.1
       http-cache-semantics: 4.2.0
       undici: 7.16.0
 
@@ -5592,7 +5595,7 @@ snapshots:
   '@keyv/bigmap@1.3.0(keyv@5.5.4)':
     dependencies:
       hashery: 1.4.0
-      hookified: 1.15.0
+      hookified: 1.15.1
       keyv: 5.5.4
 
   '@keyv/serialize@1.1.1': {}
@@ -6295,6 +6298,14 @@ snapshots:
     optionalDependencies:
       vite: 7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0)
 
+  '@vitest/mocker@4.0.18(vite@7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))':
+    dependencies:
+      '@vitest/spy': 4.0.18
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+
   '@vitest/pretty-format@4.0.18':
     dependencies:
       tinyrainbow: 3.0.3
@@ -6655,7 +6666,7 @@ snapshots:
     dependencies:
       '@cacheable/memory': 2.0.6
       '@cacheable/utils': 2.3.2
-      hookified: 1.15.0
+      hookified: 1.15.1
       keyv: 5.5.4
       qified: 0.5.2
 
@@ -6930,7 +6941,7 @@ snapshots:
       cacheable: 2.3.0
       ejs: 3.1.10
       ent: 2.2.2
-      hookified: 1.15.0
+      hookified: 1.15.1
       liquidjs: 10.24.0
       nunjucks: 3.2.4
       pug: 3.0.3
@@ -7298,7 +7309,7 @@ snapshots:
 
   hashery@1.4.0:
     dependencies:
-      hookified: 1.15.0
+      hookified: 1.15.1
 
   hasown@2.0.2:
     dependencies:
@@ -8813,7 +8824,7 @@ snapshots:
 
   qified@0.5.2:
     dependencies:
-      hookified: 1.15.0
+      hookified: 1.15.1
 
   queue-microtask@1.2.3: {}
 
@@ -9656,7 +9667,7 @@ snapshots:
   vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.18
-      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0))
+      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
       '@vitest/pretty-format': 4.0.18
       '@vitest/runner': 4.0.18
       '@vitest/snapshot': 4.0.18
@@ -9761,7 +9772,7 @@ snapshots:
   writr@4.5.1:
     dependencies:
       cacheable: 2.3.0
-      hookified: 1.15.0
+      hookified: 1.15.1
       html-react-parser: 5.2.6(react@19.1.1)
       js-yaml: 4.1.0
       react: 19.1.1
