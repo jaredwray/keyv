@@ -142,6 +142,67 @@ test.it("keyvMemcache getMany", async (t) => {
 	t.expect(value[0]).toEqual({ expires: 0, value: undefined });
 });
 
+test.it("keyvMemcache setMany", async (t) => {
+	const keyv = new Keyv({ store: keyvMemcache });
+
+	await keyv.setMany([
+		{ key: "setMany1", value: "value1" },
+		{ key: "setMany2", value: "value2" },
+		{ key: "setMany3", value: "value3" },
+	]);
+
+	t.expect(await keyv.get("setMany1")).toBe("value1");
+	t.expect(await keyv.get("setMany2")).toBe("value2");
+	t.expect(await keyv.get("setMany3")).toBe("value3");
+});
+
+test.it("keyvMemcache setMany with ttl", async (t) => {
+	const keyv = new Keyv({ store: keyvMemcache });
+
+	await keyv.setMany([
+		{ key: "setManyTtl1", value: "value1", ttl: 1000 },
+		{ key: "setManyTtl2", value: "value2", ttl: 1000 },
+	]);
+
+	t.expect(await keyv.get("setManyTtl1")).toBe("value1");
+
+	await snooze(2000);
+
+	t.expect(await keyv.get("setManyTtl1")).toBeUndefined();
+});
+
+test.it("keyvMemcache hasMany", async (t) => {
+	await keyvMemcache.set("hasMany1", "value1");
+	await keyvMemcache.set("hasMany2", "value2");
+
+	const result = await keyvMemcache.hasMany([
+		"hasMany1",
+		"hasMany2",
+		"hasMany3",
+	]);
+
+	t.expect(result).toEqual([true, true, false]);
+});
+
+test.it("keyvMemcache hasMany with no keys existing", async (t) => {
+	const result = await keyvMemcache.hasMany(["noKey1", "noKey2", "noKey3"]);
+	t.expect(result).toEqual([false, false, false]);
+});
+
+test.it("keyvMemcache setMany should emit error on failure", async (t) => {
+	const badMemcache = new KeyvMemcache("baduri:11211");
+	let errorEmitted = false;
+	badMemcache.on("error", () => {
+		errorEmitted = true;
+	});
+
+	try {
+		await badMemcache.setMany([{ key: "foo", value: "bar" }]);
+	} catch {
+		t.expect(errorEmitted).toBeTruthy();
+	}
+});
+
 test.it("keyv has / false", async (t) => {
 	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
@@ -164,12 +225,7 @@ test.it("clear should emit an error", async (t) => {
 });
 
 test.it("delete should emit an error", async (t) => {
-	const options = {
-		logger: {
-			log() {},
-		},
-	};
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211", options) });
+	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
 	keyv.on("error", () => {
 		t.expect(true).toBeTruthy();
@@ -181,12 +237,7 @@ test.it("delete should emit an error", async (t) => {
 });
 
 test.it("set should emit an error", async (t) => {
-	const options = {
-		logger: {
-			log() {},
-		},
-	};
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211", options) });
+	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
 	keyv.on("error", () => {
 		t.expect(true).toBeTruthy();
@@ -198,12 +249,7 @@ test.it("set should emit an error", async (t) => {
 });
 
 test.it("get should emit an error", async (t) => {
-	const options = {
-		logger: {
-			log() {},
-		},
-	};
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211", options) });
+	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
 	keyv.on("error", () => {
 		t.expect(true).toBeTruthy();
@@ -212,6 +258,13 @@ test.it("get should emit an error", async (t) => {
 	try {
 		await keyv.get("foo");
 	} catch {}
+});
+
+test.it("disconnect should work", async (t) => {
+	const memcache = new KeyvMemcache(uri);
+	await memcache.set("disconnect-test", "value");
+	await memcache.disconnect();
+	t.expect(true).toBeTruthy();
 });
 
 const store = () => keyvMemcache;

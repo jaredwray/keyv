@@ -5,3 +5,5 @@ packages:
   - 'storage/*'
   - 'website'
 minimumReleaseAge: 2880
+minimumReleaseAgeExclude:
+  - memcache
