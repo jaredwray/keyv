@@ -163,34 +163,6 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Clears all data from the memcache server by flushing it.
-	 * Note: this flushes the entire server, not just the current namespace.
-	 */
-	async clear(): Promise<void> {
-		try {
-			await this.client.flush();
-		} catch (error) {
-			this.emit("error", error);
-			throw error;
-		}
-	}
-
-	/**
-	 * Formats a key by prepending the namespace if one is set.
-	 * @param key - The key to format
-	 * @returns The formatted key (e.g., `'namespace:key'`), or the original key if no namespace is set
-	 */
-	formatKey(key: string) {
-		let result = key;
-
-		if (this.namespace) {
-			result = `${this.namespace.trim()}:${key.trim()}`;
-		}
-
-		return result;
-	}
-
-	/**
 	 * Checks whether a key exists in the memcache server.
 	 * @param key - The key to check
 	 * @returns `true` if the key exists, `false` otherwise. Returns `false` on any error.
@@ -218,10 +190,38 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Clears all data from the memcache server by flushing it.
+	 * Note: this flushes the entire server, not just the current namespace.
+	 */
+	async clear(): Promise<void> {
+		try {
+			await this.client.flush();
+		} catch (error) {
+			this.emit("error", error);
+			throw error;
+		}
+	}
+
+	/**
 	 * Gracefully disconnects from the memcache server.
 	 */
 	async disconnect(): Promise<void> {
 		await this.client.disconnect();
+	}
+
+	/**
+	 * Formats a key by prepending the namespace if one is set.
+	 * @param key - The key to format
+	 * @returns The formatted key (e.g., `'namespace:key'`), or the original key if no namespace is set
+	 */
+	formatKey(key: string) {
+		let result = key;
+
+		if (this.namespace) {
+			result = `${this.namespace.trim()}:${key.trim()}`;
+		}
+
+		return result;
 	}
 }
 
