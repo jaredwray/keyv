@@ -46,12 +46,8 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 			...options,
 		};
 
-		if (typeof uri === "string" && !allOptions.nodes) {
-			allOptions.nodes = [uri];
-		}
-
 		if (!allOptions.nodes) {
-			allOptions.nodes = ["localhost:11211"];
+			allOptions.nodes = typeof uri === "string" ? [uri] : ["localhost:11211"];
 		}
 
 		this.opts = allOptions;
