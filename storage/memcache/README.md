@@ -14,6 +14,16 @@
 - [Keyv Compression is not Supported](#keyv-compression-is-not-supported)
 - [Usage](#usage)
 - [Usage with Namespaces](#usage-with-namespaces)
+- [API](#api)
+  - [.get(key)](#getkey)
+  - [.getMany(keys)](#getmanykeys)
+  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.delete(key)](#deletekey)
+  - [.deleteMany(keys)](#deletemanykeys)
+  - [.clear()](#clear)
+  - [.has(key)](#haskey)
+  - [.disconnect()](#disconnect)
+  - [.formatKey(key)](#formatkeykey)
 - [Works with Memcached and Google Cloud](#works-with-memcached-and-google-cloud)
   - [Using Memcached](#using-memcached)
   - [Using Google Cloud](#using-google-cloud)
@@ -78,6 +88,101 @@ await keyv2.set("foo","bar2", 6000) //Expiring time is optional
 const obj1 = await keyv1.get("foo"); //will return bar1
 const obj2 = await keyv2.get("foo"); //will return bar2
 
+```
+
+## API
+
+### .get(key)
+
+Retrieves a value from the memcache server. Returns the stored data or `undefined` if the key does not exist.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.set('foo', 'bar');
+const result = await memcache.get('foo'); // { value: 'bar', expires: ... }
+```
+
+### .getMany(keys)
+
+Retrieves multiple values from the memcache server. Returns an array of stored data corresponding to each key.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.set('key1', 'value1');
+await memcache.set('key2', 'value2');
+const results = await memcache.getMany(['key1', 'key2']);
+```
+
+### .set(key, value, ttl?)
+
+Stores a value in the memcache server. The optional `ttl` parameter is in milliseconds and is converted to seconds internally.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.set('foo', 'bar'); // no expiration
+await memcache.set('foo', 'bar', 5000); // expires in 5 seconds
+```
+
+### .delete(key)
+
+Deletes a key from the memcache server. Returns `true` if the key was deleted.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.set('foo', 'bar');
+const deleted = await memcache.delete('foo'); // true
+```
+
+### .deleteMany(keys)
+
+Deletes multiple keys from the memcache server. Returns `true` only if all keys were successfully deleted.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.set('key1', 'value1');
+await memcache.set('key2', 'value2');
+const allDeleted = await memcache.deleteMany(['key1', 'key2']); // true
+```
+
+### .clear()
+
+Flushes all data from the memcache server. Note: this clears the entire server, not just keys within the current namespace.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.clear();
+```
+
+### .has(key)
+
+Checks whether a key exists in the memcache server. Returns `false` on any error.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.set('foo', 'bar');
+const exists = await memcache.has('foo'); // true
+const missing = await memcache.has('baz'); // false
+```
+
+### .disconnect()
+
+Gracefully disconnects from the memcache server.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.disconnect();
+```
+
+### .formatKey(key)
+
+Formats a key by prepending the namespace if one is set. If no namespace is set, the key is returned as-is.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+memcache.formatKey('foo'); // 'foo'
+
+memcache.namespace = 'myapp';
+memcache.formatKey('foo'); // 'myapp:foo'
 ```
 
 ## Works with Memcached and Google Cloud
