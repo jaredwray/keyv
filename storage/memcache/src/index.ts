@@ -1,6 +1,7 @@
 import EventEmitter from "node:events";
 import { defaultDeserialize } from "@keyv/serialize";
 import type { KeyvStoreAdapter, StoredData } from "keyv";
+import { Keyv } from "keyv";
 import { Memcache, type MemcacheOptions } from "memcache";
 
 /**
@@ -244,5 +245,10 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		await this.client.disconnect();
 	}
 }
+
+export const createKeyv = (
+	uri?: string | KeyvMemcacheOptions,
+	options?: KeyvMemcacheOptions,
+) => new Keyv({ store: new KeyvMemcache(uri, options) });
 
 export default KeyvMemcache;

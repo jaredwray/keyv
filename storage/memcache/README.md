@@ -12,6 +12,7 @@
 
 - [Install](#install)
 - [Keyv Compression is not Supported](#keyv-compression-is-not-supported)
+- [Quick Start with createKeyv](#quick-start-with-createkeyv)
 - [Usage](#usage)
 - [Usage with Namespaces](#usage-with-namespaces)
 - [API](#api)
@@ -46,6 +47,33 @@ npm install --save @keyv/memcache
 ## Keyv Compression is not Supported
 
 This package does not support compression. If you need compression, please use the `@keyv/redis` or another service package instead.
+
+## Quick Start with createKeyv
+
+The `createKeyv` helper creates a `Keyv` instance with a Memcache store in a single call:
+
+```js
+import { createKeyv } from '@keyv/memcache';
+
+const keyv = createKeyv('localhost:11211');
+
+// set a value
+await keyv.set('foo', 'bar', 6000);
+
+// get a value
+const value = await keyv.get('foo');
+
+// delete a value
+await keyv.delete('foo');
+```
+
+You can also pass an options object:
+
+```js
+import { createKeyv } from '@keyv/memcache';
+
+const keyv = createKeyv({ url: 'localhost:11211' });
+```
 
 ## Usage
 
