@@ -18,10 +18,12 @@
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
   - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
   - [.has(key)](#haskey)
+  - [.hasMany(keys)](#hasmanykeys)
   - [.disconnect()](#disconnect)
   - [.formatKey(key)](#formatkeykey)
 - [Works with Memcached and Google Cloud](#works-with-memcached-and-google-cloud)
@@ -123,6 +125,18 @@ await memcache.set('foo', 'bar'); // no expiration
 await memcache.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
+### .setMany(entries)
+
+Stores multiple values in the memcache server. Each entry can have an optional `ttl` in milliseconds.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.setMany([
+  { key: 'key1', value: 'value1' },
+  { key: 'key2', value: 'value2', ttl: 5000 },
+]);
+```
+
 ### .delete(key)
 
 Deletes a key from the memcache server. Returns `true` if the key was deleted.
@@ -162,6 +176,17 @@ const memcache = new KeyvMemcache('localhost:11211');
 await memcache.set('foo', 'bar');
 const exists = await memcache.has('foo'); // true
 const missing = await memcache.has('baz'); // false
+```
+
+### .hasMany(keys)
+
+Checks whether multiple keys exist in the memcache server. Returns an array of booleans corresponding to each key.
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+await memcache.set('key1', 'value1');
+await memcache.set('key2', 'value2');
+const results = await memcache.hasMany(['key1', 'key2', 'key3']); // [true, true, false]
 ```
 
 ### .disconnect()

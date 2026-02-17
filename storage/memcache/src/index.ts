@@ -137,6 +137,26 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Stores multiple values in the memcache server.
+	 * @param entries - An array of objects containing key, value, and optional ttl
+	 */
+	async setMany(
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		entries: Array<{ key: string; value: any; ttl?: number }>,
+	): Promise<void> {
+		const promises = entries.map(async ({ key, value, ttl }) =>
+			this.set(key, value, ttl),
+		);
+		const results = await Promise.allSettled(promises);
+		for (const result of results) {
+			if (result.status === "rejected") {
+				this.emit("error", result.reason);
+				throw result.reason as Error;
+			}
+		}
+	}
+
+	/**
 	 * Deletes a key from the memcache server.
 	 * @param key - The key to delete
 	 * @returns `true` if the key was deleted, `false` otherwise
@@ -202,6 +222,19 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		} catch {
 			return false;
 		}
+	}
+
+	/**
+	 * Checks whether multiple keys exist in the memcache server.
+	 * @param keys - An array of keys to check
+	 * @returns An array of booleans indicating whether each key exists
+	 */
+	async hasMany(keys: string[]): Promise<boolean[]> {
+		const promises = keys.map(async (key) => this.has(key));
+		const results = await Promise.allSettled(promises);
+		return results.map((result) =>
+			result.status === "fulfilled" ? result.value : false,
+		);
 	}
 
 	/**
