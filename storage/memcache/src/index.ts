@@ -8,13 +8,9 @@ import { Memcache, type MemcacheOptions } from "memcache";
  * Extends the Memcache client options with additional Keyv-specific properties.
  */
 export type KeyvMemcacheOptions = {
-	/** The URL of the memcache server */
-	url?: string;
-	/** Default expiration time in seconds */
-	expires?: number;
-} & Partial<MemcacheOptions> &
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	Record<string, any>;
+	/** Optional namespace for key prefixing */
+	namespace?: string;
+} & MemcacheOptions;
 
 /**
  * Memcache storage adapter for Keyv.
@@ -46,21 +42,22 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		super();
 
 		const allOptions: KeyvMemcacheOptions = {
-			...(typeof uri === "object" ? uri : { uri }),
+			...(typeof uri === "object" ? uri : {}),
 			...options,
 		};
 
-		if (allOptions.uri && !allOptions.url) {
-			allOptions.url = allOptions.uri;
+		if (typeof uri === "string" && !allOptions.nodes) {
+			allOptions.nodes = [uri];
 		}
 
-		const connectionUri = allOptions.url || "localhost:11211";
-		allOptions.url = allOptions.uri = connectionUri;
+		if (!allOptions.nodes) {
+			allOptions.nodes = ["localhost:11211"];
+		}
 
 		this.opts = allOptions;
 
-		const { url, uri: _uri, expires, ...memcacheOptions } = allOptions;
-		this.client = new Memcache({ nodes: [connectionUri], ...memcacheOptions });
+		const { namespace: _namespace, ...memcacheOptions } = allOptions;
+		this.client = new Memcache(memcacheOptions);
 	}
 
 	/**
