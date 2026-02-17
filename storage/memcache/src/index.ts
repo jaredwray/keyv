@@ -61,15 +61,6 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Returns the formatted namespace string.
-	 * @returns The namespace in the format `'namespace:{namespace}'`
-	 */
-	_getNamespace(): string {
-		// biome-ignore lint/style/noNonNullAssertion: fix this
-		return `namespace:${this.namespace!}`;
-	}
-
-	/**
 	 * Retrieves a value from the memcache server.
 	 * @param key - The key to retrieve
 	 * @returns The stored data, or `{ value: undefined, expires: 0 }` if the key does not exist

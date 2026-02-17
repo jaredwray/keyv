@@ -51,10 +51,6 @@ test.it("keyv get", async (t) => {
 	t.expect(await keyv.get("foo")).toBe("bar");
 });
 
-test.it("get namespace", (t) => {
-	t.expect(keyvMemcache._getNamespace()).toBe("namespace:keyv");
-});
-
 test.it("format key for no namespace", (t) => {
 	t.expect(new KeyvMemcache(uri).formatKey("foo")).toBe("foo");
 });
