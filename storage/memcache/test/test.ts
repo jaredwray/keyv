@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import { keyvApiTests, keyvValueTests } from "@keyv/test-suite";
 import Keyv from "keyv";
 import * as test from "vitest";
-import KeyvMemcache from "../src/index.js";
+import KeyvMemcache, { createKeyv } from "../src/index.js";
 
 const snooze = async (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
@@ -265,6 +265,11 @@ test.it("disconnect should work", async (t) => {
 	await memcache.set("disconnect-test", "value");
 	await memcache.disconnect();
 	t.expect(true).toBeTruthy();
+});
+
+test.it("createKeyv returns a Keyv instance", (t) => {
+	const keyv = createKeyv(uri);
+	t.expect(keyv).toBeInstanceOf(Keyv);
 });
 
 const store = () => keyvMemcache;
