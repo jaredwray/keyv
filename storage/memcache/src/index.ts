@@ -14,27 +14,28 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	public namespace?: string;
 	public client: Memcache;
 	public opts: KeyvMemcacheOptions;
-	constructor(uri?: string, options?: KeyvMemcacheOptions) {
+	constructor(
+		uri?: string | KeyvMemcacheOptions,
+		options?: KeyvMemcacheOptions,
+	) {
 		super();
 
-		options = {
-			...(typeof uri === "string" ? { uri } : uri),
+		const allOptions: KeyvMemcacheOptions = {
+			...(typeof uri === "object" ? uri : { uri }),
 			...options,
 		};
 
-		if (options.uri && options.url === undefined) {
-			options.url = options.uri;
+		if (allOptions.uri && !allOptions.url) {
+			allOptions.url = allOptions.uri;
 		}
 
-		if (uri === undefined) {
-			uri = "localhost:11211";
-			options.url = options.uri = uri;
-		}
+		const connectionUri = allOptions.url || "localhost:11211";
+		allOptions.url = allOptions.uri = connectionUri;
 
-		this.opts = options;
+		this.opts = allOptions;
 
-		const { url, uri: _uri, expires, ...memcacheOptions } = options;
-		this.client = new Memcache({ nodes: [uri], ...memcacheOptions });
+		const { url, uri: _uri, expires, ...memcacheOptions } = allOptions;
+		this.client = new Memcache({ nodes: [connectionUri], ...memcacheOptions });
 	}
 
 	_getNamespace(): string {
