@@ -1,19 +1,18 @@
 import EventEmitter from "node:events";
 import { defaultDeserialize } from "@keyv/serialize";
-import type { Buffer } from "buffer";
 import type { KeyvStoreAdapter, StoredData } from "keyv";
-import memcache from "memjs";
+import { Memcache, type MemcacheOptions } from "memcache";
 
 export type KeyvMemcacheOptions = {
 	url?: string;
 	expires?: number;
-} & memcache.ClientOptions &
+} & Partial<MemcacheOptions> &
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	Record<string, any>;
 
 export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	public namespace?: string;
-	public client: memcache.Client;
+	public client: Memcache;
 	public opts: KeyvMemcacheOptions;
 	constructor(uri?: string, options?: KeyvMemcacheOptions) {
 		super();
@@ -34,7 +33,8 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 
 		this.opts = options;
 
-		this.client = memcache.Client.create(uri, options);
+		const { url, uri: _uri, expires, ...memcacheOptions } = options;
+		this.client = new Memcache({ nodes: [uri], ...memcacheOptions });
 	}
 
 	_getNamespace(): string {
@@ -43,28 +43,22 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async get<Value>(key: string): Promise<StoredData<Value>> {
-		return new Promise((resolve, reject) => {
-			this.client.get(this.formatKey(key), (error, value) => {
-				if (error) {
-					this.emit("error", error);
-					reject(error);
-				} else {
-					let value_: StoredData<Value>;
-					if (value === null) {
-						value_ = {
-							value: undefined,
-							expires: 0,
-						};
-					} else {
-						value_ = this.opts.deserialize
-							? this.opts.deserialize(value)
-							: defaultDeserialize(value);
-					}
+		try {
+			const value = await this.client.get(this.formatKey(key));
+			if (value === undefined) {
+				return {
+					value: undefined,
+					expires: 0,
+				};
+			}
 
-					resolve(value_);
-				}
-			});
-		});
+			return this.opts.deserialize
+				? this.opts.deserialize(value)
+				: defaultDeserialize(value);
+		} catch (error) {
+			this.emit("error", error);
+			throw error;
+		}
 	}
 
 	async getMany<Value>(keys: string[]) {
@@ -86,30 +80,23 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
-		const options: KeyvMemcacheOptions = {};
+		const exptime = ttl !== undefined ? Math.floor(ttl / 1000) : 0;
 
-		if (ttl !== undefined) {
-			options.expires = options.ttl = Math.floor(ttl / 1000); // Moving to seconds
+		try {
+			await this.client.set(this.formatKey(key), value as string, exptime);
+		} catch (error) {
+			this.emit("error", error);
+			throw error;
 		}
-
-		await this.client.set(
-			this.formatKey(key),
-			value as unknown as Buffer,
-			options,
-		);
 	}
 
 	async delete(key: string): Promise<boolean> {
-		return new Promise((resolve, reject) => {
-			this.client.delete(this.formatKey(key), (error, success) => {
-				if (error) {
-					this.emit("error", error);
-					reject(error);
-				} else {
-					resolve(Boolean(success));
-				}
-			});
-		});
+		try {
+			return await this.client.delete(this.formatKey(key));
+		} catch (error) {
+			this.emit("error", error);
+			throw error;
+		}
 	}
 
 	async deleteMany(keys: string[]) {
@@ -120,16 +107,12 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async clear(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.client.flush((error) => {
-				if (error) {
-					this.emit("error", error);
-					reject(error);
-				} else {
-					resolve(undefined);
-				}
-			});
-		});
+		try {
+			await this.client.flush();
+		} catch (error) {
+			this.emit("error", error);
+			throw error;
+		}
 	}
 
 	formatKey(key: string) {
@@ -143,15 +126,16 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async has(key: string): Promise<boolean> {
-		return new Promise((resolve) => {
-			this.client.get(this.formatKey(key), (error, value) => {
-				if (error) {
-					resolve(false);
-				} else {
-					resolve(value !== null);
-				}
-			});
-		});
+		try {
+			const value = await this.client.get(this.formatKey(key));
+			return value !== undefined;
+		} catch {
+			return false;
+		}
+	}
+
+	async disconnect(): Promise<void> {
+		await this.client.disconnect();
 	}
 }
 

@@ -164,12 +164,7 @@ test.it("clear should emit an error", async (t) => {
 });
 
 test.it("delete should emit an error", async (t) => {
-	const options = {
-		logger: {
-			log() {},
-		},
-	};
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211", options) });
+	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
 	keyv.on("error", () => {
 		t.expect(true).toBeTruthy();
@@ -181,12 +176,7 @@ test.it("delete should emit an error", async (t) => {
 });
 
 test.it("set should emit an error", async (t) => {
-	const options = {
-		logger: {
-			log() {},
-		},
-	};
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211", options) });
+	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
 	keyv.on("error", () => {
 		t.expect(true).toBeTruthy();
@@ -198,12 +188,7 @@ test.it("set should emit an error", async (t) => {
 });
 
 test.it("get should emit an error", async (t) => {
-	const options = {
-		logger: {
-			log() {},
-		},
-	};
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211", options) });
+	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
 	keyv.on("error", () => {
 		t.expect(true).toBeTruthy();
@@ -212,6 +197,13 @@ test.it("get should emit an error", async (t) => {
 	try {
 		await keyv.get("foo");
 	} catch {}
+});
+
+test.it("disconnect should work", async (t) => {
+	const memcache = new KeyvMemcache(uri);
+	await memcache.set("disconnect-test", "value");
+	await memcache.disconnect();
+	t.expect(true).toBeTruthy();
 });
 
 const store = () => keyvMemcache;
