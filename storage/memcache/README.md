@@ -32,6 +32,7 @@
 - [SASL Authentication](#sasl-authentication)
 - [AWS ElastiCache Auto Discovery](#aws-elasticache-auto-discovery)
 - [API](#api)
+  - [constructor(uri?, options?)](#constructoruri-options)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
   - [.set(key, value, ttl?)](#setkey-value-ttl)
@@ -228,6 +229,34 @@ const keyv = new Keyv({ store: memcache });
 | `useLegacyCommand` | `boolean` | `false` | Use legacy command for engine versions < 1.4.14 |
 
 ## API
+
+### constructor(uri?, options?)
+
+Creates a new `KeyvMemcache` instance.
+
+- `uri` — A memcache server URI string (e.g., `'localhost:11211'`) or a `KeyvMemcacheOptions` object. Defaults to `'localhost:11211'` if not provided.
+- `options` — Optional `KeyvMemcacheOptions` object. When both `uri` and `options` are objects, they are merged together.
+
+The `namespace` property is extracted from the resolved options and used for key prefixing. All remaining options are passed directly to the underlying `Memcache` client.
+
+```js
+import KeyvMemcache from '@keyv/memcache';
+
+// Using a URI string
+const memcache = new KeyvMemcache('localhost:11211');
+
+// Using an options object
+const memcache2 = new KeyvMemcache({ nodes: ['localhost:11211'], timeout: 3000 });
+
+// Using multiple nodes
+const memcache3 = new KeyvMemcache({
+  nodes: ['server1:11211', 'server2:11211', 'server3:11211'],
+  namespace: 'myapp',
+});
+
+// Using a URI string with additional options
+const memcache4 = new KeyvMemcache('localhost:11211', { namespace: 'myapp' });
+```
 
 ### .get(key)
 
