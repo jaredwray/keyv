@@ -310,9 +310,6 @@ importers:
 
   storage/memcache:
     dependencies:
-      '@keyv/serialize':
-        specifier: workspace:^
-        version: link:../../serialization/serialize
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv

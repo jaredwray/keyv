@@ -1,5 +1,4 @@
 import EventEmitter from "node:events";
-import { defaultDeserialize } from "@keyv/serialize";
 import type { KeyvStoreAdapter, StoredData } from "keyv";
 import { Keyv } from "keyv";
 import { Memcache, type MemcacheOptions } from "memcache";
@@ -82,15 +81,10 @@ export class KeyvMemcache extends EventEmitter implements KeyvStoreAdapter {
 		try {
 			const value = await this.client.get(this.formatKey(key));
 			if (value === undefined) {
-				return {
-					value: undefined,
-					expires: 0,
-				};
+				return undefined;
 			}
 
-			return this.opts.deserialize
-				? this.opts.deserialize(value)
-				: defaultDeserialize(value);
+			return value as StoredData<Value>;
 		} catch (error) {
 			this.emit("error", error);
 			throw error;
