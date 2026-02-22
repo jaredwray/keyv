@@ -507,7 +507,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * Disconnects from the PostgreSQL database and releases the connection pool.
 	 */
 	public async disconnect(): Promise<void> {
-		await endPool();
+		await endPool(this._uri);
 	}
 
 	/**

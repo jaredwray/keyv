@@ -126,6 +126,10 @@ npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname
 
 The migration runs inside a transaction and will roll back automatically if anything fails.
 
+**Important notes:**
+- The script only migrates rows where `namespace IS NULL`. Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
+- Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
+
 # Constructor Options
 
 `KeyvPostgres` accepts a connection URI string or an options object. The options object accepts the following properties along with any [`PoolConfig`](https://node-postgres.com/apis/pool) properties from the `pg` library (e.g. `max`, `idleTimeoutMillis`, `connectionTimeoutMillis`):

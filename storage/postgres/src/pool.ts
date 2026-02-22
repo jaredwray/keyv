@@ -1,19 +1,21 @@
 import pg, { type Pool, type PoolConfig } from "pg";
 
-let postgresPool: Pool | undefined;
-let globalUri: string | undefined;
+const pools = new Map<string, Pool>();
 
-export const pool = (uri: string, options: PoolConfig = {}) => {
-	if (globalUri !== uri) {
-		postgresPool = undefined;
-		globalUri = uri;
+export const pool = (uri: string, options: PoolConfig = {}): Pool => {
+	let existingPool = pools.get(uri);
+	if (!existingPool) {
+		existingPool = new pg.Pool({ connectionString: uri, ...options });
+		pools.set(uri, existingPool);
 	}
 
-	postgresPool ??= new pg.Pool({ connectionString: uri, ...options });
-	return postgresPool;
+	return existingPool;
 };
 
-export const endPool = async () => {
-	await postgresPool?.end();
-	globalUri = undefined;
+export const endPool = async (uri: string) => {
+	const existingPool = pools.get(uri);
+	if (existingPool) {
+		await existingPool.end();
+		pools.delete(uri);
+	}
 };

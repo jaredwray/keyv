@@ -622,6 +622,35 @@ interface KeyvEncryption {
 
 ---
 
+### Native Hashing for Key and Namespace
+
+Keyv now supports native hashing when `key` or `namespace` is too long. By default, this is not enabled but if you set `keyLength` or `namespaceLength` and submit a key it will use hashing to keep the maximum length and not error out. This helps with many of the storage adapters such as `memcache`, `postgres`, `mysql`, `sqlite`, etc.
+
+```javascript
+import Keyv from 'keyv';
+
+const keyv = new Keyv({
+  keyLength: 255,
+  namespaceLenght: 255,
+});
+```
+
+You can even set what hash algorithm to use via the `hash` property as we use [hashery](https://npmjs.org/package/hashery).
+
+```javascript
+import Keyv from 'keyv';
+
+const keyv = new Keyv({
+  keyLength: 255,
+  namespaceLenght: 255,
+  hashAlgorithm: 'SHA-256'
+});
+
+// or via properties
+
+keyv.hash.defaultAlgorithm = 'DJB2';
+```
+
 ### New Identification Functions
 
 Keyv v6 provides new functions to help identify adapters and capabilities.
