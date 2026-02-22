@@ -186,7 +186,6 @@ test.it("should have correct default property values", (t) => {
 	t.expect(keyv.table).toBe("keyv");
 	t.expect(keyv.keySize).toBe(255);
 	t.expect(keyv.schema).toBe("public");
-	t.expect(keyv.dialect).toBe("postgres");
 	t.expect(keyv.iterationLimit).toBe(10);
 	t.expect(keyv.useUnloggedTable).toBe(false);
 	t.expect(keyv.ssl).toBeUndefined();
@@ -199,7 +198,6 @@ test.it("should set properties from constructor options", (t) => {
 		table: "custom_table",
 		keySize: 512,
 		schema: "custom_schema",
-		dialect: "pg",
 		iterationLimit: 50,
 		useUnloggedTable: true,
 		ssl: { rejectUnauthorized: false },
@@ -208,7 +206,6 @@ test.it("should set properties from constructor options", (t) => {
 	t.expect(keyv.table).toBe("custom_table");
 	t.expect(keyv.keySize).toBe(512);
 	t.expect(keyv.schema).toBe("custom_schema");
-	t.expect(keyv.dialect).toBe("pg");
 	t.expect(keyv.iterationLimit).toBe(50);
 	t.expect(keyv.useUnloggedTable).toBe(true);
 	t.expect(keyv.ssl).toEqual({ rejectUnauthorized: false });
@@ -217,7 +214,6 @@ test.it("should set properties from constructor options", (t) => {
 test.it("should set uri when string is passed to constructor", (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
 	t.expect(keyv.uri).toBe(postgresUri);
-	t.expect(keyv.dialect).toBe("postgres");
 	t.expect(keyv.table).toBe("keyv");
 	t.expect(keyv.schema).toBe("public");
 });
@@ -236,8 +232,6 @@ test.it("should be able to get and set individual properties", (t) => {
 	t.expect(keyv.useUnloggedTable).toBe(true);
 	keyv.ssl = { rejectUnauthorized: false };
 	t.expect(keyv.ssl).toEqual({ rejectUnauthorized: false });
-	keyv.dialect = "pg";
-	t.expect(keyv.dialect).toBe("pg");
 	keyv.uri = "postgresql://localhost:5433";
 	t.expect(keyv.uri).toBe("postgresql://localhost:5433");
 	keyv.namespace = "test-ns";

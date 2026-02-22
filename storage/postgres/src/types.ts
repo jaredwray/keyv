@@ -7,7 +7,6 @@ export type KeyvPostgresOptions = {
 	keySize?: number;
 	schema?: string;
 	ssl?: any;
-	dialect?: string;
 	iterationLimit?: number;
 	useUnloggedTable?: boolean;
 } & PoolConfig;

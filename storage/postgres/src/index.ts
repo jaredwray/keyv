@@ -55,12 +55,6 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	private _ssl: any;
 
 	/**
-	 * The database dialect identifier.
-	 * @default 'postgres'
-	 */
-	private _dialect = "postgres";
-
-	/**
 	 * The number of rows to fetch per iteration batch.
 	 * @default 10
 	 */
@@ -215,21 +209,6 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get the database dialect identifier.
-	 * @default 'postgres'
-	 */
-	public get dialect(): string {
-		return this._dialect;
-	}
-
-	/**
-	 * Set the database dialect identifier.
-	 */
-	public set dialect(value: string) {
-		this._dialect = value;
-	}
-
-	/**
 	 * Get the number of rows to fetch per iteration batch.
 	 * @default 10
 	 */
@@ -270,7 +249,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			keySize: this._keySize,
 			schema: this._schema,
 			ssl: this._ssl,
-			dialect: this._dialect,
+			dialect: "postgres",
 			iterationLimit: this._iterationLimit,
 			useUnloggedTable: this._useUnloggedTable,
 			...this._poolConfig,
@@ -526,10 +505,6 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			this._ssl = options.ssl;
 		}
 
-		if (options.dialect !== undefined) {
-			this._dialect = options.dialect;
-		}
-
 		if (options.iterationLimit !== undefined) {
 			this._iterationLimit = options.iterationLimit;
 		}
@@ -544,7 +519,6 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			keySize,
 			schema,
 			ssl,
-			dialect,
 			iterationLimit,
 			useUnloggedTable,
 			...poolConfigRest

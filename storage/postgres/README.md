@@ -1,8 +1,8 @@
-# @keyv/postgres [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/postgres [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > PostgreSQL storage adapter for Keyv
 
-[![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/btestsuild.yaml)
+[![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/v/@keyv/postgres.svg)](https://www.npmjs.com/package/@keyv/postgres)
 [![npm](https://img.shields.io/npm/dm/@keyv/postgres)](https://npmjs.com/package/@keyv/postgres)
@@ -15,7 +15,16 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 
 - [Install](#install)
 - [Usage](#usage)
-- [Options](#options)
+- [Constructor Options](#constructor-options)
+- [Properties](#properties)
+  - [uri](#uri)
+  - [table](#table)
+  - [keySize](#keysize)
+  - [schema](#schema)
+  - [ssl](#ssl)
+  - [iterationLimit](#iterationlimit)
+  - [useUnloggedTable](#useunloggedtable)
+  - [namespace](#namespace)
 - [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
 - [Connection Pooling](#connection-pooling)
 - [SSL/TLS Connections](#ssltls-connections)
@@ -46,51 +55,143 @@ npm install --save keyv @keyv/postgres
 import Keyv from 'keyv';
 import KeyvPostgres from '@keyv/postgres';
 
-const keyv = new Keyv(new KeyvPostgres('postgresql://user:pass@localhost:5432/dbname'));
+const keyv = new Keyv({ store: new KeyvPostgres('postgresql://user:pass@localhost:5432/dbname') });
 keyv.on('error', handleConnectionError);
 ```
 
-You can specify the `table` option.
-
-e.g:
+You can specify the `table` and `schema` options:
 
 ```js
-const keyvPostgres = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', table: 'cache' });
-const keyv = new Keyv(keyvPostgres);
+const keyvPostgres = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', table: 'cache', schema: 'keyv' });
+const keyv = new Keyv({ store: keyvPostgres });
 ```
 
-You can specify the `schema` option (default is `public`).
-
-e.g:
+You can also use the `createKeyv` helper function to create `Keyv` with `KeyvPostgres` store:
 
 ```js
-const keyvPostgres = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', schema: 'keyv' });
-const keyv = new Keyv(keyvPostgres);
-```
-
-You can also use the `createKeyv` helper function to create `Keyv` with `KeyvPostgres` store.
-
-```js
-import {createKeyv} from '@keyv/postgres';
+import { createKeyv } from '@keyv/postgres';
 
 const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', table: 'cache', schema: 'keyv' });
 ```
 
-# Options
+# Constructor Options
 
-`KeyvPostgres` accepts the following options:
+`KeyvPostgres` accepts a connection URI string or an options object. The options object accepts the following properties along with any [`PoolConfig`](https://node-postgres.com/apis/pool) properties from the `pg` library (e.g. `max`, `idleTimeoutMillis`, `connectionTimeoutMillis`):
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `uri` | `string` | `"postgresql://localhost:5432"` | PostgreSQL connection URI |
-| `table` | `string` | `"keyv"` | Table name for key-value storage |
+| `uri` | `string` | `'postgresql://localhost:5432'` | PostgreSQL connection URI |
+| `table` | `string` | `'keyv'` | Table name for key-value storage |
 | `keySize` | `number` | `255` | Maximum key column size (VARCHAR length) |
-| `schema` | `string` | `"public"` | PostgreSQL schema name (created automatically if it doesn't exist) |
+| `schema` | `string` | `'public'` | PostgreSQL schema name (created automatically if it doesn't exist) |
 | `ssl` | `object` | `undefined` | SSL/TLS configuration passed to the `pg` driver |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `useUnloggedTable` | `boolean` | `false` | Use a PostgreSQL UNLOGGED table for better write performance |
 
-`KeyvPostgresOptions` extends `PoolConfig` from the [`pg`](https://node-postgres.com/apis/pool) library, so any pool configuration options (e.g. `max`, `idleTimeoutMillis`, `connectionTimeoutMillis`) can be passed directly.
+# Properties
+
+All configuration options are exposed as properties with getters and setters on the `KeyvPostgres` instance. You can read or update them after construction.
+
+## uri
+
+Get or set the PostgreSQL connection URI.
+
+- Type: `string`
+- Default: `'postgresql://localhost:5432'`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname' });
+console.log(store.uri); // 'postgresql://user:pass@localhost:5432/dbname'
+```
+
+## table
+
+Get or set the table name used for storage.
+
+- Type: `string`
+- Default: `'keyv'`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname' });
+console.log(store.table); // 'keyv'
+store.table = 'cache';
+```
+
+## keySize
+
+Get or set the maximum key size (VARCHAR length) for the key column.
+
+- Type: `number`
+- Default: `255`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', keySize: 512 });
+console.log(store.keySize); // 512
+```
+
+## schema
+
+Get or set the PostgreSQL schema name. Non-public schemas are created automatically if they don't exist.
+
+- Type: `string`
+- Default: `'public'`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', schema: 'keyv' });
+console.log(store.schema); // 'keyv'
+```
+
+## ssl
+
+Get or set the SSL configuration for the PostgreSQL connection. Passed directly to the `pg` driver.
+
+- Type: `object | undefined`
+- Default: `undefined`
+
+```js
+const store = new KeyvPostgres({
+  uri: 'postgresql://user:pass@localhost:5432/dbname',
+  ssl: { rejectUnauthorized: false },
+});
+console.log(store.ssl); // { rejectUnauthorized: false }
+```
+
+## iterationLimit
+
+Get or set the number of rows to fetch per iteration batch.
+
+- Type: `number`
+- Default: `10`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', iterationLimit: 50 });
+console.log(store.iterationLimit); // 50
+```
+
+## useUnloggedTable
+
+Get or set whether to use a PostgreSQL unlogged table for better write performance. Unlogged tables are faster but data is lost on crash.
+
+- Type: `boolean`
+- Default: `false`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', useUnloggedTable: true });
+console.log(store.useUnloggedTable); // true
+```
+
+## namespace
+
+Get or set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+
+- Type: `string | undefined`
+- Default: `undefined`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname' });
+store.namespace = 'my-namespace';
+console.log(store.namespace); // 'my-namespace'
+```
 
 # Using an Unlogged Table for Performance
 
@@ -98,7 +199,7 @@ By default, the adapter creates a logged table. If you want to use an unlogged t
 
 ```js
 const keyvPostgres = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', useUnloggedTable: true });
-const keyv = new Keyv(keyvPostgres);
+const keyv = new Keyv({ store: keyvPostgres });
 ```
 
 From the [PostgreSQL documentation](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-UNLOGGED):
@@ -112,7 +213,7 @@ If this is specified, any sequences created together with the unlogged table (fo
 The adapter automatically uses the default settings on the `pg` package for connection pooling. You can override these settings by passing the options to the constructor such as setting the `max` pool size.
 
 ```js
-const keyv = new Keyv(new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', max: 20 }));
+const keyv = new Keyv({ store: new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', max: 20 }) });
 ```
 
 # SSL/TLS Connections
@@ -126,7 +227,7 @@ const keyvPostgres = new KeyvPostgres({
     rejectUnauthorized: false,
   },
 });
-const keyv = new Keyv(keyvPostgres);
+const keyv = new Keyv({ store: keyvPostgres });
 ```
 
 For more details on SSL configuration, see the [node-postgres SSL documentation](https://node-postgres.com/features/ssl).
@@ -213,7 +314,7 @@ await keyv.clear();
 
 ## .iterator(namespace?)
 
-Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` option.
+Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` property.
 
 ```js
 const iterator = keyv.iterator();
