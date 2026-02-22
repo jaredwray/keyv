@@ -349,16 +349,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async delete(key: string): Promise<boolean> {
 		const strippedKey = this._removeKeyPrefix(key);
 		const ns = this._getNamespaceValue();
-		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [strippedKey, ns]);
-
-		if (rows[0] === undefined) {
-			return false;
-		}
-
-		await this.query(del, [strippedKey, ns]);
-		return true;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
+		const rows = await this.query(del, [strippedKey, ns]);
+		return rows.length > 0;
 	}
 
 	/**
@@ -369,16 +362,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		const strippedKeys = keys.map((k) => this._removeKeyPrefix(k));
 		const ns = this._getNamespaceValue();
-		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [strippedKeys, ns]);
-
-		if (rows[0] === undefined) {
-			return false;
-		}
-
-		await this.query(del, [strippedKeys, ns]);
-		return true;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
+		const rows = await this.query(del, [strippedKeys, ns]);
+		return rows.length > 0;
 	}
 
 	/**
