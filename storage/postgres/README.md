@@ -15,8 +15,21 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 
 - [Install](#install)
 - [Usage](#usage)
+- [Options](#options)
 - [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
-- [Connection pooling](#connection-pooling)
+- [Connection Pooling](#connection-pooling)
+- [SSL/TLS Connections](#ssltls-connections)
+- [API](#api)
+  - [.set(key, value)](#setkey-value)
+  - [.setMany(entries)](#setmanyentries)
+  - [.get(key)](#getkey)
+  - [.getMany(keys)](#getmanykeys)
+  - [.has(key)](#haskey)
+  - [.delete(key)](#deletekey)
+  - [.deleteMany(keys)](#deletemanykeys)
+  - [.clear()](#clear)
+  - [.iterator(namespace?)](#iteratornamespace)
+  - [.disconnect()](#disconnect)
 - [Testing](#testing)
 - [License](#license)
 
@@ -62,7 +75,23 @@ import {createKeyv} from '@keyv/postgres';
 const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', table: 'cache', schema: 'keyv' });
 ```
 
-## Using an Unlogged Table for Performance
+# Options
+
+`KeyvPostgres` accepts the following options:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `uri` | `string` | `"postgresql://localhost:5432"` | PostgreSQL connection URI |
+| `table` | `string` | `"keyv"` | Table name for key-value storage |
+| `keySize` | `number` | `255` | Maximum key column size (VARCHAR length) |
+| `schema` | `string` | `"public"` | PostgreSQL schema name (created automatically if it doesn't exist) |
+| `ssl` | `object` | `undefined` | SSL/TLS configuration passed to the `pg` driver |
+| `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
+| `useUnloggedTable` | `boolean` | `false` | Use a PostgreSQL UNLOGGED table for better write performance |
+
+`KeyvPostgresOptions` extends `PoolConfig` from the [`pg`](https://node-postgres.com/apis/pool) library, so any pool configuration options (e.g. `max`, `idleTimeoutMillis`, `connectionTimeoutMillis`) can be passed directly.
+
+# Using an Unlogged Table for Performance
 
 By default, the adapter creates a logged table. If you want to use an unlogged table for performance, you can pass the `useUnloggedTable` option to the constructor.
 
@@ -77,12 +106,116 @@ If specified, the table is created as an unlogged table. Data written to unlogge
 
 If this is specified, any sequences created together with the unlogged table (for identity or serial columns) are also created as unlogged.
 
-# Connection pooling
+# Connection Pooling
 
 The adapter automatically uses the default settings on the `pg` package for connection pooling. You can override these settings by passing the options to the constructor such as setting the `max` pool size.
 
 ```js
 const keyv = new Keyv(new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', max: 20 }));
+```
+
+# SSL/TLS Connections
+
+You can configure SSL/TLS connections by passing the `ssl` option. This is passed directly to the underlying `pg` driver.
+
+```js
+const keyvPostgres = new KeyvPostgres({
+  uri: 'postgresql://user:pass@localhost:5432/dbname',
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+const keyv = new Keyv(keyvPostgres);
+```
+
+For more details on SSL configuration, see the [node-postgres SSL documentation](https://node-postgres.com/features/ssl).
+
+# API
+
+## .set(key, value)
+
+Set a key-value pair.
+
+```js
+await keyv.set('foo', 'bar');
+```
+
+## .setMany(entries)
+
+Set multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
+
+```js
+await keyv.setMany([
+  { key: 'foo', value: 'bar' },
+  { key: 'baz', value: 'qux' },
+]);
+```
+
+## .get(key)
+
+Get a value by key. Returns `undefined` if the key does not exist.
+
+```js
+const value = await keyv.get('foo'); // 'bar'
+```
+
+## .getMany(keys)
+
+Get multiple values at once. Returns an array of values in the same order as the keys, with `undefined` for missing keys.
+
+```js
+const values = await keyv.getMany(['foo', 'baz']); // ['bar', 'qux']
+```
+
+## .has(key)
+
+Check if a key exists. Returns a boolean.
+
+```js
+const exists = await keyv.has('foo'); // true
+```
+
+## .delete(key)
+
+Delete a key. Returns `true` if the key existed, `false` otherwise.
+
+```js
+const deleted = await keyv.delete('foo'); // true
+```
+
+## .deleteMany(keys)
+
+Delete multiple keys at once. Returns `true` if any of the keys existed.
+
+```js
+const deleted = await keyv.deleteMany(['foo', 'baz']); // true
+```
+
+## .clear()
+
+Clear all keys in the current namespace.
+
+```js
+await keyv.clear();
+```
+
+## .iterator(namespace?)
+
+Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` option.
+
+```js
+const iterator = keyv.iterator();
+for await (const [key, value] of iterator) {
+  console.log(key, value);
+}
+```
+
+## .disconnect()
+
+Disconnect from the PostgreSQL database and release the connection pool.
+
+```js
+await keyv.disconnect();
 ```
 
 # Testing
