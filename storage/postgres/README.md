@@ -15,6 +15,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 
 - [Install](#install)
 - [Usage](#usage)
+- [Migrating to v6](#migrating-to-v6)
 - [Constructor Options](#constructor-options)
 - [Properties](#properties)
   - [uri](#uri)
@@ -73,6 +74,57 @@ import { createKeyv } from '@keyv/postgres';
 
 const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', table: 'cache', schema: 'keyv' });
 ```
+
+# Migrating to v6
+
+## Properties instead of opts
+
+In v5, configuration was accessed through the `opts` object:
+
+```js
+// v5
+store.opts.table; // 'keyv'
+store.opts.schema; // 'public'
+```
+
+In v6, all configuration options are exposed as top-level properties with getters and setters:
+
+```js
+// v6
+store.table; // 'keyv'
+store.schema; // 'public'
+store.table = 'cache';
+```
+
+## Native namespace support
+
+In v5, namespaces were stored as key prefixes in the `key` column (e.g. `key="myns:mykey"` with `namespace=NULL`). In v6, the namespace is stored in a dedicated `namespace` column (e.g. `key="mykey"`, `namespace="myns"`). This enables more efficient queries and proper namespace isolation.
+
+The adapter automatically adds the `namespace` column and creates the appropriate index when it connects, so no manual schema changes are needed for new installations.
+
+## Running the migration script
+
+If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script is located at `scripts/migrate-v6.ts` in the `@keyv/postgres` package.
+
+Preview the changes first with `--dry-run`:
+
+```shell
+npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --dry-run
+```
+
+Run the migration:
+
+```shell
+npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname
+```
+
+You can also specify a custom table and schema:
+
+```shell
+npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --table cache --schema keyv
+```
+
+The migration runs inside a transaction and will roll back automatically if anything fails.
 
 # Constructor Options
 
