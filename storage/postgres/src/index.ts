@@ -1,7 +1,7 @@
-// biome-ignore-all lint/style/noNonNullAssertion: need to fix
 import { Hookified } from "hookified";
 import Keyv, { type KeyvEntry, type KeyvStoreAdapter } from "keyv";
-import type { DatabaseError } from "pg";
+import type { DatabaseError, PoolConfig } from "pg";
+import type { ConnectionOptions } from "tls";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
 
@@ -20,11 +20,58 @@ function escapeIdentifier(identifier: string): string {
  * Uses the `pg` library for connection pooling and parameterized queries.
  */
 export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
-	/** Resolved configuration options for the adapter. */
-	public opts: KeyvPostgresOptions;
 	/** Function for executing SQL queries against the PostgreSQL database. */
 	private query: Query;
+
+	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
+
+	/**
+	 * The PostgreSQL connection URI.
+	 * @default 'postgresql://localhost:5432'
+	 */
+	private _uri = "postgresql://localhost:5432";
+
+	/**
+	 * The table name used for storage.
+	 * @default 'keyv'
+	 */
+	private _table = "keyv";
+
+	/**
+	 * The maximum key size (VARCHAR length) for the key column.
+	 * @default 255
+	 */
+	private _keySize = 255;
+
+	/**
+	 * The PostgreSQL schema name.
+	 * @default 'public'
+	 */
+	private _schema = "public";
+
+	/**
+	 * The SSL configuration for the PostgreSQL connection.
+	 * @default undefined
+	 */
+	private _ssl?: boolean | ConnectionOptions;
+
+	/**
+	 * The number of rows to fetch per iteration batch.
+	 * @default 10
+	 */
+	private _iterationLimit = 10;
+
+	/**
+	 * Whether to use a PostgreSQL unlogged table (faster writes, no WAL, data lost on crash).
+	 * @default false
+	 */
+	private _useUnloggedTable = false;
+
+	/**
+	 * Additional PoolConfig properties passed through to the pg connection pool.
+	 */
+	private _poolConfig: PoolConfig = {};
 
 	/**
 	 * Creates a new KeyvPostgres instance.
@@ -34,30 +81,15 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		super();
 
 		if (typeof options === "string") {
-			const uri = options;
-			options = {
-				dialect: "postgres",
-				uri,
-			};
-		} else {
-			options = {
-				dialect: "postgres",
-				uri: "postgresql://localhost:5432",
-				...options,
-			};
+			this._uri = options;
+		} else if (options) {
+			this.setOptions(options);
 		}
 
-		this.opts = {
-			table: "keyv",
-			schema: "public",
-			keySize: 255,
-			...options,
-		};
+		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)}(key VARCHAR(${Number(this._keySize)}) PRIMARY KEY, value TEXT )`;
 
-		let createTable = `CREATE${this.opts.useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${this.opts.schema!}.${this.opts.table!}(key VARCHAR(${Number(this.opts.keySize!)}) PRIMARY KEY, value TEXT )`;
-
-		if (this.opts.schema !== "public") {
-			createTable = `CREATE SCHEMA IF NOT EXISTS ${this.opts.schema!}; ${createTable}`;
+		if (this._schema !== "public") {
+			createTable = `CREATE SCHEMA IF NOT EXISTS ${escapeIdentifier(this._schema)}; ${createTable}`;
 		}
 
 		const connected = this.connect()
@@ -102,12 +134,142 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Get the PostgreSQL connection URI.
+	 * @default 'postgresql://localhost:5432'
+	 */
+	public get uri(): string {
+		return this._uri;
+	}
+
+	/**
+	 * Set the PostgreSQL connection URI.
+	 */
+	public set uri(value: string) {
+		this._uri = value;
+	}
+
+	/**
+	 * Get the table name used for storage.
+	 * @default 'keyv'
+	 */
+	public get table(): string {
+		return this._table;
+	}
+
+	/**
+	 * Set the table name used for storage.
+	 */
+	public set table(value: string) {
+		this._table = value;
+	}
+
+	/**
+	 * Get the maximum key size (VARCHAR length) for the key column.
+	 * @default 255
+	 */
+	public get keySize(): number {
+		return this._keySize;
+	}
+
+	/**
+	 * Set the maximum key size (VARCHAR length) for the key column.
+	 */
+	public set keySize(value: number) {
+		this._keySize = value;
+	}
+
+	/**
+	 * Get the PostgreSQL schema name.
+	 * @default 'public'
+	 */
+	public get schema(): string {
+		return this._schema;
+	}
+
+	/**
+	 * Set the PostgreSQL schema name.
+	 */
+	public set schema(value: string) {
+		this._schema = value;
+	}
+
+	/**
+	 * Get the SSL configuration for the PostgreSQL connection.
+	 * @default undefined
+	 */
+	public get ssl(): boolean | ConnectionOptions | undefined {
+		return this._ssl;
+	}
+
+	/**
+	 * Set the SSL configuration for the PostgreSQL connection.
+	 */
+	public set ssl(value: boolean | ConnectionOptions | undefined) {
+		this._ssl = value;
+	}
+
+	/**
+	 * Get the number of rows to fetch per iteration batch.
+	 * @default 10
+	 */
+	public get iterationLimit(): number {
+		return this._iterationLimit;
+	}
+
+	/**
+	 * Set the number of rows to fetch per iteration batch.
+	 */
+	public set iterationLimit(value: number) {
+		this._iterationLimit = value;
+	}
+
+	/**
+	 * Get whether to use a PostgreSQL unlogged table (faster writes, no WAL, data lost on crash).
+	 * @default false
+	 */
+	public get useUnloggedTable(): boolean {
+		return this._useUnloggedTable;
+	}
+
+	/**
+	 * Set whether to use a PostgreSQL unlogged table.
+	 */
+	public set useUnloggedTable(value: boolean) {
+		this._useUnloggedTable = value;
+	}
+
+	/**
+	 * Get the options for the adapter. This is required by the KeyvStoreAdapter interface.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	public get opts(): any {
+		return {
+			uri: this._uri,
+			table: this._table,
+			keySize: this._keySize,
+			schema: this._schema,
+			ssl: this._ssl,
+			dialect: "postgres",
+			iterationLimit: this._iterationLimit,
+			useUnloggedTable: this._useUnloggedTable,
+			...this._poolConfig,
+		};
+	}
+
+	/**
+	 * Set the options for the adapter.
+	 */
+	public set opts(options: KeyvPostgresOptions) {
+		this.setOptions(options);
+	}
+
+	/**
 	 * Gets a value by key.
 	 * @param key - The key to retrieve.
 	 * @returns The value associated with the key, or `undefined` if not found.
 	 */
 	public async get<Value>(key: string): Promise<Value | undefined> {
-		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 		const row = rows[0];
 		return row === undefined ? undefined : row.value;
@@ -121,7 +283,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<Value | undefined>> {
-		const getMany = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
+		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
 		const rows = await this.query(getMany, [keys]);
 		const rowsMap = new Map(rows.map((row) => [row.key, row]));
 
@@ -135,9 +297,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any): Promise<void> {
-		const upsert = `INSERT INTO ${this.opts.schema!}.${this.opts.table!} (key, value)
-      VALUES($1, $2) 
-      ON CONFLICT(key) 
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value)
+      VALUES($1, $2)
+      ON CONFLICT(key)
       DO UPDATE SET value=excluded.value;`;
 		await this.query(upsert, [key, value]);
 	}
@@ -153,7 +315,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			keys.push(key);
 			values.push(value);
 		}
-		const upsert = `INSERT INTO ${this.opts.schema!}.${this.opts.table!} (key, value)
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value)
       SELECT * FROM UNNEST($1::text[], $2::text[])
       ON CONFLICT(key)
       DO UPDATE SET value=excluded.value;`;
@@ -166,8 +328,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key existed and was deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
-		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 
 		if (rows[0] === undefined) {
@@ -184,8 +346,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if any of the keys existed and were deleted, `false` otherwise.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
-		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
-		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
 
 		if (rows[0] === undefined) {
@@ -200,7 +362,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * Clears all keys in the current namespace. If no namespace is set, all keys are removed.
 	 */
 	public async clear(): Promise<void> {
-		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key LIKE $1`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key LIKE $1`;
 		await this.query(del, [this._namespace ? `${this._namespace}:%` : "%"]);
 	}
 
@@ -213,7 +375,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async *iterator(
 		namespace?: string,
 	): AsyncGenerator<[string, string], void, unknown> {
-		const limit = Number.parseInt(String(this.opts.iterationLimit!), 10) || 10;
+		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
 
 		// Escape special LIKE pattern characters in namespace
 		const escapedNamespace = namespace
@@ -234,11 +396,11 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 
 				if (lastKey === null) {
 					// First batch: no cursor constraint
-					select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 ORDER BY key LIMIT $2`;
+					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key LIKE $1 ORDER BY key LIMIT $2`;
 					params = [pattern, limit];
 				} else {
 					// Subsequent batches: use keyset pagination
-					select = `SELECT * FROM ${escapeIdentifier(this.opts.schema!)}.${escapeIdentifier(this.opts.table!)} WHERE key LIKE $1 AND key > $2 ORDER BY key LIMIT $3`;
+					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key LIKE $1 AND key > $2 ORDER BY key LIMIT $3`;
 					params = [pattern, lastKey, limit];
 				}
 
@@ -285,7 +447,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key exists, `false` otherwise.
 	 */
 	public async has(key: string): Promise<boolean> {
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1 )`;
+		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 )`;
 		const rows = await this.query(exists, [key]);
 		return rows[0].exists;
 	}
@@ -296,7 +458,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns An array of booleans in the same order as the input keys.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const select = `SELECT key FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
+		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
 		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
 		return keys.map((key) => existingKeys.has(key));
@@ -307,7 +469,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns A query function that executes SQL statements and returns result rows.
 	 */
 	private async connect() {
-		const conn = pool(this.opts.uri!, this.opts);
+		const conn = pool(this._uri, { ...this._poolConfig, ssl: this._ssl });
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		return async (sql: string, values?: any) => {
 			const data = await conn.query(sql, values);
@@ -320,6 +482,49 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 */
 	public async disconnect(): Promise<void> {
 		await endPool();
+	}
+
+	private setOptions(options: KeyvPostgresOptions): void {
+		if (options.uri !== undefined) {
+			this._uri = options.uri;
+		}
+
+		if (options.table !== undefined) {
+			this._table = options.table;
+		}
+
+		if (options.keySize !== undefined) {
+			this._keySize = options.keySize;
+		}
+
+		if (options.schema !== undefined) {
+			this._schema = options.schema;
+		}
+
+		if (options.ssl !== undefined) {
+			this._ssl = options.ssl;
+		}
+
+		if (options.iterationLimit !== undefined) {
+			this._iterationLimit = options.iterationLimit;
+		}
+
+		if (options.useUnloggedTable !== undefined) {
+			this._useUnloggedTable = options.useUnloggedTable;
+		}
+
+		const {
+			uri,
+			table,
+			keySize,
+			schema,
+			ssl,
+			iterationLimit,
+			useUnloggedTable,
+			...poolConfigRest
+		} = options;
+
+		this._poolConfig = { ...this._poolConfig, ...poolConfigRest };
 	}
 }
 

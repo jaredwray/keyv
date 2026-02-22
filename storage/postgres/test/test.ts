@@ -180,6 +180,95 @@ test.it(
 	},
 );
 
+test.it("should have correct default property values", (t) => {
+	const keyv = new KeyvPostgres();
+	t.expect(keyv.uri).toBe("postgresql://localhost:5432");
+	t.expect(keyv.table).toBe("keyv");
+	t.expect(keyv.keySize).toBe(255);
+	t.expect(keyv.schema).toBe("public");
+	t.expect(keyv.iterationLimit).toBe(10);
+	t.expect(keyv.useUnloggedTable).toBe(false);
+	t.expect(keyv.ssl).toBeUndefined();
+	t.expect(keyv.namespace).toBeUndefined();
+});
+
+test.it("should set properties from constructor options", (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		table: "custom_table",
+		keySize: 512,
+		schema: "custom_schema",
+		iterationLimit: 50,
+		useUnloggedTable: true,
+		ssl: { rejectUnauthorized: false },
+	});
+	t.expect(keyv.uri).toBe(postgresUri);
+	t.expect(keyv.table).toBe("custom_table");
+	t.expect(keyv.keySize).toBe(512);
+	t.expect(keyv.schema).toBe("custom_schema");
+	t.expect(keyv.iterationLimit).toBe(50);
+	t.expect(keyv.useUnloggedTable).toBe(true);
+	t.expect(keyv.ssl).toEqual({ rejectUnauthorized: false });
+});
+
+test.it("should set uri when string is passed to constructor", (t) => {
+	const keyv = new KeyvPostgres(postgresUri);
+	t.expect(keyv.uri).toBe(postgresUri);
+	t.expect(keyv.table).toBe("keyv");
+	t.expect(keyv.schema).toBe("public");
+});
+
+test.it("should be able to get and set individual properties", (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	keyv.table = "new_table";
+	t.expect(keyv.table).toBe("new_table");
+	keyv.schema = "new_schema";
+	t.expect(keyv.schema).toBe("new_schema");
+	keyv.keySize = 512;
+	t.expect(keyv.keySize).toBe(512);
+	keyv.iterationLimit = 25;
+	t.expect(keyv.iterationLimit).toBe(25);
+	keyv.useUnloggedTable = true;
+	t.expect(keyv.useUnloggedTable).toBe(true);
+	keyv.ssl = { rejectUnauthorized: false };
+	t.expect(keyv.ssl).toEqual({ rejectUnauthorized: false });
+	keyv.uri = "postgresql://localhost:5433";
+	t.expect(keyv.uri).toBe("postgresql://localhost:5433");
+	keyv.namespace = "test-ns";
+	t.expect(keyv.namespace).toBe("test-ns");
+	keyv.namespace = undefined;
+	t.expect(keyv.namespace).toBeUndefined();
+});
+
+test.it("opts getter should return correct object", (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		table: "opts_table",
+		iterationLimit: 99,
+	});
+	const opts = keyv.opts;
+	t.expect(opts.table).toBe("opts_table");
+	t.expect(opts.iterationLimit).toBe(99);
+	t.expect(opts.dialect).toBe("postgres");
+	t.expect(opts.uri).toBe(postgresUri);
+	t.expect(opts.schema).toBe("public");
+	t.expect(opts.keySize).toBe(255);
+	t.expect(opts.useUnloggedTable).toBe(false);
+});
+
+test.it("opts setter should update individual properties", (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	keyv.opts = {
+		table: "updated_table",
+		schema: "updated_schema",
+		keySize: 1024,
+	};
+	t.expect(keyv.table).toBe("updated_table");
+	t.expect(keyv.schema).toBe("updated_schema");
+	t.expect(keyv.keySize).toBe(1024);
+	t.expect(keyv.uri).toBe(postgresUri);
+});
+
 test.it("emits error when connection fails", async (t) => {
 	const keyv = new KeyvPostgres({
 		uri: "postgresql://invalid:invalid@localhost:9999/nonexistent",
