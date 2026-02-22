@@ -21,6 +21,8 @@ function escapeIdentifier(identifier: string): string {
 export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	/** Function for executing SQL queries against the PostgreSQL database. */
 	private query: Query;
+	
+	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
 
 	/**
