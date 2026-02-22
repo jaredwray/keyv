@@ -98,17 +98,26 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		const schemaEsc = escapeIdentifier(this._schema);
 		const tableEsc = escapeIdentifier(this._table);
 
-		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${schemaEsc}.${tableEsc}(key VARCHAR(${Number(this._keyLength)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) DEFAULT NULL)`;
+		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${schemaEsc}.${tableEsc}(key VARCHAR(${Number(this._keyLength)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) DEFAULT NULL, expires BIGINT DEFAULT NULL)`;
 
 		if (this._schema !== "public") {
 			createTable = `CREATE SCHEMA IF NOT EXISTS ${schemaEsc}; ${createTable}`;
 		}
 
 		const migration = `ALTER TABLE ${schemaEsc}.${tableEsc} ADD COLUMN IF NOT EXISTS namespace VARCHAR(${Number(this._namespaceLength)}) DEFAULT NULL`;
+		const migrationExpires = `ALTER TABLE ${schemaEsc}.${tableEsc} ADD COLUMN IF NOT EXISTS expires BIGINT DEFAULT NULL`;
 		const dropOldPk = `ALTER TABLE ${schemaEsc}.${tableEsc} DROP CONSTRAINT IF EXISTS ${escapeIdentifier(`${this._table}_pkey`)}`;
 		const createIndex = `CREATE UNIQUE INDEX IF NOT EXISTS ${escapeIdentifier(`${this._table}_key_namespace_idx`)} ON ${schemaEsc}.${tableEsc} (key, COALESCE(namespace, ''))`;
+		const createExpiresIndex = `CREATE INDEX IF NOT EXISTS ${escapeIdentifier(`${this._table}_expires_idx`)} ON ${schemaEsc}.${tableEsc} (expires) WHERE expires IS NOT NULL`;
 
-		this._connected = this.init(createTable, migration, dropOldPk, createIndex)
+		this._connected = this.init(
+			createTable,
+			migration,
+			migrationExpires,
+			dropOldPk,
+			createIndex,
+			createExpiresIndex,
+		)
 			/* v8 ignore start -- @preserve */
 			.catch((error) => {
 				this.emit("error", error);
@@ -130,16 +139,20 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	private async init(
 		createTable: string,
 		migration: string,
+		migrationExpires: string,
 		dropOldPk: string,
 		createIndex: string,
+		createExpiresIndex: string,
 	): Promise<Query> {
 		const query = await this.connect();
 
 		try {
 			await query(createTable);
 			await query(migration);
+			await query(migrationExpires);
 			await query(dropOldPk);
 			await query(createIndex);
+			await query(createExpiresIndex);
 		} catch (error) {
 			// 23505 = unique_violation: safe to ignore when concurrent instances
 			// race to create the same index (the index already exists).
@@ -355,11 +368,17 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any): Promise<void> {
 		const strippedKey = this.removeKeyPrefix(key);
-		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace)
-      VALUES($1, $2, $3)
+		const expires = this.getExpiresFromValue(value);
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
+      VALUES($1, $2, $3, $4)
       ON CONFLICT(key, COALESCE(namespace, ''))
-      DO UPDATE SET value=excluded.value;`;
-		await this.query(upsert, [strippedKey, value, this.getNamespaceValue()]);
+      DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
+		await this.query(upsert, [
+			strippedKey,
+			value,
+			this.getNamespaceValue(),
+			expires,
+		]);
 	}
 
 	/**
@@ -369,15 +388,22 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		const keys = [];
 		const values = [];
+		const expiresArray: Array<number | null> = [];
 		for (const { key, value } of entries) {
 			keys.push(this.removeKeyPrefix(key));
 			values.push(value);
+			expiresArray.push(this.getExpiresFromValue(value));
 		}
-		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace)
-      SELECT k, v, $3 FROM UNNEST($1::text[], $2::text[]) AS t(k, v)
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
+      SELECT k, v, $3, e FROM UNNEST($1::text[], $2::text[], $4::bigint[]) AS t(k, v, e)
       ON CONFLICT(key, COALESCE(namespace, ''))
-      DO UPDATE SET value=excluded.value;`;
-		await this.query(upsert, [keys, values, this.getNamespaceValue()]);
+      DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
+		await this.query(upsert, [
+			keys,
+			values,
+			this.getNamespaceValue(),
+			expiresArray,
+		]);
 	}
 
 	/**
@@ -566,6 +592,35 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 */
 	private getNamespaceValue(): string | null {
 		return this._namespace ?? null;
+	}
+
+	/**
+	 * Extracts the `expires` timestamp from a serialized value.
+	 * The Keyv core serializes data as JSON like `{"value":"...","expires":1234567890}`.
+	 * Returns the expires value as a number, or null if not present or not parseable.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	private getExpiresFromValue(value: any): number | null {
+		if (typeof value !== "string") {
+			if (
+				value &&
+				typeof value === "object" &&
+				typeof value.expires === "number"
+			) {
+				return value.expires;
+			}
+
+			return null;
+		}
+
+		try {
+			const parsed = JSON.parse(value);
+			if (parsed && typeof parsed.expires === "number") {
+				return parsed.expires;
+			}
+		} catch {}
+
+		return null;
 	}
 
 	private setOptions(options: KeyvPostgresOptions): void {

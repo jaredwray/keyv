@@ -90,6 +90,11 @@ async function migrate(options: {
 			`ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS namespace VARCHAR(${Number(namespaceLength)}) DEFAULT NULL`,
 		);
 
+		// Ensure the expires column exists (idempotent)
+		await client.query(
+			`ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS expires BIGINT DEFAULT NULL`,
+		);
+
 		// Preview what will be migrated
 		const previewQuery = `
 			SELECT key AS old_key,
