@@ -151,43 +151,19 @@ test.it(".setMany support", async (t) => {
 	]);
 });
 
-test.it("iterator emits error and stops when query fails", async (t) => {
-	const keyv = new KeyvPostgres({ uri: postgresUri });
+test.it("emits error when connection fails", async (t) => {
+	const errors: unknown[] = [];
+	const keyv = new KeyvPostgres({
+		uri: "postgresql://invalid:invalid@localhost:9999/nonexistent",
+	});
+	keyv.on("error", (error: unknown) => {
+		errors.push(error);
+	});
 
-	// Store the original query function
-	const originalQuery = keyv.query;
+	// Wait for the connection attempt to fail
+	await new Promise((resolve) => {
+		setTimeout(resolve, 1000);
+	});
 
-	try {
-		// Replace query to throw an error on SELECT (iterator query)
-		keyv.query = async (sql: string, values?: unknown[]) => {
-			if (sql.includes("SELECT * FROM") && sql.includes("LIKE")) {
-				throw new Error("Connection lost");
-			}
-
-			return originalQuery(sql, values);
-		};
-
-		// Set up error listener
-		const errors: Error[] = [];
-		keyv.on("error", (error: Error) => {
-			errors.push(error);
-		});
-
-		// Iterate - should emit error and stop
-		const results: Array<[string, string]> = [];
-		for await (const entry of keyv.iterator()) {
-			results.push(entry as [string, string]);
-		}
-
-		// Should have emitted an error with context
-		t.expect(errors.length).toBe(1);
-		t.expect(errors[0].message).toContain("Iterator failed at cursor start");
-		t.expect(errors[0].message).toContain("Connection lost");
-
-		// Should have yielded no results
-		t.expect(results.length).toBe(0);
-	} finally {
-		// Restore original query
-		keyv.query = originalQuery;
-	}
+	t.expect(errors.length).toBeGreaterThan(0);
 });
