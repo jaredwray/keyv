@@ -1,7 +1,7 @@
+import type { ConnectionOptions } from "node:tls";
 import { Hookified } from "hookified";
 import Keyv, { type KeyvEntry, type KeyvStoreAdapter } from "keyv";
 import type { DatabaseError, PoolConfig } from "pg";
-import type { ConnectionOptions } from "tls";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
 
@@ -509,16 +509,14 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	/**
 	 * Returns the effective table name based on namespace and namespacePrefix.
 	 * When a namespace is set: `{namespacePrefix}{namespace}` (e.g., `keyv_user`).
-	 * When no namespace: the prefix without its trailing underscore (e.g., `keyv`).
+	 * When no namespace: falls back to `this._table` (respects the `table` constructor option).
 	 */
 	private _getEffectiveTable(): string {
 		if (this._namespace) {
 			return `${this._namespacePrefix}${this._namespace}`;
 		}
 
-		return this._namespacePrefix.endsWith("_")
-			? this._namespacePrefix.slice(0, -1)
-			: this._namespacePrefix;
+		return this._table;
 	}
 
 	/**
