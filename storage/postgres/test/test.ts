@@ -280,3 +280,90 @@ test.it("emits error when connection fails", async (t) => {
 
 	t.expect(error).toBeInstanceOf(Error);
 });
+
+test.it(
+	"native namespace: same key in different namespaces stored independently",
+	async (t) => {
+		const postgres1 = new KeyvPostgres({ uri: postgresUri });
+		postgres1.namespace = "ns1";
+		const postgres2 = new KeyvPostgres({ uri: postgresUri });
+		postgres2.namespace = "ns2";
+
+		await postgres1.set("ns1:testkey", "value1");
+		await postgres2.set("ns2:testkey", "value2");
+
+		t.expect(await postgres1.get("ns1:testkey")).toBe("value1");
+		t.expect(await postgres2.get("ns2:testkey")).toBe("value2");
+	},
+);
+
+test.it(
+	"native namespace: null namespace stores and retrieves correctly",
+	async (t) => {
+		const postgres = new KeyvPostgres({ uri: postgresUri });
+		await postgres.set("testkey", "testvalue");
+		t.expect(await postgres.get("testkey")).toBe("testvalue");
+	},
+);
+
+test.it(
+	"native namespace: clear only clears the specified namespace",
+	async (t) => {
+		const postgres1 = new KeyvPostgres({ uri: postgresUri });
+		postgres1.namespace = "ns1";
+		const postgres2 = new KeyvPostgres({ uri: postgresUri });
+		postgres2.namespace = "ns2";
+
+		await postgres1.set("ns1:key1", "value1");
+		await postgres2.set("ns2:key1", "value2");
+
+		await postgres1.clear();
+
+		t.expect(await postgres1.get("ns1:key1")).toBeUndefined();
+		t.expect(await postgres2.get("ns2:key1")).toBe("value2");
+	},
+);
+
+test.it(
+	"native namespace: iterator with null namespace paginates correctly",
+	async (t) => {
+		const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
+
+		await postgres.set("a", "v1");
+		await postgres.set("b", "v2");
+		await postgres.set("c", "v3");
+
+		const keys: string[] = [];
+		for await (const [key] of postgres.iterator()) {
+			keys.push(key);
+		}
+
+		t.expect(keys.length).toBe(3);
+		t.expect(keys).toContain("a");
+		t.expect(keys).toContain("b");
+		t.expect(keys).toContain("c");
+	},
+);
+
+test.it(
+	"native namespace: iterator only returns keys from correct namespace",
+	async (t) => {
+		const postgres1 = new KeyvPostgres({ uri: postgresUri });
+		postgres1.namespace = "ns1";
+		const postgres2 = new KeyvPostgres({ uri: postgresUri });
+		postgres2.namespace = "ns2";
+
+		await postgres1.set("ns1:key1", "val1");
+		await postgres1.set("ns1:key2", "val2");
+		await postgres2.set("ns2:key3", "val3");
+
+		const keys: string[] = [];
+		for await (const [key] of postgres1.iterator("ns1")) {
+			keys.push(key);
+		}
+
+		t.expect(keys.length).toBe(2);
+		t.expect(keys).toContain("ns1:key1");
+		t.expect(keys).toContain("ns1:key2");
+	},
+);
