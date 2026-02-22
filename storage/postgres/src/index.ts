@@ -42,10 +42,16 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	private _table = "keyv";
 
 	/**
-	 * The maximum key size (VARCHAR length) for the key column.
+	 * The maximum key length (VARCHAR length) for the key column.
 	 * @default 255
 	 */
-	private _keySize = 255;
+	private _keyLength = 255;
+
+	/**
+	 * The maximum namespace length (VARCHAR length) for the namespace column.
+	 * @default 255
+	 */
+	private _namespaceLength = 255;
 
 	/**
 	 * The PostgreSQL schema name.
@@ -92,13 +98,13 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		const schemaEsc = escapeIdentifier(this._schema);
 		const tableEsc = escapeIdentifier(this._table);
 
-		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${schemaEsc}.${tableEsc}(key VARCHAR(${Number(this._keySize)}) NOT NULL, value TEXT, namespace VARCHAR(255) DEFAULT NULL)`;
+		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${schemaEsc}.${tableEsc}(key VARCHAR(${Number(this._keyLength)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) DEFAULT NULL)`;
 
 		if (this._schema !== "public") {
 			createTable = `CREATE SCHEMA IF NOT EXISTS ${schemaEsc}; ${createTable}`;
 		}
 
-		const migration = `ALTER TABLE ${schemaEsc}.${tableEsc} ADD COLUMN IF NOT EXISTS namespace VARCHAR(255) DEFAULT NULL`;
+		const migration = `ALTER TABLE ${schemaEsc}.${tableEsc} ADD COLUMN IF NOT EXISTS namespace VARCHAR(${Number(this._namespaceLength)}) DEFAULT NULL`;
 		const dropOldPk = `ALTER TABLE ${schemaEsc}.${tableEsc} DROP CONSTRAINT IF EXISTS ${escapeIdentifier(`${this._table}_pkey`)}`;
 		const createIndex = `CREATE UNIQUE INDEX IF NOT EXISTS ${escapeIdentifier(`${this._table}_key_namespace_idx`)} ON ${schemaEsc}.${tableEsc} (key, COALESCE(namespace, ''))`;
 
@@ -191,18 +197,33 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get the maximum key size (VARCHAR length) for the key column.
+	 * Get the maximum key length (VARCHAR length) for the key column.
 	 * @default 255
 	 */
-	public get keySize(): number {
-		return this._keySize;
+	public get keyLength(): number {
+		return this._keyLength;
 	}
 
 	/**
-	 * Set the maximum key size (VARCHAR length) for the key column.
+	 * Set the maximum key length (VARCHAR length) for the key column.
 	 */
-	public set keySize(value: number) {
-		this._keySize = value;
+	public set keyLength(value: number) {
+		this._keyLength = value;
+	}
+
+	/**
+	 * Get the maximum namespace length (VARCHAR length) for the namespace column.
+	 * @default 255
+	 */
+	public get namespaceLength(): number {
+		return this._namespaceLength;
+	}
+
+	/**
+	 * Set the maximum namespace length (VARCHAR length) for the namespace column.
+	 */
+	public set namespaceLength(value: number) {
+		this._namespaceLength = value;
 	}
 
 	/**
@@ -273,7 +294,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		return {
 			uri: this._uri,
 			table: this._table,
-			keySize: this._keySize,
+			keyLength: this._keyLength,
+			namespaceLength: this._namespaceLength,
 			schema: this._schema,
 			ssl: this._ssl,
 			dialect: "postgres",
@@ -555,8 +577,12 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			this._table = options.table;
 		}
 
-		if (options.keySize !== undefined) {
-			this._keySize = options.keySize;
+		if (options.keyLength !== undefined) {
+			this._keyLength = options.keyLength;
+		}
+
+		if (options.namespaceLength !== undefined) {
+			this._namespaceLength = options.namespaceLength;
 		}
 
 		if (options.schema !== undefined) {
@@ -578,7 +604,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		const {
 			uri,
 			table,
-			keySize,
+			keyLength,
+			namespaceLength,
 			schema,
 			ssl,
 			iterationLimit,

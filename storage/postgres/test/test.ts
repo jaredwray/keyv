@@ -184,7 +184,7 @@ test.it("should have correct default property values", (t) => {
 	const keyv = new KeyvPostgres();
 	t.expect(keyv.uri).toBe("postgresql://localhost:5432");
 	t.expect(keyv.table).toBe("keyv");
-	t.expect(keyv.keySize).toBe(255);
+	t.expect(keyv.keyLength).toBe(255);
 	t.expect(keyv.schema).toBe("public");
 	t.expect(keyv.iterationLimit).toBe(10);
 	t.expect(keyv.useUnloggedTable).toBe(false);
@@ -196,7 +196,7 @@ test.it("should set properties from constructor options", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		table: "custom_table",
-		keySize: 512,
+		keyLength: 512,
 		schema: "custom_schema",
 		iterationLimit: 50,
 		useUnloggedTable: true,
@@ -204,7 +204,7 @@ test.it("should set properties from constructor options", (t) => {
 	});
 	t.expect(keyv.uri).toBe(postgresUri);
 	t.expect(keyv.table).toBe("custom_table");
-	t.expect(keyv.keySize).toBe(512);
+	t.expect(keyv.keyLength).toBe(512);
 	t.expect(keyv.schema).toBe("custom_schema");
 	t.expect(keyv.iterationLimit).toBe(50);
 	t.expect(keyv.useUnloggedTable).toBe(true);
@@ -224,8 +224,8 @@ test.it("should be able to get and set individual properties", (t) => {
 	t.expect(keyv.table).toBe("new_table");
 	keyv.schema = "new_schema";
 	t.expect(keyv.schema).toBe("new_schema");
-	keyv.keySize = 512;
-	t.expect(keyv.keySize).toBe(512);
+	keyv.keyLength = 512;
+	t.expect(keyv.keyLength).toBe(512);
 	keyv.iterationLimit = 25;
 	t.expect(keyv.iterationLimit).toBe(25);
 	keyv.useUnloggedTable = true;
@@ -252,7 +252,7 @@ test.it("opts getter should return correct object", (t) => {
 	t.expect(opts.dialect).toBe("postgres");
 	t.expect(opts.uri).toBe(postgresUri);
 	t.expect(opts.schema).toBe("public");
-	t.expect(opts.keySize).toBe(255);
+	t.expect(opts.keyLength).toBe(255);
 	t.expect(opts.useUnloggedTable).toBe(false);
 });
 
@@ -261,11 +261,11 @@ test.it("opts setter should update individual properties", (t) => {
 	keyv.opts = {
 		table: "updated_table",
 		schema: "updated_schema",
-		keySize: 1024,
+		keyLength: 1024,
 	};
 	t.expect(keyv.table).toBe("updated_table");
 	t.expect(keyv.schema).toBe("updated_schema");
-	t.expect(keyv.keySize).toBe(1024);
+	t.expect(keyv.keyLength).toBe(1024);
 	t.expect(keyv.uri).toBe(postgresUri);
 });
 

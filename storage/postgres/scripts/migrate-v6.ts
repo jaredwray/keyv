@@ -8,7 +8,7 @@
  * moving the prefix into the namespace column.
  *
  * Usage:
- *   npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@host:5432/db [--table keyv] [--schema public] [--dry-run]
+ *   npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@host:5432/db [--table keyv] [--schema public] [--keyLength 255] [--namespaceLength 255] [--dry-run]
  */
 
 import pg from "pg";
@@ -21,11 +21,15 @@ function parseArgs(args: string[]): {
 	uri: string;
 	table: string;
 	schema: string;
+	keyLength: number;
+	namespaceLength: number;
 	dryRun: boolean;
 } {
 	let uri = "";
 	let table = "keyv";
 	let schema = "public";
+	let keyLength = 255;
+	let namespaceLength = 255;
 	let dryRun = false;
 
 	for (let i = 0; i < args.length; i++) {
@@ -39,6 +43,12 @@ function parseArgs(args: string[]): {
 			case "--schema":
 				schema = args[++i] ?? "public";
 				break;
+			case "--keyLength":
+				keyLength = Number(args[++i] ?? 255);
+				break;
+			case "--namespaceLength":
+				namespaceLength = Number(args[++i] ?? 255);
+				break;
 			case "--dry-run":
 				dryRun = true;
 				break;
@@ -48,21 +58,23 @@ function parseArgs(args: string[]): {
 	if (!uri) {
 		console.error("Error: --uri is required");
 		console.error(
-			"Usage: npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@host:5432/db [--table keyv] [--schema public] [--dry-run]",
+			"Usage: npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@host:5432/db [--table keyv] [--schema public] [--keyLength 255] [--namespaceLength 255] [--dry-run]",
 		);
 		process.exit(1);
 	}
 
-	return { uri, table, schema, dryRun };
+	return { uri, table, schema, keyLength, namespaceLength, dryRun };
 }
 
 async function migrate(options: {
 	uri: string;
 	table: string;
 	schema: string;
+	keyLength: number;
+	namespaceLength: number;
 	dryRun: boolean;
 }): Promise<void> {
-	const { uri, table, schema, dryRun } = options;
+	const { uri, table, schema, namespaceLength, dryRun } = options;
 	const schemaEsc = escapeIdentifier(schema);
 	const tableEsc = escapeIdentifier(table);
 	const qualifiedTable = `${schemaEsc}.${tableEsc}`;
@@ -75,7 +87,7 @@ async function migrate(options: {
 
 		// Ensure the namespace column exists (idempotent)
 		await client.query(
-			`ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS namespace VARCHAR(255) DEFAULT NULL`,
+			`ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS namespace VARCHAR(${Number(namespaceLength)}) DEFAULT NULL`,
 		);
 
 		// Preview what will be migrated

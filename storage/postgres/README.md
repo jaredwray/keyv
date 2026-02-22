@@ -20,7 +20,8 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 - [Properties](#properties)
   - [uri](#uri)
   - [table](#table)
-  - [keySize](#keysize)
+  - [keyLength](#keylength)
+  - [namespaceLength](#namespacelength)
   - [schema](#schema)
   - [ssl](#ssl)
   - [iterationLimit](#iterationlimit)
@@ -118,10 +119,11 @@ Run the migration:
 npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname
 ```
 
-You can also specify a custom table and schema:
+You can also specify a custom table, schema, and column lengths:
 
 ```shell
 npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --table cache --schema keyv
+npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --keyLength 512 --namespaceLength 512
 ```
 
 The migration runs inside a transaction and will roll back automatically if anything fails.
@@ -138,7 +140,8 @@ The migration runs inside a transaction and will roll back automatically if anyt
 | --- | --- | --- | --- |
 | `uri` | `string` | `'postgresql://localhost:5432'` | PostgreSQL connection URI |
 | `table` | `string` | `'keyv'` | Table name for key-value storage |
-| `keySize` | `number` | `255` | Maximum key column size (VARCHAR length) |
+| `keyLength` | `number` | `255` | Maximum key column length (VARCHAR length) |
+| `namespaceLength` | `number` | `255` | Maximum namespace column length (VARCHAR length) |
 | `schema` | `string` | `'public'` | PostgreSQL schema name (created automatically if it doesn't exist) |
 | `ssl` | `object` | `undefined` | SSL/TLS configuration passed to the `pg` driver |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
@@ -173,16 +176,28 @@ console.log(store.table); // 'keyv'
 store.table = 'cache';
 ```
 
-## keySize
+## keyLength
 
-Get or set the maximum key size (VARCHAR length) for the key column.
+Get or set the maximum key length (VARCHAR length) for the key column.
 
 - Type: `number`
 - Default: `255`
 
 ```js
-const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', keySize: 512 });
-console.log(store.keySize); // 512
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', keyLength: 512 });
+console.log(store.keyLength); // 512
+```
+
+## namespaceLength
+
+Get or set the maximum namespace length (VARCHAR length) for the namespace column.
+
+- Type: `number`
+- Default: `255`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', namespaceLength: 512 });
+console.log(store.namespaceLength); // 512
 ```
 
 ## schema
