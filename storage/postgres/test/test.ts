@@ -325,6 +325,23 @@ test.it(
 );
 
 test.it(
+	"native namespace: iterator falls back to default limit when iterationLimit is 0",
+	async (t) => {
+		const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 0 });
+		postgres.namespace = "nslimit";
+
+		await postgres.set("nslimit:a", "v1");
+
+		const keys: string[] = [];
+		for await (const [key] of postgres.iterator("nslimit")) {
+			keys.push(key);
+		}
+
+		t.expect(keys).toContain("nslimit:a");
+	},
+);
+
+test.it(
 	"native namespace: iterator with null namespace paginates correctly",
 	async (t) => {
 		const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
