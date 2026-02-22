@@ -414,24 +414,23 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			let entries: Array<{ key: string; value: string }>;
 
 			try {
-				let select: string;
-				let params: Array<string | number | null>;
+				const where: string[] = [];
+				const params: Array<string | number | null> = [];
 
 				if (namespaceValue !== null) {
-					if (lastKey === null) {
-						select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE namespace = $1 ORDER BY key LIMIT $2`;
-						params = [namespaceValue, limit];
-					} else {
-						select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE namespace = $1 AND key > $2 ORDER BY key LIMIT $3`;
-						params = [namespaceValue, lastKey, limit];
-					}
-				} else if (lastKey === null) {
-					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE namespace IS NULL ORDER BY key LIMIT $1`;
-					params = [limit];
+					where.push(`namespace = $${params.length + 1}`);
+					params.push(namespaceValue);
 				} else {
-					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE namespace IS NULL AND key > $1 ORDER BY key LIMIT $2`;
-					params = [lastKey, limit];
+					where.push("namespace IS NULL");
 				}
+
+				if (lastKey !== null) {
+					where.push(`key > $${params.length + 1}`);
+					params.push(lastKey);
+				}
+
+				const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE ${where.join(" AND ")} ORDER BY key LIMIT $${params.length + 1}`;
+				params.push(limit);
 
 				entries = await this.query(select, params);
 				/* v8 ignore start -- @preserve */
