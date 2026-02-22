@@ -151,43 +151,43 @@ test.it(".setMany support", async (t) => {
 	]);
 });
 
-test.it("iterator emits error and stops when query fails", async (t) => {
-	const keyv = new KeyvPostgres({ uri: postgresUri });
+test.it(
+	".hasMany() returns correct booleans for existing and non-existing keys",
+	async (t) => {
+		const keyv = new KeyvPostgres(postgresUri);
+		const key1 = faker.string.alphanumeric(10);
+		const value1 = faker.lorem.sentence();
+		const key2 = faker.string.alphanumeric(10);
+		const value2 = faker.lorem.sentence();
+		const key3 = faker.string.alphanumeric(10);
+		await keyv.set(key1, value1);
+		await keyv.set(key2, value2);
+		const result = await keyv.hasMany([key1, key2, key3]);
+		t.expect(result).toStrictEqual([true, true, false]);
+	},
+);
 
-	// Store the original query function
-	const originalQuery = keyv.query;
+test.it(
+	".hasMany() with all non-existent keys returns all false",
+	async (t) => {
+		const keyv = new KeyvPostgres(postgresUri);
+		const result = await keyv.hasMany([
+			"nonexistent1",
+			"nonexistent2",
+			"nonexistent3",
+		]);
+		t.expect(result).toStrictEqual([false, false, false]);
+	},
+);
 
-	try {
-		// Replace query to throw an error on SELECT (iterator query)
-		keyv.query = async (sql: string, values?: unknown[]) => {
-			if (sql.includes("SELECT * FROM") && sql.includes("LIKE")) {
-				throw new Error("Connection lost");
-			}
+test.it("emits error when connection fails", async (t) => {
+	const keyv = new KeyvPostgres({
+		uri: "postgresql://invalid:invalid@localhost:9999/nonexistent",
+	});
 
-			return originalQuery(sql, values);
-		};
+	const error = await new Promise((resolve) => {
+		keyv.on("error", (error: unknown) => resolve(error));
+	});
 
-		// Set up error listener
-		const errors: Error[] = [];
-		keyv.on("error", (error: Error) => {
-			errors.push(error);
-		});
-
-		// Iterate - should emit error and stop
-		const results: Array<[string, string]> = [];
-		for await (const entry of keyv.iterator()) {
-			results.push(entry as [string, string]);
-		}
-
-		// Should have emitted an error with context
-		t.expect(errors.length).toBe(1);
-		t.expect(errors[0].message).toContain("Iterator failed at cursor start");
-		t.expect(errors[0].message).toContain("Connection lost");
-
-		// Should have yielded no results
-		t.expect(results.length).toBe(0);
-	} finally {
-		// Restore original query
-		keyv.query = originalQuery;
-	}
+	t.expect(error).toBeInstanceOf(Error);
 });

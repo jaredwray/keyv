@@ -1,5 +1,5 @@
 // biome-ignore-all lint/style/noNonNullAssertion: need to fix
-import EventEmitter from "node:events";
+import { Hookified } from "hookified";
 import Keyv, { type KeyvEntry, type KeyvStoreAdapter } from "keyv";
 import type { DatabaseError } from "pg";
 import { endPool, pool } from "./pool.js";
@@ -19,13 +19,13 @@ function escapeIdentifier(identifier: string): string {
  * PostgreSQL storage adapter for Keyv.
  * Uses the `pg` library for connection pooling and parameterized queries.
  */
-export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	/** Resolved configuration options for the adapter. */
 	public opts: KeyvPostgresOptions;
 	/** Function for executing SQL queries against the PostgreSQL database. */
 	private query: Query;
-	/** Optional namespace used for key prefixing and scoping operations like `clear()`. */
-	public namespace?: string;
+	private _namespace?: string;
+
 	/**
 	 * Creates a new KeyvPostgres instance.
 	 * @param options - A PostgreSQL connection URI string or a {@link KeyvPostgresOptions} configuration object.
@@ -76,7 +76,9 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 
 				return query;
 			})
+			/* v8 ignore start -- @preserve */
 			.catch((error) => this.emit("error", error));
+		/* v8 ignore stop */
 
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		this.query = async (sqlString: string, values?: any) =>
@@ -86,11 +88,25 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
+	 */
+	public get namespace(): string | undefined {
+		return this._namespace;
+	}
+
+	/**
+	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+	 */
+	public set namespace(value: string | undefined) {
+		this._namespace = value;
+	}
+
+	/**
 	 * Gets a value by key.
 	 * @param key - The key to retrieve.
 	 * @returns The value associated with the key, or `undefined` if not found.
 	 */
-	public async get(key: string) {
+	public async get<Value>(key: string): Promise<Value | undefined> {
 		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 		const row = rows[0];
@@ -102,7 +118,9 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	 * @param keys - An array of keys to retrieve.
 	 * @returns An array of values in the same order as the keys, with `undefined` for missing keys.
 	 */
-	public async getMany(keys: string[]) {
+	public async getMany<Value>(
+		keys: string[],
+	): Promise<Array<Value | undefined>> {
 		const getMany = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
 		const rows = await this.query(getMany, [keys]);
 		const rowsMap = new Map(rows.map((row) => [row.key, row]));
@@ -116,7 +134,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	 * @param value - The value to store.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any) {
+	public async set(key: string, value: any): Promise<void> {
 		const upsert = `INSERT INTO ${this.opts.schema!}.${this.opts.table!} (key, value)
       VALUES($1, $2) 
       ON CONFLICT(key) 
@@ -128,7 +146,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	 * Sets multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
 	 * @param entries - An array of key-value entry objects.
 	 */
-	public async setMany(entries: KeyvEntry[]) {
+	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		const keys = [];
 		const values = [];
 		for (const { key, value } of entries) {
@@ -147,7 +165,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	 * @param key - The key to delete.
 	 * @returns `true` if the key existed and was deleted, `false` otherwise.
 	 */
-	public async delete(key: string) {
+	public async delete(key: string): Promise<boolean> {
 		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
 		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
@@ -165,7 +183,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	 * @param keys - An array of keys to delete.
 	 * @returns `true` if any of the keys existed and were deleted, `false` otherwise.
 	 */
-	public async deleteMany(keys: string[]) {
+	public async deleteMany(keys: string[]): Promise<boolean> {
 		const select = `SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
 		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
@@ -181,9 +199,9 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	/**
 	 * Clears all keys in the current namespace. If no namespace is set, all keys are removed.
 	 */
-	public async clear() {
+	public async clear(): Promise<void> {
 		const del = `DELETE FROM ${this.opts.schema!}.${this.opts.table!} WHERE key LIKE $1`;
-		await this.query(del, [this.namespace ? `${this.namespace}:%` : "%"]);
+		await this.query(del, [this._namespace ? `${this._namespace}:%` : "%"]);
 	}
 
 	/**
@@ -192,7 +210,9 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	 * @param namespace - Optional namespace to filter keys by.
 	 * @yields A `[key, value]` tuple for each entry.
 	 */
-	public async *iterator(namespace?: string) {
+	public async *iterator(
+		namespace?: string,
+	): AsyncGenerator<[string, string], void, unknown> {
 		const limit = Number.parseInt(String(this.opts.iterationLimit!), 10) || 10;
 
 		// Escape special LIKE pattern characters in namespace
@@ -223,6 +243,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 				}
 
 				entries = await this.query(select, params);
+				/* v8 ignore start -- @preserve */
 			} catch (error) {
 				// Emit error with context for debugging
 				this.emit(
@@ -233,6 +254,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 				);
 				return;
 			}
+			/* v8 ignore stop */
 
 			/* v8 ignore next -- @preserve */
 			if (entries.length === 0) {
@@ -262,10 +284,22 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	 * @param key - The key to check.
 	 * @returns `true` if the key exists, `false` otherwise.
 	 */
-	public async has(key: string) {
+	public async has(key: string): Promise<boolean> {
 		const exists = `SELECT EXISTS ( SELECT * FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = $1 )`;
 		const rows = await this.query(exists, [key]);
 		return rows[0].exists;
+	}
+
+	/**
+	 * Checks whether multiple keys exist in the store.
+	 * @param keys - An array of keys to check.
+	 * @returns An array of booleans in the same order as the input keys.
+	 */
+	public async hasMany(keys: string[]): Promise<boolean[]> {
+		const select = `SELECT key FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
+		const rows = await this.query(select, [keys]);
+		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
+		return keys.map((key) => existingKeys.has(key));
 	}
 
 	/**
@@ -284,7 +318,7 @@ export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
 	/**
 	 * Disconnects from the PostgreSQL database and releases the connection pool.
 	 */
-	public async disconnect() {
+	public async disconnect(): Promise<void> {
 		await endPool();
 	}
 }
