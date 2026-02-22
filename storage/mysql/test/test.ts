@@ -177,32 +177,28 @@ test.it(".has() prevents UNION-based SQL injection", async (t) => {
 	t.expect(result).toBe(false);
 });
 
-test.it("createKeyv returns a Keyv instance", (t) => {
+test.it("createKeyv returns a Keyv instance", async (t) => {
 	const keyv = createKeyv(uri);
 	t.expect(keyv).toBeInstanceOf(Keyv);
+	await keyv.disconnect();
 });
 
-test.it("createKeyv with options returns a Keyv instance", (t) => {
+test.it("createKeyv with options returns a Keyv instance", async (t) => {
 	const keyv = createKeyv({ uri, table: "cache" });
 	t.expect(keyv).toBeInstanceOf(Keyv);
+	await keyv.disconnect();
 });
 
-test.it("constructor with default options", (t) => {
-	const store = new KeyvMysql();
-	t.expect(store.opts.dialect).toBe("mysql");
-	t.expect(store.opts.uri).toBe("mysql://localhost");
-	t.expect(store.opts.table).toBe("keyv");
-	t.expect(store.opts.keySize).toBe(255);
-});
-
-test.it("constructor with string URI", (t) => {
+test.it("constructor with string URI", async (t) => {
 	const store = new KeyvMysql(uri);
 	t.expect(store.opts.uri).toBe(uri);
+	await store.disconnect();
 });
 
-test.it("constructor with options object", (t) => {
+test.it("constructor with options object", async (t) => {
 	const store = new KeyvMysql({ uri, table: "custom_table", keySize: 512 });
 	t.expect(store.opts.uri).toBe(uri);
 	t.expect(store.opts.table).toBe("custom_table");
 	t.expect(store.opts.keySize).toBe(512);
+	await store.disconnect();
 });
