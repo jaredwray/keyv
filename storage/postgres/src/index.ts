@@ -23,6 +23,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	/** Function for executing SQL queries against the PostgreSQL database. */
 	private query: Query;
 
+	/** Promise that resolves to the query function once initialization completes. */
+	private _connected: Promise<Query>;
+
 	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
 
@@ -99,34 +102,48 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		const dropOldPk = `ALTER TABLE ${schemaEsc}.${tableEsc} DROP CONSTRAINT IF EXISTS ${escapeIdentifier(`${this._table}_pkey`)}`;
 		const createIndex = `CREATE UNIQUE INDEX IF NOT EXISTS ${escapeIdentifier(`${this._table}_key_namespace_idx`)} ON ${schemaEsc}.${tableEsc} (key, COALESCE(namespace, ''))`;
 
-		const connected = this.connect()
-			.then(async (query) => {
-				try {
-					await query(createTable);
-					await query(migration);
-					await query(dropOldPk);
-					await query(createIndex);
-				} catch (error) {
-					/* v8 ignore next -- @preserve */
-					if ((error as DatabaseError).code !== "23505") {
-						this.emit("error", error);
-					}
-
-					/* v8 ignore next -- @preserve */
-					return query;
-				}
-
-				return query;
-			})
+		this._connected = this.init(createTable, migration, dropOldPk, createIndex)
 			/* v8 ignore start -- @preserve */
-			.catch((error) => this.emit("error", error));
+			.catch((error) => {
+				this.emit("error", error);
+				throw error; // Re-throw so subsequent queries fail with a clear error
+			});
 		/* v8 ignore stop */
 
 		// biome-ignore lint/suspicious/noExplicitAny: type format
-		this.query = async (sqlString: string, values?: any) =>
-			connected
-				// @ts-expect-error - query is not a boolean
-				.then((query) => query(sqlString, values));
+		this.query = async (sqlString: string, values?: any) => {
+			const query = await this._connected;
+			return query(sqlString, values);
+		};
+	}
+
+	/**
+	 * Initializes the database connection and ensures the table schema exists.
+	 * Called from the constructor; errors are emitted rather than thrown.
+	 */
+	private async init(
+		createTable: string,
+		migration: string,
+		dropOldPk: string,
+		createIndex: string,
+	): Promise<Query> {
+		const query = await this.connect();
+
+		try {
+			await query(createTable);
+			await query(migration);
+			await query(dropOldPk);
+			await query(createIndex);
+		} catch (error) {
+			// 23505 = unique_violation: safe to ignore when concurrent instances
+			// race to create the same index (the index already exists).
+			/* v8 ignore next -- @preserve */
+			if ((error as DatabaseError).code !== "23505") {
+				this.emit("error", error);
+			}
+		}
+
+		return query;
 	}
 
 	/**
