@@ -181,18 +181,13 @@ test.it(
 );
 
 test.it("emits error when connection fails", async (t) => {
-	const errors: unknown[] = [];
 	const keyv = new KeyvPostgres({
 		uri: "postgresql://invalid:invalid@localhost:9999/nonexistent",
 	});
-	keyv.on("error", (error: unknown) => {
-		errors.push(error);
+
+	const error = await new Promise((resolve) => {
+		keyv.on("error", (error: unknown) => resolve(error));
 	});
 
-	// Wait for the connection attempt to fail
-	await new Promise((resolve) => {
-		setTimeout(resolve, 1000);
-	});
-
-	t.expect(errors.length).toBeGreaterThan(0);
+	t.expect(error).toBeInstanceOf(Error);
 });
