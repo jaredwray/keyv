@@ -10,6 +10,7 @@ export type KeyvPostgresOptions = {
 	ssl?: boolean | ConnectionOptions;
 	iterationLimit?: number;
 	useUnloggedTable?: boolean;
+	clearExpiredInterval?: number;
 } & PoolConfig;
 
 // biome-ignore lint/suspicious/noExplicitAny: values can be any type for parameterized queries

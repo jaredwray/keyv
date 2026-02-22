@@ -554,3 +554,86 @@ test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
 		JSON.stringify({ value: "ok", expires: futureExpires }),
 	);
 });
+
+test.it("clearExpiredInterval defaults to 0 (disabled)", (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	t.expect(keyv.clearExpiredInterval).toBe(0);
+});
+
+test.it("clearExpiredInterval can be set via constructor options", (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		clearExpiredInterval: 5000,
+	});
+	t.expect(keyv.clearExpiredInterval).toBe(5000);
+	keyv.clearExpiredInterval = 0;
+});
+
+test.it("clearExpiredInterval getter and setter work", (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	t.expect(keyv.clearExpiredInterval).toBe(0);
+	keyv.clearExpiredInterval = 3000;
+	t.expect(keyv.clearExpiredInterval).toBe(3000);
+	keyv.clearExpiredInterval = 0;
+});
+
+test.it("clearExpiredInterval is included in opts getter", (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		clearExpiredInterval: 10_000,
+	});
+	t.expect(keyv.opts.clearExpiredInterval).toBe(10_000);
+	keyv.clearExpiredInterval = 0;
+});
+
+test.it(
+	"clearExpiredInterval automatically clears expired entries",
+	async (t) => {
+		const keyv = new KeyvPostgres({
+			uri: postgresUri,
+			clearExpiredInterval: 100,
+		});
+		const pastExpires = Date.now() - 60_000;
+		const futureExpires = Date.now() + 60_000;
+		await keyv.set(
+			"interval-expired",
+			JSON.stringify({ value: "old", expires: pastExpires }),
+		);
+		await keyv.set(
+			"interval-valid",
+			JSON.stringify({ value: "fresh", expires: futureExpires }),
+		);
+
+		// Wait for the interval to fire
+		await new Promise((resolve) => {
+			setTimeout(resolve, 300);
+		});
+
+		t.expect(await keyv.get("interval-expired")).toBeUndefined();
+		t.expect(await keyv.get("interval-valid")).toBe(
+			JSON.stringify({ value: "fresh", expires: futureExpires }),
+		);
+		keyv.clearExpiredInterval = 0;
+	},
+);
+
+test.it("disconnect stops the clearExpiredInterval timer", async (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		clearExpiredInterval: 100,
+	});
+	t.expect(keyv.clearExpiredInterval).toBe(100);
+	await keyv.disconnect();
+	// After disconnect, the timer should be stopped. We just verify no errors are thrown.
+	t.expect(keyv.clearExpiredInterval).toBe(100);
+});
+
+test.it("setting clearExpiredInterval to 0 stops an active timer", (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		clearExpiredInterval: 1000,
+	});
+	t.expect(keyv.clearExpiredInterval).toBe(1000);
+	keyv.clearExpiredInterval = 0;
+	t.expect(keyv.clearExpiredInterval).toBe(0);
+});

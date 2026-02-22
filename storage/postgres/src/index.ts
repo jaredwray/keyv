@@ -78,6 +78,18 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	private _useUnloggedTable = false;
 
 	/**
+	 * The interval in milliseconds between automatic expired-entry cleanup runs.
+	 * A value of 0 (default) disables the automatic cleanup.
+	 * @default 0
+	 */
+	private _clearExpiredInterval = 0;
+
+	/**
+	 * The timer reference for the automatic expired-entry cleanup interval.
+	 */
+	private _clearExpiredTimer?: ReturnType<typeof setInterval>;
+
+	/**
 	 * Additional PoolConfig properties passed through to the pg connection pool.
 	 */
 	private _poolConfig: PoolConfig = {};
@@ -130,6 +142,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			const query = await this._connected;
 			return query(sqlString, values);
 		};
+
+		this.startClearExpiredTimer();
 	}
 
 	/**
@@ -300,6 +314,24 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Get the interval in milliseconds between automatic expired-entry cleanup runs.
+	 * A value of 0 means the automatic cleanup is disabled.
+	 * @default 0
+	 */
+	public get clearExpiredInterval(): number {
+		return this._clearExpiredInterval;
+	}
+
+	/**
+	 * Set the interval in milliseconds between automatic expired-entry cleanup runs.
+	 * Setting to 0 disables the automatic cleanup.
+	 */
+	public set clearExpiredInterval(value: number) {
+		this._clearExpiredInterval = value;
+		this.startClearExpiredTimer();
+	}
+
+	/**
 	 * Get the options for the adapter. This is required by the KeyvStoreAdapter interface.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -314,6 +346,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			dialect: "postgres",
 			iterationLimit: this._iterationLimit,
 			useUnloggedTable: this._useUnloggedTable,
+			clearExpiredInterval: this._clearExpiredInterval,
 			...this._poolConfig,
 		};
 	}
@@ -578,8 +611,10 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Disconnects from the PostgreSQL database and releases the connection pool.
+	 * Also stops the automatic expired-entry cleanup interval if running.
 	 */
 	public async disconnect(): Promise<void> {
+		this.stopClearExpiredTimer();
 		await endPool(this._uri, { ...this._poolConfig, ssl: this._ssl });
 	}
 
@@ -628,6 +663,35 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		return null;
 	}
 
+	/**
+	 * Starts (or restarts) the automatic expired-entry cleanup interval.
+	 * If the interval is 0 or negative, any existing timer is stopped.
+	 */
+	private startClearExpiredTimer(): void {
+		this.stopClearExpiredTimer();
+		if (this._clearExpiredInterval > 0) {
+			this._clearExpiredTimer = setInterval(async () => {
+				try {
+					await this.clearExpired();
+				} catch (error) {
+					/* v8 ignore next -- @preserve */
+					this.emit("error", error);
+				}
+			}, this._clearExpiredInterval);
+			this._clearExpiredTimer.unref();
+		}
+	}
+
+	/**
+	 * Stops the automatic expired-entry cleanup interval if running.
+	 */
+	private stopClearExpiredTimer(): void {
+		if (this._clearExpiredTimer) {
+			clearInterval(this._clearExpiredTimer);
+			this._clearExpiredTimer = undefined;
+		}
+	}
+
 	private setOptions(options: KeyvPostgresOptions): void {
 		if (options.uri !== undefined) {
 			this._uri = options.uri;
@@ -661,6 +725,10 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			this._useUnloggedTable = options.useUnloggedTable;
 		}
 
+		if (options.clearExpiredInterval !== undefined) {
+			this._clearExpiredInterval = options.clearExpiredInterval;
+		}
+
 		const {
 			uri,
 			table,
@@ -670,6 +738,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			ssl,
 			iterationLimit,
 			useUnloggedTable,
+			clearExpiredInterval,
 			...poolConfigRest
 		} = options;
 

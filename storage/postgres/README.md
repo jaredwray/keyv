@@ -26,6 +26,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [ssl](#ssl)
   - [iterationLimit](#iterationlimit)
   - [useUnloggedTable](#useunloggedtable)
+  - [clearExpiredInterval](#clearexpiredinterval)
   - [namespace](#namespace)
 - [Methods](#methods)
   - [.set(key, value)](#setkey-value)
@@ -147,6 +148,7 @@ The migration runs inside a transaction and will roll back automatically if anyt
 | `ssl` | `object` | `undefined` | SSL/TLS configuration passed to the `pg` driver |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `useUnloggedTable` | `boolean` | `false` | Use a PostgreSQL UNLOGGED table for better write performance |
+| `clearExpiredInterval` | `number` | `0` | Interval in milliseconds to automatically clear expired entries (0 = disabled) |
 
 # Properties
 
@@ -250,6 +252,22 @@ Get or set whether to use a PostgreSQL unlogged table for better write performan
 ```js
 const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', useUnloggedTable: true });
 console.log(store.useUnloggedTable); // true
+```
+
+## clearExpiredInterval
+
+Get or set the interval in milliseconds between automatic expired-entry cleanup runs. When set to a value greater than 0, the adapter will automatically call `clearExpired()` at the specified interval. The timer uses `unref()` so it won't keep the Node.js process alive. Setting to 0 disables the automatic cleanup.
+
+- Type: `number`
+- Default: `0` (disabled)
+
+```js
+// Clean up expired entries every 60 seconds
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', clearExpiredInterval: 60_000 });
+console.log(store.clearExpiredInterval); // 60000
+
+// Disable it later
+store.clearExpiredInterval = 0;
 ```
 
 ## namespace
