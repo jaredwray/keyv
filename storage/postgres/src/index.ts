@@ -1,6 +1,7 @@
 import { Hookified } from "hookified";
 import Keyv, { type KeyvEntry, type KeyvStoreAdapter } from "keyv";
 import type { DatabaseError, PoolConfig } from "pg";
+import type { ConnectionOptions } from "tls";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
 
@@ -21,7 +22,7 @@ function escapeIdentifier(identifier: string): string {
 export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	/** Function for executing SQL queries against the PostgreSQL database. */
 	private query: Query;
-	
+
 	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
 
@@ -53,8 +54,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * The SSL configuration for the PostgreSQL connection.
 	 * @default undefined
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private _ssl: any;
+	private _ssl?: boolean | ConnectionOptions;
 
 	/**
 	 * The number of rows to fetch per iteration batch.
@@ -86,10 +86,10 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			this.setOptions(options);
 		}
 
-		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${this._schema}.${this._table}(key VARCHAR(${Number(this._keySize)}) PRIMARY KEY, value TEXT )`;
+		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)}(key VARCHAR(${Number(this._keySize)}) PRIMARY KEY, value TEXT )`;
 
 		if (this._schema !== "public") {
-			createTable = `CREATE SCHEMA IF NOT EXISTS ${this._schema}; ${createTable}`;
+			createTable = `CREATE SCHEMA IF NOT EXISTS ${escapeIdentifier(this._schema)}; ${createTable}`;
 		}
 
 		const connected = this.connect()
@@ -197,16 +197,14 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * Get the SSL configuration for the PostgreSQL connection.
 	 * @default undefined
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get ssl(): any {
+	public get ssl(): boolean | ConnectionOptions | undefined {
 		return this._ssl;
 	}
 
 	/**
 	 * Set the SSL configuration for the PostgreSQL connection.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public set ssl(value: any) {
+	public set ssl(value: boolean | ConnectionOptions | undefined) {
 		this._ssl = value;
 	}
 
@@ -271,7 +269,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns The value associated with the key, or `undefined` if not found.
 	 */
 	public async get<Value>(key: string): Promise<Value | undefined> {
-		const select = `SELECT * FROM ${this._schema}.${this._table} WHERE key = $1`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 		const row = rows[0];
 		return row === undefined ? undefined : row.value;
@@ -285,7 +283,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<Value | undefined>> {
-		const getMany = `SELECT * FROM ${this._schema}.${this._table} WHERE key = ANY($1)`;
+		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
 		const rows = await this.query(getMany, [keys]);
 		const rowsMap = new Map(rows.map((row) => [row.key, row]));
 
@@ -299,7 +297,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any): Promise<void> {
-		const upsert = `INSERT INTO ${this._schema}.${this._table} (key, value)
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value)
       VALUES($1, $2)
       ON CONFLICT(key)
       DO UPDATE SET value=excluded.value;`;
@@ -317,7 +315,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			keys.push(key);
 			values.push(value);
 		}
-		const upsert = `INSERT INTO ${this._schema}.${this._table} (key, value)
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value)
       SELECT * FROM UNNEST($1::text[], $2::text[])
       ON CONFLICT(key)
       DO UPDATE SET value=excluded.value;`;
@@ -330,8 +328,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key existed and was deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const select = `SELECT * FROM ${this._schema}.${this._table} WHERE key = $1`;
-		const del = `DELETE FROM ${this._schema}.${this._table} WHERE key = $1`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 
 		if (rows[0] === undefined) {
@@ -348,8 +346,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if any of the keys existed and were deleted, `false` otherwise.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
-		const select = `SELECT * FROM ${this._schema}.${this._table} WHERE key = ANY($1)`;
-		const del = `DELETE FROM ${this._schema}.${this._table} WHERE key = ANY($1)`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
 
 		if (rows[0] === undefined) {
@@ -364,7 +362,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * Clears all keys in the current namespace. If no namespace is set, all keys are removed.
 	 */
 	public async clear(): Promise<void> {
-		const del = `DELETE FROM ${this._schema}.${this._table} WHERE key LIKE $1`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key LIKE $1`;
 		await this.query(del, [this._namespace ? `${this._namespace}:%` : "%"]);
 	}
 
@@ -449,7 +447,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key exists, `false` otherwise.
 	 */
 	public async has(key: string): Promise<boolean> {
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this._schema}.${this._table} WHERE key = $1 )`;
+		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 )`;
 		const rows = await this.query(exists, [key]);
 		return rows[0].exists;
 	}
@@ -460,7 +458,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns An array of booleans in the same order as the input keys.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const select = `SELECT key FROM ${this._schema}.${this._table} WHERE key = ANY($1)`;
+		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
 		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
 		return keys.map((key) => existingKeys.has(key));
