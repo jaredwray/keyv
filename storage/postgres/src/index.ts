@@ -291,6 +291,18 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Checks whether multiple keys exist in the store.
+	 * @param keys - An array of keys to check.
+	 * @returns An array of booleans in the same order as the input keys.
+	 */
+	public async hasMany(keys: string[]): Promise<boolean[]> {
+		const select = `SELECT key FROM ${this.opts.schema!}.${this.opts.table!} WHERE key = ANY($1)`;
+		const rows = await this.query(select, [keys]);
+		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
+		return keys.map((key) => existingKeys.has(key));
+	}
+
+	/**
 	 * Establishes a connection to the PostgreSQL database via the connection pool.
 	 * @returns A query function that executes SQL statements and returns result rows.
 	 */

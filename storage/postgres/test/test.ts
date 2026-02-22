@@ -151,6 +151,35 @@ test.it(".setMany support", async (t) => {
 	]);
 });
 
+test.it(
+	".hasMany() returns correct booleans for existing and non-existing keys",
+	async (t) => {
+		const keyv = new KeyvPostgres(postgresUri);
+		const key1 = faker.string.alphanumeric(10);
+		const value1 = faker.lorem.sentence();
+		const key2 = faker.string.alphanumeric(10);
+		const value2 = faker.lorem.sentence();
+		const key3 = faker.string.alphanumeric(10);
+		await keyv.set(key1, value1);
+		await keyv.set(key2, value2);
+		const result = await keyv.hasMany([key1, key2, key3]);
+		t.expect(result).toStrictEqual([true, true, false]);
+	},
+);
+
+test.it(
+	".hasMany() with all non-existent keys returns all false",
+	async (t) => {
+		const keyv = new KeyvPostgres(postgresUri);
+		const result = await keyv.hasMany([
+			"nonexistent1",
+			"nonexistent2",
+			"nonexistent3",
+		]);
+		t.expect(result).toStrictEqual([false, false, false]);
+	},
+);
+
 test.it("emits error when connection fails", async (t) => {
 	const errors: unknown[] = [];
 	const keyv = new KeyvPostgres({

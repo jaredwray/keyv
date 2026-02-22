@@ -25,6 +25,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
   - [.has(key)](#haskey)
+  - [.hasMany(keys)](#hasmanykeys)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
@@ -173,6 +174,17 @@ Check if a key exists. Returns a boolean.
 
 ```js
 const exists = await keyv.has('foo'); // true
+```
+
+## .hasMany(keys)
+
+Check if multiple keys exist. Returns an array of booleans in the same order as the input keys.
+
+```js
+await keyv.set('foo', 'bar');
+await keyv.set('baz', 'qux');
+
+const results = await keyv.hasMany(['foo', 'baz', 'unknown']); // [true, true, false]
 ```
 
 ## .delete(key)
