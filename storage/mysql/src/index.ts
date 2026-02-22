@@ -1,6 +1,7 @@
 // biome-ignore-all lint/style/noNonNullAssertion: need to fix
-import EventEmitter from "node:events";
+import { Hookified } from "hookified";
 import type { KeyvStoreAdapter, StoredData } from "keyv";
+import { Keyv } from "keyv";
 import mysql from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
@@ -47,8 +48,14 @@ type QueryType<T> = Promise<
 /**
  * MySQL storage adapter for Keyv.
  * Provides a persistent key-value store using MySQL as the backend.
+ *
+ * @example
+ * ```typescript
+ * const store = new KeyvMysql('mysql://user:pass@localhost:3306/dbname');
+ * const keyv = new Keyv({ store });
+ * ```
  */
-export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	/**
 	 * Configuration options for the MySQL adapter.
 	 */
@@ -90,8 +97,6 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		);
 
 		delete mysqlOptions.namespace;
-		delete mysqlOptions.serialize;
-		delete mysqlOptions.deserialize;
 
 		const connection = async () => {
 			const conn = pool(options.uri!, mysqlOptions);
@@ -309,6 +314,20 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		endPool();
 	}
 }
+
+/**
+ * Creates a new Keyv instance backed by a MySQL store.
+ * @param uri - The MySQL connection URI (e.g., `'mysql://user:pass@localhost:3306/dbname'`) or an options object.
+ * @returns A configured Keyv instance using KeyvMysql as the store.
+ *
+ * @example
+ * ```typescript
+ * const keyv = createKeyv('mysql://user:pass@localhost:3306/dbname');
+ * await keyv.set('foo', 'bar');
+ * ```
+ */
+export const createKeyv = (uri?: KeyvMysqlOptions | string) =>
+	new Keyv({ store: new KeyvMysql(uri) });
 
 export default KeyvMysql;
 export type { KeyvMysqlOptions } from "./types";

@@ -378,6 +378,12 @@ importers:
 
   storage/mysql:
     dependencies:
+      hookified:
+        specifier: ^1.13.0
+        version: 1.15.1
+      keyv:
+        specifier: workspace:^
+        version: link:../../core/keyv
       mysql2:
         specifier: ^3.16.1
         version: 3.16.1
@@ -391,9 +397,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.0.17
         version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
-      keyv:
-        specifier: workspace:^
-        version: link:../../core/keyv
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2

@@ -1,4 +1,4 @@
-# @keyv/mysql [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/mysql [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > MySQL/MariaDB storage adapter for Keyv
 
@@ -21,25 +21,80 @@ npm install --save keyv @keyv/mysql
 import Keyv from 'keyv';
 import KeyvMysql from '@keyv/mysql';
 
-const keyv = new Keyv(new KeyvMysql('mysql://user:pass@localhost:3306/dbname'));
-keyv.on('error', handleConnectionError);
+const keyv = new Keyv({ store: new KeyvMysql('mysql://user:pass@localhost:3306/dbname') });
 ```
 
-You can specify a custom table with the `table` option and the primary key size with `keySize`.
-If you want to use native MySQL scheduler to delete expired keys, you can specify `intervalExpiration` in seconds.
+Or use the `createKeyv` helper for a more concise setup:
 
-e.g:
+```js
+import { createKeyv } from '@keyv/mysql';
+
+const keyv = createKeyv('mysql://user:pass@localhost:3306/dbname');
+await keyv.set('foo', 'bar');
+const value = await keyv.get('foo');
+```
+
+## Constructor
+
+The `KeyvMysql` constructor accepts a connection URI string or an options object:
+
+```js
+// With a connection URI
+const store = new KeyvMysql('mysql://user:pass@localhost:3306/dbname');
+
+// With an options object
+const store = new KeyvMysql({
+  uri: 'mysql://user:pass@localhost:3306/dbname',
+  table: 'cache',
+  keySize: 255,
+  intervalExpiration: 60
+});
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `uri` | `string` | `'mysql://localhost'` | MySQL connection URI |
+| `table` | `string` | `'keyv'` | Database table name for key-value storage |
+| `keySize` | `number` | `255` | Maximum key length (VARCHAR size) |
+| `intervalExpiration` | `number` | `undefined` | Interval in seconds for MySQL event scheduler to delete expired keys |
+| `iterationLimit` | `string \| number` | `10` | Number of rows to fetch per iteration batch |
+
+Any additional options are passed directly to the `mysql2` connection pool (e.g., `ssl`, `charset`, `timezone`).
+
+## createKeyv Helper
+
+The `createKeyv` function creates a `Keyv` instance with a `KeyvMysql` store in a single call:
+
+```js
+import { createKeyv } from '@keyv/mysql';
+
+// With a URI
+const keyv = createKeyv('mysql://user:pass@localhost:3306/dbname');
+
+// With options
+const keyv = createKeyv({
+  uri: 'mysql://user:pass@localhost:3306/dbname',
+  table: 'cache',
+  keySize: 512
+});
+```
+
+## Interval Expiration
+
+You can use native MySQL scheduler to delete expired keys by specifying `intervalExpiration` in seconds:
 
 ```js
 import Keyv from 'keyv';
 import KeyvMysql from '@keyv/mysql';
 
-const keyv = new Keyv(new KeyvMysql({
+const keyv = new Keyv({ store: new KeyvMysql({
   uri: 'mysql://user:pass@localhost:3306/dbname',
   table: 'cache',
   keySize: 255,
   intervalExpiration: 60
-}));
+}) });
 ```
 
 ## SSL
