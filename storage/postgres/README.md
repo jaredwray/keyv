@@ -11,13 +11,22 @@ PostgreSQL storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant upserts. [Why?](https://stackoverflow.com/questions/17267417/how-to-upsert-merge-insert-on-duplicate-update-in-postgresql/17267423#17267423)
 
-## Install
+## Table of Contents
+
+- [Install](#install)
+- [Usage](#usage)
+- [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
+- [Connection pooling](#connection-pooling)
+- [Testing](#testing)
+- [License](#license)
+
+# Install
 
 ```shell
 npm install --save keyv @keyv/postgres
 ```
 
-## Usage
+# Usage
 
 ```js
 import Keyv from 'keyv';
@@ -68,7 +77,7 @@ If specified, the table is created as an unlogged table. Data written to unlogge
 
 If this is specified, any sequences created together with the unlogged table (for identity or serial columns) are also created as unlogged.
 
-## Connection pooling
+# Connection pooling
 
 The adapter automatically uses the default settings on the `pg` package for connection pooling. You can override these settings by passing the options to the constructor such as setting the `max` pool size.
 
@@ -76,7 +85,7 @@ The adapter automatically uses the default settings on the `pg` package for conn
 const keyv = new Keyv(new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', max: 20 }));
 ```
 
-## Testing
+# Testing
 
 When testing you can use our `docker compose` postgresql instance by having docker installed and running. This will start a postgres server, run the tests, and stop the server:
 
@@ -90,6 +99,6 @@ To just test the postgres adapter go to the postgres directory (storage/postgres
 pnpm test
 ```
 
-## License
+# License
 
 [MIT © Jared Wray](LISCENCE)
