@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import * as test from "vitest";
 import KeyvPostgres from "../src/index.js";
-import { endPool } from "../src/pool.js";
+import { endAllPools } from "../src/pool.js";
 
 const postgresUri = "postgresql://postgres:postgres@localhost:5433/keyv_test";
 
@@ -16,7 +16,7 @@ test.beforeEach(async () => {
 });
 
 test.it("throws if ssl is not used", async (t) => {
-	await endPool();
+	await endAllPools();
 	try {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
@@ -25,7 +25,7 @@ test.it("throws if ssl is not used", async (t) => {
 	} catch {
 		t.expect(true).toBeTruthy();
 	} finally {
-		await endPool();
+		await endAllPools();
 	}
 });
 
