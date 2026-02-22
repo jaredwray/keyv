@@ -375,7 +375,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async *iterator(
 		namespace?: string,
 	): AsyncGenerator<[string, string], void, unknown> {
-		const limit = this._iterationLimit;
+		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
 
 		// Escape special LIKE pattern characters in namespace
 		const escapedNamespace = namespace
@@ -469,7 +469,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns A query function that executes SQL statements and returns result rows.
 	 */
 	private async connect() {
-		const conn = pool(this._uri, { ssl: this._ssl, ...this._poolConfig });
+		const conn = pool(this._uri, { ...this._poolConfig, ssl: this._ssl });
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		return async (sql: string, values?: any) => {
 			const data = await conn.query(sql, values);
