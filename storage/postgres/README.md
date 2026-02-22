@@ -25,10 +25,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [iterationLimit](#iterationlimit)
   - [useUnloggedTable](#useunloggedtable)
   - [namespace](#namespace)
-- [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
-- [Connection Pooling](#connection-pooling)
-- [SSL/TLS Connections](#ssltls-connections)
-- [API](#api)
+- [Methods](#methods)
   - [.set(key, value)](#setkey-value)
   - [.setMany(entries)](#setmanyentries)
   - [.get(key)](#getkey)
@@ -40,6 +37,9 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [.clear()](#clear)
   - [.iterator(namespace?)](#iteratornamespace)
   - [.disconnect()](#disconnect)
+- [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
+- [Connection Pooling](#connection-pooling)
+- [SSL/TLS Connections](#ssltls-connections)
 - [Testing](#testing)
 - [License](#license)
 
@@ -193,46 +193,7 @@ store.namespace = 'my-namespace';
 console.log(store.namespace); // 'my-namespace'
 ```
 
-# Using an Unlogged Table for Performance
-
-By default, the adapter creates a logged table. If you want to use an unlogged table for performance, you can pass the `useUnloggedTable` option to the constructor.
-
-```js
-const keyvPostgres = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', useUnloggedTable: true });
-const keyv = new Keyv({ store: keyvPostgres });
-```
-
-From the [PostgreSQL documentation](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-UNLOGGED):
-
-If specified, the table is created as an unlogged table. Data written to unlogged tables is not written to the write-ahead log (see Chapter 28), which makes them considerably faster than ordinary tables. However, they are not crash-safe: an unlogged table is automatically truncated after a crash or unclean shutdown. The contents of an unlogged table are also not replicated to standby servers. Any indexes created on an unlogged table are automatically unlogged as well.
-
-If this is specified, any sequences created together with the unlogged table (for identity or serial columns) are also created as unlogged.
-
-# Connection Pooling
-
-The adapter automatically uses the default settings on the `pg` package for connection pooling. You can override these settings by passing the options to the constructor such as setting the `max` pool size.
-
-```js
-const keyv = new Keyv({ store: new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', max: 20 }) });
-```
-
-# SSL/TLS Connections
-
-You can configure SSL/TLS connections by passing the `ssl` option. This is passed directly to the underlying `pg` driver.
-
-```js
-const keyvPostgres = new KeyvPostgres({
-  uri: 'postgresql://user:pass@localhost:5432/dbname',
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
-const keyv = new Keyv({ store: keyvPostgres });
-```
-
-For more details on SSL configuration, see the [node-postgres SSL documentation](https://node-postgres.com/features/ssl).
-
-# API
+# Methods
 
 ## .set(key, value)
 
@@ -330,6 +291,45 @@ Disconnect from the PostgreSQL database and release the connection pool.
 ```js
 await keyv.disconnect();
 ```
+
+# Using an Unlogged Table for Performance
+
+By default, the adapter creates a logged table. If you want to use an unlogged table for performance, you can pass the `useUnloggedTable` option to the constructor.
+
+```js
+const keyvPostgres = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', useUnloggedTable: true });
+const keyv = new Keyv({ store: keyvPostgres });
+```
+
+From the [PostgreSQL documentation](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-UNLOGGED):
+
+If specified, the table is created as an unlogged table. Data written to unlogged tables is not written to the write-ahead log (see Chapter 28), which makes them considerably faster than ordinary tables. However, they are not crash-safe: an unlogged table is automatically truncated after a crash or unclean shutdown. The contents of an unlogged table are also not replicated to standby servers. Any indexes created on an unlogged table are automatically unlogged as well.
+
+If this is specified, any sequences created together with the unlogged table (for identity or serial columns) are also created as unlogged.
+
+# Connection Pooling
+
+The adapter automatically uses the default settings on the `pg` package for connection pooling. You can override these settings by passing the options to the constructor such as setting the `max` pool size.
+
+```js
+const keyv = new Keyv({ store: new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', max: 20 }) });
+```
+
+# SSL/TLS Connections
+
+You can configure SSL/TLS connections by passing the `ssl` option. This is passed directly to the underlying `pg` driver.
+
+```js
+const keyvPostgres = new KeyvPostgres({
+  uri: 'postgresql://user:pass@localhost:5432/dbname',
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+const keyv = new Keyv({ store: keyvPostgres });
+```
+
+For more details on SSL configuration, see the [node-postgres SSL documentation](https://node-postgres.com/features/ssl).
 
 # Testing
 
