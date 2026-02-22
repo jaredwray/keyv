@@ -446,6 +446,14 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Utility helper method to delete all expired entries from the store where the `expires` column is less than the current timestamp.
+	 */
+	public async clearExpired(): Promise<void> {
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE expires IS NOT NULL AND expires < $1`;
+		await this.query(del, [Date.now()]);
+	}
+
+	/**
 	 * Iterates over all key-value pairs, optionally filtered by namespace.
 	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`.
 	 * @param namespace - Optional namespace to filter keys by.
@@ -601,24 +609,21 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	private getExpiresFromValue(value: any): number | null {
-		if (typeof value !== "string") {
-			if (
-				value &&
-				typeof value === "object" &&
-				typeof value.expires === "number"
-			) {
-				return value.expires;
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		let data: any;
+		if (typeof value === "string") {
+			try {
+				data = JSON.parse(value);
+			} catch {
+				return null;
 			}
-
-			return null;
+		} else {
+			data = value;
 		}
 
-		try {
-			const parsed = JSON.parse(value);
-			if (parsed && typeof parsed.expires === "number") {
-				return parsed.expires;
-			}
-		} catch {}
+		if (data && typeof data === "object" && typeof data.expires === "number") {
+			return data.expires;
+		}
 
 		return null;
 	}

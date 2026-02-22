@@ -37,6 +37,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
+  - [.clearExpired()](#clearexpired)
   - [.iterator(namespace?)](#iteratornamespace)
   - [.disconnect()](#disconnect)
 - [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
@@ -342,6 +343,14 @@ Clear all keys in the current namespace.
 
 ```js
 await keyv.clear();
+```
+
+## .clearExpired()
+
+Utility helper method to delete all expired entries from the store. This removes any rows where the `expires` column is set and the timestamp is in the past. This is useful for periodic cleanup of expired data.
+
+```js
+await keyv.clearExpired();
 ```
 
 ## .iterator(namespace?)

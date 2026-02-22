@@ -511,3 +511,46 @@ test.it("set() handles numeric value for expires extraction", async (t) => {
 	const result = await keyv.get("num-val-key");
 	t.expect(result).toBe("12345");
 });
+
+test.it(
+	"clearExpired() removes expired entries and keeps valid ones",
+	async (t) => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const pastExpires = Date.now() - 60_000;
+		const futureExpires = Date.now() + 60_000;
+		await keyv.set(
+			"expired-key",
+			JSON.stringify({ value: "old", expires: pastExpires }),
+		);
+		await keyv.set(
+			"valid-key",
+			JSON.stringify({ value: "fresh", expires: futureExpires }),
+		);
+		await keyv.set("no-ttl-key", JSON.stringify({ value: "forever" }));
+
+		await keyv.clearExpired();
+
+		t.expect(await keyv.get("expired-key")).toBeUndefined();
+		t.expect(await keyv.get("valid-key")).toBe(
+			JSON.stringify({ value: "fresh", expires: futureExpires }),
+		);
+		t.expect(await keyv.get("no-ttl-key")).toBe(
+			JSON.stringify({ value: "forever" }),
+		);
+	},
+);
+
+test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const futureExpires = Date.now() + 60_000;
+	await keyv.set(
+		"still-valid",
+		JSON.stringify({ value: "ok", expires: futureExpires }),
+	);
+
+	await keyv.clearExpired();
+
+	t.expect(await keyv.get("still-valid")).toBe(
+		JSON.stringify({ value: "ok", expires: futureExpires }),
+	);
+});

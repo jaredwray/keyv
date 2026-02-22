@@ -83,17 +83,16 @@ async function migrate(options: {
 	const client = await pool.connect();
 
 	try {
-		await client.query("BEGIN");
-
-		// Ensure the namespace column exists (idempotent)
+		// Schema migrations run outside the transaction so they persist
+		// even when the data migration is a no-op or a dry run.
 		await client.query(
 			`ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS namespace VARCHAR(${Number(namespaceLength)}) DEFAULT NULL`,
 		);
-
-		// Ensure the expires column exists (idempotent)
 		await client.query(
 			`ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS expires BIGINT DEFAULT NULL`,
 		);
+
+		await client.query("BEGIN");
 
 		// Preview what will be migrated
 		const previewQuery = `
