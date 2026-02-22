@@ -1,5 +1,6 @@
 // biome-ignore-all lint/style/noNonNullAssertion: need to fix
-import EventEmitter from "node:events";
+
+import { Hookified } from "hookified";
 import Keyv, { type KeyvEntry, type KeyvStoreAdapter } from "keyv";
 import type { DatabaseError } from "pg";
 import { endPool, pool } from "./pool.js";
@@ -15,7 +16,7 @@ function escapeIdentifier(identifier: string): string {
 	return `"${identifier.replace(/"/g, '""')}"`;
 }
 
-export class KeyvPostgres extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	opts: KeyvPostgresOptions;
 	query: Query;
 	namespace?: string;
