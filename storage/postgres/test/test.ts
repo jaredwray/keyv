@@ -185,6 +185,7 @@ test.it("should have correct default property values", (t) => {
 	t.expect(keyv.uri).toBe("postgresql://localhost:5432");
 	t.expect(keyv.table).toBe("keyv");
 	t.expect(keyv.keyLength).toBe(255);
+	t.expect(keyv.namespaceLength).toBe(255);
 	t.expect(keyv.schema).toBe("public");
 	t.expect(keyv.iterationLimit).toBe(10);
 	t.expect(keyv.useUnloggedTable).toBe(false);
@@ -197,6 +198,7 @@ test.it("should set properties from constructor options", (t) => {
 		uri: postgresUri,
 		table: "custom_table",
 		keyLength: 512,
+		namespaceLength: 512,
 		schema: "custom_schema",
 		iterationLimit: 50,
 		useUnloggedTable: true,
@@ -205,6 +207,7 @@ test.it("should set properties from constructor options", (t) => {
 	t.expect(keyv.uri).toBe(postgresUri);
 	t.expect(keyv.table).toBe("custom_table");
 	t.expect(keyv.keyLength).toBe(512);
+	t.expect(keyv.namespaceLength).toBe(512);
 	t.expect(keyv.schema).toBe("custom_schema");
 	t.expect(keyv.iterationLimit).toBe(50);
 	t.expect(keyv.useUnloggedTable).toBe(true);
@@ -226,6 +229,8 @@ test.it("should be able to get and set individual properties", (t) => {
 	t.expect(keyv.schema).toBe("new_schema");
 	keyv.keyLength = 512;
 	t.expect(keyv.keyLength).toBe(512);
+	keyv.namespaceLength = 512;
+	t.expect(keyv.namespaceLength).toBe(512);
 	keyv.iterationLimit = 25;
 	t.expect(keyv.iterationLimit).toBe(25);
 	keyv.useUnloggedTable = true;
