@@ -25,12 +25,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - Connection errors are passed through (db failures won't kill your app)
 - Supports the current active LTS version of Node.js or higher
 
-# Bun Support
-
-We make a best effort to support [Bun](https://bun.sh/) as a runtime. Our default and primary target is Node.js, but we run tests against Bun to ensure compatibility. If you encounter any issues while using Keyv with Bun, please report them at our [GitHub issues](https://github.com/jaredwray/keyv/issues).
-
 # Table of Contents
-- [Bun Support](#bun-support)
 - [Usage](#usage)
 - [Type-safe Usage](#type-safe-usage)
 - [Using Storage Adapters](#using-storage-adapters)
@@ -63,6 +58,7 @@ We make a best effort to support [Bun](https://bun.sh/) as a runtime. Our defaul
 	- [.deleteMany(keys)](#deletemanykeys)
 	- [.clear()](#clear)
 	- [.iterator()](#iterator)
+- [Bun Support](#bun-support)
 - [How to Contribute](#how-to-contribute)
 - [License](#license)
 
@@ -814,6 +810,10 @@ keyv.stats.enabled = true; // Enable stats tracking
 // ... perform operations ...
 keyv.stats.enabled = false; // Disable stats tracking
 ```
+
+# Bun Support
+
+We make a best effort to support [Bun](https://bun.sh/) as a runtime. Our default and primary target is Node.js, but we run tests against Bun to ensure compatibility. If you encounter any issues while using Keyv with Bun, please report them at our [GitHub issues](https://github.com/jaredwray/keyv/issues).
 
 # How to Contribute
 
