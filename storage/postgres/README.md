@@ -24,7 +24,9 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [ssl](#ssl)
   - [iterationLimit](#iterationlimit)
   - [useUnloggedTable](#useunloggedtable)
+  - [namespacePrefix](#namespaceprefix)
   - [namespace](#namespace)
+- [Namespace-Per-Table](#namespace-per-table)
 - [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
 - [Connection Pooling](#connection-pooling)
 - [SSL/TLS Connections](#ssltls-connections)
@@ -87,6 +89,7 @@ const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', t
 | `ssl` | `object` | `undefined` | SSL/TLS configuration passed to the `pg` driver |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `useUnloggedTable` | `boolean` | `false` | Use a PostgreSQL UNLOGGED table for better write performance |
+| `namespacePrefix` | `string` | `'keyv_'` | Prefix for namespace-per-table table names (e.g., `keyv_` + `users` = table `keyv_users`) |
 
 # Properties
 
@@ -180,17 +183,61 @@ const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbn
 console.log(store.useUnloggedTable); // true
 ```
 
+## namespacePrefix
+
+Get or set the prefix used for namespace-per-table table names. When a namespace is set, the table name becomes `{namespacePrefix}{namespace}` (e.g., `keyv_users`). When no namespace is set, the trailing underscore is stripped and the table name is just the prefix base (e.g., `keyv`).
+
+- Type: `string`
+- Default: `'keyv_'`
+
+```js
+const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', namespacePrefix: 'cache_' });
+console.log(store.namespacePrefix); // 'cache_'
+```
+
 ## namespace
 
-Get or set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+Get or set the namespace for the adapter. When set, the adapter uses a dedicated table named `{namespacePrefix}{namespace}` (e.g., `keyv_sessions`). This provides physical isolation between namespaces.
 
 - Type: `string | undefined`
 - Default: `undefined`
 
 ```js
 const store = new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname' });
-store.namespace = 'my-namespace';
-console.log(store.namespace); // 'my-namespace'
+store.namespace = 'sessions';
+console.log(store.namespace); // 'sessions'
+// Data is stored in table: keyv_sessions
+```
+
+# Namespace-Per-Table
+
+Each namespace automatically gets its own PostgreSQL table. The table name is computed from the `namespacePrefix` and the `namespace`:
+
+- Namespace `"users"` with default prefix → table `keyv_users`
+- Namespace `"sessions"` with prefix `"cache_"` → table `cache_sessions`
+- No namespace with default prefix → table `keyv`
+
+Tables are created automatically when first accessed.
+
+```js
+import Keyv from 'keyv';
+import KeyvPostgres from '@keyv/postgres';
+
+// Two separate namespaces, each with their own table
+const users = new Keyv({
+  store: new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname' }),
+  namespace: 'users',
+});
+
+const sessions = new Keyv({
+  store: new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname' }),
+  namespace: 'sessions',
+});
+
+// Data is isolated — clearing users does not affect sessions
+await users.set('user1', { name: 'Alice' });
+await sessions.set('sess1', { token: 'abc' });
+await users.clear(); // Only clears the keyv_users table
 ```
 
 # Using an Unlogged Table for Performance

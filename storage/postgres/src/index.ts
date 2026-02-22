@@ -69,6 +69,20 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	private _useUnloggedTable = false;
 
 	/**
+	 * The prefix used for namespace-per-table table names.
+	 * When a namespace is set, the table name becomes `{namespacePrefix}{namespace}` (e.g., `keyv_user`).
+	 * When no namespace is set, the trailing underscore is stripped (e.g., `keyv`).
+	 * @default 'keyv_'
+	 */
+	private _namespacePrefix = "keyv_";
+
+	/**
+	 * Tracks table names that have already been created during this adapter's lifetime.
+	 * Used to avoid redundant CREATE TABLE IF NOT EXISTS queries.
+	 */
+	private readonly _createdTables = new Set<string>();
+
+	/**
 	 * Additional PoolConfig properties passed through to the pg connection pool.
 	 */
 	private _poolConfig: PoolConfig = {};
@@ -86,16 +100,14 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			this.setOptions(options);
 		}
 
-		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)}(key VARCHAR(${Number(this._keySize)}) PRIMARY KEY, value TEXT )`;
-
-		if (this._schema !== "public") {
-			createTable = `CREATE SCHEMA IF NOT EXISTS ${escapeIdentifier(this._schema)}; ${createTable}`;
-		}
+		const initialTable = this._getEffectiveTable();
+		const createTable = this._buildCreateTableSql(initialTable);
 
 		const connected = this.connect()
 			.then(async (query) => {
 				try {
 					await query(createTable);
+					this._createdTables.add(initialTable);
 				} catch (error) {
 					/* v8 ignore next -- @preserve */
 					if ((error as DatabaseError).code !== "23505") {
@@ -239,6 +251,21 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Get the namespace prefix used for per-table namespace isolation.
+	 * @default 'keyv_'
+	 */
+	public get namespacePrefix(): string {
+		return this._namespacePrefix;
+	}
+
+	/**
+	 * Set the namespace prefix used for per-table namespace isolation.
+	 */
+	public set namespacePrefix(value: string) {
+		this._namespacePrefix = value;
+	}
+
+	/**
 	 * Get the options for the adapter. This is required by the KeyvStoreAdapter interface.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -252,6 +279,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			dialect: "postgres",
 			iterationLimit: this._iterationLimit,
 			useUnloggedTable: this._useUnloggedTable,
+			namespacePrefix: this._namespacePrefix,
 			...this._poolConfig,
 		};
 	}
@@ -269,7 +297,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns The value associated with the key, or `undefined` if not found.
 	 */
 	public async get<Value>(key: string): Promise<Value | undefined> {
-		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 		const row = rows[0];
 		return row === undefined ? undefined : row.value;
@@ -283,7 +313,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<Value | undefined>> {
-		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = ANY($1)`;
 		const rows = await this.query(getMany, [keys]);
 		const rowsMap = new Map(rows.map((row) => [row.key, row]));
 
@@ -297,7 +329,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any): Promise<void> {
-		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value)
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} (key, value)
       VALUES($1, $2)
       ON CONFLICT(key)
       DO UPDATE SET value=excluded.value;`;
@@ -309,13 +343,15 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @param entries - An array of key-value entry objects.
 	 */
 	public async setMany(entries: KeyvEntry[]): Promise<void> {
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
 		const keys = [];
 		const values = [];
 		for (const { key, value } of entries) {
 			keys.push(key);
 			values.push(value);
 		}
-		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value)
+		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} (key, value)
       SELECT * FROM UNNEST($1::text[], $2::text[])
       ON CONFLICT(key)
       DO UPDATE SET value=excluded.value;`;
@@ -328,8 +364,10 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key existed and was deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1`;
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = $1`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = $1`;
 		const rows = await this.query(select, [key]);
 
 		if (rows[0] === undefined) {
@@ -346,8 +384,10 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if any of the keys existed and were deleted, `false` otherwise.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
-		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = ANY($1)`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
 
 		if (rows[0] === undefined) {
@@ -362,8 +402,10 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * Clears all keys in the current namespace. If no namespace is set, all keys are removed.
 	 */
 	public async clear(): Promise<void> {
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key LIKE $1`;
-		await this.query(del, [this._namespace ? `${this._namespace}:%` : "%"]);
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)}`;
+		await this.query(del);
 	}
 
 	/**
@@ -373,15 +415,11 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @yields A `[key, value]` tuple for each entry.
 	 */
 	public async *iterator(
-		namespace?: string,
+		_namespace?: string,
 	): AsyncGenerator<[string, string], void, unknown> {
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
 		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
-
-		// Escape special LIKE pattern characters in namespace
-		const escapedNamespace = namespace
-			? `${namespace.replace(/[%_\\]/g, "\\$&")}:`
-			: "";
-		const pattern = `${escapedNamespace}%`;
 
 		// Use keyset pagination (cursor-based) instead of OFFSET to handle
 		// concurrent deletions during iteration without skipping entries
@@ -396,12 +434,12 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 
 				if (lastKey === null) {
 					// First batch: no cursor constraint
-					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key LIKE $1 ORDER BY key LIMIT $2`;
-					params = [pattern, limit];
+					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} ORDER BY key LIMIT $1`;
+					params = [limit];
 				} else {
 					// Subsequent batches: use keyset pagination
-					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key LIKE $1 AND key > $2 ORDER BY key LIMIT $3`;
-					params = [pattern, lastKey, limit];
+					select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key > $1 ORDER BY key LIMIT $2`;
+					params = [lastKey, limit];
 				}
 
 				entries = await this.query(select, params);
@@ -447,7 +485,9 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key exists, `false` otherwise.
 	 */
 	public async has(key: string): Promise<boolean> {
-		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 )`;
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = $1 )`;
 		const rows = await this.query(exists, [key]);
 		return rows[0].exists;
 	}
@@ -458,10 +498,61 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns An array of booleans in the same order as the input keys.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1)`;
+		const tableName = this._getEffectiveTable();
+		await this._ensureTable(tableName);
+		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)} WHERE key = ANY($1)`;
 		const rows = await this.query(select, [keys]);
 		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
 		return keys.map((key) => existingKeys.has(key));
+	}
+
+	/**
+	 * Returns the effective table name based on namespace and namespacePrefix.
+	 * When a namespace is set: `{namespacePrefix}{namespace}` (e.g., `keyv_user`).
+	 * When no namespace: the prefix without its trailing underscore (e.g., `keyv`).
+	 */
+	private _getEffectiveTable(): string {
+		if (this._namespace) {
+			return `${this._namespacePrefix}${this._namespace}`;
+		}
+
+		return this._namespacePrefix.endsWith("_")
+			? this._namespacePrefix.slice(0, -1)
+			: this._namespacePrefix;
+	}
+
+	/**
+	 * Builds the CREATE TABLE SQL statement for the given table name.
+	 */
+	private _buildCreateTableSql(tableName: string): string {
+		let createTable = `CREATE${this._useUnloggedTable ? " UNLOGGED " : " "}TABLE IF NOT EXISTS ${escapeIdentifier(this._schema)}.${escapeIdentifier(tableName)}(key VARCHAR(${Number(this._keySize)}) PRIMARY KEY, value TEXT )`;
+
+		if (this._schema !== "public") {
+			createTable = `CREATE SCHEMA IF NOT EXISTS ${escapeIdentifier(this._schema)}; ${createTable}`;
+		}
+
+		return createTable;
+	}
+
+	/**
+	 * Ensures the table exists, creating it if necessary.
+	 * Uses an in-memory Set to avoid redundant CREATE TABLE queries after the first call.
+	 */
+	private async _ensureTable(tableName: string): Promise<void> {
+		if (this._createdTables.has(tableName)) {
+			return;
+		}
+
+		const createTable = this._buildCreateTableSql(tableName);
+		try {
+			await this.query(createTable);
+			this._createdTables.add(tableName);
+		} catch (error) {
+			/* v8 ignore next -- @preserve */
+			if ((error as DatabaseError).code !== "23505") {
+				this.emit("error", error);
+			}
+		}
 	}
 
 	/**
@@ -513,6 +604,10 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			this._useUnloggedTable = options.useUnloggedTable;
 		}
 
+		if (options.namespacePrefix !== undefined) {
+			this._namespacePrefix = options.namespacePrefix;
+		}
+
 		const {
 			uri,
 			table,
@@ -521,6 +616,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 			ssl,
 			iterationLimit,
 			useUnloggedTable,
+			namespacePrefix,
 			...poolConfigRest
 		} = options;
 

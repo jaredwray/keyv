@@ -190,6 +190,7 @@ test.it("should have correct default property values", (t) => {
 	t.expect(keyv.useUnloggedTable).toBe(false);
 	t.expect(keyv.ssl).toBeUndefined();
 	t.expect(keyv.namespace).toBeUndefined();
+	t.expect(keyv.namespacePrefix).toBe("keyv_");
 });
 
 test.it("should set properties from constructor options", (t) => {
@@ -254,6 +255,7 @@ test.it("opts getter should return correct object", (t) => {
 	t.expect(opts.schema).toBe("public");
 	t.expect(opts.keySize).toBe(255);
 	t.expect(opts.useUnloggedTable).toBe(false);
+	t.expect(opts.namespacePrefix).toBe("keyv_");
 });
 
 test.it("opts setter should update individual properties", (t) => {
@@ -280,3 +282,112 @@ test.it("emits error when connection fails", async (t) => {
 
 	t.expect(error).toBeInstanceOf(Error);
 });
+
+test.it("namespacePrefix getter and setter", (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	t.expect(keyv.namespacePrefix).toBe("keyv_");
+	keyv.namespacePrefix = "cache_";
+	t.expect(keyv.namespacePrefix).toBe("cache_");
+});
+
+test.it("namespacePrefix can be set from constructor options", (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		namespacePrefix: "app_",
+	});
+	t.expect(keyv.namespacePrefix).toBe("app_");
+});
+
+test.it(
+	"namespace-per-table: two namespaces use separate tables with data isolation",
+	async (t) => {
+		const storeA = new KeyvPostgres({ uri: postgresUri });
+		const storeB = new KeyvPostgres({ uri: postgresUri });
+		const keyvA = new Keyv({ store: storeA, namespace: "nstbl_a" });
+		const keyvB = new Keyv({ store: storeB, namespace: "nstbl_b" });
+
+		const key = faker.string.alphanumeric(10);
+		const valueA = faker.lorem.sentence();
+		const valueB = faker.lorem.sentence();
+
+		await keyvA.set(key, valueA);
+		await keyvB.set(key, valueB);
+
+		t.expect(await keyvA.get(key)).toBe(valueA);
+		t.expect(await keyvB.get(key)).toBe(valueB);
+
+		await keyvA.clear();
+		await keyvB.clear();
+	},
+);
+
+test.it(
+	"namespace-per-table: clear() only clears the namespace table",
+	async (t) => {
+		const storeA = new KeyvPostgres({ uri: postgresUri });
+		const storeB = new KeyvPostgres({ uri: postgresUri });
+		const keyvA = new Keyv({ store: storeA, namespace: "clr_a" });
+		const keyvB = new Keyv({ store: storeB, namespace: "clr_b" });
+
+		await keyvA.set("foo", "bar");
+		await keyvB.set("foo", "baz");
+
+		await keyvA.clear();
+
+		t.expect(await keyvA.get("foo")).toBeUndefined();
+		t.expect(await keyvB.get("foo")).toBe("baz");
+
+		await keyvB.clear();
+	},
+);
+
+test.it(
+	"namespace-per-table: iterator yields all entries from namespace table",
+	async (t) => {
+		const store = new KeyvPostgres({ uri: postgresUri });
+		store.namespace = "iter_ns";
+		await store.clear();
+		await store.set("k1", "v1");
+		await store.set("k2", "v2");
+		await store.set("k3", "v3");
+
+		const entries: Array<[string, string]> = [];
+		for await (const entry of store.iterator()) {
+			entries.push(entry);
+		}
+
+		t.expect(entries.length).toBe(3);
+		const keys = entries.map(([k]) => k);
+		t.expect(keys).toContain("k1");
+		t.expect(keys).toContain("k2");
+		t.expect(keys).toContain("k3");
+
+		await store.clear();
+	},
+);
+
+test.it(
+	"namespace-per-table: custom namespacePrefix creates correct table",
+	async (t) => {
+		const store = new KeyvPostgres({
+			uri: postgresUri,
+			namespacePrefix: "cache_",
+		});
+		store.namespace = "tokens";
+		await store.set("t1", "val1");
+		t.expect(await store.get("t1")).toBe("val1");
+		await store.clear();
+	},
+);
+
+test.it(
+	"namespace-per-table: no namespace uses prefix as table name",
+	async (t) => {
+		const store = new KeyvPostgres({ uri: postgresUri });
+		// No namespace set — table should be "keyv"
+		const key = faker.string.alphanumeric(10);
+		const value = faker.lorem.sentence();
+		await store.set(key, value);
+		t.expect(await store.get(key)).toBe(value);
+	},
+);
