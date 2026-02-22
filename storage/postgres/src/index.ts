@@ -279,11 +279,11 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns The value associated with the key, or `undefined` if not found.
 	 */
 	public async get<Value>(key: string): Promise<Value | undefined> {
-		const strippedKey = this._removeKeyPrefix(key);
+		const strippedKey = this.removeKeyPrefix(key);
 		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
 		const rows = await this.query(select, [
 			strippedKey,
-			this._getNamespaceValue(),
+			this.getNamespaceValue(),
 		]);
 		const row = rows[0];
 		return row === undefined ? undefined : row.value;
@@ -297,11 +297,11 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<Value | undefined>> {
-		const strippedKeys = keys.map((k) => this._removeKeyPrefix(k));
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
 		const rows = await this.query(getMany, [
 			strippedKeys,
-			this._getNamespaceValue(),
+			this.getNamespaceValue(),
 		]);
 		const rowsMap = new Map(rows.map((row) => [row.key, row]));
 
@@ -315,12 +315,12 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any): Promise<void> {
-		const strippedKey = this._removeKeyPrefix(key);
+		const strippedKey = this.removeKeyPrefix(key);
 		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace)
       VALUES($1, $2, $3)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value;`;
-		await this.query(upsert, [strippedKey, value, this._getNamespaceValue()]);
+		await this.query(upsert, [strippedKey, value, this.getNamespaceValue()]);
 	}
 
 	/**
@@ -331,14 +331,14 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 		const keys = [];
 		const values = [];
 		for (const { key, value } of entries) {
-			keys.push(this._removeKeyPrefix(key));
+			keys.push(this.removeKeyPrefix(key));
 			values.push(value);
 		}
 		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace)
       SELECT k, v, $3 FROM UNNEST($1::text[], $2::text[]) AS t(k, v)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value;`;
-		await this.query(upsert, [keys, values, this._getNamespaceValue()]);
+		await this.query(upsert, [keys, values, this.getNamespaceValue()]);
 	}
 
 	/**
@@ -347,8 +347,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key existed and was deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const strippedKey = this._removeKeyPrefix(key);
-		const ns = this._getNamespaceValue();
+		const strippedKey = this.removeKeyPrefix(key);
+		const ns = this.getNamespaceValue();
 		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
 		const rows = await this.query(del, [strippedKey, ns]);
 		return rows.length > 0;
@@ -360,8 +360,8 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if any of the keys existed and were deleted, `false` otherwise.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean> {
-		const strippedKeys = keys.map((k) => this._removeKeyPrefix(k));
-		const ns = this._getNamespaceValue();
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
+		const ns = this.getNamespaceValue();
 		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
 		const rows = await this.query(del, [strippedKeys, ns]);
 		return rows.length > 0;
@@ -465,11 +465,11 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key exists, `false` otherwise.
 	 */
 	public async has(key: string): Promise<boolean> {
-		const strippedKey = this._removeKeyPrefix(key);
+		const strippedKey = this.removeKeyPrefix(key);
 		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') )`;
 		const rows = await this.query(exists, [
 			strippedKey,
-			this._getNamespaceValue(),
+			this.getNamespaceValue(),
 		]);
 		return rows[0].exists;
 	}
@@ -480,11 +480,11 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @returns An array of booleans in the same order as the input keys.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const strippedKeys = keys.map((k) => this._removeKeyPrefix(k));
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
 		const rows = await this.query(select, [
 			strippedKeys,
-			this._getNamespaceValue(),
+			this.getNamespaceValue(),
 		]);
 		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
 		return strippedKeys.map((key) => existingKeys.has(key));
@@ -514,7 +514,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * Strips the namespace prefix from a key that was added by the Keyv core.
 	 * For example, if namespace is "ns" and key is "ns:foo", returns "foo".
 	 */
-	private _removeKeyPrefix(key: string): string {
+	private removeKeyPrefix(key: string): string {
 		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
 			return key.slice(this._namespace.length + 1);
 		}
@@ -525,7 +525,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	/**
 	 * Returns the namespace value for SQL parameters. Returns null when no namespace is set.
 	 */
-	private _getNamespaceValue(): string | null {
+	private getNamespaceValue(): string | null {
 		return this._namespace ?? null;
 	}
 
