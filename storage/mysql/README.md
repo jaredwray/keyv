@@ -68,7 +68,7 @@ const keyv = new Keyv(new KeyvMysql({
 | `table` | `string` | `"keyv"` | Name of the MySQL table used for storage |
 | `keySize` | `number` | `255` | Maximum size of the key column (VARCHAR length) |
 | `dialect` | `string` | `"mysql"` | Database dialect |
-| `iterationLimit` | `string \| number` | `10` | Number of rows to fetch per batch during iteration |
+| `iterationLimit` | `string \| number` | `10` | Number of rows to fetch per batch during iteration. Accepts both numbers and string representations of numbers (e.g., `10` or `"10"`) |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
 | `ssl` | `object` | `undefined` | SSL configuration object passed to the MySQL connection |
 
