@@ -327,6 +327,10 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * @returns Array of booleans in the same order as the input keys
 	 */
 	async hasMany(keys: string[]): Promise<boolean[]> {
+		if (keys.length === 0) {
+			return [];
+		}
+
 		const sql = `SELECT id FROM ${escapeIdentifier(this.opts.table!)} WHERE id IN (?)`;
 		const select = mysql.format(sql, [keys]);
 		const rows: mysql.RowDataPacket[] = await this.query(select);
