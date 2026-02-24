@@ -13,6 +13,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 - [Install](#install)
 - [Usage](#usage)
+- [Migrating to v6](#migrating-to-v6)
 - [Properties](#properties)
 - [Namespace Support](#namespace-support)
 - [Methods](#methods)
@@ -62,6 +63,54 @@ const keyv = new Keyv(new KeyvMysql({
   intervalExpiration: 60
 }));
 ```
+
+## Migrating to v6
+
+### Breaking changes
+
+#### Native namespace support
+
+In v5, namespaces were stored as key prefixes in the `id` column (e.g. `id="myns:mykey"` with `namespace=''`). In v6, the namespace is stored in a dedicated `namespace` column (e.g. `id="mykey"`, `namespace="myns"`). This enables more efficient queries and proper namespace isolation.
+
+The adapter automatically adds the `namespace` column and creates the appropriate index when it connects, so no manual schema changes are needed for new installations.
+
+### New features
+
+#### Bulk operations
+
+v6 adds new methods for efficient multi-key operations:
+
+- `.setMany(entries)` — bulk upsert using `ON DUPLICATE KEY UPDATE`
+- `.hasMany(keys)` — bulk existence check
+
+### Running the migration script
+
+If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script is located at `scripts/migrate-v6.ts` in the `@keyv/mysql` package.
+
+Preview the changes first with `--dry-run`:
+
+```shell
+npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --dry-run
+```
+
+Run the migration:
+
+```shell
+npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname
+```
+
+You can also specify a custom table and column lengths:
+
+```shell
+npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --table cache
+npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --keyLength 512 --namespaceLength 512
+```
+
+The migration runs inside a transaction and will roll back automatically if anything fails.
+
+**Important notes:**
+- The script only migrates rows where `namespace = ''` (the default). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
+- Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
 
 ## Properties
 
