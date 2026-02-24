@@ -176,3 +176,36 @@ test.it(".has() prevents UNION-based SQL injection", async (t) => {
 	const result = await keyv.has("' UNION SELECT 1 --");
 	t.expect(result).toBe(false);
 });
+
+test.it(".setMany() sets multiple key-value pairs", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	await keyv.setMany([
+		{ key: "setMany1", value: "value1" },
+		{ key: "setMany2", value: "value2" },
+		{ key: "setMany3", value: "value3" },
+	]);
+	t.expect(await keyv.get("setMany1")).toBe("value1");
+	t.expect(await keyv.get("setMany2")).toBe("value2");
+	t.expect(await keyv.get("setMany3")).toBe("value3");
+});
+
+test.it(".setMany() updates existing keys", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	await keyv.set("setManyUpdate", "original");
+	await keyv.setMany([{ key: "setManyUpdate", value: "updated" }]);
+	t.expect(await keyv.get("setManyUpdate")).toBe("updated");
+});
+
+test.it(".hasMany() returns correct boolean array", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	await keyv.set("hasMany1", "value1");
+	await keyv.set("hasMany2", "value2");
+	const results = await keyv.hasMany(["hasMany1", "hasMany2", "nonexistent"]);
+	t.expect(results).toEqual([true, true, false]);
+});
+
+test.it(".hasMany() returns all false for nonexistent keys", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const results = await keyv.hasMany(["missing1", "missing2"]);
+	t.expect(results).toEqual([false, false]);
+});
