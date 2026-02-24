@@ -14,6 +14,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Install](#install)
 - [Usage](#usage)
 - [Properties](#properties)
+- [Namespace Support](#namespace-support)
 - [Methods](#methods)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
@@ -69,12 +70,33 @@ const keyv = new Keyv(new KeyvMysql({
 | `uri` | `string` | `"mysql://localhost"` | MySQL connection URI string |
 | `table` | `string` | `"keyv"` | Name of the MySQL table used for storage |
 | `keySize` | `number` | `255` | Maximum size of the key column (VARCHAR length) |
+| `namespace` | `string` | `undefined` | Optional namespace for scoping keys. When set, keys are stored with their namespace in a separate column |
+| `namespaceLength` | `number` | `255` | Maximum size of the namespace column (VARCHAR length) |
 | `dialect` | `string` | `"mysql"` | Database dialect |
 | `iterationLimit` | `string \| number` | `10` | Number of rows to fetch per batch during iteration. Accepts both numbers and string representations of numbers (e.g., `10` or `"10"`) |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
 | `ssl` | `object` | `undefined` | SSL configuration object passed to the MySQL connection |
 
 The `KeyvMysql` constructor also accepts any valid `mysql2` [ConnectionOptions](https://sidorares.github.io/node-mysql2/docs/documentation/connections) such as `host`, `port`, `user`, `password`, and `database`. These are parsed from the `uri` if not provided directly.
+
+## Namespace Support
+
+The MySQL adapter supports native namespace scoping. When a namespace is set, keys are stored in a dedicated `namespace` column rather than being embedded in the key name. This provides efficient filtering and proper isolation between namespaces.
+
+```js
+import Keyv from 'keyv';
+import KeyvMysql from '@keyv/mysql';
+
+const keyvA = new Keyv({ store: new KeyvMysql(uri), namespace: 'cache-a' });
+const keyvB = new Keyv({ store: new KeyvMysql(uri), namespace: 'cache-b' });
+
+// These don't conflict despite having the same key name
+await keyvA.set('user:1', 'Alice');
+await keyvB.set('user:1', 'Bob');
+
+// clear() only affects the namespace it belongs to
+await keyvA.clear(); // Only clears 'cache-a' entries
+```
 
 ## Methods
 

@@ -14,6 +14,19 @@ keyvIteratorTests(test, Keyv, iteratorStore);
 test.beforeEach(async () => {
 	const keyv = store();
 	await keyv.clear();
+	// Clear namespaced entries from native namespace tests
+	const ns1 = new KeyvMysql({ uri });
+	ns1.namespace = "ns1";
+	await ns1.clear();
+	const ns2 = new KeyvMysql({ uri });
+	ns2.namespace = "ns2";
+	await ns2.clear();
+	const nsA = new KeyvMysql({ uri });
+	nsA.namespace = "namespace-a";
+	await nsA.clear();
+	const nsB = new KeyvMysql({ uri });
+	nsB.namespace = "namespace-b";
+	await nsB.clear();
 });
 
 test.it("iterator with default namespace", async (t) => {
@@ -219,4 +232,180 @@ test.it(".hasMany() with empty array returns empty array", async (t) => {
 	const keyv = new KeyvMysql(uri);
 	const results = await keyv.hasMany([]);
 	t.expect(results).toEqual([]);
+});
+
+// Native namespace tests
+test.it(
+	"native namespace: same key in different namespaces stored independently",
+	async (t) => {
+		const mysql1 = new KeyvMysql({ uri });
+		mysql1.namespace = "ns1";
+		const mysql2 = new KeyvMysql({ uri });
+		mysql2.namespace = "ns2";
+
+		await mysql1.set("ns1:testkey", "value1");
+		await mysql2.set("ns2:testkey", "value2");
+
+		t.expect(await mysql1.get("ns1:testkey")).toBe("value1");
+		t.expect(await mysql2.get("ns2:testkey")).toBe("value2");
+	},
+);
+
+test.it(
+	"native namespace: null namespace stores and retrieves correctly",
+	async (t) => {
+		const keyv = new KeyvMysql({ uri });
+		await keyv.set("testkey-no-ns", "testvalue");
+		t.expect(await keyv.get("testkey-no-ns")).toBe("testvalue");
+	},
+);
+
+test.it(
+	"native namespace: clear only clears the specified namespace",
+	async (t) => {
+		const mysql1 = new KeyvMysql({ uri });
+		mysql1.namespace = "ns1";
+		const mysql2 = new KeyvMysql({ uri });
+		mysql2.namespace = "ns2";
+
+		await mysql1.set("ns1:key1", "value1");
+		await mysql2.set("ns2:key1", "value2");
+
+		await mysql1.clear();
+
+		t.expect(await mysql1.get("ns1:key1")).toBeUndefined();
+		t.expect(await mysql2.get("ns2:key1")).toBe("value2");
+	},
+);
+
+test.it("native namespace: delete scoped to namespace", async (t) => {
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = "ns1";
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = "ns2";
+
+	await mysql1.set("ns1:key1", "val1");
+	await mysql2.set("ns2:key1", "val2");
+
+	const deleted = await mysql1.delete("ns1:key1");
+	t.expect(deleted).toBe(true);
+	t.expect(await mysql1.get("ns1:key1")).toBeUndefined();
+	t.expect(await mysql2.get("ns2:key1")).toBe("val2");
+});
+
+test.it("native namespace: deleteMany scoped to namespace", async (t) => {
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = "ns1";
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = "ns2";
+
+	await mysql1.set("ns1:key1", "val1");
+	await mysql2.set("ns2:key1", "val2");
+
+	const deleted = await mysql1.deleteMany(["ns1:key1"]);
+	t.expect(deleted).toBe(true);
+	t.expect(await mysql1.get("ns1:key1")).toBeUndefined();
+	t.expect(await mysql2.get("ns2:key1")).toBe("val2");
+});
+
+test.it("native namespace: has scoped to namespace", async (t) => {
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = "ns1";
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = "ns2";
+
+	await mysql1.set("ns1:key1", "val1");
+
+	t.expect(await mysql1.has("ns1:key1")).toBe(true);
+	// ns2 should not see ns1's key
+	t.expect(await mysql2.has("ns2:key1")).toBe(false);
+});
+
+test.it("native namespace: hasMany scoped to namespace", async (t) => {
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = "ns1";
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = "ns2";
+
+	await mysql1.set("ns1:key1", "val1");
+	await mysql2.set("ns2:key1", "val2");
+
+	const result1 = await mysql1.hasMany(["ns1:key1"]);
+	t.expect(result1).toEqual([true]);
+
+	const result2 = await mysql1.hasMany(["ns2:key1"]);
+	t.expect(result2).toEqual([false]);
+});
+
+test.it(
+	"native namespace: iterator only returns keys from correct namespace",
+	async (t) => {
+		const mysql1 = new KeyvMysql({ uri });
+		mysql1.namespace = "ns1";
+		const mysql2 = new KeyvMysql({ uri });
+		mysql2.namespace = "ns2";
+
+		await mysql1.set("ns1:key1", "val1");
+		await mysql1.set("ns1:key2", "val2");
+		await mysql2.set("ns2:key3", "val3");
+
+		const keys: string[] = [];
+		for await (const [key] of mysql1.iterator("ns1")) {
+			keys.push(key);
+		}
+
+		t.expect(keys.length).toBe(2);
+		t.expect(keys).toContain("ns1:key1");
+		t.expect(keys).toContain("ns1:key2");
+	},
+);
+
+test.it(
+	"native namespace: two Keyv instances with different namespaces do not conflict",
+	async (t) => {
+		const mysqlA = new KeyvMysql({ uri });
+		const mysqlB = new KeyvMysql({ uri });
+		const keyvA = new Keyv({ store: mysqlA, namespace: "namespace-a" });
+		const keyvB = new Keyv({ store: mysqlB, namespace: "namespace-b" });
+
+		t.expect(await keyvA.set("mykey", "valueA")).toBe(true);
+		t.expect(await keyvA.get("mykey")).toBe("valueA");
+		t.expect(await keyvB.set("mykey", "valueB")).toBe(true);
+		t.expect(await keyvB.get("mykey")).toBe("valueB");
+		// Ensure they didn't overwrite each other
+		t.expect(await keyvA.get("mykey")).toBe("valueA");
+	},
+);
+
+test.it("native namespace: getMany scoped to namespace", async (t) => {
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = "ns1";
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = "ns2";
+
+	await mysql1.set("ns1:key1", "val1");
+	await mysql2.set("ns2:key1", "val2");
+
+	const results = await mysql1.getMany(["ns1:key1"]);
+	t.expect(results).toEqual(["val1"]);
+
+	const results2 = await mysql1.getMany(["ns2:key1"]);
+	t.expect(results2).toEqual([undefined]);
+});
+
+test.it("native namespace: setMany scoped to namespace", async (t) => {
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = "ns1";
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = "ns2";
+
+	await mysql1.setMany([
+		{ key: "ns1:key1", value: "val1" },
+		{ key: "ns1:key2", value: "val2" },
+	]);
+
+	t.expect(await mysql1.get("ns1:key1")).toBe("val1");
+	t.expect(await mysql1.get("ns1:key2")).toBe("val2");
+	// ns2 should not see ns1's keys
+	t.expect(await mysql2.get("ns2:key1")).toBeUndefined();
 });
