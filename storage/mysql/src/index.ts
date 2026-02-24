@@ -195,6 +195,10 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * @returns Promise that resolves when the operation completes
 	 */
 	async setMany(entries: KeyvEntry[]): Promise<void> {
+		if (entries.length === 0) {
+			return;
+		}
+
 		const values = entries.map(({ key, value }) => [key, value]);
 		const placeholders = values.map(() => "(?, ?)").join(", ");
 		const flatValues = values.flat();
@@ -326,7 +330,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const sql = `SELECT id FROM ${escapeIdentifier(this.opts.table!)} WHERE id IN (?)`;
 		const select = mysql.format(sql, [keys]);
 		const rows: mysql.RowDataPacket[] = await this.query(select);
-		const existingKeys = new Set(rows.map((row: { id: string }) => row.id));
+		const existingKeys = new Set(rows.map((row) => row.id as string));
 		return keys.map((key) => existingKeys.has(key));
 	}
 
