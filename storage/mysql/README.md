@@ -18,10 +18,12 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
   - [.set(key, value)](#setkey-value)
+  - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
   - [.has(key)](#haskey)
+  - [.hasMany(keys)](#hasmanykeys)
   - [.iterator(namespace)](#iteratornamespace)
   - [.disconnect()](#disconnect)
 - [SSL](#ssl)
@@ -100,6 +102,17 @@ Sets a value for the given key. If the key already exists, it will be updated.
 await keyvMysql.set('foo', 'bar');
 ```
 
+### .setMany(entries)
+
+Set multiple key-value pairs at once. Each entry is an object with `key` and `value` properties.
+
+```js
+await keyvMysql.setMany([
+  { key: 'foo', value: 'bar' },
+  { key: 'baz', value: 'qux' },
+]);
+```
+
 ### .delete(key)
 
 Deletes a key-value pair from the store. Returns `true` if the key existed and was deleted, `false` otherwise.
@@ -130,6 +143,17 @@ Returns `true` if the key exists in the store, `false` otherwise.
 
 ```js
 const exists = await keyvMysql.has('foo');
+```
+
+### .hasMany(keys)
+
+Check if multiple keys exist. Returns an array of booleans in the same order as the input keys.
+
+```js
+await keyvMysql.set('foo', 'bar');
+await keyvMysql.set('baz', 'qux');
+
+const results = await keyvMysql.hasMany(['foo', 'baz', 'unknown']); // [true, true, false]
 ```
 
 ### .iterator(namespace)

@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/noNonNullAssertion: need to fix
 import EventEmitter from "node:events";
-import type { KeyvStoreAdapter, StoredData } from "keyv";
+import type { KeyvEntry, KeyvStoreAdapter, StoredData } from "keyv";
 import mysql from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
@@ -190,6 +190,22 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Sets multiple key-value pairs at once.
+	 * @param entries - Array of key-value entry objects
+	 * @returns Promise that resolves when the operation completes
+	 */
+	async setMany(entries: KeyvEntry[]): Promise<void> {
+		const values = entries.map(({ key, value }) => [key, value]);
+		const placeholders = values.map(() => "(?, ?)").join(", ");
+		const flatValues = values.flat();
+		const sql = `INSERT INTO ${escapeIdentifier(this.opts.table!)} (id, value)
+			VALUES ${placeholders}
+			ON DUPLICATE KEY UPDATE value=VALUES(value);`;
+		const upsert = mysql.format(sql, flatValues);
+		await this.query(upsert);
+	}
+
+	/**
 	 * Deletes a key-value pair from the store.
 	 * @param key - The key to delete
 	 * @returns True if the key existed and was deleted, false if the key did not exist
@@ -299,6 +315,19 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const exists = mysql.format(sql, [key]);
 		const rows = await this.query(exists);
 		return Object.values(rows[0])[0] === 1;
+	}
+
+	/**
+	 * Checks whether multiple keys exist in the store.
+	 * @param keys - Array of keys to check
+	 * @returns Array of booleans in the same order as the input keys
+	 */
+	async hasMany(keys: string[]): Promise<boolean[]> {
+		const sql = `SELECT id FROM ${escapeIdentifier(this.opts.table!)} WHERE id IN (?)`;
+		const select = mysql.format(sql, [keys]);
+		const rows: mysql.RowDataPacket[] = await this.query(select);
+		const existingKeys = new Set(rows.map((row: { id: string }) => row.id));
+		return keys.map((key) => existingKeys.has(key));
 	}
 
 	/**
