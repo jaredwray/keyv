@@ -98,9 +98,10 @@ async function migrate(options: {
 			}
 		}
 
+		const indexName = `\`${(table + "_key_namespace_idx").replace(/`/g, "``")}\``;
 		try {
 			await connection.query(
-				`CREATE UNIQUE INDEX \`${table}_key_namespace_idx\` ON ${tableEsc} (id, namespace)`,
+				`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (id, namespace)`,
 			);
 		} catch (error) {
 			if ((error as { errno?: number }).errno !== 1061) {

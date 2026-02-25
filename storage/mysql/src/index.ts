@@ -110,7 +110,8 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		};
 
 		const tableEsc = escapeIdentifier(this.opts.table!);
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this.opts.keySize!)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this.opts.namespaceLength!)}) NOT NULL DEFAULT '', UNIQUE INDEX \`${this.opts.table!}_key_namespace_idx\` (id, namespace))`;
+		const indexName = `\`${(this.opts.table! + "_key_namespace_idx").replace(/`/g, "``")}\``;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this.opts.keySize!)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this.opts.namespaceLength!)}) NOT NULL DEFAULT '', UNIQUE INDEX ${indexName} (id, namespace))`;
 
 		/* v8 ignore next -- @preserve */
 		const connected = connection().then(async (query) => {
@@ -141,7 +142,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			// Migration: create composite unique index
 			try {
 				await query(
-					`CREATE UNIQUE INDEX \`${this.opts.table!}_key_namespace_idx\` ON ${tableEsc} (id, namespace)`,
+					`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (id, namespace)`,
 				);
 			} catch (error) {
 				// Error 1061 = Duplicate key name - index already exists, safe to ignore
