@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
-import type { KeyvStoreAdapter, StoredData } from "keyv";
+import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import {
 	type Document,
 	GridFSBucket,
@@ -383,6 +383,14 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		await client.mongoClient.close();
 	}
 }
+
+/**
+ * Helper function to create a Keyv instance with KeyvMongo as the storage adapter.
+ * @param options - Optional {@link KeyvMongoOptions} configuration object or connection URI string.
+ * @returns A new Keyv instance backed by MongoDB.
+ */
+export const createKeyv = (options?: KeyvMongoOptions) =>
+	new Keyv({ store: new KeyvMongo(options) });
 
 export default KeyvMongo;
 export type { KeyvMongoOptions } from "./types.js";

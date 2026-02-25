@@ -35,6 +35,14 @@ e.g:
 const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname', { collection: 'cache' });
 ```
 
+You can also use the `createKeyv` helper function to create a `Keyv` instance with `KeyvMongo` as the store:
+
+```js
+import { createKeyv } from '@keyv/mongo';
+
+const keyv = createKeyv('mongodb://user:pass@localhost:27017/dbname');
+```
+
 ## License
 
 [MIT © Jared Wray](LISCENCE)
