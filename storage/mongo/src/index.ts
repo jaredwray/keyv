@@ -106,18 +106,12 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get whether GridFS is used for storing values.
+	 * Get whether GridFS is used for storing values. This is read-only and can only be set via the constructor
+	 * because the MongoDB connection shape differs between GridFS and standard modes.
 	 * @default false
 	 */
 	public get useGridFS(): boolean {
 		return this._useGridFS;
-	}
-
-	/**
-	 * Set whether GridFS is used for storing values.
-	 */
-	public set useGridFS(value: boolean) {
-		this._useGridFS = value;
 	}
 
 	/**

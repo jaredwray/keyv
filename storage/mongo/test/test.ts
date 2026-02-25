@@ -78,8 +78,6 @@ test.it("properties can be modified via setters", (t) => {
 	t.expect(store.namespace).toBe("test-ns");
 	store.collection = "custom-collection";
 	t.expect(store.collection).toBe("custom-collection");
-	store.useGridFS = true;
-	t.expect(store.useGridFS).toBe(true);
 	store.db = "mydb";
 	t.expect(store.db).toBe("mydb");
 	store.readPreference = undefined;
