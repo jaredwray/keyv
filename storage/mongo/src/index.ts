@@ -336,7 +336,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			}
 
 			await client.store.updateOne(
-				{ _id: file._id },
+				{ _id: { $eq: file._id } },
 				{
 					$set: {
 						"metadata.lastAccessed": new Date(),
