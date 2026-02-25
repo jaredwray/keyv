@@ -1,5 +1,9 @@
 import { Hookified } from "hookified";
-import type { KeyvEntry, KeyvStoreAdapter, StoredData } from "keyv";
+import Keyv, {
+	type KeyvEntry,
+	type KeyvStoreAdapter,
+	type StoredData,
+} from "keyv";
 import mysql, { type ConnectionOptions } from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
@@ -644,6 +648,14 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 		return mysqlOptions as ConnectionOptions;
 	}
 }
+
+/**
+ * Helper function to create a Keyv instance with KeyvMysql as the storage adapter.
+ * @param options - Optional {@link KeyvMysqlOptions} configuration object or connection URI string.
+ * @returns A new Keyv instance backed by MySQL.
+ */
+export const createKeyv = (options?: KeyvMysqlOptions | string) =>
+	new Keyv({ store: new KeyvMysql(options) });
 
 export default KeyvMysql;
 export type { KeyvMysqlOptions } from "./types";

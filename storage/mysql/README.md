@@ -56,6 +56,22 @@ const keyv = new Keyv(new KeyvMysql('mysql://user:pass@localhost:3306/dbname'));
 keyv.on('error', handleConnectionError);
 ```
 
+You can also use the `createKeyv` helper function to create a `Keyv` instance with `KeyvMysql` as the store:
+
+```js
+import { createKeyv } from '@keyv/mysql';
+
+const keyv = createKeyv('mysql://user:pass@localhost:3306/dbname');
+```
+
+Or with an options object:
+
+```js
+import { createKeyv } from '@keyv/mysql';
+
+const keyv = createKeyv({ uri: 'mysql://user:pass@localhost:3306/dbname', table: 'cache', keyLength: 512 });
+```
+
 You can specify a custom table with the `table` option and the primary key length with `keyLength`.
 If you want to use native MySQL scheduler to delete expired keys, you can specify `intervalExpiration` in seconds.
 
