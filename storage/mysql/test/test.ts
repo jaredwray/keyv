@@ -2,7 +2,7 @@ import keyvTestSuite, { delay, keyvIteratorTests } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type mysql from "mysql2";
 import * as test from "vitest";
-import KeyvMysql from "../src/index.js";
+import KeyvMysql, { createKeyv } from "../src/index.js";
 import { parseConnectionString } from "../src/pool.js";
 
 const uri = "mysql://root@localhost:3306/keyv_test";
@@ -577,4 +577,19 @@ test.it("iterator on empty store returns nothing", async (t) => {
 	}
 
 	t.expect(entries.length).toBe(0);
+});
+
+// createKeyv helper tests
+test.it("createKeyv with URI string returns a Keyv instance", async (t) => {
+	const keyv = createKeyv(uri);
+	t.expect(keyv).toBeInstanceOf(Keyv);
+	await keyv.set("createKeyv-test", "value");
+	t.expect(await keyv.get("createKeyv-test")).toBe("value");
+});
+
+test.it("createKeyv with options object returns a Keyv instance", async (t) => {
+	const keyv = createKeyv({ uri, table: "keyv" });
+	t.expect(keyv).toBeInstanceOf(Keyv);
+	await keyv.set("createKeyv-opts-test", "value");
+	t.expect(await keyv.get("createKeyv-opts-test")).toBe("value");
 });
