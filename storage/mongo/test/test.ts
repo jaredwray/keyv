@@ -415,6 +415,30 @@ test.it("createKeyv with namespace option", async (t) => {
 	t.expect(rawValue).toBeDefined();
 });
 
+test.it("createKeyv with different namespaces do not conflict", async (t) => {
+	const keyvA = createKeyv({
+		namespace: "createKeyv-a",
+		url: mongoURL,
+		...options,
+	});
+	const keyvB = createKeyv({
+		namespace: "createKeyv-b",
+		url: mongoURL,
+		...options,
+	});
+
+	await keyvA.set("shared-key", "valueA");
+	await keyvB.set("shared-key", "valueB");
+
+	t.expect(await keyvA.get("shared-key")).toBe("valueA");
+	t.expect(await keyvB.get("shared-key")).toBe("valueB");
+
+	// clear only affects its own namespace
+	await keyvA.clear();
+	t.expect(await keyvA.get("shared-key")).toBeUndefined();
+	t.expect(await keyvB.get("shared-key")).toBe("valueB");
+});
+
 // Native namespace tests - Standard mode
 test.it(
 	"native namespace: same key in different namespaces stored independently",
