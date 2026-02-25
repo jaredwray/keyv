@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import EventEmitter from "node:events";
+import { Hookified } from "hookified";
 import type { KeyvStoreAdapter, StoredData } from "keyv";
 import {
 	type Document,
@@ -20,7 +20,7 @@ const keyvMongoKeys = new Set([
 	"dialect",
 	"db",
 ]);
-export class KeyvMongo extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	opts: Options;
 	connect: Promise<KeyvMongoConnect>;
 	namespace?: string;
