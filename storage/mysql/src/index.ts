@@ -28,6 +28,7 @@ const keyvMysqlKeys = new Set([
 	"compression",
 	"connect",
 	"dialect",
+	"intervalExpiration",
 	"keySize",
 	"namespaceLength",
 	"table",
@@ -110,8 +111,9 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		};
 
 		const tableEsc = escapeIdentifier(this.opts.table!);
-		const indexName = `\`${(this.opts.table! + "_key_namespace_idx").replace(/`/g, "``")}\``;
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this.opts.keySize!)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this.opts.namespaceLength!)}) NOT NULL DEFAULT '', UNIQUE INDEX ${indexName} (id, namespace))`;
+		const indexName = `\`${(`${this.opts.table!}_key_namespace_idx`).replace(/`/g, "``")}\``;
+		const expiresIndexName = `\`${(`${this.opts.table!}_expires_idx`).replace(/`/g, "``")}\``;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this.opts.keySize!)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this.opts.namespaceLength!)}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
 
 		/* v8 ignore next -- @preserve */
 		const connected = connection().then(async (query) => {
@@ -151,6 +153,28 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				}
 			}
 
+			// Migration: add expires column
+			try {
+				await query(
+					`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`,
+				);
+			} catch (error) {
+				if ((error as { errno?: number }).errno !== 1060) {
+					throw error;
+				}
+			}
+
+			// Migration: create expires index
+			try {
+				await query(
+					`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`,
+				);
+			} catch (error) {
+				if ((error as { errno?: number }).errno !== 1061) {
+					throw error;
+				}
+			}
+
 			if (
 				this.opts.intervalExpiration !== undefined &&
 				this.opts.intervalExpiration > 0
@@ -159,7 +183,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				await query("DROP EVENT IF EXISTS keyv_delete_expired_keys;");
 				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
 					DO DELETE FROM ${tableEsc}
-					WHERE CAST(value->'$.expires' AS UNSIGNED) BETWEEN 1 AND UNIX_TIMESTAMP(NOW(3)) * 1000;`);
+					WHERE expires BETWEEN 1 AND UNIX_TIMESTAMP(NOW(3)) * 1000;`);
 			}
 
 			return query;
@@ -189,6 +213,32 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 */
 	private getNamespaceValue(): string {
 		return this.namespace ?? "";
+	}
+
+	/**
+	 * Extracts the expires timestamp from a serialized value.
+	 * @param value - The serialized value (string or object)
+	 * @returns The expires timestamp in milliseconds, or null if not present
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: value can be any type
+	private getExpiresFromValue(value: any): number | null {
+		// biome-ignore lint/suspicious/noExplicitAny: parsed data can be any type
+		let data: any;
+		if (typeof value === "string") {
+			try {
+				data = JSON.parse(value);
+			} catch {
+				return null;
+			}
+		} else {
+			data = value;
+		}
+
+		if (data && typeof data === "object" && typeof data.expires === "number") {
+			return data.expires;
+		}
+
+		return null;
 	}
 
 	/**
@@ -244,10 +294,11 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	async set(key: string, value: any) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const sql = `INSERT INTO ${escapeIdentifier(this.opts.table!)} (id, value, namespace)
-			VALUES(?, ?, ?)
-			ON DUPLICATE KEY UPDATE value=?;`;
-		const insert = [strippedKey, value, ns, value];
+		const expires = this.getExpiresFromValue(value);
+		const sql = `INSERT INTO ${escapeIdentifier(this.opts.table!)} (id, value, namespace, expires)
+			VALUES(?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE value=?, expires=?;`;
+		const insert = [strippedKey, value, ns, expires, value, expires];
 		const upsert = mysql.format(sql, insert);
 		return this.query(upsert);
 	}
@@ -267,12 +318,13 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			this.removeKeyPrefix(key),
 			value,
 			ns,
+			this.getExpiresFromValue(value),
 		]);
-		const placeholders = values.map(() => "(?, ?, ?)").join(", ");
+		const placeholders = values.map(() => "(?, ?, ?, ?)").join(", ");
 		const flatValues = values.flat();
-		const sql = `INSERT INTO ${escapeIdentifier(this.opts.table!)} (id, value, namespace)
+		const sql = `INSERT INTO ${escapeIdentifier(this.opts.table!)} (id, value, namespace, expires)
 			VALUES ${placeholders}
-			ON DUPLICATE KEY UPDATE value=VALUES(value);`;
+			ON DUPLICATE KEY UPDATE value=VALUES(value), expires=VALUES(expires);`;
 		const upsert = mysql.format(sql, flatValues);
 		await this.query(upsert);
 	}
@@ -412,6 +464,17 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 		const existingKeys = new Set(rows.map((row) => row.id as string));
 		return strippedKeys.map((key) => existingKeys.has(key));
+	}
+
+	/**
+	 * Deletes all expired entries from the store.
+	 * Removes rows where the expires column is set and the timestamp is in the past.
+	 * @returns Promise that resolves when the operation completes
+	 */
+	async clearExpired(): Promise<void> {
+		const sql = `DELETE FROM ${escapeIdentifier(this.opts.table!)} WHERE expires IS NOT NULL AND expires < ?`;
+		const del = mysql.format(sql, [Date.now()]);
+		await this.query(del);
 	}
 
 	/**

@@ -1,5 +1,6 @@
 import keyvTestSuite, { delay, keyvIteratorTests } from "@keyv/test-suite";
 import Keyv from "keyv";
+import type mysql from "mysql2";
 import * as test from "vitest";
 import KeyvMysql from "../src/index.js";
 import { parseConnectionString } from "../src/pool.js";
@@ -233,6 +234,110 @@ test.it(".hasMany() with empty array returns empty array", async (t) => {
 	const results = await keyv.hasMany([]);
 	t.expect(results).toEqual([]);
 });
+
+// Expires column tests
+test.it(
+	"set() extracts and stores expires in the expires column",
+	async (t) => {
+		const keyv = new KeyvMysql(uri);
+		const valueWithExpires = JSON.stringify({
+			value: "bar",
+			expires: 9999999999999,
+		});
+		await keyv.set("expires-test", valueWithExpires);
+		const rows = await keyv.query<mysql.RowDataPacket[]>(
+			`SELECT expires FROM \`keyv\` WHERE id = 'expires-test' AND namespace = ''`,
+		);
+		t.expect(rows[0].expires).toBe(9999999999999n);
+	},
+);
+
+test.it(
+	"set() stores null expires when value has no expires field",
+	async (t) => {
+		const keyv = new KeyvMysql(uri);
+		await keyv.set("no-expires-test", "plain string value");
+		const rows = await keyv.query<mysql.RowDataPacket[]>(
+			`SELECT expires FROM \`keyv\` WHERE id = 'no-expires-test' AND namespace = ''`,
+		);
+		t.expect(rows[0].expires).toBeNull();
+	},
+);
+
+test.it("set() updates expires column on upsert", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const value1 = JSON.stringify({ value: "bar", expires: 1000 });
+	const value2 = JSON.stringify({ value: "bar", expires: 2000 });
+	await keyv.set("upsert-expires", value1);
+	const rows1 = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT expires FROM \`keyv\` WHERE id = 'upsert-expires' AND namespace = ''`,
+	);
+	t.expect(rows1[0].expires).toBe(1000n);
+	await keyv.set("upsert-expires", value2);
+	const rows2 = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT expires FROM \`keyv\` WHERE id = 'upsert-expires' AND namespace = ''`,
+	);
+	t.expect(rows2[0].expires).toBe(2000n);
+});
+
+test.it("setMany() extracts and stores expires for each entry", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	await keyv.setMany([
+		{ key: "sm-exp1", value: JSON.stringify({ value: "a", expires: 5000 }) },
+		{ key: "sm-exp2", value: JSON.stringify({ value: "b" }) },
+	]);
+	const rows = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT id, expires FROM \`keyv\` WHERE id IN ('sm-exp1', 'sm-exp2') AND namespace = '' ORDER BY id`,
+	);
+	t.expect(rows[0].expires).toBe(5000n);
+	t.expect(rows[1].expires).toBeNull();
+});
+
+test.it(
+	"clearExpired() removes expired entries and keeps valid ones",
+	async (t) => {
+		const keyv = new KeyvMysql(uri);
+		// Expired entry (timestamp in the past)
+		const expired = JSON.stringify({ value: "old", expires: 1 });
+		// Valid entry (far future)
+		const valid = JSON.stringify({ value: "new", expires: 9999999999999 });
+		// No expiry
+		const noExpiry = JSON.stringify({ value: "forever" });
+		await keyv.set("expired-key", expired);
+		await keyv.set("valid-key", valid);
+		await keyv.set("no-expiry-key", noExpiry);
+		await keyv.clearExpired();
+		t.expect(await keyv.get("expired-key")).toBeUndefined();
+		t.expect(await keyv.get("valid-key")).toBe(valid);
+		t.expect(await keyv.get("no-expiry-key")).toBe(noExpiry);
+	},
+);
+
+test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const valid = JSON.stringify({ value: "bar", expires: 9999999999999 });
+	await keyv.set("still-valid", valid);
+	await keyv.clearExpired();
+	t.expect(await keyv.get("still-valid")).toBe(valid);
+});
+
+test.it(
+	"expires column is populated when using Keyv core with TTL",
+	async (t) => {
+		const keyvMysql = new KeyvMysql(uri);
+		const keyv = new Keyv({ store: keyvMysql });
+		await keyv.set("ttl-key", "ttl-value", 60_000);
+		const rows = await keyvMysql.query<mysql.RowDataPacket[]>(
+			`SELECT expires FROM \`keyv\` WHERE id = 'ttl-key' AND namespace = ''`,
+		);
+		t.expect(rows[0].expires).not.toBeNull();
+		// expires should be roughly Date.now() + 60000
+		const expires = Number(rows[0].expires);
+		const now = Date.now();
+		t.expect(expires).toBeGreaterThan(now);
+		t.expect(expires).toBeLessThanOrEqual(now + 60_000 + 1000);
+	},
+);
 
 // Native namespace tests
 test.it(

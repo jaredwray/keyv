@@ -26,6 +26,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.clear()](#clear)
   - [.has(key)](#haskey)
   - [.hasMany(keys)](#hasmanykeys)
+  - [.clearExpired()](#clearexpired)
   - [.iterator(namespace)](#iteratornamespace)
   - [.disconnect()](#disconnect)
 - [SSL](#ssl)
@@ -76,6 +77,20 @@ The adapter automatically adds the `namespace` column and creates the appropriat
 
 ### New features
 
+#### Native TTL support with `expires` column
+
+v6 adds an `expires BIGINT` column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the `expires` timestamp from the serialized value and stores it in the column. The `intervalExpiration` event scheduler now queries this column directly instead of extracting from JSON, which is significantly more efficient.
+
+The schema migration is automatic on connect — existing tables get the column and index added automatically.
+
+#### `clearExpired()` method
+
+A new utility method that deletes all rows where the `expires` column is set and the timestamp is in the past:
+
+```js
+await keyvMysql.clearExpired();
+```
+
 #### Bulk operations
 
 v6 adds new methods for efficient multi-key operations:
@@ -108,9 +123,12 @@ npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --ke
 
 The migration runs inside a transaction and will roll back automatically if anything fails.
 
+The migration script also populates the new `expires` column from existing JSON values in the `value` column.
+
 **Important notes:**
-- The script only migrates rows where `namespace = ''` (the default). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
+- The script only migrates namespace rows where `namespace = ''` (the default). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
 - Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
+- The `expires` column is populated by extracting `value->'$.expires'` from existing JSON values.
 
 ## Properties
 
@@ -225,6 +243,14 @@ await keyvMysql.set('foo', 'bar');
 await keyvMysql.set('baz', 'qux');
 
 const results = await keyvMysql.hasMany(['foo', 'baz', 'unknown']); // [true, true, false]
+```
+
+### .clearExpired()
+
+Deletes all entries where the `expires` column is set and the timestamp is in the past. Useful for periodic cleanup of expired entries.
+
+```js
+await keyvMysql.clearExpired();
 ```
 
 ### .iterator(namespace)

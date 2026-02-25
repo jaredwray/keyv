@@ -109,6 +109,28 @@ async function migrate(options: {
 			}
 		}
 
+		// Migration: add expires column
+		try {
+			await connection.query(
+				`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`,
+			);
+		} catch (error) {
+			if ((error as { errno?: number }).errno !== 1060) {
+				throw error;
+			}
+		}
+
+		const expiresIndexName = `\`${(table + "_expires_idx").replace(/`/g, "``")}\``;
+		try {
+			await connection.query(
+				`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`,
+			);
+		} catch (error) {
+			if ((error as { errno?: number }).errno !== 1061) {
+				throw error;
+			}
+		}
+
 		// Preview what will be migrated
 		const [rows] = await connection.query(
 			`SELECT id AS old_key,
@@ -156,10 +178,37 @@ async function migrate(options: {
 			await connection.commit();
 
 			const affectedRows = (result as mysql.ResultSetHeader).affectedRows;
-			console.log(`\nMigration complete. ${affectedRows} row(s) updated.`);
+			console.log(`\nNamespace migration complete. ${affectedRows} row(s) updated.`);
 		} catch (error) {
 			await connection.rollback();
 			throw error;
+		}
+
+		// Populate expires column from existing JSON values
+		const [expiresPreview] = await connection.query(
+			`SELECT COUNT(*) AS cnt FROM ${tableEsc}
+			WHERE expires IS NULL AND JSON_VALID(value) AND value->'$.expires' IS NOT NULL`,
+		);
+
+		const expiresCount = (expiresPreview as Array<{ cnt: number }>)[0].cnt;
+
+		if (expiresCount > 0) {
+			console.log(`\nFound ${expiresCount} row(s) with expires to populate.`);
+
+			if (!dryRun) {
+				const [expiresResult] = await connection.query(
+					`UPDATE ${tableEsc}
+					SET expires = CAST(value->'$.expires' AS UNSIGNED)
+					WHERE expires IS NULL AND JSON_VALID(value) AND value->'$.expires' IS NOT NULL`,
+				);
+
+				const expiresUpdated = (expiresResult as mysql.ResultSetHeader).affectedRows;
+				console.log(`Expires column populated for ${expiresUpdated} row(s).`);
+			} else {
+				console.log("Dry run — expires column not populated.");
+			}
+		} else {
+			console.log("\nNo rows need expires column population.");
 		}
 	} catch (error) {
 		console.error("\nMigration failed, all changes rolled back.");
