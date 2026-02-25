@@ -587,4 +587,3 @@ test.it("iterator on empty store returns nothing", async (t) => {
 
 	t.expect(entries.length).toBe(0);
 });
-

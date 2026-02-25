@@ -213,6 +213,8 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public get opts(): any {
 		return {
+			dialect: "mysql",
+			url: this._uri,
 			uri: this._uri,
 			table: this._table,
 			keySize: this._keySize,
