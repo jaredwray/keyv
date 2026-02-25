@@ -134,13 +134,13 @@ test.it("close connection successfully", async (t) => {
 test.it("set intervalExpiration to 1 second", async (t) => {
 	const keyvMySql = new KeyvMysql({ uri, intervalExpiration: 1 });
 	const keyv = new Keyv({ store: keyvMySql });
-	// Ttl: 1s
-	await keyv.set("foo-interval1", "bar-interval1", 1000);
+	// Ttl: 2s
+	await keyv.set("foo-interval1", "bar-interval1", 2000);
 	// No ttl -> undefined -> (expires:null) -> infinite
 	await keyv.set("foo-interval-no-ttl", "bar-interval-no-ttl");
 	const value1 = await keyv.get("foo-interval1");
 	t.expect(value1).toBe("bar-interval1");
-	await delay(1100);
+	await delay(2500);
 	const value2 = await keyv.get("foo-interval1");
 	t.expect(value2).toBeUndefined();
 	const value3 = await keyv.get("foo-interval-no-ttl");
