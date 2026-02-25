@@ -3,7 +3,7 @@ import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type { KeyvMongoOptions } from "types";
 import * as test from "vitest";
-import KeyvMongo from "../src/index.js";
+import KeyvMongo, { createKeyv } from "../src/index.js";
 
 const options = { serverSelectionTimeoutMS: 5000, db: "keyvdb" };
 const mongoURL = "mongodb://127.0.0.1:27017";
@@ -253,6 +253,20 @@ test.it("Close connection should fail", async (t) => {
 	} catch {
 		t.expect(true).toBeTruthy();
 	}
+});
+
+test.it("createKeyv with URI string returns a Keyv instance", async (t) => {
+	const keyv = createKeyv(mongoURL);
+	t.expect(keyv).toBeInstanceOf(Keyv);
+	await keyv.set("createKeyv-test", "value");
+	t.expect(await keyv.get("createKeyv-test")).toBe("value");
+});
+
+test.it("createKeyv with options object returns a Keyv instance", async (t) => {
+	const keyv = createKeyv({ url: mongoURL, collection: "keyv", ...options });
+	t.expect(keyv).toBeInstanceOf(Keyv);
+	await keyv.set("createKeyv-opts-test", "value");
+	t.expect(await keyv.get("createKeyv-opts-test")).toBe("value");
 });
 
 const expectIteratorNamespace = async (
