@@ -1,25 +1,21 @@
-// biome-ignore-all lint/suspicious/noExplicitAny: type format
 import type {
 	Collection,
 	Db,
 	GridFSBucket,
 	MongoClient,
+	MongoClientOptions,
 	ReadPreference,
 } from "mongodb";
 
 export type Options = {
-	[key: string]: unknown;
-	url?: string | undefined;
+	url?: string;
 	collection?: string;
 	namespace?: string;
-	serialize?: any;
-	deserialize?: any;
 	useGridFS?: boolean;
 	uri?: string;
-	dialect?: string;
 	db?: string;
 	readPreference?: ReadPreference;
-};
+} & MongoClientOptions;
 
 export type KeyvMongoOptions = Options | string;
 
@@ -29,5 +25,3 @@ export type KeyvMongoConnect = {
 	db?: Db;
 	mongoClient: MongoClient;
 };
-
-export type PifyFunction = (...arguments_: any[]) => any;

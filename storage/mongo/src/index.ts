@@ -4,75 +4,267 @@ import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import {
 	type Document,
 	GridFSBucket,
+	type MongoClientOptions,
 	MongoClient as mongoClient,
+	type ReadPreference,
 	type WithId,
 } from "mongodb";
 import type { KeyvMongoConnect, KeyvMongoOptions, Options } from "./types.js";
 
-const keyvMongoKeys = new Set([
-	"url",
-	"collection",
-	"namespace",
-	"serialize",
-	"deserialize",
-	"uri",
-	"useGridFS",
-	"dialect",
-	"db",
-]);
+/**
+ * MongoDB storage adapter for Keyv.
+ * Provides a persistent key-value store using MongoDB as the backend.
+ */
 export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
-	opts: Options;
-	connect: Promise<KeyvMongoConnect>;
-	namespace?: string;
+	/**
+	 * The MongoDB connection URI.
+	 * @default 'mongodb://127.0.0.1:27017'
+	 */
+	private _url = "mongodb://127.0.0.1:27017";
 
+	/**
+	 * The collection name used for storage.
+	 * @default 'keyv'
+	 */
+	private _collection = "keyv";
+
+	/**
+	 * The namespace used to prefix keys for multi-tenant separation.
+	 */
+	private _namespace?: string;
+
+	/**
+	 * Whether to use GridFS for storing values.
+	 * @default false
+	 */
+	private _useGridFS = false;
+
+	/**
+	 * The database name for the MongoDB connection.
+	 * @default undefined
+	 */
+	private _db?: string;
+
+	/**
+	 * The MongoDB read preference for GridFS operations.
+	 * @default undefined
+	 */
+	private _readPreference?: ReadPreference;
+
+	/**
+	 * Additional MongoClientOptions passed through to the MongoDB driver.
+	 */
+	private _mongoOptions: MongoClientOptions = {};
+
+	/**
+	 * Promise that resolves to the MongoDB connection details.
+	 */
+	public connect: Promise<KeyvMongoConnect>;
+
+	/**
+	 * Get the MongoDB connection URI.
+	 * @default 'mongodb://127.0.0.1:27017'
+	 */
+	public get url(): string {
+		return this._url;
+	}
+
+	/**
+	 * Set the MongoDB connection URI.
+	 */
+	public set url(value: string) {
+		this._url = value;
+	}
+
+	/**
+	 * Get the collection name used for storage.
+	 * @default 'keyv'
+	 */
+	public get collection(): string {
+		return this._collection;
+	}
+
+	/**
+	 * Set the collection name used for storage.
+	 */
+	public set collection(value: string) {
+		this._collection = value;
+	}
+
+	/**
+	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
+	 */
+	public get namespace(): string | undefined {
+		return this._namespace;
+	}
+
+	/**
+	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+	 */
+	public set namespace(value: string | undefined) {
+		this._namespace = value;
+	}
+
+	/**
+	 * Get whether GridFS is used for storing values.
+	 * @default false
+	 */
+	public get useGridFS(): boolean {
+		return this._useGridFS;
+	}
+
+	/**
+	 * Set whether GridFS is used for storing values.
+	 */
+	public set useGridFS(value: boolean) {
+		this._useGridFS = value;
+	}
+
+	/**
+	 * Get the database name for the MongoDB connection.
+	 */
+	public get db(): string | undefined {
+		return this._db;
+	}
+
+	/**
+	 * Set the database name for the MongoDB connection.
+	 */
+	public set db(value: string | undefined) {
+		this._db = value;
+	}
+
+	/**
+	 * Get the MongoDB read preference for GridFS operations.
+	 */
+	public get readPreference(): ReadPreference | undefined {
+		return this._readPreference;
+	}
+
+	/**
+	 * Set the MongoDB read preference for GridFS operations.
+	 */
+	public set readPreference(value: ReadPreference | undefined) {
+		this._readPreference = value;
+	}
+
+	/**
+	 * Get the options for the adapter. This is provided for backward compatibility.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	public get opts(): any {
+		return {
+			url: this._url,
+			uri: this._url,
+			collection: this._collection,
+			useGridFS: this._useGridFS,
+			db: this._db,
+			readPreference: this._readPreference,
+			dialect: "mongo",
+			...this._mongoOptions,
+		};
+	}
+
+	/**
+	 * Creates a new KeyvMongo instance.
+	 * @param url - Configuration options, connection URI string, or undefined for defaults.
+	 * @param options - Additional configuration options that override the first parameter.
+	 */
 	constructor(url?: KeyvMongoOptions, options?: Options) {
 		super();
-		url ??= {};
+
+		let mergedOptions: Options = {};
+
 		if (typeof url === "string") {
-			url = { url };
+			this._url = url;
+			if (options) {
+				mergedOptions = options;
+			}
+		} else if (url) {
+			mergedOptions = { ...url, ...options };
+		} else if (options) {
+			mergedOptions = options;
 		}
 
-		if (url.uri) {
-			url = { url: url.uri, ...url };
+		if (mergedOptions.uri !== undefined) {
+			this._url = mergedOptions.uri;
 		}
 
-		this.opts = {
-			url: "mongodb://127.0.0.1:27017",
-			collection: "keyv",
-			...url,
-			...options,
-		};
+		if (mergedOptions.url !== undefined) {
+			this._url = mergedOptions.url;
+		}
 
-		delete this.opts.emitErrors;
+		if (mergedOptions.collection !== undefined) {
+			this._collection = mergedOptions.collection;
+		}
 
-		const mongoOptions = Object.fromEntries(
-			Object.entries(this.opts).filter(([k]) => !keyvMongoKeys.has(k)),
-		);
+		if (mergedOptions.namespace !== undefined) {
+			this._namespace = mergedOptions.namespace;
+		}
 
-		this.opts = Object.fromEntries(
-			Object.entries(this.opts).filter(([k]) => keyvMongoKeys.has(k)),
-		);
+		if (mergedOptions.useGridFS !== undefined) {
+			this._useGridFS = mergedOptions.useGridFS;
+		}
 
+		if (mergedOptions.db !== undefined) {
+			this._db = mergedOptions.db;
+		}
+
+		if (mergedOptions.readPreference !== undefined) {
+			this._readPreference = mergedOptions.readPreference;
+		}
+
+		this._mongoOptions = this.extractMongoOptions(mergedOptions);
+
+		this.connect = this.initConnection();
+	}
+
+	/**
+	 * Extracts MongoDB driver options from the provided options, filtering out Keyv-specific properties.
+	 */
+	private extractMongoOptions(options: Options): MongoClientOptions {
+		const keyvKeys = new Set([
+			"url",
+			"collection",
+			"namespace",
+			"serialize",
+			"deserialize",
+			"uri",
+			"useGridFS",
+			"dialect",
+			"db",
+			"readPreference",
+			"emitErrors",
+		]);
+
+		const mongoOptions: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(options)) {
+			if (!keyvKeys.has(key)) {
+				mongoOptions[key] = value;
+			}
+		}
+
+		return mongoOptions as MongoClientOptions;
+	}
+
+	/**
+	 * Initializes the MongoDB connection and sets up indexes.
+	 */
+	private initConnection(): Promise<KeyvMongoConnect> {
 		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: need to fix
-		this.connect = new Promise(async (resolve, _reject) => {
+		return new Promise(async (resolve, _reject) => {
 			try {
-				let url = "";
-				/* v8 ignore next -- @preserve */
-				if (this.opts.url) {
-					url = this.opts.url;
-				}
-
-				const client = new mongoClient(url, mongoOptions);
+				const client = new mongoClient(this._url, this._mongoOptions);
 				await client.connect();
 
-				const database = client.db(this.opts.db);
+				const database = client.db(this._db);
 
-				if (this.opts.useGridFS) {
+				if (this._useGridFS) {
 					const bucket = new GridFSBucket(database, {
-						readPreference: this.opts.readPreference,
-						bucketName: this.opts.collection,
+						readPreference: this._readPreference,
+						bucketName: this._collection,
 					});
-					const store = database.collection(`${this.opts.collection}.files`);
+					const store = database.collection(`${this._collection}.files`);
 
 					await store.createIndex({ uploadDate: -1 });
 					await store.createIndex({ "metadata.expiresAt": 1 });
@@ -86,13 +278,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 						mongoClient: client,
 					});
 				} else {
-					let collection = "keyv";
-					/* v8 ignore next -- @preserve */
-					if (this.opts.collection) {
-						collection = this.opts.collection;
-					}
-
-					const store = database.collection(collection);
+					const store = database.collection(this._collection);
 
 					await store.createIndex(
 						{ key: 1 },
@@ -115,7 +301,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	async get<Value>(key: string): Promise<StoredData<Value>> {
 		const client = await this.connect;
 
-		if (this.opts.useGridFS) {
+		if (this._useGridFS) {
 			await client.store.updateOne(
 				{
 					filename: String(key),
@@ -157,7 +343,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	}
 
 	async getMany<Value>(keys: string[]) {
-		if (this.opts.useGridFS) {
+		if (this._useGridFS) {
 			const promises = [];
 			for (const key of keys) {
 				promises.push(this.get(key));
@@ -177,8 +363,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		const values: Array<{ key: string; value: StoredData<Value> }> =
 			// @ts-expect-error need to fix this `s`
 			await connect.store.s.db
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				.collection(this.opts.collection!)
+				.collection(this._collection)
 				.find({ key: { $in: keys } })
 				.project({ _id: 0, value: 1, key: 1 })
 				.toArray();
@@ -204,7 +389,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		const expiresAt =
 			typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
 
-		if (this.opts.useGridFS) {
+		if (this._useGridFS) {
 			const client = await this.connect;
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const stream = client.bucket!.openUploadStream(key, {
@@ -237,12 +422,12 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 		const client = await this.connect;
 
-		if (this.opts.useGridFS) {
+		if (this._useGridFS) {
 			try {
 				// biome-ignore lint/style/noNonNullAssertion: need to fix
 				const connection = client.db!;
 				const bucket = new GridFSBucket(connection, {
-					bucketName: this.opts.collection,
+					bucketName: this._collection,
 				});
 				const files = await bucket.find({ filename: key }).toArray();
 				// biome-ignore lint/style/noNonNullAssertion: need to fix
@@ -259,11 +444,11 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 	async deleteMany(keys: string[]) {
 		const client = await this.connect;
-		if (this.opts.useGridFS) {
+		if (this._useGridFS) {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const connection = client.db!;
 			const bucket = new GridFSBucket(connection, {
-				bucketName: this.opts.collection,
+				bucketName: this._collection,
 			});
 			const files = await bucket.find({ filename: { $in: keys } }).toArray();
 			if (files.length === 0) {
@@ -283,18 +468,18 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 	async clear() {
 		const client = await this.connect;
-		if (this.opts.useGridFS) {
+		if (this._useGridFS) {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			await client.bucket!.drop();
 		}
 
 		await client.store.deleteMany({
-			key: { $regex: this.namespace ? `^${this.namespace}:*` : "" },
+			key: { $regex: this._namespace ? `^${this._namespace}:*` : "" },
 		});
 	}
 
 	async clearExpired(): Promise<boolean> {
-		if (!this.opts.useGridFS) {
+		if (!this._useGridFS) {
 			return false;
 		}
 
@@ -302,7 +487,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const connection = client.db!;
 			const bucket = new GridFSBucket(connection, {
-				bucketName: this.opts.collection,
+				bucketName: this._collection,
 			});
 
 			return bucket
@@ -322,7 +507,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	}
 
 	async clearUnusedFor(seconds: number): Promise<boolean> {
-		if (!this.opts.useGridFS) {
+		if (!this._useGridFS) {
 			return false;
 		}
 
@@ -330,7 +515,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		// biome-ignore lint/style/noNonNullAssertion: need to fix
 		const connection = client.db!;
 		const bucket = new GridFSBucket(connection, {
-			bucketName: this.opts.collection,
+			bucketName: this._collection,
 		});
 
 		const lastAccessedFiles = await bucket
@@ -352,7 +537,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		const client = await this.connect;
 		// biome-ignore lint/style/useTemplate: need to fix
 		const regexp = new RegExp(`^${namespace ? namespace + ":" : ".*"}`);
-		const iterator = this.opts.useGridFS
+		const iterator = this._useGridFS
 			? client.store
 					.find({
 						filename: regexp,
@@ -373,7 +558,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	async has(key: string) {
 		const client = await this.connect;
 		/* v8 ignore next -- @preserve */
-		const filter = { [this.opts.useGridFS ? "filename" : "key"]: { $eq: key } };
+		const filter = { [this._useGridFS ? "filename" : "key"]: { $eq: key } };
 		const document = await client.store.count(filter);
 		return document !== 0;
 	}

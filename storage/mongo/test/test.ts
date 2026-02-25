@@ -31,17 +31,64 @@ test.it(
 	"Collection option merges into default options if URL is passed",
 	(t) => {
 		const store = new KeyvMongo(mongoURL, { collection: "foo" });
-		t.expect(store.opts).toEqual({
-			url: mongoURL,
-			collection: "foo",
-		});
+		t.expect(store.url).toBe(mongoURL);
+		t.expect(store.collection).toBe("foo");
+		// Backward compatibility
+		t.expect(store.opts.url).toBe(mongoURL);
+		t.expect(store.opts.collection).toBe("foo");
 	},
 );
 
 test.it("URI is passed it is correct", (t) => {
 	const options_ = { uri: "mongodb://127.0.0.1:27017" };
 	const store = new KeyvMongo(options_);
-	t.expect(store.opts.uri).toEqual(options_.uri);
+	t.expect(store.url).toBe(options_.uri);
+	// Backward compatibility
+	t.expect(store.opts.uri).toBe(options_.uri);
+});
+
+test.it("default properties are set correctly", (t) => {
+	const store = new KeyvMongo();
+	t.expect(store.url).toBe("mongodb://127.0.0.1:27017");
+	t.expect(store.collection).toBe("keyv");
+	t.expect(store.useGridFS).toBe(false);
+	t.expect(store.db).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
+	t.expect(store.readPreference).toBeUndefined();
+});
+
+test.it("properties can be set via constructor options", (t) => {
+	const store = new KeyvMongo({
+		url: mongoURL,
+		collection: "custom",
+		useGridFS: true,
+		db: "testdb",
+	});
+	t.expect(store.url).toBe(mongoURL);
+	t.expect(store.collection).toBe("custom");
+	t.expect(store.useGridFS).toBe(true);
+	t.expect(store.db).toBe("testdb");
+});
+
+test.it("properties can be modified via setters", (t) => {
+	const store = new KeyvMongo();
+	store.namespace = "test-ns";
+	t.expect(store.namespace).toBe("test-ns");
+	store.collection = "custom-collection";
+	t.expect(store.collection).toBe("custom-collection");
+	store.useGridFS = true;
+	t.expect(store.useGridFS).toBe(true);
+	store.db = "mydb";
+	t.expect(store.db).toBe("mydb");
+});
+
+test.it("opts getter returns backward-compatible object", (t) => {
+	const store = new KeyvMongo(mongoURL, { collection: "cache", ...options });
+	const opts = store.opts;
+	t.expect(opts.url).toBe(mongoURL);
+	t.expect(opts.uri).toBe(mongoURL);
+	t.expect(opts.collection).toBe("cache");
+	t.expect(opts.dialect).toBe("mongo");
 });
 
 test.it("Stores value in GridFS", async (t) => {
