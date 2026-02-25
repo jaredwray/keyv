@@ -633,19 +633,72 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Extracts mysql2 ConnectionOptions from the full options object.
-	 * Uses destructuring to separate known Keyv-specific keys from mysql2 passthrough keys.
+	 * Only binds known ConnectionOptions properties to the result.
 	 */
 	private generateMySqlOptions(options: KeyvMysqlOptions): ConnectionOptions {
-		const {
-			uri,
-			table,
-			keyLength,
-			namespaceLength,
-			intervalExpiration,
-			iterationLimit,
-			...mysqlOptions
-		} = options;
-		return mysqlOptions as ConnectionOptions;
+		const connectionOptionsKeys: Array<keyof ConnectionOptions> = [
+			"authPlugins",
+			"authSwitchHandler",
+			"bigNumberStrings",
+			"charset",
+			"charsetNumber",
+			"compress",
+			"connectAttributes",
+			"connectTimeout",
+			"connectionLimit",
+			"database",
+			"dateStrings",
+			"debug",
+			"decimalNumbers",
+			"disableEval",
+			"enableKeepAlive",
+			"flags",
+			"gracefulEnd",
+			"host",
+			"idleTimeout",
+			"infileStreamFactory",
+			"insecureAuth",
+			"isServer",
+			"jsonStrings",
+			"keepAliveInitialDelay",
+			"localAddress",
+			"maxIdle",
+			"maxPreparedStatements",
+			"multipleStatements",
+			"namedPlaceholders",
+			"nestTables",
+			"password",
+			"password1",
+			"password2",
+			"password3",
+			"passwordSha1",
+			"pool",
+			"port",
+			"queueLimit",
+			"queryFormat",
+			"rowsAsArray",
+			"socketPath",
+			"ssl",
+			"stream",
+			"stringifyObjects",
+			"supportBigNumbers",
+			"timezone",
+			"trace",
+			"typeCast",
+			"uri",
+			"user",
+			"waitForConnections",
+		];
+
+		const mysqlOptions: ConnectionOptions = {};
+		for (const key of connectionOptionsKeys) {
+			if (key in options) {
+				// biome-ignore lint/suspicious/noExplicitAny: dynamically copying known keys
+				(mysqlOptions as any)[key] = (options as any)[key];
+			}
+		}
+
+		return mysqlOptions;
 	}
 }
 
