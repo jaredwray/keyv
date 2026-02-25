@@ -214,6 +214,26 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Strips the namespace prefix from a key that was added by the Keyv core.
+	 * For example, if namespace is "ns" and key is "ns:foo", returns "foo".
+	 */
+	private removeKeyPrefix(key: string): string {
+		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
+			return key.slice(this._namespace.length + 1);
+		}
+
+		return key;
+	}
+
+	/**
+	 * Returns the namespace value for query filters.
+	 * Returns empty string when no namespace is set.
+	 */
+	private getNamespaceValue(): string {
+		return this._namespace ?? "";
+	}
+
+	/**
 	 * Extracts MongoDB driver options from the provided options, filtering out Keyv-specific properties.
 	 */
 	private extractMongoOptions(options: Options): MongoClientOptions {
@@ -264,6 +284,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 					await store.createIndex({ "metadata.expiresAt": 1 });
 					await store.createIndex({ "metadata.lastAccessed": 1 });
 					await store.createIndex({ "metadata.filename": 1 });
+					await store.createIndex({ "metadata.namespace": 1 });
 
 					resolve({
 						bucket,
@@ -274,8 +295,15 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 				} else {
 					const store = database.collection(this._collection);
 
+					// Migration: drop old single-field unique index on key
+					try {
+						await store.dropIndex("key_1");
+					} catch {
+						// Index doesn't exist or already dropped - safe to ignore
+					}
+
 					await store.createIndex(
-						{ key: 1 },
+						{ key: 1, namespace: 1 },
 						{ unique: true, background: true },
 					);
 					await store.createIndex(
@@ -294,12 +322,21 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 	async get<Value>(key: string): Promise<StoredData<Value>> {
 		const client = await this.connect;
+		const strippedKey = this.removeKeyPrefix(key);
+		const ns = this.getNamespaceValue();
 
 		if (this._useGridFS) {
+			const file = await client.store.findOne({
+				filename: strippedKey,
+				"metadata.namespace": ns,
+			});
+
+			if (!file) {
+				return undefined;
+			}
+
 			await client.store.updateOne(
-				{
-					filename: String(key),
-				},
+				{ _id: file._id },
 				{
 					$set: {
 						"metadata.lastAccessed": new Date(),
@@ -308,10 +345,11 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			);
 
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const stream = client.bucket!.openDownloadStreamByName(key);
+			const stream = client.bucket!.openDownloadStream(file._id);
 
 			return new Promise((resolve) => {
 				const resp: Uint8Array[] = [];
+				/* v8 ignore next -- @preserve */
 				stream.on("error", () => {
 					resolve(undefined);
 				});
@@ -327,7 +365,10 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			});
 		}
 
-		const document = await client.store.findOne({ key: { $eq: key } });
+		const document = await client.store.findOne({
+			key: { $eq: strippedKey },
+			namespace: { $eq: ns },
+		});
 
 		if (!document) {
 			return undefined;
@@ -354,42 +395,45 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		}
 
 		const connect = await this.connect;
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
+		const ns = this.getNamespaceValue();
 		const values: Array<{ key: string; value: StoredData<Value> }> =
-			// @ts-expect-error need to fix this `s`
-			await connect.store.s.db
-				.collection(this._collection)
-				.find({ key: { $in: keys } })
+			(await connect.store
+				.find({ key: { $in: strippedKeys }, namespace: { $eq: ns } })
 				.project({ _id: 0, value: 1, key: 1 })
-				.toArray();
+				.toArray()) as Array<{ key: string; value: StoredData<Value> }>;
 
-		const results = [...keys];
-		let i = 0;
-		for (const key of keys) {
+		const results: Array<StoredData<Value>> = [];
+		for (const key of strippedKeys) {
 			const rowIndex = values.findIndex(
 				(row: { key: string; value: unknown }) => row.key === key,
 			);
 
-			// @ts-expect-error - results type
-			results[i] = rowIndex > -1 ? values[rowIndex].value : undefined;
-
-			i++;
+			results.push(
+				rowIndex > -1
+					? values[rowIndex].value
+					: (undefined as StoredData<Value>),
+			);
 		}
 
-		return results as Array<StoredData<Value>>;
+		return results;
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
 		const expiresAt =
 			typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
+		const strippedKey = this.removeKeyPrefix(key);
+		const ns = this.getNamespaceValue();
 
 		if (this._useGridFS) {
 			const client = await this.connect;
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const stream = client.bucket!.openUploadStream(key, {
+			const stream = client.bucket!.openUploadStream(strippedKey, {
 				metadata: {
 					expiresAt,
 					lastAccessed: new Date(),
+					namespace: ns,
 				},
 			});
 
@@ -403,8 +447,8 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 		const client = await this.connect;
 		await client.store.updateOne(
-			{ key: { $eq: key } },
-			{ $set: { key, value, expiresAt } },
+			{ key: { $eq: strippedKey }, namespace: { $eq: ns } },
+			{ $set: { key: strippedKey, value, namespace: ns, expiresAt } },
 			{ upsert: true },
 		);
 	}
@@ -415,6 +459,8 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		}
 
 		const client = await this.connect;
+		const strippedKey = this.removeKeyPrefix(key);
+		const ns = this.getNamespaceValue();
 
 		if (this._useGridFS) {
 			try {
@@ -423,7 +469,16 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 				const bucket = new GridFSBucket(connection, {
 					bucketName: this._collection,
 				});
-				const files = await bucket.find({ filename: key }).toArray();
+				const files = await bucket
+					.find({
+						filename: strippedKey,
+						"metadata.namespace": ns,
+					})
+					.toArray();
+				if (files.length === 0) {
+					return false;
+				}
+
 				// biome-ignore lint/style/noNonNullAssertion: need to fix
 				await client.bucket!.delete(files[0]._id);
 				return true;
@@ -432,19 +487,30 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			}
 		}
 
-		const object = await client.store.deleteOne({ key: { $eq: key } });
+		const object = await client.store.deleteOne({
+			key: { $eq: strippedKey },
+			namespace: { $eq: ns },
+		});
 		return object.deletedCount > 0;
 	}
 
 	async deleteMany(keys: string[]) {
 		const client = await this.connect;
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
+		const ns = this.getNamespaceValue();
+
 		if (this._useGridFS) {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			const connection = client.db!;
 			const bucket = new GridFSBucket(connection, {
 				bucketName: this._collection,
 			});
-			const files = await bucket.find({ filename: { $in: keys } }).toArray();
+			const files = await bucket
+				.find({
+					filename: { $in: strippedKeys },
+					"metadata.namespace": ns,
+				})
+				.toArray();
 			if (files.length === 0) {
 				return false;
 			}
@@ -456,19 +522,38 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			return true;
 		}
 
-		const object = await client.store.deleteMany({ key: { $in: keys } });
+		const object = await client.store.deleteMany({
+			key: { $in: strippedKeys },
+			namespace: { $eq: ns },
+		});
 		return object.deletedCount > 0;
 	}
 
 	async clear() {
 		const client = await this.connect;
+		const ns = this.getNamespaceValue();
+
 		if (this._useGridFS) {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			await client.bucket!.drop();
+			const connection = client.db!;
+			const bucket = new GridFSBucket(connection, {
+				bucketName: this._collection,
+			});
+			const files = await bucket
+				.find({
+					"metadata.namespace": ns,
+				})
+				.toArray();
+
+			await Promise.all(
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
+				files.map(async (file) => client.bucket!.delete(file._id)),
+			);
+			return;
 		}
 
 		await client.store.deleteMany({
-			key: { $regex: this._namespace ? `^${this._namespace}:*` : "" },
+			namespace: { $eq: ns },
 		});
 	}
 
@@ -476,6 +561,8 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		if (!this._useGridFS) {
 			return false;
 		}
+
+		const ns = this.getNamespaceValue();
 
 		return this.connect.then(async (client) => {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
@@ -489,6 +576,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 					"metadata.expiresAt": {
 						$lte: new Date(Date.now()),
 					},
+					"metadata.namespace": ns,
 				})
 				.toArray()
 				.then(async (expiredFiles) =>
@@ -505,6 +593,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			return false;
 		}
 
+		const ns = this.getNamespaceValue();
 		const client = await this.connect;
 		// biome-ignore lint/style/noNonNullAssertion: need to fix
 		const connection = client.db!;
@@ -517,6 +606,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 				"metadata.lastAccessed": {
 					$lte: new Date(Date.now() - seconds * 1000),
 				},
+				"metadata.namespace": ns,
 			})
 			.toArray();
 
@@ -529,31 +619,63 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 	async *iterator(namespace?: string) {
 		const client = await this.connect;
-		// biome-ignore lint/style/useTemplate: need to fix
-		const regexp = new RegExp(`^${namespace ? namespace + ":" : ".*"}`);
-		const iterator = this._useGridFS
-			? client.store
-					.find({
-						filename: regexp,
-					})
-					.map(async (x: WithId<Document>) => [
-						x.filename,
-						await this.get(x.filename),
-					])
-			: client.store
-					.find({
-						key: regexp,
-					})
-					.map((x: WithId<Document>) => [x.key, x.value]);
+		const namespaceValue = namespace ?? "";
+
+		if (this._useGridFS) {
+			const gridIterator = client.store
+				.find({ "metadata.namespace": namespaceValue })
+				.map(async (x: WithId<Document>) => {
+					const prefixedKey = namespace
+						? `${namespace}:${x.filename}`
+						: x.filename;
+					// biome-ignore lint/style/noNonNullAssertion: need to fix
+					const stream = client.bucket!.openDownloadStream(x._id);
+					const data = await new Promise<string | undefined>((resolve) => {
+						const resp: Uint8Array[] = [];
+						/* v8 ignore next -- @preserve */
+						stream.on("error", () => {
+							resolve(undefined);
+						});
+						stream.on("end", () => {
+							resolve(Buffer.concat(resp).toString("utf8"));
+						});
+						stream.on("data", (chunk) => {
+							resp.push(chunk as Uint8Array);
+						});
+					});
+					return [prefixedKey, data];
+				});
+			yield* gridIterator;
+			return;
+		}
+
+		const iterator = client.store
+			.find({ namespace: { $eq: namespaceValue } })
+			.map((x: WithId<Document>) => {
+				const prefixedKey = namespace ? `${namespace}:${x.key}` : x.key;
+				return [prefixedKey, x.value];
+			});
 
 		yield* iterator;
 	}
 
 	async has(key: string) {
 		const client = await this.connect;
-		/* v8 ignore next -- @preserve */
-		const filter = { [this._useGridFS ? "filename" : "key"]: { $eq: key } };
-		const document = await client.store.count(filter);
+		const strippedKey = this.removeKeyPrefix(key);
+		const ns = this.getNamespaceValue();
+
+		if (this._useGridFS) {
+			const document = await client.store.count({
+				filename: { $eq: strippedKey },
+				"metadata.namespace": ns,
+			});
+			return document !== 0;
+		}
+
+		const document = await client.store.count({
+			key: { $eq: strippedKey },
+			namespace: { $eq: ns },
+		});
 		return document !== 0;
 	}
 

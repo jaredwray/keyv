@@ -1,7 +1,6 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test file
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import Keyv from "keyv";
-import type { KeyvMongoOptions } from "types";
 import * as test from "vitest";
 import KeyvMongo, { createKeyv } from "../src/index.js";
 
@@ -25,6 +24,21 @@ test.afterAll(async () => {
 test.beforeEach(async () => {
 	const keyv = new KeyvMongo({ ...options });
 	await keyv.clear();
+	// Also clear namespaced data from namespace tests
+	const ns1 = new KeyvMongo({ ...options });
+	ns1.namespace = "ns1";
+	await ns1.clear();
+	const ns2 = new KeyvMongo({ ...options });
+	ns2.namespace = "ns2";
+	await ns2.clear();
+	// Clear GridFS data
+	const gridfs = new KeyvMongo({ useGridFS: true, ...options });
+	await gridfs.clear();
+	for (const ns of ["ns1", "ns2", "key1", "namespace-a", "namespace-b"]) {
+		const gridfsNs = new KeyvMongo({ useGridFS: true, ...options });
+		gridfsNs.namespace = ns;
+		await gridfsNs.clear();
+	}
 });
 
 test.it(
@@ -114,12 +128,14 @@ test.it("Stores value in GridFS", async (t) => {
 
 test.it("Gets value from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.set("key1", "keyv1");
 	const result = await store.get("key1");
 	t.expect(result).toBe("keyv1");
 });
 
 test.it("Deletes value from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.set("key1", "keyv1");
 	const result = await store.delete("key1");
 	t.expect(result).toBeTruthy();
 });
@@ -138,13 +154,15 @@ test.it("Stores value with TTL in GridFS", async (t) => {
 
 test.it("Clears expired value from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.set("expired-key", "expired-value", 0);
 	const cleared = await store.clearExpired();
 	t.expect(cleared).toBeTruthy();
 });
 
 test.it("Clears unused files from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	const cleared = await store.clearUnusedFor(5);
+	await store.set("unused-key", "unused-value");
+	const cleared = await store.clearUnusedFor(0);
 	t.expect(cleared).toBeTruthy();
 });
 
@@ -261,25 +279,83 @@ test.it("Clears an empty store GridFS should not fail", async (_t) => {
 });
 
 test.it("iterator with default namespace", async (t) => {
-	await exceptIteratorDefaultNamespace({ ...options }, t);
+	const store = new KeyvMongo({ ...options });
+	await store.set("foo", "bar");
+	await store.set("foo2", "bar2");
+	const iterator = store.iterator();
+	let entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("foo");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar");
+	entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("foo2");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar2");
+	entry = await iterator.next();
+	t.expect(entry.value).toBeUndefined();
 });
 
 test.it("iterator with namespace", async (t) => {
-	await expectIteratorNamespace({ namespace: "key1", ...options }, t);
+	const store = new KeyvMongo({ namespace: "key1", ...options });
+	await store.set("key1:foo", "bar");
+	await store.set("key1:foo2", "bar2");
+	const iterator = store.iterator("key1");
+	let entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("key1:foo");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar");
+	entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("key1:foo2");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar2");
+	entry = await iterator.next();
+	t.expect(entry.value).toBeUndefined();
 });
 
 test.it("iterator with default namespace using GridFS", async (t) => {
-	await exceptIteratorDefaultNamespace(
-		{ namespace: "key1", useGridFS: true, ...options },
-		t,
-	);
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.set("foo", "bar");
+	await store.set("foo2", "bar2");
+	const iterator = store.iterator();
+	let entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("foo");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar");
+	entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("foo2");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar2");
+	entry = await iterator.next();
+	t.expect(entry.value).toBeUndefined();
 });
 
 test.it("iterator with namespace using GridFS", async (t) => {
-	await expectIteratorNamespace(
-		{ namespace: "key1", useGridFS: true, ...options },
-		t,
-	);
+	const store = new KeyvMongo({
+		namespace: "key1",
+		useGridFS: true,
+		...options,
+	});
+	await store.set("key1:foo", "bar");
+	await store.set("key1:foo2", "bar2");
+	const iterator = store.iterator("key1");
+	let entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("key1:foo");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar");
+	entry = await iterator.next();
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[0]).toBe("key1:foo2");
+	// @ts-expect-error - test iterator
+	t.expect(entry.value[1]).toBe("bar2");
+	entry = await iterator.next();
+	t.expect(entry.value).toBeUndefined();
 });
 
 test.it("Close connection successfully on GridFS", async (t) => {
@@ -339,46 +415,233 @@ test.it("createKeyv with namespace option", async (t) => {
 	t.expect(rawValue).toBeDefined();
 });
 
-const expectIteratorNamespace = async (
-	options_: KeyvMongoOptions,
-	t: test.TaskContext & test.TestContext,
-) => {
-	const store = new KeyvMongo(options_);
-	await store.set("key1:foo", "bar");
-	await store.set("key1:foo2", "bar2");
-	const iterator = store.iterator("key1");
-	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo2");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
-};
+// Native namespace tests - Standard mode
+test.it(
+	"native namespace: same key in different namespaces stored independently",
+	async (t) => {
+		const mongo1 = new KeyvMongo({ ...options });
+		mongo1.namespace = "ns1";
+		const mongo2 = new KeyvMongo({ ...options });
+		mongo2.namespace = "ns2";
 
-const exceptIteratorDefaultNamespace = async (
-	options_: KeyvMongoOptions,
-	t: test.TaskContext & test.TestContext,
-) => {
-	const store = new KeyvMongo(options_);
-	await store.set("foo", "bar");
-	await store.set("foo2", "bar2");
-	const iterator = store.iterator();
-	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("foo");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("foo2");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
-};
+		await mongo1.set("ns1:testkey", "value1");
+		await mongo2.set("ns2:testkey", "value2");
+
+		t.expect(await mongo1.get("ns1:testkey")).toBe("value1");
+		t.expect(await mongo2.get("ns2:testkey")).toBe("value2");
+	},
+);
+
+test.it(
+	"native namespace: null namespace stores and retrieves correctly",
+	async (t) => {
+		const keyv = new KeyvMongo({ ...options });
+		await keyv.set("testkey-no-ns", "testvalue");
+		t.expect(await keyv.get("testkey-no-ns")).toBe("testvalue");
+	},
+);
+
+test.it(
+	"native namespace: clear only clears the specified namespace",
+	async (t) => {
+		const mongo1 = new KeyvMongo({ ...options });
+		mongo1.namespace = "ns1";
+		const mongo2 = new KeyvMongo({ ...options });
+		mongo2.namespace = "ns2";
+
+		await mongo1.set("ns1:key1", "value1");
+		await mongo2.set("ns2:key1", "value2");
+
+		await mongo1.clear();
+
+		t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
+		t.expect(await mongo2.get("ns2:key1")).toBe("value2");
+	},
+);
+
+test.it("native namespace: delete scoped to namespace", async (t) => {
+	const mongo1 = new KeyvMongo({ ...options });
+	mongo1.namespace = "ns1";
+	const mongo2 = new KeyvMongo({ ...options });
+	mongo2.namespace = "ns2";
+
+	await mongo1.set("ns1:key1", "val1");
+	await mongo2.set("ns2:key1", "val2");
+
+	const deleted = await mongo1.delete("ns1:key1");
+	t.expect(deleted).toBe(true);
+	t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
+	t.expect(await mongo2.get("ns2:key1")).toBe("val2");
+});
+
+test.it("native namespace: deleteMany scoped to namespace", async (t) => {
+	const mongo1 = new KeyvMongo({ ...options });
+	mongo1.namespace = "ns1";
+	const mongo2 = new KeyvMongo({ ...options });
+	mongo2.namespace = "ns2";
+
+	await mongo1.set("ns1:key1", "val1");
+	await mongo2.set("ns2:key1", "val2");
+
+	const deleted = await mongo1.deleteMany(["ns1:key1"]);
+	t.expect(deleted).toBe(true);
+	t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
+	t.expect(await mongo2.get("ns2:key1")).toBe("val2");
+});
+
+test.it("native namespace: has scoped to namespace", async (t) => {
+	const mongo1 = new KeyvMongo({ ...options });
+	mongo1.namespace = "ns1";
+	const mongo2 = new KeyvMongo({ ...options });
+	mongo2.namespace = "ns2";
+
+	await mongo1.set("ns1:key1", "val1");
+
+	t.expect(await mongo1.has("ns1:key1")).toBe(true);
+	t.expect(await mongo2.has("ns2:key1")).toBe(false);
+});
+
+test.it(
+	"native namespace: iterator only returns keys from correct namespace",
+	async (t) => {
+		const mongo1 = new KeyvMongo({ ...options });
+		mongo1.namespace = "ns1";
+		const mongo2 = new KeyvMongo({ ...options });
+		mongo2.namespace = "ns2";
+
+		await mongo1.set("ns1:key1", "val1");
+		await mongo1.set("ns1:key2", "val2");
+		await mongo2.set("ns2:key3", "val3");
+
+		const keys: string[] = [];
+		for await (const [key] of mongo1.iterator("ns1")) {
+			keys.push(key);
+		}
+
+		t.expect(keys.length).toBe(2);
+		t.expect(keys).toContain("ns1:key1");
+		t.expect(keys).toContain("ns1:key2");
+	},
+);
+
+test.it(
+	"native namespace: two Keyv instances with different namespaces do not conflict",
+	async (t) => {
+		const mongoA = new KeyvMongo({ ...options });
+		const mongoB = new KeyvMongo({ ...options });
+		const keyvA = new Keyv({ store: mongoA, namespace: "namespace-a" });
+		const keyvB = new Keyv({ store: mongoB, namespace: "namespace-b" });
+
+		t.expect(await keyvA.set("mykey", "valueA")).toBe(true);
+		t.expect(await keyvA.get("mykey")).toBe("valueA");
+		t.expect(await keyvB.set("mykey", "valueB")).toBe(true);
+		t.expect(await keyvB.get("mykey")).toBe("valueB");
+		// Ensure they didn't overwrite each other
+		t.expect(await keyvA.get("mykey")).toBe("valueA");
+	},
+);
+
+test.it("native namespace: getMany scoped to namespace", async (t) => {
+	const mongo1 = new KeyvMongo({ ...options });
+	mongo1.namespace = "ns1";
+	const mongo2 = new KeyvMongo({ ...options });
+	mongo2.namespace = "ns2";
+
+	await mongo1.set("ns1:key1", "val1");
+	await mongo2.set("ns2:key1", "val2");
+
+	const results = await mongo1.getMany(["ns1:key1"]);
+	t.expect(results).toEqual(["val1"]);
+
+	const results2 = await mongo1.getMany(["ns2:key1"]);
+	t.expect(results2).toEqual([undefined]);
+});
+
+// Native namespace tests - GridFS mode
+test.it(
+	"native namespace GridFS: same key in different namespaces stored independently",
+	async (t) => {
+		const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
+		mongo1.namespace = "ns1";
+		const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
+		mongo2.namespace = "ns2";
+
+		await mongo1.set("ns1:testkey", "value1");
+		await mongo2.set("ns2:testkey", "value2");
+
+		t.expect(await mongo1.get("ns1:testkey")).toBe("value1");
+		t.expect(await mongo2.get("ns2:testkey")).toBe("value2");
+	},
+);
+
+test.it(
+	"native namespace GridFS: clear only clears the specified namespace",
+	async (t) => {
+		const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
+		mongo1.namespace = "ns1";
+		const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
+		mongo2.namespace = "ns2";
+
+		await mongo1.set("ns1:key1", "value1");
+		await mongo2.set("ns2:key1", "value2");
+
+		await mongo1.clear();
+
+		t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
+		t.expect(await mongo2.get("ns2:key1")).toBe("value2");
+	},
+);
+
+test.it("native namespace GridFS: delete scoped to namespace", async (t) => {
+	const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
+	mongo1.namespace = "ns1";
+	const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
+	mongo2.namespace = "ns2";
+
+	await mongo1.set("ns1:key1", "val1");
+	await mongo2.set("ns2:key1", "val2");
+
+	const deleted = await mongo1.delete("ns1:key1");
+	t.expect(deleted).toBe(true);
+	t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
+	t.expect(await mongo2.get("ns2:key1")).toBe("val2");
+});
+
+test.it("native namespace GridFS: has scoped to namespace", async (t) => {
+	const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
+	mongo1.namespace = "ns1";
+	const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
+	mongo2.namespace = "ns2";
+
+	await mongo1.set("ns1:key1", "val1");
+
+	t.expect(await mongo1.has("ns1:key1")).toBe(true);
+	t.expect(await mongo2.has("ns2:key1")).toBe(false);
+});
+
+test.it(
+	"native namespace GridFS: two Keyv instances with different namespaces do not conflict",
+	async (t) => {
+		const mongoA = new KeyvMongo({ useGridFS: true, ...options });
+		const mongoB = new KeyvMongo({ useGridFS: true, ...options });
+		const keyvA = new Keyv({ store: mongoA, namespace: "namespace-a" });
+		const keyvB = new Keyv({ store: mongoB, namespace: "namespace-b" });
+
+		t.expect(await keyvA.set("mykey", "valueA")).toBe(true);
+		t.expect(await keyvA.get("mykey")).toBe("valueA");
+		t.expect(await keyvB.set("mykey", "valueB")).toBe(true);
+		t.expect(await keyvB.get("mykey")).toBe("valueB");
+		// Ensure they didn't overwrite each other
+		t.expect(await keyvA.get("mykey")).toBe("valueA");
+	},
+);
+
+test.it("GridFS delete returns false when bucket.delete throws", async (t) => {
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.set("delete-error-file", "some-data");
+	const client = await store.connect;
+	// Close the connection to make bucket.delete throw
+	await client.mongoClient.close();
+	const result = await store.delete("delete-error-file");
+	t.expect(result).toBe(false);
+});
