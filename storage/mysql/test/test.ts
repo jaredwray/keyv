@@ -551,15 +551,6 @@ test.it("opts getter returns composed object", (t) => {
 	t.expect(opts.iterationLimit).toBe(10);
 });
 
-test.it("opts setter updates individual properties", (t) => {
-	const keyv = new KeyvMysql(uri);
-	keyv.opts = { table: "new_table", keyLength: 1024 };
-	t.expect(keyv.table).toBe("new_table");
-	t.expect(keyv.keyLength).toBe(1024);
-	// Other defaults should remain
-	t.expect(keyv.namespaceLength).toBe(255);
-});
-
 test.it("individual property setters work", (t) => {
 	const keyv = new KeyvMysql(uri);
 	keyv.uri = "mysql://otherhost";

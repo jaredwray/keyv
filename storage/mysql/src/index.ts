@@ -1,6 +1,6 @@
 import { Hookified } from "hookified";
 import type { KeyvEntry, KeyvStoreAdapter, StoredData } from "keyv";
-import mysql from "mysql2";
+import mysql, { type ConnectionOptions } from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
 
@@ -17,23 +17,6 @@ function escapeIdentifier(identifier: string): string {
 		.map((segment) => `\`${segment.replace(/`/g, "``")}\``)
 		.join(".");
 }
-
-/**
- * Set of keys that are specific to Keyv MySQL configuration.
- * These keys are filtered out when creating the MySQL connection options.
- */
-const keyvMysqlKeys = new Set([
-	"adapter",
-	"compression",
-	"connect",
-	"intervalExpiration",
-	"iterationLimit",
-	"keyLength",
-	"namespaceLength",
-	"table",
-	"ttl",
-	"uri",
-]);
 
 type QueryType<T> = Promise<
 	T extends
@@ -95,12 +78,12 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	/**
 	 * Additional mysql2 ConnectionOptions passed through to the connection pool.
 	 */
-	private _mysqlOptions: Record<string, unknown> = {};
+	private _mysqlOptions: ConnectionOptions = {};
 
 	/**
 	 * Query function for executing SQL statements against the MySQL database.
 	 */
-	query: <T>(sqlString: string) => QueryType<T>;
+	public query: <T>(sqlString: string) => QueryType<T>;
 
 	/**
 	 * Get the MySQL connection URI.
@@ -226,23 +209,40 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Set the options for the adapter.
-	 */
-	public set opts(options: KeyvMysqlOptions) {
-		this.setOptions(options);
-	}
-
-	/**
 	 * Creates a new KeyvMysql instance.
-	 * @param keyvOptions - Configuration options or connection URI string
+	 * @param options - Configuration options or connection URI string
 	 */
-	constructor(keyvOptions?: KeyvMysqlOptions | string) {
+	constructor(options?: KeyvMysqlOptions | string) {
 		super();
 
-		if (typeof keyvOptions === "string") {
-			this._uri = keyvOptions;
-		} else if (keyvOptions) {
-			this.setOptions(keyvOptions);
+		if (typeof options === "string") {
+			this._uri = options;
+		} else if (options) {
+			if (options.uri !== undefined) {
+				this._uri = options.uri;
+			}
+
+			if (options.table !== undefined) {
+				this._table = options.table;
+			}
+
+			if (options.keyLength !== undefined) {
+				this._keyLength = options.keyLength;
+			}
+
+			if (options.namespaceLength !== undefined) {
+				this._namespaceLength = options.namespaceLength;
+			}
+
+			if (options.intervalExpiration !== undefined) {
+				this._intervalExpiration = options.intervalExpiration;
+			}
+
+			if (options.iterationLimit !== undefined) {
+				this._iterationLimit = Number(options.iterationLimit);
+			}
+
+			this._mysqlOptions = this.generateMySqlOptions(options);
 		}
 
 		const connection = async () => {
@@ -339,97 +339,11 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Strips the namespace prefix from a key that was added by the Keyv core.
-	 * For example, if namespace is "ns" and key is "ns:foo", returns "foo".
-	 */
-	private removeKeyPrefix(key: string): string {
-		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
-			return key.slice(this._namespace.length + 1);
-		}
-
-		return key;
-	}
-
-	/**
-	 * Returns the namespace value for SQL parameters.
-	 * Returns empty string when no namespace is set.
-	 */
-	private getNamespaceValue(): string {
-		return this._namespace ?? "";
-	}
-
-	/**
-	 * Extracts the expires timestamp from a serialized value.
-	 * @param value - The serialized value (string or object)
-	 * @returns The expires timestamp in milliseconds, or null if not present
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: value can be any type
-	private getExpiresFromValue(value: any): number | null {
-		// biome-ignore lint/suspicious/noExplicitAny: parsed data can be any type
-		let data: any;
-		if (typeof value === "string") {
-			try {
-				data = JSON.parse(value);
-			} catch {
-				return null;
-			}
-		} else {
-			/* v8 ignore next -- @preserve */
-			data = value;
-		}
-
-		if (data && typeof data === "object" && typeof data.expires === "number") {
-			return data.expires;
-		}
-
-		return null;
-	}
-
-	/**
-	 * Applies the given options to the adapter's private variables.
-	 */
-	private setOptions(options: KeyvMysqlOptions): void {
-		if (options.uri !== undefined) {
-			this._uri = options.uri;
-		}
-
-		if (options.table !== undefined) {
-			this._table = options.table;
-		}
-
-		if (options.keyLength !== undefined) {
-			this._keyLength = options.keyLength;
-		}
-
-		if (options.namespaceLength !== undefined) {
-			this._namespaceLength = options.namespaceLength;
-		}
-
-		if (options.intervalExpiration !== undefined) {
-			this._intervalExpiration = options.intervalExpiration;
-		}
-
-		if (options.iterationLimit !== undefined) {
-			this._iterationLimit = Number(options.iterationLimit);
-		}
-
-		// Extract mysql2 ConnectionOptions (everything not a Keyv-specific key)
-		const mysqlPassthrough = Object.fromEntries(
-			Object.entries(options).filter(([k]) => !keyvMysqlKeys.has(k)),
-		);
-		delete mysqlPassthrough.namespace;
-		delete mysqlPassthrough.serialize;
-		delete mysqlPassthrough.deserialize;
-
-		this._mysqlOptions = { ...this._mysqlOptions, ...mysqlPassthrough };
-	}
-
-	/**
 	 * Retrieves a value from the store by key.
 	 * @param key - The key to retrieve
 	 * @returns The stored value or undefined if not found
 	 */
-	async get<Value>(key: string) {
+	public async get<Value>(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
 		const select = mysql.format(sql, [strippedKey, this.getNamespaceValue()]);
@@ -445,7 +359,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param keys - Array of keys to retrieve
 	 * @returns Array of stored values in the same order as the input keys, with undefined for missing keys
 	 */
-	async getMany<Value>(keys: string[]) {
+	public async getMany<Value>(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
 		const select = mysql.format(sql, [strippedKeys, this.getNamespaceValue()]);
@@ -474,7 +388,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @returns Promise that resolves when the operation completes
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	async set(key: string, value: any) {
+	public async set(key: string, value: any) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const expires = this.getExpiresFromValue(value);
@@ -491,7 +405,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param entries - Array of key-value entry objects
 	 * @returns Promise that resolves when the operation completes
 	 */
-	async setMany(entries: KeyvEntry[]): Promise<void> {
+	public async setMany(entries: KeyvEntry[]): Promise<void> {
 		if (entries.length === 0) {
 			return;
 		}
@@ -517,7 +431,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param key - The key to delete
 	 * @returns True if the key existed and was deleted, false if the key did not exist
 	 */
-	async delete(key: string) {
+	public async delete(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
@@ -541,7 +455,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param key - Array of keys to delete
 	 * @returns True if at least one key was deleted, false if no keys were found
 	 */
-	async deleteMany(key: string[]) {
+	public async deleteMany(key: string[]) {
 		const strippedKeys = key.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
@@ -556,7 +470,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * If a namespace is set, only entries within that namespace are cleared.
 	 * @returns Promise that resolves when the operation completes
 	 */
-	async clear() {
+	public async clear() {
 		const ns = this.getNamespaceValue();
 		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE namespace = ?`;
 		const del = mysql.format(sql, [ns]);
@@ -570,7 +484,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param namespace - Optional namespace to filter results
 	 * @yields Arrays containing [key, value] pairs
 	 */
-	async *iterator(
+	public async *iterator(
 		namespace?: string,
 	): AsyncGenerator<[string, string], void, unknown> {
 		const limit = this._iterationLimit || 10;
@@ -619,7 +533,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param key - The key to check
 	 * @returns True if the key exists, false otherwise
 	 */
-	async has(key: string) {
+	public async has(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const sql = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? )`;
@@ -633,7 +547,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param keys - Array of keys to check
 	 * @returns Array of booleans in the same order as the input keys
 	 */
-	async hasMany(keys: string[]): Promise<boolean[]> {
+	public async hasMany(keys: string[]): Promise<boolean[]> {
 		if (keys.length === 0) {
 			return [];
 		}
@@ -652,7 +566,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * Removes rows where the expires column is set and the timestamp is in the past.
 	 * @returns Promise that resolves when the operation completes
 	 */
-	async clearExpired(): Promise<void> {
+	public async clearExpired(): Promise<void> {
 		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE expires IS NOT NULL AND expires < ?`;
 		const del = mysql.format(sql, [Date.now()]);
 		await this.query(del);
@@ -662,8 +576,72 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * Disconnects from the MySQL database and closes the connection pool.
 	 * @returns Promise that resolves when disconnected
 	 */
-	async disconnect() {
+	public async disconnect() {
 		endPool();
+	}
+
+	/**
+	 * Strips the namespace prefix from a key that was added by the Keyv core.
+	 * For example, if namespace is "ns" and key is "ns:foo", returns "foo".
+	 */
+	private removeKeyPrefix(key: string): string {
+		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
+			return key.slice(this._namespace.length + 1);
+		}
+
+		return key;
+	}
+
+	/**
+	 * Returns the namespace value for SQL parameters.
+	 * Returns empty string when no namespace is set.
+	 */
+	private getNamespaceValue(): string {
+		return this._namespace ?? "";
+	}
+
+	/**
+	 * Extracts the expires timestamp from a serialized value.
+	 * @param value - The serialized value (string or object)
+	 * @returns The expires timestamp in milliseconds, or null if not present
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: value can be any type
+	private getExpiresFromValue(value: any): number | null {
+		// biome-ignore lint/suspicious/noExplicitAny: parsed data can be any type
+		let data: any;
+		if (typeof value === "string") {
+			try {
+				data = JSON.parse(value);
+			} catch {
+				return null;
+			}
+		} else {
+			/* v8 ignore next -- @preserve */
+			data = value;
+		}
+
+		if (data && typeof data === "object" && typeof data.expires === "number") {
+			return data.expires;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Extracts mysql2 ConnectionOptions from the full options object.
+	 * Uses destructuring to separate known Keyv-specific keys from mysql2 passthrough keys.
+	 */
+	private generateMySqlOptions(options: KeyvMysqlOptions): ConnectionOptions {
+		const {
+			uri,
+			table,
+			keyLength,
+			namespaceLength,
+			intervalExpiration,
+			iterationLimit,
+			...mysqlOptions
+		} = options;
+		return mysqlOptions as ConnectionOptions;
 	}
 }
 
