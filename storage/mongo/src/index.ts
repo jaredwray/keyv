@@ -391,7 +391,8 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
  */
 export const createKeyv = (options?: KeyvMongoOptions) => {
 	const store = new KeyvMongo(options);
-	const namespace = typeof options === "object" ? options?.namespace : undefined;
+	const namespace =
+		typeof options === "object" ? options?.namespace : undefined;
 	return new Keyv({ store, namespace });
 };
 
