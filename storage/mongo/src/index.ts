@@ -327,8 +327,8 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 		if (this._useGridFS) {
 			const file = await client.store.findOne({
-				filename: strippedKey,
-				"metadata.namespace": ns,
+				filename: { $eq: strippedKey },
+				"metadata.namespace": { $eq: ns },
 			});
 
 			if (!file) {
@@ -471,8 +471,8 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 				});
 				const files = await bucket
 					.find({
-						filename: strippedKey,
-						"metadata.namespace": ns,
+						filename: { $eq: strippedKey },
+						"metadata.namespace": { $eq: ns },
 					})
 					.toArray();
 				if (files.length === 0) {
@@ -508,7 +508,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			const files = await bucket
 				.find({
 					filename: { $in: strippedKeys },
-					"metadata.namespace": ns,
+					"metadata.namespace": { $eq: ns },
 				})
 				.toArray();
 			if (files.length === 0) {
@@ -541,7 +541,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			});
 			const files = await bucket
 				.find({
-					"metadata.namespace": ns,
+					"metadata.namespace": { $eq: ns },
 				})
 				.toArray();
 
@@ -576,7 +576,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 					"metadata.expiresAt": {
 						$lte: new Date(Date.now()),
 					},
-					"metadata.namespace": ns,
+					"metadata.namespace": { $eq: ns },
 				})
 				.toArray()
 				.then(async (expiredFiles) =>
@@ -606,7 +606,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 				"metadata.lastAccessed": {
 					$lte: new Date(Date.now() - seconds * 1000),
 				},
-				"metadata.namespace": ns,
+				"metadata.namespace": { $eq: ns },
 			})
 			.toArray();
 
@@ -623,7 +623,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 
 		if (this._useGridFS) {
 			const gridIterator = client.store
-				.find({ "metadata.namespace": namespaceValue })
+				.find({ "metadata.namespace": { $eq: namespaceValue } })
 				.map(async (x: WithId<Document>) => {
 					const prefixedKey = namespace
 						? `${namespace}:${x.filename}`
@@ -667,7 +667,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		if (this._useGridFS) {
 			const document = await client.store.count({
 				filename: { $eq: strippedKey },
-				"metadata.namespace": ns,
+				"metadata.namespace": { $eq: ns },
 			});
 			return document !== 0;
 		}
