@@ -83,6 +83,20 @@ In v5, namespaces were stored as key prefixes in the `id` column (e.g. `id="myns
 
 The adapter automatically adds the `namespace` column and creates the appropriate index when it connects, so no manual schema changes are needed for new installations.
 
+#### `keySize` renamed to `keyLength`
+
+The `keySize` option and property has been renamed to `keyLength` for consistency with the migration script and to better reflect that it controls VARCHAR column length.
+
+```js
+// v5
+const store = new KeyvMysql({ uri, keySize: 512 });
+store.keySize; // 512
+
+// v6
+const store = new KeyvMysql({ uri, keyLength: 512 });
+store.keyLength; // 512
+```
+
 #### Properties instead of opts
 
 In v5, configuration was accessed through the `opts` object:
@@ -90,7 +104,7 @@ In v5, configuration was accessed through the `opts` object:
 ```js
 // v5
 store.opts.table; // 'keyv'
-store.opts.keyLength; // 255
+store.opts.keySize; // 255
 ```
 
 In v6, all configuration options are exposed as top-level properties with getters and setters:
@@ -167,7 +181,7 @@ The migration script also populates the new `expires` column from existing JSON 
 | --- | --- | --- | --- |
 | `uri` | `string` | `'mysql://localhost'` | MySQL connection URI |
 | `table` | `string` | `'keyv'` | Table name for key-value storage |
-| `keyLength` | `number` | `255` | Maximum key column length (VARCHAR length) |
+| `keyLength` | `number` | `255` | Maximum key length (VARCHAR length) |
 | `namespaceLength` | `number` | `255` | Maximum namespace column length (VARCHAR length) |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
@@ -203,7 +217,7 @@ store.table = 'cache';
 
 ### keyLength
 
-Get or set the maximum key size (VARCHAR length) for the key column.
+Get or set the maximum key length (VARCHAR length) for the key column.
 
 - Type: `number`
 - Default: `255`
