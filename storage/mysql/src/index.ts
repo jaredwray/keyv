@@ -256,7 +256,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const tableEsc = escapeIdentifier(this._table);
 		const indexName = `\`${(`${this._table}_key_namespace_idx`).replace(/`/g, "``")}\``;
 		const expiresIndexName = `\`${(`${this._table}_expires_idx`).replace(/`/g, "``")}\``;
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this._keyLength)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${this._keyLength}) NOT NULL, value TEXT, namespace VARCHAR(${this._namespaceLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
 
 		/* v8 ignore next -- @preserve */
 		const connected = connection().then(async (query) => {
