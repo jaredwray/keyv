@@ -1,4 +1,4 @@
-import EventEmitter from "node:events";
+import { Hookified } from "hookified";
 import type { KeyvEntry, KeyvStoreAdapter, StoredData } from "keyv";
 import mysql from "mysql2";
 import { endPool, pool } from "./pool.js";
@@ -49,7 +49,7 @@ type QueryType<T> = Promise<
  * MySQL storage adapter for Keyv.
  * Provides a persistent key-value store using MySQL as the backend.
  */
-export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	/**
 	 * The MySQL connection URI.
 	 * @default 'mysql://localhost'
