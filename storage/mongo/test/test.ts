@@ -269,6 +269,16 @@ test.it("createKeyv with options object returns a Keyv instance", async (t) => {
 	t.expect(await keyv.get("createKeyv-opts-test")).toBe("value");
 });
 
+test.it("createKeyv with namespace option", async (t) => {
+	const keyv = createKeyv({ namespace: "custom", url: mongoURL, ...options });
+	t.expect(keyv.namespace).toBe("custom");
+	await keyv.set("foo", "bar");
+	t.expect(await keyv.get("foo")).toBe("bar");
+	const store = keyv.store as KeyvMongo;
+	const rawValue = await store.get("custom:foo");
+	t.expect(rawValue).toBeDefined();
+});
+
 const expectIteratorNamespace = async (
 	options_: KeyvMongoOptions,
 	t: test.TaskContext & test.TestContext,
