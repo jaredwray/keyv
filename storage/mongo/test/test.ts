@@ -660,6 +660,102 @@ test.it(
 	},
 );
 
+// setMany tests - Standard mode
+test.it("setMany sets multiple keys in standard mode", async (t) => {
+	const store = new KeyvMongo({ ...options });
+	await store.setMany([
+		{ key: "sm1", value: "val1" },
+		{ key: "sm2", value: "val2" },
+		{ key: "sm3", value: "val3" },
+	]);
+	t.expect(await store.get("sm1")).toBe("val1");
+	t.expect(await store.get("sm2")).toBe("val2");
+	t.expect(await store.get("sm3")).toBe("val3");
+});
+
+test.it("setMany with TTL in standard mode", async (t) => {
+	const store = new KeyvMongo({ ...options });
+	await store.setMany([
+		{ key: "sm-ttl1", value: "val1", ttl: 60000 },
+		{ key: "sm-ttl2", value: "val2" },
+	]);
+	t.expect(await store.get("sm-ttl1")).toBe("val1");
+	t.expect(await store.get("sm-ttl2")).toBe("val2");
+});
+
+test.it("setMany upserts existing keys in standard mode", async (t) => {
+	const store = new KeyvMongo({ ...options });
+	await store.set("sm-upsert", "original");
+	await store.setMany([{ key: "sm-upsert", value: "updated" }]);
+	t.expect(await store.get("sm-upsert")).toBe("updated");
+});
+
+test.it("setMany with namespace in standard mode", async (t) => {
+	const store = new KeyvMongo({ ...options });
+	store.namespace = "ns1";
+	await store.setMany([
+		{ key: "ns1:key1", value: "val1" },
+		{ key: "ns1:key2", value: "val2" },
+	]);
+	t.expect(await store.get("ns1:key1")).toBe("val1");
+	t.expect(await store.get("ns1:key2")).toBe("val2");
+});
+
+// setMany tests - GridFS mode
+test.it("setMany sets multiple keys in GridFS mode", async (t) => {
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.setMany([
+		{ key: "gsm1", value: "val1" },
+		{ key: "gsm2", value: "val2" },
+	]);
+	t.expect(await store.get("gsm1")).toBe("val1");
+	t.expect(await store.get("gsm2")).toBe("val2");
+});
+
+// hasMany tests - Standard mode
+test.it("hasMany checks multiple keys in standard mode", async (t) => {
+	const store = new KeyvMongo({ ...options });
+	await store.set("hm1", "val1");
+	await store.set("hm2", "val2");
+	const results = await store.hasMany(["hm1", "hm2", "hm3"]);
+	t.expect(results).toEqual([true, true, false]);
+});
+
+test.it("hasMany with namespace in standard mode", async (t) => {
+	const store1 = new KeyvMongo({ ...options });
+	store1.namespace = "ns1";
+	const store2 = new KeyvMongo({ ...options });
+	store2.namespace = "ns2";
+
+	await store1.set("ns1:key1", "val1");
+	await store2.set("ns2:key1", "val2");
+
+	const results = await store1.hasMany(["ns1:key1", "ns1:nonexistent"]);
+	t.expect(results).toEqual([true, false]);
+});
+
+// hasMany tests - GridFS mode
+test.it("hasMany checks multiple keys in GridFS mode", async (t) => {
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.set("ghm1", "val1");
+	await store.set("ghm2", "val2");
+	const results = await store.hasMany(["ghm1", "ghm2", "ghm3"]);
+	t.expect(results).toEqual([true, true, false]);
+});
+
+test.it("hasMany with namespace in GridFS mode", async (t) => {
+	const store1 = new KeyvMongo({ useGridFS: true, ...options });
+	store1.namespace = "ns1";
+	const store2 = new KeyvMongo({ useGridFS: true, ...options });
+	store2.namespace = "ns2";
+
+	await store1.set("ns1:key1", "val1");
+	await store2.set("ns2:key1", "val2");
+
+	const results = await store1.hasMany(["ns1:key1", "ns1:nonexistent"]);
+	t.expect(results).toEqual([true, false]);
+});
+
 test.it("GridFS delete returns false when bucket.delete throws", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
 	await store.set("delete-error-file", "some-data");
