@@ -579,7 +579,33 @@ test.it("iterator on empty store returns nothing", async (t) => {
 	t.expect(entries.length).toBe(0);
 });
 
+// Non-string value tests (covers getExpiresFromValue else branch)
+test.it(
+	"set() stores null expires when value is a number (non-string)",
+	async (t) => {
+		const keyv = new KeyvMysql(uri);
+		await keyv.set("numeric-value-test", 42);
+		const rows = await keyv.query<mysql.RowDataPacket[]>(
+			`SELECT expires FROM \`keyv\` WHERE id = 'numeric-value-test' AND namespace = ''`,
+		);
+		t.expect(rows[0].expires).toBeNull();
+	},
+);
+
+test.it(
+	"set() stores null expires when value is null (non-string)",
+	async (t) => {
+		const keyv = new KeyvMysql(uri);
+		await keyv.set("null-value-test", null);
+		const rows = await keyv.query<mysql.RowDataPacket[]>(
+			`SELECT expires FROM \`keyv\` WHERE id = 'null-value-test' AND namespace = ''`,
+		);
+		t.expect(rows[0].expires).toBeNull();
+	},
+);
+
 // createKeyv helper tests
+
 test.it("createKeyv with URI string returns a Keyv instance", async (t) => {
 	const keyv = createKeyv(uri);
 	t.expect(keyv).toBeInstanceOf(Keyv);

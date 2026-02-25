@@ -620,7 +620,6 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 				return null;
 			}
 		} else {
-			/* v8 ignore next -- @preserve */
 			data = value;
 		}
 
