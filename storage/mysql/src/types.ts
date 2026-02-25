@@ -6,5 +6,5 @@ export type KeyvMysqlOptions = {
 	keySize?: number;
 	namespaceLength?: number;
 	intervalExpiration?: number;
-	iterationLimit?: string | number;
+	iterationLimit?: number;
 } & ConnectionOptions;
