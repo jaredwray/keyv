@@ -1,4 +1,3 @@
-// biome-ignore-all lint/style/noNonNullAssertion: need to fix
 import EventEmitter from "node:events";
 import type { KeyvEntry, KeyvStoreAdapter, StoredData } from "keyv";
 import mysql from "mysql2";
@@ -29,6 +28,7 @@ const keyvMysqlKeys = new Set([
 	"connect",
 	"dialect",
 	"intervalExpiration",
+	"iterationLimit",
 	"keySize",
 	"namespaceLength",
 	"table",
@@ -52,19 +52,206 @@ type QueryType<T> = Promise<
  */
 export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	/**
-	 * Configuration options for the MySQL adapter.
+	 * The database dialect.
+	 * @default 'mysql'
 	 */
-	opts: KeyvMysqlOptions;
+	private _dialect: "mysql" = "mysql";
 
 	/**
-	 * Optional namespace for key prefixing.
+	 * The MySQL connection URI.
+	 * @default 'mysql://localhost'
 	 */
-	namespace?: string;
+	private _uri = "mysql://localhost";
+
+	/**
+	 * The table name used for storage.
+	 * @default 'keyv'
+	 */
+	private _table = "keyv";
+
+	/**
+	 * The maximum key size (VARCHAR length) for the key column.
+	 * @default 255
+	 */
+	private _keySize = 255;
+
+	/**
+	 * The maximum namespace length (VARCHAR length) for the namespace column.
+	 * @default 255
+	 */
+	private _namespaceLength = 255;
+
+	/**
+	 * The interval in seconds for MySQL event scheduler cleanup of expired entries.
+	 * A value of undefined or 0 disables the automatic cleanup.
+	 * @default undefined
+	 */
+	private _intervalExpiration?: number;
+
+	/**
+	 * The number of rows to fetch per iteration batch.
+	 * @default 10
+	 */
+	private _iterationLimit: string | number = 10;
+
+	/**
+	 * The namespace used to prefix keys for multi-tenant separation.
+	 */
+	private _namespace?: string;
+
+	/**
+	 * Additional mysql2 ConnectionOptions passed through to the connection pool.
+	 */
+	private _mysqlOptions: Record<string, unknown> = {};
 
 	/**
 	 * Query function for executing SQL statements against the MySQL database.
 	 */
 	query: <T>(sqlString: string) => QueryType<T>;
+
+	/**
+	 * Get the database dialect.
+	 * @default 'mysql'
+	 */
+	public get dialect(): "mysql" {
+		return this._dialect;
+	}
+
+	/**
+	 * Set the database dialect.
+	 */
+	public set dialect(value: "mysql") {
+		this._dialect = value;
+	}
+
+	/**
+	 * Get the MySQL connection URI.
+	 * @default 'mysql://localhost'
+	 */
+	public get uri(): string {
+		return this._uri;
+	}
+
+	/**
+	 * Set the MySQL connection URI.
+	 */
+	public set uri(value: string) {
+		this._uri = value;
+	}
+
+	/**
+	 * Get the table name used for storage.
+	 * @default 'keyv'
+	 */
+	public get table(): string {
+		return this._table;
+	}
+
+	/**
+	 * Set the table name used for storage.
+	 */
+	public set table(value: string) {
+		this._table = value;
+	}
+
+	/**
+	 * Get the maximum key size (VARCHAR length) for the key column.
+	 * @default 255
+	 */
+	public get keySize(): number {
+		return this._keySize;
+	}
+
+	/**
+	 * Set the maximum key size (VARCHAR length) for the key column.
+	 */
+	public set keySize(value: number) {
+		this._keySize = value;
+	}
+
+	/**
+	 * Get the maximum namespace length (VARCHAR length) for the namespace column.
+	 * @default 255
+	 */
+	public get namespaceLength(): number {
+		return this._namespaceLength;
+	}
+
+	/**
+	 * Set the maximum namespace length (VARCHAR length) for the namespace column.
+	 */
+	public set namespaceLength(value: number) {
+		this._namespaceLength = value;
+	}
+
+	/**
+	 * Get the interval in seconds for MySQL event scheduler cleanup of expired entries.
+	 * A value of undefined or 0 disables the automatic cleanup.
+	 * @default undefined
+	 */
+	public get intervalExpiration(): number | undefined {
+		return this._intervalExpiration;
+	}
+
+	/**
+	 * Set the interval in seconds for MySQL event scheduler cleanup of expired entries.
+	 */
+	public set intervalExpiration(value: number | undefined) {
+		this._intervalExpiration = value;
+	}
+
+	/**
+	 * Get the number of rows to fetch per iteration batch.
+	 * @default 10
+	 */
+	public get iterationLimit(): string | number {
+		return this._iterationLimit;
+	}
+
+	/**
+	 * Set the number of rows to fetch per iteration batch.
+	 */
+	public set iterationLimit(value: string | number) {
+		this._iterationLimit = value;
+	}
+
+	/**
+	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
+	 */
+	public get namespace(): string | undefined {
+		return this._namespace;
+	}
+
+	/**
+	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+	 */
+	public set namespace(value: string | undefined) {
+		this._namespace = value;
+	}
+
+	/**
+	 * Get the options for the adapter. This is provided for backward compatibility.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	public get opts(): any {
+		return {
+			dialect: this._dialect,
+			uri: this._uri,
+			table: this._table,
+			keySize: this._keySize,
+			namespaceLength: this._namespaceLength,
+			intervalExpiration: this._intervalExpiration,
+			iterationLimit: this._iterationLimit,
+			...this._mysqlOptions,
+		};
+	}
+
+	/**
+	 * Set the options for the adapter.
+	 */
+	public set opts(options: KeyvMysqlOptions) {
+		this.setOptions(options);
+	}
 
 	/**
 	 * Creates a new KeyvMysql instance.
@@ -73,47 +260,24 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	constructor(keyvOptions?: KeyvMysqlOptions | string) {
 		super();
 
-		let options: KeyvMysqlOptions = {
-			dialect: "mysql",
-			uri: "mysql://localhost",
-		};
-
 		if (typeof keyvOptions === "string") {
-			options.uri = keyvOptions;
-		} else {
-			options = {
-				...options,
-				...keyvOptions,
-			};
+			this._uri = keyvOptions;
+		} else if (keyvOptions) {
+			this.setOptions(keyvOptions);
 		}
 
-		const mysqlOptions = Object.fromEntries(
-			Object.entries(options).filter(([k]) => !keyvMysqlKeys.has(k)),
-		);
-
-		delete mysqlOptions.namespace;
-		delete mysqlOptions.serialize;
-		delete mysqlOptions.deserialize;
-
 		const connection = async () => {
-			const conn = pool(options.uri!, mysqlOptions);
+			const conn = pool(this._uri, this._mysqlOptions);
 			return async (sql: string) => {
 				const data = await conn.query(sql);
 				return data[0];
 			};
 		};
 
-		this.opts = {
-			table: "keyv",
-			keySize: 255,
-			namespaceLength: 255,
-			...options,
-		};
-
-		const tableEsc = escapeIdentifier(this.opts.table!);
-		const indexName = `\`${(`${this.opts.table!}_key_namespace_idx`).replace(/`/g, "``")}\``;
-		const expiresIndexName = `\`${(`${this.opts.table!}_expires_idx`).replace(/`/g, "``")}\``;
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this.opts.keySize!)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this.opts.namespaceLength!)}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
+		const tableEsc = escapeIdentifier(this._table);
+		const indexName = `\`${(`${this._table}_key_namespace_idx`).replace(/`/g, "``")}\``;
+		const expiresIndexName = `\`${(`${this._table}_expires_idx`).replace(/`/g, "``")}\``;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this._keySize)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
 
 		/* v8 ignore next -- @preserve */
 		const connected = connection().then(async (query) => {
@@ -122,7 +286,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			// Migration for existing tables: add namespace column
 			try {
 				await query(
-					`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARCHAR(${Number(this.opts.namespaceLength!)}) NOT NULL DEFAULT ''`,
+					`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT ''`,
 				);
 			} catch (error) {
 				// Error 1060 = Duplicate column name - column already exists, safe to ignore
@@ -176,12 +340,12 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			}
 
 			if (
-				this.opts.intervalExpiration !== undefined &&
-				this.opts.intervalExpiration > 0
+				this._intervalExpiration !== undefined &&
+				this._intervalExpiration > 0
 			) {
 				await query("SET GLOBAL event_scheduler = ON;");
 				await query("DROP EVENT IF EXISTS keyv_delete_expired_keys;");
-				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this.opts.intervalExpiration} SECOND
+				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this._intervalExpiration} SECOND
 					DO DELETE FROM ${tableEsc}
 					WHERE expires BETWEEN 1 AND UNIX_TIMESTAMP(NOW(3)) * 1000;`);
 			}
@@ -200,8 +364,8 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * For example, if namespace is "ns" and key is "ns:foo", returns "foo".
 	 */
 	private removeKeyPrefix(key: string): string {
-		if (this.namespace && key.startsWith(`${this.namespace}:`)) {
-			return key.slice(this.namespace.length + 1);
+		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
+			return key.slice(this._namespace.length + 1);
 		}
 
 		return key;
@@ -212,7 +376,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * Returns empty string when no namespace is set.
 	 */
 	private getNamespaceValue(): string {
-		return this.namespace ?? "";
+		return this._namespace ?? "";
 	}
 
 	/**
@@ -242,13 +406,56 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Applies the given options to the adapter's private variables.
+	 */
+	private setOptions(options: KeyvMysqlOptions): void {
+		if (options.dialect !== undefined) {
+			this._dialect = options.dialect;
+		}
+
+		if (options.uri !== undefined) {
+			this._uri = options.uri;
+		}
+
+		if (options.table !== undefined) {
+			this._table = options.table;
+		}
+
+		if (options.keySize !== undefined) {
+			this._keySize = options.keySize;
+		}
+
+		if (options.namespaceLength !== undefined) {
+			this._namespaceLength = options.namespaceLength;
+		}
+
+		if (options.intervalExpiration !== undefined) {
+			this._intervalExpiration = options.intervalExpiration;
+		}
+
+		if (options.iterationLimit !== undefined) {
+			this._iterationLimit = options.iterationLimit;
+		}
+
+		// Extract mysql2 ConnectionOptions (everything not a Keyv-specific key)
+		const mysqlPassthrough = Object.fromEntries(
+			Object.entries(options).filter(([k]) => !keyvMysqlKeys.has(k)),
+		);
+		delete mysqlPassthrough.namespace;
+		delete mysqlPassthrough.serialize;
+		delete mysqlPassthrough.deserialize;
+
+		this._mysqlOptions = { ...this._mysqlOptions, ...mysqlPassthrough };
+	}
+
+	/**
 	 * Retrieves a value from the store by key.
 	 * @param key - The key to retrieve
 	 * @returns The stored value or undefined if not found
 	 */
 	async get<Value>(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
-		const sql = `SELECT * FROM ${escapeIdentifier(this.opts.table!)} WHERE id = ? AND namespace = ?`;
+		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
 		const select = mysql.format(sql, [strippedKey, this.getNamespaceValue()]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
@@ -264,7 +471,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 */
 	async getMany<Value>(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const sql = `SELECT * FROM ${escapeIdentifier(this.opts.table!)} WHERE id IN (?) AND namespace = ?`;
+		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
 		const select = mysql.format(sql, [strippedKeys, this.getNamespaceValue()]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
@@ -295,7 +502,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const expires = this.getExpiresFromValue(value);
-		const sql = `INSERT INTO ${escapeIdentifier(this.opts.table!)} (id, value, namespace, expires)
+		const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE value=?, expires=?;`;
 		const insert = [strippedKey, value, ns, expires, value, expires];
@@ -322,7 +529,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		]);
 		const placeholders = values.map(() => "(?, ?, ?, ?)").join(", ");
 		const flatValues = values.flat();
-		const sql = `INSERT INTO ${escapeIdentifier(this.opts.table!)} (id, value, namespace, expires)
+		const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
 			VALUES ${placeholders}
 			ON DUPLICATE KEY UPDATE value=VALUES(value), expires=VALUES(expires);`;
 		const upsert = mysql.format(sql, flatValues);
@@ -337,9 +544,9 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	async delete(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const sql = `SELECT * FROM ${escapeIdentifier(this.opts.table!)} WHERE id = ? AND namespace = ?`;
+		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
 		const select = mysql.format(sql, [strippedKey, ns]);
-		const delSql = `DELETE FROM ${escapeIdentifier(this.opts.table!)} WHERE id = ? AND namespace = ?`;
+		const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
 		const del = mysql.format(delSql, [strippedKey, ns]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
@@ -361,7 +568,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	async deleteMany(key: string[]) {
 		const strippedKeys = key.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const sql = `DELETE FROM ${escapeIdentifier(this.opts.table!)} WHERE id IN (?) AND namespace = ?`;
+		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
 		const del = mysql.format(sql, [strippedKeys, ns]);
 
 		const result: mysql.ResultSetHeader = await this.query(del);
@@ -375,7 +582,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 */
 	async clear() {
 		const ns = this.getNamespaceValue();
-		const sql = `DELETE FROM ${escapeIdentifier(this.opts.table!)} WHERE namespace = ?`;
+		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE namespace = ?`;
 		const del = mysql.format(sql, [ns]);
 
 		await this.query(del);
@@ -387,33 +594,30 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * @param namespace - Optional namespace to filter results
 	 * @yields Arrays containing [key, value] pairs
 	 */
-	async *iterator(namespace?: string) {
-		const limit =
-			Number.parseInt(this.opts.iterationLimit! as string, 10) || 10;
+	async *iterator(
+		namespace?: string,
+	): AsyncGenerator<[string, string], void, unknown> {
+		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
 		const namespaceValue = namespace ?? "";
+		let lastKey: string | null = null;
 
-		// @ts-expect-error - iterate
-		async function* iterate(
-			lastKey: string | null,
-			options: KeyvMysqlOptions,
-			query: <T>(sqlString: string) => QueryType<T>,
-		) {
+		while (true) {
 			let sql: string;
 			if (lastKey === null) {
 				// First batch: no cursor constraint
 				sql = mysql.format(
-					`SELECT * FROM ${escapeIdentifier(options.table!)} WHERE namespace = ? ORDER BY id LIMIT ?`,
+					`SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? ORDER BY id LIMIT ?`,
 					[namespaceValue, limit],
 				);
 			} else {
 				// Subsequent batches: use keyset pagination
 				sql = mysql.format(
-					`SELECT * FROM ${escapeIdentifier(options.table!)} WHERE namespace = ? AND id > ? ORDER BY id LIMIT ?`,
+					`SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND id > ? ORDER BY id LIMIT ?`,
 					[namespaceValue, lastKey, limit],
 				);
 			}
 
-			const entries: mysql.RowDataPacket[] = await query(sql);
+			const entries: mysql.RowDataPacket[] = await this.query(sql);
 			if (entries.length === 0) {
 				return;
 			}
@@ -424,13 +628,14 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				yield [prefixedKey, entry.value];
 			}
 
-			// Continue with next batch using last key as cursor
-			if (entries.length === limit) {
-				yield* iterate(entries[entries.length - 1].id, options, query);
+			// Update cursor to the last key processed
+			lastKey = entries[entries.length - 1].id;
+
+			// If we got fewer entries than the limit, we've reached the end
+			if (entries.length < limit) {
+				return;
 			}
 		}
-
-		yield* iterate(null, this.opts, this.query);
 	}
 
 	/**
@@ -441,7 +646,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	async has(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const sql = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this.opts.table!)} WHERE id = ? AND namespace = ? )`;
+		const sql = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? )`;
 		const exists = mysql.format(sql, [strippedKey, ns]);
 		const rows = await this.query(exists);
 		return Object.values(rows[0])[0] === 1;
@@ -459,7 +664,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const sql = `SELECT id FROM ${escapeIdentifier(this.opts.table!)} WHERE id IN (?) AND namespace = ?`;
+		const sql = `SELECT id FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
 		const select = mysql.format(sql, [strippedKeys, ns]);
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 		const existingKeys = new Set(rows.map((row) => row.id as string));
@@ -472,7 +677,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * @returns Promise that resolves when the operation completes
 	 */
 	async clearExpired(): Promise<void> {
-		const sql = `DELETE FROM ${escapeIdentifier(this.opts.table!)} WHERE expires IS NOT NULL AND expires < ?`;
+		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE expires IS NOT NULL AND expires < ?`;
 		const del = mysql.format(sql, [Date.now()]);
 		await this.query(del);
 	}

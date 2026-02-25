@@ -37,14 +37,14 @@ test.it("iterator with default namespace", async (t) => {
 	await keyv.set("foo2", "bar2");
 	const iterator = keyv.iterator();
 	let entry = await iterator.next();
-	t.expect(entry.value[0]).toBe("foo");
-	t.expect(entry.value[1]).toBe("bar");
+	t.expect(entry.value?.[0]).toBe("foo");
+	t.expect(entry.value?.[1]).toBe("bar");
 	entry = await iterator.next();
-	t.expect(entry.value[0]).toBe("foo1");
-	t.expect(entry.value[1]).toBe("bar1");
+	t.expect(entry.value?.[0]).toBe("foo1");
+	t.expect(entry.value?.[1]).toBe("bar1");
 	entry = await iterator.next();
-	t.expect(entry.value[0]).toBe("foo2");
-	t.expect(entry.value[1]).toBe("bar2");
+	t.expect(entry.value?.[0]).toBe("foo2");
+	t.expect(entry.value?.[1]).toBe("bar2");
 	entry = await iterator.next();
 	t.expect(entry.value).toBeUndefined();
 });
@@ -248,7 +248,7 @@ test.it(
 		const rows = await keyv.query<mysql.RowDataPacket[]>(
 			`SELECT expires FROM \`keyv\` WHERE id = 'expires-test' AND namespace = ''`,
 		);
-		t.expect(rows[0].expires).toBe(9999999999999n);
+		t.expect(Number(rows[0].expires)).toBe(9999999999999);
 	},
 );
 
@@ -272,12 +272,12 @@ test.it("set() updates expires column on upsert", async (t) => {
 	const rows1 = await keyv.query<mysql.RowDataPacket[]>(
 		`SELECT expires FROM \`keyv\` WHERE id = 'upsert-expires' AND namespace = ''`,
 	);
-	t.expect(rows1[0].expires).toBe(1000n);
+	t.expect(Number(rows1[0].expires)).toBe(1000);
 	await keyv.set("upsert-expires", value2);
 	const rows2 = await keyv.query<mysql.RowDataPacket[]>(
 		`SELECT expires FROM \`keyv\` WHERE id = 'upsert-expires' AND namespace = ''`,
 	);
-	t.expect(rows2[0].expires).toBe(2000n);
+	t.expect(Number(rows2[0].expires)).toBe(2000);
 });
 
 test.it("setMany() extracts and stores expires for each entry", async (t) => {
@@ -289,7 +289,7 @@ test.it("setMany() extracts and stores expires for each entry", async (t) => {
 	const rows = await keyv.query<mysql.RowDataPacket[]>(
 		`SELECT id, expires FROM \`keyv\` WHERE id IN ('sm-exp1', 'sm-exp2') AND namespace = '' ORDER BY id`,
 	);
-	t.expect(rows[0].expires).toBe(5000n);
+	t.expect(Number(rows[0].expires)).toBe(5000);
 	t.expect(rows[1].expires).toBeNull();
 });
 
@@ -328,7 +328,7 @@ test.it(
 		const keyv = new Keyv({ store: keyvMysql });
 		await keyv.set("ttl-key", "ttl-value", 60_000);
 		const rows = await keyvMysql.query<mysql.RowDataPacket[]>(
-			`SELECT expires FROM \`keyv\` WHERE id = 'ttl-key' AND namespace = ''`,
+			`SELECT expires FROM \`keyv\` WHERE id = 'ttl-key' AND namespace = 'keyv'`,
 		);
 		t.expect(rows[0].expires).not.toBeNull();
 		// expires should be roughly Date.now() + 60000
@@ -513,4 +513,65 @@ test.it("native namespace: setMany scoped to namespace", async (t) => {
 	t.expect(await mysql1.get("ns1:key2")).toBe("val2");
 	// ns2 should not see ns1's keys
 	t.expect(await mysql2.get("ns2:key1")).toBeUndefined();
+});
+
+// Property getter/setter tests
+test.it("properties have correct defaults", (t) => {
+	const keyv = new KeyvMysql(uri);
+	t.expect(keyv.dialect).toBe("mysql");
+	t.expect(keyv.uri).toBe(uri);
+	t.expect(keyv.table).toBe("keyv");
+	t.expect(keyv.keySize).toBe(255);
+	t.expect(keyv.namespaceLength).toBe(255);
+	t.expect(keyv.iterationLimit).toBe(10);
+	t.expect(keyv.intervalExpiration).toBeUndefined();
+	t.expect(keyv.namespace).toBeUndefined();
+});
+
+test.it("properties are set correctly via constructor options", (t) => {
+	const keyv = new KeyvMysql({
+		uri,
+		table: "custom_table",
+		keySize: 512,
+		namespaceLength: 128,
+		iterationLimit: 50,
+	});
+	t.expect(keyv.table).toBe("custom_table");
+	t.expect(keyv.keySize).toBe(512);
+	t.expect(keyv.namespaceLength).toBe(128);
+	t.expect(keyv.iterationLimit).toBe(50);
+});
+
+test.it("opts getter returns composed object", (t) => {
+	const keyv = new KeyvMysql({ uri, table: "custom", keySize: 512 });
+	const { opts } = keyv;
+	t.expect(opts.table).toBe("custom");
+	t.expect(opts.keySize).toBe(512);
+	t.expect(opts.dialect).toBe("mysql");
+	t.expect(opts.uri).toBe(uri);
+	t.expect(opts.namespaceLength).toBe(255);
+	t.expect(opts.iterationLimit).toBe(10);
+});
+
+test.it("opts setter updates individual properties", (t) => {
+	const keyv = new KeyvMysql(uri);
+	keyv.opts = { table: "new_table", keySize: 1024 };
+	t.expect(keyv.table).toBe("new_table");
+	t.expect(keyv.keySize).toBe(1024);
+	// Other defaults should remain
+	t.expect(keyv.namespaceLength).toBe(255);
+});
+
+test.it("individual property setters work", (t) => {
+	const keyv = new KeyvMysql(uri);
+	keyv.table = "updated_table";
+	t.expect(keyv.table).toBe("updated_table");
+	keyv.keySize = 1024;
+	t.expect(keyv.keySize).toBe(1024);
+	keyv.namespaceLength = 128;
+	t.expect(keyv.namespaceLength).toBe(128);
+	keyv.iterationLimit = 100;
+	t.expect(keyv.iterationLimit).toBe(100);
+	keyv.namespace = "test-ns";
+	t.expect(keyv.namespace).toBe("test-ns");
 });

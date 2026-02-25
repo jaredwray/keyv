@@ -14,7 +14,16 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Install](#install)
 - [Usage](#usage)
 - [Migrating to v6](#migrating-to-v6)
+- [Constructor Options](#constructor-options)
 - [Properties](#properties)
+  - [uri](#uri)
+  - [table](#table)
+  - [keySize](#keysize)
+  - [namespaceLength](#namespacelength)
+  - [dialect](#dialect)
+  - [iterationLimit](#iterationlimit)
+  - [intervalExpiration](#intervalexpiration)
+  - [namespace](#namespace-1)
 - [Namespace Support](#namespace-support)
 - [Methods](#methods)
   - [.get(key)](#getkey)
@@ -75,6 +84,27 @@ In v5, namespaces were stored as key prefixes in the `id` column (e.g. `id="myns
 
 The adapter automatically adds the `namespace` column and creates the appropriate index when it connects, so no manual schema changes are needed for new installations.
 
+#### Properties instead of opts
+
+In v5, configuration was accessed through the `opts` object:
+
+```js
+// v5
+store.opts.table; // 'keyv'
+store.opts.keySize; // 255
+```
+
+In v6, all configuration options are exposed as top-level properties with getters and setters:
+
+```js
+// v6
+store.table; // 'keyv'
+store.keySize; // 255
+store.table = 'cache';
+```
+
+The `opts` getter still exists for backward compatibility but should not be used for new code.
+
 ### New features
 
 #### Native TTL support with `expires` column
@@ -130,21 +160,121 @@ The migration script also populates the new `expires` column from existing JSON 
 - Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
 - The `expires` column is populated by extracting `value->'$.expires'` from existing JSON values.
 
+## Constructor Options
+
+`KeyvMysql` accepts a connection URI string or an options object. The options object accepts the following properties along with any [`ConnectionOptions`](https://sidorares.github.io/node-mysql2/docs/documentation/connections) from the `mysql2` library (e.g. `host`, `port`, `user`, `password`, `database`):
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `uri` | `string` | `'mysql://localhost'` | MySQL connection URI |
+| `table` | `string` | `'keyv'` | Table name for key-value storage |
+| `keySize` | `number` | `255` | Maximum key column length (VARCHAR length) |
+| `namespaceLength` | `number` | `255` | Maximum namespace column length (VARCHAR length) |
+| `dialect` | `'mysql'` | `'mysql'` | Database dialect |
+| `iterationLimit` | `string \| number` | `10` | Number of rows fetched per batch during iteration |
+| `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
+
 ## Properties
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `uri` | `string` | `"mysql://localhost"` | MySQL connection URI string |
-| `table` | `string` | `"keyv"` | Name of the MySQL table used for storage |
-| `keySize` | `number` | `255` | Maximum size of the key column (VARCHAR length) |
-| `namespace` | `string` | `undefined` | Optional namespace for scoping keys. When set, keys are stored with their namespace in a separate column |
-| `namespaceLength` | `number` | `255` | Maximum size of the namespace column (VARCHAR length) |
-| `dialect` | `string` | `"mysql"` | Database dialect |
-| `iterationLimit` | `string \| number` | `10` | Number of rows to fetch per batch during iteration. Accepts both numbers and string representations of numbers (e.g., `10` or `"10"`) |
-| `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
-| `ssl` | `object` | `undefined` | SSL configuration object passed to the MySQL connection |
+All configuration options are exposed as properties with getters and setters on the `KeyvMysql` instance. You can read or update them after construction.
 
-The `KeyvMysql` constructor also accepts any valid `mysql2` [ConnectionOptions](https://sidorares.github.io/node-mysql2/docs/documentation/connections) such as `host`, `port`, `user`, `password`, and `database`. These are parsed from the `uri` if not provided directly.
+### uri
+
+Get or set the MySQL connection URI.
+
+- Type: `string`
+- Default: `'mysql://localhost'`
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname' });
+console.log(store.uri); // 'mysql://user:pass@localhost:3306/dbname'
+```
+
+### table
+
+Get or set the table name used for storage.
+
+- Type: `string`
+- Default: `'keyv'`
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname' });
+console.log(store.table); // 'keyv'
+store.table = 'cache';
+```
+
+### keySize
+
+Get or set the maximum key size (VARCHAR length) for the key column.
+
+- Type: `number`
+- Default: `255`
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', keySize: 512 });
+console.log(store.keySize); // 512
+```
+
+### namespaceLength
+
+Get or set the maximum namespace length (VARCHAR length) for the namespace column.
+
+- Type: `number`
+- Default: `255`
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', namespaceLength: 512 });
+console.log(store.namespaceLength); // 512
+```
+
+### dialect
+
+Get the database dialect. Always returns `'mysql'`.
+
+- Type: `'mysql'`
+- Default: `'mysql'`
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname' });
+console.log(store.dialect); // 'mysql'
+```
+
+### iterationLimit
+
+Get or set the number of rows to fetch per iteration batch. Accepts both numbers and string representations of numbers.
+
+- Type: `string | number`
+- Default: `10`
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', iterationLimit: 50 });
+console.log(store.iterationLimit); // 50
+```
+
+### intervalExpiration
+
+Get or set the interval in seconds for automatic expiration cleanup via the MySQL event scheduler. When set to a value greater than 0, the adapter creates a MySQL scheduled event that periodically deletes expired entries.
+
+- Type: `number | undefined`
+- Default: `undefined` (disabled)
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', intervalExpiration: 60 });
+console.log(store.intervalExpiration); // 60
+```
+
+### namespace
+
+Get or set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+
+- Type: `string | undefined`
+- Default: `undefined`
+
+```js
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname' });
+store.namespace = 'my-namespace';
+console.log(store.namespace); // 'my-namespace'
+```
 
 ## Namespace Support
 
