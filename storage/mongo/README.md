@@ -23,6 +23,18 @@ Uses TTL indexes to automatically remove expired documents. However [MongoDB doe
   - [useGridFS](#usegridfs)
   - [db](#db)
   - [readPreference](#readpreference)
+- [Methods](#methods)
+  - [set](#set)
+  - [get](#get)
+  - [getMany](#getmany)
+  - [has](#has)
+  - [delete](#delete)
+  - [deleteMany](#deletemany)
+  - [clear](#clear)
+  - [iterator](#iterator)
+  - [disconnect](#disconnect)
+  - [clearExpired](#clearexpired)
+  - [clearUnusedFor](#clearunusedfor)
 - [License](#license)
 
 ## Install
@@ -171,6 +183,206 @@ const store = new KeyvMongo({
   readPreference: ReadPreference.SECONDARY,
 });
 console.log(store.readPreference); // ReadPreference.SECONDARY
+```
+
+## Methods
+
+### set
+
+`set(key, value, ttl?)` - Set a value in the store.
+
+- `key` *(string)* - The key to set.
+- `value` *(any)* - The value to store.
+- `ttl` *(number, optional)* - Time to live in milliseconds. If specified, the key will expire after this duration.
+- Returns: `Promise<void>`
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set('foo', 'bar');
+await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
+```
+
+### get
+
+`get(key)` - Get a value from the store.
+
+- `key` *(string)* - The key to retrieve.
+- Returns: `Promise<any>` - The stored value, or `undefined` if the key does not exist.
+
+In GridFS mode, `get` also updates the `lastAccessed` timestamp on the file, which is used by `clearUnusedFor`.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set('foo', 'bar');
+const value = await keyv.get('foo');
+console.log(value); // 'bar'
+
+const missing = await keyv.get('nonexistent');
+console.log(missing); // undefined
+```
+
+### getMany
+
+`getMany(keys)` - Get multiple values from the store at once.
+
+- `keys` *(string[])* - Array of keys to retrieve.
+- Returns: `Promise<Array<any>>` - Array of values in the same order as the input keys. Missing keys return `undefined` at their position.
+
+In standard mode, uses a single MongoDB query with the `$in` operator for efficiency. In GridFS mode, each key is fetched individually.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set('key1', 'value1');
+await keyv.set('key2', 'value2');
+
+const values = await keyv.get(['key1', 'key2', 'key3']);
+console.log(values); // ['value1', 'value2', undefined]
+```
+
+### has
+
+`has(key)` - Check if a key exists in the store.
+
+- `key` *(string)* - The key to check.
+- Returns: `Promise<boolean>` - `true` if the key exists, `false` otherwise.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set('foo', 'bar');
+console.log(await keyv.has('foo')); // true
+console.log(await keyv.has('nonexistent')); // false
+```
+
+### delete
+
+`delete(key)` - Delete a key from the store.
+
+- `key` *(string)* - The key to delete.
+- Returns: `Promise<boolean>` - `true` if the key was deleted, `false` if the key was not found.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set('foo', 'bar');
+console.log(await keyv.delete('foo')); // true
+console.log(await keyv.delete('nonexistent')); // false
+```
+
+### deleteMany
+
+`deleteMany(keys)` - Delete multiple keys from the store at once.
+
+- `keys` *(string[])* - Array of keys to delete.
+- Returns: `Promise<boolean>` - `true` if any keys were deleted, `false` if none were found.
+
+In standard mode, uses a single MongoDB query with the `$in` operator. In GridFS mode, all matching files are found and deleted in parallel.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set('key1', 'value1');
+await keyv.set('key2', 'value2');
+
+console.log(await keyv.delete(['key1', 'key2', 'key3'])); // true
+```
+
+### clear
+
+`clear()` - Delete all keys in the current namespace.
+
+- Returns: `Promise<void>`
+
+Only keys matching the current namespace are removed. If no namespace is set, all keys with an empty namespace are cleared.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store, namespace: 'my-namespace' });
+
+await keyv.set('key1', 'value1');
+await keyv.set('key2', 'value2');
+
+await keyv.clear(); // removes all keys in 'my-namespace'
+```
+
+### iterator
+
+`iterator(namespace?)` - Iterate over all key-value pairs in the store.
+
+- `namespace` *(string, optional)* - The namespace to iterate over.
+- Returns: `AsyncGenerator<[string, any]>` - An async generator yielding `[key, value]` pairs.
+
+Keys are returned with the namespace prefix included (e.g., `namespace:key`).
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store, namespace: 'ns' });
+
+await keyv.set('key1', 'value1');
+await keyv.set('key2', 'value2');
+
+for await (const [key, value] of keyv.iterator('ns')) {
+  console.log(key, value); // 'ns:key1' 'value1', 'ns:key2' 'value2'
+}
+```
+
+### disconnect
+
+`disconnect()` - Close the MongoDB connection.
+
+- Returns: `Promise<void>`
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+// ... use the store ...
+
+await keyv.disconnect();
+```
+
+### clearExpired
+
+`clearExpired()` - Remove all expired files from GridFS. This method only works in GridFS mode and is a no-op that returns `false` in standard mode.
+
+- Returns: `Promise<boolean>` - `true` if running in GridFS mode, `false` otherwise.
+
+This is useful for manual cleanup of expired GridFS files, since GridFS does not support MongoDB TTL indexes.
+
+```js
+const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true });
+
+await store.set('temp', 'data', 1000); // expires in 1 second
+
+// After expiration...
+await store.clearExpired(); // removes expired GridFS files
+```
+
+### clearUnusedFor
+
+`clearUnusedFor(seconds)` - Remove all GridFS files that have not been accessed for the specified duration. This method only works in GridFS mode and is a no-op that returns `false` in standard mode.
+
+- `seconds` *(number)* - The number of seconds of inactivity after which files should be removed.
+- Returns: `Promise<boolean>` - `true` if running in GridFS mode, `false` otherwise.
+
+The `lastAccessed` timestamp is updated each time a file is read via `get`.
+
+```js
+const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true });
+
+await store.set('foo', 'bar');
+
+// Remove files not accessed in the last hour
+await store.clearUnusedFor(3600);
 ```
 
 ## License
