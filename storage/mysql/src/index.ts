@@ -26,7 +26,6 @@ const keyvMysqlKeys = new Set([
 	"adapter",
 	"compression",
 	"connect",
-	"dialect",
 	"intervalExpiration",
 	"iterationLimit",
 	"keySize",
@@ -51,12 +50,6 @@ type QueryType<T> = Promise<
  * Provides a persistent key-value store using MySQL as the backend.
  */
 export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
-	/**
-	 * The database dialect.
-	 * @default 'mysql'
-	 */
-	private _dialect: "mysql" = "mysql";
-
 	/**
 	 * The MySQL connection URI.
 	 * @default 'mysql://localhost'
@@ -108,21 +101,6 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * Query function for executing SQL statements against the MySQL database.
 	 */
 	query: <T>(sqlString: string) => QueryType<T>;
-
-	/**
-	 * Get the database dialect.
-	 * @default 'mysql'
-	 */
-	public get dialect(): "mysql" {
-		return this._dialect;
-	}
-
-	/**
-	 * Set the database dialect.
-	 */
-	public set dialect(value: "mysql") {
-		this._dialect = value;
-	}
 
 	/**
 	 * Get the MySQL connection URI.
@@ -235,7 +213,6 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public get opts(): any {
 		return {
-			dialect: this._dialect,
 			uri: this._uri,
 			table: this._table,
 			keySize: this._keySize,
@@ -410,10 +387,6 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * Applies the given options to the adapter's private variables.
 	 */
 	private setOptions(options: KeyvMysqlOptions): void {
-		if (options.dialect !== undefined) {
-			this._dialect = options.dialect;
-		}
-
 		if (options.uri !== undefined) {
 			this._uri = options.uri;
 		}

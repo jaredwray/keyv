@@ -518,7 +518,6 @@ test.it("native namespace: setMany scoped to namespace", async (t) => {
 // Property getter/setter tests
 test.it("properties have correct defaults", (t) => {
 	const keyv = new KeyvMysql(uri);
-	t.expect(keyv.dialect).toBe("mysql");
 	t.expect(keyv.uri).toBe(uri);
 	t.expect(keyv.table).toBe("keyv");
 	t.expect(keyv.keySize).toBe(255);
@@ -547,7 +546,6 @@ test.it("opts getter returns composed object", (t) => {
 	const { opts } = keyv;
 	t.expect(opts.table).toBe("custom");
 	t.expect(opts.keySize).toBe(512);
-	t.expect(opts.dialect).toBe("mysql");
 	t.expect(opts.uri).toBe(uri);
 	t.expect(opts.namespaceLength).toBe(255);
 	t.expect(opts.iterationLimit).toBe(10);
@@ -564,8 +562,6 @@ test.it("opts setter updates individual properties", (t) => {
 
 test.it("individual property setters work", (t) => {
 	const keyv = new KeyvMysql(uri);
-	keyv.dialect = "mysql";
-	t.expect(keyv.dialect).toBe("mysql");
 	keyv.uri = "mysql://otherhost";
 	t.expect(keyv.uri).toBe("mysql://otherhost");
 	keyv.table = "updated_table";
@@ -592,8 +588,3 @@ test.it("iterator on empty store returns nothing", async (t) => {
 	t.expect(entries.length).toBe(0);
 });
 
-test.it("opts setter with dialect updates dialect property", (t) => {
-	const keyv = new KeyvMysql(uri);
-	keyv.opts = { dialect: "mysql" };
-	t.expect(keyv.dialect).toBe("mysql");
-});

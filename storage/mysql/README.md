@@ -20,7 +20,6 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [table](#table)
   - [keySize](#keysize)
   - [namespaceLength](#namespacelength)
-  - [dialect](#dialect)
   - [iterationLimit](#iterationlimit)
   - [intervalExpiration](#intervalexpiration)
   - [namespace](#namespace-1)
@@ -170,7 +169,6 @@ The migration script also populates the new `expires` column from existing JSON 
 | `table` | `string` | `'keyv'` | Table name for key-value storage |
 | `keySize` | `number` | `255` | Maximum key column length (VARCHAR length) |
 | `namespaceLength` | `number` | `255` | Maximum namespace column length (VARCHAR length) |
-| `dialect` | `'mysql'` | `'mysql'` | Database dialect |
 | `iterationLimit` | `string \| number` | `10` | Number of rows fetched per batch during iteration |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
 
@@ -225,18 +223,6 @@ Get or set the maximum namespace length (VARCHAR length) for the namespace colum
 ```js
 const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', namespaceLength: 512 });
 console.log(store.namespaceLength); // 512
-```
-
-### dialect
-
-Get the database dialect. Always returns `'mysql'`.
-
-- Type: `'mysql'`
-- Default: `'mysql'`
-
-```js
-const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname' });
-console.log(store.dialect); // 'mysql'
 ```
 
 ### iterationLimit
