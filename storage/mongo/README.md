@@ -25,9 +25,11 @@ Uses TTL indexes to automatically remove expired documents. However [MongoDB doe
   - [readPreference](#readpreference)
 - [Methods](#methods)
   - [set](#set)
+  - [setMany](#setmany)
   - [get](#get)
   - [getMany](#getmany)
   - [has](#has)
+  - [hasMany](#hasmany)
   - [delete](#delete)
   - [deleteMany](#deletemany)
   - [clear](#clear)
@@ -204,6 +206,25 @@ await keyv.set('foo', 'bar');
 await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
+### setMany
+
+`setMany(entries)` - Set multiple values in the store at once.
+
+- `entries` *(Array<{ key: string, value: any, ttl?: number }>)* - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds.
+- Returns: `Promise<void>`
+
+In standard mode, uses a single MongoDB `bulkWrite` operation for efficiency. In GridFS mode, each entry is set individually in parallel.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set([
+  { key: 'key1', value: 'value1' },
+  { key: 'key2', value: 'value2', ttl: 5000 },
+]);
+```
+
 ### get
 
 `get(key)` - Get a value from the store.
@@ -259,6 +280,26 @@ const keyv = new Keyv({ store });
 await keyv.set('foo', 'bar');
 console.log(await keyv.has('foo')); // true
 console.log(await keyv.has('nonexistent')); // false
+```
+
+### hasMany
+
+`hasMany(keys)` - Check if multiple keys exist in the store at once.
+
+- `keys` *(string[])* - Array of keys to check.
+- Returns: `Promise<boolean[]>` - Array of booleans in the same order as the input keys.
+
+Uses a single MongoDB query with the `$in` operator for efficiency in both standard and GridFS modes.
+
+```js
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store });
+
+await keyv.set('key1', 'value1');
+await keyv.set('key2', 'value2');
+
+const results = await keyv.has(['key1', 'key2', 'key3']);
+console.log(results); // [true, true, false]
 ```
 
 ### delete
@@ -318,10 +359,10 @@ await keyv.clear(); // removes all keys in 'my-namespace'
 
 `iterator(namespace?)` - Iterate over all key-value pairs in the store.
 
-- `namespace` *(string, optional)* - The namespace to iterate over.
+- `namespace` *(string, optional)* - The namespace to iterate over. When used through Keyv, the namespace is passed automatically from the Keyv instance.
 - Returns: `AsyncGenerator<[string, any]>` - An async generator yielding `[key, value]` pairs.
 
-Keys are returned with the namespace prefix included (e.g., `namespace:key`).
+When used through Keyv, the namespace prefix is stripped from keys automatically.
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
@@ -330,8 +371,8 @@ const keyv = new Keyv({ store, namespace: 'ns' });
 await keyv.set('key1', 'value1');
 await keyv.set('key2', 'value2');
 
-for await (const [key, value] of keyv.iterator('ns')) {
-  console.log(key, value); // 'ns:key1' 'value1', 'ns:key2' 'value2'
+for await (const [key, value] of keyv.iterator()) {
+  console.log(key, value); // 'key1' 'value1', 'key2' 'value2'
 }
 ```
 

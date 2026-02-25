@@ -453,6 +453,37 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 		);
 	}
 
+	async setMany(
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		entries: Array<{ key: string; value: any; ttl?: number }>,
+	): Promise<void> {
+		if (this._useGridFS) {
+			await Promise.all(
+				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
+			);
+			return;
+		}
+
+		const client = await this.connect;
+		const ns = this.getNamespaceValue();
+		const operations = entries.map(({ key, value, ttl }) => {
+			const strippedKey = this.removeKeyPrefix(key);
+			const expiresAt =
+				typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
+			return {
+				updateOne: {
+					filter: { key: { $eq: strippedKey }, namespace: { $eq: ns } },
+					update: {
+						$set: { key: strippedKey, value, namespace: ns, expiresAt },
+					},
+					upsert: true,
+				},
+			};
+		});
+
+		await client.store.bulkWrite(operations);
+	}
+
 	async delete(key: string) {
 		if (typeof key !== "string") {
 			return false;
@@ -677,6 +708,34 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 			namespace: { $eq: ns },
 		});
 		return document !== 0;
+	}
+
+	async hasMany(keys: string[]): Promise<boolean[]> {
+		const client = await this.connect;
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
+		const ns = this.getNamespaceValue();
+
+		if (this._useGridFS) {
+			const files = await client.store
+				.find({
+					filename: { $in: strippedKeys },
+					"metadata.namespace": { $eq: ns },
+				})
+				.project({ filename: 1 })
+				.toArray();
+			const existingKeys = new Set(files.map((f) => f.filename as string));
+			return strippedKeys.map((key) => existingKeys.has(key));
+		}
+
+		const docs = await client.store
+			.find({
+				key: { $in: strippedKeys },
+				namespace: { $eq: ns },
+			})
+			.project({ key: 1 })
+			.toArray();
+		const existingKeys = new Set(docs.map((d) => d.key as string));
+		return strippedKeys.map((key) => existingKeys.has(key));
 	}
 
 	async disconnect(): Promise<void> {
