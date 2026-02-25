@@ -28,7 +28,7 @@ const keyvMysqlKeys = new Set([
 	"connect",
 	"intervalExpiration",
 	"iterationLimit",
-	"keySize",
+	"keyLength",
 	"namespaceLength",
 	"table",
 	"ttl",
@@ -66,7 +66,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * The maximum key size (VARCHAR length) for the key column.
 	 * @default 255
 	 */
-	private _keySize = 255;
+	private _keyLength = 255;
 
 	/**
 	 * The maximum namespace length (VARCHAR length) for the namespace column.
@@ -136,15 +136,15 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 	 * Get the maximum key size (VARCHAR length) for the key column.
 	 * @default 255
 	 */
-	public get keySize(): number {
-		return this._keySize;
+	public get keyLength(): number {
+		return this._keyLength;
 	}
 
 	/**
 	 * Set the maximum key size (VARCHAR length) for the key column.
 	 */
-	public set keySize(value: number) {
-		this._keySize = value;
+	public set keyLength(value: number) {
+		this._keyLength = value;
 	}
 
 	/**
@@ -217,7 +217,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			url: this._uri,
 			uri: this._uri,
 			table: this._table,
-			keySize: this._keySize,
+			keyLength: this._keyLength,
 			namespaceLength: this._namespaceLength,
 			intervalExpiration: this._intervalExpiration,
 			iterationLimit: this._iterationLimit,
@@ -256,7 +256,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 		const tableEsc = escapeIdentifier(this._table);
 		const indexName = `\`${(`${this._table}_key_namespace_idx`).replace(/`/g, "``")}\``;
 		const expiresIndexName = `\`${(`${this._table}_expires_idx`).replace(/`/g, "``")}\``;
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this._keySize)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARCHAR(${Number(this._keyLength)}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
 
 		/* v8 ignore next -- @preserve */
 		const connected = connection().then(async (query) => {
@@ -397,8 +397,8 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 			this._table = options.table;
 		}
 
-		if (options.keySize !== undefined) {
-			this._keySize = options.keySize;
+		if (options.keyLength !== undefined) {
+			this._keyLength = options.keyLength;
 		}
 
 		if (options.namespaceLength !== undefined) {

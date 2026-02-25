@@ -18,7 +18,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Properties](#properties)
   - [uri](#uri)
   - [table](#table)
-  - [keySize](#keysize)
+  - [keyLength](#keylength)
   - [namespaceLength](#namespacelength)
   - [iterationLimit](#iterationlimit)
   - [intervalExpiration](#intervalexpiration)
@@ -56,7 +56,7 @@ const keyv = new Keyv(new KeyvMysql('mysql://user:pass@localhost:3306/dbname'));
 keyv.on('error', handleConnectionError);
 ```
 
-You can specify a custom table with the `table` option and the primary key size with `keySize`.
+You can specify a custom table with the `table` option and the primary key length with `keyLength`.
 If you want to use native MySQL scheduler to delete expired keys, you can specify `intervalExpiration` in seconds.
 
 e.g:
@@ -68,7 +68,7 @@ import KeyvMysql from '@keyv/mysql';
 const keyv = new Keyv(new KeyvMysql({
   uri: 'mysql://user:pass@localhost:3306/dbname',
   table: 'cache',
-  keySize: 255,
+  keyLength: 255,
   intervalExpiration: 60
 }));
 ```
@@ -90,7 +90,7 @@ In v5, configuration was accessed through the `opts` object:
 ```js
 // v5
 store.opts.table; // 'keyv'
-store.opts.keySize; // 255
+store.opts.keyLength; // 255
 ```
 
 In v6, all configuration options are exposed as top-level properties with getters and setters:
@@ -98,7 +98,7 @@ In v6, all configuration options are exposed as top-level properties with getter
 ```js
 // v6
 store.table; // 'keyv'
-store.keySize; // 255
+store.keyLength; // 255
 store.table = 'cache';
 ```
 
@@ -167,9 +167,9 @@ The migration script also populates the new `expires` column from existing JSON 
 | --- | --- | --- | --- |
 | `uri` | `string` | `'mysql://localhost'` | MySQL connection URI |
 | `table` | `string` | `'keyv'` | Table name for key-value storage |
-| `keySize` | `number` | `255` | Maximum key column length (VARCHAR length) |
+| `keyLength` | `number` | `255` | Maximum key column length (VARCHAR length) |
 | `namespaceLength` | `number` | `255` | Maximum namespace column length (VARCHAR length) |
-| `iterationLimit` | `string \| number` | `10` | Number of rows fetched per batch during iteration |
+| `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
 
 ## Properties
@@ -201,7 +201,7 @@ console.log(store.table); // 'keyv'
 store.table = 'cache';
 ```
 
-### keySize
+### keyLength
 
 Get or set the maximum key size (VARCHAR length) for the key column.
 
@@ -209,8 +209,8 @@ Get or set the maximum key size (VARCHAR length) for the key column.
 - Default: `255`
 
 ```js
-const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', keySize: 512 });
-console.log(store.keySize); // 512
+const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', keyLength: 512 });
+console.log(store.keyLength); // 512
 ```
 
 ### namespaceLength
@@ -227,9 +227,9 @@ console.log(store.namespaceLength); // 512
 
 ### iterationLimit
 
-Get or set the number of rows to fetch per iteration batch. Accepts both numbers and string representations of numbers.
+Get or set the number of rows to fetch per iteration batch.
 
-- Type: `string | number`
+- Type: `number`
 - Default: `10`
 
 ```js

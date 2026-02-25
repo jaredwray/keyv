@@ -3,7 +3,7 @@ import type { ConnectionOptions } from "mysql2";
 export type KeyvMysqlOptions = {
 	uri?: string;
 	table?: string;
-	keySize?: number;
+	keyLength?: number;
 	namespaceLength?: number;
 	intervalExpiration?: number;
 	iterationLimit?: number;

@@ -520,7 +520,7 @@ test.it("properties have correct defaults", (t) => {
 	const keyv = new KeyvMysql(uri);
 	t.expect(keyv.uri).toBe(uri);
 	t.expect(keyv.table).toBe("keyv");
-	t.expect(keyv.keySize).toBe(255);
+	t.expect(keyv.keyLength).toBe(255);
 	t.expect(keyv.namespaceLength).toBe(255);
 	t.expect(keyv.iterationLimit).toBe(10);
 	t.expect(keyv.intervalExpiration).toBeUndefined();
@@ -531,21 +531,21 @@ test.it("properties are set correctly via constructor options", (t) => {
 	const keyv = new KeyvMysql({
 		uri,
 		table: "custom_table",
-		keySize: 512,
+		keyLength: 512,
 		namespaceLength: 128,
 		iterationLimit: 50,
 	});
 	t.expect(keyv.table).toBe("custom_table");
-	t.expect(keyv.keySize).toBe(512);
+	t.expect(keyv.keyLength).toBe(512);
 	t.expect(keyv.namespaceLength).toBe(128);
 	t.expect(keyv.iterationLimit).toBe(50);
 });
 
 test.it("opts getter returns composed object", (t) => {
-	const keyv = new KeyvMysql({ uri, table: "custom", keySize: 512 });
+	const keyv = new KeyvMysql({ uri, table: "custom", keyLength: 512 });
 	const { opts } = keyv;
 	t.expect(opts.table).toBe("custom");
-	t.expect(opts.keySize).toBe(512);
+	t.expect(opts.keyLength).toBe(512);
 	t.expect(opts.uri).toBe(uri);
 	t.expect(opts.namespaceLength).toBe(255);
 	t.expect(opts.iterationLimit).toBe(10);
@@ -553,9 +553,9 @@ test.it("opts getter returns composed object", (t) => {
 
 test.it("opts setter updates individual properties", (t) => {
 	const keyv = new KeyvMysql(uri);
-	keyv.opts = { table: "new_table", keySize: 1024 };
+	keyv.opts = { table: "new_table", keyLength: 1024 };
 	t.expect(keyv.table).toBe("new_table");
-	t.expect(keyv.keySize).toBe(1024);
+	t.expect(keyv.keyLength).toBe(1024);
 	// Other defaults should remain
 	t.expect(keyv.namespaceLength).toBe(255);
 });
@@ -566,8 +566,8 @@ test.it("individual property setters work", (t) => {
 	t.expect(keyv.uri).toBe("mysql://otherhost");
 	keyv.table = "updated_table";
 	t.expect(keyv.table).toBe("updated_table");
-	keyv.keySize = 1024;
-	t.expect(keyv.keySize).toBe(1024);
+	keyv.keyLength = 1024;
+	t.expect(keyv.keyLength).toBe(1024);
 	keyv.namespaceLength = 128;
 	t.expect(keyv.namespaceLength).toBe(128);
 	keyv.iterationLimit = 100;
