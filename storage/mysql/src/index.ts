@@ -395,6 +395,7 @@ export class KeyvMysql extends EventEmitter implements KeyvStoreAdapter {
 				return null;
 			}
 		} else {
+			/* v8 ignore next -- @preserve */
 			data = value;
 		}
 

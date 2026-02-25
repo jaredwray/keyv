@@ -564,6 +564,10 @@ test.it("opts setter updates individual properties", (t) => {
 
 test.it("individual property setters work", (t) => {
 	const keyv = new KeyvMysql(uri);
+	keyv.dialect = "mysql";
+	t.expect(keyv.dialect).toBe("mysql");
+	keyv.uri = "mysql://otherhost";
+	t.expect(keyv.uri).toBe("mysql://otherhost");
 	keyv.table = "updated_table";
 	t.expect(keyv.table).toBe("updated_table");
 	keyv.keySize = 1024;
@@ -572,6 +576,24 @@ test.it("individual property setters work", (t) => {
 	t.expect(keyv.namespaceLength).toBe(128);
 	keyv.iterationLimit = 100;
 	t.expect(keyv.iterationLimit).toBe(100);
+	keyv.intervalExpiration = 30;
+	t.expect(keyv.intervalExpiration).toBe(30);
 	keyv.namespace = "test-ns";
 	t.expect(keyv.namespace).toBe("test-ns");
+});
+
+test.it("iterator on empty store returns nothing", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const entries: Array<[string, string]> = [];
+	for await (const entry of keyv.iterator()) {
+		entries.push(entry);
+	}
+
+	t.expect(entries.length).toBe(0);
+});
+
+test.it("opts setter with dialect updates dialect property", (t) => {
+	const keyv = new KeyvMysql(uri);
+	keyv.opts = { dialect: "mysql" };
+	t.expect(keyv.dialect).toBe("mysql");
 });
