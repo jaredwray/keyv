@@ -72,6 +72,8 @@ test.it("properties can be set via constructor options", (t) => {
 
 test.it("properties can be modified via setters", (t) => {
 	const store = new KeyvMongo();
+	store.url = "mongodb://localhost:27018";
+	t.expect(store.url).toBe("mongodb://localhost:27018");
 	store.namespace = "test-ns";
 	t.expect(store.namespace).toBe("test-ns");
 	store.collection = "custom-collection";
@@ -80,6 +82,19 @@ test.it("properties can be modified via setters", (t) => {
 	t.expect(store.useGridFS).toBe(true);
 	store.db = "mydb";
 	t.expect(store.db).toBe("mydb");
+	store.readPreference = undefined;
+	t.expect(store.readPreference).toBeUndefined();
+});
+
+test.it("constructor with undefined url and options sets properties", (t) => {
+	const store = new KeyvMongo(undefined, {
+		collection: "from-options",
+		db: "optionsdb",
+		readPreference: "primary" as any,
+	});
+	t.expect(store.collection).toBe("from-options");
+	t.expect(store.db).toBe("optionsdb");
+	t.expect(store.readPreference).toBe("primary");
 });
 
 test.it("opts getter returns backward-compatible object", (t) => {
