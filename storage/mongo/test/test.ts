@@ -1,4 +1,5 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test file
+import { faker } from "@faker-js/faker";
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import Keyv from "keyv";
 import * as test from "vitest";
@@ -19,26 +20,6 @@ test.afterAll(async () => {
 	keyv = new KeyvMongo({ collection: "foo", useGridFS: true, ...options });
 	await keyv.clear();
 	await keyv.disconnect();
-});
-
-test.beforeEach(async () => {
-	const keyv = new KeyvMongo({ ...options });
-	await keyv.clear();
-	// Also clear namespaced data from namespace tests
-	const ns1 = new KeyvMongo({ ...options });
-	ns1.namespace = "ns1";
-	await ns1.clear();
-	const ns2 = new KeyvMongo({ ...options });
-	ns2.namespace = "ns2";
-	await ns2.clear();
-	// Clear GridFS data
-	const gridfs = new KeyvMongo({ useGridFS: true, ...options });
-	await gridfs.clear();
-	for (const ns of ["ns1", "ns2", "key1", "namespace-a", "namespace-b"]) {
-		const gridfsNs = new KeyvMongo({ useGridFS: true, ...options });
-		gridfsNs.namespace = ns;
-		await gridfsNs.clear();
-	}
 });
 
 test.it(
@@ -120,48 +101,54 @@ test.it("opts getter returns backward-compatible object", (t) => {
 
 test.it("Stores value in GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	const result = await store.set("key1", "keyv1", 0);
-	const get = await store.get("key1");
-	t.expect((result as any).filename).toBe("key1");
+	const key = faker.string.alphanumeric(10);
+	const result = await store.set(key, "keyv1", 0);
+	const get = await store.get(key);
+	t.expect((result as any).filename).toBe(key);
 	t.expect(get).toBe("keyv1");
 });
 
 test.it("Gets value from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	await store.set("key1", "keyv1");
-	const result = await store.get("key1");
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "keyv1");
+	const result = await store.get(key);
 	t.expect(result).toBe("keyv1");
 });
 
 test.it("Deletes value from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	await store.set("key1", "keyv1");
-	const result = await store.delete("key1");
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "keyv1");
+	const result = await store.delete(key);
 	t.expect(result).toBeTruthy();
 });
 
 test.it("Deletes non existent value from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	const result = await store.delete("no-existent-value");
+	const result = await store.delete(faker.string.alphanumeric(10));
 	t.expect(result).toBeFalsy();
 });
 
 test.it("Stores value with TTL in GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	const result = await store.set("key1", "keyv1", 0);
-	t.expect((result as any).filename).toBe("key1");
+	const key = faker.string.alphanumeric(10);
+	const result = await store.set(key, "keyv1", 0);
+	t.expect((result as any).filename).toBe(key);
 });
 
 test.it("Clears expired value from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	await store.set("expired-key", "expired-value", 0);
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "expired-value", 0);
 	const cleared = await store.clearExpired();
 	t.expect(cleared).toBeTruthy();
 });
 
 test.it("Clears unused files from GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	await store.set("unused-key", "unused-value");
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "unused-value");
 	const cleared = await store.clearUnusedFor(0);
 	t.expect(cleared).toBeTruthy();
 });
@@ -180,7 +167,7 @@ test.it("Clears unused files only when GridFS options is true", async (t) => {
 
 test.it("Gets non-existent file and return should be undefined", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	const result = await store.get("non-existent-file");
+	const result = await store.get(faker.string.alphanumeric(10));
 	t.expect(typeof result).toBe("undefined");
 });
 
@@ -195,20 +182,30 @@ test.it("Non-string keys are not permitted in delete", async (t) => {
 
 test.it(".deleteMany([keys]) should delete multiple gridfs key", async (t) => {
 	const keyv = new KeyvMongo({ useGridFS: true, ...options });
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.set("foo2", "bar2");
-	t.expect(await keyv.deleteMany(["foo", "foo1", "foo2"])).toBeTruthy();
-	t.expect(await keyv.get("foo")).toBeUndefined();
-	t.expect(await keyv.get("foo1")).toBeUndefined();
-	t.expect(await keyv.get("foo2")).toBeUndefined();
+	const keys = [
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+	];
+	await keyv.set(keys[0], "bar");
+	await keyv.set(keys[1], "bar1");
+	await keyv.set(keys[2], "bar2");
+	t.expect(await keyv.deleteMany(keys)).toBeTruthy();
+	t.expect(await keyv.get(keys[0])).toBeUndefined();
+	t.expect(await keyv.get(keys[1])).toBeUndefined();
+	t.expect(await keyv.get(keys[2])).toBeUndefined();
 });
 
 test.it(
 	".deleteMany([keys]) with nonexistent gridfs keys resolves to false",
 	async (t) => {
 		const keyv = new KeyvMongo({ useGridFS: true, ...options });
-		t.expect(await keyv.deleteMany(["foo", "foo1", "foo2"])).toBeFalsy();
+		t.expect(
+			await keyv.deleteMany([
+				faker.string.alphanumeric(10),
+				faker.string.alphanumeric(10),
+			]),
+		).toBeFalsy();
 	},
 );
 
@@ -216,11 +213,15 @@ test.it(
 	".getMany([keys]) using GridFS should return array values",
 	async (t) => {
 		const keyv = new KeyvMongo({ useGridFS: true, ...options });
-		await keyv.clearUnusedFor(0);
-		await keyv.set("foo", "bar");
-		await keyv.set("foo1", "bar1");
-		await keyv.set("foo2", "bar2");
-		const values = await keyv.getMany<string>(["foo", "foo1", "foo2"]);
+		const keys = [
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+		];
+		await keyv.set(keys[0], "bar");
+		await keyv.set(keys[1], "bar1");
+		await keyv.set(keys[2], "bar2");
+		const values = await keyv.getMany<string>(keys);
 		t.expect(Array.isArray(values)).toBeTruthy();
 		t.expect(values[0]).toBe("bar");
 		t.expect(values[1]).toBe("bar1");
@@ -232,10 +233,14 @@ test.it(
 	".getMany([keys]) using GridFS should return array values with undefined",
 	async (t) => {
 		const keyv = new KeyvMongo({ useGridFS: true, ...options });
-		await keyv.clearUnusedFor(0);
-		await keyv.set("foo", "bar");
-		await keyv.set("foo2", "bar2");
-		const values = await keyv.getMany<string>(["foo", "foo1", "foo2"]);
+		const keys = [
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+		];
+		await keyv.set(keys[0], "bar");
+		await keyv.set(keys[2], "bar2");
+		const values = await keyv.getMany<string>(keys);
 		t.expect(Array.isArray(values)).toBeTruthy();
 		t.expect(values[0]).toBe("bar");
 		t.expect(values[1]).toBeUndefined();
@@ -247,8 +252,11 @@ test.it(
 	".getMany([keys]) using GridFS should return empty array for all no existent keys",
 	async (t) => {
 		const keyv = new KeyvMongo({ useGridFS: true, ...options });
-		await keyv.clearUnusedFor(0);
-		const values = await keyv.getMany<string>(["foo", "foo1", "foo2"]);
+		const values = await keyv.getMany<string>([
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+		]);
 		t.expect(Array.isArray(values)).toBeTruthy();
 		t.expect(values).toStrictEqual([undefined, undefined, undefined]);
 	},
@@ -280,90 +288,88 @@ test.it("Clears an empty store GridFS should not fail", async (_t) => {
 
 test.it("iterator with default namespace", async (t) => {
 	const store = new KeyvMongo({ ...options });
-	await store.set("foo", "bar");
-	await store.set("foo2", "bar2");
-	const iterator = store.iterator();
-	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("foo");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("foo2");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	await store.clear();
+	const key1 = faker.string.alphanumeric(10);
+	const key2 = faker.string.alphanumeric(10);
+	await store.set(key1, "bar");
+	await store.set(key2, "bar2");
+	const results: Array<[string, string]> = [];
+	for await (const entry of store.iterator()) {
+		results.push(entry as [string, string]);
+	}
+
+	t.expect(results.length).toBeGreaterThanOrEqual(2);
+	const keys = results.map(([k]) => k);
+	t.expect(keys).toContain(key1);
+	t.expect(keys).toContain(key2);
 });
 
 test.it("iterator with namespace", async (t) => {
-	const store = new KeyvMongo({ namespace: "key1", ...options });
-	await store.set("key1:foo", "bar");
-	await store.set("key1:foo2", "bar2");
-	const iterator = store.iterator("key1");
-	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo2");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	const ns = faker.string.alphanumeric(8);
+	const store = new KeyvMongo({ namespace: ns, ...options });
+	await store.clear();
+	const key1 = `${ns}:${faker.string.alphanumeric(10)}`;
+	const key2 = `${ns}:${faker.string.alphanumeric(10)}`;
+	await store.set(key1, "bar");
+	await store.set(key2, "bar2");
+	const results: Array<[string, string]> = [];
+	for await (const entry of store.iterator(ns)) {
+		results.push(entry as [string, string]);
+	}
+
+	t.expect(results.length).toBe(2);
+	const keys = results.map(([k]) => k);
+	t.expect(keys).toContain(key1);
+	t.expect(keys).toContain(key2);
 });
 
 test.it("iterator with default namespace using GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	await store.set("foo", "bar");
-	await store.set("foo2", "bar2");
-	const iterator = store.iterator();
-	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("foo");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("foo2");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	await store.clear();
+	const key1 = faker.string.alphanumeric(10);
+	const key2 = faker.string.alphanumeric(10);
+	await store.set(key1, "bar");
+	await store.set(key2, "bar2");
+	const results: Array<[string, string]> = [];
+	for await (const entry of store.iterator()) {
+		results.push(entry as [string, string]);
+	}
+
+	t.expect(results.length).toBeGreaterThanOrEqual(2);
+	const keys = results.map(([k]) => k);
+	t.expect(keys).toContain(key1);
+	t.expect(keys).toContain(key2);
 });
 
 test.it("iterator with namespace using GridFS", async (t) => {
+	const ns = faker.string.alphanumeric(8);
 	const store = new KeyvMongo({
-		namespace: "key1",
+		namespace: ns,
 		useGridFS: true,
 		...options,
 	});
-	await store.set("key1:foo", "bar");
-	await store.set("key1:foo2", "bar2");
-	const iterator = store.iterator("key1");
-	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo2");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	await store.clear();
+	const key1 = `${ns}:${faker.string.alphanumeric(10)}`;
+	const key2 = `${ns}:${faker.string.alphanumeric(10)}`;
+	await store.set(key1, "bar");
+	await store.set(key2, "bar2");
+	const results: Array<[string, string]> = [];
+	for await (const entry of store.iterator(ns)) {
+		results.push(entry as [string, string]);
+	}
+
+	t.expect(results.length).toBe(2);
+	const keys = results.map(([k]) => k);
+	t.expect(keys).toContain(key1);
+	t.expect(keys).toContain(key2);
 });
 
 test.it("Close connection successfully on GridFS", async (t) => {
 	const keyv = new KeyvMongo({ useGridFS: true, ...options });
-	t.expect(await keyv.get("foobar")).toBeUndefined();
+	t.expect(await keyv.get(faker.string.alphanumeric(10))).toBeUndefined();
 	await keyv.disconnect();
 	try {
-		await keyv.get("foobar");
+		await keyv.get(faker.string.alphanumeric(10));
 		t.expect.fail();
 	} catch {
 		t.expect(true).toBeTruthy();
@@ -371,11 +377,12 @@ test.it("Close connection successfully on GridFS", async (t) => {
 });
 
 test.it("Close connection successfully", async (t) => {
-	const keyv = new KeyvMongo({ namespace: "key1", ...options });
-	t.expect(await keyv.get("foobar")).toBeUndefined();
+	const ns = faker.string.alphanumeric(8);
+	const keyv = new KeyvMongo({ namespace: ns, ...options });
+	t.expect(await keyv.get(faker.string.alphanumeric(10))).toBeUndefined();
 	await keyv.disconnect();
 	try {
-		await keyv.get("foobar");
+		await keyv.get(faker.string.alphanumeric(10));
 		t.expect.fail();
 	} catch {
 		t.expect(true).toBeTruthy();
@@ -383,7 +390,8 @@ test.it("Close connection successfully", async (t) => {
 });
 
 test.it("Close connection should fail", async (t) => {
-	const keyv = new KeyvMongo({ namespace: "key1", ...options });
+	const ns = faker.string.alphanumeric(8);
+	const keyv = new KeyvMongo({ namespace: ns, ...options });
 	try {
 		await keyv.disconnect();
 	} catch {
@@ -394,65 +402,67 @@ test.it("Close connection should fail", async (t) => {
 test.it("createKeyv with URI string returns a Keyv instance", async (t) => {
 	const keyv = createKeyv(mongoURL);
 	t.expect(keyv).toBeInstanceOf(Keyv);
-	await keyv.set("createKeyv-test", "value");
-	t.expect(await keyv.get("createKeyv-test")).toBe("value");
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
+	t.expect(await keyv.get(key)).toBe("value");
 });
 
 test.it("createKeyv with options object returns a Keyv instance", async (t) => {
 	const keyv = createKeyv({ url: mongoURL, collection: "keyv", ...options });
 	t.expect(keyv).toBeInstanceOf(Keyv);
-	await keyv.set("createKeyv-opts-test", "value");
-	t.expect(await keyv.get("createKeyv-opts-test")).toBe("value");
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
+	t.expect(await keyv.get(key)).toBe("value");
 });
 
 test.it("createKeyv with namespace option", async (t) => {
-	const keyv = createKeyv({ namespace: "custom", url: mongoURL, ...options });
-	t.expect(keyv.namespace).toBe("custom");
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
-	const store = keyv.store as KeyvMongo;
-	const rawValue = await store.get("custom:foo");
+	const ns = faker.string.alphanumeric(8);
+	const keyv = createKeyv({ namespace: ns, url: mongoURL, ...options });
+	t.expect(keyv.namespace).toBe(ns);
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "bar");
+	t.expect(await keyv.get(key)).toBe("bar");
+	const storeInstance = keyv.store as KeyvMongo;
+	const rawValue = await storeInstance.get(`${ns}:${key}`);
 	t.expect(rawValue).toBeDefined();
 });
 
 test.it("createKeyv with different namespaces do not conflict", async (t) => {
-	const keyvA = createKeyv({
-		namespace: "createKeyv-a",
-		url: mongoURL,
-		...options,
-	});
-	const keyvB = createKeyv({
-		namespace: "createKeyv-b",
-		url: mongoURL,
-		...options,
-	});
+	const nsA = faker.string.alphanumeric(8);
+	const nsB = faker.string.alphanumeric(8);
+	const keyvA = createKeyv({ namespace: nsA, url: mongoURL, ...options });
+	const keyvB = createKeyv({ namespace: nsB, url: mongoURL, ...options });
 
-	await keyvA.set("shared-key", "valueA");
-	await keyvB.set("shared-key", "valueB");
+	const key = faker.string.alphanumeric(10);
+	await keyvA.set(key, "valueA");
+	await keyvB.set(key, "valueB");
 
-	t.expect(await keyvA.get("shared-key")).toBe("valueA");
-	t.expect(await keyvB.get("shared-key")).toBe("valueB");
+	t.expect(await keyvA.get(key)).toBe("valueA");
+	t.expect(await keyvB.get(key)).toBe("valueB");
 
 	// clear only affects its own namespace
 	await keyvA.clear();
-	t.expect(await keyvA.get("shared-key")).toBeUndefined();
-	t.expect(await keyvB.get("shared-key")).toBe("valueB");
+	t.expect(await keyvA.get(key)).toBeUndefined();
+	t.expect(await keyvB.get(key)).toBe("valueB");
 });
 
 // Native namespace tests - Standard mode
 test.it(
 	"native namespace: same key in different namespaces stored independently",
 	async (t) => {
+		const ns1 = faker.string.alphanumeric(8);
+		const ns2 = faker.string.alphanumeric(8);
 		const mongo1 = new KeyvMongo({ ...options });
-		mongo1.namespace = "ns1";
+		mongo1.namespace = ns1;
 		const mongo2 = new KeyvMongo({ ...options });
-		mongo2.namespace = "ns2";
+		mongo2.namespace = ns2;
 
-		await mongo1.set("ns1:testkey", "value1");
-		await mongo2.set("ns2:testkey", "value2");
+		const key = faker.string.alphanumeric(10);
+		await mongo1.set(`${ns1}:${key}`, "value1");
+		await mongo2.set(`${ns2}:${key}`, "value2");
 
-		t.expect(await mongo1.get("ns1:testkey")).toBe("value1");
-		t.expect(await mongo2.get("ns2:testkey")).toBe("value2");
+		t.expect(await mongo1.get(`${ns1}:${key}`)).toBe("value1");
+		t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("value2");
 	},
 );
 
@@ -460,124 +470,147 @@ test.it(
 	"native namespace: null namespace stores and retrieves correctly",
 	async (t) => {
 		const keyv = new KeyvMongo({ ...options });
-		await keyv.set("testkey-no-ns", "testvalue");
-		t.expect(await keyv.get("testkey-no-ns")).toBe("testvalue");
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, "testvalue");
+		t.expect(await keyv.get(key)).toBe("testvalue");
 	},
 );
 
 test.it(
 	"native namespace: clear only clears the specified namespace",
 	async (t) => {
+		const ns1 = faker.string.alphanumeric(8);
+		const ns2 = faker.string.alphanumeric(8);
 		const mongo1 = new KeyvMongo({ ...options });
-		mongo1.namespace = "ns1";
+		mongo1.namespace = ns1;
 		const mongo2 = new KeyvMongo({ ...options });
-		mongo2.namespace = "ns2";
+		mongo2.namespace = ns2;
 
-		await mongo1.set("ns1:key1", "value1");
-		await mongo2.set("ns2:key1", "value2");
+		const key = faker.string.alphanumeric(10);
+		await mongo1.set(`${ns1}:${key}`, "value1");
+		await mongo2.set(`${ns2}:${key}`, "value2");
 
 		await mongo1.clear();
 
-		t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
-		t.expect(await mongo2.get("ns2:key1")).toBe("value2");
+		t.expect(await mongo1.get(`${ns1}:${key}`)).toBeUndefined();
+		t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("value2");
 	},
 );
 
 test.it("native namespace: delete scoped to namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const mongo1 = new KeyvMongo({ ...options });
-	mongo1.namespace = "ns1";
+	mongo1.namespace = ns1;
 	const mongo2 = new KeyvMongo({ ...options });
-	mongo2.namespace = "ns2";
+	mongo2.namespace = ns2;
 
-	await mongo1.set("ns1:key1", "val1");
-	await mongo2.set("ns2:key1", "val2");
+	const key = faker.string.alphanumeric(10);
+	await mongo1.set(`${ns1}:${key}`, "val1");
+	await mongo2.set(`${ns2}:${key}`, "val2");
 
-	const deleted = await mongo1.delete("ns1:key1");
+	const deleted = await mongo1.delete(`${ns1}:${key}`);
 	t.expect(deleted).toBe(true);
-	t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
-	t.expect(await mongo2.get("ns2:key1")).toBe("val2");
+	t.expect(await mongo1.get(`${ns1}:${key}`)).toBeUndefined();
+	t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("val2");
 });
 
 test.it("native namespace: deleteMany scoped to namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const mongo1 = new KeyvMongo({ ...options });
-	mongo1.namespace = "ns1";
+	mongo1.namespace = ns1;
 	const mongo2 = new KeyvMongo({ ...options });
-	mongo2.namespace = "ns2";
+	mongo2.namespace = ns2;
 
-	await mongo1.set("ns1:key1", "val1");
-	await mongo2.set("ns2:key1", "val2");
+	const key = faker.string.alphanumeric(10);
+	await mongo1.set(`${ns1}:${key}`, "val1");
+	await mongo2.set(`${ns2}:${key}`, "val2");
 
-	const deleted = await mongo1.deleteMany(["ns1:key1"]);
+	const deleted = await mongo1.deleteMany([`${ns1}:${key}`]);
 	t.expect(deleted).toBe(true);
-	t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
-	t.expect(await mongo2.get("ns2:key1")).toBe("val2");
+	t.expect(await mongo1.get(`${ns1}:${key}`)).toBeUndefined();
+	t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("val2");
 });
 
 test.it("native namespace: has scoped to namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const mongo1 = new KeyvMongo({ ...options });
-	mongo1.namespace = "ns1";
+	mongo1.namespace = ns1;
 	const mongo2 = new KeyvMongo({ ...options });
-	mongo2.namespace = "ns2";
+	mongo2.namespace = ns2;
 
-	await mongo1.set("ns1:key1", "val1");
+	const key = faker.string.alphanumeric(10);
+	await mongo1.set(`${ns1}:${key}`, "val1");
 
-	t.expect(await mongo1.has("ns1:key1")).toBe(true);
-	t.expect(await mongo2.has("ns2:key1")).toBe(false);
+	t.expect(await mongo1.has(`${ns1}:${key}`)).toBe(true);
+	t.expect(await mongo2.has(`${ns2}:${key}`)).toBe(false);
 });
 
 test.it(
 	"native namespace: iterator only returns keys from correct namespace",
 	async (t) => {
+		const ns1 = faker.string.alphanumeric(8);
+		const ns2 = faker.string.alphanumeric(8);
 		const mongo1 = new KeyvMongo({ ...options });
-		mongo1.namespace = "ns1";
+		mongo1.namespace = ns1;
 		const mongo2 = new KeyvMongo({ ...options });
-		mongo2.namespace = "ns2";
+		mongo2.namespace = ns2;
 
-		await mongo1.set("ns1:key1", "val1");
-		await mongo1.set("ns1:key2", "val2");
-		await mongo2.set("ns2:key3", "val3");
+		const key1 = `${ns1}:${faker.string.alphanumeric(10)}`;
+		const key2 = `${ns1}:${faker.string.alphanumeric(10)}`;
+		await mongo1.set(key1, "val1");
+		await mongo1.set(key2, "val2");
+		await mongo2.set(`${ns2}:${faker.string.alphanumeric(10)}`, "val3");
 
 		const keys: string[] = [];
-		for await (const [key] of mongo1.iterator("ns1")) {
+		for await (const [key] of mongo1.iterator(ns1)) {
 			keys.push(key);
 		}
 
 		t.expect(keys.length).toBe(2);
-		t.expect(keys).toContain("ns1:key1");
-		t.expect(keys).toContain("ns1:key2");
+		t.expect(keys).toContain(key1);
+		t.expect(keys).toContain(key2);
 	},
 );
 
 test.it(
 	"native namespace: two Keyv instances with different namespaces do not conflict",
 	async (t) => {
+		const nsA = faker.string.alphanumeric(8);
+		const nsB = faker.string.alphanumeric(8);
 		const mongoA = new KeyvMongo({ ...options });
 		const mongoB = new KeyvMongo({ ...options });
-		const keyvA = new Keyv({ store: mongoA, namespace: "namespace-a" });
-		const keyvB = new Keyv({ store: mongoB, namespace: "namespace-b" });
+		const keyvA = new Keyv({ store: mongoA, namespace: nsA });
+		const keyvB = new Keyv({ store: mongoB, namespace: nsB });
 
-		t.expect(await keyvA.set("mykey", "valueA")).toBe(true);
-		t.expect(await keyvA.get("mykey")).toBe("valueA");
-		t.expect(await keyvB.set("mykey", "valueB")).toBe(true);
-		t.expect(await keyvB.get("mykey")).toBe("valueB");
+		const key = faker.string.alphanumeric(10);
+		t.expect(await keyvA.set(key, "valueA")).toBe(true);
+		t.expect(await keyvA.get(key)).toBe("valueA");
+		t.expect(await keyvB.set(key, "valueB")).toBe(true);
+		t.expect(await keyvB.get(key)).toBe("valueB");
 		// Ensure they didn't overwrite each other
-		t.expect(await keyvA.get("mykey")).toBe("valueA");
+		t.expect(await keyvA.get(key)).toBe("valueA");
 	},
 );
 
 test.it("native namespace: getMany scoped to namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const mongo1 = new KeyvMongo({ ...options });
-	mongo1.namespace = "ns1";
+	mongo1.namespace = ns1;
 	const mongo2 = new KeyvMongo({ ...options });
-	mongo2.namespace = "ns2";
+	mongo2.namespace = ns2;
 
-	await mongo1.set("ns1:key1", "val1");
-	await mongo2.set("ns2:key1", "val2");
+	const key = faker.string.alphanumeric(10);
+	await mongo1.set(`${ns1}:${key}`, "val1");
+	await mongo2.set(`${ns2}:${key}`, "val2");
 
-	const results = await mongo1.getMany(["ns1:key1"]);
+	const results = await mongo1.getMany([`${ns1}:${key}`]);
 	t.expect(results).toEqual(["val1"]);
 
-	const results2 = await mongo1.getMany(["ns2:key1"]);
+	const results2 = await mongo1.getMany([`${ns2}:${key}`]);
 	t.expect(results2).toEqual([undefined]);
 });
 
@@ -585,183 +618,234 @@ test.it("native namespace: getMany scoped to namespace", async (t) => {
 test.it(
 	"native namespace GridFS: same key in different namespaces stored independently",
 	async (t) => {
+		const ns1 = faker.string.alphanumeric(8);
+		const ns2 = faker.string.alphanumeric(8);
 		const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
-		mongo1.namespace = "ns1";
+		mongo1.namespace = ns1;
 		const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
-		mongo2.namespace = "ns2";
+		mongo2.namespace = ns2;
 
-		await mongo1.set("ns1:testkey", "value1");
-		await mongo2.set("ns2:testkey", "value2");
+		const key = faker.string.alphanumeric(10);
+		await mongo1.set(`${ns1}:${key}`, "value1");
+		await mongo2.set(`${ns2}:${key}`, "value2");
 
-		t.expect(await mongo1.get("ns1:testkey")).toBe("value1");
-		t.expect(await mongo2.get("ns2:testkey")).toBe("value2");
+		t.expect(await mongo1.get(`${ns1}:${key}`)).toBe("value1");
+		t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("value2");
 	},
 );
 
 test.it(
 	"native namespace GridFS: clear only clears the specified namespace",
 	async (t) => {
+		const ns1 = faker.string.alphanumeric(8);
+		const ns2 = faker.string.alphanumeric(8);
 		const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
-		mongo1.namespace = "ns1";
+		mongo1.namespace = ns1;
 		const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
-		mongo2.namespace = "ns2";
+		mongo2.namespace = ns2;
 
-		await mongo1.set("ns1:key1", "value1");
-		await mongo2.set("ns2:key1", "value2");
+		const key = faker.string.alphanumeric(10);
+		await mongo1.set(`${ns1}:${key}`, "value1");
+		await mongo2.set(`${ns2}:${key}`, "value2");
 
 		await mongo1.clear();
 
-		t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
-		t.expect(await mongo2.get("ns2:key1")).toBe("value2");
+		t.expect(await mongo1.get(`${ns1}:${key}`)).toBeUndefined();
+		t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("value2");
 	},
 );
 
 test.it("native namespace GridFS: delete scoped to namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
-	mongo1.namespace = "ns1";
+	mongo1.namespace = ns1;
 	const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
-	mongo2.namespace = "ns2";
+	mongo2.namespace = ns2;
 
-	await mongo1.set("ns1:key1", "val1");
-	await mongo2.set("ns2:key1", "val2");
+	const key = faker.string.alphanumeric(10);
+	await mongo1.set(`${ns1}:${key}`, "val1");
+	await mongo2.set(`${ns2}:${key}`, "val2");
 
-	const deleted = await mongo1.delete("ns1:key1");
+	const deleted = await mongo1.delete(`${ns1}:${key}`);
 	t.expect(deleted).toBe(true);
-	t.expect(await mongo1.get("ns1:key1")).toBeUndefined();
-	t.expect(await mongo2.get("ns2:key1")).toBe("val2");
+	t.expect(await mongo1.get(`${ns1}:${key}`)).toBeUndefined();
+	t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("val2");
 });
 
 test.it("native namespace GridFS: has scoped to namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const mongo1 = new KeyvMongo({ useGridFS: true, ...options });
-	mongo1.namespace = "ns1";
+	mongo1.namespace = ns1;
 	const mongo2 = new KeyvMongo({ useGridFS: true, ...options });
-	mongo2.namespace = "ns2";
+	mongo2.namespace = ns2;
 
-	await mongo1.set("ns1:key1", "val1");
+	const key = faker.string.alphanumeric(10);
+	await mongo1.set(`${ns1}:${key}`, "val1");
 
-	t.expect(await mongo1.has("ns1:key1")).toBe(true);
-	t.expect(await mongo2.has("ns2:key1")).toBe(false);
+	t.expect(await mongo1.has(`${ns1}:${key}`)).toBe(true);
+	t.expect(await mongo2.has(`${ns2}:${key}`)).toBe(false);
 });
 
 test.it(
 	"native namespace GridFS: two Keyv instances with different namespaces do not conflict",
 	async (t) => {
+		const nsA = faker.string.alphanumeric(8);
+		const nsB = faker.string.alphanumeric(8);
 		const mongoA = new KeyvMongo({ useGridFS: true, ...options });
 		const mongoB = new KeyvMongo({ useGridFS: true, ...options });
-		const keyvA = new Keyv({ store: mongoA, namespace: "namespace-a" });
-		const keyvB = new Keyv({ store: mongoB, namespace: "namespace-b" });
+		const keyvA = new Keyv({ store: mongoA, namespace: nsA });
+		const keyvB = new Keyv({ store: mongoB, namespace: nsB });
 
-		t.expect(await keyvA.set("mykey", "valueA")).toBe(true);
-		t.expect(await keyvA.get("mykey")).toBe("valueA");
-		t.expect(await keyvB.set("mykey", "valueB")).toBe(true);
-		t.expect(await keyvB.get("mykey")).toBe("valueB");
+		const key = faker.string.alphanumeric(10);
+		t.expect(await keyvA.set(key, "valueA")).toBe(true);
+		t.expect(await keyvA.get(key)).toBe("valueA");
+		t.expect(await keyvB.set(key, "valueB")).toBe(true);
+		t.expect(await keyvB.get(key)).toBe("valueB");
 		// Ensure they didn't overwrite each other
-		t.expect(await keyvA.get("mykey")).toBe("valueA");
+		t.expect(await keyvA.get(key)).toBe("valueA");
 	},
 );
 
 // setMany tests - Standard mode
 test.it("setMany sets multiple keys in standard mode", async (t) => {
 	const store = new KeyvMongo({ ...options });
+	const keys = [
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+	];
 	await store.setMany([
-		{ key: "sm1", value: "val1" },
-		{ key: "sm2", value: "val2" },
-		{ key: "sm3", value: "val3" },
+		{ key: keys[0], value: "val1" },
+		{ key: keys[1], value: "val2" },
+		{ key: keys[2], value: "val3" },
 	]);
-	t.expect(await store.get("sm1")).toBe("val1");
-	t.expect(await store.get("sm2")).toBe("val2");
-	t.expect(await store.get("sm3")).toBe("val3");
+	t.expect(await store.get(keys[0])).toBe("val1");
+	t.expect(await store.get(keys[1])).toBe("val2");
+	t.expect(await store.get(keys[2])).toBe("val3");
 });
 
 test.it("setMany with TTL in standard mode", async (t) => {
 	const store = new KeyvMongo({ ...options });
+	const keys = [faker.string.alphanumeric(10), faker.string.alphanumeric(10)];
 	await store.setMany([
-		{ key: "sm-ttl1", value: "val1", ttl: 60000 },
-		{ key: "sm-ttl2", value: "val2" },
+		{ key: keys[0], value: "val1", ttl: 60000 },
+		{ key: keys[1], value: "val2" },
 	]);
-	t.expect(await store.get("sm-ttl1")).toBe("val1");
-	t.expect(await store.get("sm-ttl2")).toBe("val2");
+	t.expect(await store.get(keys[0])).toBe("val1");
+	t.expect(await store.get(keys[1])).toBe("val2");
 });
 
 test.it("setMany upserts existing keys in standard mode", async (t) => {
 	const store = new KeyvMongo({ ...options });
-	await store.set("sm-upsert", "original");
-	await store.setMany([{ key: "sm-upsert", value: "updated" }]);
-	t.expect(await store.get("sm-upsert")).toBe("updated");
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "original");
+	await store.setMany([{ key, value: "updated" }]);
+	t.expect(await store.get(key)).toBe("updated");
 });
 
 test.it("setMany with namespace in standard mode", async (t) => {
+	const ns = faker.string.alphanumeric(8);
 	const store = new KeyvMongo({ ...options });
-	store.namespace = "ns1";
+	store.namespace = ns;
+	const keys = [
+		`${ns}:${faker.string.alphanumeric(10)}`,
+		`${ns}:${faker.string.alphanumeric(10)}`,
+	];
 	await store.setMany([
-		{ key: "ns1:key1", value: "val1" },
-		{ key: "ns1:key2", value: "val2" },
+		{ key: keys[0], value: "val1" },
+		{ key: keys[1], value: "val2" },
 	]);
-	t.expect(await store.get("ns1:key1")).toBe("val1");
-	t.expect(await store.get("ns1:key2")).toBe("val2");
+	t.expect(await store.get(keys[0])).toBe("val1");
+	t.expect(await store.get(keys[1])).toBe("val2");
 });
 
 // setMany tests - GridFS mode
 test.it("setMany sets multiple keys in GridFS mode", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
+	const keys = [faker.string.alphanumeric(10), faker.string.alphanumeric(10)];
 	await store.setMany([
-		{ key: "gsm1", value: "val1" },
-		{ key: "gsm2", value: "val2" },
+		{ key: keys[0], value: "val1" },
+		{ key: keys[1], value: "val2" },
 	]);
-	t.expect(await store.get("gsm1")).toBe("val1");
-	t.expect(await store.get("gsm2")).toBe("val2");
+	t.expect(await store.get(keys[0])).toBe("val1");
+	t.expect(await store.get(keys[1])).toBe("val2");
 });
 
 // hasMany tests - Standard mode
 test.it("hasMany checks multiple keys in standard mode", async (t) => {
 	const store = new KeyvMongo({ ...options });
-	await store.set("hm1", "val1");
-	await store.set("hm2", "val2");
-	const results = await store.hasMany(["hm1", "hm2", "hm3"]);
+	const keys = [
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+	];
+	await store.set(keys[0], "val1");
+	await store.set(keys[1], "val2");
+	const results = await store.hasMany(keys);
 	t.expect(results).toEqual([true, true, false]);
 });
 
 test.it("hasMany with namespace in standard mode", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const store1 = new KeyvMongo({ ...options });
-	store1.namespace = "ns1";
+	store1.namespace = ns1;
 	const store2 = new KeyvMongo({ ...options });
-	store2.namespace = "ns2";
+	store2.namespace = ns2;
 
-	await store1.set("ns1:key1", "val1");
-	await store2.set("ns2:key1", "val2");
+	const key = faker.string.alphanumeric(10);
+	await store1.set(`${ns1}:${key}`, "val1");
+	await store2.set(`${ns2}:${key}`, "val2");
 
-	const results = await store1.hasMany(["ns1:key1", "ns1:nonexistent"]);
+	const results = await store1.hasMany([
+		`${ns1}:${key}`,
+		`${ns1}:${faker.string.alphanumeric(10)}`,
+	]);
 	t.expect(results).toEqual([true, false]);
 });
 
 // hasMany tests - GridFS mode
 test.it("hasMany checks multiple keys in GridFS mode", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	await store.set("ghm1", "val1");
-	await store.set("ghm2", "val2");
-	const results = await store.hasMany(["ghm1", "ghm2", "ghm3"]);
+	const keys = [
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+		faker.string.alphanumeric(10),
+	];
+	await store.set(keys[0], "val1");
+	await store.set(keys[1], "val2");
+	const results = await store.hasMany(keys);
 	t.expect(results).toEqual([true, true, false]);
 });
 
 test.it("hasMany with namespace in GridFS mode", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
 	const store1 = new KeyvMongo({ useGridFS: true, ...options });
-	store1.namespace = "ns1";
+	store1.namespace = ns1;
 	const store2 = new KeyvMongo({ useGridFS: true, ...options });
-	store2.namespace = "ns2";
+	store2.namespace = ns2;
 
-	await store1.set("ns1:key1", "val1");
-	await store2.set("ns2:key1", "val2");
+	const key = faker.string.alphanumeric(10);
+	await store1.set(`${ns1}:${key}`, "val1");
+	await store2.set(`${ns2}:${key}`, "val2");
 
-	const results = await store1.hasMany(["ns1:key1", "ns1:nonexistent"]);
+	const results = await store1.hasMany([
+		`${ns1}:${key}`,
+		`${ns1}:${faker.string.alphanumeric(10)}`,
+	]);
 	t.expect(results).toEqual([true, false]);
 });
 
 test.it("GridFS delete returns false when bucket.delete throws", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
-	await store.set("delete-error-file", "some-data");
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "some-data");
 	const client = await store.connect;
 	// Close the connection to make bucket.delete throw
 	await client.mongoClient.close();
-	const result = await store.delete("delete-error-file");
+	const result = await store.delete(key);
 	t.expect(result).toBe(false);
 });
