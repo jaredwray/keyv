@@ -37,6 +37,7 @@ Uses TTL indexes to automatically remove expired documents. However [MongoDB doe
   - [disconnect](#disconnect)
   - [clearExpired](#clearexpired)
   - [clearUnusedFor](#clearunusedfor)
+- [Migration from v3 to v6](#migration-from-v3-to-v6)
 - [License](#license)
 
 ## Install
@@ -424,6 +425,135 @@ await store.set('foo', 'bar');
 
 // Remove files not accessed in the last hour
 await store.clearUnusedFor(3600);
+```
+
+## Migration from v3 to v6
+
+`@keyv/mongo` is jumping from v3 to v6 because the entire Keyv monorepo is now unified under a single version number. This approach, similar to what other popular open source projects do, keeps all `@keyv/*` packages in sync and makes it easier to reason about compatibility across the ecosystem.
+
+### Breaking Changes
+
+#### MongoDB Driver Upgraded to v7
+
+The `mongodb` dependency has been upgraded from `^6.x` to `^7.0.0`. Review the [MongoDB Node.js Driver v7 release notes](https://github.com/mongodb/node-mongodb-native/releases/tag/v7.0.0) for any breaking changes that may affect your application.
+
+#### Event Handling: EventEmitter Replaced with Hookified
+
+`KeyvMongo` no longer extends Node.js `EventEmitter`. It now extends `Hookified`, which provides hook-based event management.
+
+```js
+// v3 - EventEmitter
+const store = new KeyvMongo('mongodb://localhost:27017');
+store.on('error', err => console.error(err));
+
+// v6 - Hookified (same usage for basic events)
+const store = new KeyvMongo('mongodb://localhost:27017');
+store.on('error', err => console.error(err));
+```
+
+For most use cases the `.on()` API is the same, but if you relied on EventEmitter-specific methods like `.listenerCount()`, `.rawListeners()`, or `.prependListener()`, check the [Hookified documentation](https://github.com/jaredwray/hookified) for equivalents.
+
+#### `useGridFS` is Now Read-Only
+
+The `useGridFS` property can no longer be changed after construction. The connection shape differs between GridFS and standard modes, so this must be set at construction time.
+
+```js
+// v3 - Could change after instantiation
+const store = new KeyvMongo('mongodb://localhost:27017');
+store.useGridFS = true; // worked in v3
+
+// v6 - Must set at construction
+const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true });
+console.log(store.useGridFS); // true (read-only)
+```
+
+#### Property Access Changed from `opts` to Direct Getters/Setters
+
+Properties are no longer accessed through an `opts` object. Use the direct getters and setters on the instance instead.
+
+```js
+// v3
+store.opts.url;
+store.opts.collection = 'cache';
+
+// v6
+store.url;
+store.collection = 'cache';
+```
+
+#### `ttlSupport` Property Removed
+
+The `ttlSupport` property has been removed. If your code checks for TTL support on the adapter, remove those checks.
+
+#### Namespace Index Change
+
+The unique index on the underlying MongoDB collection has changed from `{ key: 1 }` to `{ key: 1, namespace: 1 }`. This allows the same key name to exist in different namespaces without conflicts. The old index is automatically dropped and replaced on first connection, so no manual migration is needed.
+
+#### Options Type is Now Strongly Typed
+
+The constructor options no longer accept arbitrary keys via `[key: string]: unknown`. Options are now strictly typed with explicit properties. Any additional MongoDB driver options should be valid `MongoClientOptions` properties.
+
+```js
+// v3 - Accepted any properties
+const store = new KeyvMongo({ url: 'mongodb://...', customProp: true }); // no type error
+
+// v6 - Strictly typed
+const store = new KeyvMongo({ url: 'mongodb://...', collection: 'cache' }); // only known props + MongoClientOptions
+```
+
+### New Features
+
+#### `createKeyv` Helper Function
+
+A new `createKeyv` helper simplifies creating a Keyv instance with the MongoDB adapter.
+
+```js
+import { createKeyv } from '@keyv/mongo';
+
+// Before
+const store = new KeyvMongo('mongodb://localhost:27017');
+const keyv = new Keyv({ store, namespace: 'my-ns' });
+
+// After
+const keyv = createKeyv({ url: 'mongodb://localhost:27017', namespace: 'my-ns' });
+```
+
+#### `setMany` Method
+
+Batch set multiple key-value pairs in a single operation using MongoDB `bulkWrite`.
+
+```js
+await store.setMany([
+  { key: 'key1', value: 'value1' },
+  { key: 'key2', value: 'value2', ttl: 5000 },
+]);
+```
+
+#### `hasMany` Method
+
+Check if multiple keys exist in a single query using the `$in` operator.
+
+```js
+const results = await store.hasMany(['key1', 'key2', 'key3']);
+// [true, true, false]
+```
+
+#### `clearExpired` Method
+
+Manually remove expired files from GridFS storage.
+
+```js
+const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true });
+await store.clearExpired();
+```
+
+#### `clearUnusedFor` Method
+
+Remove GridFS files that have not been accessed for a specified duration.
+
+```js
+const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true });
+await store.clearUnusedFor(3600); // remove files unused for 1 hour
 ```
 
 ## License
