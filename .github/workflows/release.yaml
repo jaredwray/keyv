@@ -1,0 +1,97 @@
+name: release
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Approve Builds
+        run: pnpm approve-builds
+
+      - name: Build
+        run: pnpm build
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Start Services
+        run: pnpm test:services:start
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Approve Builds
+        run: pnpm approve-builds
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test Packages
+        run: pnpm test
+
+  publish:
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    name: Publish
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Approve Builds
+        run: pnpm approve-builds
+
+      - name: Build
+        run: pnpm build
+
+      - name: Setup NPM Auth
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @keyv/serialize
+        run: pnpm --filter @keyv/serialize publish --tag alpha --no-git-checks
+
+      - name: Publish keyv
+        run: pnpm --filter keyv publish --tag alpha --no-git-checks
+
+      - name: Publish remaining packages
+        run: pnpm --filter '!keyv' --filter '!@keyv/serialize' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag alpha --no-git-checks
