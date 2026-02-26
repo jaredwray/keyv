@@ -69,22 +69,30 @@ Unified versioning simplifies dependency management and ensures compatibility ac
 
 | Task | Status |
 |------|--------|
-| Finalize namespace handling in storage adapters | NOT STARTED |
-| Remove `opts` property | NOT STARTED |
-| Integrate Hookified library | NOT STARTED |
+| Remove `opts` property in Keyv and Storage Adapters | IN PROGRESS |
+| Update `@keyv/sqlite`  | NOT STARTED |
+| Update `@keyv/etcd`  | NOT STARTED |
+| Update `@keyv/valkey`  | NOT STARTED |
+| Update `@keyv/dynamo`  | NOT STARTED |
+| Integrate Hookified library in Keyv | NOT STARTED |
 | Update `deleteMany` return type | NOT STARTED |
 | Update `setMany` signature and return type | NOT STARTED |
-| Add `getRaw` and `getManyRaw` methods | NOT STARTED |
 | Refactor iterator implementation | NOT STARTED |
-| Implement `KeyvGenericStore` | NOT STARTED |
-| Add serialization adapters | NOT STARTED |
 | Add encryption adapters | NOT STARTED |
 | Add compression interface standardization | NOT STARTED |
 | Browser compatibility | NOT STARTED |
-| Documentation updates | NOT STARTED |
-| Storage adapter updates | NOT STARTED |
-| Migrate `@keyv/memcache` from `memjs` to `memcache` | NOT STARTED |
 | Release v6.0.0 | NOT STARTED |
+| Finalize namespace handling in storage adapters | COMPLETE |
+| Add `getRaw` and `getManyRaw` methods | COMPLETE |
+| Implement `KeyvGenericStore` | COMPLETE |
+| Add serialization adapters | COMPLETE |
+| Migrate `@keyv/memcache` from `memjs` to `memcache` | COMPLETE |
+| Update `@keyv/bigmap`  | COMPLETE |
+| Update `@keyv/mongo`  | COMPLETE |
+| Update `@keyv/mysql`  | COMPLETE |
+| Update `@keyv/postgres`  | COMPLETE |
+| Update `@keyv/redis`  | COMPLETE |
+| Add GitHub Actions release workflow | COMPLETE |
 
 ---
 
