@@ -183,6 +183,22 @@ test.it("del should work when not using useSets", async (t) => {
 	t.expect(value).toBe(undefined);
 });
 
+test.it("del should work when using useSets", async (t) => {
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvValkey(redis, { useSets: true });
+	keyv.namespace = "del-sets-test";
+
+	await keyv.set("fooDel2", "barDel2");
+	t.expect(await keyv.get("fooDel2")).toBe("barDel2");
+
+	const result = await keyv.delete("fooDel2");
+	t.expect(result).toBe(true);
+	t.expect(await keyv.get("fooDel2")).toBe(undefined);
+
+	const resultFalse = await keyv.delete("nonexistent");
+	t.expect(resultFalse).toBe(false);
+});
+
 test.it("can create a full keyv instance with a uri", async (t) => {
 	const keyv = createKeyv(redisURI);
 	t.expect(keyv).toBeTruthy();
@@ -329,6 +345,50 @@ test.it("deleteMany with empty array should return false", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const result = await keyv.deleteMany([]);
 	t.expect(result).toBe(false);
+	await keyv.disconnect();
+});
+
+test.it("clear with useSets should clear keys tracked in set", async (t) => {
+	const keyv = new KeyvValkey(redisURI, { useSets: true });
+	keyv.namespace = "clear-sets-test";
+	await keyv.set("cs1", "val1");
+	await keyv.set("cs2", "val2");
+	t.expect(await keyv.get("cs1")).toBe("val1");
+	await keyv.clear();
+	t.expect(await keyv.get("cs1")).toBe(undefined);
+	t.expect(await keyv.get("cs2")).toBe(undefined);
+	await keyv.disconnect();
+});
+
+test.it("iterator without namespace should not error", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	const iterator = keyv.iterator();
+	const result = await iterator.next();
+	t.expect(result.done === true || Array.isArray(result.value)).toBe(true);
+	await keyv.disconnect();
+});
+
+test.it("createKeyv without arguments should use default uri", async (t) => {
+	const keyv = createKeyv();
+	t.expect(keyv).toBeTruthy();
+	await keyv.disconnect();
+});
+
+test.it("iterator with useSets should iterate keys", async (t) => {
+	const keyvRedis = new KeyvValkey(redisURI, { useSets: true });
+	const keyv = new Keyv(keyvRedis, { namespace: "iter-sets" });
+
+	await keyv.clear();
+	await keyv.set("is1", "val1");
+	await keyv.set("is2", "val2");
+
+	const collected = new Map<string, string>();
+	for await (const [key, value] of keyvRedis.iterator("iter-sets")) {
+		collected.set(key, value);
+	}
+
+	t.expect(collected.size).toBe(2);
+	await keyv.clear();
 	await keyv.disconnect();
 });
 
