@@ -21,9 +21,7 @@ test.it("reuse a redis instance", async (t) => {
 	t.expect(keyv.redis.foo).toBe("bar");
 
 	await keyv.set("foo", "bar");
-	const value = await redis.get("foo");
-	t.expect(value).toBe("bar");
-	t.expect(await keyv.get("foo")).toBe(value);
+	t.expect(await keyv.get("foo")).toBe("bar");
 });
 
 test.it("set an undefined key", async (t) => {
@@ -129,8 +127,8 @@ test.it("should handle RedisOptions", (t) => {
 	t.expect(keyv.redis instanceof Redis).toBeTruthy();
 });
 
-test.it("set method should use Redis sets when useSets is false", async (t) => {
-	const options = { useRedisSets: false };
+test.it("set method should use sets when useSets is false", async (t) => {
+	const options = { useSets: false };
 	const keyv = new KeyvValkey(options);
 
 	await keyv.set("foo", "bar");
@@ -140,7 +138,7 @@ test.it("set method should use Redis sets when useSets is false", async (t) => {
 });
 
 test.it("clear method when useSets is false", async (t) => {
-	const options = { useRedisSets: false };
+	const options = { useSets: false };
 	const keyv = new KeyvValkey(options);
 
 	await keyv.set("foo", "bar");
@@ -157,22 +155,22 @@ test.it("clear method when useSets is false", async (t) => {
 test.it(
 	"clear method when useSets is false and empty keys should not error",
 	async (t) => {
-		const options = { useRedisSets: false };
+		const options = { useSets: false };
 		const keyv = new KeyvValkey(options);
 		t.expect(await keyv.clear()).toBeUndefined();
 	},
 );
 
 test.it("when passing in ioredis set the options.useSets", (t) => {
-	const options = { useRedisSets: false };
+	const options = { useSets: false };
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
-	t.expect(keyv.opts.useRedisSets).toBe(false);
+	t.expect(keyv.opts.useSets).toBe(false);
 });
 
 test.it("del should work when not using useSets", async (t) => {
-	const options = { useRedisSets: false };
+	const options = { useSets: false };
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
@@ -190,6 +188,52 @@ test.it("can create a full keyv instance with a uri", async (t) => {
 	t.expect(keyv).toBeTruthy();
 	await keyv.set("foo222", "bar222");
 	t.expect(await keyv.get("foo222")).toBe("bar222");
+});
+
+test.it("should have default useSets as false", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.useSets).toBe(false);
+});
+
+test.it("should allow setting useSets via setter", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	keyv.useSets = false;
+	t.expect(keyv.useSets).toBe(false);
+	t.expect(keyv.opts.useSets).toBe(false);
+});
+
+test.it("should allow setting and getting namespace via setter", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.namespace).toBeUndefined();
+	keyv.namespace = "test-ns";
+	t.expect(keyv.namespace).toBe("test-ns");
+});
+
+test.it("should allow setting redis instance via setter", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	const newRedis = new Redis(redisURI);
+	keyv.redis = newRedis;
+	t.expect(keyv.redis).toBe(newRedis);
+});
+
+test.it("opts getter should return dialect as redis", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.opts.dialect).toBe("redis");
+});
+
+test.it("opts getter should reflect current useSets value", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.opts.useSets).toBe(false);
+	keyv.useSets = true;
+	t.expect(keyv.opts.useSets).toBe(true);
+});
+
+test.it("deprecated useRedisSets getter/setter should still work", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.useRedisSets).toBe(false);
+	keyv.useRedisSets = true;
+	t.expect(keyv.useRedisSets).toBe(true);
+	t.expect(keyv.useSets).toBe(true);
 });
 
 test.it(

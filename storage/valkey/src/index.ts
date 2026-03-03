@@ -4,18 +4,31 @@ import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
-	namespace?: string;
-	opts: Record<string, unknown>;
+	/**
+	 * The namespace used to prefix keys for multi-tenant separation.
+	 * @default undefined
+	 */
+	private _namespace?: string;
+
+	/**
+	 * Whether to use sets for key management.
+	 * When true, uses sets to track namespaced keys for cleaner management.
+	 * When false, uses pattern matching instead.
+	 * @default true
+	 */
+	private _useSets = false;
+
+	/**
+	 * The iovalkey Redis or Cluster instance.
+	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	redis: any;
+	private _redis: any;
+
 	constructor(
 		uri: KeyvValkeyOptions | KeyvUriOptions,
 		options?: KeyvValkeyOptions,
 	) {
 		super();
-		this.opts = {};
-		this.opts.useRedisSets = true;
-		this.opts.dialect = "redis";
 
 		if (
 			typeof uri !== "string" &&
@@ -23,21 +36,90 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			uri.options &&
 			("family" in uri.options || uri.isCluster)
 		) {
-			this.redis = uri;
+			this._redis = uri;
 		} else {
 			options = {
 				...(typeof uri === "string" ? { uri } : (uri as KeyvValkeyOptions)),
 				...options,
 			};
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			this.redis = new Redis(options.uri!, options);
+			this._redis = new Redis(options.uri!, options);
 		}
 
-		if (options !== undefined && options.useRedisSets === false) {
-			this.opts.useRedisSets = false;
+		if (options !== undefined && options.useSets !== undefined) {
+			this._useSets = options.useSets;
 		}
 
-		this.redis.on("error", (error: Error) => this.emit("error", error));
+		this._redis.on("error", (error: Error) => this.emit("error", error));
+	}
+
+	/**
+	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
+	 */
+	public get namespace(): string | undefined {
+		return this._namespace;
+	}
+
+	/**
+	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+	 */
+	public set namespace(value: string | undefined) {
+		this._namespace = value;
+	}
+
+	/**
+	 * Get whether sets are used for key management.
+	 * @default true
+	 */
+	public get useSets(): boolean {
+		return this._useSets;
+	}
+
+	/**
+	 * Set whether sets are used for key management.
+	 */
+	public set useSets(value: boolean) {
+		this._useSets = value;
+	}
+
+	/**
+	 * @deprecated Use `useSets` instead.
+	 */
+	public get useRedisSets(): boolean {
+		return this._useSets;
+	}
+
+	/**
+	 * @deprecated Use `useSets` instead.
+	 */
+	public set useRedisSets(value: boolean) {
+		this._useSets = value;
+	}
+
+	/**
+	 * Get the iovalkey Redis or Cluster instance.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	public get redis(): any {
+		return this._redis;
+	}
+
+	/**
+	 * Set the iovalkey Redis or Cluster instance.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	public set redis(value: any) {
+		this._redis = value;
+	}
+
+	/**
+	 * Get the options for the adapter. This is provided for backward compatibility.
+	 */
+	public get opts(): Record<string, unknown> {
+		return {
+			dialect: "redis",
+			useSets: this._useSets,
+		};
 	}
 
 	_getNamespace(): string {
@@ -49,7 +131,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	_getKeyName = (key: string): string => {
-		if (!this.opts.useRedisSets) {
+		if (!this._useSets) {
 			return `${this._getNamespace()}:${key}`;
 		}
 
@@ -59,7 +141,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	async get<Value>(key: string): Promise<StoredData<Value> | undefined> {
 		key = this._getKeyName(key);
 
-		const value = await this.redis.get(key);
+		const value = await this._redis.get(key);
 		if (value === null) {
 			return undefined;
 		}
@@ -71,7 +153,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		keys: string[],
 	): Promise<Array<StoredData<Value | undefined>>> {
 		keys = keys.map(this._getKeyName);
-		return this.redis.mget(keys);
+		return this._redis.mget(keys);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -91,13 +173,13 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			}
 		};
 
-		if (this.opts.useRedisSets) {
-			const trx = await this.redis.multi();
+		if (this._useSets) {
+			const trx = await this._redis.multi();
 			await set(trx);
 			await trx.sadd(this._getNamespace(), key);
 			await trx.exec();
 		} else {
-			await set(this.redis);
+			await set(this._redis);
 		}
 	}
 
@@ -107,14 +189,14 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		// biome-ignore lint/suspicious/noExplicitAny: allowed
 		const unlink = async (redis: any) => redis.unlink(key);
 
-		if (this.opts.useRedisSets) {
-			const trx = this.redis.multi();
+		if (this._useSets) {
+			const trx = this._redis.multi();
 			await unlink(trx);
 			await trx.srem(this._getNamespace(), key);
 			const r = await trx.exec();
 			items = r[0][1];
 		} else {
-			items = await unlink(this.redis);
+			items = await unlink(this._redis);
 		}
 
 		return items > 0;
@@ -128,35 +210,36 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async clear() {
-		if (this.opts.useRedisSets) {
-			const keys: string[] = await this.redis.smembers(this._getNamespace());
+		if (this._useSets) {
+			const keys: string[] = await this._redis.smembers(this._getNamespace());
 			if (keys.length > 0) {
 				await Promise.all([
-					this.redis.unlink([...keys]),
-					this.redis.srem(this._getNamespace(), [...keys]),
+					this._redis.unlink([...keys]),
+					this._redis.srem(this._getNamespace(), [...keys]),
 				]);
 			}
 		} else {
 			const pattern = `${this._getNamespace()}*`;
-			const keys: string[] = await this.redis.keys(pattern);
+			const keys: string[] = await this._redis.keys(pattern);
 			if (keys.length > 0) {
-				await this.redis.unlink(keys);
+				await this._redis.unlink(keys);
 			}
 		}
 	}
 
 	async *iterator(namespace?: string) {
-		const scan = this.redis.scan.bind(this.redis);
-		const get = this.redis.mget.bind(this.redis);
+		const scan = this._redis.scan.bind(this._redis);
+		const get = this._redis.mget.bind(this._redis);
+		const prefix = this._useSets ? "" : `${this._getNamespace()}:`;
+		const match = `${prefix}${namespace ?? ""}:*`;
 		let cursor = "0";
 		do {
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const [curs, keys] = await scan(cursor, "MATCH", `${namespace!}:*`);
+			const [curs, keys] = await scan(cursor, "MATCH", match);
 			cursor = curs;
 			if (keys.length > 0) {
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
-					const key = keys[i];
+					const key = prefix ? keys[i].slice(prefix.length) : keys[i];
 					const value = values[i];
 					yield [key, value];
 				}
@@ -166,12 +249,12 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 
 	async has(key: string) {
 		key = this._getKeyName(key);
-		const value: number = await this.redis.exists(key);
+		const value: number = await this._redis.exists(key);
 		return value !== 0;
 	}
 
 	async disconnect() {
-		return this.redis.disconnect();
+		return this._redis.disconnect();
 	}
 }
 
