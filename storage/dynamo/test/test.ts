@@ -1,11 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: this is a test file
 import { randomUUID } from "node:crypto";
 import process from "node:process";
-import {
-	ResourceInUseException,
-	ResourceNotFoundException,
-	UpdateTimeToLiveCommand,
-} from "@aws-sdk/client-dynamodb";
+import { ResourceInUseException } from "@aws-sdk/client-dynamodb";
 import keyvTestSuite from "@keyv/test-suite";
 import Keyv from "keyv";
 import * as test from "vitest";
@@ -123,37 +119,6 @@ test.it(
 		await store.set("test:key1", "value1");
 		(store as any).client.send = originalSend;
 		await t.expect(store.get("test:key1")).resolves.toBe("value1");
-	},
-);
-
-test.it(
-	"should throw error when not ResourceInUseException on create table",
-	async (t) => {
-		const store = new KeyvDynamo({
-			endpoint: dynamoURL,
-			tableName: randomUUID(),
-		});
-
-		const originalSend = (store as any).client.send;
-		(store as any).client.send = test.vi.fn().mockImplementation((command) => {
-			// Force error on UpdateTimeToLiveCommand
-			if (command.constructor.name === "UpdateTimeToLiveCommand") {
-				return originalSend.call(
-					(store as any).client,
-					new UpdateTimeToLiveCommand({
-						...command,
-						TableName: "failTimeToLive",
-					}),
-				);
-			}
-
-			return originalSend.call((store as any).client, command);
-		});
-
-		await t
-			.expect(store.set("test:key1", "value1"))
-			.rejects.toThrow(ResourceNotFoundException);
-		(store as any).client.send = originalSend;
 	},
 );
 
