@@ -28,12 +28,15 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
   - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
-  - [.clear()](#clear)
   - [.has(key)](#haskey)
+  - [.hasMany(keys)](#hasmanykeys)
+  - [.clear()](#clear)
   - [.iterator(namespace?)](#iteratornamespace)
   - [.disconnect()](#disconnect)
+- [Clustering](#clustering)
 - [License](#license)
 
 # Install
@@ -221,6 +224,17 @@ await store.set('foo', 'bar');
 await store.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
+### .setMany(entries)
+
+Sets multiple key-value pairs in a single batch operation. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped.
+
+```js
+await store.setMany([
+  { key: 'foo', value: 'bar' },
+  { key: 'baz', value: 'qux', ttl: 5000 },
+]);
+```
+
 ### .delete(key)
 
 Deletes a key-value pair from the store. Returns `true` if the key existed and was deleted, `false` otherwise.
@@ -231,18 +245,10 @@ const deleted = await store.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store. Returns `true` if all keys were deleted successfully.
+Deletes multiple key-value pairs from the store in a single batch operation. Returns `true` if at least one key was deleted, `false` otherwise.
 
 ```js
 const deleted = await store.deleteMany(['foo', 'bar']);
-```
-
-### .clear()
-
-Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared.
-
-```js
-await store.clear();
 ```
 
 ### .has(key)
@@ -251,6 +257,23 @@ Returns `true` if the key exists in the store, `false` otherwise.
 
 ```js
 const exists = await store.has('foo');
+```
+
+### .hasMany(keys)
+
+Checks if multiple keys exist in the store in a single batch operation. Returns an array of booleans.
+
+```js
+const results = await store.hasMany(['foo', 'bar', 'baz']);
+// [true, true, false]
+```
+
+### .clear()
+
+Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared.
+
+```js
+await store.clear();
 ```
 
 ### .iterator(namespace?)
@@ -270,6 +293,31 @@ Disconnects from the Valkey server.
 ```js
 await store.disconnect();
 ```
+
+## Clustering
+
+The adapter supports Valkey and Redis clusters via iovalkey's `Cluster` class. Pass a `Redis.Cluster` instance directly to the constructor:
+
+```js
+import KeyvValkey from '@keyv/valkey';
+import Redis from 'iovalkey';
+
+const cluster = new Redis.Cluster([
+  { host: '127.0.0.1', port: 7001 },
+  { host: '127.0.0.1', port: 7002 },
+  { host: '127.0.0.1', port: 7003 },
+]);
+const store = new KeyvValkey(cluster);
+```
+
+Batch methods (`getMany`, `setMany`, `deleteMany`, `hasMany`) automatically group keys by hash slot and run separate transactions per slot group. This avoids `CROSSSLOT` errors without any extra configuration.
+
+Single-key methods (`get`, `set`, `delete`, `has`) work automatically in cluster mode — iovalkey routes each command to the correct node.
+
+### Cluster gotchas
+
+- **`clear()` with `useSets: false` (the default)** uses the `KEYS` command, which only scans the node that receives the command. In cluster mode this may miss keys on other nodes. Set `useSets: true` if you need reliable `clear()` across all cluster nodes.
+- **`iterator()` in cluster mode** uses `SCAN`, which only iterates keys on the node the command is routed to. It may not return all keys across the cluster.
 
 ## License
 
