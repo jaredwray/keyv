@@ -1,5 +1,5 @@
-import EventEmitter from "node:events";
 import calculateSlot from "cluster-key-slot";
+import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
 import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
@@ -9,7 +9,7 @@ import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
  * using iovalkey as the underlying client. Implements the {@link KeyvStoreAdapter}
  * interface with support for namespacing, TTL, batch operations, and async iteration.
  */
-class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
+class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 	/**
 	 * The namespace used to prefix keys for multi-tenant separation.
 	 * When set, all keys are scoped under this namespace to prevent collisions
@@ -51,7 +51,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		uri: KeyvValkeyOptions | KeyvUriOptions,
 		options?: KeyvValkeyOptions,
 	) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		if (
 			typeof uri !== "string" &&

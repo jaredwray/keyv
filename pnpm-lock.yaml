@@ -230,8 +230,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       hookified:
-        specifier: ^1.15.0
-        version: 1.15.0
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -263,6 +263,9 @@ importers:
       '@aws-sdk/lib-dynamodb':
         specifier: ^3.958.0
         version: 3.958.0(@aws-sdk/client-dynamodb@3.958.0)
+      hookified:
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -285,6 +288,9 @@ importers:
       etcd3:
         specifier: ^1.1.2
         version: 1.1.2
+      hookified:
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -311,8 +317,8 @@ importers:
   storage/memcache:
     dependencies:
       hookified:
-        specifier: ^1.13.0
-        version: 1.15.1
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -351,8 +357,8 @@ importers:
   storage/mongo:
     dependencies:
       hookified:
-        specifier: ^1.13.0
-        version: 1.15.1
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -385,8 +391,8 @@ importers:
   storage/mysql:
     dependencies:
       hookified:
-        specifier: ^1.13.0
-        version: 1.15.1
+        specifier: ^2.0.0
+        version: 2.0.1
       mysql2:
         specifier: ^3.16.1
         version: 3.16.1
@@ -419,8 +425,8 @@ importers:
   storage/postgres:
     dependencies:
       hookified:
-        specifier: ^1.13.0
-        version: 1.15.1
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -462,8 +468,8 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2
       hookified:
-        specifier: ^1.13.0
-        version: 1.15.0
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -495,6 +501,9 @@ importers:
 
   storage/sqlite:
     dependencies:
+      hookified:
+        specifier: ^2.0.0
+        version: 2.0.1
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -529,6 +538,9 @@ importers:
       cluster-key-slot:
         specifier: ^1.1.0
         version: 1.1.2
+      hookified:
+        specifier: ^2.0.0
+        version: 2.0.1
       iovalkey:
         specifier: ^0.3.3
         version: 0.3.3
@@ -2976,11 +2988,11 @@ packages:
     resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
     engines: {node: '>=12.0.0'}
 
-  hookified@1.15.0:
-    resolution: {integrity: sha512-51w+ZZGt7Zw5q7rM3nC4t3aLn/xvKDETsXqMczndvwyVQhAHfUmUuFBRFcos8Iyebtk7OAE9dL26wFNzZVVOkw==}
-
   hookified@1.15.1:
     resolution: {integrity: sha512-MvG/clsADq1GPM2KGo2nyfaWVyn9naPiXrqIe4jYjXNZQt238kWyOGrsyc/DmRAQ+Re6yeo6yX/yoNCG5KAEVg==}
+
+  hookified@2.0.1:
+    resolution: {integrity: sha512-rCuuGZ7qae0+C0ySqe8nRj8JJ5/6zym5YBs19iga9ju+ubLELkgpvnfi4A6NP8Aow7mCxfCqyAAbkj9QqyEXRg==}
 
   hosted-git-info@2.8.9:
     resolution: {integrity: sha512-mxIDAb9Lsm6DoOJ7xH+5+X4y1LU/4Hi50L9C5sIswK3JzULS4bwk1FvjdBgvYR4bzT4tuUQiC15FE2f5HbLvYw==}
@@ -7412,9 +7424,9 @@ snapshots:
 
   highlight.js@11.11.1: {}
 
-  hookified@1.15.0: {}
-
   hookified@1.15.1: {}
+
+  hookified@2.0.1: {}
 
   hosted-git-info@2.8.9: {}
 

@@ -51,7 +51,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^1.13.0",
+		"hookified": "^2.0.0",
 		"pg": "^8.17.1"
 	},
 	"peerDependencies": {

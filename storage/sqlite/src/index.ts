@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/noNonNullAssertion: need to fix
-import EventEmitter from "node:events";
 import { promisify } from "node:util";
+import { Hookified } from "hookified";
 import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import sqlite3 from "sqlite3";
 import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
@@ -13,14 +13,14 @@ const toTableString = (input: string) => {
 	return /^[a-zA-Z]/.test(sanitized) ? sanitized : `_${sanitized}`;
 };
 
-export class KeyvSqlite extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	opts: KeyvSqliteOptions;
 	namespace?: string;
 	close: DbClose;
 	query: DbQuery;
 
 	constructor(keyvOptions?: KeyvSqliteOptions | string) {
-		super();
+		super({ throwOnEmptyListeners: false });
 		let options: KeyvSqliteOptions = {
 			dialect: "sqlite",
 			uri: "sqlite://:memory:",

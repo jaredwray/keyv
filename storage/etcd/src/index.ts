@@ -1,5 +1,5 @@
-import { EventEmitter } from "node:events";
 import { Etcd3, type Lease } from "etcd3";
+import { Hookified } from "hookified";
 import type { StoredData } from "keyv";
 import type {
 	ClearOutput,
@@ -19,14 +19,14 @@ export type KeyvEtcdOptions = {
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: any is allowed
-export class KeyvEtcd<Value = any> extends EventEmitter {
+export class KeyvEtcd<Value = any> extends Hookified {
 	public opts: KeyvEtcdOptions;
 	public client: Etcd3;
 	public lease?: Lease;
 	public namespace?: string;
 
 	constructor(url?: KeyvEtcdOptions | string, options?: KeyvEtcdOptions) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		url ??= {};
 

@@ -99,7 +99,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	 * @param options - A PostgreSQL connection URI string or a {@link KeyvPostgresOptions} configuration object.
 	 */
 	constructor(options?: KeyvPostgresOptions | string) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		if (typeof options === "string") {
 			this._uri = options;
