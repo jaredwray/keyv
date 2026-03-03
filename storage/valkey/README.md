@@ -13,6 +13,29 @@ Valkey is the open source replacement to Redis which decided to do a [dual licen
 
 We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a Node.js client for Valkey based on the `ioredis` client.
 
+## Table of Contents
+
+- [Install](#install)
+- [Usage](#usage)
+- [Migrating to v6](#migrating-to-v6)
+- [Constructor Options](#constructor-options)
+- [Properties](#properties)
+  - [namespace](#namespace)
+  - [useSets](#usesets)
+  - [useRedisSets (deprecated)](#useredisSets-deprecated)
+  - [redis](#redis)
+- [Methods](#methods)
+  - [.get(key)](#getkey)
+  - [.getMany(keys)](#getmanykeys)
+  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.delete(key)](#deletekey)
+  - [.deleteMany(keys)](#deletemanykeys)
+  - [.clear()](#clear)
+  - [.has(key)](#haskey)
+  - [.iterator(namespace?)](#iteratornamespace)
+  - [.disconnect()](#disconnect)
+- [License](#license)
+
 # Install
 
 ```shell
