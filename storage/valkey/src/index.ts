@@ -1,6 +1,6 @@
 import EventEmitter from "node:events";
 import calculateSlot from "cluster-key-slot";
-import Redis from "iovalkey";
+import Redis, { type Cluster } from "iovalkey";
 import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
@@ -29,9 +29,11 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	/**
 	 * The underlying iovalkey Redis or Cluster client instance used for all
 	 * storage operations. Can be a standalone Redis connection or a Cluster instance.
+	 * Typed as `any` internally to avoid cascading type assertions from iovalkey's
+	 * return types. The public `client` getter/setter exposes the proper `Redis | Cluster` type.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private _redis: any;
+	// biome-ignore lint/suspicious/noExplicitAny: iovalkey method return types require flexible internal typing
+	private _client: any;
 
 	/**
 	 * Creates a new KeyvValkey adapter instance.
@@ -57,21 +59,21 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			uri.options &&
 			("family" in uri.options || uri.isCluster)
 		) {
-			this._redis = uri;
+			this._client = uri;
 		} else {
 			options = {
 				...(typeof uri === "string" ? { uri } : (uri as KeyvValkeyOptions)),
 				...options,
 			};
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			this._redis = new Redis(options.uri!, options);
+			this._client = new Redis(options.uri!, options);
 		}
 
 		if (options !== undefined && options.useSets !== undefined) {
 			this._useSets = options.useSets;
 		}
 
-		this._redis.on("error", (error: Error) => this.emit("error", error));
+		this._client.on("error", (error: Error) => this.emit("error", error));
 	}
 
 	/**
@@ -132,20 +134,18 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	/**
 	 * Gets the underlying iovalkey Redis or Cluster client instance.
 	 * Can be used to access the raw client for advanced operations not exposed by the adapter.
-	 * @returns {any} The iovalkey Redis or Cluster instance.
+	 * @returns {Redis | Cluster} The iovalkey Redis or Cluster instance.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get redis(): any {
-		return this._redis;
+	public get client(): Redis | Cluster {
+		return this._client as Redis | Cluster;
 	}
 
 	/**
 	 * Replaces the underlying iovalkey Redis or Cluster client instance.
-	 * @param {any} value - The new iovalkey Redis or Cluster instance to use.
+	 * @param {Redis | Cluster} value - The new iovalkey Redis or Cluster instance to use.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public set redis(value: any) {
-		this._redis = value;
+	public set client(value: Redis | Cluster) {
+		this._client = value;
 	}
 
 	/**
@@ -170,7 +170,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	public async get<Value>(key: string): Promise<StoredData<Value> | undefined> {
 		key = this.getKeyName(key);
 
-		const value = await this._redis.get(key);
+		const value = await this._client.get(key);
 		if (value === null) {
 			return undefined;
 		}
@@ -198,7 +198,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 
 			await Promise.all(
 				Array.from(slotMap.values(), async (slotKeys) => {
-					const values = await this._redis.mget(slotKeys);
+					const values = await this._client.mget(slotKeys);
 					for (const [index, value] of values.entries()) {
 						resultMap.set(slotKeys[index], value);
 					}
@@ -210,7 +210,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			);
 		}
 
-		return this._redis.mget(resolvedKeys);
+		return this._client.mget(resolvedKeys);
 	}
 
 	/**
@@ -242,12 +242,12 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		};
 
 		if (this._useSets) {
-			const trx = await this._redis.multi();
+			const trx = await this._client.multi();
 			await set(trx);
 			await trx.sadd(this.getNamespace(), key);
 			await trx.exec();
 		} else {
-			await set(this._redis);
+			await set(this._client);
 		}
 	}
 
@@ -297,7 +297,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 
 		await Promise.all(
 			Array.from(slotMap.values(), async (group) => {
-				const trx = this._redis.multi();
+				const trx = this._client.multi();
 				for (const { k, value, ttl } of group) {
 					if (typeof ttl === "number") {
 						trx.set(k, value, "PX", ttl);
@@ -329,13 +329,13 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		const unlink = async (redis: any) => redis.unlink(key);
 
 		if (this._useSets) {
-			const trx = this._redis.multi();
+			const trx = this._client.multi();
 			await unlink(trx);
 			await trx.srem(this.getNamespace(), key);
 			const r = await trx.exec();
 			items = r[0][1];
 		} else {
-			items = await unlink(this._redis);
+			items = await unlink(this._client);
 		}
 
 		return items > 0;
@@ -360,7 +360,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 
 		await Promise.all(
 			Array.from(slotMap.values(), async (slotKeys) => {
-				const trx = this._redis.multi();
+				const trx = this._client.multi();
 				for (const k of slotKeys) {
 					trx.unlink(k);
 					if (this._useSets) {
@@ -399,7 +399,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 
 		await Promise.all(
 			Array.from(slotMap.entries(), async ([_slot, slotKeys]) => {
-				const trx = this._redis.multi();
+				const trx = this._client.multi();
 				for (const k of slotKeys) {
 					trx.exists(k);
 				}
@@ -426,18 +426,18 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	 */
 	public async clear() {
 		if (this._useSets) {
-			const keys: string[] = await this._redis.smembers(this.getNamespace());
+			const keys: string[] = await this._client.smembers(this.getNamespace());
 			if (keys.length > 0) {
 				await Promise.all([
-					this._redis.unlink([...keys]),
-					this._redis.srem(this.getNamespace(), [...keys]),
+					this._client.unlink([...keys]),
+					this._client.srem(this.getNamespace(), [...keys]),
 				]);
 			}
 		} else {
 			const pattern = `${this.getNamespace()}*`;
-			const keys: string[] = await this._redis.keys(pattern);
+			const keys: string[] = await this._client.keys(pattern);
 			if (keys.length > 0) {
-				await this._redis.unlink(keys);
+				await this._client.unlink(keys);
 			}
 		}
 	}
@@ -452,8 +452,8 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	 *   The key has the internal namespace prefix stripped when `useSets` is disabled.
 	 */
 	public async *iterator(namespace?: string) {
-		const scan = this._redis.scan.bind(this._redis);
-		const get = this._redis.mget.bind(this._redis);
+		const scan = this._client.scan.bind(this._client);
+		const get = this._client.mget.bind(this._client);
 		const prefix = this._useSets ? "" : `${this.getNamespace()}:`;
 		const match = `${prefix}${namespace ?? ""}:*`;
 		let cursor = "0";
@@ -478,7 +478,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	 */
 	public async has(key: string) {
 		key = this.getKeyName(key);
-		const value: number = await this._redis.exists(key);
+		const value: number = await this._client.exists(key);
 		return value !== 0;
 	}
 
@@ -489,7 +489,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	 * @returns {Promise<void>}
 	 */
 	public async disconnect() {
-		return this._redis.disconnect();
+		return this._client.disconnect();
 	}
 
 	/**
@@ -528,7 +528,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	 * @returns {boolean} `true` if the client is a Cluster instance, `false` for standalone.
 	 */
 	private isCluster(): boolean {
-		return this._redis.isCluster === true;
+		return this._client.isCluster === true;
 	}
 
 	/**

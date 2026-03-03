@@ -23,7 +23,7 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [namespace](#namespace)
   - [useSets](#usesets)
   - [useRedisSets (deprecated)](#useredisSets-deprecated)
-  - [redis](#redis)
+  - [client](#client)
 - [Methods](#methods)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
@@ -127,6 +127,18 @@ The `opts` getter still exists for backward compatibility but should not be used
 
 The `useRedisSets` option has been renamed to `useSets`. The `useRedisSets` property is still available as a deprecated getter/setter on the class but will be removed in a future version.
 
+#### `redis` property renamed to `client`
+
+The `redis` property has been renamed to `client` and is now properly typed as `Redis | Cluster` instead of `any`. Update any code that accesses the underlying iovalkey instance:
+
+```js
+// v5
+store.redis;
+
+// v6
+store.client;
+```
+
 #### `useSets` default changed from `true` to `false`
 
 The default value of `useSets` has changed from `true` to `false` for performance reasons. When enabled, a set is maintained for each namespace to track keys, which can lead to memory leaks in high-throughput scenarios. If you depend on the previous behavior, explicitly set `useSets: true` in your options:
@@ -181,9 +193,9 @@ When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS` 
 
 Deprecated alias for `useSets`. Use `useSets` instead.
 
-### redis
+### client
 
-Get or set the underlying iovalkey `Redis` or `Cluster` instance.
+Get or set the underlying iovalkey `Redis` or `Cluster` client instance.
 
 - Type: `Redis | Cluster`
 
@@ -191,10 +203,10 @@ Get or set the underlying iovalkey `Redis` or `Cluster` instance.
 import Redis from 'iovalkey';
 
 const store = new KeyvValkey('redis://localhost:6379');
-console.log(store.redis); // Redis instance
+console.log(store.client); // Redis instance
 
 // Replace with a new instance
-store.redis = new Redis('redis://localhost:6380');
+store.client = new Redis('redis://localhost:6380');
 ```
 
 ## Methods
