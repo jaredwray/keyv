@@ -536,6 +536,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.3.8
         version: 2.3.14
+      '@faker-js/faker':
+        specifier: ^10.2.0
+        version: 10.2.0
       '@keyv/test-suite':
         specifier: workspace:^
         version: link:../../core/test-suite
