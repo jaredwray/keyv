@@ -54,6 +54,7 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"cluster-key-slot": "^1.1.0",
+		"hookified": "^2.0.0",
 		"iovalkey": "^0.3.3"
 	},
 	"devDependencies": {

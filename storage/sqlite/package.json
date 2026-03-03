@@ -50,6 +50,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
+		"hookified": "^2.0.0",
 		"sqlite3": "^5.1.7"
 	},
 	"peerDependencies": {

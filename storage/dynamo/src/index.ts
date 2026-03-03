@@ -1,4 +1,3 @@
-import EventEmitter from "node:events";
 import {
 	CreateTableCommand,
 	DescribeTableCommand,
@@ -18,9 +17,10 @@ import {
 	type PutCommandInput,
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
+import { Hookified } from "hookified";
 import { Keyv, type KeyvStoreAdapter, type StoredData } from "keyv";
 
-export class KeyvDynamo extends EventEmitter implements KeyvStoreAdapter {
+export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 	sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
 	namespace?: string;
 	opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
