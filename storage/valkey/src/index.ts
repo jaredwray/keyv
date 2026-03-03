@@ -1,4 +1,5 @@
 import EventEmitter from "node:events";
+import calculateSlot from "cluster-key-slot";
 import Redis from "iovalkey";
 import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
@@ -122,6 +123,33 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		};
 	}
 
+	/**
+	 * Returns true if the underlying client is a Cluster instance.
+	 */
+	private _isCluster(): boolean {
+		return this._redis.isCluster === true;
+	}
+
+	/**
+	 * Groups keys by hash slot for cluster-safe transactions.
+	 * In non-cluster mode, all keys go to slot 0.
+	 */
+	private _getSlotMap(keys: string[]): Map<number, string[]> {
+		const slotMap = new Map<number, string[]>();
+		if (this._isCluster()) {
+			for (const key of keys) {
+				const slot = calculateSlot(key);
+				const slotKeys = slotMap.get(slot) ?? [];
+				slotKeys.push(key);
+				slotMap.set(slot, slotKeys);
+			}
+		} else {
+			slotMap.set(0, keys);
+		}
+
+		return slotMap;
+	}
+
 	_getNamespace(): string {
 		if (this.namespace) {
 			return `namespace:${this.namespace}`;
@@ -191,25 +219,50 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			return;
 		}
 
-		const trx = this._redis.multi();
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		const resolvedEntries: Array<{ k: string; value: any; ttl?: number }> = [];
 		for (const { key, value, ttl } of entries) {
 			if (value === undefined) {
 				continue;
 			}
 
-			const k = this._getKeyName(key);
-			if (typeof ttl === "number") {
-				trx.set(k, value, "PX", ttl);
-			} else {
-				trx.set(k, value);
-			}
-
-			if (this._useSets) {
-				trx.sadd(this._getNamespace(), k);
-			}
+			resolvedEntries.push({ k: this._getKeyName(key), value, ttl });
 		}
 
-		await trx.exec();
+		if (resolvedEntries.length === 0) {
+			return;
+		}
+
+		const slotMap = new Map<number, typeof resolvedEntries>();
+		if (this._isCluster()) {
+			for (const entry of resolvedEntries) {
+				const slot = calculateSlot(entry.k);
+				const group = slotMap.get(slot) ?? [];
+				group.push(entry);
+				slotMap.set(slot, group);
+			}
+		} else {
+			slotMap.set(0, resolvedEntries);
+		}
+
+		await Promise.all(
+			Array.from(slotMap.values(), async (group) => {
+				const trx = this._redis.multi();
+				for (const { k, value, ttl } of group) {
+					if (typeof ttl === "number") {
+						trx.set(k, value, "PX", ttl);
+					} else {
+						trx.set(k, value);
+					}
+
+					if (this._useSets) {
+						trx.sadd(this._getNamespace(), k);
+					}
+				}
+
+				await trx.exec();
+			}),
+		);
 	}
 
 	async delete(key: string) {
@@ -236,19 +289,30 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			return false;
 		}
 
-		const trx = this._redis.multi();
-		for (const key of keys) {
-			const k = this._getKeyName(key);
-			trx.unlink(k);
-			if (this._useSets) {
-				trx.srem(this._getNamespace(), k);
-			}
-		}
+		const resolvedKeys = keys.map((key) => this._getKeyName(key));
+		const slotMap = this._getSlotMap(resolvedKeys);
+		let deleted = false;
 
-		const results = await trx.exec();
-		const step = this._useSets ? 2 : 1;
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		return results.some((r: any, i: number) => i % step === 0 && r[1] > 0);
+		await Promise.all(
+			Array.from(slotMap.values(), async (slotKeys) => {
+				const trx = this._redis.multi();
+				for (const k of slotKeys) {
+					trx.unlink(k);
+					if (this._useSets) {
+						trx.srem(this._getNamespace(), k);
+					}
+				}
+
+				const results = await trx.exec();
+				const step = this._useSets ? 2 : 1;
+				// biome-ignore lint/suspicious/noExplicitAny: type format
+				if (results.some((r: any, i: number) => i % step === 0 && r[1] > 0)) {
+					deleted = true;
+				}
+			}),
+		);
+
+		return deleted;
 	}
 
 	async hasMany(keys: string[]): Promise<boolean[]> {
@@ -256,14 +320,26 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			return [];
 		}
 
-		const trx = this._redis.multi();
-		for (const key of keys) {
-			trx.exists(this._getKeyName(key));
-		}
+		const resolvedKeys = keys.map((key) => this._getKeyName(key));
+		const resultMap = new Map<string, boolean>();
+		const slotMap = this._getSlotMap(resolvedKeys);
 
-		const results = await trx.exec();
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		return results.map((r: any) => r[1] !== 0);
+		await Promise.all(
+			Array.from(slotMap.entries(), async ([_slot, slotKeys]) => {
+				const trx = this._redis.multi();
+				for (const k of slotKeys) {
+					trx.exists(k);
+				}
+
+				const results = await trx.exec();
+				for (const [index, result] of results.entries()) {
+					// biome-ignore lint/suspicious/noExplicitAny: type format
+					resultMap.set(slotKeys[index], (result as any)[1] !== 0);
+				}
+			}),
+		);
+
+		return resolvedKeys.map((k) => resultMap.get(k) ?? false);
 	}
 
 	async clear() {

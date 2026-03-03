@@ -293,6 +293,17 @@ test.it("setMany should skip undefined values", async (t) => {
 	await keyv.disconnect();
 });
 
+test.it("setMany with all undefined values should not error", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	await keyv.setMany([
+		{ key: "sma1", value: undefined },
+		{ key: "sma2", value: undefined },
+	]);
+	t.expect(await keyv.get("sma1")).toBe(undefined);
+	t.expect(await keyv.get("sma2")).toBe(undefined);
+	await keyv.disconnect();
+});
+
 test.it("setMany with useSets should track keys in set", async (t) => {
 	const keyv = new KeyvValkey(redisURI, { useSets: true });
 	keyv.namespace = "setmany-test";
