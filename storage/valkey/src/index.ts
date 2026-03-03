@@ -180,8 +180,27 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	async getMany<Value>(
 		keys: string[],
 	): Promise<Array<StoredData<Value | undefined>>> {
-		keys = keys.map(this._getKeyName);
-		return this._redis.mget(keys);
+		const resolvedKeys = keys.map(this._getKeyName);
+
+		if (this._isCluster()) {
+			const slotMap = this._getSlotMap(resolvedKeys);
+			const resultMap = new Map<string, StoredData<Value | undefined>>();
+
+			await Promise.all(
+				Array.from(slotMap.values(), async (slotKeys) => {
+					const values = await this._redis.mget(slotKeys);
+					for (const [index, value] of values.entries()) {
+						resultMap.set(slotKeys[index], value);
+					}
+				}),
+			);
+
+			return resolvedKeys.map(
+				(k) => resultMap.get(k) as StoredData<Value | undefined>,
+			);
+		}
+
+		return this._redis.mget(resolvedKeys);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
