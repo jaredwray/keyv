@@ -91,11 +91,23 @@ In v6, all configuration options are exposed as top-level properties with getter
 
 ```js
 // v6
-store.useRedisSets; // true
-store.useRedisSets = false;
+store.useSets; // true
+store.useSets = false;
 ```
 
 The `opts` getter still exists for backward compatibility but should not be used for new code.
+
+#### `useRedisSets` renamed to `useSets`
+
+The `useRedisSets` option has been renamed to `useSets`. The `useRedisSets` property is still available as a deprecated getter/setter on the class but will be removed in a future version.
+
+#### `useSets` default changed from `true` to `false`
+
+The default value of `useSets` has changed from `true` to `false` for performance reasons. When enabled, a set is maintained for each namespace to track keys, which can lead to memory leaks in high-throughput scenarios. If you depend on the previous behavior, explicitly set `useSets: true` in your options:
+
+```js
+const store = new KeyvValkey('redis://localhost:6379', { useSets: true });
+```
 
 ## Constructor Options
 
@@ -104,7 +116,7 @@ The `opts` getter still exists for backward compatibility but should not be used
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `uri` | `string` | `undefined` | Valkey connection URI |
-| `useRedisSets` | `boolean` | `true` | Whether to use Redis sets for namespace key management |
+| `useSets` | `boolean` | `false` | Whether to use sets for namespace key management |
 
 ## Properties
 
@@ -123,21 +135,25 @@ store.namespace = 'my-namespace';
 console.log(store.namespace); // 'my-namespace'
 ```
 
-### useRedisSets
+### useSets
 
-Get or set whether to use Redis sets for key management. When `true`, a Redis set is maintained for each namespace to track keys. When `false`, keys are prefixed with the namespace and pattern matching is used instead.
+Get or set whether to use sets for key management. When `true`, a set is maintained for each namespace to track keys. When `false`, keys are prefixed with the namespace and pattern matching is used instead.
 
 - Type: `boolean`
-- Default: `true`
+- Default: `false`
 
 ```js
-const store = new KeyvValkey('redis://localhost:6379', { useRedisSets: false });
-console.log(store.useRedisSets); // false
+const store = new KeyvValkey('redis://localhost:6379', { useSets: true });
+console.log(store.useSets); // true
 ```
 
-**Note**: In high-performance scenarios, enabling `useRedisSets` might lead to memory leaks. If you're running a high-performance application or service, it is recommended to set `useRedisSets` to `false`.
+**Note**: When `useSets` is `true`, a set is maintained for each namespace which can lead to memory leaks in high-performance scenarios. This is why the default is `false`.
 
-However, please note that setting `useRedisSets` to `false` could lead to performance issues in production when using the `clear` function, as it will need to iterate over all keys to delete them.
+When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS` command) to find and delete keys, which may be slower on very large databases.
+
+### useRedisSets (deprecated)
+
+Deprecated alias for `useSets`. Use `useSets` instead.
 
 ### redis
 

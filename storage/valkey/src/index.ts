@@ -11,12 +11,12 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	private _namespace?: string;
 
 	/**
-	 * Whether to use Redis sets for key management.
-	 * When true, uses Redis sets to track namespaced keys for cleaner management.
+	 * Whether to use sets for key management.
+	 * When true, uses sets to track namespaced keys for cleaner management.
 	 * When false, uses pattern matching instead.
 	 * @default true
 	 */
-	private _useRedisSets = true;
+	private _useSets = false;
 
 	/**
 	 * The iovalkey Redis or Cluster instance.
@@ -46,8 +46,8 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			this._redis = new Redis(options.uri!, options);
 		}
 
-		if (options !== undefined && options.useRedisSets !== undefined) {
-			this._useRedisSets = options.useRedisSets;
+		if (options !== undefined && options.useSets !== undefined) {
+			this._useSets = options.useSets;
 		}
 
 		this._redis.on("error", (error: Error) => this.emit("error", error));
@@ -68,18 +68,32 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get whether Redis sets are used for key management.
+	 * Get whether sets are used for key management.
 	 * @default true
 	 */
-	public get useRedisSets(): boolean {
-		return this._useRedisSets;
+	public get useSets(): boolean {
+		return this._useSets;
 	}
 
 	/**
-	 * Set whether Redis sets are used for key management.
+	 * Set whether sets are used for key management.
+	 */
+	public set useSets(value: boolean) {
+		this._useSets = value;
+	}
+
+	/**
+	 * @deprecated Use `useSets` instead.
+	 */
+	public get useRedisSets(): boolean {
+		return this._useSets;
+	}
+
+	/**
+	 * @deprecated Use `useSets` instead.
 	 */
 	public set useRedisSets(value: boolean) {
-		this._useRedisSets = value;
+		this._useSets = value;
 	}
 
 	/**
@@ -104,7 +118,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	public get opts(): Record<string, unknown> {
 		return {
 			dialect: "redis",
-			useRedisSets: this._useRedisSets,
+			useSets: this._useSets,
 		};
 	}
 
@@ -117,7 +131,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	_getKeyName = (key: string): string => {
-		if (!this._useRedisSets) {
+		if (!this._useSets) {
 			return `${this._getNamespace()}:${key}`;
 		}
 
@@ -159,7 +173,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			}
 		};
 
-		if (this._useRedisSets) {
+		if (this._useSets) {
 			const trx = await this._redis.multi();
 			await set(trx);
 			await trx.sadd(this._getNamespace(), key);
@@ -175,7 +189,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		// biome-ignore lint/suspicious/noExplicitAny: allowed
 		const unlink = async (redis: any) => redis.unlink(key);
 
-		if (this._useRedisSets) {
+		if (this._useSets) {
 			const trx = this._redis.multi();
 			await unlink(trx);
 			await trx.srem(this._getNamespace(), key);
@@ -196,7 +210,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async clear() {
-		if (this._useRedisSets) {
+		if (this._useSets) {
 			const keys: string[] = await this._redis.smembers(this._getNamespace());
 			if (keys.length > 0) {
 				await Promise.all([
@@ -216,15 +230,16 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	async *iterator(namespace?: string) {
 		const scan = this._redis.scan.bind(this._redis);
 		const get = this._redis.mget.bind(this._redis);
+		const prefix = this._useSets ? "" : `${this._getNamespace()}:`;
+		const match = `${prefix}${namespace ?? ""}:*`;
 		let cursor = "0";
 		do {
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const [curs, keys] = await scan(cursor, "MATCH", `${namespace!}:*`);
+			const [curs, keys] = await scan(cursor, "MATCH", match);
 			cursor = curs;
 			if (keys.length > 0) {
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
-					const key = keys[i];
+					const key = prefix ? keys[i].slice(prefix.length) : keys[i];
 					const value = values[i];
 					yield [key, value];
 				}
