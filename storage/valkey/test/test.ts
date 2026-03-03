@@ -192,6 +192,44 @@ test.it("can create a full keyv instance with a uri", async (t) => {
 	t.expect(await keyv.get("foo222")).toBe("bar222");
 });
 
+test.it("should have default useRedisSets as true", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.useRedisSets).toBe(true);
+});
+
+test.it("should allow setting useRedisSets via setter", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	keyv.useRedisSets = false;
+	t.expect(keyv.useRedisSets).toBe(false);
+	t.expect(keyv.opts.useRedisSets).toBe(false);
+});
+
+test.it("should allow setting and getting namespace via setter", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.namespace).toBeUndefined();
+	keyv.namespace = "test-ns";
+	t.expect(keyv.namespace).toBe("test-ns");
+});
+
+test.it("should allow setting redis instance via setter", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	const newRedis = new Redis(redisURI);
+	keyv.redis = newRedis;
+	t.expect(keyv.redis).toBe(newRedis);
+});
+
+test.it("opts getter should return dialect as redis", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.opts.dialect).toBe("redis");
+});
+
+test.it("opts getter should reflect current useRedisSets value", (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	t.expect(keyv.opts.useRedisSets).toBe(true);
+	keyv.useRedisSets = false;
+	t.expect(keyv.opts.useRedisSets).toBe(false);
+});
+
 test.it(
 	"iterator should iterate over multiple keys in namespace",
 	async (t) => {
