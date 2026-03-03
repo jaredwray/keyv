@@ -183,6 +183,35 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		}
 	}
 
+	async setMany(
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		entries: Array<{ key: string; value: any; ttl?: number }>,
+	): Promise<void> {
+		if (entries.length === 0) {
+			return;
+		}
+
+		const trx = this._redis.multi();
+		for (const { key, value, ttl } of entries) {
+			if (value === undefined) {
+				continue;
+			}
+
+			const k = this._getKeyName(key);
+			if (typeof ttl === "number") {
+				trx.set(k, value, "PX", ttl);
+			} else {
+				trx.set(k, value);
+			}
+
+			if (this._useSets) {
+				trx.sadd(this._getNamespace(), k);
+			}
+		}
+
+		await trx.exec();
+	}
+
 	async delete(key: string) {
 		key = this._getKeyName(key);
 		let items = 0;
@@ -203,10 +232,38 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async deleteMany(keys: string[]) {
-		const deletePromises = keys.map(async (key) => this.delete(key));
-		const results = await Promise.allSettled(deletePromises);
-		// @ts-expect-error - results is an array of objects with status and value
-		return results.every((result) => result.value);
+		if (keys.length === 0) {
+			return false;
+		}
+
+		const trx = this._redis.multi();
+		for (const key of keys) {
+			const k = this._getKeyName(key);
+			trx.unlink(k);
+			if (this._useSets) {
+				trx.srem(this._getNamespace(), k);
+			}
+		}
+
+		const results = await trx.exec();
+		const step = this._useSets ? 2 : 1;
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		return results.some((r: any, i: number) => i % step === 0 && r[1] > 0);
+	}
+
+	async hasMany(keys: string[]): Promise<boolean[]> {
+		if (keys.length === 0) {
+			return [];
+		}
+
+		const trx = this._redis.multi();
+		for (const key of keys) {
+			trx.exists(this._getKeyName(key));
+		}
+
+		const results = await trx.exec();
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		return results.map((r: any) => r[1] !== 0);
 	}
 
 	async clear() {

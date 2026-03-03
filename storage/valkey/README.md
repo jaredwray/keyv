@@ -28,10 +28,12 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
   - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
-  - [.clear()](#clear)
   - [.has(key)](#haskey)
+  - [.hasMany(keys)](#hasmanykeys)
+  - [.clear()](#clear)
   - [.iterator(namespace?)](#iteratornamespace)
   - [.disconnect()](#disconnect)
 - [License](#license)
@@ -221,6 +223,17 @@ await store.set('foo', 'bar');
 await store.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
+### .setMany(entries)
+
+Sets multiple key-value pairs in a single batch operation. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped.
+
+```js
+await store.setMany([
+  { key: 'foo', value: 'bar' },
+  { key: 'baz', value: 'qux', ttl: 5000 },
+]);
+```
+
 ### .delete(key)
 
 Deletes a key-value pair from the store. Returns `true` if the key existed and was deleted, `false` otherwise.
@@ -231,18 +244,10 @@ const deleted = await store.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store. Returns `true` if all keys were deleted successfully.
+Deletes multiple key-value pairs from the store in a single batch operation. Returns `true` if at least one key was deleted, `false` otherwise.
 
 ```js
 const deleted = await store.deleteMany(['foo', 'bar']);
-```
-
-### .clear()
-
-Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared.
-
-```js
-await store.clear();
 ```
 
 ### .has(key)
@@ -251,6 +256,23 @@ Returns `true` if the key exists in the store, `false` otherwise.
 
 ```js
 const exists = await store.has('foo');
+```
+
+### .hasMany(keys)
+
+Checks if multiple keys exist in the store in a single batch operation. Returns an array of booleans.
+
+```js
+const results = await store.hasMany(['foo', 'bar', 'baz']);
+// [true, true, false]
+```
+
+### .clear()
+
+Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared.
+
+```js
+await store.clear();
 ```
 
 ### .iterator(namespace?)

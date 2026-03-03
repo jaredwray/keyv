@@ -236,6 +236,113 @@ test.it("deprecated useRedisSets getter/setter should still work", (t) => {
 	t.expect(keyv.useSets).toBe(true);
 });
 
+test.it("setMany should set multiple keys", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	await keyv.setMany([
+		{ key: "sm1", value: "val1" },
+		{ key: "sm2", value: "val2" },
+		{ key: "sm3", value: "val3" },
+	]);
+	const values = await keyv.getMany(["sm1", "sm2", "sm3"]);
+	t.expect(values).toEqual(["val1", "val2", "val3"]);
+	await keyv.disconnect();
+});
+
+test.it("setMany with TTL should expire keys", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	await keyv.setMany([{ key: "smttl1", value: "val1", ttl: 100 }]);
+	t.expect(await keyv.get("smttl1")).toBe("val1");
+	await new Promise((r) => {
+		setTimeout(r, 150);
+	});
+	t.expect(await keyv.get("smttl1")).toBe(undefined);
+	await keyv.disconnect();
+});
+
+test.it("setMany with empty array should not error", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	await keyv.setMany([]);
+	t.expect(true).toBe(true);
+	await keyv.disconnect();
+});
+
+test.it("setMany should skip undefined values", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	await keyv.setMany([
+		{ key: "smu1", value: "val1" },
+		{ key: "smu2", value: undefined },
+	]);
+	t.expect(await keyv.get("smu1")).toBe("val1");
+	t.expect(await keyv.get("smu2")).toBe(undefined);
+	await keyv.disconnect();
+});
+
+test.it("setMany with useSets should track keys in set", async (t) => {
+	const keyv = new KeyvValkey(redisURI, { useSets: true });
+	keyv.namespace = "setmany-test";
+	await keyv.setMany([
+		{ key: "sms1", value: "val1" },
+		{ key: "sms2", value: "val2" },
+	]);
+	t.expect(await keyv.get("sms1")).toBe("val1");
+	t.expect(await keyv.get("sms2")).toBe("val2");
+	await keyv.clear();
+	t.expect(await keyv.get("sms1")).toBe(undefined);
+	await keyv.disconnect();
+});
+
+test.it("hasMany should return array of booleans", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	await keyv.set("hm1", "val1");
+	await keyv.set("hm2", "val2");
+	const results = await keyv.hasMany(["hm1", "hm2", "hm3"]);
+	t.expect(results).toEqual([true, true, false]);
+	await keyv.disconnect();
+});
+
+test.it("hasMany with empty array should return empty array", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	const results = await keyv.hasMany([]);
+	t.expect(results).toEqual([]);
+	await keyv.disconnect();
+});
+
+test.it("deleteMany should batch delete keys", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	await keyv.set("dm1", "val1");
+	await keyv.set("dm2", "val2");
+	const result = await keyv.deleteMany(["dm1", "dm2"]);
+	t.expect(result).toBe(true);
+	t.expect(await keyv.get("dm1")).toBe(undefined);
+	t.expect(await keyv.get("dm2")).toBe(undefined);
+	await keyv.disconnect();
+});
+
+test.it("deleteMany with nonexistent keys should return false", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	const result = await keyv.deleteMany(["nonexist1", "nonexist2"]);
+	t.expect(result).toBe(false);
+	await keyv.disconnect();
+});
+
+test.it("deleteMany with empty array should return false", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	const result = await keyv.deleteMany([]);
+	t.expect(result).toBe(false);
+	await keyv.disconnect();
+});
+
+test.it("deleteMany with useSets should remove from set", async (t) => {
+	const keyv = new KeyvValkey(redisURI, { useSets: true });
+	keyv.namespace = "delmany-test";
+	await keyv.set("dms1", "val1");
+	await keyv.set("dms2", "val2");
+	await keyv.deleteMany(["dms1", "dms2"]);
+	t.expect(await keyv.get("dms1")).toBe(undefined);
+	t.expect(await keyv.get("dms2")).toBe(undefined);
+	await keyv.disconnect();
+});
+
 test.it(
 	"iterator should iterate over multiple keys in namespace",
 	async (t) => {
