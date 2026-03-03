@@ -4,27 +4,47 @@ import Redis from "iovalkey";
 import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
+/**
+ * Valkey storage adapter for Keyv. Supports both standalone and cluster modes
+ * using iovalkey as the underlying client. Implements the {@link KeyvStoreAdapter}
+ * interface with support for namespacing, TTL, batch operations, and async iteration.
+ */
 class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	/**
 	 * The namespace used to prefix keys for multi-tenant separation.
+	 * When set, all keys are scoped under this namespace to prevent collisions
+	 * between different consumers sharing the same Valkey instance.
 	 * @default undefined
 	 */
 	private _namespace?: string;
 
 	/**
-	 * Whether to use sets for key management.
-	 * When true, uses sets to track namespaced keys for cleaner management.
-	 * When false, uses pattern matching instead.
-	 * @default true
+	 * Whether to use Redis/Valkey sets for tracking namespaced keys.
+	 * When true, keys are tracked in a set for efficient `clear()` operations.
+	 * When false, `clear()` uses pattern-based key scanning with `KEYS` command.
+	 * @default false
 	 */
 	private _useSets = false;
 
 	/**
-	 * The iovalkey Redis or Cluster instance.
+	 * The underlying iovalkey Redis or Cluster client instance used for all
+	 * storage operations. Can be a standalone Redis connection or a Cluster instance.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	private _redis: any;
 
+	/**
+	 * Creates a new KeyvValkey adapter instance.
+	 *
+	 * Accepts either a connection URI string, a pre-configured iovalkey Redis/Cluster instance,
+	 * or a configuration object. When a URI string is provided, a new Redis connection is created.
+	 * When an existing Redis/Cluster instance is passed, it is reused directly.
+	 *
+	 * @param {KeyvValkeyOptions | KeyvUriOptions} uri - Connection URI string (e.g. `"redis://localhost:6379"`),
+	 *   a pre-configured iovalkey Redis/Cluster instance, or an options object.
+	 * @param {KeyvValkeyOptions} [options] - Additional adapter options such as `useSets`. Merged with
+	 *   options derived from `uri` when `uri` is a string or plain options object.
+	 */
 	constructor(
 		uri: KeyvValkeyOptions | KeyvUriOptions,
 		options?: KeyvValkeyOptions,
@@ -55,50 +75,64 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
+	 * Gets the namespace for the adapter. When set, all keys are prefixed with
+	 * this namespace to provide multi-tenant isolation within a shared Valkey instance.
+	 * @returns {string | undefined} The current namespace, or `undefined` if no namespace is set.
 	 */
 	public get namespace(): string | undefined {
 		return this._namespace;
 	}
 
 	/**
-	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+	 * Sets the namespace for the adapter. Used for key prefixing and scoping
+	 * operations like `clear()`, `iterator()`, and set-based key tracking.
+	 * @param {string | undefined} value - The namespace string to use, or `undefined` to remove namespacing.
 	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
 	}
 
 	/**
-	 * Get whether sets are used for key management.
-	 * @default true
+	 * Gets whether Valkey sets are used for key management. When enabled, keys are tracked
+	 * in a Valkey set per namespace, allowing `clear()` to efficiently remove only the keys
+	 * belonging to that namespace without scanning.
+	 * @returns {boolean} `true` if set-based key tracking is enabled, `false` otherwise.
+	 * @default false
 	 */
 	public get useSets(): boolean {
 		return this._useSets;
 	}
 
 	/**
-	 * Set whether sets are used for key management.
+	 * Sets whether Valkey sets are used for key management.
+	 * @param {boolean} value - `true` to enable set-based key tracking, `false` to use pattern scanning.
 	 */
 	public set useSets(value: boolean) {
 		this._useSets = value;
 	}
 
 	/**
-	 * @deprecated Use `useSets` instead.
+	 * Gets whether Redis sets are used for key management.
+	 * @returns {boolean} `true` if set-based key tracking is enabled, `false` otherwise.
+	 * @deprecated Use {@link useSets} instead.
 	 */
 	public get useRedisSets(): boolean {
 		return this._useSets;
 	}
 
 	/**
-	 * @deprecated Use `useSets` instead.
+	 * Sets whether Redis sets are used for key management.
+	 * @param {boolean} value - `true` to enable set-based key tracking, `false` to use pattern scanning.
+	 * @deprecated Use {@link useSets} instead.
 	 */
 	public set useRedisSets(value: boolean) {
 		this._useSets = value;
 	}
 
 	/**
-	 * Get the iovalkey Redis or Cluster instance.
+	 * Gets the underlying iovalkey Redis or Cluster client instance.
+	 * Can be used to access the raw client for advanced operations not exposed by the adapter.
+	 * @returns {any} The iovalkey Redis or Cluster instance.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public get redis(): any {
@@ -106,7 +140,8 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Set the iovalkey Redis or Cluster instance.
+	 * Replaces the underlying iovalkey Redis or Cluster client instance.
+	 * @param {any} value - The new iovalkey Redis or Cluster instance to use.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public set redis(value: any) {
@@ -114,7 +149,9 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get the options for the adapter. This is provided for backward compatibility.
+	 * Gets the adapter options for backward compatibility with Keyv internals.
+	 * Returns the dialect identifier and current `useSets` setting.
+	 * @returns {{ dialect: string; useSets: boolean }} The adapter options object.
 	 */
 	public get opts(): Record<string, unknown> {
 		return {
@@ -123,6 +160,13 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		};
 	}
 
+	/**
+	 * Retrieves the value associated with a key from the Valkey store.
+	 * The key is resolved through the namespace prefix before querying.
+	 * @template Value - The type of the stored value.
+	 * @param {string} key - The key to look up.
+	 * @returns {Promise<StoredData<Value> | undefined>} The stored data if found, or `undefined` if the key does not exist.
+	 */
 	public async get<Value>(key: string): Promise<StoredData<Value> | undefined> {
 		key = this.getKeyName(key);
 
@@ -134,6 +178,15 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return value;
 	}
 
+	/**
+	 * Retrieves the values associated with multiple keys from the Valkey store in a single operation.
+	 * In cluster mode, keys are grouped by hash slot to avoid CROSSSLOT errors and each group
+	 * is fetched with a separate `MGET` command. In standalone mode, a single `MGET` is used.
+	 * @template Value - The type of the stored values.
+	 * @param {string[]} keys - An array of keys to look up.
+	 * @returns {Promise<Array<StoredData<Value | undefined>>>} An array of stored data in the same order as the input keys.
+	 *   Each element is the stored value or `undefined` if the corresponding key does not exist.
+	 */
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<StoredData<Value | undefined>>> {
@@ -160,6 +213,17 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return this._redis.mget(resolvedKeys);
 	}
 
+	/**
+	 * Stores a key-value pair in the Valkey store with an optional TTL (time-to-live).
+	 * If the value is `undefined`, the operation is skipped and returns `undefined`.
+	 * When `useSets` is enabled, the key is also added to the namespace tracking set
+	 * within an atomic transaction.
+	 * @param {string} key - The key under which to store the value.
+	 * @param {any} value - The value to store. If `undefined`, the operation is a no-op.
+	 * @param {number} [ttl] - Optional time-to-live in milliseconds. When provided, the key
+	 *   will automatically expire after this duration.
+	 * @returns {Promise<undefined>} Returns `undefined` if the value is `undefined`.
+	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any, ttl?: number) {
 		if (value === undefined) {
@@ -187,6 +251,16 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		}
 	}
 
+	/**
+	 * Stores multiple key-value pairs in the Valkey store in a single batched operation.
+	 * Entries with `undefined` values are skipped. In cluster mode, entries are grouped by
+	 * hash slot and each group is executed as a separate `MULTI/EXEC` transaction to avoid
+	 * CROSSSLOT errors. When `useSets` is enabled, each key is also added to the namespace
+	 * tracking set within the same transaction.
+	 * @param {Array<{ key: string; value: any; ttl?: number }>} entries - An array of objects
+	 *   containing `key`, `value`, and an optional `ttl` in milliseconds for each entry.
+	 * @returns {Promise<void>}
+	 */
 	public async setMany(
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		entries: Array<{ key: string; value: any; ttl?: number }>,
@@ -241,6 +315,13 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		);
 	}
 
+	/**
+	 * Deletes a single key from the Valkey store. Uses `UNLINK` for non-blocking removal.
+	 * When `useSets` is enabled, the key is also removed from the namespace tracking set
+	 * within an atomic transaction.
+	 * @param {string} key - The key to delete.
+	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` if the key did not exist.
+	 */
 	public async delete(key: string) {
 		key = this.getKeyName(key);
 		let items = 0;
@@ -260,6 +341,14 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return items > 0;
 	}
 
+	/**
+	 * Deletes multiple keys from the Valkey store in a single batched operation.
+	 * In cluster mode, keys are grouped by hash slot and each group is executed as
+	 * a separate `MULTI/EXEC` transaction to avoid CROSSSLOT errors. When `useSets`
+	 * is enabled, keys are also removed from the namespace tracking set.
+	 * @param {string[]} keys - An array of keys to delete.
+	 * @returns {Promise<boolean>} `true` if at least one key existed and was deleted, `false` if none of the keys existed.
+	 */
 	public async deleteMany(keys: string[]) {
 		if (keys.length === 0) {
 			return false;
@@ -291,6 +380,14 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return deleted;
 	}
 
+	/**
+	 * Checks whether multiple keys exist in the Valkey store in a single batched operation.
+	 * In cluster mode, keys are grouped by hash slot and each group is checked using
+	 * a separate `MULTI/EXEC` transaction with `EXISTS` commands to avoid CROSSSLOT errors.
+	 * @param {string[]} keys - An array of keys to check for existence.
+	 * @returns {Promise<boolean[]>} An array of booleans in the same order as the input keys.
+	 *   Each element is `true` if the corresponding key exists, `false` otherwise.
+	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		if (keys.length === 0) {
 			return [];
@@ -319,6 +416,14 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return resolvedKeys.map((k) => resultMap.get(k) ?? false);
 	}
 
+	/**
+	 * Removes all keys belonging to the current namespace from the Valkey store.
+	 * When `useSets` is enabled, retrieves all tracked keys from the namespace set
+	 * and removes them along with the set itself using `UNLINK` and `SREM`.
+	 * When `useSets` is disabled, uses the `KEYS` command with a pattern match
+	 * to find and remove all keys matching the namespace prefix.
+	 * @returns {Promise<void>}
+	 */
 	public async clear() {
 		if (this._useSets) {
 			const keys: string[] = await this._redis.smembers(this.getNamespace());
@@ -337,6 +442,15 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		}
 	}
 
+	/**
+	 * Creates an async generator that iterates over all key-value pairs matching
+	 * the given namespace. Uses the `SCAN` command for cursor-based iteration to
+	 * avoid blocking the server. Values are fetched in batches using `MGET`.
+	 * @param {string} [namespace] - The namespace to iterate over. If not provided,
+	 *   iterates over keys matching the empty namespace prefix.
+	 * @yields {[string, string]} A tuple of `[key, value]` for each matching entry.
+	 *   The key has the internal namespace prefix stripped when `useSets` is disabled.
+	 */
 	public async *iterator(namespace?: string) {
 		const scan = this._redis.scan.bind(this._redis);
 		const get = this._redis.mget.bind(this._redis);
@@ -357,18 +471,32 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		} while (cursor !== "0");
 	}
 
+	/**
+	 * Checks whether a key exists in the Valkey store.
+	 * @param {string} key - The key to check for existence.
+	 * @returns {Promise<boolean>} `true` if the key exists, `false` otherwise.
+	 */
 	public async has(key: string) {
 		key = this.getKeyName(key);
 		const value: number = await this._redis.exists(key);
 		return value !== 0;
 	}
 
+	/**
+	 * Disconnects the underlying iovalkey client from the Valkey server.
+	 * After calling this method, the adapter can no longer perform operations
+	 * and any subsequent calls will throw an error.
+	 * @returns {Promise<void>}
+	 */
 	public async disconnect() {
 		return this._redis.disconnect();
 	}
 
 	/**
-	 * Returns the namespace prefix string for key scoping.
+	 * Builds the internal namespace prefix string used for key scoping and set tracking.
+	 * Returns `"namespace:<namespace>"` when a namespace is set, or `"namespace:"` as
+	 * the default prefix when no namespace is configured.
+	 * @returns {string} The fully qualified namespace prefix string.
 	 */
 	private getNamespace(): string {
 		if (this.namespace) {
@@ -379,7 +507,11 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Returns the fully qualified key name, applying namespace prefix when not using sets.
+	 * Resolves a logical key to its fully qualified storage key. When `useSets` is disabled,
+	 * the key is prefixed with the namespace string (e.g. `"namespace:myns:mykey"`).
+	 * When `useSets` is enabled, the key is returned as-is since set membership handles scoping.
+	 * @param {string} key - The logical key to resolve.
+	 * @returns {string} The fully qualified key for use in Valkey commands.
 	 */
 	private getKeyName(key: string): string {
 		if (!this._useSets) {
@@ -390,15 +522,22 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Returns true if the underlying client is a Cluster instance.
+	 * Checks whether the underlying iovalkey client is a Cluster instance.
+	 * Used internally to determine whether operations need cluster-safe handling
+	 * such as hash slot grouping for multi-key commands.
+	 * @returns {boolean} `true` if the client is a Cluster instance, `false` for standalone.
 	 */
 	private isCluster(): boolean {
 		return this._redis.isCluster === true;
 	}
 
 	/**
-	 * Groups keys by hash slot for cluster-safe transactions.
-	 * In non-cluster mode, all keys go to slot 0.
+	 * Groups an array of keys by their Redis hash slot for cluster-safe multi-key operations.
+	 * In cluster mode, keys that map to different hash slots cannot be used in the same
+	 * `MULTI/EXEC` transaction, so they must be grouped and processed separately.
+	 * In standalone (non-cluster) mode, all keys are assigned to slot 0 for a single batch.
+	 * @param {string[]} keys - The keys to group by hash slot.
+	 * @returns {Map<number, string[]>} A map from hash slot number to the array of keys in that slot.
 	 */
 	private getSlotMap(keys: string[]): Map<number, string[]> {
 		const slotMap = new Map<number, string[]>();
@@ -418,10 +557,19 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 }
 
 /**
- * Will create a Keyv instance with the Valkey adapter.
- * @param {KeyvValkeyOptions | KeyvUriOptions} connect - How to connect to the Valkey server. If string pass in the url, if object pass in the options.
- * @param {KeyvValkeyOptions} options - Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
- * @returns {Keyv} - Keyv instance with the Redis adapter
+ * Creates a new {@link Keyv} instance pre-configured with the Valkey storage adapter.
+ * This is a convenience factory function that handles adapter instantiation and wiring.
+ * @param {KeyvValkeyOptions | KeyvUriOptions} [connect="redis://localhost:6379"] - Connection configuration.
+ *   Can be a Redis URI string (e.g. `"redis://localhost:6379"`) or an options object with
+ *   connection details and adapter settings.
+ * @param {KeyvValkeyOptions} [options] - Additional adapter options such as `useSets` and `namespace`.
+ * @returns {Keyv} A fully configured Keyv instance backed by the Valkey adapter.
+ * @example
+ * ```typescript
+ * const keyv = createKeyv("redis://localhost:6379");
+ * await keyv.set("greeting", "hello");
+ * console.log(await keyv.get("greeting")); // "hello"
+ * ```
  */
 export function createKeyv(
 	connect?: KeyvValkeyOptions | KeyvUriOptions,
