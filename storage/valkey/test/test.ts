@@ -19,7 +19,7 @@ test.it("reuse a redis instance", async (t) => {
 	// @ts-expect-error foo doesn't exist on Redis
 	redis.foo = "bar";
 	const keyv = new KeyvValkey(redis);
-	t.expect(keyv.redis.foo).toBe("bar");
+	t.expect(keyv.client.foo).toBe("bar");
 
 	const key = faker.string.alphanumeric(10);
 	const value = faker.string.alphanumeric(10);
@@ -114,7 +114,7 @@ test.it("should handle KeyvOptions without uri", (t) => {
 		isCluster: true,
 	};
 	const keyv = new KeyvValkey(options as Cluster);
-	t.expect(keyv.redis instanceof Redis).toBeTruthy();
+	t.expect(keyv.client instanceof Redis).toBeTruthy();
 });
 
 test.it("should handle KeyvOptions with family option", (t) => {
@@ -123,7 +123,7 @@ test.it("should handle KeyvOptions with family option", (t) => {
 		family: 4,
 	};
 	const keyv = new KeyvValkey(options);
-	t.expect(keyv.redis instanceof Redis).toBeTruthy();
+	t.expect(keyv.client instanceof Redis).toBeTruthy();
 });
 
 test.it("should handle RedisOptions", (t) => {
@@ -132,7 +132,7 @@ test.it("should handle RedisOptions", (t) => {
 		connectionName: "name",
 	};
 	const keyv = new KeyvValkey(options);
-	t.expect(keyv.redis instanceof Redis).toBeTruthy();
+	t.expect(keyv.client instanceof Redis).toBeTruthy();
 });
 
 test.it("set method should use sets when useSets is false", async (t) => {
@@ -250,8 +250,8 @@ test.it("should allow setting and getting namespace via setter", (t) => {
 test.it("should allow setting redis instance via setter", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const newRedis = new Redis(redisURI);
-	keyv.redis = newRedis;
-	t.expect(keyv.redis).toBe(newRedis);
+	keyv.client = newRedis;
+	t.expect(keyv.client).toBe(newRedis);
 });
 
 test.it("opts getter should return dialect as redis", (t) => {
