@@ -454,7 +454,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	public async *iterator(namespace?: string) {
 		const scan = this._client.scan.bind(this._client);
 		const get = this._client.mget.bind(this._client);
-		const prefix = this._useSets ? "" : `${this.getNamespace()}:`;
+		const prefix = `${this.getNamespace()}:`;
 		const match = `${prefix}${namespace ?? ""}:*`;
 		let cursor = "0";
 		do {
@@ -463,7 +463,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			if (keys.length > 0) {
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
-					const key = prefix ? keys[i].slice(prefix.length) : keys[i];
+					const key = keys[i].slice(prefix.length);
 					const value = values[i];
 					yield [key, value];
 				}
@@ -507,18 +507,15 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Resolves a logical key to its fully qualified storage key. When `useSets` is disabled,
-	 * the key is prefixed with the namespace string (e.g. `"namespace:myns:mykey"`).
-	 * When `useSets` is enabled, the key is returned as-is since set membership handles scoping.
+	 * Resolves a logical key to its fully qualified storage key by prefixing it
+	 * with the namespace string (e.g. `"namespace:myns:mykey"`). The namespace
+	 * prefix is always applied regardless of the `useSets` setting to ensure
+	 * consistent namespace isolation.
 	 * @param {string} key - The logical key to resolve.
 	 * @returns {string} The fully qualified key for use in Valkey commands.
 	 */
 	private getKeyName(key: string): string {
-		if (!this._useSets) {
-			return `${this.getNamespace()}:${key}`;
-		}
-
-		return key;
+		return `${this.getNamespace()}:${key}`;
 	}
 
 	/**
