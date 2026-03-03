@@ -126,7 +126,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	/**
 	 * Returns true if the underlying client is a Cluster instance.
 	 */
-	private _isCluster(): boolean {
+	private isCluster(): boolean {
 		return this._redis.isCluster === true;
 	}
 
@@ -134,9 +134,9 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	 * Groups keys by hash slot for cluster-safe transactions.
 	 * In non-cluster mode, all keys go to slot 0.
 	 */
-	private _getSlotMap(keys: string[]): Map<number, string[]> {
+	private getSlotMap(keys: string[]): Map<number, string[]> {
 		const slotMap = new Map<number, string[]>();
-		if (this._isCluster()) {
+		if (this.isCluster()) {
 			for (const key of keys) {
 				const slot = calculateSlot(key);
 				const slotKeys = slotMap.get(slot) ?? [];
@@ -150,7 +150,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return slotMap;
 	}
 
-	_getNamespace(): string {
+	getNamespace(): string {
 		if (this.namespace) {
 			return `namespace:${this.namespace}`;
 		}
@@ -158,16 +158,16 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		return `namespace:`;
 	}
 
-	_getKeyName = (key: string): string => {
+	getKeyName = (key: string): string => {
 		if (!this._useSets) {
-			return `${this._getNamespace()}:${key}`;
+			return `${this.getNamespace()}:${key}`;
 		}
 
 		return key;
 	};
 
 	async get<Value>(key: string): Promise<StoredData<Value> | undefined> {
-		key = this._getKeyName(key);
+		key = this.getKeyName(key);
 
 		const value = await this._redis.get(key);
 		if (value === null) {
@@ -180,10 +180,10 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	async getMany<Value>(
 		keys: string[],
 	): Promise<Array<StoredData<Value | undefined>>> {
-		const resolvedKeys = keys.map(this._getKeyName);
+		const resolvedKeys = keys.map(this.getKeyName);
 
-		if (this._isCluster()) {
-			const slotMap = this._getSlotMap(resolvedKeys);
+		if (this.isCluster()) {
+			const slotMap = this.getSlotMap(resolvedKeys);
 			const resultMap = new Map<string, StoredData<Value | undefined>>();
 
 			await Promise.all(
@@ -209,7 +209,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			return undefined;
 		}
 
-		key = this._getKeyName(key);
+		key = this.getKeyName(key);
 
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		const set = async (redis: any) => {
@@ -223,7 +223,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		if (this._useSets) {
 			const trx = await this._redis.multi();
 			await set(trx);
-			await trx.sadd(this._getNamespace(), key);
+			await trx.sadd(this.getNamespace(), key);
 			await trx.exec();
 		} else {
 			await set(this._redis);
@@ -245,7 +245,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 				continue;
 			}
 
-			resolvedEntries.push({ k: this._getKeyName(key), value, ttl });
+			resolvedEntries.push({ k: this.getKeyName(key), value, ttl });
 		}
 
 		if (resolvedEntries.length === 0) {
@@ -253,7 +253,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		}
 
 		const slotMap = new Map<number, typeof resolvedEntries>();
-		if (this._isCluster()) {
+		if (this.isCluster()) {
 			for (const entry of resolvedEntries) {
 				const slot = calculateSlot(entry.k);
 				const group = slotMap.get(slot) ?? [];
@@ -275,7 +275,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 					}
 
 					if (this._useSets) {
-						trx.sadd(this._getNamespace(), k);
+						trx.sadd(this.getNamespace(), k);
 					}
 				}
 
@@ -285,7 +285,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async delete(key: string) {
-		key = this._getKeyName(key);
+		key = this.getKeyName(key);
 		let items = 0;
 		// biome-ignore lint/suspicious/noExplicitAny: allowed
 		const unlink = async (redis: any) => redis.unlink(key);
@@ -293,7 +293,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 		if (this._useSets) {
 			const trx = this._redis.multi();
 			await unlink(trx);
-			await trx.srem(this._getNamespace(), key);
+			await trx.srem(this.getNamespace(), key);
 			const r = await trx.exec();
 			items = r[0][1];
 		} else {
@@ -308,8 +308,8 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			return false;
 		}
 
-		const resolvedKeys = keys.map((key) => this._getKeyName(key));
-		const slotMap = this._getSlotMap(resolvedKeys);
+		const resolvedKeys = keys.map((key) => this.getKeyName(key));
+		const slotMap = this.getSlotMap(resolvedKeys);
 		let deleted = false;
 
 		await Promise.all(
@@ -318,7 +318,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 				for (const k of slotKeys) {
 					trx.unlink(k);
 					if (this._useSets) {
-						trx.srem(this._getNamespace(), k);
+						trx.srem(this.getNamespace(), k);
 					}
 				}
 
@@ -339,9 +339,9 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 			return [];
 		}
 
-		const resolvedKeys = keys.map((key) => this._getKeyName(key));
+		const resolvedKeys = keys.map((key) => this.getKeyName(key));
 		const resultMap = new Map<string, boolean>();
-		const slotMap = this._getSlotMap(resolvedKeys);
+		const slotMap = this.getSlotMap(resolvedKeys);
 
 		await Promise.all(
 			Array.from(slotMap.entries(), async ([_slot, slotKeys]) => {
@@ -353,7 +353,8 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 				const results = await trx.exec();
 				for (const [index, result] of results.entries()) {
 					// biome-ignore lint/suspicious/noExplicitAny: type format
-					resultMap.set(slotKeys[index], (result as any)[1] !== 0);
+					const r = result as any;
+					resultMap.set(slotKeys[index], r[0] === null && r[1] > 0);
 				}
 			}),
 		);
@@ -363,15 +364,15 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 
 	async clear() {
 		if (this._useSets) {
-			const keys: string[] = await this._redis.smembers(this._getNamespace());
+			const keys: string[] = await this._redis.smembers(this.getNamespace());
 			if (keys.length > 0) {
 				await Promise.all([
 					this._redis.unlink([...keys]),
-					this._redis.srem(this._getNamespace(), [...keys]),
+					this._redis.srem(this.getNamespace(), [...keys]),
 				]);
 			}
 		} else {
-			const pattern = `${this._getNamespace()}*`;
+			const pattern = `${this.getNamespace()}*`;
 			const keys: string[] = await this._redis.keys(pattern);
 			if (keys.length > 0) {
 				await this._redis.unlink(keys);
@@ -382,7 +383,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	async *iterator(namespace?: string) {
 		const scan = this._redis.scan.bind(this._redis);
 		const get = this._redis.mget.bind(this._redis);
-		const prefix = this._useSets ? "" : `${this._getNamespace()}:`;
+		const prefix = this._useSets ? "" : `${this.getNamespace()}:`;
 		const match = `${prefix}${namespace ?? ""}:*`;
 		let cursor = "0";
 		do {
@@ -400,7 +401,7 @@ class KeyvValkey extends EventEmitter implements KeyvStoreAdapter {
 	}
 
 	async has(key: string) {
-		key = this._getKeyName(key);
+		key = this.getKeyName(key);
 		const value: number = await this._redis.exists(key);
 		return value !== 0;
 	}

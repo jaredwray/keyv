@@ -36,6 +36,7 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [.clear()](#clear)
   - [.iterator(namespace?)](#iteratornamespace)
   - [.disconnect()](#disconnect)
+- [Clustering](#clustering)
 - [License](#license)
 
 # Install
@@ -292,6 +293,31 @@ Disconnects from the Valkey server.
 ```js
 await store.disconnect();
 ```
+
+## Clustering
+
+The adapter supports Valkey and Redis clusters via iovalkey's `Cluster` class. Pass a `Redis.Cluster` instance directly to the constructor:
+
+```js
+import KeyvValkey from '@keyv/valkey';
+import Redis from 'iovalkey';
+
+const cluster = new Redis.Cluster([
+  { host: '127.0.0.1', port: 7001 },
+  { host: '127.0.0.1', port: 7002 },
+  { host: '127.0.0.1', port: 7003 },
+]);
+const store = new KeyvValkey(cluster);
+```
+
+Batch methods (`getMany`, `setMany`, `deleteMany`, `hasMany`) automatically group keys by hash slot and run separate transactions per slot group. This avoids `CROSSSLOT` errors without any extra configuration.
+
+Single-key methods (`get`, `set`, `delete`, `has`) work automatically in cluster mode — iovalkey routes each command to the correct node.
+
+### Cluster gotchas
+
+- **`clear()` with `useSets: false` (the default)** uses the `KEYS` command, which only scans the node that receives the command. In cluster mode this may miss keys on other nodes. Set `useSets: true` if you need reliable `clear()` across all cluster nodes.
+- **`iterator()` in cluster mode** uses `SCAN`, which only iterates keys on the node the command is routed to. It may not return all keys across the cluster.
 
 ## License
 
