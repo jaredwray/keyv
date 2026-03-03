@@ -51,7 +51,7 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 		uri: KeyvValkeyOptions | KeyvUriOptions,
 		options?: KeyvValkeyOptions,
 	) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		if (
 			typeof uri !== "string" &&

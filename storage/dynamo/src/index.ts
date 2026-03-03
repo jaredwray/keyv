@@ -28,7 +28,7 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 	private readonly tableReady: Promise<void>;
 
 	constructor(options: KeyvDynamoOptions | string) {
-		super();
+		super({ throwOnEmptyListeners: false });
 		options ??= {};
 		if (typeof options === "string") {
 			options = { endpoint: options };

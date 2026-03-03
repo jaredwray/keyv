@@ -217,7 +217,7 @@ export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
 	 * @param options - Configuration options or connection URI string
 	 */
 	constructor(options?: KeyvMysqlOptions | string) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		if (typeof options === "string") {
 			this._uri = options;

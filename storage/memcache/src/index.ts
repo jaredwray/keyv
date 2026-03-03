@@ -39,7 +39,7 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 		uri?: string | KeyvMemcacheOptions,
 		options?: KeyvMemcacheOptions,
 	) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		const allOptions: KeyvMemcacheOptions = {
 			...(typeof uri === "object" ? uri : {}),

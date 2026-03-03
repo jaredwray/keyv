@@ -26,7 +26,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	public namespace?: string;
 
 	constructor(url?: KeyvEtcdOptions | string, options?: KeyvEtcdOptions) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		url ??= {};
 

@@ -20,7 +20,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	query: DbQuery;
 
 	constructor(keyvOptions?: KeyvSqliteOptions | string) {
-		super();
+		super({ throwOnEmptyListeners: false });
 		let options: KeyvSqliteOptions = {
 			dialect: "sqlite",
 			uri: "sqlite://:memory:",

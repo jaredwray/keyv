@@ -165,7 +165,7 @@ export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
 	 * @param options - Additional configuration options that override the first parameter.
 	 */
 	constructor(url?: KeyvMongoOptions, options?: Options) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		let mergedOptions: Options = {};
 
