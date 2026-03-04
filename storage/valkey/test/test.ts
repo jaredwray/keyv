@@ -93,10 +93,10 @@ test.it(".clear() cleaned namespace", async (t) => {
 	const redis = new Redis(redisURI);
 
 	// Namespace should also expire after calling clear
-	t.expect(await redis.exists(`namespace:${ns}`)).toBe(0);
+	t.expect(await redis.exists(ns)).toBe(0);
 
 	// Memory of each key should be null
-	t.expect(await redis.memory("USAGE", `namespace:${ns}`)).toBe(null);
+	t.expect(await redis.memory("USAGE", ns)).toBe(null);
 });
 
 test.it("Keyv stores ttl without const", async (t) => {

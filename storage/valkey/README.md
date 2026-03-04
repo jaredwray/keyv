@@ -139,6 +139,12 @@ store.redis;
 store.client;
 ```
 
+#### Key format changed from `namespace:{ns}:{key}` to `{ns}:{key}`
+
+The internal key format stored in Valkey has been simplified. The `namespace:` prefix wrapper has been removed, and duplicate namespace prefixes from Keyv core are now deduplicated. For example, a key that was previously stored as `namespace:myns:myns:foo` is now stored as `myns:foo`.
+
+**This is a breaking change.** Existing data stored with the old format will not be accessible after upgrading. You must clear your Valkey store before upgrading or migrate keys manually.
+
 #### `useSets` default changed from `true` to `false`
 
 The default value of `useSets` has changed from `true` to `false` for performance reasons. When enabled, a set is maintained for each namespace to track keys, which can lead to memory leaks in high-throughput scenarios. If you depend on the previous behavior, explicitly set `useSets: true` in your options:

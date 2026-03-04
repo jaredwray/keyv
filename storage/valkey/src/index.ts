@@ -434,7 +434,8 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 				]);
 			}
 		} else {
-			const pattern = `${this.getNamespace()}*`;
+			const ns = this.getNamespace();
+			const pattern = ns ? `${ns}:*` : "*";
 			const keys: string[] = await this._client.keys(pattern);
 			if (keys.length > 0) {
 				await this._client.unlink(keys);
@@ -454,8 +455,8 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 	public async *iterator(namespace?: string) {
 		const scan = this._client.scan.bind(this._client);
 		const get = this._client.mget.bind(this._client);
-		const prefix = `${this.getNamespace()}:`;
-		const match = `${prefix}${namespace ?? ""}:*`;
+		const ns = namespace ?? this.getNamespace();
+		const match = ns ? `${ns}:*` : "*";
 		let cursor = "0";
 		do {
 			const [curs, keys] = await scan(cursor, "MATCH", match);
@@ -463,9 +464,7 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 			if (keys.length > 0) {
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
-					const key = keys[i].slice(prefix.length);
-					const value = values[i];
-					yield [key, value];
+					yield [keys[i], values[i]];
 				}
 			}
 		} while (cursor !== "0");
@@ -493,29 +492,32 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Builds the internal namespace prefix string used for key scoping and set tracking.
-	 * Returns `"namespace:<namespace>"` when a namespace is set, or `"namespace:"` as
-	 * the default prefix when no namespace is configured.
-	 * @returns {string} The fully qualified namespace prefix string.
+	 * Returns the current namespace string used for key scoping and set tracking.
+	 * @returns {string} The namespace string, or an empty string if no namespace is set.
 	 */
 	private getNamespace(): string {
-		if (this.namespace) {
-			return `namespace:${this.namespace}`;
-		}
-
-		return `namespace:`;
+		return this.namespace ?? "";
 	}
 
 	/**
-	 * Resolves a logical key to its fully qualified storage key by prefixing it
-	 * with the namespace string (e.g. `"namespace:myns:mykey"`). The namespace
-	 * prefix is always applied regardless of the `useSets` setting to ensure
-	 * consistent namespace isolation.
+	 * Resolves a logical key to its fully qualified storage key. If the key already
+	 * starts with the namespace prefix (as added by Keyv core), it is returned as-is
+	 * to avoid double-prefixing. Otherwise, the namespace prefix is prepended.
 	 * @param {string} key - The logical key to resolve.
 	 * @returns {string} The fully qualified key for use in Valkey commands.
 	 */
 	private getKeyName(key: string): string {
-		return `${this.getNamespace()}:${key}`;
+		const ns = this.getNamespace();
+		if (!ns) {
+			return key;
+		}
+
+		const prefix = `${ns}:`;
+		if (key.startsWith(prefix)) {
+			return key;
+		}
+
+		return `${prefix}${key}`;
 	}
 
 	/**
