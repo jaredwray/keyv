@@ -147,6 +147,15 @@ The default value of `useSets` has changed from `true` to `false` for performanc
 const store = new KeyvValkey('redis://localhost:6379', { useSets: true });
 ```
 
+#### `useSets` key prefix changed from `namespace:` to `sets:`
+
+When `useSets` is enabled, all keys (both data keys and the SET tracking key) now use a `sets:` prefix instead of `namespace:`. This prevents `WRONGTYPE` collisions between the SET tracking key and regular string data keys that could share the same name.
+
+- **Data keys**: `sets:<namespace>:<key>` (was `namespace:<namespace>:<key>`)
+- **SET tracking key**: `sets:<namespace>` (was `namespace:<namespace>`)
+
+The `clear()` method automatically detects and cleans up legacy `namespace:`-prefixed SET keys, so no manual migration is needed.
+
 ## Constructor Options
 
 `KeyvValkey` accepts a connection URI string, an options object, or an existing iovalkey `Redis`/`Cluster` instance. The options object accepts the following properties along with any [`RedisOptions`](https://github.com/valkey-io/iovalkey#connect-to-valkey) from the `iovalkey` library:
@@ -186,6 +195,8 @@ console.log(store.useSets); // true
 ```
 
 **Note**: When `useSets` is `true`, a set is maintained for each namespace which can lead to memory leaks in high-performance scenarios. This is why the default is `false`.
+
+When `useSets` is enabled, all keys use the `sets:` prefix (e.g., `sets:myns:mykey`) to isolate them from non-useSets keys. The SET tracking key is stored at `sets:<namespace>`.
 
 When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS` command) to find and delete keys, which may be slower on very large databases.
 

@@ -244,7 +244,7 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 		if (this._useSets) {
 			const trx = await this._client.multi();
 			await set(trx);
-			await trx.sadd(this.getNamespace(), key);
+			await trx.sadd(this.getSetKey(), key);
 			await trx.exec();
 		} else {
 			await set(this._client);
@@ -306,7 +306,7 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 					}
 
 					if (this._useSets) {
-						trx.sadd(this.getNamespace(), k);
+						trx.sadd(this.getSetKey(), k);
 					}
 				}
 
@@ -331,7 +331,7 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 		if (this._useSets) {
 			const trx = this._client.multi();
 			await unlink(trx);
-			await trx.srem(this.getNamespace(), key);
+			await trx.srem(this.getSetKey(), key);
 			const r = await trx.exec();
 			items = r[0][1];
 		} else {
@@ -364,7 +364,7 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 				for (const k of slotKeys) {
 					trx.unlink(k);
 					if (this._useSets) {
-						trx.srem(this.getNamespace(), k);
+						trx.srem(this.getSetKey(), k);
 					}
 				}
 
@@ -426,15 +426,35 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 	 */
 	public async clear() {
 		if (this._useSets) {
-			const keys: string[] = await this._client.smembers(this.getNamespace());
+			const setKey = this.getSetKey();
+			const keys: string[] = await this._client.smembers(setKey);
 			if (keys.length > 0) {
 				await Promise.all([
 					this._client.unlink([...keys]),
-					this._client.srem(this.getNamespace(), [...keys]),
+					this._client.srem(setKey, [...keys]),
 				]);
 			}
+
+			// Legacy cleanup: clear old "namespace:<ns>" SET key from pre-v6 format
+			if (this.namespace) {
+				const legacySetKey = `namespace:${this.namespace}`;
+				const legacyKeyType: string = await this._client.type(legacySetKey);
+				if (legacyKeyType === "set") {
+					const legacyKeys: string[] =
+						await this._client.smembers(legacySetKey);
+					if (legacyKeys.length > 0) {
+						await Promise.all([
+							this._client.unlink([...legacyKeys]),
+							this._client.srem(legacySetKey, [...legacyKeys]),
+						]);
+					}
+
+					await this._client.unlink(legacySetKey);
+				}
+			}
 		} else {
-			const pattern = `${this.getNamespace()}*`;
+			const prefix = this.getKeyPrefix();
+			const pattern = prefix ? `${prefix}*` : "*";
 			const keys: string[] = await this._client.keys(pattern);
 			if (keys.length > 0) {
 				await this._client.unlink(keys);
@@ -454,7 +474,7 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 	public async *iterator(namespace?: string) {
 		const scan = this._client.scan.bind(this._client);
 		const get = this._client.mget.bind(this._client);
-		const prefix = `${this.getNamespace()}:`;
+		const prefix = `${this.getKeyPrefix()}:`;
 		const match = `${prefix}${namespace ?? ""}:*`;
 		let cursor = "0";
 		do {
@@ -493,29 +513,56 @@ class KeyvValkey extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Builds the internal namespace prefix string used for key scoping and set tracking.
-	 * Returns `"namespace:<namespace>"` when a namespace is set, or `"namespace:"` as
-	 * the default prefix when no namespace is configured.
-	 * @returns {string} The fully qualified namespace prefix string.
+	 * Returns the key used for the Valkey SET that tracks all data keys in this namespace.
+	 * Only used when `useSets` is enabled. The `sets:` prefix ensures this SET key
+	 * never collides with data keys from other adapters or non-useSets configurations.
+	 * @returns {string} The SET tracking key (e.g. `"sets:myns"` or `"sets"` when no namespace).
 	 */
-	private getNamespace(): string {
+	private getSetKey(): string {
+		if (this.namespace) {
+			return `sets:${this.namespace}`;
+		}
+
+		return "sets";
+	}
+
+	/**
+	 * Returns the key prefix used for scoping data keys. When `useSets` is enabled,
+	 * keys use the `sets:` prefix to isolate them from non-useSets keys. When disabled
+	 * and a namespace is set, keys use the `namespace:` prefix. When no namespace is
+	 * set and `useSets` is disabled, keys are stored without a prefix.
+	 * @returns {string} The key prefix, or empty string if no namespace and useSets is disabled.
+	 */
+	private getKeyPrefix(): string {
+		if (this._useSets) {
+			if (this.namespace) {
+				return `sets:${this.namespace}`;
+			}
+
+			return "sets";
+		}
+
 		if (this.namespace) {
 			return `namespace:${this.namespace}`;
 		}
 
-		return `namespace:`;
+		return "";
 	}
 
 	/**
 	 * Resolves a logical key to its fully qualified storage key by prefixing it
-	 * with the namespace string (e.g. `"namespace:myns:mykey"`). The namespace
-	 * prefix is always applied regardless of the `useSets` setting to ensure
-	 * consistent namespace isolation.
+	 * with the appropriate prefix (e.g. `"sets:myns:mykey"` or `"namespace:myns:mykey"`).
+	 * When no prefix is configured, returns the key as-is.
 	 * @param {string} key - The logical key to resolve.
 	 * @returns {string} The fully qualified key for use in Valkey commands.
 	 */
 	private getKeyName(key: string): string {
-		return `${this.getNamespace()}:${key}`;
+		const prefix = this.getKeyPrefix();
+		if (prefix) {
+			return `${prefix}:${key}`;
+		}
+
+		return key;
 	}
 
 	/**
