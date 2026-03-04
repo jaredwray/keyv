@@ -462,6 +462,75 @@ test.it("iterator with useSets should iterate keys", async (t) => {
 	await keyv.disconnect();
 });
 
+test.it("useSets should use sets: prefix for SET tracking key", async (t) => {
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvValkey(redis, { useSets: true });
+	const ns = `sets-prefix-${faker.string.alphanumeric(8)}`;
+	keyv.namespace = ns;
+
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
+
+	// The SET tracking key should use the sets: prefix
+	t.expect(await redis.exists(`sets:${ns}`)).toBe(1);
+	t.expect(await redis.type(`sets:${ns}`)).toBe("set");
+
+	// The old namespace: format should NOT exist
+	t.expect(await redis.exists(`namespace:${ns}`)).toBe(0);
+
+	await keyv.clear();
+	await keyv.disconnect();
+});
+
+test.it(
+	"useSets clear should clean up legacy namespace: SET keys",
+	async (t) => {
+		const redis = new Redis(redisURI);
+		const ns = `legacy-${faker.string.alphanumeric(8)}`;
+
+		// Simulate legacy data: a SET at namespace:<ns> with some tracked keys
+		const legacyDataKey = `namespace:${ns}:oldkey`;
+		await redis.set(legacyDataKey, "oldvalue");
+		await redis.sadd(`namespace:${ns}`, legacyDataKey);
+
+		// Create adapter with useSets and call clear
+		const keyv = new KeyvValkey(redis, { useSets: true });
+		keyv.namespace = ns;
+		await keyv.clear();
+
+		// Legacy SET and data keys should be cleaned up
+		t.expect(await redis.exists(`namespace:${ns}`)).toBe(0);
+		t.expect(await redis.exists(legacyDataKey)).toBe(0);
+
+		await keyv.disconnect();
+	},
+);
+
+test.it(
+	"useSets should not collide with string keys at namespace path",
+	async (t) => {
+		const redis = new Redis(redisURI);
+		const ns = `collision-${faker.string.alphanumeric(8)}`;
+
+		// Another client stores a string at namespace:<ns>
+		await redis.set(`namespace:${ns}`, "some-string-value");
+
+		// useSets operations should work without WRONGTYPE errors
+		const keyv = new KeyvValkey(redis, { useSets: true });
+		keyv.namespace = ns;
+
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, "value");
+		t.expect(await keyv.get(key)).toBe("value");
+		await keyv.clear();
+		t.expect(await keyv.get(key)).toBe(undefined);
+
+		// Clean up the string key (not managed by keyv)
+		await redis.del(`namespace:${ns}`);
+		await keyv.disconnect();
+	},
+);
+
 test.it("deleteMany with useSets should remove from set", async (t) => {
 	const keyv = new KeyvValkey(redisURI, { useSets: true });
 	const ns = `delmany-${faker.string.alphanumeric(8)}`;
