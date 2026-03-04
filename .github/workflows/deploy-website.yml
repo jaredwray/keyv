@@ -35,9 +35,11 @@ jobs:
     - name: Build Website
       run: pnpm website:build
 
+    - name: Install Wrangler
+      run: pnpm add -Dw wrangler@3
+
     - name: Publish to Cloudflare Pages
       uses: cloudflare/wrangler-action@v3
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        packageManager: npm
         command: pages deploy website/dist --project-name=keyv --branch=main
