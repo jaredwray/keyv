@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import Keyv, { type CompressionAdapter, type KeyvStoreAdapter } from "keyv";
 import type * as Vitest from "vitest";
 
@@ -58,8 +59,10 @@ const keyvCompressionTests = (
 
 	test.it("compress/decompress with main keyv", async (t) => {
 		const keyv = new Keyv({ compression });
-		await keyv.set("foo", "bar");
-		t.expect(await keyv.get("foo")).toBe("bar");
+		const key = faker.string.alphanumeric(10);
+		const value = faker.lorem.sentence();
+		await keyv.set(key, value);
+		t.expect(await keyv.get(key)).toBe(value);
 	});
 };
 
