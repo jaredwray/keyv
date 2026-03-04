@@ -1,6 +1,6 @@
 {
   "name": "@keyv/mono-repo",
-  "version": "6.0.0-alpha.1",
+  "version": "6.0.0-alpha.2",
   "type": "module",
   "description": "Keyv Mono Repo",
   "repository": "https://github.com/jaredwray/keyv.git",
