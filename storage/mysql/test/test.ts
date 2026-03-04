@@ -13,7 +13,7 @@ keyvTestSuite(test, Keyv, store);
 const iteratorStore = () => new KeyvMysql({ uri, iterationLimit: 2 });
 keyvIteratorTests(test, Keyv, iteratorStore);
 
-test.it("iterator with default namespace", async (t) => {
+test.it("iterator with explicit namespace", async (t) => {
 	const ns = faker.string.alphanumeric(8);
 	const keyv = new KeyvMysql({ uri });
 	keyv.namespace = ns;
@@ -35,6 +35,26 @@ test.it("iterator with default namespace", async (t) => {
 	t.expect(collected.get(`${ns}:${key1}`)).toBe(val1);
 	t.expect(collected.get(`${ns}:${key2}`)).toBe(val2);
 	t.expect(collected.get(`${ns}:${key3}`)).toBe(val3);
+});
+
+test.it("iterator with default namespace", async (t) => {
+	const keyv = new KeyvMysql({ uri });
+	await keyv.clear();
+	const key1 = faker.string.alphanumeric(10);
+	const val1 = faker.string.alphanumeric(10);
+	const key2 = faker.string.alphanumeric(10);
+	const val2 = faker.string.alphanumeric(10);
+	await keyv.set(key1, val1);
+	await keyv.set(key2, val2);
+	const collected = new Map<string, string>();
+	for await (const [key, value] of keyv.iterator()) {
+		collected.set(key, value);
+	}
+
+	t.expect(collected.size).toBeGreaterThanOrEqual(2);
+	t.expect(collected.get(key1)).toBe(val1);
+	t.expect(collected.get(key2)).toBe(val2);
+	await keyv.clear();
 });
 
 test.it(".clear() with undefined namespace", async (t) => {
