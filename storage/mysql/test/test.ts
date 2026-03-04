@@ -323,8 +323,8 @@ test.it("setMany() extracts and stores expires for each entry", async (t) => {
 	);
 	const row1 = rows.find((r) => r.id === key1);
 	const row2 = rows.find((r) => r.id === key2);
-	t.expect(Number(row1!.expires)).toBe(5000);
-	t.expect(row2!.expires).toBeNull();
+	t.expect(Number(row1?.expires)).toBe(5000);
+	t.expect(row2?.expires).toBeNull();
 });
 
 test.it(

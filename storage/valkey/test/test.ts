@@ -531,6 +531,29 @@ test.it(
 	},
 );
 
+test.it(
+	"useSets without namespace should use 'sets' as key prefix",
+	async (t) => {
+		const redis = new Redis(redisURI);
+		const keyv = new KeyvValkey(redis, { useSets: true });
+
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, "value");
+
+		// SET tracking key should be "sets" (no namespace suffix)
+		t.expect(await redis.exists("sets")).toBe(1);
+		t.expect(await redis.type("sets")).toBe("set");
+
+		// Data key should be "sets:<key>"
+		t.expect(await redis.exists(`sets:${key}`)).toBe(1);
+
+		t.expect(await keyv.get(key)).toBe("value");
+		await keyv.clear();
+		t.expect(await keyv.get(key)).toBe(undefined);
+		await keyv.disconnect();
+	},
+);
+
 test.it("deleteMany with useSets should remove from set", async (t) => {
 	const keyv = new KeyvValkey(redisURI, { useSets: true });
 	const ns = `delmany-${faker.string.alphanumeric(8)}`;
