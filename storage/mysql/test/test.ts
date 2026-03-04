@@ -318,14 +318,13 @@ test.it("setMany() extracts and stores expires for each entry", async (t) => {
 		{ key: key1, value: JSON.stringify({ value: "a", expires: 5000 }) },
 		{ key: key2, value: JSON.stringify({ value: "b" }) },
 	]);
-	const row1 = await keyv.query<mysql.RowDataPacket[]>(
-		`SELECT expires FROM \`keyv\` WHERE id = '${key1}' AND namespace = ''`,
+	const rows = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT id, expires FROM \`keyv\` WHERE id IN ('${key1}', '${key2}') AND namespace = ''`,
 	);
-	const row2 = await keyv.query<mysql.RowDataPacket[]>(
-		`SELECT expires FROM \`keyv\` WHERE id = '${key2}' AND namespace = ''`,
-	);
-	t.expect(Number(row1[0].expires)).toBe(5000);
-	t.expect(row2[0].expires).toBeNull();
+	const row1 = rows.find((r) => r.id === key1);
+	const row2 = rows.find((r) => r.id === key2);
+	t.expect(Number(row1!.expires)).toBe(5000);
+	t.expect(row2!.expires).toBeNull();
 });
 
 test.it(
