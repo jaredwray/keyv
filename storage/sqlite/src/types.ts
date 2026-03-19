@@ -10,15 +10,18 @@ export type KeyvSqliteOptions = {
 	uri?: string;
 	busyTimeout?: number;
 	table?: string;
+	/** Maximum key length (VARCHAR size). Alias: keyLength. @default 255 */
 	keySize?: number;
+	/** Maximum key length (VARCHAR size). Alias for keySize. @default 255 */
+	keyLength?: number;
+	/** Maximum namespace length (VARCHAR size). @default 255 */
+	namespaceLength?: number;
 	db?: string;
 	iterationLimit?: number | string;
 	/** Enable WAL (Write-Ahead Logging) mode. */
 	wal?: boolean;
-	connect?: () => Promise<{
-		query: DbQuery;
-		close: DbClose;
-	}>;
+	/** Interval in milliseconds between automatic expired-entry cleanup runs. 0 disables. @default 0 */
+	clearExpiredInterval?: number;
 };
 
 export type Db = {

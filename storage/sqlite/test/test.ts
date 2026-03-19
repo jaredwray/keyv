@@ -115,6 +115,15 @@ test.it("keySize accepts valid values", (t) => {
 	t.expect(keyv3.opts.keySize).toBe(1);
 });
 
+test.it("keyLength alias works for keySize", (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		keyLength: 512,
+	});
+	t.expect(keyv.opts.keySize).toBe(512);
+	t.expect(keyv.opts.keyLength).toBe(512);
+});
+
 test.it("keyv options as a string", (t) => {
 	const uri = "sqlite://test/testdb.sqlite";
 	const keyv = new KeyvSqlite(uri);
@@ -331,4 +340,318 @@ test.it("WAL mode with in-memory database logs a warning", async (t) => {
 
 	warnSpy.mockRestore();
 	await keyv.disconnect();
+});
+
+// --- New feature tests ---
+
+test.it("setMany will set multiple records at once", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	await keyv.setMany([
+		{ key: "a", value: "1" },
+		{ key: "b", value: "2" },
+		{ key: "c", value: "3" },
+	]);
+	const values = await keyv.getMany(["a", "b", "c"]);
+	t.expect(values).toStrictEqual(["1", "2", "3"]);
+});
+
+test.it("setMany with empty array does nothing", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	await keyv.setMany([]);
+	const iterator = keyv.iterator();
+	const result = await iterator.next();
+	t.expect(result.done).toBe(true);
+});
+
+test.it("setMany upserts existing keys", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	await keyv.set("a", "old");
+	await keyv.setMany([
+		{ key: "a", value: "new" },
+		{ key: "b", value: "2" },
+	]);
+	t.expect(await keyv.get("a")).toBe("new");
+	t.expect(await keyv.get("b")).toBe("2");
+});
+
+test.it("hasMany checks multiple keys", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	await keyv.set("a", "1");
+	await keyv.set("c", "3");
+	const results = await keyv.hasMany(["a", "b", "c"]);
+	t.expect(results).toStrictEqual([true, false, true]);
+});
+
+test.it("hasMany with no existing keys returns all false", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	const results = await keyv.hasMany(["x", "y", "z"]);
+	t.expect(results).toStrictEqual([false, false, false]);
+});
+
+test.it("clearExpired removes expired entries", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	// Set an entry with an already-expired timestamp
+	const expiredValue = JSON.stringify({
+		value: "old",
+		expires: Date.now() - 1000,
+	});
+	const validValue = JSON.stringify({ value: "current", expires: null });
+	await keyv.set("expired-key", expiredValue);
+	await keyv.set("valid-key", validValue);
+	t.expect(await keyv.has("expired-key")).toBe(true);
+	t.expect(await keyv.has("valid-key")).toBe(true);
+	await keyv.clearExpired();
+	t.expect(await keyv.has("expired-key")).toBe(false);
+	t.expect(await keyv.has("valid-key")).toBe(true);
+});
+
+test.it("clearExpiredInterval auto-cleans expired entries", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+		clearExpiredInterval: 100,
+	});
+	await keyv.clear();
+	const expiredValue = JSON.stringify({
+		value: "old",
+		expires: Date.now() - 1000,
+	});
+	await keyv.set("auto-expired", expiredValue);
+	t.expect(await keyv.has("auto-expired")).toBe(true);
+	// Wait for the cleanup timer to fire
+	await new Promise((resolve) => {
+		setTimeout(resolve, 250);
+	});
+	t.expect(await keyv.has("auto-expired")).toBe(false);
+	await keyv.disconnect();
+});
+
+test.it("clearExpiredInterval setter restarts timer", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	t.expect(keyv.clearExpiredInterval).toBe(0);
+	keyv.clearExpiredInterval = 500;
+	t.expect(keyv.clearExpiredInterval).toBe(500);
+	// Reset to 0 to disable
+	keyv.clearExpiredInterval = 0;
+	t.expect(keyv.clearExpiredInterval).toBe(0);
+	await keyv.disconnect();
+});
+
+test.it("namespace column stores namespace separately from key", async (t) => {
+	const storeA = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	const storeB = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	storeA.namespace = "nsA";
+	storeB.namespace = "nsB";
+
+	await storeA.clear();
+	await storeB.clear();
+
+	// Same key, different namespaces
+	await storeA.set("nsA:key1", "valueA");
+	await storeB.set("nsB:key1", "valueB");
+
+	t.expect(await storeA.get("nsA:key1")).toBe("valueA");
+	t.expect(await storeB.get("nsB:key1")).toBe("valueB");
+
+	// Clear one namespace should not affect the other
+	await storeA.clear();
+	t.expect(await storeA.get("nsA:key1")).toBe(undefined);
+	t.expect(await storeB.get("nsB:key1")).toBe("valueB");
+
+	await storeB.clear();
+});
+
+test.it("namespaceLength option is respected", (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		namespaceLength: 128,
+	});
+	t.expect(keyv.opts.namespaceLength).toBe(128);
+});
+
+test.it("opts getter returns all options", (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		keySize: 512,
+		namespaceLength: 128,
+		busyTimeout: 5000,
+		iterationLimit: 50,
+		wal: false,
+		clearExpiredInterval: 1000,
+	});
+	const opts = keyv.opts;
+	t.expect(opts.uri).toBe("sqlite://test/testdb.sqlite");
+	t.expect(opts.keySize).toBe(512);
+	t.expect(opts.keyLength).toBe(512);
+	t.expect(opts.namespaceLength).toBe(128);
+	t.expect(opts.busyTimeout).toBe(5000);
+	t.expect(opts.iterationLimit).toBe(50);
+	t.expect(opts.wal).toBe(false);
+	t.expect(opts.clearExpiredInterval).toBe(1000);
+	t.expect(opts.dialect).toBe("sqlite");
+});
+
+test.it("deleteMany returns false when no keys exist", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	const result = await keyv.deleteMany(["nonexistent1", "nonexistent2"]);
+	t.expect(result).toBe(false);
+});
+
+test.it("has returns false for non-existent key", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	t.expect(await keyv.has("nonexistent")).toBe(false);
+});
+
+test.it("migrates old schema that lacks namespace column", async (t) => {
+	const dbPath = "test/testdb-migration.sqlite";
+	const fs = await import("node:fs");
+	// Remove any leftover db
+	try {
+		fs.unlinkSync(dbPath);
+	} catch {}
+
+	// Create a database with the old schema (no namespace/expires columns)
+	const sqlite3Module = await import("sqlite3");
+	const { promisify } = await import("node:util");
+	await new Promise<void>((resolve, reject) => {
+		const db = new sqlite3Module.default.Database(dbPath, async (err) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+
+			const run = promisify(db.run).bind(db);
+			const close = promisify(db.close).bind(db);
+			await run("CREATE TABLE keyv(key VARCHAR(255) PRIMARY KEY, value TEXT)");
+			await run("INSERT INTO keyv (key, value) VALUES ('oldkey', 'oldval')");
+			await close();
+			resolve();
+		});
+	});
+
+	// Open with the new adapter — should trigger migration
+	const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
+	// Old data should be preserved
+	t.expect(await keyv.get("oldkey")).toBe("oldval");
+	// New features should work
+	await keyv.set("newkey", "newval");
+	t.expect(await keyv.get("newkey")).toBe("newval");
+	await keyv.disconnect();
+
+	try {
+		fs.unlinkSync(dbPath);
+	} catch {}
+});
+
+test.it(
+	"migrates schema that has namespace but lacks expires column",
+	async (t) => {
+		const dbPath = "test/testdb-migration2.sqlite";
+		const fs = await import("node:fs");
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+
+		// Create a database with namespace but no expires column
+		const sqlite3Module = await import("sqlite3");
+		const { promisify } = await import("node:util");
+		await new Promise<void>((resolve, reject) => {
+			const db = new sqlite3Module.default.Database(dbPath, async (err) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+
+				const run = promisify(db.run).bind(db);
+				const close = promisify(db.close).bind(db);
+				await run(
+					"CREATE TABLE keyv(key VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE(key, namespace))",
+				);
+				await run(
+					"INSERT INTO keyv (key, value, namespace) VALUES ('k1', 'v1', '')",
+				);
+				await close();
+				resolve();
+			});
+		});
+
+		// Open with the new adapter — should add expires column
+		const keyv = new KeyvSqlite({
+			uri: `sqlite://${dbPath}`,
+			busyTimeout: 3000,
+		});
+		t.expect(await keyv.get("k1")).toBe("v1");
+		// Expires-related features should work
+		const expiredValue = JSON.stringify({
+			value: "temp",
+			expires: Date.now() - 1000,
+		});
+		await keyv.set("expiring", expiredValue);
+		await keyv.clearExpired();
+		t.expect(await keyv.has("expiring")).toBe(false);
+		await keyv.disconnect();
+
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+	},
+);
+
+test.it("opts setter updates options", (t) => {
+	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
+	keyv.opts = { iterationLimit: 99 };
+	t.expect(keyv.opts.iterationLimit).toBe(99);
+});
+
+test.it("getExpiresFromValue handles non-string object values", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	// Pass an object value (not a string) with expires — covers the non-string branch
+	const objValue = { value: "data", expires: Date.now() + 60000 };
+	await keyv.set("objkey", objValue);
+	t.expect(await keyv.has("objkey")).toBe(true);
 });
