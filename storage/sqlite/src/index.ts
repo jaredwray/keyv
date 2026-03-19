@@ -306,7 +306,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Gets multiple values by their keys in a single query using SQLite's `json_each()`.
+	 * Gets multiple values by their keys using parameterized `IN (?, ?)` queries.
 	 * @param keys - An array of keys to retrieve.
 	 * @returns An array of values in the same order as the input keys,
 	 *   with `undefined` for any keys that do not exist.
@@ -314,12 +314,19 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async getMany<Value>(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const select = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
-		const rows = await this.query(select, JSON.stringify(strippedKeys), ns);
+		const batchSize = 998; // 999 max params - 1 for namespace
+		const rowMap = new Map<string, Value>();
 
-		const rowMap = new Map(
-			rows.map((row: { key: string; value: Value }) => [row.key, row.value]),
-		);
+		for (let i = 0; i < strippedKeys.length; i += batchSize) {
+			const batch = strippedKeys.slice(i, i + batchSize);
+			const placeholders = batch.map(() => "?").join(", ");
+			const select = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE key IN (${placeholders}) AND namespace = ?`;
+			const rows = await this.query(select, ...batch, ns);
+			for (const row of rows as Array<{ key: string; value: Value }>) {
+				rowMap.set(row.key, row.value);
+			}
+		}
+
 		return strippedKeys.map(
 			(key) => (rowMap.get(key) ?? undefined) as StoredData<Value | undefined>,
 		);
@@ -402,26 +409,35 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the store in a single operation using SQLite's `json_each()`.
+	 * Deletes multiple keys from the store using parameterized `IN (?, ?)` queries.
 	 * @param keys - An array of keys to delete.
 	 * @returns `true` if any of the keys existed and were deleted, `false` if none were found.
 	 */
 	async deleteMany(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const select = `SELECT COUNT(*) as cnt FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
-		const del = `DELETE FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
+		const batchSize = 998; // 999 max params - 1 for namespace
+		let totalCount = 0;
 
-		const countResult = await this.query(
-			select,
-			JSON.stringify(strippedKeys),
-			ns,
-		);
-		if (countResult[0].cnt === 0) {
+		for (let i = 0; i < strippedKeys.length; i += batchSize) {
+			const batch = strippedKeys.slice(i, i + batchSize);
+			const placeholders = batch.map(() => "?").join(", ");
+			const select = `SELECT COUNT(*) as cnt FROM ${escapeIdentifier(this._table)} WHERE key IN (${placeholders}) AND namespace = ?`;
+			const countResult = await this.query(select, ...batch, ns);
+			totalCount += countResult[0].cnt;
+		}
+
+		if (totalCount === 0) {
 			return false;
 		}
 
-		await this.query(del, JSON.stringify(strippedKeys), ns);
+		for (let i = 0; i < strippedKeys.length; i += batchSize) {
+			const batch = strippedKeys.slice(i, i + batchSize);
+			const placeholders = batch.map(() => "?").join(", ");
+			const del = `DELETE FROM ${escapeIdentifier(this._table)} WHERE key IN (${placeholders}) AND namespace = ?`;
+			await this.query(del, ...batch, ns);
+		}
+
 		return true;
 	}
 
@@ -448,7 +464,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Checks whether multiple keys exist in the store in a single query.
+	 * Checks whether multiple keys exist in the store using parameterized `IN (?, ?)` queries.
 	 * @param keys - An array of keys to check.
 	 * @returns An array of booleans in the same order as the input keys,
 	 *   where `true` indicates the key exists and `false` indicates it does not.
@@ -456,9 +472,19 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async hasMany(keys: string[]): Promise<boolean[]> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const select = `SELECT key FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
-		const rows = await this.query(select, JSON.stringify(strippedKeys), ns);
-		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
+		const batchSize = 998; // 999 max params - 1 for namespace
+		const existingKeys = new Set<string>();
+
+		for (let i = 0; i < strippedKeys.length; i += batchSize) {
+			const batch = strippedKeys.slice(i, i + batchSize);
+			const placeholders = batch.map(() => "?").join(", ");
+			const select = `SELECT key FROM ${escapeIdentifier(this._table)} WHERE key IN (${placeholders}) AND namespace = ?`;
+			const rows = await this.query(select, ...batch, ns);
+			for (const row of rows as Array<{ key: string }>) {
+				existingKeys.add(row.key);
+			}
+		}
+
 		return strippedKeys.map((key) => existingKeys.has(key));
 	}
 
