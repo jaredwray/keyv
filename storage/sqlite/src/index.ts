@@ -8,6 +8,14 @@ import Keyv, {
 import sqlite3 from "sqlite3";
 import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
 
+/**
+ * Sanitizes a table name for safe use in SQL statements.
+ * Strips all non-alphanumeric characters (except underscores) and ensures
+ * the name starts with a letter (prepends `_` if it starts with a digit).
+ * @param input - The raw table name to sanitize.
+ * @returns The sanitized table name.
+ * @throws If the sanitized result is empty (input contained only special characters).
+ */
 const toTableString = (input: string) => {
 	const sanitized = String(input).replace(/[^a-zA-Z0-9_]/g, "");
 	if (sanitized.length === 0) {
@@ -16,23 +24,108 @@ const toTableString = (input: string) => {
 	return /^[a-zA-Z]/.test(sanitized) ? sanitized : `_${sanitized}`;
 };
 
+/**
+ * SQLite storage adapter for Keyv.
+ *
+ * Uses the `sqlite3` library for database access. Stores key-value pairs in a
+ * SQLite table with dedicated `namespace` and `expires` columns for efficient
+ * multi-tenant separation and TTL-based expiration.
+ *
+ * @example
+ * ```ts
+ * import KeyvSqlite from '@keyv/sqlite';
+ * import Keyv from 'keyv';
+ *
+ * const store = new KeyvSqlite('sqlite://path/to/db.sqlite');
+ * const keyv = new Keyv({ store });
+ * ```
+ */
 export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
+	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
+
+	/**
+	 * The SQLite connection URI.
+	 * @default 'sqlite://:memory:'
+	 */
 	private _uri = "sqlite://:memory:";
+
+	/**
+	 * The table name used for storage.
+	 * @default 'keyv'
+	 */
 	private _table = "keyv";
+
+	/**
+	 * The maximum key length (VARCHAR length) for the key column.
+	 * @default 255
+	 */
 	private _keySize = 255;
+
+	/**
+	 * The maximum namespace length (VARCHAR length) for the namespace column.
+	 * @default 255
+	 */
 	private _namespaceLength = 255;
+
+	/**
+	 * The storage adapter dialect identifier.
+	 * @default 'sqlite'
+	 */
 	private _dialect = "sqlite";
+
+	/**
+	 * The resolved file path for the SQLite database, derived from the URI.
+	 * @default ':memory:'
+	 */
 	private _db = ":memory:";
+
+	/**
+	 * The SQLite busy timeout in milliseconds. Controls how long SQLite waits
+	 * when the database is locked by another connection.
+	 */
 	private _busyTimeout?: number;
+
+	/**
+	 * The number of rows to fetch per iteration batch.
+	 * @default 10
+	 */
 	private _iterationLimit: number | string = 10;
+
+	/**
+	 * Whether WAL (Write-Ahead Logging) mode is enabled for improved concurrency.
+	 * Not supported for in-memory databases.
+	 * @default false
+	 */
 	private _wal = false;
+
+	/**
+	 * The interval in milliseconds between automatic expired-entry cleanup runs.
+	 * A value of 0 (default) disables the automatic cleanup.
+	 * @default 0
+	 */
 	private _clearExpiredInterval = 0;
+
+	/** The timer reference for the automatic expired-entry cleanup interval. */
 	private _clearExpiredTimer?: ReturnType<typeof setInterval>;
 
+	/** Promise-based function to close the database connection. */
 	close: DbClose;
+
+	/** Promise-based function to execute SQL queries against the database. */
 	query: DbQuery;
 
+	/**
+	 * Creates a new KeyvSqlite instance.
+	 *
+	 * Initializes the database connection, creates the storage table if it does
+	 * not exist, and runs any necessary schema migrations for older databases.
+	 *
+	 * @param keyvOptions - A SQLite connection URI string (e.g. `'sqlite://path/to/db.sqlite'`)
+	 *   or a {@link KeyvSqliteOptions} configuration object. Defaults to an in-memory database.
+	 * @throws If `keySize` is not a finite positive number between 1 and 65535.
+	 * @throws If the table name contains no alphanumeric characters after sanitization.
+	 */
 	constructor(keyvOptions?: KeyvSqliteOptions | string) {
 		super({ throwOnEmptyListeners: false });
 
@@ -108,21 +201,26 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get the namespace for the adapter.
+	 * Get the namespace for the adapter. If `undefined`, no namespace prefix is applied
+	 * and entries are stored under the default (empty) namespace.
 	 */
 	public get namespace(): string | undefined {
 		return this._namespace;
 	}
 
 	/**
-	 * Set the namespace for the adapter.
+	 * Set the namespace for the adapter. Used by Keyv core for key prefixing
+	 * and scoping operations like {@link clear} and {@link iterator}.
 	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
 	}
 
 	/**
-	 * Get the options for the adapter.
+	 * Get the current configuration options as a plain object.
+	 * Includes all adapter settings such as `uri`, `table`, `keySize`, `keyLength`,
+	 * `namespaceLength`, `iterationLimit`, `wal`, `busyTimeout`, `clearExpiredInterval`,
+	 * `dialect`, and `db`.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public get opts(): any {
@@ -142,7 +240,9 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Set the options for the adapter.
+	 * Set the configuration options for the adapter. Only provided properties
+	 * are updated; omitted properties retain their current values.
+	 * @param options - A partial {@link KeyvSqliteOptions} object with the properties to update.
 	 */
 	public set opts(options: KeyvSqliteOptions) {
 		this.setOptions(options);
@@ -150,6 +250,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Get the interval in milliseconds between automatic expired-entry cleanup runs.
+	 * A value of `0` means the automatic cleanup is disabled.
 	 * @default 0
 	 */
 	public get clearExpiredInterval(): number {
@@ -158,6 +259,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Set the interval in milliseconds between automatic expired-entry cleanup runs.
+	 * Setting to `0` disables the automatic cleanup. Any existing timer is stopped
+	 * and restarted with the new interval.
 	 */
 	public set clearExpiredInterval(value: number) {
 		this._clearExpiredInterval = value;
@@ -165,7 +268,9 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Gets a value by key.
+	 * Gets a value by key from the store.
+	 * @param key - The key to retrieve. If a namespace is set, the namespace prefix is stripped before querying.
+	 * @returns The value associated with the key, or `undefined` if the key does not exist.
 	 */
 	async get<Value>(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
@@ -177,7 +282,10 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Gets multiple values by their keys.
+	 * Gets multiple values by their keys in a single query using SQLite's `json_each()`.
+	 * @param keys - An array of keys to retrieve.
+	 * @returns An array of values in the same order as the input keys,
+	 *   with `undefined` for any keys that do not exist.
 	 */
 	async getMany<Value>(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
@@ -194,7 +302,11 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Sets a key-value pair.
+	 * Sets a key-value pair. Uses an upsert operation via `ON CONFLICT` to
+	 * insert a new entry or update an existing one atomically. Automatically
+	 * extracts the `expires` timestamp from the serialized value if present.
+	 * @param key - The key to set. If a namespace is set, the namespace prefix is stripped before storing.
+	 * @param value - The value to store. May be a serialized JSON string containing an `expires` timestamp.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any) {
@@ -209,7 +321,9 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Sets multiple key-value pairs at once.
+	 * Sets multiple key-value pairs at once using a multi-row `INSERT ... ON CONFLICT` statement.
+	 * More efficient than calling {@link set} in a loop for bulk operations.
+	 * @param entries - An array of `{ key, value }` entry objects to store.
 	 */
 	async setMany(entries: KeyvEntry[]): Promise<void> {
 		if (entries.length === 0) {
@@ -237,6 +351,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Deletes a key from the store.
+	 * @param key - The key to delete.
+	 * @returns `true` if the key existed and was deleted, `false` if the key was not found.
 	 */
 	async delete(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
@@ -255,7 +371,9 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the store.
+	 * Deletes multiple keys from the store in a single operation using SQLite's `json_each()`.
+	 * @param keys - An array of keys to delete.
+	 * @returns `true` if any of the keys existed and were deleted, `false` if none were found.
 	 */
 	async deleteMany(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
@@ -277,7 +395,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Clears all keys in the current namespace.
+	 * Clears all keys in the current namespace. If no namespace is set,
+	 * all entries with an empty namespace are removed.
 	 */
 	async clear() {
 		const del = `DELETE FROM ${this._table} WHERE namespace = ?`;
@@ -285,7 +404,9 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Checks whether a key exists.
+	 * Checks whether a key exists in the store.
+	 * @param key - The key to check.
+	 * @returns `true` if the key exists, `false` otherwise.
 	 */
 	async has(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
@@ -296,7 +417,10 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Checks whether multiple keys exist.
+	 * Checks whether multiple keys exist in the store in a single query.
+	 * @param keys - An array of keys to check.
+	 * @returns An array of booleans in the same order as the input keys,
+	 *   where `true` indicates the key exists and `false` indicates it does not.
 	 */
 	async hasMany(keys: string[]): Promise<boolean[]> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
@@ -308,7 +432,9 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Deletes all expired entries from the store.
+	 * Deletes all expired entries from the store where the `expires` column
+	 * is less than the current timestamp. This is called automatically when
+	 * {@link clearExpiredInterval} is set to a positive value.
 	 */
 	async clearExpired(): Promise<void> {
 		const del = `DELETE FROM ${this._table} WHERE expires IS NOT NULL AND expires < ?`;
@@ -316,7 +442,13 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Iterates over all key-value pairs using cursor-based pagination.
+	 * Iterates over all key-value pairs, optionally filtered by namespace.
+	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`
+	 * to safely handle concurrent modifications without skipping entries.
+	 * @param namespace - Optional namespace to filter entries by. If omitted, iterates
+	 *   over entries in the default (empty) namespace.
+	 * @yields A `[key, value]` tuple for each entry. Keys include the namespace prefix
+	 *   when a namespace is provided, for compatibility with Keyv core.
 	 */
 	async *iterator(namespace?: string) {
 		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
@@ -373,7 +505,10 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Disconnects from the database and stops cleanup timers.
+	 * Disconnects from the SQLite database and releases resources.
+	 * Stops the automatic expired-entry cleanup interval if running,
+	 * then closes the underlying database connection. Must be called
+	 * before process exit to avoid hanging connections.
 	 */
 	async disconnect() {
 		this.stopClearExpiredTimer();
@@ -381,7 +516,9 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Creates a new SQLite database connection.
+	 * Creates a new SQLite database connection, configures busy timeout
+	 * and WAL mode if requested, and returns promisified query/close functions.
+	 * @returns An object with `query` and `close` functions for database operations.
 	 */
 	private async createConnection(): Promise<Db> {
 		return new Promise<sqlite3.Database>((resolve, reject) => {
@@ -420,7 +557,12 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Strips the namespace prefix from a key added by the Keyv core.
+	 * Strips the namespace prefix from a key that was added by the Keyv core.
+	 * For example, if namespace is `'ns'` and key is `'ns:foo'`, returns `'foo'`.
+	 * If no namespace is set or the key does not start with the expected prefix,
+	 * the key is returned unchanged.
+	 * @param key - The potentially prefixed key.
+	 * @returns The key without the namespace prefix.
 	 */
 	private removeKeyPrefix(key: string): string {
 		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
@@ -431,7 +573,10 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Returns the namespace value for SQL parameters.
+	 * Returns the namespace value for use in SQL query parameters.
+	 * Returns an empty string when no namespace is set, matching the
+	 * `NOT NULL DEFAULT ''` column constraint.
+	 * @returns The current namespace string, or `''` if unset.
 	 */
 	private getNamespaceValue(): string {
 		return this._namespace ?? "";
@@ -439,6 +584,13 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Extracts the `expires` timestamp from a serialized value.
+	 *
+	 * The Keyv core serializes data as JSON like `{"value":"...","expires":1234567890}`.
+	 * This method parses that JSON (or inspects the object directly if the value
+	 * is not a string) and returns the `expires` field if present.
+	 *
+	 * @param value - The serialized value string or object to inspect.
+	 * @returns The expires timestamp as a number, or `null` if not present or not parseable.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	private getExpiresFromValue(value: any): number | null {
@@ -463,6 +615,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Starts (or restarts) the automatic expired-entry cleanup interval.
+	 * If the interval is `0` or negative, any existing timer is stopped.
+	 * The timer is unreffed so it does not prevent the Node.js process from exiting.
 	 */
 	private startClearExpiredTimer(): void {
 		this.stopClearExpiredTimer();
@@ -480,7 +634,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Stops the automatic expired-entry cleanup interval.
+	 * Stops the automatic expired-entry cleanup interval if running
+	 * and clears the timer reference.
 	 */
 	private stopClearExpiredTimer(): void {
 		if (this._clearExpiredTimer) {
@@ -489,6 +644,12 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 		}
 	}
 
+	/**
+	 * Applies configuration options from a partial {@link KeyvSqliteOptions} object.
+	 * Only properties that are explicitly defined (not `undefined`) are updated.
+	 * The `keyLength` property is treated as an alias for `keySize`.
+	 * @param options - The options to apply.
+	 */
 	private setOptions(options: KeyvSqliteOptions): void {
 		if (options.uri !== undefined) {
 			this._uri = options.uri;
@@ -528,6 +689,11 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 }
 
+/**
+ * Helper function to create a Keyv instance with KeyvSqlite as the storage adapter.
+ * @param keyvOptions - Optional {@link KeyvSqliteOptions} configuration object or URI string.
+ * @returns A new Keyv instance backed by SQLite.
+ */
 export const createKeyv = (keyvOptions?: KeyvSqliteOptions | string) =>
 	new Keyv({ store: new KeyvSqlite(keyvOptions) });
 
