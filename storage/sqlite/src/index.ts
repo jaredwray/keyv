@@ -37,9 +37,10 @@ function escapeIdentifier(identifier: string): string {
 /**
  * SQLite storage adapter for Keyv.
  *
- * Uses the `sqlite3` library for database access. Stores key-value pairs in a
- * SQLite table with dedicated `namespace` and `expires` columns for efficient
- * multi-tenant separation and TTL-based expiration.
+ * Supports multiple drivers (`better-sqlite3`, `node:sqlite`, `bun:sqlite`) with
+ * automatic runtime detection. Stores key-value pairs in a SQLite table with
+ * dedicated `namespace` and `expires` columns for efficient multi-tenant
+ * separation and TTL-based expiration.
  *
  * @example
  * ```ts

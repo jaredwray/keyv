@@ -19,6 +19,17 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Properties](#properties)
   - [namespace](#namespace)
   - [opts](#opts)
+    - [opts.uri](#optsuri)
+    - [opts.dialect](#optsdialect)
+    - [opts.table](#optstable)
+    - [opts.keySize](#optskeysize)
+    - [opts.namespaceLength](#optsnamespacelength)
+    - [opts.db](#optsdb)
+    - [opts.iterationLimit](#optsiterationlimit)
+    - [opts.wal](#optswal)
+    - [opts.busyTimeout](#optsbusytimeout)
+    - [opts.clearExpiredInterval](#optsclearexpiredinterval)
+    - [opts.driver](#optsdriver)
   - [clearExpiredInterval](#clearexpiredinterval)
 - [Methods](#methods)
   - [.set(key, value)](#setkey-value)
@@ -33,6 +44,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.clearExpired()](#clearexpired)
   - [.iterator(namespace?)](#iteratornamespace)
   - [.disconnect()](#disconnect)
+- [Clearing Expired Keys](#clearing-expired-keys)
 - [WAL Mode](#wal-mode)
 - [Testing](#testing)
 - [License](#license)
@@ -50,7 +62,7 @@ import Keyv from 'keyv';
 import KeyvSqlite from '@keyv/sqlite';
 
 const keyv = new Keyv({ store: new KeyvSqlite('sqlite://path/to/database.sqlite') });
-keyv.on('error', handleConnectionError);
+keyv.on('error', err => console.error(err));
 ```
 
 You can specify the `table`, `busyTimeout`, and `wal` options:
@@ -79,11 +91,11 @@ const keyv = createKeyv('sqlite://path/to/database.sqlite');
 
 | Driver | Package | Runtime | Type |
 | --- | --- | --- | --- |
-| `better-sqlite3` | `better-sqlite3` | Node.js | Synchronous (default) |
+| `better-sqlite3` | `better-sqlite3` | Node.js | Synchronous (fallback) |
 | `node:sqlite` | Built-in | Node.js 22.5+ | Synchronous |
 | `bun:sqlite` | Built-in | Bun | Synchronous |
 
-By default, `better-sqlite3` is included as a direct dependency and used automatically. On Bun, the native `bun:sqlite` driver is preferred.
+`better-sqlite3` is included as a direct dependency and used as a fallback when native runtime drivers are unavailable. On Bun, the native `bun:sqlite` driver is preferred. On Node.js 22.5+, the built-in `node:sqlite` driver is preferred.
 
 ## Selecting a specific driver
 
@@ -107,7 +119,7 @@ When no `driver` is specified, the adapter tries drivers in this order:
 
 You can also pass a custom driver object that implements the `SqliteDriver` interface:
 
-```js
+```ts
 import type { SqliteDriver } from '@keyv/sqlite';
 
 const customDriver: SqliteDriver = {
@@ -129,22 +141,11 @@ const store = new KeyvSqlite({
 
 ### Properties instead of opts
 
-In v5, configuration was accessed through the `opts` object:
+The `opts` getter still exists for backward compatibility and returns all current settings as a plain object. New top-level getters and setters have been added for `namespace` and `clearExpiredInterval`:
 
 ```js
-// v5
-store.opts.table; // 'keyv'
-store.opts.busyTimeout; // 10000
-```
-
-In v6, configuration is accessed through the `opts` getter which returns all current settings as a plain object. The `clearExpiredInterval` and `namespace` properties are also available as top-level getters and setters:
-
-```js
-// v6
-store.opts.table; // 'keyv'
-store.opts.busyTimeout; // 10000
-store.clearExpiredInterval; // 0
-store.namespace; // undefined
+store.namespace = 'my-namespace';
+store.clearExpiredInterval = 60_000;
 ```
 
 ### Native namespace support
@@ -189,8 +190,8 @@ const store = new KeyvSqlite({
 New methods for efficient multi-key operations:
 
 - `.setMany(entries)` — bulk upsert with automatic batching (249 entries per batch to stay within SQLite's 999 parameter limit)
-- `.getMany(keys)` — bulk retrieve using `json_each()`
-- `.deleteMany(keys)` — bulk delete using `json_each()`
+- `.getMany(keys)` — bulk retrieve with automatic batching
+- `.deleteMany(keys)` — bulk delete with automatic batching
 - `.hasMany(keys)` — bulk existence check
 
 ### `createKeyv()` helper
@@ -244,13 +245,57 @@ console.log(store.namespace); // 'my-namespace'
 
 ## opts
 
-Get the current configuration options as a plain object. Returns an object containing `uri`, `dialect`, `table`, `keySize`, `keyLength`, `namespaceLength`, `db`, `iterationLimit`, `wal`, `busyTimeout`, and `clearExpiredInterval`.
+Get or set the current configuration options as a plain object.
 
 ```js
 const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
 console.log(store.opts.table); // 'keyv'
 console.log(store.opts.wal); // false
 ```
+
+### opts.uri
+
+The SQLite connection URI. Default: `'sqlite://:memory:'`
+
+### opts.dialect
+
+The storage adapter dialect identifier. Default: `'sqlite'`
+
+### opts.table
+
+The table name used for storage. Default: `'keyv'`
+
+### opts.keySize
+
+The maximum key length (VARCHAR size). Alias: `keyLength`. Default: `255`
+
+### opts.namespaceLength
+
+The maximum namespace column length (VARCHAR size). Default: `255`
+
+### opts.db
+
+The resolved file path for the SQLite database, derived from the URI. Default: `':memory:'`
+
+### opts.iterationLimit
+
+The number of rows to fetch per iteration batch. Default: `10`
+
+### opts.wal
+
+Whether WAL (Write-Ahead Logging) mode is enabled. Default: `false`
+
+### opts.busyTimeout
+
+The SQLite busy timeout in milliseconds. Default: `undefined`
+
+### opts.clearExpiredInterval
+
+The interval in milliseconds between automatic expired-entry cleanup runs. Default: `0`
+
+### opts.driver
+
+The explicit driver selection. Default: `undefined` (auto-detected)
 
 ## clearExpiredInterval
 
@@ -321,9 +366,6 @@ const exists = await keyv.has('foo'); // true
 Check if multiple keys exist. Returns an array of booleans in the same order as the input keys.
 
 ```js
-await keyv.set('foo', 'bar');
-await keyv.set('baz', 'qux');
-
 const results = await keyv.hasMany(['foo', 'baz', 'unknown']); // [true, true, false]
 ```
 
@@ -376,6 +418,39 @@ Disconnect from the SQLite database and release resources. Stops the automatic e
 
 ```js
 await store.disconnect();
+```
+
+# Clearing Expired Keys
+
+When a key is stored with a TTL, the adapter records the expiration timestamp in the `expires` column. However, expired rows are not automatically removed from the database — they remain until explicitly cleaned up.
+
+## Automatic cleanup
+
+Set the `clearExpiredInterval` option (in milliseconds) to automatically remove expired entries on a recurring timer. The timer uses `unref()` so it won't keep the Node.js process alive.
+
+```js
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  clearExpiredInterval: 60_000, // clean up every 60 seconds
+});
+```
+
+You can change or disable the interval at runtime:
+
+```js
+// Change to every 5 minutes
+store.clearExpiredInterval = 300_000;
+
+// Disable automatic cleanup
+store.clearExpiredInterval = 0;
+```
+
+## Manual cleanup
+
+Call `clearExpired()` directly to remove all expired entries on demand:
+
+```js
+await store.clearExpired();
 ```
 
 # WAL Mode
