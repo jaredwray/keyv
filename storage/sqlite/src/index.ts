@@ -25,6 +25,16 @@ const toTableString = (input: string) => {
 };
 
 /**
+ * Escapes a SQL identifier (table/index name) to prevent SQL injection.
+ * Uses double-quote escaping as per the SQL standard supported by SQLite.
+ * @param identifier - The raw identifier to escape.
+ * @returns The escaped identifier wrapped in double quotes.
+ */
+function escapeIdentifier(identifier: string): string {
+	return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+/**
  * SQLite storage adapter for Keyv.
  *
  * Uses the `sqlite3` library for database access. Stores key-value pairs in a
@@ -145,14 +155,14 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 			);
 		}
 
-		const createTable = `CREATE TABLE IF NOT EXISTS ${this._table}(key VARCHAR(${keySize}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT DEFAULT NULL, UNIQUE(key, namespace))`;
-		const createExpiresIndex = `CREATE INDEX IF NOT EXISTS ${this._table}_expires_idx ON ${this._table} (expires) WHERE expires IS NOT NULL`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${escapeIdentifier(this._table)}(key VARCHAR(${keySize}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT DEFAULT NULL, UNIQUE(key, namespace))`;
+		const createExpiresIndex = `CREATE INDEX IF NOT EXISTS ${escapeIdentifier(`${this._table}_expires_idx`)} ON ${escapeIdentifier(this._table)} (expires) WHERE expires IS NOT NULL`;
 
 		const connected: Promise<Db> = this.createConnection()
 			.then(async (database) => {
 				// Check if table exists and needs migration
 				const tableInfo = await database.query(
-					`PRAGMA table_info(${this._table})`,
+					`PRAGMA table_info(${escapeIdentifier(this._table)})`,
 				);
 
 				if (tableInfo.length === 0) {
@@ -164,17 +174,19 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 					if (!columnNames.includes("namespace")) {
 						// Old schema detected — migrate by recreating table
 						await database.query(
-							`ALTER TABLE ${this._table} RENAME TO ${this._table}_migration_old`,
+							`ALTER TABLE ${escapeIdentifier(this._table)} RENAME TO ${escapeIdentifier(`${this._table}_migration_old`)}`,
 						);
 						await database.query(createTable);
 						await database.query(
-							`INSERT INTO ${this._table} (key, value) SELECT key, value FROM ${this._table}_migration_old`,
+							`INSERT INTO ${escapeIdentifier(this._table)} (key, value) SELECT key, value FROM ${escapeIdentifier(`${this._table}_migration_old`)}`,
 						);
-						await database.query(`DROP TABLE ${this._table}_migration_old`);
+						await database.query(
+							`DROP TABLE ${escapeIdentifier(`${this._table}_migration_old`)}`,
+						);
 					} else if (!columnNames.includes("expires")) {
 						// Has namespace but missing expires — add column
 						await database.query(
-							`ALTER TABLE ${this._table} ADD COLUMN expires BIGINT DEFAULT NULL`,
+							`ALTER TABLE ${escapeIdentifier(this._table)} ADD COLUMN expires BIGINT DEFAULT NULL`,
 						);
 					}
 				}
@@ -242,10 +254,14 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	/**
 	 * Set the configuration options for the adapter. Only provided properties
 	 * are updated; omitted properties retain their current values.
+	 * Table names are sanitized via {@link toTableString} to prevent SQL injection.
 	 * @param options - A partial {@link KeyvSqliteOptions} object with the properties to update.
 	 */
 	public set opts(options: KeyvSqliteOptions) {
 		this.setOptions(options);
+		if (options.table !== undefined) {
+			this._table = toTableString(this._table);
+		}
 	}
 
 	/**
@@ -275,7 +291,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async get<Value>(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const select = `SELECT * FROM ${this._table} WHERE key = ? AND namespace = ?`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE key = ? AND namespace = ?`;
 		const rows = await this.query(select, strippedKey, ns);
 		const row = rows[0];
 		return row === undefined ? undefined : (row.value as Value);
@@ -290,15 +306,15 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async getMany<Value>(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const select = `SELECT * FROM ${this._table} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
 		const rows = await this.query(select, JSON.stringify(strippedKeys), ns);
 
-		return strippedKeys.map((key) => {
-			const row = rows.find(
-				(row: { key: string; value: Value }) => row.key === key,
-			);
-			return (row ? row.value : undefined) as StoredData<Value | undefined>;
-		});
+		const rowMap = new Map(
+			rows.map((row: { key: string; value: Value }) => [row.key, row.value]),
+		);
+		return strippedKeys.map(
+			(key) => (rowMap.get(key) ?? undefined) as StoredData<Value | undefined>,
+		);
 	}
 
 	/**
@@ -313,7 +329,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const expires = this.getExpiresFromValue(value);
-		const upsert = `INSERT INTO ${this._table} (key, value, namespace, expires)
+		const upsert = `INSERT INTO ${escapeIdentifier(this._table)} (key, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
@@ -342,7 +358,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 			params.push(strippedKey, value, ns, expires);
 		}
 
-		const upsert = `INSERT INTO ${this._table} (key, value, namespace, expires)
+		const upsert = `INSERT INTO ${escapeIdentifier(this._table)} (key, value, namespace, expires)
 			VALUES ${placeholders.join(", ")}
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
@@ -357,8 +373,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async delete(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const select = `SELECT * FROM ${this._table} WHERE key = ? AND namespace = ?`;
-		const del = `DELETE FROM ${this._table} WHERE key = ? AND namespace = ?`;
+		const select = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE key = ? AND namespace = ?`;
+		const del = `DELETE FROM ${escapeIdentifier(this._table)} WHERE key = ? AND namespace = ?`;
 
 		const rows = await this.query(select, strippedKey, ns);
 		const row = rows[0];
@@ -378,8 +394,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async deleteMany(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const select = `SELECT COUNT(*) as cnt FROM ${this._table} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
-		const del = `DELETE FROM ${this._table} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
+		const select = `SELECT COUNT(*) as cnt FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
+		const del = `DELETE FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
 
 		const countResult = await this.query(
 			select,
@@ -399,7 +415,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	 * all entries with an empty namespace are removed.
 	 */
 	async clear() {
-		const del = `DELETE FROM ${this._table} WHERE namespace = ?`;
+		const del = `DELETE FROM ${escapeIdentifier(this._table)} WHERE namespace = ?`;
 		await this.query(del, this.getNamespaceValue());
 	}
 
@@ -411,7 +427,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async has(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this._table} WHERE key = ? AND namespace = ? ) as exists_result`;
+		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._table)} WHERE key = ? AND namespace = ? ) as exists_result`;
 		const result = await this.query(exists, strippedKey, ns);
 		return Object.values(result[0])[0] === 1;
 	}
@@ -425,7 +441,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async hasMany(keys: string[]): Promise<boolean[]> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const select = `SELECT key FROM ${this._table} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
+		const select = `SELECT key FROM ${escapeIdentifier(this._table)} WHERE key IN (SELECT value FROM json_each(?)) AND namespace = ?`;
 		const rows = await this.query(select, JSON.stringify(strippedKeys), ns);
 		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
 		return strippedKeys.map((key) => existingKeys.has(key));
@@ -437,7 +453,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	 * {@link clearExpiredInterval} is set to a positive value.
 	 */
 	async clearExpired(): Promise<void> {
-		const del = `DELETE FROM ${this._table} WHERE expires IS NOT NULL AND expires < ?`;
+		const del = `DELETE FROM ${escapeIdentifier(this._table)} WHERE expires IS NOT NULL AND expires < ?`;
 		await this.query(del, Date.now());
 	}
 
@@ -464,10 +480,10 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 				let params: any[];
 
 				if (lastKey !== null) {
-					select = `SELECT * FROM ${this._table} WHERE namespace = ? AND key > ? ORDER BY key LIMIT ?`;
+					select = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND key > ? ORDER BY key LIMIT ?`;
 					params = [ns, lastKey, limit];
 				} else {
-					select = `SELECT * FROM ${this._table} WHERE namespace = ? ORDER BY key LIMIT ?`;
+					select = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? ORDER BY key LIMIT ?`;
 					params = [ns, limit];
 				}
 

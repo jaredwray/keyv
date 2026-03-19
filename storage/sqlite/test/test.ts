@@ -655,3 +655,67 @@ test.it("getExpiresFromValue handles non-string object values", async (t) => {
 	await keyv.set("objkey", objValue);
 	t.expect(await keyv.has("objkey")).toBe(true);
 });
+
+// --- SQL injection prevention tests ---
+
+test.it(
+	"table name with SQL injection characters is sanitized at construction",
+	async (t) => {
+		// Attempt to inject via table name — toTableString strips all non-alphanumeric chars
+		const keyv = new KeyvSqlite({
+			uri: "sqlite://test/testdb.sqlite",
+			table: "keyv'; DROP TABLE keyv; --",
+			busyTimeout: 3000,
+		});
+		// Sanitized to "keyvDROPTABLEkeyv" (only alphanumeric chars kept)
+		t.expect(keyv.opts.table).toBe("keyvDROPTABLEkeyv");
+		// Operations should work on the sanitized table name
+		await keyv.set("test", "value");
+		t.expect(await keyv.get("test")).toBe("value");
+		await keyv.clear();
+		await keyv.disconnect();
+	},
+);
+
+test.it(
+	"opts setter sanitizes table name (prevents post-construction injection)",
+	(t) => {
+		const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
+		keyv.opts = { table: "evil'; DROP TABLE keyv;--" };
+		// Should be sanitized, not the raw malicious string
+		t.expect(keyv.opts.table).toBe("evilDROPTABLEkeyv");
+	},
+);
+
+test.it(
+	"table name that is a SQLite reserved keyword works correctly",
+	async (t) => {
+		const keyv = new KeyvSqlite({
+			uri: "sqlite://test/testdb.sqlite",
+			table: "select",
+			busyTimeout: 3000,
+		});
+		// escapeIdentifier wraps in double quotes, so "select" is safe as a table name
+		t.expect(keyv.opts.table).toBe("select");
+		await keyv.set("k1", "v1");
+		t.expect(await keyv.get("k1")).toBe("v1");
+		await keyv.clear();
+		await keyv.disconnect();
+	},
+);
+
+test.it("table name with double quotes is escaped correctly", async (t) => {
+	// Double quotes in the name would break identifier escaping without proper handling
+	// toTableString strips them, but escapeIdentifier also handles them as defense-in-depth
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		table: 'my"table',
+		busyTimeout: 3000,
+	});
+	// toTableString strips the double-quote character
+	t.expect(keyv.opts.table).toBe("mytable");
+	await keyv.set("k1", "v1");
+	t.expect(await keyv.get("k1")).toBe("v1");
+	await keyv.clear();
+	await keyv.disconnect();
+});
