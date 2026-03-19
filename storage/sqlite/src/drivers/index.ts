@@ -10,11 +10,15 @@ async function loadDriver(name: SqliteDriverName): Promise<SqliteDriver> {
 		}
 
 		case "node:sqlite": {
+			// Probe that the built-in module exists before returning the driver
+			await import("node:sqlite");
 			const { nodeSqliteDriver } = await import("./node-sqlite-driver.js");
 			return nodeSqliteDriver;
 		}
 
 		case "bun:sqlite": {
+			// Probe that the built-in module exists before returning the driver
+			await import("bun:sqlite");
 			const { bunSqliteDriver } = await import("./bun-sqlite-driver.js");
 			return bunSqliteDriver;
 		}

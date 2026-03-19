@@ -32,10 +32,10 @@ describe("driver selection", () => {
 		);
 	});
 
-	it("bun:sqlite driver fails to connect outside Bun runtime", async () => {
-		const driver = await resolveDriver("bun:sqlite");
-		expect(driver.name).toBe("bun:sqlite");
-		await expect(driver.connect({ filename: ":memory:" })).rejects.toThrow();
+	it("bun:sqlite driver fails to load outside Bun runtime", async () => {
+		await expect(resolveDriver("bun:sqlite")).rejects.toThrow(
+			/Failed to load SQLite driver "bun:sqlite"/,
+		);
 	});
 
 	it("accepts a custom SqliteDriver object", async () => {
