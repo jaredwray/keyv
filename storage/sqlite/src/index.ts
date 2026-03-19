@@ -237,6 +237,113 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
+	 * Get the SQLite connection URI.
+	 * @default 'sqlite://:memory:'
+	 */
+	public get uri(): string {
+		return this._uri;
+	}
+
+	/**
+	 * Get the storage adapter dialect identifier.
+	 * @default 'sqlite'
+	 */
+	public get dialect(): string {
+		return this._dialect;
+	}
+
+	/**
+	 * Get the table name used for storage.
+	 * @default 'keyv'
+	 */
+	public get table(): string {
+		return this._table;
+	}
+
+	/**
+	 * Set the table name used for storage.
+	 * The name is sanitized to prevent SQL injection.
+	 */
+	public set table(value: string) {
+		this._table = toTableString(value);
+	}
+
+	/**
+	 * Get the maximum key length (VARCHAR length) for the key column.
+	 * @default 255
+	 */
+	public get keySize(): number {
+		return this._keySize;
+	}
+
+	/**
+	 * Set the maximum key length (VARCHAR length) for the key column.
+	 */
+	public set keySize(value: number) {
+		this._keySize = value;
+	}
+
+	/**
+	 * Get the maximum namespace length (VARCHAR length) for the namespace column.
+	 * @default 255
+	 */
+	public get namespaceLength(): number {
+		return this._namespaceLength;
+	}
+
+	/**
+	 * Set the maximum namespace length (VARCHAR length) for the namespace column.
+	 */
+	public set namespaceLength(value: number) {
+		this._namespaceLength = value;
+	}
+
+	/**
+	 * Get the resolved file path for the SQLite database, derived from the URI.
+	 * @default ':memory:'
+	 */
+	public get db(): string {
+		return this._db;
+	}
+
+	/**
+	 * Get the number of rows to fetch per iteration batch.
+	 * @default 10
+	 */
+	public get iterationLimit(): number | string {
+		return this._iterationLimit;
+	}
+
+	/**
+	 * Set the number of rows to fetch per iteration batch.
+	 */
+	public set iterationLimit(value: number | string) {
+		this._iterationLimit = value;
+	}
+
+	/**
+	 * Get whether WAL (Write-Ahead Logging) mode is enabled.
+	 * @default false
+	 */
+	public get wal(): boolean {
+		return this._wal;
+	}
+
+	/**
+	 * Get the SQLite busy timeout in milliseconds.
+	 */
+	public get busyTimeout(): number | undefined {
+		return this._busyTimeout;
+	}
+
+	/**
+	 * Get the explicit driver selection. Returns `undefined` if auto-detected.
+	 */
+	public get driver(): SqliteDriverName | SqliteDriver | undefined {
+		return this._driver;
+	}
+
+	/**
 	 * Get the current configuration options as a plain object.
 	 * Includes all adapter settings such as `uri`, `table`, `keySize`, `keyLength`,
 	 * `namespaceLength`, `iterationLimit`, `wal`, `busyTimeout`, `clearExpiredInterval`,

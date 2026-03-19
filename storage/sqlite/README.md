@@ -18,18 +18,16 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Constructor Options](#constructor-options)
 - [Properties](#properties)
   - [namespace](#namespace)
-  - [opts](#opts)
-    - [opts.uri](#optsuri)
-    - [opts.dialect](#optsdialect)
-    - [opts.table](#optstable)
-    - [opts.keySize](#optskeysize)
-    - [opts.namespaceLength](#optsnamespacelength)
-    - [opts.db](#optsdb)
-    - [opts.iterationLimit](#optsiterationlimit)
-    - [opts.wal](#optswal)
-    - [opts.busyTimeout](#optsbusytimeout)
-    - [opts.clearExpiredInterval](#optsclearexpiredinterval)
-    - [opts.driver](#optsdriver)
+  - [uri](#uri)
+  - [dialect](#dialect)
+  - [table](#table)
+  - [keySize](#keysize)
+  - [namespaceLength](#namespacelength)
+  - [db](#db)
+  - [iterationLimit](#iterationlimit)
+  - [wal](#wal)
+  - [busyTimeout](#busytimeout)
+  - [driver](#driver)
   - [clearExpiredInterval](#clearexpiredinterval)
 - [Methods](#methods)
   - [.set(key, value)](#setkey-value)
@@ -243,59 +241,125 @@ store.namespace = 'my-namespace';
 console.log(store.namespace); // 'my-namespace'
 ```
 
-## opts
+## uri
 
-Get or set the current configuration options as a plain object.
+Get the SQLite connection URI.
+
+- Type: `string`
+- Default: `'sqlite://:memory:'`
 
 ```js
 const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
-console.log(store.opts.table); // 'keyv'
-console.log(store.opts.wal); // false
+console.log(store.uri); // 'sqlite://path/to/database.sqlite'
 ```
 
-### opts.uri
+## dialect
 
-The SQLite connection URI. Default: `'sqlite://:memory:'`
+Get the storage adapter dialect identifier.
 
-### opts.dialect
+- Type: `string`
+- Default: `'sqlite'`
 
-The storage adapter dialect identifier. Default: `'sqlite'`
+```js
+console.log(store.dialect); // 'sqlite'
+```
 
-### opts.table
+## table
 
-The table name used for storage. Default: `'keyv'`
+Get or set the table name used for storage. The setter sanitizes the name to prevent SQL injection.
 
-### opts.keySize
+- Type: `string`
+- Default: `'keyv'`
 
-The maximum key length (VARCHAR size). Alias: `keyLength`. Default: `255`
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://:memory:', table: 'cache' });
+console.log(store.table); // 'cache'
+store.table = 'sessions';
+```
 
-### opts.namespaceLength
+## keySize
 
-The maximum namespace column length (VARCHAR size). Default: `255`
+Get or set the maximum key length (VARCHAR length) for the key column.
 
-### opts.db
+- Type: `number`
+- Default: `255`
 
-The resolved file path for the SQLite database, derived from the URI. Default: `':memory:'`
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://:memory:', keySize: 512 });
+console.log(store.keySize); // 512
+```
 
-### opts.iterationLimit
+## namespaceLength
 
-The number of rows to fetch per iteration batch. Default: `10`
+Get or set the maximum namespace column length (VARCHAR length).
 
-### opts.wal
+- Type: `number`
+- Default: `255`
 
-Whether WAL (Write-Ahead Logging) mode is enabled. Default: `false`
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://:memory:', namespaceLength: 128 });
+console.log(store.namespaceLength); // 128
+```
 
-### opts.busyTimeout
+## db
 
-The SQLite busy timeout in milliseconds. Default: `undefined`
+Get the resolved file path for the SQLite database, derived from the URI.
 
-### opts.clearExpiredInterval
+- Type: `string`
+- Default: `':memory:'`
 
-The interval in milliseconds between automatic expired-entry cleanup runs. Default: `0`
+```js
+const store = new KeyvSqlite('sqlite://data/app.sqlite');
+console.log(store.db); // 'data/app.sqlite'
+```
 
-### opts.driver
+## iterationLimit
 
-The explicit driver selection. Default: `undefined` (auto-detected)
+Get or set the number of rows to fetch per iteration batch.
+
+- Type: `number`
+- Default: `10`
+
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://:memory:', iterationLimit: 50 });
+console.log(store.iterationLimit); // 50
+```
+
+## wal
+
+Get whether WAL (Write-Ahead Logging) mode is enabled.
+
+- Type: `boolean`
+- Default: `false`
+
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://path/to/database.sqlite', wal: true });
+console.log(store.wal); // true
+```
+
+## busyTimeout
+
+Get the SQLite busy timeout in milliseconds.
+
+- Type: `number | undefined`
+- Default: `undefined`
+
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://:memory:', busyTimeout: 5000 });
+console.log(store.busyTimeout); // 5000
+```
+
+## driver
+
+Get the explicit driver selection. Returns `undefined` when auto-detected.
+
+- Type: `string | SqliteDriver | undefined`
+- Default: `undefined` (auto-detected)
+
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://:memory:', driver: 'better-sqlite3' });
+console.log(store.driver); // 'better-sqlite3'
+```
 
 ## clearExpiredInterval
 

@@ -700,3 +700,73 @@ test.it("table name with double quotes is escaped correctly", async (t) => {
 	await keyv.clear();
 	await keyv.disconnect();
 });
+
+test.it("property getters return correct defaults", async (t) => {
+	const keyv = new KeyvSqlite();
+	t.expect(keyv.uri).toBe("sqlite://:memory:");
+	t.expect(keyv.dialect).toBe("sqlite");
+	t.expect(keyv.table).toBe("keyv");
+	t.expect(keyv.keySize).toBe(255);
+	t.expect(keyv.namespaceLength).toBe(255);
+	t.expect(keyv.db).toBe(":memory:");
+	t.expect(keyv.iterationLimit).toBe(10);
+	t.expect(keyv.wal).toBe(false);
+	t.expect(keyv.busyTimeout).toBeUndefined();
+	t.expect(keyv.driver).toBeUndefined();
+	t.expect(keyv.namespace).toBeUndefined();
+	t.expect(keyv.clearExpiredInterval).toBe(0);
+	await keyv.disconnect();
+});
+
+test.it("property getters return constructor-provided values", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://:memory:",
+		table: "custom",
+		keySize: 512,
+		namespaceLength: 128,
+		busyTimeout: 5000,
+		iterationLimit: 50,
+		wal: false,
+		driver: "better-sqlite3",
+	});
+	t.expect(keyv.table).toBe("custom");
+	t.expect(keyv.keySize).toBe(512);
+	t.expect(keyv.namespaceLength).toBe(128);
+	t.expect(keyv.busyTimeout).toBe(5000);
+	t.expect(keyv.iterationLimit).toBe(50);
+	t.expect(keyv.driver).toBe("better-sqlite3");
+	await keyv.disconnect();
+});
+
+test.it("table setter sanitizes input", async (t) => {
+	const keyv = new KeyvSqlite("sqlite://:memory:");
+	keyv.table = "my_table";
+	t.expect(keyv.table).toBe("my_table");
+	keyv.table = '3bad"name';
+	t.expect(keyv.table).toBe("_3badname");
+	await keyv.disconnect();
+});
+
+test.it("keySize setter updates value", async (t) => {
+	const keyv = new KeyvSqlite("sqlite://:memory:");
+	t.expect(keyv.keySize).toBe(255);
+	keyv.keySize = 512;
+	t.expect(keyv.keySize).toBe(512);
+	await keyv.disconnect();
+});
+
+test.it("namespaceLength setter updates value", async (t) => {
+	const keyv = new KeyvSqlite("sqlite://:memory:");
+	t.expect(keyv.namespaceLength).toBe(255);
+	keyv.namespaceLength = 128;
+	t.expect(keyv.namespaceLength).toBe(128);
+	await keyv.disconnect();
+});
+
+test.it("iterationLimit setter updates value", async (t) => {
+	const keyv = new KeyvSqlite("sqlite://:memory:");
+	t.expect(keyv.iterationLimit).toBe(10);
+	keyv.iterationLimit = 99;
+	t.expect(keyv.iterationLimit).toBe(99);
+	await keyv.disconnect();
+});
