@@ -1,7 +1,5 @@
 import type { SqliteDriver, SqliteDriverName } from "./types.js";
 
-const driverCache = new Map<string, SqliteDriver>();
-
 async function loadDriver(name: SqliteDriverName): Promise<SqliteDriver> {
 	switch (name) {
 		case "better-sqlite3": {
@@ -53,15 +51,8 @@ export async function resolveDriver(
 
 	// Explicit driver name — load or fail
 	if (typeof preferred === "string") {
-		const cached = driverCache.get(preferred);
-		if (cached) {
-			return cached;
-		}
-
 		try {
-			const driver = await loadDriver(preferred);
-			driverCache.set(preferred, driver);
-			return driver;
+			return await loadDriver(preferred);
 		} catch (error) {
 			throw new Error(
 				`Failed to load SQLite driver "${preferred}": ${(error as Error).message}`,
@@ -71,22 +62,14 @@ export async function resolveDriver(
 
 	// Auto-detect based on runtime
 	const isBun = typeof Bun !== "undefined";
+	/* v8 ignore next -- @preserve: Bun runtime branch */
 	const candidates: SqliteDriverName[] = isBun
 		? ["bun:sqlite", "better-sqlite3"]
 		: ["node:sqlite", "better-sqlite3"];
 
 	for (const name of candidates) {
-		const cached = driverCache.get(name);
-		if (cached) {
-			return cached;
-		}
-
 		try {
-			const driver = await loadDriver(name);
-			// Verify the driver can actually connect by returning it
-			// The actual connection test happens in driver.connect()
-			driverCache.set(name, driver);
-			return driver;
+			return await loadDriver(name);
 		} catch {
 			// Driver not available, try next
 		}
