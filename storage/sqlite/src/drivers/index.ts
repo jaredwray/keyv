@@ -16,6 +16,7 @@ async function loadDriver(name: SqliteDriverName): Promise<SqliteDriver> {
 			return nodeSqliteDriver;
 		}
 
+		/* v8 ignore next 5 -- @preserve: bun:sqlite only available in Bun runtime */
 		case "bun:sqlite": {
 			// Probe that the built-in module exists before returning the driver
 			await import("bun:sqlite");
