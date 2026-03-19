@@ -173,16 +173,18 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 					const columnNames = tableInfo.map((c: { name: string }) => c.name);
 					if (!columnNames.includes("namespace")) {
 						// Old schema detected — migrate by recreating table
+						// Old keys are stored as "namespace:actualKey" (e.g. "keyv:foo").
+						// Split them so the new schema stores key and namespace separately.
+						const oldTable = escapeIdentifier(`${this._table}_migration_old`);
+						const newTable = escapeIdentifier(this._table);
 						await database.query(
-							`ALTER TABLE ${escapeIdentifier(this._table)} RENAME TO ${escapeIdentifier(`${this._table}_migration_old`)}`,
+							`ALTER TABLE ${newTable} RENAME TO ${oldTable}`,
 						);
 						await database.query(createTable);
 						await database.query(
-							`INSERT INTO ${escapeIdentifier(this._table)} (key, value) SELECT key, value FROM ${escapeIdentifier(`${this._table}_migration_old`)}`,
+							`INSERT OR IGNORE INTO ${newTable} (key, value, namespace) SELECT CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, INSTR(key, ':') + 1) ELSE key END, value, CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, 1, INSTR(key, ':') - 1) ELSE '' END FROM ${oldTable}`,
 						);
-						await database.query(
-							`DROP TABLE ${escapeIdentifier(`${this._table}_migration_old`)}`,
-						);
+						await database.query(`DROP TABLE ${oldTable}`);
 					} else if (!columnNames.includes("expires")) {
 						// Has namespace but missing expires — add column
 						await database.query(
@@ -346,23 +348,30 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 			return;
 		}
 
+		// Each entry uses 4 parameters. SQLite defaults to a max of 999 bind
+		// parameters (SQLITE_MAX_VARIABLE_NUMBER), so batch to stay under that.
+		const batchSize = 249; // floor(999 / 4)
 		const ns = this.getNamespaceValue();
-		const placeholders: string[] = [];
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		const params: any[] = [];
 
-		for (const { key, value } of entries) {
-			const strippedKey = this.removeKeyPrefix(key);
-			const expires = this.getExpiresFromValue(value);
-			placeholders.push("(?, ?, ?, ?)");
-			params.push(strippedKey, value, ns, expires);
-		}
+		for (let i = 0; i < entries.length; i += batchSize) {
+			const batch = entries.slice(i, i + batchSize);
+			const placeholders: string[] = [];
+			// biome-ignore lint/suspicious/noExplicitAny: type format
+			const params: any[] = [];
 
-		const upsert = `INSERT INTO ${escapeIdentifier(this._table)} (key, value, namespace, expires)
+			for (const { key, value } of batch) {
+				const strippedKey = this.removeKeyPrefix(key);
+				const expires = this.getExpiresFromValue(value);
+				placeholders.push("(?, ?, ?, ?)");
+				params.push(strippedKey, value, ns, expires);
+			}
+
+			const upsert = `INSERT INTO ${escapeIdentifier(this._table)} (key, value, namespace, expires)
 			VALUES ${placeholders.join(", ")}
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-		await this.query(upsert, ...params);
+			await this.query(upsert, ...params);
+		}
 	}
 
 	/**

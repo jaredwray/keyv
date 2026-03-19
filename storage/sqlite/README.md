@@ -1,4 +1,4 @@
-# @keyv/sqlite [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/sqlite [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > SQLite storage adapter for Keyv
 
@@ -7,60 +7,349 @@
 [![npm](https://img.shields.io/npm/v/@keyv/sqlite.svg)](https://www.npmjs.com/package/@keyv/sqlite)
 [![npm](https://img.shields.io/npm/dm/@keyv/sqlite)](https://npmjs.com/package/@keyv/sqlite)
 
-SQLite storage adapter for [Keyv](https://github.com/lukechilds/keyv).
+SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
-## Install
+## Table of Contents
+
+- [Install](#install)
+- [Usage](#usage)
+- [Migrating to v6](#migrating-to-v6)
+- [Constructor Options](#constructor-options)
+- [Properties](#properties)
+  - [namespace](#namespace)
+  - [opts](#opts)
+  - [clearExpiredInterval](#clearexpiredinterval)
+- [Methods](#methods)
+  - [.set(key, value)](#setkey-value)
+  - [.setMany(entries)](#setmanyentries)
+  - [.get(key)](#getkey)
+  - [.getMany(keys)](#getmanykeys)
+  - [.has(key)](#haskey)
+  - [.hasMany(keys)](#hasmanykeys)
+  - [.delete(key)](#deletekey)
+  - [.deleteMany(keys)](#deletemanykeys)
+  - [.clear()](#clear)
+  - [.clearExpired()](#clearexpired)
+  - [.iterator(namespace?)](#iteratornamespace)
+  - [.disconnect()](#disconnect)
+- [WAL Mode](#wal-mode)
+- [Testing](#testing)
+- [License](#license)
+
+# Install
 
 ```shell
 npm install --save keyv @keyv/sqlite
 ```
 
-## Usage
+# Usage
 
 ```js
 import Keyv from 'keyv';
 import KeyvSqlite from '@keyv/sqlite';
 
-const keyv = new Keyv(new KeyvSqlite('sqlite://path/to/database.sqlite'));
+const keyv = new Keyv({ store: new KeyvSqlite('sqlite://path/to/database.sqlite') });
 keyv.on('error', handleConnectionError);
 ```
 
-You can specify the `table`, [`busyTimeout`](https://sqlite.org/c3ref/busy_timeout.html), and `wal` options.
-
-e.g:
+You can specify the `table`, `busyTimeout`, and `wal` options:
 
 ```js
-import Keyv from 'keyv';
-import KeyvSqlite from '@keyv/sqlite';
-
-const keyvSqlite = new KeyvSqlite('sqlite://path/to/database.sqlite', {
+const keyvSqlite = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
   table: 'cache',
   busyTimeout: 10000,
-  wal: true // Enable WAL mode for better concurrency
+  wal: true,
 });
-
 const keyv = new Keyv({ store: keyvSqlite });
 ```
 
-### Options
-
-- `uri` - The SQLite database URI (default: `'sqlite://:memory:'`)
-- `table` - The table name to use for storage (default: `'keyv'`)
-- `busyTimeout` - Sets a busy handler that sleeps for a specified amount of time when a table is locked
-- `wal` - Enable [Write-Ahead Logging](https://sqlite.org/wal.html) mode for better concurrency and performance (default: `false`)
-  - **Note:** WAL mode is not supported for in-memory databases (`:memory:`). A warning will be logged and the option will be ignored.
-- `keySize` - The maximum key size in bytes (default: `255`, max: `65535`)
-
-You can also use a helper function to create `Keyv` with `KeyvSqlite` store.
+You can also use the `createKeyv` helper function to create `Keyv` with `KeyvSqlite` store:
 
 ```js
-import {createKeyv} from '@keyv/sqlite';
+import { createKeyv } from '@keyv/sqlite';
 
 const keyv = createKeyv('sqlite://path/to/database.sqlite');
 ```
 
+# Migrating to v6
 
-## License
+## Breaking changes
+
+### Properties instead of opts
+
+In v5, configuration was accessed through the `opts` object:
+
+```js
+// v5
+store.opts.table; // 'keyv'
+store.opts.busyTimeout; // 10000
+```
+
+In v6, configuration is accessed through the `opts` getter which returns all current settings as a plain object. The `clearExpiredInterval` and `namespace` properties are also available as top-level getters and setters:
+
+```js
+// v6
+store.opts.table; // 'keyv'
+store.opts.busyTimeout; // 10000
+store.clearExpiredInterval; // 0
+store.namespace; // undefined
+```
+
+### Native namespace support
+
+In v5, namespaces were stored as key prefixes in the `key` column (e.g. `key="myns:mykey"` with no namespace column). In v6, the namespace is stored in a dedicated `namespace` column (e.g. `key="mykey"`, `namespace="myns"`). This enables more efficient queries and proper namespace isolation.
+
+The adapter automatically detects old schemas and migrates existing data on connect — no manual migration steps are needed. During migration, prefixed keys like `myns:mykey` are split into `key="mykey"` and `namespace="myns"`.
+
+### Hookified integration
+
+The adapter now extends [Hookified](https://hookified.org) instead of a custom EventEmitter. Events work the same (`on`, `emit`), but hooks are also available via the standard Hookified API.
+
+## New features
+
+### Native TTL support with `expires` column
+
+v6 adds an `expires BIGINT` column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the `expires` timestamp from the serialized value and stores it in the column. A partial index is created on the `expires` column for efficient cleanup queries.
+
+The schema migration is automatic on connect — existing tables get the column added via `ALTER TABLE ... ADD COLUMN`.
+
+### `clearExpired()` method
+
+A new utility method that deletes all rows where the `expires` column is set and the timestamp is in the past:
+
+```js
+await store.clearExpired();
+```
+
+### `clearExpiredInterval` option
+
+Set an interval (in milliseconds) to automatically call `clearExpired()` on a schedule. Disabled by default (`0`). The timer uses `unref()` so it won't keep the Node.js process alive.
+
+```js
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  clearExpiredInterval: 60_000, // clean up every 60 seconds
+});
+```
+
+### Bulk operations
+
+New methods for efficient multi-key operations:
+
+- `.setMany(entries)` — bulk upsert with automatic batching (249 entries per batch to stay within SQLite's 999 parameter limit)
+- `.getMany(keys)` — bulk retrieve using `json_each()`
+- `.deleteMany(keys)` — bulk delete using `json_each()`
+- `.hasMany(keys)` — bulk existence check
+
+### `createKeyv()` helper
+
+A convenience function to create a `Keyv` instance with `KeyvSqlite` as the store in one call:
+
+```js
+import { createKeyv } from '@keyv/sqlite';
+
+const keyv = createKeyv('sqlite://path/to/database.sqlite');
+```
+
+### Improved iterator
+
+The iterator now uses cursor-based (keyset) pagination instead of `OFFSET`. This handles concurrent modifications during iteration without skipping entries and is more efficient for large datasets.
+
+# Constructor Options
+
+`KeyvSqlite` accepts a connection URI string or an options object:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `uri` | `string` | `'sqlite://:memory:'` | SQLite connection URI |
+| `table` | `string` | `'keyv'` | Table name for key-value storage |
+| `keySize` | `number` | `255` | Maximum key column length (VARCHAR length, max 65535). Alias: `keyLength` |
+| `namespaceLength` | `number` | `255` | Maximum namespace column length (VARCHAR length) |
+| `busyTimeout` | `number` | `undefined` | SQLite [busy timeout](https://sqlite.org/c3ref/busy_timeout.html) in milliseconds |
+| `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
+| `wal` | `boolean` | `false` | Enable [WAL mode](https://sqlite.org/wal.html) for better concurrency |
+| `clearExpiredInterval` | `number` | `0` | Interval in milliseconds to automatically clear expired entries (0 = disabled) |
+
+# Properties
+
+## namespace
+
+Get or set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()` and `iterator()`.
+
+- Type: `string | undefined`
+- Default: `undefined`
+
+```js
+const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
+store.namespace = 'my-namespace';
+console.log(store.namespace); // 'my-namespace'
+```
+
+## opts
+
+Get the current configuration options as a plain object. Returns an object containing `uri`, `dialect`, `table`, `keySize`, `keyLength`, `namespaceLength`, `db`, `iterationLimit`, `wal`, `busyTimeout`, and `clearExpiredInterval`.
+
+```js
+const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
+console.log(store.opts.table); // 'keyv'
+console.log(store.opts.wal); // false
+```
+
+## clearExpiredInterval
+
+Get or set the interval in milliseconds between automatic expired-entry cleanup runs. When set to a value greater than 0, the adapter will automatically call `clearExpired()` at the specified interval. The timer uses `unref()` so it won't keep the Node.js process alive. Setting to 0 disables the automatic cleanup.
+
+- Type: `number`
+- Default: `0` (disabled)
+
+```js
+// Clean up expired entries every 60 seconds
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  clearExpiredInterval: 60_000,
+});
+console.log(store.clearExpiredInterval); // 60000
+
+// Disable it later
+store.clearExpiredInterval = 0;
+```
+
+# Methods
+
+## .set(key, value)
+
+Set a key-value pair.
+
+```js
+await keyv.set('foo', 'bar');
+```
+
+## .setMany(entries)
+
+Set multiple key-value pairs at once. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit.
+
+```js
+await keyv.setMany([
+  { key: 'foo', value: 'bar' },
+  { key: 'baz', value: 'qux' },
+]);
+```
+
+## .get(key)
+
+Get a value by key. Returns `undefined` if the key does not exist.
+
+```js
+const value = await keyv.get('foo'); // 'bar'
+```
+
+## .getMany(keys)
+
+Get multiple values at once. Returns an array of values in the same order as the keys, with `undefined` for missing keys.
+
+```js
+const values = await keyv.getMany(['foo', 'baz']); // ['bar', 'qux']
+```
+
+## .has(key)
+
+Check if a key exists. Returns a boolean.
+
+```js
+const exists = await keyv.has('foo'); // true
+```
+
+## .hasMany(keys)
+
+Check if multiple keys exist. Returns an array of booleans in the same order as the input keys.
+
+```js
+await keyv.set('foo', 'bar');
+await keyv.set('baz', 'qux');
+
+const results = await keyv.hasMany(['foo', 'baz', 'unknown']); // [true, true, false]
+```
+
+## .delete(key)
+
+Delete a key. Returns `true` if the key existed, `false` otherwise.
+
+```js
+const deleted = await keyv.delete('foo'); // true
+```
+
+## .deleteMany(keys)
+
+Delete multiple keys at once. Returns `true` if any of the keys existed.
+
+```js
+const deleted = await keyv.deleteMany(['foo', 'baz']); // true
+```
+
+## .clear()
+
+Clear all keys in the current namespace.
+
+```js
+await keyv.clear();
+```
+
+## .clearExpired()
+
+Utility helper method to delete all expired entries from the store. This removes any rows where the `expires` column is set and the timestamp is in the past. This is useful for periodic cleanup of expired data.
+
+```js
+await store.clearExpired();
+```
+
+## .iterator(namespace?)
+
+Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` option.
+
+```js
+const iterator = keyv.iterator();
+for await (const [key, value] of iterator) {
+  console.log(key, value);
+}
+```
+
+## .disconnect()
+
+Disconnect from the SQLite database and release resources. Stops the automatic expired-entry cleanup interval if running.
+
+```js
+await store.disconnect();
+```
+
+# WAL Mode
+
+By default, SQLite uses the rollback journal for transactions. Enabling [WAL (Write-Ahead Logging)](https://sqlite.org/wal.html) mode can significantly improve concurrency and write performance for most workloads.
+
+```js
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  wal: true,
+});
+const keyv = new Keyv({ store });
+```
+
+**Note:** WAL mode is not supported for in-memory databases (`:memory:`). If enabled for an in-memory database, a warning will be logged and the option will be ignored.
+
+From the [SQLite documentation](https://sqlite.org/wal.html):
+
+> WAL provides more concurrency as readers do not block writers and a writer does not block readers. Reading and writing can proceed concurrently. WAL is significantly faster than the default rollback journal in most scenarios involving a single database connection, and is also faster in many scenarios involving multiple database connections.
+
+# Testing
+
+To test the SQLite adapter, go to the sqlite directory and run:
+
+```shell
+cd storage/sqlite && pnpm test
+```
+
+No external services or Docker are required since SQLite is file-based.
+
+# License
 
 [MIT © Jared Wray](LICENCE)
-
