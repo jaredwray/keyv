@@ -552,23 +552,14 @@ test.it("migrates old schema that lacks namespace column", async (t) => {
 	} catch {}
 
 	// Create a database with the old schema (no namespace/expires columns)
-	const sqlite3Module = await import("sqlite3");
-	const { promisify } = await import("node:util");
-	await new Promise<void>((resolve, reject) => {
-		const db = new sqlite3Module.default.Database(dbPath, async (err) => {
-			if (err) {
-				reject(err);
-				return;
-			}
-
-			const run = promisify(db.run).bind(db);
-			const close = promisify(db.close).bind(db);
-			await run("CREATE TABLE keyv(key VARCHAR(255) PRIMARY KEY, value TEXT)");
-			await run("INSERT INTO keyv (key, value) VALUES ('oldkey', 'oldval')");
-			await close();
-			resolve();
-		});
-	});
+	const Database = (await import("better-sqlite3")).default;
+	const db = new Database(dbPath);
+	db.exec("CREATE TABLE keyv(key VARCHAR(255) PRIMARY KEY, value TEXT)");
+	db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run(
+		"oldkey",
+		"oldval",
+	);
+	db.close();
 
 	// Open with the new adapter — should trigger migration
 	const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
@@ -594,27 +585,17 @@ test.it(
 		} catch {}
 
 		// Create a database with namespace but no expires column
-		const sqlite3Module = await import("sqlite3");
-		const { promisify } = await import("node:util");
-		await new Promise<void>((resolve, reject) => {
-			const db = new sqlite3Module.default.Database(dbPath, async (err) => {
-				if (err) {
-					reject(err);
-					return;
-				}
-
-				const run = promisify(db.run).bind(db);
-				const close = promisify(db.close).bind(db);
-				await run(
-					"CREATE TABLE keyv(key VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE(key, namespace))",
-				);
-				await run(
-					"INSERT INTO keyv (key, value, namespace) VALUES ('k1', 'v1', '')",
-				);
-				await close();
-				resolve();
-			});
-		});
+		const Database = (await import("better-sqlite3")).default;
+		const db = new Database(dbPath);
+		db.exec(
+			"CREATE TABLE keyv(key VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE(key, namespace))",
+		);
+		db.prepare("INSERT INTO keyv (key, value, namespace) VALUES (?, ?, ?)").run(
+			"k1",
+			"v1",
+			"",
+		);
+		db.close();
 
 		// Open with the new adapter — should add expires column
 		const keyv = new KeyvSqlite({

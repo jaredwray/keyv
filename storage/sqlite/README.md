@@ -13,6 +13,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 - [Install](#install)
 - [Usage](#usage)
+- [Multi-Driver Support](#multi-driver-support)
 - [Migrating to v6](#migrating-to-v6)
 - [Constructor Options](#constructor-options)
 - [Properties](#properties)
@@ -70,6 +71,56 @@ You can also use the `createKeyv` helper function to create `Keyv` with `KeyvSql
 import { createKeyv } from '@keyv/sqlite';
 
 const keyv = createKeyv('sqlite://path/to/database.sqlite');
+```
+
+# Multi-Driver Support
+
+`@keyv/sqlite` supports multiple SQLite drivers and automatically selects the best one available for your runtime:
+
+| Driver | Package | Runtime | Type |
+| --- | --- | --- | --- |
+| `better-sqlite3` | `better-sqlite3` | Node.js | Synchronous (default) |
+| `node:sqlite` | Built-in | Node.js 22.5+ | Synchronous |
+| `bun:sqlite` | Built-in | Bun | Synchronous |
+
+By default, `better-sqlite3` is included as a direct dependency and used automatically. On Bun, the native `bun:sqlite` driver is preferred.
+
+## Selecting a specific driver
+
+You can explicitly choose a driver via the `driver` option:
+
+```js
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  driver: 'better-sqlite3', // or 'node:sqlite' or 'bun:sqlite'
+});
+```
+
+## Auto-detection order
+
+When no `driver` is specified, the adapter tries drivers in this order:
+
+- **Bun**: `bun:sqlite` then `better-sqlite3`
+- **Node.js**: `node:sqlite` then `better-sqlite3`
+
+## Custom driver
+
+You can also pass a custom driver object that implements the `SqliteDriver` interface:
+
+```js
+import type { SqliteDriver } from '@keyv/sqlite';
+
+const customDriver: SqliteDriver = {
+  name: 'better-sqlite3',
+  async connect(options) {
+    // Return { query, close } — see SqliteDriver type for details
+  },
+};
+
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  driver: customDriver,
+});
 ```
 
 # Migrating to v6
@@ -152,6 +203,10 @@ import { createKeyv } from '@keyv/sqlite';
 const keyv = createKeyv('sqlite://path/to/database.sqlite');
 ```
 
+### Multi-driver support
+
+v6 replaces the callback-based `sqlite3` package with `better-sqlite3` as the default driver and adds support for `node:sqlite` (Node.js 22.5+) and `bun:sqlite` (Bun). The driver is auto-detected or can be explicitly selected via the `driver` option. See [Multi-Driver Support](#multi-driver-support) for details.
+
 ### Improved iterator
 
 The iterator now uses cursor-based (keyset) pagination instead of `OFFSET`. This handles concurrent modifications during iteration without skipping entries and is more efficient for large datasets.
@@ -170,6 +225,7 @@ The iterator now uses cursor-based (keyset) pagination instead of `OFFSET`. This
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `wal` | `boolean` | `false` | Enable [WAL mode](https://sqlite.org/wal.html) for better concurrency |
 | `clearExpiredInterval` | `number` | `0` | Interval in milliseconds to automatically clear expired entries (0 = disabled) |
+| `driver` | `string \| SqliteDriver` | `undefined` | Explicit driver selection (`'better-sqlite3'`, `'node:sqlite'`, `'bun:sqlite'`) or custom driver object. Auto-detected if omitted |
 
 # Properties
 

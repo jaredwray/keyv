@@ -19,7 +19,7 @@
 		}
 	},
 	"scripts": {
-		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean --external bun:sqlite --external node:sqlite",
 		"prepublishOnly": "pnpm build",
 		"lint": "biome check --write --error-on-warnings",
 		"lint:ci": "biome check --error-on-warnings",
@@ -50,14 +50,15 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^2.0.0",
-		"sqlite3": "^5.1.7"
+		"better-sqlite3": "^11.0.0",
+		"hookified": "^2.0.0"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.11",
+		"@types/better-sqlite3": "^7.6.0",
 		"@faker-js/faker": "^10.2.0",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^4.0.17",

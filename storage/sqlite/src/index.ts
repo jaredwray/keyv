@@ -1,11 +1,11 @@
-import { promisify } from "node:util";
 import { Hookified } from "hookified";
 import Keyv, {
 	type KeyvEntry,
 	type KeyvStoreAdapter,
 	type StoredData,
 } from "keyv";
-import sqlite3 from "sqlite3";
+import { resolveDriver } from "./drivers/index.js";
+import type { SqliteDriver, SqliteDriverName } from "./drivers/types.js";
 import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
 
 /**
@@ -108,6 +108,11 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	 * @default false
 	 */
 	private _wal = false;
+
+	/**
+	 * The explicit driver selection. If omitted, auto-detection is used.
+	 */
+	private _driver?: SqliteDriverName | SqliteDriver;
 
 	/**
 	 * The interval in milliseconds between automatic expired-entry cleanup runs.
@@ -250,6 +255,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 			wal: this._wal,
 			busyTimeout: this._busyTimeout,
 			clearExpiredInterval: this._clearExpiredInterval,
+			driver: this._driver,
 		};
 	}
 
@@ -541,43 +547,16 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Creates a new SQLite database connection, configures busy timeout
-	 * and WAL mode if requested, and returns promisified query/close functions.
+	 * Creates a new SQLite database connection using the resolved driver.
+	 * The driver handles busy timeout, WAL mode, and connection setup.
 	 * @returns An object with `query` and `close` functions for database operations.
 	 */
 	private async createConnection(): Promise<Db> {
-		return new Promise<sqlite3.Database>((resolve, reject) => {
-			const database = new sqlite3.Database(this._db, (error) => {
-				/* v8 ignore next -- @preserve */
-				if (error) {
-					reject(error);
-				} else {
-					if (this._busyTimeout) {
-						database.configure("busyTimeout", this._busyTimeout);
-					}
-
-					resolve(database);
-				}
-			});
-		}).then(async (database) => {
-			const query = promisify(database.all).bind(database);
-			const close = promisify(database.close).bind(database);
-
-			if (this._wal) {
-				const isInMemory = this._db === ":memory:" || this._db === "";
-				if (isInMemory) {
-					console.warn(
-						"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
-					);
-				} else {
-					await query("PRAGMA journal_mode=WAL");
-				}
-			}
-
-			return {
-				query,
-				close,
-			};
+		const driver = await resolveDriver(this._driver);
+		return driver.connect({
+			filename: this._db,
+			busyTimeout: this._busyTimeout,
+			wal: this._wal,
 		});
 	}
 
@@ -711,6 +690,10 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 		if (options.clearExpiredInterval !== undefined) {
 			this._clearExpiredInterval = options.clearExpiredInterval;
 		}
+
+		if (options.driver !== undefined) {
+			this._driver = options.driver;
+		}
 	}
 }
 
@@ -723,4 +706,5 @@ export const createKeyv = (keyvOptions?: KeyvSqliteOptions | string) =>
 	new Keyv({ store: new KeyvSqlite(keyvOptions) });
 
 export default KeyvSqlite;
+export type { SqliteDriver, SqliteDriverName } from "./drivers/types";
 export type { KeyvSqliteOptions } from "./types";

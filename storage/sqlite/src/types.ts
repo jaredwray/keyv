@@ -5,6 +5,8 @@ export type DbQuery = (
 ) => Promise<any>;
 export type DbClose = () => Promise<void>;
 
+import type { SqliteDriver, SqliteDriverName } from "./drivers/types.js";
+
 export type KeyvSqliteOptions = {
 	dialect?: string;
 	uri?: string;
@@ -22,6 +24,8 @@ export type KeyvSqliteOptions = {
 	wal?: boolean;
 	/** Interval in milliseconds between automatic expired-entry cleanup runs. 0 disables. @default 0 */
 	clearExpiredInterval?: number;
+	/** Explicit driver selection or custom driver object. Auto-detected if omitted. */
+	driver?: SqliteDriverName | SqliteDriver;
 };
 
 export type Db = {
