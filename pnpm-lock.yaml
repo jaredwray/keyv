@@ -523,6 +523,9 @@ importers:
       '@keyv/test-suite':
         specifier: workspace:^
         version: link:../../core/test-suite
+      '@monstermann/tinybench-pretty-printer':
+        specifier: ^0.3.0
+        version: 0.3.0(tinybench@6.0.0)
       '@types/better-sqlite3':
         specifier: ^7.6.0
         version: 7.6.13
@@ -532,9 +535,15 @@ importers:
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
+      tinybench:
+        specifier: ^6.0.0
+        version: 6.0.0
       tsd:
         specifier: ^0.33.0
         version: 0.33.0
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
       vitest:
         specifier: ^4.0.17
         version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
@@ -1308,6 +1317,14 @@ packages:
 
   '@mongodb-js/saslprep@1.3.1':
     resolution: {integrity: sha512-6nZrq5kfAz0POWyhljnbWQQJQ5uT8oE2ddX303q1uY0tWsivWKgBDXBBvuFPwOqRRalXJuVO9EjOdVtuhLX0zg==}
+
+  '@monstermann/tables@0.0.0':
+    resolution: {integrity: sha512-mpM86yGT6EPHIyB0c4uIdKQ9mPupfNotn0UHWbj1EVeYpJP/hC9k0p6KoLf9ZZ/r3gHu9PRq61tr3K8Yeg/Rng==}
+
+  '@monstermann/tinybench-pretty-printer@0.3.0':
+    resolution: {integrity: sha512-tuBUvFBQvBg8s9cktbt7xgdAD1UYbWPq9dGrkcs/2DFJxnSi6pGiagPKDX021KeGOPJSF5AfW4rZMJWSc8m18Q==}
+    peerDependencies:
+      tinybench: ^6.0.0
 
   '@napi-rs/triples@1.2.0':
     resolution: {integrity: sha512-HAPjR3bnCsdXBsATpDIP5WCrw0JcACwhhrwIAQhiR46n+jm+a2F8kBsfseAuWtSyQ+H3Yebt2k43B5dy+04yMA==}
@@ -2472,6 +2489,10 @@ packages:
     resolution: {integrity: sha512-/lzGpEWL/8PfI0BmBOPRwp0c/wFNX1RdUML3jK/RcSBA9T8mZDdQpqYBKtCFTOfQbwPqWEOpjqW+Fnayc0969g==}
     engines: {node: '>=10'}
 
+  cli-truncate@4.0.0:
+    resolution: {integrity: sha512-nPdaFdQ0h/GEigbPClz11D0v/ZJEwxmeVZGeMo3Z5StPtUTkA9o1lD6QwoirYiSDzbcwn2XcjwmCp68W1IS4TA==}
+    engines: {node: '>=18'}
+
   cliui@8.0.1:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
@@ -3160,6 +3181,10 @@ packages:
   is-fullwidth-code-point@3.0.0:
     resolution: {integrity: sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==}
     engines: {node: '>=8'}
+
+  is-fullwidth-code-point@4.0.0:
+    resolution: {integrity: sha512-O4L094N2/dZ7xqVdrXhh9r1KODPJpFms8B5sGdJLPy664AgvXsreZUyCQQNItZRDlYug4xStLjNp/sz3HvBowQ==}
+    engines: {node: '>=12'}
 
   is-glob@4.0.3:
     resolution: {integrity: sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==}
@@ -4295,6 +4320,10 @@ packages:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
 
+  slice-ansi@5.0.0:
+    resolution: {integrity: sha512-FC+lgizVPfie0kkhqUScwRu1O/lF6NOgJmlCgK+/LYxDCTk8sGelYaHDhFcDN+Sn3Cv+3VSa4Byeo+IMCzpMgQ==}
+    engines: {node: '>=12'}
+
   smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
@@ -4473,6 +4502,10 @@ packages:
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
+
+  tinybench@6.0.0:
+    resolution: {integrity: sha512-BWlWpVbbZXaYjRV0twGLNQO00Zj4HA/sjLOQP2IvzQqGwRGp+2kh7UU3ijyJ3ywFRogYDRbiHDMrUOfaMnN56g==}
+    engines: {node: '>=20.0.0'}
 
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
@@ -5653,6 +5686,18 @@ snapshots:
     dependencies:
       sparse-bitfield: 3.0.3
 
+  '@monstermann/tables@0.0.0':
+    dependencies:
+      cli-truncate: 4.0.0
+      picocolors: 1.1.1
+      string-width: 7.2.0
+
+  '@monstermann/tinybench-pretty-printer@0.3.0(tinybench@6.0.0)':
+    dependencies:
+      '@monstermann/tables': 0.0.0
+      picocolors: 1.1.1
+      tinybench: 6.0.0
+
   '@napi-rs/triples@1.2.0': {}
 
   '@node-rs/helper@1.6.0':
@@ -6805,6 +6850,11 @@ snapshots:
 
   cli-boxes@3.0.0: {}
 
+  cli-truncate@4.0.0:
+    dependencies:
+      slice-ansi: 5.0.0
+      string-width: 7.2.0
+
   cliui@8.0.1:
     dependencies:
       string-width: 4.2.3
@@ -7612,6 +7662,8 @@ snapshots:
   is-extglob@2.1.1: {}
 
   is-fullwidth-code-point@3.0.0: {}
+
+  is-fullwidth-code-point@4.0.0: {}
 
   is-glob@4.0.3:
     dependencies:
@@ -9216,6 +9268,11 @@ snapshots:
 
   slash@3.0.0: {}
 
+  slice-ansi@5.0.0:
+    dependencies:
+      ansi-styles: 6.2.1
+      is-fullwidth-code-point: 4.0.0
+
   smart-buffer@4.2.0:
     optional: true
 
@@ -9421,6 +9478,8 @@ snapshots:
   timekeeper@2.3.1: {}
 
   tinybench@2.9.0: {}
+
+  tinybench@6.0.0: {}
 
   tinyexec@0.3.2: {}
 
