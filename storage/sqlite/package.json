@@ -19,13 +19,17 @@
 		}
 	},
 	"scripts": {
-		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
+		"build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean --external bun:sqlite --external node:sqlite",
 		"prepublishOnly": "pnpm build",
 		"lint": "biome check --write --error-on-warnings",
 		"lint:ci": "biome check --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
-		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist"
+		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist",
+		"benchmark": "tsx benchmark/run-all.ts",
+		"benchmark:better-sqlite3": "tsx benchmark/better-sqlite3.ts",
+		"benchmark:node-sqlite": "tsx benchmark/node-sqlite.ts",
+		"benchmark:bun-sqlite": "bun benchmark/bun-sqlite.ts"
 	},
 	"repository": {
 		"type": "git",
@@ -50,19 +54,23 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^2.0.0",
-		"sqlite3": "^5.1.7"
+		"better-sqlite3": "^11.0.0",
+		"hookified": "^2.0.0"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
+		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"@biomejs/biome": "^2.3.11",
+		"@types/better-sqlite3": "^7.6.0",
 		"@faker-js/faker": "^10.2.0",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^4.0.17",
 		"rimraf": "^6.1.2",
+		"tinybench": "^6.0.0",
 		"tsd": "^0.33.0",
+		"tsx": "^4.0.0",
 		"vitest": "^4.0.17"
 	},
 	"tsd": {
