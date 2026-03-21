@@ -37,3 +37,7 @@ jobs:
       - name: Run Keyv Tests with Bun
         working-directory: core/keyv
         run: bun run vitest run --coverage
+
+      - name: Run SQLite Tests with Bun
+        working-directory: storage/sqlite
+        run: bun run vitest run --coverage

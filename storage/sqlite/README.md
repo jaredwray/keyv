@@ -44,6 +44,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.disconnect()](#disconnect)
 - [Clearing Expired Keys](#clearing-expired-keys)
 - [WAL Mode](#wal-mode)
+- [Benchmarks](#benchmarks)
 - [Testing](#testing)
 - [License](#license)
 
@@ -534,6 +535,18 @@ const keyv = new Keyv({ store });
 From the [SQLite documentation](https://sqlite.org/wal.html):
 
 > WAL provides more concurrency as readers do not block writers and a writer does not block readers. Reading and writing can proceed concurrently. WAL is significantly faster than the default rollback journal in most scenarios involving a single database connection, and is also faster in many scenarios involving multiple database connections.
+
+# Benchmarks
+
+Simple `set` / `get` benchmarks comparing the supported SQLite drivers using in-memory databases with 10,000 pre-generated key-value pairs. Results will vary across machines and runs — they are meant as a relative comparison, not absolute performance numbers.
+
+<!-- BENCHMARK-RESULTS-START -->
+| name               |  summary  |   ops/sec |   time/op |  margin  |   samples |
+|--------------------|:---------:|----------:|----------:|:--------:|----------:|
+| bun set / get      |    🥇     |       64K |      18µs |  ±0.87%  |       56K |
+| better set / get   |  -29.4%   |       45K |      24µs |  ±2.39%  |       42K |
+| node set / get     |  -29.9%   |       45K |      24µs |  ±2.51%  |       42K |
+<!-- BENCHMARK-RESULTS-END -->
 
 # Testing
 
