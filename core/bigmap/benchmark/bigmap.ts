@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { faker } from "@faker-js/faker";
 import { tinybenchPrinter } from "@monstermann/tinybench-pretty-printer";
 import { Bench } from "tinybench";
-import { BigMap } from "../dist/index.js";
+import { BigMap } from "../src/index.js";
 
 const iterations = 10_000;
 const bench = new Bench({ name: "BigMap vs Map", iterations });

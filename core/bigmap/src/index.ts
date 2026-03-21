@@ -27,7 +27,7 @@ export function defaultHashFunction(key: string, storeSize: number): number {
 		hash = (hash * 33) ^ key.charCodeAt(i);
 	}
 
-	return Math.abs(hash) % storeSize;
+	return (hash >>> 0) % storeSize;
 }
 
 export type BigMapOptions = {
@@ -55,7 +55,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	constructor(options?: BigMapOptions) {
 		super(options);
-		const size = options?.storeSize ?? 4;
+		const size = options?.storeSize ?? 2;
 		if (size < 1) {
 			throw new Error("Store size must be at least 1.");
 		}
@@ -233,7 +233,8 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {any} [thisArg] - An optional value to use as `this` when executing the callback.
 	 */
 	public forEach(
-		callbackfn: (value: V, key: K, map: Map<K, V>) => void,
+		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
+		callbackfn: (this: any, value: V, key: K, map: Map<K, V>) => void,
 		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
 		thisArg?: any,
 	): void {
