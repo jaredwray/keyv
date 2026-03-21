@@ -26,10 +26,7 @@
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist",
-		"benchmark": "tsx benchmark/run-all.ts",
-		"benchmark:better-sqlite3": "tsx benchmark/better-sqlite3.ts",
-		"benchmark:node-sqlite": "tsx benchmark/node-sqlite.ts",
-		"benchmark:bun-sqlite": "bun benchmark/bun-sqlite.ts"
+		"benchmark": "tsx benchmark/node-sqlite.ts"
 	},
 	"repository": {
 		"type": "git",

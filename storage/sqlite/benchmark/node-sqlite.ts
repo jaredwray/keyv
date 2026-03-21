@@ -3,22 +3,28 @@ import { tinybenchPrinter } from "@monstermann/tinybench-pretty-printer";
 import { Bench } from "tinybench";
 import KeyvSqlite from "../src/index.js";
 
-const bench = new Bench({ name: "node:sqlite", iterations: 10_000 });
-const store = new KeyvSqlite({ uri: "sqlite://:memory:", driver: "node:sqlite" });
+const bench = new Bench({ name: "node & better", iterations: 10_000 });
+const storeNode = new KeyvSqlite({ uri: "sqlite://:memory:", driver: "node:sqlite" });
+const storeBetter = new KeyvSqlite({ uri: "sqlite://:memory:", driver: "better-sqlite3" });
 
 // Warm up connection
-await store.set("warmup", "warmup");
-await store.get("warmup");
-await store.clear();
+await storeNode.set("warmup", "warmup");
+await storeNode.get("warmup");
+await storeNode.clear();
+await storeBetter.set("warmup", "warmup");
+await storeBetter.get("warmup");
+await storeBetter.clear();
 
-bench.add("set", async () => {
-	await store.set(faker.string.uuid(), faker.lorem.paragraph());
+bench.add("node set / get", async () => {
+	const key = faker.string.uuid();
+	await storeNode.set(key, faker.lorem.paragraph());
+	await storeNode.get(key);
 });
 
-bench.add("get", async () => {
+bench.add("better set / get", async () => {
 	const key = faker.string.uuid();
-	await store.set(key, faker.lorem.paragraph());
-	await store.get(key);
+	await storeBetter.set(key, faker.lorem.paragraph());
+	await storeBetter.get(key);
 });
 
 await bench.run();
@@ -26,4 +32,4 @@ await bench.run();
 console.log(tinybenchPrinter.toMarkdown(bench));
 console.log("");
 
-await store.disconnect();
+await storeNode.disconnect();

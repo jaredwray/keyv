@@ -11,11 +11,7 @@ await store.set("warmup", "warmup");
 await store.get("warmup");
 await store.clear();
 
-bench.add("set", async () => {
-	await store.set(faker.string.uuid(), faker.lorem.paragraph());
-});
-
-bench.add("get", async () => {
+bench.add("bun set / get", async () => {
 	const key = faker.string.uuid();
 	await store.set(key, faker.lorem.paragraph());
 	await store.get(key);
