@@ -27,13 +27,17 @@ export function defaultHashFunction(key: string, storeSize: number): number {
 		hash = (hash * 33) ^ key.charCodeAt(i);
 	}
 
+	if (storeSize === 2) {
+		return (hash >>> 0) & 1;
+	}
+
 	return (hash >>> 0) % storeSize;
 }
 
 export type BigMapOptions = {
 	/**
-	 * Optional size of the store. The default is 4 maps objects.
-	 * @default 4
+	 * Optional size of the store. The default is 2 maps objects.
+	 * @default 2
 	 */
 	storeSize?: number;
 	/**
@@ -55,7 +59,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	constructor(options?: BigMapOptions) {
 		super(options);
-		const size = options?.storeSize ?? 4;
+		const size = options?.storeSize ?? 2;
 		if (size < 1) {
 			throw new Error("Store size must be at least 1.");
 		}

@@ -43,9 +43,9 @@ describe("BigMap Instance", () => {
 		expect(bigMap.storeSize).toBe(customSize);
 	});
 
-	it("should default store size to 4", () => {
+	it("should default store size to 2", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(bigMap.storeSize).toBe(4);
+		expect(bigMap.storeSize).toBe(2);
 	});
 
 	it("should throw an error when store size is set to less than 1", () => {
@@ -275,7 +275,7 @@ describe("BigMap Hash", () => {
 describe("BigMap Store", () => {
 	it("should initialize the store with empty maps", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(bigMap.store).toHaveLength(4);
+		expect(bigMap.store).toHaveLength(2);
 		for (const map of bigMap.store) {
 			expect(map).toBeInstanceOf(Map);
 		}
@@ -296,8 +296,8 @@ describe("BigMap Store", () => {
 
 	it("should throw an error for invalid store map index", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(() => bigMap.getStoreMap(4)).toThrowError(
-			"Index out of bounds: 4. Valid range is 0 to 3.",
+		expect(() => bigMap.getStoreMap(2)).toThrowError(
+			"Index out of bounds: 2. Valid range is 0 to 1.",
 		);
 	});
 
