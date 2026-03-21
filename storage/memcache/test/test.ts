@@ -54,7 +54,6 @@ it("keyv get", async () => {
 	const keyv = new Keyv({ store: keyvMemcache });
 	const key = faker.string.uuid();
 	const val = faker.lorem.word();
-	await keyv.clear();
 	expect(await keyv.get(key)).toBeUndefined();
 	await keyv.set(key, val);
 	expect(await keyv.get(key)).toBe(val);
@@ -67,8 +66,9 @@ it("format key for no namespace", () => {
 
 it("format key for namespace", () => {
 	const key = faker.string.uuid();
-	new Keyv({ store: keyvMemcache });
-	expect(keyvMemcache.formatKey(key)).toBe(`keyv:${key}`);
+	const localMemcache = new KeyvMemcache(uri);
+	new Keyv({ store: localMemcache });
+	expect(localMemcache.formatKey(key)).toBe(`keyv:${key}`);
 });
 
 it("keyv get with namespace", async () => {
@@ -232,7 +232,9 @@ it("keyvMemcache setMany should emit error on failure", async () => {
 	});
 
 	try {
-		await badMemcache.setMany([{ key: "foo", value: "bar" }]);
+		await badMemcache.setMany([
+			{ key: faker.string.uuid(), value: faker.lorem.word() },
+		]);
 	} catch {
 		expect(errorEmitted).toBeTruthy();
 	}
@@ -241,7 +243,7 @@ it("keyvMemcache setMany should emit error on failure", async () => {
 it("keyv has / false", async () => {
 	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
 
-	const value = await keyv.has("foo");
+	const value = await keyv.has(faker.string.uuid());
 
 	expect(value).toBeFalsy();
 });
@@ -267,7 +269,7 @@ it("delete should emit an error", async () => {
 	});
 
 	try {
-		await keyv.delete("foo");
+		await keyv.delete(faker.string.uuid());
 	} catch {}
 });
 
@@ -279,7 +281,7 @@ it("set should emit an error", async () => {
 	});
 
 	try {
-		await keyv.set("foo", "bar");
+		await keyv.set(faker.string.uuid(), faker.lorem.word());
 	} catch {}
 });
 
@@ -291,7 +293,7 @@ it("get should emit an error", async () => {
 	});
 
 	try {
-		await keyv.get("foo");
+		await keyv.get(faker.string.uuid());
 	} catch {}
 });
 
