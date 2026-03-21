@@ -325,11 +325,11 @@ describe("KeyvRedis Sentinel", () => {
 			keyvRedis.noNamespaceAffectsAll = true;
 
 			const key1 = faker.string.uuid();
-			const val1 = faker.lorem.word();
+			const val1 = faker.string.uuid();
 			const key2 = faker.string.uuid();
-			const val2 = faker.lorem.word();
+			const val2 = faker.string.uuid();
 			const key3 = faker.string.uuid();
-			const val3 = faker.lorem.word();
+			const val3 = faker.string.uuid();
 			keyvRedis.namespace = "ns1";
 			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";
@@ -358,11 +358,11 @@ describe("KeyvRedis Sentinel", () => {
 			keyvRedis.noNamespaceAffectsAll = false;
 
 			const key1 = faker.string.uuid();
-			const val1 = faker.lorem.word();
+			const val1 = faker.string.uuid();
 			const key2 = faker.string.uuid();
-			const val2 = faker.lorem.word();
+			const val2 = faker.string.uuid();
 			const key3 = faker.string.uuid();
-			const val3 = faker.lorem.word();
+			const val3 = faker.string.uuid();
 			keyvRedis.namespace = "ns1";
 			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";

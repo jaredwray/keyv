@@ -45,4 +45,4 @@ jobs:
 
       - name: Run Keyv Deno Smoke Tests
         working-directory: core/keyv
-        run: deno test --import-map test/deno.import_map.json test/deno.test.ts
+        run: deno test --import-map test/deno.import_map.json test/deno.smoke.ts
