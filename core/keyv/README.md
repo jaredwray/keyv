@@ -411,7 +411,7 @@ await keyv.delete('user:1');
 await keyv.clear();
 ```
 
-For more details about BigMap, see the [@keyv/bigmap documentation](https://github.com/jaredwray/keyv/tree/main/storage/bigmap).
+For more details about BigMap, see the [@keyv/bigmap documentation](https://github.com/jaredwray/keyv/tree/main/core/bigmap).
 
 # Compression
 
