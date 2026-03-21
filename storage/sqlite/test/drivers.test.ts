@@ -6,6 +6,19 @@ import type { SqliteDriver } from "../src/drivers/types.js";
 import KeyvSqlite, { createSqlite3Driver } from "../src/index.js";
 
 describe("driver selection", () => {
+	it("driverName is available after ready", async () => {
+		const store = new KeyvSqlite("sqlite://:memory:");
+		await store.ready;
+		expect(store.driverName).toEqual(expect.any(String));
+		await store.disconnect();
+	});
+
+	it("ready promise resolves without error", async () => {
+		const store = new KeyvSqlite("sqlite://:memory:");
+		await expect(store.ready).resolves.toBeUndefined();
+		await store.disconnect();
+	});
+
 	it("auto-detects better-sqlite3 by default", async () => {
 		const store = new KeyvSqlite("sqlite://:memory:");
 		const key = faker.string.uuid();

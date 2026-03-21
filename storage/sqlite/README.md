@@ -1,6 +1,6 @@
 # @keyv/sqlite [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
-> SQLite storage adapter for Keyv
+> SQLite storage adapter for Keyv with multi-driver support for `nodejs`, `bun`, and custom drivers.
 
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
@@ -13,7 +13,10 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 - [Install](#install)
 - [Usage](#usage)
+- [Using createKeyv](#using-createkeyv)
 - [Multi-Driver Support](#multi-driver-support)
+- [Creating a Custom Driver](#creating-a-custom-driver)
+- [Using sqlite3](#using-sqlite3)
 - [Migrating to v6](#migrating-to-v6)
 - [Constructor Options](#constructor-options)
 - [Properties](#properties)
@@ -28,7 +31,10 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [wal](#wal)
   - [busyTimeout](#busytimeout)
   - [driver](#driver)
+  - [driverName](#drivername)
   - [clearExpiredInterval](#clearexpiredinterval)
+  - [ready](#ready)
+  - [opts](#opts)
 - [Methods](#methods)
   - [.set(key, value)](#setkey-value)
   - [.setMany(entries)](#setmanyentries)
@@ -44,9 +50,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.disconnect()](#disconnect)
 - [Clearing Expired Keys](#clearing-expired-keys)
 - [WAL Mode](#wal-mode)
-- [Using sqlite3](#using-sqlite3)
 - [Benchmarks](#benchmarks)
-- [Testing](#testing)
 - [License](#license)
 
 # Install
@@ -77,12 +81,22 @@ const keyvSqlite = new KeyvSqlite({
 const keyv = new Keyv({ store: keyvSqlite });
 ```
 
-You can also use the `createKeyv` helper function to create `Keyv` with `KeyvSqlite` store:
+# Using createKeyv
+
+The `createKeyv` helper creates a `Keyv` instance with `KeyvSqlite` as the store in one call:
 
 ```js
 import { createKeyv } from '@keyv/sqlite';
 
+// With a URI string
 const keyv = createKeyv('sqlite://path/to/database.sqlite');
+
+// With an options object
+const keyv = createKeyv({
+  uri: 'sqlite://path/to/database.sqlite',
+  table: 'cache',
+  wal: true,
+});
 ```
 
 # Multi-Driver Support
@@ -95,7 +109,7 @@ const keyv = createKeyv('sqlite://path/to/database.sqlite');
 | `node:sqlite` | Built-in | Node.js 22.5+ | Synchronous |
 | `bun:sqlite` | Built-in | Bun | Synchronous |
 
-`better-sqlite3` is included as a direct dependency and used as a fallback when native runtime drivers are unavailable. On Bun, the native `bun:sqlite` driver is preferred. On Node.js 22.5+, the built-in `node:sqlite` driver is preferred.
+`better-sqlite3` is included as a direct dependency and used as a fallback when native runtime drivers are unavailable. On Bun, the native `bun:sqlite` driver is preferred. On Node.js 22.5+, the built-in `node:sqlite` driver is preferred. If you still need to use `sqlite3` then go to the [using sqlite3](#using-sqlite3).
 
 ## Selecting a specific driver
 
@@ -115,17 +129,26 @@ When no `driver` is specified, the adapter tries drivers in this order:
 - **Bun**: `bun:sqlite` then `better-sqlite3`
 - **Node.js**: `node:sqlite` then `better-sqlite3`
 
-## Custom driver
+# Creating a Custom Driver
 
-You can also pass a custom driver object that implements the `SqliteDriver` interface:
+You can pass a custom driver object that implements the `SqliteDriver` interface. A custom driver must provide a `name` and a `connect()` method that returns `{ query, close }`:
 
 ```ts
+import KeyvSqlite from '@keyv/sqlite';
 import type { SqliteDriver } from '@keyv/sqlite';
 
 const customDriver: SqliteDriver = {
-  name: 'better-sqlite3',
+  name: 'custom',
   async connect(options) {
-    // Return { query, close } — see SqliteDriver type for details
+    // options: { filename: string, busyTimeout?: number, wal?: boolean }
+    return {
+      async query(sql, ...params) {
+        // Execute SQL and return rows for SELECT/PRAGMA, empty array for mutations
+      },
+      async close() {
+        // Close the database connection
+      },
+    };
   },
 };
 
@@ -134,6 +157,24 @@ const store = new KeyvSqlite({
   driver: customDriver,
 });
 ```
+
+The `query` function must return an array of row objects for `SELECT` and `PRAGMA` statements, and an empty array for all other statements (`INSERT`, `UPDATE`, `DELETE`, etc.).
+
+## Type exports
+
+The following types are available for building custom drivers:
+
+```ts
+import type {
+  SqliteDriver,        // Driver interface: { name, connect() }
+  SqliteDriverName,    // 'better-sqlite3' | 'node:sqlite' | 'bun:sqlite' | 'custom'
+  KeyvSqliteOptions,   // Constructor options
+  Sqlite3ModuleLike,   // Structural type for the sqlite3 module
+  Sqlite3DatabaseLike, // Structural type for a sqlite3.Database instance
+} from '@keyv/sqlite';
+```
+
+The `createSqlite3Driver` export is a real-world example of a custom driver — see [Using sqlite3](#using-sqlite3).
 
 # Using sqlite3
 
@@ -297,7 +338,7 @@ console.log(store.dialect); // 'sqlite'
 
 ## table
 
-Get or set the table name used for storage. The setter sanitizes the name to prevent SQL injection.
+Get or set the table name used for storage. The name is sanitized and escaped for safe use in SQL queries to prevent SQL injection.
 
 - Type: `string`
 - Default: `'keyv'`
@@ -392,6 +433,19 @@ const store = new KeyvSqlite({ uri: 'sqlite://:memory:', driver: 'better-sqlite3
 console.log(store.driver); // 'better-sqlite3'
 ```
 
+## driverName
+
+Get the name of the resolved driver after connection. This is useful to check which driver was auto-detected.
+
+- Type: `string | undefined`
+- Default: `undefined` (set after connection is established)
+
+```js
+const store = new KeyvSqlite('sqlite://:memory:');
+await store.ready;
+console.log(store.driverName); // 'better-sqlite3', 'node:sqlite', 'bun:sqlite', or 'custom'
+```
+
 ## clearExpiredInterval
 
 Get or set the interval in milliseconds between automatic expired-entry cleanup runs. When set to a value greater than 0, the adapter will automatically call `clearExpired()` at the specified interval. The timer uses `unref()` so it won't keep the Node.js process alive. Setting to 0 disables the automatic cleanup.
@@ -409,6 +463,33 @@ console.log(store.clearExpiredInterval); // 60000
 
 // Disable it later
 store.clearExpiredInterval = 0;
+```
+
+## ready
+
+A promise that resolves when the database connection and schema setup are complete. You can optionally await this before the first operation to ensure the adapter is fully initialized.
+
+- Type: `Promise<void>`
+
+```js
+const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
+await store.ready; // connection and schema migration complete
+```
+
+## opts
+
+Get all current settings as a plain object. This getter exists for backward compatibility.
+
+- Type: `KeyvSqliteOptions`
+
+```js
+const store = new KeyvSqlite({
+  uri: 'sqlite://:memory:',
+  table: 'cache',
+  wal: true,
+});
+console.log(store.opts);
+// { uri: 'sqlite://:memory:', table: 'cache', keySize: 255, ... }
 ```
 
 # Methods
@@ -517,7 +598,9 @@ await store.disconnect();
 
 # Clearing Expired Keys
 
-When a key is stored with a TTL, the adapter records the expiration timestamp in the `expires` column. However, expired rows are not automatically removed from the database — they remain until explicitly cleaned up.
+When a key is stored with a TTL, the adapter records the expiration timestamp in the `expires` column. Keyv core enforces TTL automatically — expired keys return `undefined` from `get()` and `false` from `has()`, and are lazily deleted from the store when accessed via `get()`, `getMany()`, or iteration.
+
+However, expired rows that are never accessed again will remain in the database. The `clearExpired()` method and `clearExpiredInterval` option provide bulk cleanup to remove these stale rows efficiently via SQL, without needing to deserialize every row.
 
 ## Automatic cleanup
 
@@ -579,15 +662,7 @@ Simple `set` / `get` benchmarks comparing the built-in SQLite drivers plus an op
 | sqlite3 set / get   |  -74.7%   |       16K |      67µs |  ±1.25%  |       15K |
 <!-- BENCHMARK-RESULTS-END -->
 
-# Testing
-
-To test the SQLite adapter, go to the sqlite directory and run:
-
-```shell
-cd storage/sqlite && pnpm test
-```
-
-No external services or Docker are required since SQLite is file-based.
+Note: we included `sqlite3` tests in this but by default we do not have it as a dependency as our fallback is `better-sqlite3` now. Please refor to [using sqlite3](#using-sqlite3) if you want to use it.
 
 # License
 

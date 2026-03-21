@@ -335,7 +335,9 @@ test.it("WAL mode can be enabled", async (t) => {
 		uri: "sqlite://test/testdb-wal.sqlite",
 		wal: true,
 	});
-	const result = await keyv.query("PRAGMA journal_mode");
+	const result = (await keyv.query("PRAGMA journal_mode")) as Array<{
+		journal_mode: string;
+	}>;
 	t.expect(result[0].journal_mode).toBe("wal");
 	await keyv.disconnect();
 });
@@ -344,7 +346,9 @@ test.it("WAL mode is not enabled by default", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb-nowal.sqlite",
 	});
-	const result = await keyv.query("PRAGMA journal_mode");
+	const result = (await keyv.query("PRAGMA journal_mode")) as Array<{
+		journal_mode: string;
+	}>;
 	t.expect(result[0].journal_mode).not.toBe("wal");
 	await keyv.disconnect();
 });
@@ -356,7 +360,9 @@ test.it(
 			uri: "sqlite://:memory:",
 			wal: true,
 		});
-		const result = await keyv.query("PRAGMA journal_mode");
+		const result = (await keyv.query("PRAGMA journal_mode")) as Array<{
+			journal_mode: string;
+		}>;
 		// In-memory databases cannot use WAL mode, they remain in "memory" journal mode
 		t.expect(result[0].journal_mode).toBe("memory");
 		// But basic operations should still work

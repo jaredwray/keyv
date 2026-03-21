@@ -1,5 +1,10 @@
 import { promisify } from "node:util";
 import type { Db } from "../types.js";
+import {
+	coerceParams,
+	isReturningQuery,
+	shouldApplyWal,
+} from "./driver-utils.js";
 import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 
 /**
@@ -82,34 +87,21 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 			}
 
 			// WAL mode
-			if (options.wal) {
-				const isInMemory = options.filename === ":memory:";
-				if (isInMemory) {
-					console.warn(
-						"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
-					);
-				} else {
-					await execAsync("PRAGMA journal_mode = WAL");
-				}
+			if (shouldApplyWal(options.filename, options.wal)) {
+				await execAsync("PRAGMA journal_mode = WAL");
 			}
 
 			// Serial queue to ensure statement ordering
 			let queue = Promise.resolve();
 
 			const query = async (sqlString: string, ...parameter: unknown[]) => {
-				// sqlite3 only accepts primitive bind values — coerce objects to JSON
-				const safeParams = parameter.map((p) =>
-					p !== null && typeof p === "object" ? JSON.stringify(p) : p,
-				);
+				const safeParams = coerceParams(parameter);
 				const trimmed = sqlString.trimStart().toUpperCase();
 
 				const result = new Promise<unknown[]>((resolve, reject) => {
 					queue = queue.then(async () => {
 						try {
-							if (
-								trimmed.startsWith("SELECT") ||
-								trimmed.startsWith("PRAGMA")
-							) {
+							if (isReturningQuery(trimmed)) {
 								resolve(await allAsync(sqlString, safeParams));
 							} else {
 								await runAsync(sqlString, safeParams);
