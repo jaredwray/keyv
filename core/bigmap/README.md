@@ -623,8 +623,8 @@ This benchmark compares `BigMap` against the native JavaScript `Map` for combine
 <!-- BENCHMARK-RESULTS-START -->
 |        name        |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
 |--------------------|:---------:|----------:|----------:|:--------:|----------:|
-|  Map set / get     |    🥇     |      19M  |     63ns  |  ±0.02%  |      16M  |
-|  BigMap set / get  |   -98%    |     454K  |      2µs  |  ±0.05%  |     434K  |
+|  Map set / get     |    🥇     |      19M  |     61ns  |  ±0.02%  |      16M  |
+|  BigMap set / get  |   -97%    |     649K  |      2µs  |  ±0.04%  |     588K  |
 <!-- BENCHMARK-RESULTS-END -->
 
 If you want to see comparable performance just set the `storeSize: 1` and it is `-1%` off from native `Map`.

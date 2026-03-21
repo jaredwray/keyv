@@ -8,7 +8,7 @@ import { BigMap } from "../dist/index.js";
 const iterations = 10_000;
 const bench = new Bench({ name: "BigMap vs Map", iterations });
 
-const bigMap = new BigMap<string, string>({storeSize: 2});
+const bigMap = new BigMap<string, string>();
 const nativeMap = new Map<string, string>();
 
 // Pre-generate test data so faker overhead doesn't affect benchmark timing

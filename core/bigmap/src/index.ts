@@ -22,8 +22,10 @@ export type MapInterfacee<K, V> = {
 
 export type StoreHashFunction = (key: string, storeSize: number) => number;
 
+const defaultHashery = new Hashery({ cache: { enabled: true } });
+
 export function defaultHashFunction(key: string, storeSize: number): number {
-	return new Hashery().toNumberSync(key, { min: 0, max: storeSize - 1 });
+	return defaultHashery.toNumberSync(key, { min: 0, max: storeSize - 1 });
 }
 
 export type BigMapOptions = {
