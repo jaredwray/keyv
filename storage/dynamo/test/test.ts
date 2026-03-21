@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: this is a test file
-import { randomUUID } from "node:crypto";
 import process from "node:process";
 import { ResourceInUseException } from "@aws-sdk/client-dynamodb";
+import { faker } from "@faker-js/faker";
 import keyvTestSuite from "@keyv/test-suite";
 import Keyv from "keyv";
 import * as test from "vitest";
@@ -26,8 +26,10 @@ test.beforeEach(async () => {
 
 test.it("should ensure table creation", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: "newTable" });
-	await store.set("test:key1", "value1");
-	await t.expect(store.get("test:key1")).resolves.toBe("value1");
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
+	await t.expect(store.get(key)).resolves.toBe(value);
 });
 
 test.it("should be able to create a keyv instance", (t) => {
@@ -92,7 +94,9 @@ test.it(
 	async (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: undefined });
 
-		await store.set("test:key1", "value1");
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		await store.set(key, value);
 
 		t.expect(await store.clear()).toBeUndefined();
 	},
@@ -116,21 +120,25 @@ test.it(
 			return originalSend.call((store as any).client, command);
 		});
 
-		await store.set("test:key1", "value1");
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		await store.set(key, value);
 		(store as any).client.send = originalSend;
-		await t.expect(store.get("test:key1")).resolves.toBe("value1");
+		await t.expect(store.get(key)).resolves.toBe(value);
 	},
 );
 
 test.it("should wait for table when it exists but is not ACTIVE", async (t) => {
-	const tableName = randomUUID();
+	const tableName = faker.string.uuid();
 
 	// First create a store and table
 	const store = new KeyvDynamo({
 		endpoint: dynamoURL,
 		tableName,
 	});
-	await store.set("test:key1", "value1");
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
 
 	// Now test ensureTable directly with a mocked CREATING status
 	let describeCallCount = 0;
@@ -175,14 +183,16 @@ test.it(
 	"should handle ResourceInUseException and wait for table",
 	{ timeout: 10000 },
 	async (t) => {
-		const tableName = randomUUID();
+		const tableName = faker.string.uuid();
 		const store = new KeyvDynamo({
 			endpoint: dynamoURL,
 			tableName,
 		});
 
 		// First create the table
-		await store.set("test:key1", "value1");
+		const key1 = faker.string.uuid();
+		const value1 = faker.lorem.word();
+		await store.set(key1, value1);
 
 		// Now create another store instance that will hit ResourceInUseException
 		const store2 = new KeyvDynamo({
@@ -209,8 +219,10 @@ test.it(
 			});
 
 		// This should wait for the table to exist
-		await store2.set("test:key2", "value2");
-		t.expect(await store2.get("test:key2")).toBe("value2");
+		const key2 = faker.string.uuid();
+		const value2 = faker.lorem.word();
+		await store2.set(key2, value2);
+		t.expect(await store2.get(key2)).toBe(value2);
 		(store2 as any).client.send = originalSend;
 	},
 );
@@ -236,7 +248,7 @@ test.describe("createKeyv", () => {
 	});
 
 	test.it("should create Keyv instance with custom namespace", (t) => {
-		const namespace = "test-namespace";
+		const namespace = faker.string.alphanumeric(10);
 		const keyv = createKeyv({ endpoint: dynamoURL, namespace });
 		t.expect(keyv).toBeDefined();
 		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
@@ -247,7 +259,7 @@ test.describe("createKeyv", () => {
 	});
 
 	test.it("should create Keyv instance with custom table name", (t) => {
-		const tableName = "custom-table";
+		const tableName = faker.string.alphanumeric(10);
 		const keyv = createKeyv({ endpoint: dynamoURL, tableName });
 		t.expect(keyv).toBeDefined();
 		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
@@ -260,8 +272,8 @@ test.describe("createKeyv", () => {
 	test.it(
 		"should create Keyv instance with both namespace and table name",
 		(t) => {
-			const namespace = "test-namespace-2";
-			const tableName = "custom-table-2";
+			const namespace = faker.string.alphanumeric(10);
+			const tableName = faker.string.alphanumeric(10);
 			const keyv = createKeyv({ endpoint: dynamoURL, namespace, tableName });
 			t.expect(keyv).toBeDefined();
 			t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
@@ -276,8 +288,8 @@ test.describe("createKeyv", () => {
 		"should create functional Keyv instance that can store and retrieve values",
 		async (t) => {
 			const keyv = createKeyv({ endpoint: dynamoURL });
-			const key = `test-key-${randomUUID()}`;
-			const value = "test-value";
+			const key = faker.string.uuid();
+			const value = faker.lorem.word();
 
 			await keyv.set(key, value);
 			const retrieved = await keyv.get(key);
@@ -292,10 +304,10 @@ test.describe("createKeyv", () => {
 	test.it(
 		"should create functional Keyv instance with namespace that can store and retrieve values",
 		async (t) => {
-			const namespace = "test-ns";
+			const namespace = faker.string.alphanumeric(10);
 			const keyv = createKeyv({ endpoint: dynamoURL, namespace });
-			const key = `test-key-${randomUUID()}`;
-			const value = "test-value-with-namespace";
+			const key = faker.string.uuid();
+			const value = faker.lorem.word();
 
 			await keyv.set(key, value);
 			const retrieved = await keyv.get(key);
@@ -316,54 +328,54 @@ test.describe("createKeyv", () => {
 		const keyv = createKeyv({ endpoint: dynamoURL });
 
 		// Test with string
-		const stringKey = `string-${randomUUID()}`;
-		const stringValue = `random-string-${randomUUID()}`;
+		const stringKey = faker.string.uuid();
+		const stringValue = faker.lorem.sentence();
 		await keyv.set(stringKey, stringValue);
 		t.expect(await keyv.get(stringKey)).toBe(stringValue);
 
 		// Test with number
-		const numberKey = `number-${randomUUID()}`;
-		const numberValue = Math.random() * 1000;
+		const numberKey = faker.string.uuid();
+		const numberValue = faker.number.float({ max: 1000 });
 		await keyv.set(numberKey, numberValue);
 		t.expect(await keyv.get(numberKey)).toBe(numberValue);
 
 		// Test with boolean
-		const boolKey = `bool-${randomUUID()}`;
-		const boolValue = Math.random() > 0.5;
+		const boolKey = faker.string.uuid();
+		const boolValue = faker.datatype.boolean();
 		await keyv.set(boolKey, boolValue);
 		t.expect(await keyv.get(boolKey)).toBe(boolValue);
 
 		// Test with object
-		const objectKey = `object-${randomUUID()}`;
+		const objectKey = faker.string.uuid();
 		const objectValue = {
-			id: randomUUID(),
-			name: `test-${randomUUID()}`,
-			count: Math.floor(Math.random() * 100),
-			active: Math.random() > 0.5,
+			id: faker.string.uuid(),
+			name: faker.person.fullName(),
+			count: faker.number.int({ max: 100 }),
+			active: faker.datatype.boolean(),
 			nested: {
-				field1: `nested-${randomUUID()}`,
-				field2: Math.random() * 50,
+				field1: faker.lorem.word(),
+				field2: faker.number.float({ max: 50 }),
 			},
-			array: [randomUUID(), randomUUID(), randomUUID()],
+			array: [faker.string.uuid(), faker.string.uuid(), faker.string.uuid()],
 		};
 		await keyv.set(objectKey, objectValue);
 		t.expect(await keyv.get(objectKey)).toEqual(objectValue);
 
 		// Test with array
-		const arrayKey = `array-${randomUUID()}`;
+		const arrayKey = faker.string.uuid();
 		const arrayValue = [
-			randomUUID(),
-			Math.random() * 100,
-			Math.random() > 0.5,
-			{ id: randomUUID() },
+			faker.string.uuid(),
+			faker.number.float({ max: 100 }),
+			faker.datatype.boolean(),
+			{ id: faker.string.uuid() },
 			[1, 2, 3],
 		];
 		await keyv.set(arrayKey, arrayValue);
 		t.expect(await keyv.get(arrayKey)).toEqual(arrayValue);
 
 		// Test with Date object
-		const dateKey = `date-${randomUUID()}`;
-		const dateValue = new Date();
+		const dateKey = faker.string.uuid();
+		const dateValue = faker.date.recent();
 		await keyv.set(dateKey, dateValue);
 		const retrievedDate = await keyv.get(dateKey);
 		t.expect(retrievedDate).toBe(dateValue.toISOString());

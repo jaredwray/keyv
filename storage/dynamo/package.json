@@ -55,10 +55,7 @@
     "hookified": "^2.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.10",
-    "@keyv/test-suite": "workspace:^",
-    "@vitest/coverage-v8": "^4.0.16",
-    "vitest": "^4.0.16"
+    "@keyv/test-suite": "workspace:^"
   },
   "peerDependencies": {
     "keyv": "workspace:^"
