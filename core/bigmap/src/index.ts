@@ -42,11 +42,8 @@ export type BigMapOptions = {
 } & HookifiedOptions;
 
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
-	private _storeSize = 4;
-	private _store = Array.from(
-		{ length: this._storeSize },
-		() => new Map<K, V>(),
-	);
+	private _storeSize!: number;
+	private _store!: Array<Map<K, V>>;
 	private _storeHashFunction?: StoreHashFunction;
 	private _size = 0;
 
@@ -56,14 +53,12 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	constructor(options?: BigMapOptions) {
 		super(options);
-		if (options?.storeSize !== undefined) {
-			if (options.storeSize < 1) {
-				throw new Error("Store size must be at least 1.");
-			}
-
-			this.storeSize = options.storeSize;
+		const size = options?.storeSize ?? 4;
+		if (size < 1) {
+			throw new Error("Store size must be at least 1.");
 		}
 
+		this._storeSize = size;
 		this.initStore();
 
 		this._storeHashFunction = options?.storeHashFunction ?? defaultHashFunction;
@@ -89,7 +84,6 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		}
 
 		this._storeSize = size;
-		this.clear();
 		this.initStore();
 	}
 
@@ -173,8 +167,9 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public entries(): IterableIterator<[K, V]> {
 		const entries: Array<[K, V]> = [];
 		for (const store of this._store) {
-			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
-			store.forEach((value, key) => entries.push([key, value]));
+			for (const entry of store) {
+				entries.push(entry);
+			}
 		}
 
 		return entries[Symbol.iterator]();
@@ -187,8 +182,9 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public keys(): IterableIterator<K> {
 		const keys: K[] = [];
 		for (const store of this._store) {
-			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
-			store.forEach((_, key) => keys.push(key));
+			for (const key of store.keys()) {
+				keys.push(key);
+			}
 		}
 
 		return keys[Symbol.iterator]();
@@ -201,8 +197,9 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public values(): IterableIterator<V> {
 		const values: V[] = [];
 		for (const store of this._store) {
-			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
-			store.forEach((value) => values.push(value));
+			for (const value of store.values()) {
+				values.push(value);
+			}
 		}
 
 		return values[Symbol.iterator]();
@@ -215,8 +212,9 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	public [Symbol.iterator](): IterableIterator<[K, V]> {
 		const entries: Array<[K, V]> = [];
 		for (const store of this._store) {
-			// biome-ignore lint/suspicious/useIterableCallbackReturn: need to fix this
-			store.forEach((value, key) => entries.push([key, value]));
+			for (const entry of store) {
+				entries.push(entry);
+			}
 		}
 
 		return entries[Symbol.iterator]();
@@ -259,11 +257,11 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
 		thisArg?: any,
 	): void {
-		this._store.forEach((store) => {
-			store.forEach((value, key) => {
+		for (const store of this._store) {
+			for (const [key, value] of store) {
 				callbackfn.call(thisArg, value, key, this as unknown as Map<K, V>);
-			});
-		});
+			}
+		}
 	}
 
 	/**
