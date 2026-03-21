@@ -55,7 +55,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	constructor(options?: BigMapOptions) {
 		super(options);
-		const size = options?.storeSize ?? 2;
+		const size = options?.storeSize ?? 4;
 		if (size < 1) {
 			throw new Error("Store size must be at least 1.");
 		}
