@@ -276,18 +276,9 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.3.10
-        version: 2.3.14
       '@keyv/test-suite':
         specifier: workspace:^
         version: link:../../core/test-suite
-      '@vitest/coverage-v8':
-        specifier: ^4.0.16
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
-      vitest:
-        specifier: ^4.0.16
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
 
   storage/etcd:
     dependencies:
