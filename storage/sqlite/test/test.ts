@@ -209,15 +209,15 @@ test.it("Async Iterator multiple elements with limit=1 test", async (t) => {
 	await keyv.set("foo2", "bar2");
 	const iterator = keyv.iterator();
 	let key = await iterator.next();
-	let [k, v] = key.value;
+	let [k, v] = key.value as [string, string];
 	t.expect(k).toBe("foo");
 	t.expect(v).toBe("bar");
 	key = await iterator.next();
-	[k, v] = key.value;
+	[k, v] = key.value as [string, string];
 	t.expect(k).toBe("foo1");
 	t.expect(v).toBe("bar1");
 	key = await iterator.next();
-	[k, v] = key.value;
+	[k, v] = key.value as [string, string];
 	t.expect(k).toBe("foo2");
 	t.expect(v).toBe("bar2");
 });
