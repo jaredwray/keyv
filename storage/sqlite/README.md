@@ -338,7 +338,7 @@ console.log(store.dialect); // 'sqlite'
 
 ## table
 
-Get or set the table name used for storage. The setter sanitizes the name to prevent SQL injection.
+Get or set the table name used for storage. The name is sanitized and escaped for safe use in SQL queries to prevent SQL injection.
 
 - Type: `string`
 - Default: `'keyv'`
