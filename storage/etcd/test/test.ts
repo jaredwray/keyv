@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import * as test from "vitest";
@@ -86,10 +87,12 @@ async function sleep(ms: number): Promise<void> {
 
 test.it("KeyvEtcd respects default tll option", async (t) => {
 	const keyv = new KeyvEtcd(etcdUrl, { ttl: 1000 });
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await keyv.set(key, value);
+	t.expect(await keyv.get(key)).toBe(value);
 	await sleep(3000);
-	t.expect(await keyv.get("foo")).toBe(null);
+	t.expect(await keyv.get(key)).toBe(null);
 });
 
 test.it(".delete() with key as number", async (t) => {
@@ -100,28 +103,33 @@ test.it(".delete() with key as number", async (t) => {
 
 test.it(".clear() with default namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
-	await store.set("foo", "bar");
-	const result = (await store.get("foo")) as string;
-	t.expect(result).toBe("bar");
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
+	const result = (await store.get(key)) as string;
+	t.expect(result).toBe(value);
 	await store.clear();
-	const result2 = (await store.get("foo")) as string;
+	const result2 = (await store.get(key)) as string;
 	t.expect(result2).toBe(null);
 });
 
 test.it(".clear() with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
-	store.namespace = "key1";
-	await store.set(`${store.namespace}:key`, "bar");
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key = faker.string.uuid();
+	await store.set(`${store.namespace}:${key}`, faker.lorem.word());
 	await store.clear();
-	t.expect(await store.get(`${store.namespace}:key`)).toBe(null);
+	t.expect(await store.get(`${store.namespace}:${key}`)).toBe(null);
 });
 
 test.it("close connection successfully", async (t) => {
 	const keyv = new KeyvEtcd(etcdUrl);
-	t.expect(await keyv.get("foo")).toBe(null);
+	const key = faker.string.uuid();
+	t.expect(await keyv.get(key)).toBe(null);
 	await keyv.disconnect();
 	try {
-		await keyv.get("foo");
+		await keyv.get(key);
 		t.expect.fail();
 	} catch {
 		t.expect(true).toBeTruthy();
@@ -130,31 +138,36 @@ test.it("close connection successfully", async (t) => {
 
 test.it("iterator with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
-	store.namespace = "key1";
-	await store.set("key1:foo", "bar");
-	await store.set("key1:foo2", "bar2");
-	const iterator = store.iterator("key1");
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key1 = faker.string.uuid();
+	const value1 = faker.lorem.word();
+	const key2 = faker.string.uuid();
+	const value2 = faker.lorem.word();
+	await store.set(`${namespace}:${key1}`, value1);
+	await store.set(`${namespace}:${key2}`, value2);
+	const iterator = store.iterator(namespace);
+	const results = new Map<string, string>();
 	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("key1:foo2");
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar2");
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	while (!entry.done && entry.value) {
+		results.set(entry.value[0] as string, entry.value[1] as string);
+		entry = await iterator.next();
+	}
+
+	t.expect(results.size).toBe(2);
+	t.expect(results.get(`${namespace}:${key1}`)).toBe(value1);
+	t.expect(results.get(`${namespace}:${key2}`)).toBe(value2);
 });
 
 test.it("iterator without namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
-	await store.set("foo", "bar");
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
 	const iterator = store.iterator();
 	const entry = await iterator.next();
 	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe("foo");
+	t.expect(entry.value[0]).toBe(key);
 	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe("bar");
+	t.expect(entry.value[1]).toBe(value);
 });

@@ -292,24 +292,9 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.3.10
-        version: 2.3.14
       '@keyv/test-suite':
         specifier: workspace:^
         version: link:../../core/test-suite
-      '@vitest/coverage-v8':
-        specifier: ^4.0.16
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
-      rimraf:
-        specifier: ^6.1.2
-        version: 6.1.2
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^4.0.16
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
 
   storage/memcache:
     dependencies:
@@ -6339,6 +6324,14 @@ snapshots:
     optionalDependencies:
       vite: 7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0)
 
+  '@vitest/mocker@4.0.18(vite@7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))':
+    dependencies:
+      '@vitest/spy': 4.0.18
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+
   '@vitest/pretty-format@4.0.18':
     dependencies:
       tinyrainbow: 3.0.3
@@ -9719,7 +9712,7 @@ snapshots:
   vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.18
-      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0))
+      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
       '@vitest/pretty-format': 4.0.18
       '@vitest/runner': 4.0.18
       '@vitest/snapshot': 4.0.18
