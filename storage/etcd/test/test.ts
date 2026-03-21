@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import * as test from "vitest";
-import KeyvEtcd from "../src/index.js";
+import KeyvEtcd, { createKeyv } from "../src/index.js";
 
 const etcdUrl = "etcd://127.0.0.1:2379";
 
@@ -332,4 +332,33 @@ test.it("busyTimeout getter and setter", (t) => {
 test.it("dialect getter is always etcd", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.dialect).toBe("etcd");
+});
+
+test.it("createKeyv returns a Keyv instance with KeyvEtcd store", (t) => {
+	const keyv = createKeyv(etcdUrl);
+	t.expect(keyv).toBeInstanceOf(Keyv);
+	t.expect(keyv.store).toBeInstanceOf(KeyvEtcd);
+});
+
+test.it("createKeyv with options", (t) => {
+	const keyv = createKeyv(etcdUrl, { ttl: 5000 });
+	t.expect(keyv).toBeInstanceOf(Keyv);
+	t.expect(keyv.store).toBeInstanceOf(KeyvEtcd);
+	t.expect((keyv.store as KeyvEtcd).ttl).toBe(5000);
+});
+
+test.it("createKeyv with options object", (t) => {
+	const keyv = createKeyv({ url: "127.0.0.1:2379", ttl: 3000 });
+	t.expect(keyv).toBeInstanceOf(Keyv);
+	t.expect(keyv.store).toBeInstanceOf(KeyvEtcd);
+	t.expect((keyv.store as KeyvEtcd).ttl).toBe(3000);
+});
+
+test.it("createKeyv set and get", async (t) => {
+	const keyv = createKeyv(etcdUrl);
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await keyv.set(key, value);
+	t.expect(await keyv.get(key)).toBe(value);
+	await keyv.delete(key);
 });
