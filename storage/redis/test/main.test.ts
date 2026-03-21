@@ -1,6 +1,6 @@
 import process from "node:process";
-import { createClient, type RedisClientType } from "@redis/client";
 import { faker } from "@faker-js/faker";
+import { createClient, type RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
 import KeyvRedis, { createKeyv } from "../src/index.js";
 

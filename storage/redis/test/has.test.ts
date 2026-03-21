@@ -172,11 +172,7 @@ describe("has", () => {
 			{ key: key3, value: value3, ttl: 5 },
 		]);
 		await delay(10);
-		const exists = await keyvRedis.hasMany([
-			key1,
-			key2,
-			key3,
-		]);
+		const exists = await keyvRedis.hasMany([key1, key2, key3]);
 		expect(exists).toEqual([true, true, false]);
 		await keyvRedis.disconnect();
 	});

@@ -1,5 +1,5 @@
-import { delay } from "@keyv/test-suite";
 import { faker } from "@faker-js/faker";
+import { delay } from "@keyv/test-suite";
 import type { RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
 import KeyvRedis from "../src/index.js";
@@ -187,11 +187,7 @@ describe("Namespace", () => {
 			{ key: key3, value: val3, ttl: 5 },
 		]);
 		await delay(10);
-		const exists = await keyvRedis.hasMany([
-			key1,
-			key2,
-			key3,
-		]);
+		const exists = await keyvRedis.hasMany([key1, key2, key3]);
 		expect(exists).toEqual([true, true, false]);
 		await keyvRedis.disconnect();
 	});

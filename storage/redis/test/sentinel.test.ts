@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test } from "vitest";
 import { faker } from "@faker-js/faker";
+import { beforeEach, describe, expect, test } from "vitest";
 import KeyvRedis, { createSentinel } from "../src/index.js";
 
 const defaultSentinelOptions = {
@@ -243,7 +243,9 @@ describe("KeyvRedis Sentinel", () => {
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator(iteratorNamespace)) {
+				for await (const [key, value] of keyvRedis.iterator(
+					iteratorNamespace,
+				)) {
 					keys.push(key);
 					values.push(value);
 				}

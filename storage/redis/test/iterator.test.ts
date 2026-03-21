@@ -1,5 +1,5 @@
-import type { RedisClientType } from "@redis/client";
 import { faker } from "@faker-js/faker";
+import type { RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
 import KeyvRedis, { createKeyv } from "../src/index.js";
 

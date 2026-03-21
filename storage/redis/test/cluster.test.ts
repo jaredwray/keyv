@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test, vitest } from "vitest";
 import { faker } from "@faker-js/faker";
+import { beforeEach, describe, expect, test, vitest } from "vitest";
 import KeyvRedis, { createCluster } from "../src/index.js";
 
 const defaultClusterOptions = {
@@ -268,7 +268,9 @@ describe("KeyvRedis Cluster", () => {
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator(iteratorNamespace)) {
+				for await (const [key, value] of keyvRedis.iterator(
+					iteratorNamespace,
+				)) {
 					keys.push(key);
 					values.push(value);
 				}
