@@ -258,3 +258,41 @@ test.it("keyPrefixSeparator getter and setter", (t) => {
 	t.expect(store.keyPrefixSeparator).toBe("::");
 	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
 });
+
+test.it("setMany sets multiple keys", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const key1 = faker.string.uuid();
+	const value1 = faker.lorem.word();
+	const key2 = faker.string.uuid();
+	const value2 = faker.lorem.word();
+	await store.setMany([
+		{ key: key1, value: value1 },
+		{ key: key2, value: value2 },
+	]);
+	t.expect(await store.get(key1)).toBe(value1);
+	t.expect(await store.get(key2)).toBe(value2);
+});
+
+test.it("setMany emits error and throws on failure", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	await store.disconnect();
+	const errors: unknown[] = [];
+	store.on("error", (error: unknown) => {
+		errors.push(error);
+	});
+	await t
+		.expect(store.setMany([{ key: "key", value: "value" }]))
+		.rejects.toThrow();
+	t.expect(errors.length).toBeGreaterThan(0);
+});
+
+test.it("hasMany checks multiple keys", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	await store.set(key1, faker.lorem.word());
+	await store.set(key2, faker.lorem.word());
+	const results = await store.hasMany([key1, key2, key3]);
+	t.expect(results).toEqual([true, true, false]);
+});

@@ -157,6 +157,19 @@ export class KeyvEtcd<Value = any> extends Hookified {
 		await this[client]?.put(this.formatKey(key)).value(value);
 	}
 
+	async setMany(entries: Array<{ key: string; value: Value }>): Promise<void> {
+		const promises = entries.map(async ({ key, value }) =>
+			this.set(key, value),
+		);
+		const results = await Promise.allSettled(promises);
+		for (const result of results) {
+			if (result.status === "rejected") {
+				this.emit("error", result.reason);
+				throw result.reason as Error;
+			}
+		}
+	}
+
 	async delete(key: string): DeleteOutput {
 		if (typeof key !== "string") {
 			return false;
@@ -201,6 +214,14 @@ export class KeyvEtcd<Value = any> extends Hookified {
 
 	async has(key: string): HasOutput {
 		return this.client.get(this.formatKey(key)).exists();
+	}
+
+	async hasMany(keys: string[]): Promise<boolean[]> {
+		const promises = keys.map(async (key) => this.has(key));
+		const results = await Promise.allSettled(promises);
+		return results.map((result) =>
+			result.status === "fulfilled" ? result.value : false,
+		);
 	}
 
 	async disconnect() {
