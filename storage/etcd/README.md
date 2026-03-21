@@ -24,7 +24,17 @@
 - [Usage](#usage)
 - [Usage with Namespaces](#usage-with-namespaces)
 - [Options](#options)
-- [Methods and Properties](#methods-and-properties)
+- [Properties](#properties)
+  - [.client](#client)
+  - [.lease](#lease)
+  - [.url](#url)
+  - [.ttl](#ttl)
+  - [.busyTimeout](#busytimeout)
+  - [.dialect](#dialect)
+  - [.namespace](#namespace)
+  - [.keyPrefixSeparator](#keyprefixseparator)
+  - [.opts](#opts)
+- [Methods](#methods)
   - [constructor(url?, options?)](#constructorurl-options)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
@@ -147,7 +157,87 @@ const store2 = new KeyvEtcd({ url: '127.0.0.1:2379', ttl: 5000 });
 const store3 = new KeyvEtcd('etcd://localhost:2379', { ttl: 5000, busyTimeout: 3000 });
 ```
 
-## Methods and Properties
+## Properties
+
+### .client
+
+The underlying `Etcd3` client instance. Can be used to access the etcd3 client directly.
+
+| Type | Default |
+|---|---|
+| `Etcd3` | Created from the `url` option |
+
+### .lease
+
+The etcd lease used for TTL support. Only set when a `ttl` is configured.
+
+| Type | Default |
+|---|---|
+| `Lease \| undefined` | `undefined` |
+
+### .url
+
+The etcd server URL.
+
+| Type | Default |
+|---|---|
+| `string` | `'127.0.0.1:2379'` |
+
+### .ttl
+
+Default TTL in milliseconds for all keys. Converted to seconds internally for etcd leases.
+
+| Type | Default |
+|---|---|
+| `number \| undefined` | `undefined` |
+
+### .busyTimeout
+
+Busy timeout in milliseconds.
+
+| Type | Default |
+|---|---|
+| `number \| undefined` | `undefined` |
+
+### .dialect
+
+Storage dialect identifier. Always returns `'etcd'`. Read-only.
+
+| Type | Default |
+|---|---|
+| `string` | `'etcd'` |
+
+### .namespace
+
+Key prefix for namespace isolation. When set, all keys are prefixed with `namespace:`.
+
+| Type | Default |
+|---|---|
+| `string \| undefined` | `undefined` |
+
+### .keyPrefixSeparator
+
+The separator between the namespace and key.
+
+| Type | Default |
+|---|---|
+| `string` | `':'` |
+
+### .opts
+
+Read-only object containing the current configuration options. Provided for legacy compatibility.
+
+| Type |
+|---|
+| `KeyvEtcdOptions` |
+
+```js
+const store = new KeyvEtcd('etcd://localhost:2379', { ttl: 5000 });
+console.log(store.opts);
+// { url: '127.0.0.1:2379', ttl: 5000, busyTimeout: undefined, dialect: 'etcd', namespace: undefined }
+```
+
+## Methods
 
 ### constructor(url?, options?)
 
