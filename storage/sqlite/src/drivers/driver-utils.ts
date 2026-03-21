@@ -13,9 +13,21 @@ export function coerceParams(params: unknown[]): unknown[] {
 }
 
 /**
+ * Checks whether a SQL statement should return rows.
+ * Matches SELECT, PRAGMA, and any statement containing a RETURNING clause.
+ */
+export function isReturningQuery(trimmedUpperSql: string): boolean {
+	return (
+		trimmedUpperSql.startsWith("SELECT") ||
+		trimmedUpperSql.startsWith("PRAGMA") ||
+		/\bRETURNING\b/.test(trimmedUpperSql)
+	);
+}
+
+/**
  * Creates a standard query function that dispatches to the appropriate
- * method based on the SQL command type (SELECT/PRAGMA vs mutations).
- * @param allFn - Function to execute read queries (SELECT, PRAGMA) that return rows.
+ * method based on the SQL command type (SELECT/PRAGMA/RETURNING vs mutations).
+ * @param allFn - Function to execute read queries (SELECT, PRAGMA, RETURNING) that return rows.
  * @param runFn - Function to execute mutation queries (INSERT, UPDATE, DELETE).
  * @returns A {@link DbQuery} function.
  */
@@ -26,7 +38,7 @@ export function createQueryFn(
 	return async (sqlString: string, ...parameter: unknown[]) => {
 		const safeParams = coerceParams(parameter);
 		const trimmed = sqlString.trimStart().toUpperCase();
-		if (trimmed.startsWith("SELECT") || trimmed.startsWith("PRAGMA")) {
+		if (isReturningQuery(trimmed)) {
 			return allFn(sqlString, safeParams);
 		}
 

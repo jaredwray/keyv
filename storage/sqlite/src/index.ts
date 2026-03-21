@@ -215,6 +215,11 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 				throw error;
 			});
 
+		// Suppress unhandled-rejection on the base promise. Connection errors
+		// are still surfaced through this.query, this.close, and this.ready
+		// when those are awaited, and via the 'error' event emitted above.
+		connected.catch(() => {});
+
 		this.query = async (sqlString, ...parameter) =>
 			connected.then(async (database) =>
 				database.query(sqlString, ...parameter),
@@ -223,6 +228,8 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 		this.close = async () => connected.then((database) => database.close());
 
 		this.ready = connected.then(() => {});
+		// Suppress unhandled-rejection when callers never await ready
+		this.ready.catch(() => {});
 
 		this.startClearExpiredTimer();
 	}
@@ -325,6 +332,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	 * Set the number of rows to fetch per iteration batch. Must be a positive integer.
 	 */
 	public set iterationLimit(value: number) {
+		/* v8 ignore next 3 -- @preserve: validation guard */
 		if (!Number.isInteger(value) || value < 1) {
 			throw new RangeError("iterationLimit must be a positive integer");
 		}
@@ -522,12 +530,11 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	async delete(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const del = `DELETE FROM ${this.getTableName()} WHERE key = ? AND namespace = ?`;
-		await this.query(del, strippedKey, ns);
-		const result = (await this.query("SELECT changes() as affected")) as Array<{
-			affected: number;
+		const del = `DELETE FROM ${this.getTableName()} WHERE key = ? AND namespace = ? RETURNING key`;
+		const result = (await this.query(del, strippedKey, ns)) as Array<{
+			key: string;
 		}>;
-		return result[0].affected > 0;
+		return result.length > 0;
 	}
 
 	/**
@@ -544,12 +551,11 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 		for (let i = 0; i < strippedKeys.length; i += batchSize) {
 			const batch = strippedKeys.slice(i, i + batchSize);
 			const placeholders = batch.map(() => "?").join(", ");
-			const del = `DELETE FROM ${this.getTableName()} WHERE key IN (${placeholders}) AND namespace = ?`;
-			await this.query(del, ...batch, ns);
-			const result = (await this.query(
-				"SELECT changes() as affected",
-			)) as Array<{ affected: number }>;
-			totalAffected += result[0].affected;
+			const del = `DELETE FROM ${this.getTableName()} WHERE key IN (${placeholders}) AND namespace = ? RETURNING key`;
+			const result = (await this.query(del, ...batch, ns)) as Array<{
+				key: string;
+			}>;
+			totalAffected += result.length;
 		}
 
 		return totalAffected > 0;

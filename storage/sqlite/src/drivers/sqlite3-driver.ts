@@ -1,6 +1,10 @@
 import { promisify } from "node:util";
 import type { Db } from "../types.js";
-import { coerceParams, shouldApplyWal } from "./driver-utils.js";
+import {
+	coerceParams,
+	isReturningQuery,
+	shouldApplyWal,
+} from "./driver-utils.js";
 import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 
 /**
@@ -97,10 +101,7 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 				const result = new Promise<unknown[]>((resolve, reject) => {
 					queue = queue.then(async () => {
 						try {
-							if (
-								trimmed.startsWith("SELECT") ||
-								trimmed.startsWith("PRAGMA")
-							) {
+							if (isReturningQuery(trimmed)) {
 								resolve(await allAsync(sqlString, safeParams));
 							} else {
 								await runAsync(sqlString, safeParams);
