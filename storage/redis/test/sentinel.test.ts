@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, test } from "vitest";
 import KeyvRedis, { createSentinel } from "../src/index.js";
 
@@ -62,18 +63,21 @@ describe("KeyvRedis Sentinel", () => {
 
 		const keyvRedis = new KeyvRedis(sentinel);
 
-		await keyvRedis.delete("test-cl1");
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
 
-		const undefinedResult = await keyvRedis.get("test-cl1");
+		await keyvRedis.delete(key);
+
+		const undefinedResult = await keyvRedis.get(key);
 		expect(undefinedResult).toBeUndefined();
 
-		await keyvRedis.set("test-cl1", "test");
+		await keyvRedis.set(key, value);
 
-		const result = await keyvRedis.get("test-cl1");
+		const result = await keyvRedis.get(key);
 
-		expect(result).toBe("test");
+		expect(result).toBe(value);
 
-		await keyvRedis.delete("test-cl1");
+		await keyvRedis.delete(key);
 
 		await keyvRedis.disconnect();
 	});
@@ -111,11 +115,17 @@ describe("KeyvRedis Sentinel", () => {
 		test("should clear with no namespace", async () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
-			await keyvRedis.set("foo90", "bar");
-			await keyvRedis.set("foo902", "bar2");
-			await keyvRedis.set("foo903", "bar3");
+			const key1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
+			await keyvRedis.set(key1, val1);
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
-			const value = await keyvRedis.get("foo90");
+			const value = await keyvRedis.get(key1);
 			expect(value).toBeUndefined();
 			await keyvRedis.disconnect();
 		});
@@ -124,11 +134,17 @@ describe("KeyvRedis Sentinel", () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
 			keyvRedis.useUnlink = false;
-			await keyvRedis.set("foo90", "bar");
-			await keyvRedis.set("foo902", "bar2");
-			await keyvRedis.set("foo903", "bar3");
+			const key1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
+			await keyvRedis.set(key1, val1);
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
-			const value = await keyvRedis.get("foo90");
+			const value = await keyvRedis.get(key1);
 			expect(value).toBeUndefined();
 			await keyvRedis.disconnect();
 		});
@@ -136,15 +152,21 @@ describe("KeyvRedis Sentinel", () => {
 		test("should clear with no namespace but not the namespace ones", async () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
+			const key1 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const val2 = faker.lorem.word();
+			const key3 = faker.string.uuid();
+			const val3 = faker.lorem.word();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo91", "bar");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo912", "bar2");
-			await keyvRedis.set("foo913", "bar3");
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo91");
-			expect(value).toBe("bar");
+			const value = await keyvRedis.get(key1);
+			expect(value).toBe(val1);
 			await keyvRedis.disconnect();
 		});
 
@@ -153,14 +175,20 @@ describe("KeyvRedis Sentinel", () => {
 			const keyvRedis = new KeyvRedis(sentinel);
 			keyvRedis.noNamespaceAffectsAll = false;
 
+			const key1 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const val2 = faker.lorem.word();
+			const key3 = faker.string.uuid();
+			const val3 = faker.lorem.word();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo91", "bar");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo912", "bar2");
-			await keyvRedis.set("foo913", "bar3");
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo91");
+			const value = await keyvRedis.get(key1);
 			expect(value).toBeDefined();
 		});
 
@@ -169,28 +197,38 @@ describe("KeyvRedis Sentinel", () => {
 			const keyvRedis = new KeyvRedis(sentinel);
 			keyvRedis.noNamespaceAffectsAll = true;
 
+			const key1 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const val2 = faker.lorem.word();
+			const key3 = faker.string.uuid();
+			const val3 = faker.lorem.word();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo91", "bar");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo912", "bar2");
-			await keyvRedis.set("foo913", "bar3");
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo91");
+			const value = await keyvRedis.get(key1);
 			expect(value).toBeUndefined();
 		});
 
 		test("should clear namespace but not other ones", async () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
+			const key1 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const val2 = faker.lorem.word();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo921", "bar");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";
-			await keyvRedis.set("foo922", "bar2");
+			await keyvRedis.set(key2, val2);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo921");
-			expect(value).toBe("bar");
+			const value = await keyvRedis.get(key1);
+			expect(value).toBe(val1);
 			await keyvRedis.disconnect();
 		});
 	});
@@ -199,12 +237,15 @@ describe("KeyvRedis Sentinel", () => {
 		test("should no throw an error on iterator", async () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
+			const iteratorNamespace = faker.string.uuid();
 
 			let errorThrown = false;
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator("foo")) {
+				for await (const [key, value] of keyvRedis.iterator(
+					iteratorNamespace,
+				)) {
 					keys.push(key);
 					values.push(value);
 				}
@@ -220,17 +261,23 @@ describe("KeyvRedis Sentinel", () => {
 		test("should be able to iterate over keys", async () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
-			await keyvRedis.set("foo95", "bar");
-			await keyvRedis.set("foo952", "bar2");
-			await keyvRedis.set("foo953", "bar3");
+			const key1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
+			await keyvRedis.set(key1, val1);
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			const keys = [];
 			for await (const [key] of keyvRedis.iterator()) {
 				keys.push(key);
 			}
 
-			expect(keys).toContain("foo95");
-			expect(keys).toContain("foo952");
-			expect(keys).toContain("foo953");
+			expect(keys).toContain(key1);
+			expect(keys).toContain(key2);
+			expect(keys).toContain(key3);
 			await keyvRedis.disconnect();
 		});
 
@@ -238,13 +285,25 @@ describe("KeyvRedis Sentinel", () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
 			const namespace = "ns1";
-			await keyvRedis.set("foo96", "bar");
-			await keyvRedis.set("foo962", "bar2");
-			await keyvRedis.set("foo963", "bar3");
+			const noNsKey1 = faker.string.uuid();
+			const noNsKey2 = faker.string.uuid();
+			const noNsKey3 = faker.string.uuid();
+			const noNsVal1 = faker.lorem.word();
+			const noNsVal2 = faker.lorem.word();
+			const noNsVal3 = faker.lorem.word();
+			await keyvRedis.set(noNsKey1, noNsVal1);
+			await keyvRedis.set(noNsKey2, noNsVal2);
+			await keyvRedis.set(noNsKey3, noNsVal3);
 			keyvRedis.namespace = namespace;
-			await keyvRedis.set("foo961", "bar");
-			await keyvRedis.set("foo9612", "bar2");
-			await keyvRedis.set("foo9613", "bar3");
+			const nsKey1 = faker.string.uuid();
+			const nsKey2 = faker.string.uuid();
+			const nsKey3 = faker.string.uuid();
+			const nsVal1 = faker.lorem.word();
+			const nsVal2 = faker.lorem.word();
+			const nsVal3 = faker.lorem.word();
+			await keyvRedis.set(nsKey1, nsVal1);
+			await keyvRedis.set(nsKey2, nsVal2);
+			await keyvRedis.set(nsKey3, nsVal3);
 			const keys = [];
 			const values = [];
 			for await (const [key, value] of keyvRedis.iterator(namespace)) {
@@ -252,12 +311,12 @@ describe("KeyvRedis Sentinel", () => {
 				values.push(value);
 			}
 
-			expect(keys).toContain("foo961");
-			expect(keys).toContain("foo9612");
-			expect(keys).toContain("foo9613");
-			expect(values).toContain("bar");
-			expect(values).toContain("bar2");
-			expect(values).toContain("bar3");
+			expect(keys).toContain(nsKey1);
+			expect(keys).toContain(nsKey2);
+			expect(keys).toContain(nsKey3);
+			expect(values).toContain(nsVal1);
+			expect(values).toContain(nsVal2);
+			expect(values).toContain(nsVal3);
 
 			await keyvRedis.disconnect();
 		});
@@ -267,12 +326,18 @@ describe("KeyvRedis Sentinel", () => {
 			const keyvRedis = new KeyvRedis(sentinel);
 			keyvRedis.noNamespaceAffectsAll = true;
 
+			const key1 = faker.string.uuid();
+			const val1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const val2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val3 = faker.string.uuid();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo1", "bar1");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";
-			await keyvRedis.set("foo2", "bar2");
+			await keyvRedis.set(key2, val2);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo3", "bar3");
+			await keyvRedis.set(key3, val3);
 
 			const keys = [];
 			const values = [];
@@ -281,12 +346,12 @@ describe("KeyvRedis Sentinel", () => {
 				values.push(value);
 			}
 
-			expect(keys).toContain("ns1::foo1");
-			expect(keys).toContain("ns2::foo2");
-			expect(keys).toContain("foo3");
-			expect(values).toContain("bar1");
-			expect(values).toContain("bar2");
-			expect(values).toContain("bar3");
+			expect(keys).toContain(`ns1::${key1}`);
+			expect(keys).toContain(`ns2::${key2}`);
+			expect(keys).toContain(key3);
+			expect(values).toContain(val1);
+			expect(values).toContain(val2);
+			expect(values).toContain(val3);
 		});
 
 		test("should only iterate over keys with no namespace if name is undefined set and noNamespaceAffectsAll is false", async () => {
@@ -294,12 +359,18 @@ describe("KeyvRedis Sentinel", () => {
 			const keyvRedis = new KeyvRedis(sentinel);
 			keyvRedis.noNamespaceAffectsAll = false;
 
+			const key1 = faker.string.uuid();
+			const val1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const val2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val3 = faker.string.uuid();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo1", "bar1");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";
-			await keyvRedis.set("foo2", "bar2");
+			await keyvRedis.set(key2, val2);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo3", "bar3");
+			await keyvRedis.set(key3, val3);
 
 			const keys = [];
 			const values = [];
@@ -308,15 +379,15 @@ describe("KeyvRedis Sentinel", () => {
 				values.push(value);
 			}
 
-			expect(keys).toContain("foo3");
-			expect(values).toContain("bar3");
+			expect(keys).toContain(key3);
+			expect(values).toContain(val3);
 
-			expect(keys).not.toContain("foo1");
-			expect(keys).not.toContain("ns1::foo1");
-			expect(keys).not.toContain("ns2::foo2");
-			expect(keys).not.toContain("foo2");
-			expect(values).not.toContain("bar1");
-			expect(values).not.toContain("bar2");
+			expect(keys).not.toContain(key1);
+			expect(keys).not.toContain(`ns1::${key1}`);
+			expect(keys).not.toContain(`ns2::${key2}`);
+			expect(keys).not.toContain(key2);
+			expect(values).not.toContain(val1);
+			expect(values).not.toContain(val2);
 		});
 	});
 });

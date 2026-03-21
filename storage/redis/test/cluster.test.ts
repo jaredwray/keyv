@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, test, vitest } from "vitest";
 import KeyvRedis, { createCluster } from "../src/index.js";
 
@@ -59,18 +60,21 @@ describe("KeyvRedis Cluster", () => {
 
 		const keyvRedis = new KeyvRedis(cluster);
 
-		await keyvRedis.delete("test-cl1");
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
 
-		const undefinedResult = await keyvRedis.get("test-cl1");
+		await keyvRedis.delete(key);
+
+		const undefinedResult = await keyvRedis.get(key);
 		expect(undefinedResult).toBeUndefined();
 
-		await keyvRedis.set("test-cl1", "test");
+		await keyvRedis.set(key, value);
 
-		const result = await keyvRedis.get("test-cl1");
+		const result = await keyvRedis.get(key);
 
-		expect(result).toBe("test");
+		expect(result).toBe(value);
 
-		await keyvRedis.delete("test-cl1");
+		await keyvRedis.delete(key);
 
 		await keyvRedis.disconnect();
 	});
@@ -84,8 +88,9 @@ describe("KeyvRedis Cluster", () => {
 		);
 
 		const keyvRedis = new KeyvRedis(cluster);
+		const keys = Array.from({ length: 4 }, () => faker.string.uuid());
 		// These keys may hash to different slots, so multiple mGet calls may be needed
-		await keyvRedis.getMany(["test-cl1", "test-cl2", "test-cl3", "test-cl4"]);
+		await keyvRedis.getMany(keys);
 
 		// Verify that mGet was called (may be multiple times per master if keys hash to different slots)
 		let totalCalls = 0;
@@ -133,11 +138,17 @@ describe("KeyvRedis Cluster", () => {
 		test("should clear with no namespace", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
-			await keyvRedis.set("foo90", "bar");
-			await keyvRedis.set("foo902", "bar2");
-			await keyvRedis.set("foo903", "bar3");
+			const key1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
+			await keyvRedis.set(key1, val1);
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
-			const value = await keyvRedis.get("foo90");
+			const value = await keyvRedis.get(key1);
 			expect(value).toBeUndefined();
 			await keyvRedis.disconnect();
 		});
@@ -146,11 +157,17 @@ describe("KeyvRedis Cluster", () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 			keyvRedis.useUnlink = false;
-			await keyvRedis.set("foo90", "bar");
-			await keyvRedis.set("foo902", "bar2");
-			await keyvRedis.set("foo903", "bar3");
+			const key1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
+			await keyvRedis.set(key1, val1);
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
-			const value = await keyvRedis.get("foo90");
+			const value = await keyvRedis.get(key1);
 			expect(value).toBeUndefined();
 			await keyvRedis.disconnect();
 		});
@@ -158,15 +175,21 @@ describe("KeyvRedis Cluster", () => {
 		test("should clear with no namespace but not the namespace ones", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
+			const nsKey = faker.string.uuid();
+			const nsVal = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo91", "bar");
+			await keyvRedis.set(nsKey, nsVal);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo912", "bar2");
-			await keyvRedis.set("foo913", "bar3");
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo91");
-			expect(value).toBe("bar");
+			const value = await keyvRedis.get(nsKey);
+			expect(value).toBe(nsVal);
 			await keyvRedis.disconnect();
 		});
 
@@ -175,14 +198,21 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 			keyvRedis.noNamespaceAffectsAll = false;
 
+			const nsKey = faker.string.uuid();
+			const nsVal = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
+
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo91", "bar");
+			await keyvRedis.set(nsKey, nsVal);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo912", "bar2");
-			await keyvRedis.set("foo913", "bar3");
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo91");
+			const value = await keyvRedis.get(nsKey);
 			expect(value).toBeDefined();
 		});
 
@@ -191,28 +221,39 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 			keyvRedis.noNamespaceAffectsAll = true;
 
+			const nsKey = faker.string.uuid();
+			const nsVal = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val2 = faker.lorem.word();
+			const val3 = faker.lorem.word();
+
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo91", "bar");
+			await keyvRedis.set(nsKey, nsVal);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo912", "bar2");
-			await keyvRedis.set("foo913", "bar3");
+			await keyvRedis.set(key2, val2);
+			await keyvRedis.set(key3, val3);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo91");
+			const value = await keyvRedis.get(nsKey);
 			expect(value).toBeUndefined();
 		});
 
 		test("should clear namespace but not other ones", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
+			const key1 = faker.string.uuid();
+			const val1 = faker.lorem.word();
+			const key2 = faker.string.uuid();
+			const val2 = faker.lorem.word();
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo921", "bar");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";
-			await keyvRedis.set("foo922", "bar2");
+			await keyvRedis.set(key2, val2);
 			await keyvRedis.clear();
 			keyvRedis.namespace = "ns1";
-			const value = await keyvRedis.get("foo921");
-			expect(value).toBe("bar");
+			const value = await keyvRedis.get(key1);
+			expect(value).toBe(val1);
 			await keyvRedis.disconnect();
 		});
 	});
@@ -222,11 +263,14 @@ describe("KeyvRedis Cluster", () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 
+			const iteratorNamespace = faker.string.uuid();
 			let errorThrown = false;
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator("foo")) {
+				for await (const [key, value] of keyvRedis.iterator(
+					iteratorNamespace,
+				)) {
 					keys.push(key);
 					values.push(value);
 				}
@@ -242,17 +286,23 @@ describe("KeyvRedis Cluster", () => {
 		test("should be able to iterate over keys", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
-			await keyvRedis.set("foo95", "bar");
-			await keyvRedis.set("foo952", "bar2");
-			await keyvRedis.set("foo953", "bar3");
+			const iterKey1 = faker.string.uuid();
+			const iterKey2 = faker.string.uuid();
+			const iterKey3 = faker.string.uuid();
+			const iterVal1 = faker.lorem.word();
+			const iterVal2 = faker.lorem.word();
+			const iterVal3 = faker.lorem.word();
+			await keyvRedis.set(iterKey1, iterVal1);
+			await keyvRedis.set(iterKey2, iterVal2);
+			await keyvRedis.set(iterKey3, iterVal3);
 			const keys = [];
 			for await (const [key] of keyvRedis.iterator()) {
 				keys.push(key);
 			}
 
-			expect(keys).toContain("foo95");
-			expect(keys).toContain("foo952");
-			expect(keys).toContain("foo953");
+			expect(keys).toContain(iterKey1);
+			expect(keys).toContain(iterKey2);
+			expect(keys).toContain(iterKey3);
 			await keyvRedis.disconnect();
 		});
 
@@ -260,13 +310,25 @@ describe("KeyvRedis Cluster", () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 			const namespace = "ns1";
-			await keyvRedis.set("foo96", "bar");
-			await keyvRedis.set("foo962", "bar2");
-			await keyvRedis.set("foo963", "bar3");
+			const noNsKey1 = faker.string.uuid();
+			const noNsKey2 = faker.string.uuid();
+			const noNsKey3 = faker.string.uuid();
+			const noNsVal1 = faker.lorem.word();
+			const noNsVal2 = faker.lorem.word();
+			const noNsVal3 = faker.lorem.word();
+			await keyvRedis.set(noNsKey1, noNsVal1);
+			await keyvRedis.set(noNsKey2, noNsVal2);
+			await keyvRedis.set(noNsKey3, noNsVal3);
 			keyvRedis.namespace = namespace;
-			await keyvRedis.set("foo961", "bar");
-			await keyvRedis.set("foo9612", "bar2");
-			await keyvRedis.set("foo9613", "bar3");
+			const nsKey1 = faker.string.uuid();
+			const nsKey2 = faker.string.uuid();
+			const nsKey3 = faker.string.uuid();
+			const nsVal1 = faker.lorem.word();
+			const nsVal2 = faker.lorem.word();
+			const nsVal3 = faker.lorem.word();
+			await keyvRedis.set(nsKey1, nsVal1);
+			await keyvRedis.set(nsKey2, nsVal2);
+			await keyvRedis.set(nsKey3, nsVal3);
 			const keys = [];
 			const values = [];
 			for await (const [key, value] of keyvRedis.iterator(namespace)) {
@@ -274,12 +336,12 @@ describe("KeyvRedis Cluster", () => {
 				values.push(value);
 			}
 
-			expect(keys).toContain("foo961");
-			expect(keys).toContain("foo9612");
-			expect(keys).toContain("foo9613");
-			expect(values).toContain("bar");
-			expect(values).toContain("bar2");
-			expect(values).toContain("bar3");
+			expect(keys).toContain(nsKey1);
+			expect(keys).toContain(nsKey2);
+			expect(keys).toContain(nsKey3);
+			expect(values).toContain(nsVal1);
+			expect(values).toContain(nsVal2);
+			expect(values).toContain(nsVal3);
 
 			await keyvRedis.disconnect();
 		});
@@ -289,12 +351,19 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 			keyvRedis.noNamespaceAffectsAll = true;
 
+			const key1 = faker.string.uuid();
+			const val1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const val2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val3 = faker.string.uuid();
+
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo1", "bar1");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";
-			await keyvRedis.set("foo2", "bar2");
+			await keyvRedis.set(key2, val2);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo3", "bar3");
+			await keyvRedis.set(key3, val3);
 
 			const keys = [];
 			const values = [];
@@ -303,12 +372,12 @@ describe("KeyvRedis Cluster", () => {
 				values.push(value);
 			}
 
-			expect(keys).toContain("ns1::foo1");
-			expect(keys).toContain("ns2::foo2");
-			expect(keys).toContain("foo3");
-			expect(values).toContain("bar1");
-			expect(values).toContain("bar2");
-			expect(values).toContain("bar3");
+			expect(keys).toContain(`ns1::${key1}`);
+			expect(keys).toContain(`ns2::${key2}`);
+			expect(keys).toContain(key3);
+			expect(values).toContain(val1);
+			expect(values).toContain(val2);
+			expect(values).toContain(val3);
 		});
 
 		test("should only iterate over keys with no namespace if name is undefined set and noNamespaceAffectsAll is false", async () => {
@@ -316,12 +385,19 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 			keyvRedis.noNamespaceAffectsAll = false;
 
+			const key1 = faker.string.uuid();
+			const val1 = faker.string.uuid();
+			const key2 = faker.string.uuid();
+			const val2 = faker.string.uuid();
+			const key3 = faker.string.uuid();
+			const val3 = faker.string.uuid();
+
 			keyvRedis.namespace = "ns1";
-			await keyvRedis.set("foo1", "bar1");
+			await keyvRedis.set(key1, val1);
 			keyvRedis.namespace = "ns2";
-			await keyvRedis.set("foo2", "bar2");
+			await keyvRedis.set(key2, val2);
 			keyvRedis.namespace = undefined;
-			await keyvRedis.set("foo3", "bar3");
+			await keyvRedis.set(key3, val3);
 
 			const keys = [];
 			const values = [];
@@ -330,15 +406,15 @@ describe("KeyvRedis Cluster", () => {
 				values.push(value);
 			}
 
-			expect(keys).toContain("foo3");
-			expect(values).toContain("bar3");
+			expect(keys).toContain(key3);
+			expect(values).toContain(val3);
 
-			expect(keys).not.toContain("foo1");
-			expect(keys).not.toContain("ns1::foo1");
-			expect(keys).not.toContain("ns2::foo2");
-			expect(keys).not.toContain("foo2");
-			expect(values).not.toContain("bar1");
-			expect(values).not.toContain("bar2");
+			expect(keys).not.toContain(key1);
+			expect(keys).not.toContain(`ns1::${key1}`);
+			expect(keys).not.toContain(`ns2::${key2}`);
+			expect(keys).not.toContain(key2);
+			expect(values).not.toContain(val1);
+			expect(values).not.toContain(val2);
 		});
 	});
 
@@ -348,26 +424,17 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 
 			// These keys may hash to different slots
-			const entries = [
-				{ key: "batch-key1", value: "value1" },
-				{ key: "batch-key2", value: "value2" },
-				{ key: "batch-key3", value: "value3" },
-				{ key: "batch-key4", value: "value4" },
-				{ key: "batch-key5", value: "value5" },
-			];
+			const entries = Array.from({ length: 5 }, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.word(),
+			}));
 
 			// Should not throw CROSSSLOT error
 			await expect(keyvRedis.setMany(entries)).resolves.toBeUndefined();
 
 			// Verify all keys were set
 			const values = await keyvRedis.getMany(entries.map((e) => e.key));
-			expect(values).toEqual([
-				"value1",
-				"value2",
-				"value3",
-				"value4",
-				"value5",
-			]);
+			expect(values).toEqual(entries.map((e) => e.value));
 
 			await keyvRedis.disconnect();
 		});
@@ -377,12 +444,15 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 
 			// Set some keys first
-			await keyvRedis.set("has-key1", "value1");
-			await keyvRedis.set("has-key2", "value2");
-			await keyvRedis.set("has-key3", "value3");
+			const setKeys = Array.from({ length: 3 }, () => faker.string.uuid());
+			const setValues = Array.from({ length: 3 }, () => faker.lorem.word());
+			await keyvRedis.set(setKeys[0], setValues[0]);
+			await keyvRedis.set(setKeys[1], setValues[1]);
+			await keyvRedis.set(setKeys[2], setValues[2]);
 
 			// Check multiple keys that may hash to different slots
-			const keys = ["has-key1", "has-key2", "has-key3", "has-key4", "has-key5"];
+			const missingKeys = Array.from({ length: 2 }, () => faker.string.uuid());
+			const keys = [...setKeys, ...missingKeys];
 
 			// Should not throw CROSSSLOT error
 			const results = await keyvRedis.hasMany(keys);
@@ -396,27 +466,21 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 
 			// Set some keys first
-			await keyvRedis.set("del-key1", "value1");
-			await keyvRedis.set("del-key2", "value2");
-			await keyvRedis.set("del-key3", "value3");
-			await keyvRedis.set("del-key4", "value4");
-			await keyvRedis.set("del-key5", "value5");
+			const allKeys = Array.from({ length: 5 }, () => faker.string.uuid());
+			const allValues = Array.from({ length: 5 }, () => faker.lorem.word());
+			for (let i = 0; i < 5; i++) {
+				await keyvRedis.set(allKeys[i], allValues[i]);
+			}
 
-			// Delete multiple keys that may hash to different slots
-			const keysToDelete = ["del-key1", "del-key2", "del-key3"];
+			// Delete first 3 keys
+			const keysToDelete = allKeys.slice(0, 3);
 
 			// Should not throw CROSSSLOT error
 			const result = await keyvRedis.deleteMany(keysToDelete);
 			expect(result).toBe(true);
 
 			// Verify keys were deleted
-			const hasKeys = await keyvRedis.hasMany([
-				"del-key1",
-				"del-key2",
-				"del-key3",
-				"del-key4",
-				"del-key5",
-			]);
+			const hasKeys = await keyvRedis.hasMany(allKeys);
 			expect(hasKeys).toEqual([false, false, false, true, true]);
 
 			await keyvRedis.disconnect();
@@ -427,18 +491,18 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster);
 
 			// These keys may hash to different slots
-			const entries = [
-				{ key: "ttl-key1", value: "value1", ttl: 5000 },
-				{ key: "ttl-key2", value: "value2", ttl: 5000 },
-				{ key: "ttl-key3", value: "value3", ttl: 5000 },
-			];
+			const entries = Array.from({ length: 3 }, () => ({
+				key: faker.string.uuid(),
+				value: faker.lorem.word(),
+				ttl: 5000,
+			}));
 
 			// Should not throw CROSSSLOT error
 			await expect(keyvRedis.setMany(entries)).resolves.toBeUndefined();
 
 			// Verify all keys were set
 			const values = await keyvRedis.getMany(entries.map((e) => e.key));
-			expect(values).toEqual(["value1", "value2", "value3"]);
+			expect(values).toEqual(entries.map((e) => e.value));
 
 			await keyvRedis.disconnect();
 		});
@@ -448,31 +512,21 @@ describe("KeyvRedis Cluster", () => {
 			const keyvRedis = new KeyvRedis(cluster, { useUnlink: false });
 
 			// Set some keys first that may hash to different slots
-			await keyvRedis.set("del-unlink-key1", "value1");
-			await keyvRedis.set("del-unlink-key2", "value2");
-			await keyvRedis.set("del-unlink-key3", "value3");
-			await keyvRedis.set("del-unlink-key4", "value4");
-			await keyvRedis.set("del-unlink-key5", "value5");
+			const allKeys = Array.from({ length: 5 }, () => faker.string.uuid());
+			const allValues = Array.from({ length: 5 }, () => faker.lorem.word());
+			for (let i = 0; i < 5; i++) {
+				await keyvRedis.set(allKeys[i], allValues[i]);
+			}
 
-			// Delete multiple keys using del instead of unlink
-			const keysToDelete = [
-				"del-unlink-key1",
-				"del-unlink-key2",
-				"del-unlink-key3",
-			];
+			// Delete first 3 keys using del instead of unlink
+			const keysToDelete = allKeys.slice(0, 3);
 
 			// Should not throw CROSSSLOT error and should use del command
 			const result = await keyvRedis.deleteMany(keysToDelete);
 			expect(result).toBe(true);
 
 			// Verify keys were deleted
-			const hasKeys = await keyvRedis.hasMany([
-				"del-unlink-key1",
-				"del-unlink-key2",
-				"del-unlink-key3",
-				"del-unlink-key4",
-				"del-unlink-key5",
-			]);
+			const hasKeys = await keyvRedis.hasMany(allKeys);
 			expect(hasKeys).toEqual([false, false, false, true, true]);
 
 			await keyvRedis.disconnect();

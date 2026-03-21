@@ -1,4 +1,5 @@
 import process from "node:process";
+import { faker } from "@faker-js/faker";
 import { createClient, type RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
 import KeyvRedis, { createKeyv } from "../src/index.js";
@@ -38,12 +39,16 @@ describe("KeyvRedis", () => {
 		expect(keyv).toBeDefined();
 		expect(keyv.namespace).toBe("test");
 		expect(keyv.store.namespace).toBe("test");
-		await keyv.set("mykey", "myvalue");
-		await keyv.set("mykey2", { foo: "bar" });
-		const value = await keyv.get<string>("mykey");
-		expect(value).toBe("myvalue");
-		const value2 = await keyv.get("mykey2");
-		expect(value2).toEqual({ foo: "bar" });
+		const key1 = faker.string.uuid();
+		const value1 = faker.lorem.word();
+		const key2 = faker.string.uuid();
+		const objValue = faker.lorem.word();
+		await keyv.set(key1, value1);
+		await keyv.set(key2, { foo: objValue });
+		const result1 = await keyv.get<string>(key1);
+		expect(result1).toBe(value1);
+		const result2 = await keyv.get(key2);
+		expect(result2).toEqual({ foo: objValue });
 	});
 
 	test("should be able to set the client property", () => {
@@ -183,10 +188,12 @@ describe("KeyvRedis Methods", () => {
 	});
 	test("should be able to connect, set, delete, and disconnect", async () => {
 		const keyvRedis = new KeyvRedis();
-		await keyvRedis.set("foo", "bar");
-		const value = await keyvRedis.get("foo");
-		expect(value).toBe("bar");
-		const deleted = await keyvRedis.delete("foo");
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await keyvRedis.set(key, val);
+		const value = await keyvRedis.get(key);
+		expect(value).toBe(val);
+		const deleted = await keyvRedis.delete(key);
 		expect(deleted).toBe(true);
 		await keyvRedis.disconnect();
 	});
@@ -194,10 +201,12 @@ describe("KeyvRedis Methods", () => {
 	test("should be able to connect, set, delete, and disconnect using useUnlink to false", async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.useUnlink = false;
-		await keyvRedis.set("foo", "bar");
-		const value = await keyvRedis.get("foo");
-		expect(value).toBe("bar");
-		const deleted = await keyvRedis.delete("foo");
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await keyvRedis.set(key, val);
+		const value = await keyvRedis.get(key);
+		expect(value).toBe(val);
+		const deleted = await keyvRedis.delete(key);
 		expect(deleted).toBe(true);
 		await keyvRedis.disconnect();
 	});
