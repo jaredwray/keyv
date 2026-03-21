@@ -48,6 +48,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		() => new Map<K, V>(),
 	);
 	private _storeHashFunction?: StoreHashFunction;
+	private _size = 0;
 
 	/**
 	 * Creates an instance of BigMap.
@@ -154,11 +155,12 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 			return this.getStoreMap(0);
 		}
 
-		const storeSize = this._storeSize - 1; // Adjust for zero-based index
+		const raw = this._storeHashFunction
+			? this._storeHashFunction(String(key), this._storeSize)
+			: defaultHashFunction(String(key), this._storeSize);
 
-		const index = this._storeHashFunction
-			? this._storeHashFunction(String(key), storeSize)
-			: defaultHashFunction(String(key), storeSize);
+		// Normalize to a valid bucket index [0, storeSize - 1]
+		const index = Math.abs(Math.floor(raw)) % this._storeSize;
 
 		return this.getStoreMap(index);
 	}

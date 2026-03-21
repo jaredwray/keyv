@@ -439,3 +439,46 @@ describe("createKeyv", () => {
 		expect(value).toBe("value");
 	});
 });
+
+describe("bucket distribution", () => {
+	it("should populate all configured buckets", () => {
+		const storeSize = 8;
+		const bigMap = new BigMap<string, string>({ storeSize });
+
+		// Insert enough keys to statistically hit all buckets
+		for (let i = 0; i < 1000; i++) {
+			bigMap.set(`key-${i}`, `value-${i}`);
+		}
+
+		for (let i = 0; i < storeSize; i++) {
+			expect(bigMap.getStoreMap(i).size).toBeGreaterThan(0);
+		}
+	});
+
+	it("should normalize out-of-range hash values to valid bucket indices", () => {
+		const storeSize = 4;
+		// Custom hash that returns values outside [0, storeSize - 1]
+		const bigMap = new BigMap<string, string>({
+			storeSize,
+			storeHashFunction: (_key: string, _bucketCount: number) => 7,
+		});
+
+		bigMap.set("a", "1");
+		// 7 % 4 = 3, should land in bucket 3 without throwing
+		expect(bigMap.get("a")).toBe("1");
+		expect(bigMap.getStoreMap(3).size).toBe(1);
+	});
+
+	it("should normalize negative hash values to valid bucket indices", () => {
+		const storeSize = 4;
+		const bigMap = new BigMap<string, string>({
+			storeSize,
+			storeHashFunction: (_key: string, _bucketCount: number) => -5,
+		});
+
+		bigMap.set("a", "1");
+		// abs(-5) % 4 = 1, should land in bucket 1
+		expect(bigMap.get("a")).toBe("1");
+		expect(bigMap.getStoreMap(1).size).toBe(1);
+	});
+});
