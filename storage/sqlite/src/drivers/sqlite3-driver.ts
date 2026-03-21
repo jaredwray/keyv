@@ -1,3 +1,4 @@
+import { promisify } from "node:util";
 import type { Db } from "../types.js";
 import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 
@@ -61,6 +62,19 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 				);
 			});
 
+			const allAsync = promisify(db.all.bind(db)) as (
+				sql: string,
+				params: unknown[],
+			) => Promise<unknown[]>;
+			const runAsync = promisify(db.run.bind(db)) as (
+				sql: string,
+				params: unknown[],
+			) => Promise<void>;
+			const execAsync = promisify(db.exec.bind(db)) as (
+				sql: string,
+			) => Promise<void>;
+			const closeAsync = promisify(db.close.bind(db)) as () => Promise<void>;
+
 			// busyTimeout uses configure() API, not PRAGMA
 			if (options.busyTimeout) {
 				db.configure("busyTimeout", Number(options.busyTimeout));
@@ -75,7 +89,7 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 						"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
 					);
 				} else {
-					db.exec("PRAGMA journal_mode = WAL");
+					await execAsync("PRAGMA journal_mode = WAL");
 				}
 			}
 
@@ -89,49 +103,28 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 				);
 				const trimmed = sqlString.trimStart().toUpperCase();
 
-				return new Promise<unknown[]>((resolve, reject) => {
-					queue = queue.then(
-						() =>
-							new Promise<void>((done) => {
-								if (
-									trimmed.startsWith("SELECT") ||
-									trimmed.startsWith("PRAGMA")
-								) {
-									db.all(sqlString, safeParams, (err, rows) => {
-										if (err) {
-											reject(err);
-										} else {
-											resolve(rows);
-										}
-
-										done();
-									});
-								} else {
-									db.run(sqlString, safeParams, (err) => {
-										if (err) {
-											reject(err);
-										} else {
-											resolve([]);
-										}
-
-										done();
-									});
-								}
-							}),
-					);
-				});
-			};
-
-			const close = async () =>
-				new Promise<void>((resolve, reject) => {
-					db.close((err) => {
-						if (err) {
-							reject(err);
-						} else {
-							resolve();
+				const result = new Promise<unknown[]>((resolve, reject) => {
+					queue = queue.then(async () => {
+						try {
+							if (
+								trimmed.startsWith("SELECT") ||
+								trimmed.startsWith("PRAGMA")
+							) {
+								resolve(await allAsync(sqlString, safeParams));
+							} else {
+								await runAsync(sqlString, safeParams);
+								resolve([]);
+							}
+						} catch (error) {
+							reject(error);
 						}
 					});
 				});
+
+				return result;
+			};
+
+			const close = async () => closeAsync();
 
 			return { query, close };
 		},
