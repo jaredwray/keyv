@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
-import { tinybenchPrinter } from "@monstermann/tinybench-pretty-printer";
 import { Bench } from "tinybench";
 import KeyvSqlite from "../src/index.js";
+import { handleOutput } from "./utils.js";
 
 const bench = new Bench({ name: "node & better", iterations: 10_000 });
 const storeNode = new KeyvSqlite({ uri: "sqlite://:memory:", driver: "node:sqlite" });
@@ -29,7 +29,7 @@ bench.add("better set / get", async () => {
 
 await bench.run();
 
-console.log(tinybenchPrinter.toMarkdown(bench));
-console.log("");
+handleOutput(bench);
 
 await storeNode.disconnect();
+await storeBetter.disconnect();
