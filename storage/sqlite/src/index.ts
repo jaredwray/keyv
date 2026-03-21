@@ -840,5 +840,10 @@ export const createKeyv = (keyvOptions?: KeyvSqliteOptions | string) =>
 	new Keyv({ store: new KeyvSqlite(keyvOptions) });
 
 export default KeyvSqlite;
+export type {
+	Sqlite3DatabaseLike,
+	Sqlite3ModuleLike,
+} from "./drivers/sqlite3-driver.js";
+export { createSqlite3Driver } from "./drivers/sqlite3-driver.js";
 export type { SqliteDriver, SqliteDriverName } from "./drivers/types";
 export type { KeyvSqliteOptions } from "./types";

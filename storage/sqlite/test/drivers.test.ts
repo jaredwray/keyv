@@ -1,13 +1,17 @@
+import { faker } from "@faker-js/faker";
+import sqlite3 from "sqlite3";
 import { describe, expect, it, vi } from "vitest";
 import { resolveDriver } from "../src/drivers/index.js";
 import type { SqliteDriver } from "../src/drivers/types.js";
-import KeyvSqlite from "../src/index.js";
+import KeyvSqlite, { createSqlite3Driver } from "../src/index.js";
 
 describe("driver selection", () => {
 	it("auto-detects better-sqlite3 by default", async () => {
 		const store = new KeyvSqlite("sqlite://:memory:");
-		await store.set("key1", "val1");
-		expect(await store.get("key1")).toBe("val1");
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await store.set(key, val);
+		expect(await store.get(key)).toBe(val);
 		await store.disconnect();
 	});
 
@@ -16,8 +20,10 @@ describe("driver selection", () => {
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
 		});
-		await store.set("key1", "val1");
-		expect(await store.get("key1")).toBe("val1");
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await store.set(key, val);
+		expect(await store.get(key)).toBe(val);
 		await store.disconnect();
 	});
 
@@ -68,8 +74,10 @@ describe("driver selection", () => {
 			uri: "sqlite://:memory:",
 			driver: customDriver,
 		});
-		await store.set("custom", "driver");
-		expect(await store.get("custom")).toBe("driver");
+		const customKey = faker.string.uuid();
+		const customVal = faker.lorem.word();
+		await store.set(customKey, customVal);
+		expect(await store.get(customKey)).toBe(customVal);
 		await store.disconnect();
 	});
 });
@@ -80,13 +88,17 @@ describe("better-sqlite3 driver operations", () => {
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
 		});
-		await store.set("a", "1");
-		await store.set("b", "2");
-		expect(await store.get("a")).toBe("1");
-		expect(await store.has("a")).toBe(true);
-		expect(await store.has("missing")).toBe(false);
-		expect(await store.delete("a")).toBe(true);
-		expect(await store.get("a")).toBeUndefined();
+		const keyA = faker.string.uuid();
+		const keyB = faker.string.uuid();
+		const valA = faker.lorem.word();
+		const valB = faker.lorem.word();
+		await store.set(keyA, valA);
+		await store.set(keyB, valB);
+		expect(await store.get(keyA)).toBe(valA);
+		expect(await store.has(keyA)).toBe(true);
+		expect(await store.has(faker.string.uuid())).toBe(false);
+		expect(await store.delete(keyA)).toBe(true);
+		expect(await store.get(keyA)).toBeUndefined();
 		await store.disconnect();
 	});
 
@@ -95,16 +107,23 @@ describe("better-sqlite3 driver operations", () => {
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
 		});
+		const keyX = faker.string.uuid();
+		const keyY = faker.string.uuid();
+		const keyZ = faker.string.uuid();
+		const valX = faker.lorem.word();
+		const valY = faker.lorem.word();
+		const valZ = faker.lorem.word();
+		const missingKey = faker.string.uuid();
 		await store.setMany([
-			{ key: "x", value: "1" },
-			{ key: "y", value: "2" },
-			{ key: "z", value: "3" },
+			{ key: keyX, value: valX },
+			{ key: keyY, value: valY },
+			{ key: keyZ, value: valZ },
 		]);
-		const values = await store.getMany(["x", "y", "z", "missing"]);
-		expect(values).toEqual(["1", "2", "3", undefined]);
-		expect(await store.hasMany(["x", "missing"])).toEqual([true, false]);
-		expect(await store.deleteMany(["x", "y"])).toBe(true);
-		expect(await store.get("x")).toBeUndefined();
+		const values = await store.getMany([keyX, keyY, keyZ, missingKey]);
+		expect(values).toEqual([valX, valY, valZ, undefined]);
+		expect(await store.hasMany([keyX, missingKey])).toEqual([true, false]);
+		expect(await store.deleteMany([keyX, keyY])).toBe(true);
+		expect(await store.get(keyX)).toBeUndefined();
 		await store.disconnect();
 	});
 
@@ -113,9 +132,10 @@ describe("better-sqlite3 driver operations", () => {
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
 		});
-		await store.set("a", "1");
+		const key = faker.string.uuid();
+		await store.set(key, faker.lorem.word());
 		await store.clear();
-		expect(await store.get("a")).toBeUndefined();
+		expect(await store.get(key)).toBeUndefined();
 		await store.disconnect();
 	});
 
@@ -124,8 +144,8 @@ describe("better-sqlite3 driver operations", () => {
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
 		});
-		await store.set("i1", "v1");
-		await store.set("i2", "v2");
+		await store.set(faker.string.uuid(), faker.lorem.word());
+		await store.set(faker.string.uuid(), faker.lorem.word());
 		const entries: Array<[string, string]> = [];
 		for await (const entry of store.iterator()) {
 			entries.push(entry as [string, string]);
@@ -147,8 +167,10 @@ describe("better-sqlite3 driver operations", () => {
 			driver: "better-sqlite3",
 			wal: true,
 		});
-		await store.set("walkey", "walval");
-		expect(await store.get("walkey")).toBe("walval");
+		const walKey = faker.string.uuid();
+		const walVal = faker.lorem.word();
+		await store.set(walKey, walVal);
+		expect(await store.get(walKey)).toBe(walVal);
 		await store.disconnect();
 
 		try {
@@ -165,7 +187,7 @@ describe("better-sqlite3 driver operations", () => {
 			driver: "better-sqlite3",
 			wal: true,
 		});
-		await store.set("k", "v");
+		await store.set(faker.string.uuid(), faker.lorem.word());
 		expect(warnSpy).toHaveBeenCalledWith(
 			"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
 		);
@@ -179,8 +201,166 @@ describe("better-sqlite3 driver operations", () => {
 			driver: "better-sqlite3",
 			busyTimeout: 5000,
 		});
-		await store.set("bt", "val");
-		expect(await store.get("bt")).toBe("val");
+		const btKey = faker.string.uuid();
+		const btVal = faker.lorem.word();
+		await store.set(btKey, btVal);
+		expect(await store.get(btKey)).toBe(btVal);
+		await store.disconnect();
+	});
+});
+
+describe("sqlite3 helper driver", () => {
+	it("basic set/get with in-memory db", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+		});
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await store.set(key, val);
+		expect(await store.get(key)).toBe(val);
+		await store.disconnect();
+	});
+
+	it("driver name is 'custom'", () => {
+		const driver = createSqlite3Driver(sqlite3);
+		expect(driver.name).toBe("custom");
+	});
+
+	it("get/set/delete/has work correctly", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+		});
+		const keyA = faker.string.uuid();
+		const keyB = faker.string.uuid();
+		const valA = faker.lorem.word();
+		const valB = faker.lorem.word();
+		await store.set(keyA, valA);
+		await store.set(keyB, valB);
+		expect(await store.get(keyA)).toBe(valA);
+		expect(await store.has(keyA)).toBe(true);
+		expect(await store.has(faker.string.uuid())).toBe(false);
+		expect(await store.delete(keyA)).toBe(true);
+		expect(await store.get(keyA)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	it("getMany/setMany/deleteMany/hasMany work correctly", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+		});
+		const keyX = faker.string.uuid();
+		const keyY = faker.string.uuid();
+		const keyZ = faker.string.uuid();
+		const valX = faker.lorem.word();
+		const valY = faker.lorem.word();
+		const valZ = faker.lorem.word();
+		const missingKey = faker.string.uuid();
+		await store.setMany([
+			{ key: keyX, value: valX },
+			{ key: keyY, value: valY },
+			{ key: keyZ, value: valZ },
+		]);
+		const values = await store.getMany([keyX, keyY, keyZ, missingKey]);
+		expect(values).toEqual([valX, valY, valZ, undefined]);
+		expect(await store.hasMany([keyX, missingKey])).toEqual([true, false]);
+		expect(await store.deleteMany([keyX, keyY])).toBe(true);
+		expect(await store.get(keyX)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	it("clear works correctly", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+		});
+		const key = faker.string.uuid();
+		await store.set(key, faker.lorem.word());
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	it("iterator works correctly", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+		});
+		await store.set(faker.string.uuid(), faker.lorem.word());
+		await store.set(faker.string.uuid(), faker.lorem.word());
+		const entries: Array<[string, string]> = [];
+		for await (const entry of store.iterator()) {
+			entries.push(entry as [string, string]);
+		}
+
+		expect(entries.length).toBe(2);
+		await store.disconnect();
+	});
+
+	it("WAL mode works with file-based database", async () => {
+		const fs = await import("node:fs");
+		const dbPath = "test/testdb-wal-sqlite3.sqlite";
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+
+		const store = new KeyvSqlite({
+			uri: `sqlite://${dbPath}`,
+			driver: createSqlite3Driver(sqlite3),
+			wal: true,
+		});
+		const walKey = faker.string.uuid();
+		const walVal = faker.lorem.word();
+		await store.set(walKey, walVal);
+		expect(await store.get(walKey)).toBe(walVal);
+		await store.disconnect();
+
+		try {
+			fs.unlinkSync(dbPath);
+			fs.unlinkSync(`${dbPath}-wal`);
+			fs.unlinkSync(`${dbPath}-shm`);
+		} catch {}
+	});
+
+	it("WAL mode on in-memory database logs warning", async () => {
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+			wal: true,
+		});
+		await store.set(faker.string.uuid(), faker.lorem.word());
+		expect(warnSpy).toHaveBeenCalledWith(
+			"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
+		);
+		warnSpy.mockRestore();
+		await store.disconnect();
+	});
+
+	it("busyTimeout option is accepted", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+			busyTimeout: 5000,
+		});
+		const btKey = faker.string.uuid();
+		const btVal = faker.lorem.word();
+		await store.set(btKey, btVal);
+		expect(await store.get(btKey)).toBe(btVal);
+		await store.disconnect();
+	});
+
+	it("works with sqlite3.verbose()", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3.verbose()),
+		});
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await store.set(key, val);
+		expect(await store.get(key)).toBe(val);
 		await store.disconnect();
 	});
 });

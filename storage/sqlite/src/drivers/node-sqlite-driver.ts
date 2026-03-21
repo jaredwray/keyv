@@ -14,8 +14,7 @@ async function createNodeSqliteConnection(
 	}
 
 	if (options.wal) {
-		const isInMemory =
-			options.filename === ":memory:" || options.filename === "";
+		const isInMemory = options.filename === ":memory:";
 		if (isInMemory) {
 			console.warn(
 				"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",

@@ -1,11 +1,16 @@
 import { faker } from "@faker-js/faker";
+import sqlite3 from "sqlite3";
 import { Bench } from "tinybench";
-import KeyvSqlite from "../src/index.js";
+import KeyvSqlite, { createSqlite3Driver } from "../src/index.js";
 import { handleOutput } from "./utils.js";
 
-const bench = new Bench({ name: "node & better", iterations: 10_000 });
+const bench = new Bench({ name: "node, better & sqlite3", iterations: 10_000 });
 const storeNode = new KeyvSqlite({ uri: "sqlite://:memory:", driver: "node:sqlite" });
 const storeBetter = new KeyvSqlite({ uri: "sqlite://:memory:", driver: "better-sqlite3" });
+const storeSqlite3 = new KeyvSqlite({
+	uri: "sqlite://:memory:",
+	driver: createSqlite3Driver(sqlite3),
+});
 
 // Warm up connection
 await storeNode.set("warmup", "warmup");
@@ -14,6 +19,9 @@ await storeNode.clear();
 await storeBetter.set("warmup", "warmup");
 await storeBetter.get("warmup");
 await storeBetter.clear();
+await storeSqlite3.set("warmup", "warmup");
+await storeSqlite3.get("warmup");
+await storeSqlite3.clear();
 
 // Pre-generate test data so faker overhead doesn't affect benchmark timing
 const testData = Array.from({ length: 10_000 }, () => ({
@@ -37,9 +45,18 @@ bench.add("better set / get", async () => {
 	await storeBetter.get(key);
 });
 
+let sqlite3Index = 0;
+bench.add("sqlite3 set / get", async () => {
+	const { key, value } = testData[sqlite3Index % testData.length];
+	sqlite3Index++;
+	await storeSqlite3.set(key, value);
+	await storeSqlite3.get(key);
+});
+
 await bench.run();
 
 handleOutput(bench);
 
 await storeNode.disconnect();
 await storeBetter.disconnect();
+await storeSqlite3.disconnect();

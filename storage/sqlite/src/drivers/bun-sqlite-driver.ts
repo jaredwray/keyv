@@ -6,6 +6,7 @@ async function createBunSqliteConnection(
 	options: SqliteDriverConnectOptions,
 ): Promise<Db> {
 	// Dynamic import — only available in Bun runtime
+	// @ts-expect-error: bun:sqlite types may not be available
 	// biome-ignore lint/suspicious/noExplicitAny: bun:sqlite types may not be available
 	const { Database } = (await import("bun:sqlite")) as any;
 	const db = new Database(options.filename);
@@ -15,8 +16,7 @@ async function createBunSqliteConnection(
 	}
 
 	if (options.wal) {
-		const isInMemory =
-			options.filename === ":memory:" || options.filename === "";
+		const isInMemory = options.filename === ":memory:";
 		if (isInMemory) {
 			console.warn(
 				"@keyv/sqlite: WAL mode is not supported for in-memory databases. The wal option will be ignored.",
