@@ -160,26 +160,32 @@ describe("set", () => {
 
 	test("should be able to set a ttl", async () => {
 		const keyvRedis = new KeyvRedis();
-		await keyvRedis.set("foo76", "bar", 10);
+		const key = faker.string.uuid();
+		await keyvRedis.set(key, faker.lorem.word(), 10);
 		await delay(15);
-		const value = await keyvRedis.get("foo76");
+		const value = await keyvRedis.get(key);
 		expect(value).toBeUndefined();
 		await keyvRedis.disconnect();
 	});
 
 	test("should be able to set many keys", async () => {
 		const keyvRedis = new KeyvRedis();
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const key3 = faker.string.uuid();
+		const val1 = faker.lorem.word();
+		const val2 = faker.lorem.word();
 		await keyvRedis.setMany([
-			{ key: "foo-many1", value: "bar" },
-			{ key: "foo-many2", value: "bar2" },
-			{ key: "foo-many3", value: "bar3", ttl: 5 },
+			{ key: key1, value: val1 },
+			{ key: key2, value: val2 },
+			{ key: key3, value: faker.lorem.word(), ttl: 5 },
 		]);
-		const value = await keyvRedis.get("foo-many1");
-		expect(value).toBe("bar");
-		const value2 = await keyvRedis.get("foo-many2");
-		expect(value2).toBe("bar2");
+		const value = await keyvRedis.get(key1);
+		expect(value).toBe(val1);
+		const value2 = await keyvRedis.get(key2);
+		expect(value2).toBe(val2);
 		await delay(10);
-		const value3 = await keyvRedis.get("foo-many3");
+		const value3 = await keyvRedis.get(key3);
 		expect(value3).toBeUndefined();
 		await keyvRedis.disconnect();
 	});

@@ -138,18 +138,19 @@ describe("get", () => {
 
 	test("should be able to get many keys", async () => {
 		const keyvRedis = new KeyvRedis();
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const key3 = faker.string.uuid();
+		const val1 = faker.lorem.word();
+		const val2 = faker.lorem.word();
 		await keyvRedis.setMany([
-			{ key: "foo-get-many1", value: "bar" },
-			{ key: "foo-get-many2", value: "bar2" },
-			{ key: "foo-get-many3", value: "bar3", ttl: 5 },
+			{ key: key1, value: val1 },
+			{ key: key2, value: val2 },
+			{ key: key3, value: faker.lorem.word(), ttl: 5 },
 		]);
 		await delay(10);
-		const values = await keyvRedis.getMany([
-			"foo-get-many1",
-			"foo-get-many2",
-			"foo-get-many3",
-		]);
-		expect(values).toEqual(["bar", "bar2", undefined]);
+		const values = await keyvRedis.getMany([key1, key2, key3]);
+		expect(values).toEqual([val1, val2, undefined]);
 		await keyvRedis.disconnect();
 	});
 

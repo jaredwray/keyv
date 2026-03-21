@@ -160,16 +160,22 @@ describe("has", () => {
 
 	test("should be able to has many keys", async () => {
 		const keyvRedis = new KeyvRedis();
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const key3 = faker.string.uuid();
+		const value1 = faker.lorem.word();
+		const value2 = faker.lorem.word();
+		const value3 = faker.lorem.word();
 		await keyvRedis.setMany([
-			{ key: "foo-has-many1", value: "bar" },
-			{ key: "foo-has-many2", value: "bar2" },
-			{ key: "foo-has-many3", value: "bar3", ttl: 5 },
+			{ key: key1, value: value1 },
+			{ key: key2, value: value2 },
+			{ key: key3, value: value3, ttl: 5 },
 		]);
 		await delay(10);
 		const exists = await keyvRedis.hasMany([
-			"foo-has-many1",
-			"foo-has-many2",
-			"foo-has-many3",
+			key1,
+			key2,
+			key3,
 		]);
 		expect(exists).toEqual([true, true, false]);
 		await keyvRedis.disconnect();
@@ -177,15 +183,18 @@ describe("has", () => {
 
 	test("should return true on has if key exists", async () => {
 		const keyvRedis = new KeyvRedis();
-		await keyvRedis.set("hasfoo189", "bar");
-		const exists = await keyvRedis.has("hasfoo189");
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		await keyvRedis.set(key, value);
+		const exists = await keyvRedis.has(key);
 		expect(exists).toBe(true);
 		await keyvRedis.disconnect();
 	});
 
 	test("should return false on has if key does not exist", async () => {
 		const keyvRedis = new KeyvRedis();
-		const exists = await keyvRedis.has("hasfoo2");
+		const key = faker.string.uuid();
+		const exists = await keyvRedis.has(key);
 		expect(exists).toBe(false);
 		await keyvRedis.disconnect();
 	});
