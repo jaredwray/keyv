@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import keyvTestSuite from "@keyv/test-suite";
 import Keyv from "keyv";
 import * as test from "vitest";
@@ -136,11 +137,17 @@ test.it("getMany will return multiple values", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.set("foo2", "bar2");
-	const values = await keyv.getMany(["foo", "foo1", "foo2"]);
-	t.expect(values).toStrictEqual(["bar", "bar1", "bar2"]);
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	const val1 = faker.lorem.word();
+	const val2 = faker.lorem.word();
+	const val3 = faker.lorem.word();
+	await keyv.set(key1, val1);
+	await keyv.set(key2, val2);
+	await keyv.set(key3, val3);
+	const values = await keyv.getMany([key1, key2, key3]);
+	t.expect(values).toStrictEqual([val1, val2, val3]);
 });
 
 test.it("deleteMany will delete multiple records", async (t) => {
@@ -149,13 +156,19 @@ test.it("deleteMany will delete multiple records", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.set("foo2", "bar2");
-	const values = await keyv.getMany(["foo", "foo1", "foo2"]);
-	t.expect(values).toStrictEqual(["bar", "bar1", "bar2"]);
-	await keyv.deleteMany(["foo", "foo1", "foo2"]);
-	const values1 = await keyv.getMany(["foo", "foo1", "foo2"]);
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	const val1 = faker.lorem.word();
+	const val2 = faker.lorem.word();
+	const val3 = faker.lorem.word();
+	await keyv.set(key1, val1);
+	await keyv.set(key2, val2);
+	await keyv.set(key3, val3);
+	const values = await keyv.getMany([key1, key2, key3]);
+	t.expect(values).toStrictEqual([val1, val2, val3]);
+	await keyv.deleteMany([key1, key2, key3]);
+	const values1 = await keyv.getMany([key1, key2, key3]);
 	t.expect(values1).toStrictEqual([undefined, undefined, undefined]);
 });
 
@@ -165,11 +178,13 @@ test.it("Async Iterator single element test", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	await keyv.set("foo", "bar");
+	const testKey = faker.string.uuid();
+	const testVal = faker.lorem.word();
+	await keyv.set(testKey, testVal);
 	const iterator = keyv.iterator();
 	for await (const [key, raw] of iterator) {
-		t.expect(key).toBe("foo");
-		t.expect(raw).toBe("bar");
+		t.expect(key).toBe(testKey);
+		t.expect(raw).toBe(testVal);
 	}
 });
 
@@ -180,21 +195,27 @@ test.it("Async Iterator multiple element test", async (t) => {
 		iterationLimit: 3,
 	});
 	await keyv.clear();
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.set("foo2", "bar2");
-	const expectedEntries = [
-		["foo", "bar"],
-		["foo1", "bar1"],
-		["foo2", "bar2"],
-	];
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	const val1 = faker.lorem.word();
+	const val2 = faker.lorem.word();
+	const val3 = faker.lorem.word();
+	await keyv.set(key1, val1);
+	await keyv.set(key2, val2);
+	await keyv.set(key3, val3);
+	const expected = new Map([
+		[key1, val1],
+		[key2, val2],
+		[key3, val3],
+	]);
+	const actual = new Map<string, string>();
 	const iterator = keyv.iterator();
-	let i = 0;
 	for await (const [key, raw] of iterator) {
-		const [expectedKey, expectedRaw] = expectedEntries[i++];
-		t.expect(key).toBe(expectedKey);
-		t.expect(raw).toBe(expectedRaw);
+		actual.set(key, raw);
 	}
+
+	t.expect(actual).toStrictEqual(expected);
 });
 
 test.it("Async Iterator multiple elements with limit=1 test", async (t) => {
@@ -204,22 +225,30 @@ test.it("Async Iterator multiple elements with limit=1 test", async (t) => {
 		iterationLimit: 1,
 	});
 	await keyv.clear();
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.set("foo2", "bar2");
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	const val1 = faker.lorem.word();
+	const val2 = faker.lorem.word();
+	const val3 = faker.lorem.word();
+	await keyv.set(key1, val1);
+	await keyv.set(key2, val2);
+	await keyv.set(key3, val3);
+	const expected = new Map([
+		[key1, val1],
+		[key2, val2],
+		[key3, val3],
+	]);
+	const actual = new Map<string, string>();
 	const iterator = keyv.iterator();
-	let key = await iterator.next();
-	let [k, v] = key.value as [string, string];
-	t.expect(k).toBe("foo");
-	t.expect(v).toBe("bar");
-	key = await iterator.next();
-	[k, v] = key.value as [string, string];
-	t.expect(k).toBe("foo1");
-	t.expect(v).toBe("bar1");
-	key = await iterator.next();
-	[k, v] = key.value as [string, string];
-	t.expect(k).toBe("foo2");
-	t.expect(v).toBe("bar2");
+	let entry = await iterator.next();
+	while (!entry.done) {
+		const [k, v] = entry.value as [string, string];
+		actual.set(k, v);
+		entry = await iterator.next();
+	}
+
+	t.expect(actual).toStrictEqual(expected);
 });
 
 test.it("Async Iterator 0 element test", async (t) => {
@@ -236,11 +265,13 @@ test.it("Async Iterator 0 element test", async (t) => {
 
 test.it("close connection successfully", async (t) => {
 	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
-	t.expect(await keyv.get("foo")).toBe(undefined);
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
+	const testKey = faker.string.uuid();
+	const testVal = faker.lorem.word();
+	t.expect(await keyv.get(testKey)).toBe(undefined);
+	await keyv.set(testKey, testVal);
+	t.expect(await keyv.get(testKey)).toBe(testVal);
 	await keyv.disconnect();
-	await t.expect(async () => keyv.get("foo")).rejects.toThrow();
+	await t.expect(async () => keyv.get(testKey)).rejects.toThrow();
 });
 
 test.it("handling namespaces with multiple keyv instances", async (t) => {
@@ -249,19 +280,32 @@ test.it("handling namespaces with multiple keyv instances", async (t) => {
 	const keyvA = new Keyv({ store: storeA, namespace: "ns1" });
 	const keyvB = new Keyv({ store: storeB, namespace: "ns2" });
 
-	await keyvA.set("a", "x");
-	await keyvA.set("b", "y");
-	await keyvA.set("c", "z");
+	await keyvA.clear();
+	await keyvB.clear();
 
-	await keyvB.set("a", "one");
-	await keyvB.set("b", "two");
-	await keyvB.set("c", "three");
+	const keyA1 = faker.string.uuid();
+	const keyA2 = faker.string.uuid();
+	const keyA3 = faker.string.uuid();
+	const valA1 = faker.lorem.word();
+	const valA2 = faker.lorem.word();
+	const valA3 = faker.lorem.word();
+	const valB1 = faker.lorem.word();
+	const valB2 = faker.lorem.word();
+	const valB3 = faker.lorem.word();
 
-	const resultA = await keyvA.get(["a", "b", "c"]);
-	const resultB = await keyvB.get(["a", "b", "c"]);
+	await keyvA.set(keyA1, valA1);
+	await keyvA.set(keyA2, valA2);
+	await keyvA.set(keyA3, valA3);
 
-	t.expect(resultA).toStrictEqual(["x", "y", "z"]);
-	t.expect(resultB).toStrictEqual(["one", "two", "three"]);
+	await keyvB.set(keyA1, valB1);
+	await keyvB.set(keyA2, valB2);
+	await keyvB.set(keyA3, valB3);
+
+	const resultA = await keyvA.get([keyA1, keyA2, keyA3]);
+	const resultB = await keyvB.get([keyA1, keyA2, keyA3]);
+
+	t.expect(resultA).toStrictEqual([valA1, valA2, valA3]);
+	t.expect(resultB).toStrictEqual([valB1, valB2, valB3]);
 
 	const iteratorResultA = new Map<string, string>();
 
@@ -274,9 +318,9 @@ test.it("handling namespaces with multiple keyv instances", async (t) => {
 
 	t.expect(iteratorResultA).toStrictEqual(
 		new Map([
-			["a", "x"],
-			["b", "y"],
-			["c", "z"],
+			[keyA1, valA1],
+			[keyA2, valA2],
+			[keyA3, valA3],
 		]),
 	);
 });
@@ -316,9 +360,11 @@ test.it(
 		// In-memory databases cannot use WAL mode, they remain in "memory" journal mode
 		t.expect(result[0].journal_mode).toBe("memory");
 		// But basic operations should still work
-		await keyv.set("test", "value");
-		const value = await keyv.get("test");
-		t.expect(value).toBe("value");
+		const testKey = faker.string.uuid();
+		const testVal = faker.lorem.word();
+		await keyv.set(testKey, testVal);
+		const value = await keyv.get(testKey);
+		t.expect(value).toBe(testVal);
 		await keyv.disconnect();
 	},
 );
@@ -350,13 +396,19 @@ test.it("setMany will set multiple records at once", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	const val1 = faker.lorem.word();
+	const val2 = faker.lorem.word();
+	const val3 = faker.lorem.word();
 	await keyv.setMany([
-		{ key: "a", value: "1" },
-		{ key: "b", value: "2" },
-		{ key: "c", value: "3" },
+		{ key: key1, value: val1 },
+		{ key: key2, value: val2 },
+		{ key: key3, value: val3 },
 	]);
-	const values = await keyv.getMany(["a", "b", "c"]);
-	t.expect(values).toStrictEqual(["1", "2", "3"]);
+	const values = await keyv.getMany([key1, key2, key3]);
+	t.expect(values).toStrictEqual([val1, val2, val3]);
 });
 
 test.it("setMany with empty array does nothing", async (t) => {
@@ -377,13 +429,18 @@ test.it("setMany upserts existing keys", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	await keyv.set("a", "old");
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const oldVal = faker.lorem.word();
+	const newVal = faker.lorem.word();
+	const val2 = faker.lorem.word();
+	await keyv.set(key1, oldVal);
 	await keyv.setMany([
-		{ key: "a", value: "new" },
-		{ key: "b", value: "2" },
+		{ key: key1, value: newVal },
+		{ key: key2, value: val2 },
 	]);
-	t.expect(await keyv.get("a")).toBe("new");
-	t.expect(await keyv.get("b")).toBe("2");
+	t.expect(await keyv.get(key1)).toBe(newVal);
+	t.expect(await keyv.get(key2)).toBe(val2);
 });
 
 test.it("hasMany checks multiple keys", async (t) => {
@@ -392,9 +449,12 @@ test.it("hasMany checks multiple keys", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	await keyv.set("a", "1");
-	await keyv.set("c", "3");
-	const results = await keyv.hasMany(["a", "b", "c"]);
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	await keyv.set(key1, faker.lorem.word());
+	await keyv.set(key3, faker.lorem.word());
+	const results = await keyv.hasMany([key1, key2, key3]);
 	t.expect(results).toStrictEqual([true, false, true]);
 });
 
@@ -404,7 +464,11 @@ test.it("hasMany with no existing keys returns all false", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	const results = await keyv.hasMany(["x", "y", "z"]);
+	const results = await keyv.hasMany([
+		faker.string.uuid(),
+		faker.string.uuid(),
+		faker.string.uuid(),
+	]);
 	t.expect(results).toStrictEqual([false, false, false]);
 });
 
@@ -420,13 +484,15 @@ test.it("clearExpired removes expired entries", async (t) => {
 		expires: Date.now() - 1000,
 	});
 	const validValue = JSON.stringify({ value: "current", expires: null });
-	await keyv.set("expired-key", expiredValue);
-	await keyv.set("valid-key", validValue);
-	t.expect(await keyv.has("expired-key")).toBe(true);
-	t.expect(await keyv.has("valid-key")).toBe(true);
+	const expiredKey = faker.string.uuid();
+	const validKey = faker.string.uuid();
+	await keyv.set(expiredKey, expiredValue);
+	await keyv.set(validKey, validValue);
+	t.expect(await keyv.has(expiredKey)).toBe(true);
+	t.expect(await keyv.has(validKey)).toBe(true);
 	await keyv.clearExpired();
-	t.expect(await keyv.has("expired-key")).toBe(false);
-	t.expect(await keyv.has("valid-key")).toBe(true);
+	t.expect(await keyv.has(expiredKey)).toBe(false);
+	t.expect(await keyv.has(validKey)).toBe(true);
 });
 
 test.it("clearExpiredInterval auto-cleans expired entries", async (t) => {
@@ -440,13 +506,14 @@ test.it("clearExpiredInterval auto-cleans expired entries", async (t) => {
 		value: "old",
 		expires: Date.now() - 1000,
 	});
-	await keyv.set("auto-expired", expiredValue);
-	t.expect(await keyv.has("auto-expired")).toBe(true);
+	const autoExpiredKey = faker.string.uuid();
+	await keyv.set(autoExpiredKey, expiredValue);
+	t.expect(await keyv.has(autoExpiredKey)).toBe(true);
 	// Wait for the cleanup timer to fire
 	await new Promise((resolve) => {
 		setTimeout(resolve, 250);
 	});
-	t.expect(await keyv.has("auto-expired")).toBe(false);
+	t.expect(await keyv.has(autoExpiredKey)).toBe(false);
 	await keyv.disconnect();
 });
 
@@ -480,16 +547,19 @@ test.it("namespace column stores namespace separately from key", async (t) => {
 	await storeB.clear();
 
 	// Same key, different namespaces
-	await storeA.set("nsA:key1", "valueA");
-	await storeB.set("nsB:key1", "valueB");
+	const nsKey = faker.string.uuid();
+	const valA = faker.lorem.word();
+	const valB = faker.lorem.word();
+	await storeA.set(`nsA:${nsKey}`, valA);
+	await storeB.set(`nsB:${nsKey}`, valB);
 
-	t.expect(await storeA.get("nsA:key1")).toBe("valueA");
-	t.expect(await storeB.get("nsB:key1")).toBe("valueB");
+	t.expect(await storeA.get(`nsA:${nsKey}`)).toBe(valA);
+	t.expect(await storeB.get(`nsB:${nsKey}`)).toBe(valB);
 
 	// Clear one namespace should not affect the other
 	await storeA.clear();
-	t.expect(await storeA.get("nsA:key1")).toBe(undefined);
-	t.expect(await storeB.get("nsB:key1")).toBe("valueB");
+	t.expect(await storeA.get(`nsA:${nsKey}`)).toBe(undefined);
+	t.expect(await storeB.get(`nsB:${nsKey}`)).toBe(valB);
 
 	await storeB.clear();
 });
@@ -530,7 +600,10 @@ test.it("deleteMany returns false when no keys exist", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	const result = await keyv.deleteMany(["nonexistent1", "nonexistent2"]);
+	const result = await keyv.deleteMany([
+		faker.string.uuid(),
+		faker.string.uuid(),
+	]);
 	t.expect(result).toBe(false);
 });
 
@@ -540,7 +613,7 @@ test.it("has returns false for non-existent key", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	t.expect(await keyv.has("nonexistent")).toBe(false);
+	t.expect(await keyv.has(faker.string.uuid())).toBe(false);
 });
 
 test.it("migrates old schema that lacks namespace column", async (t) => {
@@ -632,9 +705,10 @@ test.it("getExpiresFromValue handles non-string object values", async (t) => {
 	});
 	await keyv.clear();
 	// Pass an object value (not a string) with expires — covers the non-string branch
-	const objValue = { value: "data", expires: Date.now() + 60000 };
-	await keyv.set("objkey", objValue);
-	t.expect(await keyv.has("objkey")).toBe(true);
+	const objValue = { value: faker.lorem.word(), expires: Date.now() + 60000 };
+	const objKey = faker.string.uuid();
+	await keyv.set(objKey, objValue);
+	t.expect(await keyv.has(objKey)).toBe(true);
 });
 
 // --- SQL injection prevention tests ---
@@ -651,8 +725,10 @@ test.it(
 		// Sanitized to "keyvDROPTABLEkeyv" (only alphanumeric chars kept)
 		t.expect(keyv.opts.table).toBe("keyvDROPTABLEkeyv");
 		// Operations should work on the sanitized table name
-		await keyv.set("test", "value");
-		t.expect(await keyv.get("test")).toBe("value");
+		const testKey = faker.string.uuid();
+		const testVal = faker.lorem.word();
+		await keyv.set(testKey, testVal);
+		t.expect(await keyv.get(testKey)).toBe(testVal);
 		await keyv.clear();
 		await keyv.disconnect();
 	},
@@ -678,8 +754,10 @@ test.it(
 		});
 		// escapeIdentifier wraps in double quotes, so "select" is safe as a table name
 		t.expect(keyv.opts.table).toBe("select");
-		await keyv.set("k1", "v1");
-		t.expect(await keyv.get("k1")).toBe("v1");
+		const testKey = faker.string.uuid();
+		const testVal = faker.lorem.word();
+		await keyv.set(testKey, testVal);
+		t.expect(await keyv.get(testKey)).toBe(testVal);
 		await keyv.clear();
 		await keyv.disconnect();
 	},
@@ -695,8 +773,10 @@ test.it("table name with double quotes is escaped correctly", async (t) => {
 	});
 	// toTableString strips the double-quote character
 	t.expect(keyv.opts.table).toBe("mytable");
-	await keyv.set("k1", "v1");
-	t.expect(await keyv.get("k1")).toBe("v1");
+	const testKey = faker.string.uuid();
+	const testVal = faker.lorem.word();
+	await keyv.set(testKey, testVal);
+	t.expect(await keyv.get(testKey)).toBe(testVal);
 	await keyv.clear();
 	await keyv.disconnect();
 });

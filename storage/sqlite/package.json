@@ -59,7 +59,6 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@faker-js/faker": "^10.2.0",
 		"@keyv/test-suite": "workspace:^",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"@types/better-sqlite3": "^7.6.0",
