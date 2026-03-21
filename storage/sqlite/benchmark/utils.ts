@@ -1,4 +1,7 @@
-import { writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { tinybenchPrinter } from "@monstermann/tinybench-pretty-printer";
 import type { Bench } from "tinybench";
 
@@ -54,6 +57,39 @@ export function handleOutput(bench: Bench): void {
 		console.log(tinybenchPrinter.toMarkdown(bench));
 		console.log("");
 	}
+}
+
+export function runBenchmarks(): BenchmarkResult[] {
+	const cwd = resolve(import.meta.dirname, "..");
+	const timestamp = Date.now();
+	const nodeResultsPath = join(tmpdir(), `keyv-bench-node-${timestamp}.json`);
+	const bunResultsPath = join(tmpdir(), `keyv-bench-bun-${timestamp}.json`);
+
+	const allResults: BenchmarkResult[] = [];
+
+	try {
+		console.log("Running node-sqlite benchmark...");
+		execSync(`tsx benchmark/node-sqlite.ts --output ${nodeResultsPath}`, { cwd, stdio: "inherit" });
+		const nodeResults: BenchmarkResult = JSON.parse(readFileSync(nodeResultsPath, "utf-8"));
+		allResults.push(nodeResults);
+		unlinkSync(nodeResultsPath);
+	} catch (error) {
+		console.error("Failed to run node-sqlite benchmark:", (error as Error).message);
+		try { unlinkSync(nodeResultsPath); } catch {}
+	}
+
+	try {
+		console.log("Running bun-sqlite benchmark...");
+		execSync(`bun benchmark/bun-sqlite.ts --output ${bunResultsPath}`, { cwd, stdio: "inherit" });
+		const bunResults: BenchmarkResult = JSON.parse(readFileSync(bunResultsPath, "utf-8"));
+		allResults.push(bunResults);
+		unlinkSync(bunResultsPath);
+	} catch {
+		console.warn("Skipping bun:sqlite benchmark (bun not available or failed)");
+		try { unlinkSync(bunResultsPath); } catch {}
+	}
+
+	return allResults;
 }
 
 function compactNumber(n: number): string {

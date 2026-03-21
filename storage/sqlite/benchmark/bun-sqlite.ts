@@ -11,9 +11,17 @@ await store.set("warmup", "warmup");
 await store.get("warmup");
 await store.clear();
 
+// Pre-generate test data so faker overhead doesn't affect benchmark timing
+const testData = Array.from({ length: 10_000 }, () => ({
+	key: faker.string.uuid(),
+	value: faker.lorem.paragraph(),
+}));
+
+let bunIndex = 0;
 bench.add("bun set / get", async () => {
-	const key = faker.string.uuid();
-	await store.set(key, faker.lorem.paragraph());
+	const { key, value } = testData[bunIndex % testData.length];
+	bunIndex++;
+	await store.set(key, value);
 	await store.get(key);
 });
 

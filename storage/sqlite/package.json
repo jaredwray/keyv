@@ -26,7 +26,8 @@
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./test/testdb.sqlite ./dist",
-		"benchmark": "tsx benchmark/combined.ts"
+		"benchmark": "tsx benchmark/combined.ts",
+		"benchmark:readme": "tsx benchmark/readme.ts"
 	},
 	"repository": {
 		"type": "git",
