@@ -568,14 +568,15 @@ From the [SQLite documentation](https://sqlite.org/wal.html):
 
 # Benchmarks
 
-Simple `set` / `get` benchmarks comparing the supported SQLite drivers using in-memory databases with 10,000 pre-generated key-value pairs. Results will vary across machines and runs — they are meant as a relative comparison, not absolute performance numbers.
+Simple `set` / `get` benchmarks comparing the built-in SQLite drivers plus an optional `sqlite3` custom-driver setup using in-memory databases with 10,000 pre-generated key-value pairs. Results will vary across machines and runs — they are meant as a relative comparison, not absolute performance numbers.
 
 <!-- BENCHMARK-RESULTS-START -->
-| name               |  summary  |   ops/sec |   time/op |  margin  |   samples |
-|--------------------|:---------:|----------:|----------:|:--------:|----------:|
-| bun set / get      |    🥇     |       64K |      18µs |  ±0.87%  |       56K |
-| better set / get   |  -29.4%   |       45K |      24µs |  ±2.39%  |       42K |
-| node set / get     |  -29.9%   |       45K |      24µs |  ±2.51%  |       42K |
+| name                |  summary  |   ops/sec |   time/op |  margin  |   samples |
+|---------------------|:---------:|----------:|----------:|:--------:|----------:|
+| bun set / get       |    🥇     |       64K |      18µs |  ±0.79%  |       57K |
+| better set / get    |  -32.0%   |       44K |      25µs |  ±2.34%  |       40K |
+| node set / get      |  -32.7%   |       43K |      25µs |  ±2.46%  |       40K |
+| sqlite3 set / get   |  -74.7%   |       16K |      67µs |  ±1.25%  |       15K |
 <!-- BENCHMARK-RESULTS-END -->
 
 # Testing
