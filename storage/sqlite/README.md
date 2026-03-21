@@ -44,6 +44,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.disconnect()](#disconnect)
 - [Clearing Expired Keys](#clearing-expired-keys)
 - [WAL Mode](#wal-mode)
+- [Using sqlite3](#using-sqlite3)
 - [Benchmarks](#benchmarks)
 - [Testing](#testing)
 - [License](#license)
@@ -133,6 +134,35 @@ const store = new KeyvSqlite({
   driver: customDriver,
 });
 ```
+
+# Using sqlite3
+
+The callback-based [`sqlite3`](https://www.npmjs.com/package/sqlite3) package is not auto-detected or bundled with `@keyv/sqlite`. If you need to use it, install it in your project and pass it via the `createSqlite3Driver` helper:
+
+```bash
+npm install sqlite3
+```
+
+```ts
+import KeyvSqlite, { createSqlite3Driver } from '@keyv/sqlite';
+import sqlite3 from 'sqlite3';
+
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  driver: createSqlite3Driver(sqlite3),
+});
+```
+
+`sqlite3.verbose()` also works:
+
+```ts
+const store = new KeyvSqlite({
+  uri: 'sqlite://path/to/database.sqlite',
+  driver: createSqlite3Driver(sqlite3.verbose()),
+});
+```
+
+All standard options (`wal`, `busyTimeout`, etc.) are supported.
 
 # Migrating to v6
 
