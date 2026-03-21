@@ -16,13 +16,17 @@ export type KeyvEtcdOptions = {
 	ttl?: number;
 	busyTimeout?: number;
 	dialect?: "etcd";
+	namespace?: string;
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: any is allowed
 export class KeyvEtcd<Value = any> extends Hookified {
 	public client: Etcd3;
 	public lease?: Lease;
-	private _opts: KeyvEtcdOptions;
+	private _url = "127.0.0.1:2379";
+	private _ttl?: number;
+	private _busyTimeout?: number;
+	private _dialect = "etcd";
 	private _namespace?: string;
 	private _keyPrefixSeparator = ":";
 
@@ -39,30 +43,28 @@ export class KeyvEtcd<Value = any> extends Hookified {
 			url = { url: url.uri, ...url };
 		}
 
-		this._opts = {
-			url: "127.0.0.1:2379",
+		const merged = {
 			...url,
 			...options,
-			dialect: "etcd",
 		};
+
 		/* c8 ignore next -- @preserve */
-		if (this._opts.url) {
-			this._opts.url = this._opts.url?.replace(/^etcd:\/\//, "");
-		} else {
-			/* c8 ignore next -- @preserve */
-			this._opts.url = "127.0.0.1:2379";
+		if (merged.url) {
+			this._url = merged.url.replace(/^etcd:\/\//, "");
 		}
 
+		this._ttl = typeof merged.ttl === "number" ? merged.ttl : undefined;
+		this._busyTimeout = merged.busyTimeout;
+
 		this.client = new Etcd3({
-			hosts: this._opts.url,
+			hosts: this._url,
 		});
 
 		// Https://github.com/microsoft/etcd3/issues/105
 		this.client.getRoles().catch((error) => this.emit("error", error));
 
-		if (typeof this._opts.ttl === "number") {
-			// biome-ignore lint/style/noNonNullAssertion: allowed
-			this.lease = this.client.lease(this._opts.ttl! / 1000, {
+		if (typeof this._ttl === "number") {
+			this.lease = this.client.lease(this._ttl / 1000, {
 				autoKeepAlive: false,
 			});
 		}
@@ -70,9 +72,40 @@ export class KeyvEtcd<Value = any> extends Hookified {
 
 	get opts(): KeyvEtcdOptions {
 		return {
-			...this._opts,
+			url: this._url,
+			ttl: this._ttl,
+			busyTimeout: this._busyTimeout,
+			dialect: this._dialect as "etcd",
 			namespace: this._namespace,
-		} as KeyvEtcdOptions;
+		};
+	}
+
+	get url(): string {
+		return this._url;
+	}
+
+	set url(value: string) {
+		this._url = value;
+	}
+
+	get ttl(): number | undefined {
+		return this._ttl;
+	}
+
+	set ttl(value: number | undefined) {
+		this._ttl = value;
+	}
+
+	get busyTimeout(): number | undefined {
+		return this._busyTimeout;
+	}
+
+	set busyTimeout(value: number | undefined) {
+		this._busyTimeout = value;
+	}
+
+	get dialect(): string {
+		return this._dialect;
 	}
 
 	get namespace(): string | undefined {
@@ -149,7 +182,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	async set(key: string, value: Value): SetOutput {
 		let client: "lease" | "client" = "client";
 
-		if (this._opts.ttl) {
+		if (this._ttl) {
 			client = "lease";
 		}
 

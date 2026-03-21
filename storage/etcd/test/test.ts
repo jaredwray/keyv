@@ -15,6 +15,8 @@ test.it("default options", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.opts).toEqual({
 		url: "127.0.0.1:2379",
+		ttl: undefined,
+		busyTimeout: undefined,
 		dialect: "etcd",
 		namespace: undefined,
 	});
@@ -25,6 +27,7 @@ test.it("enable ttl using default url", (t) => {
 	t.expect(store.opts).toEqual({
 		url: "127.0.0.1:2379",
 		ttl: 1000,
+		busyTimeout: undefined,
 		dialect: "etcd",
 		namespace: undefined,
 	});
@@ -36,7 +39,8 @@ test.it("disable ttl using default url", (t) => {
 	const store = new KeyvEtcd({ ttl: true });
 	t.expect(store.opts).toEqual({
 		url: "127.0.0.1:2379",
-		ttl: true,
+		ttl: undefined,
+		busyTimeout: undefined,
 		dialect: "etcd",
 		namespace: undefined,
 	});
@@ -51,6 +55,7 @@ test.it("enable ttl using url", (t) => {
 	t.expect(store.opts).toEqual({
 		url: "127.0.0.1:2379",
 		ttl: 1000,
+		busyTimeout: undefined,
 		dialect: "etcd",
 		namespace: undefined,
 	});
@@ -62,6 +67,7 @@ test.it("enable ttl using url and options", (t) => {
 	t.expect(store.opts).toEqual({
 		url: "127.0.0.1:2379",
 		ttl: 1000,
+		busyTimeout: undefined,
 		dialect: "etcd",
 		namespace: undefined,
 	});
@@ -73,7 +79,8 @@ test.it("disable ttl using url and options", (t) => {
 	const store = new KeyvEtcd("127.0.0.1:2379", { ttl: true });
 	t.expect(store.opts).toEqual({
 		url: "127.0.0.1:2379",
-		ttl: true,
+		ttl: undefined,
+		busyTimeout: undefined,
 		dialect: "etcd",
 		namespace: undefined,
 	});
@@ -295,4 +302,34 @@ test.it("hasMany checks multiple keys", async (t) => {
 	await store.set(key2, faker.lorem.word());
 	const results = await store.hasMany([key1, key2, key3]);
 	t.expect(results).toEqual([true, true, false]);
+});
+
+test.it("url getter and setter", (t) => {
+	const store = new KeyvEtcd();
+	t.expect(store.url).toBe("127.0.0.1:2379");
+	store.url = "10.0.0.1:2379";
+	t.expect(store.url).toBe("10.0.0.1:2379");
+});
+
+test.it("ttl getter and setter", (t) => {
+	const store = new KeyvEtcd();
+	t.expect(store.ttl).toBeUndefined();
+	store.ttl = 5000;
+	t.expect(store.ttl).toBe(5000);
+	store.ttl = undefined;
+	t.expect(store.ttl).toBeUndefined();
+});
+
+test.it("busyTimeout getter and setter", (t) => {
+	const store = new KeyvEtcd({ busyTimeout: 3000 });
+	t.expect(store.busyTimeout).toBe(3000);
+	store.busyTimeout = 5000;
+	t.expect(store.busyTimeout).toBe(5000);
+	store.busyTimeout = undefined;
+	t.expect(store.busyTimeout).toBeUndefined();
+});
+
+test.it("dialect getter is always etcd", (t) => {
+	const store = new KeyvEtcd();
+	t.expect(store.dialect).toBe("etcd");
 });
