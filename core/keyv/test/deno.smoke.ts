@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import Keyv from "../dist/index.js";
 
 function assert(condition: unknown, message: string): asserts condition {
