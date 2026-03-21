@@ -56,6 +56,7 @@
 - [Types](#types)
 - [StoreHashFunction](#storehashfunction)
 - [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
+- [Benchmark](#benchmark)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -614,6 +615,19 @@ import { djb2Hash } from '@keyv/bigmap';
 
 const hash = djb2Hash('myKey', 0, 10);
 ```
+
+# Benchmark
+
+This benchmark compares `BigMap` against the native JavaScript `Map` for combined `set` and `get` operations using 10,000 iterations of randomly generated data. BigMap trades raw single-threaded speed for the ability to scale past the ~16.7 million entry limit of a native Map by distributing keys across multiple internal Map instances via a hash function. For most workloads under that limit, native Map will be faster; BigMap is designed for scenarios where you need to go beyond it.
+
+<!-- BENCHMARK-RESULTS-START -->
+|        name        |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|--------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  Map set / get     |    🥇     |      19M  |     63ns  |  ±0.02%  |      16M  |
+|  BigMap set / get  |   -98%    |     454K  |      2µs  |  ±0.05%  |     434K  |
+<!-- BENCHMARK-RESULTS-END -->
+
+If you want to see comparable performance just set the `storeSize: 1` and it is `-1%` off from native `Map`.
 
 # Contributing
 
