@@ -322,9 +322,13 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Set the number of rows to fetch per iteration batch.
+	 * Set the number of rows to fetch per iteration batch. Must be a positive integer.
 	 */
 	public set iterationLimit(value: number) {
+		if (!Number.isInteger(value) || value < 1) {
+			throw new RangeError("iterationLimit must be a positive integer");
+		}
+
 		this._iterationLimit = value;
 	}
 
@@ -620,7 +624,7 @@ export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
 	 *   when a namespace is provided, for compatibility with Keyv core.
 	 */
 	async *iterator(namespace?: string) {
-		const limit = this._iterationLimit || 10;
+		const limit = this._iterationLimit > 0 ? this._iterationLimit : 10;
 		const ns = namespace ?? "";
 		let lastKey: string | null = null;
 
