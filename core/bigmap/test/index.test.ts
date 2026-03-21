@@ -43,9 +43,9 @@ describe("BigMap Instance", () => {
 		expect(bigMap.storeSize).toBe(customSize);
 	});
 
-	it("should default store size to 4", () => {
+	it("should default store size to 2", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(bigMap.storeSize).toBe(4);
+		expect(bigMap.storeSize).toBe(2);
 	});
 
 	it("should throw an error when store size is set to less than 1", () => {
@@ -275,7 +275,7 @@ describe("BigMap Hash", () => {
 describe("BigMap Store", () => {
 	it("should initialize the store with empty maps", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(bigMap.store).toHaveLength(4);
+		expect(bigMap.store).toHaveLength(2);
 		for (const map of bigMap.store) {
 			expect(map).toBeInstanceOf(Map);
 		}
@@ -296,8 +296,8 @@ describe("BigMap Store", () => {
 
 	it("should throw an error for invalid store map index", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(() => bigMap.getStoreMap(4)).toThrowError(
-			"Index out of bounds: 4. Valid range is 0 to 3.",
+		expect(() => bigMap.getStoreMap(2)).toThrowError(
+			"Index out of bounds: 2. Valid range is 0 to 1.",
 		);
 	});
 
@@ -437,5 +437,48 @@ describe("createKeyv", () => {
 		await keyv.set("test", "value");
 		const value = await keyv.get("test");
 		expect(value).toBe("value");
+	});
+});
+
+describe("bucket distribution", () => {
+	it("should populate all configured buckets", () => {
+		const storeSize = 8;
+		const bigMap = new BigMap<string, string>({ storeSize });
+
+		// Insert enough keys to statistically hit all buckets
+		for (let i = 0; i < 1000; i++) {
+			bigMap.set(`key-${i}`, `value-${i}`);
+		}
+
+		for (let i = 0; i < storeSize; i++) {
+			expect(bigMap.getStoreMap(i).size).toBeGreaterThan(0);
+		}
+	});
+
+	it("should normalize out-of-range hash values to valid bucket indices", () => {
+		const storeSize = 4;
+		// Custom hash that returns values outside [0, storeSize - 1]
+		const bigMap = new BigMap<string, string>({
+			storeSize,
+			storeHashFunction: (_key: string, _bucketCount: number) => 7,
+		});
+
+		bigMap.set("a", "1");
+		// 7 % 4 = 3, should land in bucket 3 without throwing
+		expect(bigMap.get("a")).toBe("1");
+		expect(bigMap.getStoreMap(3).size).toBe(1);
+	});
+
+	it("should normalize negative hash values to valid bucket indices", () => {
+		const storeSize = 4;
+		const bigMap = new BigMap<string, string>({
+			storeSize,
+			storeHashFunction: (_key: string, _bucketCount: number) => -5,
+		});
+
+		bigMap.set("a", "1");
+		// abs(-5) % 4 = 1, should land in bucket 1
+		expect(bigMap.get("a")).toBe("1");
+		expect(bigMap.getStoreMap(1).size).toBe(1);
 	});
 });

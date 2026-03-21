@@ -9,9 +9,8 @@
 
 # Features
 * Based on the Map interface and uses the same API.
-* Lightweight with no dependencies.
+* Lightweight and easy to use.
 * Scales to past the 17 million key limit of a regular Map.
-* Uses a hash `djb2Hash` for fast key lookups.
 * Ability to use your own hash function.
 * Built in Typescript and Generics for type safety.
 * Used in `@cacheable/memory` for scalable in-memory caching.
@@ -56,6 +55,7 @@
 - [Types](#types)
 - [StoreHashFunction](#storehashfunction)
 - [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
+- [Benchmark](#benchmark)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -99,7 +99,7 @@ bigMap.clear();
 
 # Custom Store Size
 
-By default, BigMap uses 4 internal Map instances. You can configure this:
+By default, BigMap uses 2 internal Map instances. You can configure this:
 
 ```typescript
 const bigMap = new BigMap<string, number>({ storeSize: 10 });
@@ -241,7 +241,7 @@ The `createKeyv` function creates a Keyv instance with BigMap as the storage ada
 
 **Parameters:**
 - `options` (optional): BigMap configuration options
-  - `storeSize` (number): Number of internal Map instances. Default: `4`
+  - `storeSize` (number): Number of internal Map instances. Default: `2`
   - `storeHashFunction` (StoreHashFunction): Custom hash function for key distribution
 
 **Returns:** `Keyv` instance with BigMap adapter
@@ -343,7 +343,7 @@ Creates a new BigMap instance.
 
 **Parameters:**
 - `options` (optional): Configuration options
-  - `storeSize` (number): Number of internal Map instances to use. Default: `4`. Must be at least 1.
+  - `storeSize` (number): Number of internal Map instances to use. Default: `2`. Must be at least 1.
   - `storeHashFunction` (StoreHashFunction): Custom hash function for key distribution. Default: `defaultHashFunction`
 
 **Example:**
@@ -360,7 +360,7 @@ const customBigMap = new BigMap<string, number>({
 | Property | Type | Access | Description |
 |----------|------|--------|-------------|
 | `size` | `number` | Read-only | Gets the total number of entries in the BigMap. |
-| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this will clear all entries. Default: `4` |
+| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this will clear all entries. Default: `2` |
 | `storeHashFunction` | `StoreHashFunction \| undefined` | Read/Write | Gets or sets the hash function used for key distribution. |
 | `store` | `Array<Map<K, V>>` | Read-only | Gets the internal array of Map instances. |
 
@@ -373,7 +373,7 @@ bigMap.set('key1', 100);
 console.log(bigMap.size); // 1
 
 // storeSize property
-console.log(bigMap.storeSize); // 4 (default)
+console.log(bigMap.storeSize); // 2 (default)
 bigMap.storeSize = 8; // Changes size and clears all entries
 
 // storeHashFunction property
@@ -582,38 +582,34 @@ type StoreHashFunction = (key: string, storeSize: number) => number;
 
 **Parameters:**
 - `key` (string): The key to hash (converted to string)
-- `storeSize` (number): The number of stores (adjusted for zero-based index)
+- `storeSize` (number): The total number of stores
 
 **Returns:** `number` - The index of the store to use (0 to storeSize - 1)
 
 ### defaultHashFunction
 
-The default hash function using DJB2 algorithm from [Hashery](https://npmjs.com/package/hashery):
+The built-in hash function used for distributing keys across stores. It uses a fast multiplicative hash with XOR mixing to produce a bucket index. You can override it via the `storeHashFunction` option.
 
 **Example:**
 ```typescript
 import { defaultHashFunction } from '@keyv/bigmap';
 
-const index = defaultHashFunction('myKey', 4);
+const index = defaultHashFunction('myKey', 2);
 ```
 
-### djb2Hash
 
-DJB2 hash algorithm implementation.
+# Benchmark
 
-**Parameters:**
-- `string` (string): The string to hash
-- `min` (number): Minimum value. Default: `0`
-- `max` (number): Maximum value. Default: `10`
+This benchmark compares `BigMap` against the native JavaScript `Map` for combined `set` and `get` operations using 10,000 iterations of randomly generated data. BigMap trades raw single-threaded speed for the ability to scale past the ~16.7 million entry limit of a native Map by distributing keys across multiple internal Map instances via a hash function. For most workloads under that limit, native Map will be faster; BigMap is designed for scenarios where you need to go beyond it.
 
-**Returns:** `number` - Hash value within the specified range
+<!-- BENCHMARK-RESULTS-START -->
+|        name        |  summary  |  ops/sec  |  time/op  |  margin  |  samples  |
+|--------------------|:---------:|----------:|----------:|:--------:|----------:|
+|  Map set / get     |    🥇     |      19M  |     60ns  |  ±0.02%  |      17M  |
+|  BigMap set / get  |   -73%    |       5M  |    215ns  |  ±0.03%  |       5M  |
+<!-- BENCHMARK-RESULTS-END -->
 
-**Example:**
-```typescript
-import { djb2Hash } from '@keyv/bigmap';
-
-const hash = djb2Hash('myKey', 0, 10);
-```
+If you want to see comparable performance just set the `storeSize: 1` and it is `-1%` off from native `Map`.
 
 # Contributing
 

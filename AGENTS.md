@@ -38,7 +38,8 @@ Individual package tests:
 - **core/keyv**: Core Keyv library - the main key-value storage interface
 - **core/test-suite**: Shared test suite (@keyv/test-suite) for API compliance testing
 - **serialization/serialize**: Serialization utilities (@keyv/serialize) - used by core and adapters
-- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB, BigMap
+- **core/bigmap**: BigMap - scalable in-memory Map implementation
+- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB
 - **compression/**: Compression adapters - Brotli, Gzip, LZ4
 - **website**: Documentation website
 

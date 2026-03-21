@@ -44,6 +44,7 @@ This monorepo is organized into categorized directories:
 core/             Core packages
   keyv/             Main Keyv library
   test-suite/       Shared test suite for API compliance
+  bigmap/           Scalable in-memory Map
 serialization/    Serialization packages
   serialize/        Default serializer (@keyv/serialize)
 compression/      Compression adapters
@@ -52,7 +53,7 @@ compression/      Compression adapters
   compress-lz4/
 storage/          Storage adapters
   redis/  postgres/  mysql/  mongo/  sqlite/
-  memcache/  etcd/  valkey/  dynamo/  bigmap/
+  memcache/  etcd/  valkey/  dynamo/
 website/          Documentation website (keyv.org)
 ```
 
@@ -60,10 +61,9 @@ website/          Documentation website (keyv.org)
 
 * [keyv](https://github.com/jaredwray/keyv/tree/main/core/keyv) - Simple key-value storage with support for multiple backends
 * [test-suite](https://github.com/jaredwray/keyv/tree/main/core/test-suite) - Test suite for Keyv API compliance
+* [bigmap](https://github.com/jaredwray/keyv/tree/main/core/bigmap) - Scalable in-memory Map
 
 ## Storage Adapters
-
-* [bigmap](https://github.com/jaredwray/keyv/tree/main/storage/bigmap) - BigMap storage adapter
 * [dynamo](https://github.com/jaredwray/keyv/tree/main/storage/dynamo) - DynamoDB storage adapter
 * [etcd](https://github.com/jaredwray/keyv/tree/main/storage/etcd) - Etcd storage adapter
 * [memcache](https://github.com/jaredwray/keyv/tree/main/storage/memcache) - Memcache storage adapter

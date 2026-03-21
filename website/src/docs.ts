@@ -10,6 +10,7 @@ async function main() {
 	await copyCompressionDocs(basePath);
 	await copyTestSuite(basePath);
 	await copyKeyvAPI(basePath);
+	await copyBigMap(basePath);
 };
 
 async function copyStorageAdapters(basePath: string) {
@@ -55,6 +56,24 @@ async function copyKeyvAPI(basePath: string) {
 
 	console.log("Adding Keyv API");
 	await fs.promises.writeFile(`${basePath}/website/site/docs/keyv.md`, newFileText);
+}
+
+async function copyBigMap(basePath: string) {
+	const originalFileText = await fs.promises.readFile(`${basePath}/core/bigmap/README.md`, "utf8");
+	let newFileText = "---\n";
+	newFileText += `title: '@keyv/bigmap'\n`;
+	newFileText += `sidebarTitle: '@keyv/bigmap'\n`;
+	newFileText += `parent: 'Storage Adapters'\n`;
+	newFileText += "---\n";
+	newFileText += "\n";
+	newFileText += originalFileText;
+
+	newFileText = cleanDocumentFromImage(newFileText);
+
+	const websiteDocsPath = `${basePath}/website/site/docs/storage-adapters`;
+	await fs.promises.mkdir(websiteDocsPath, {recursive: true});
+	console.log("Adding BigMap");
+	await fs.promises.writeFile(`${websiteDocsPath}/bigmap.md`, newFileText);
 }
 
 async function copyCompressionDocs(basePath: string) {
