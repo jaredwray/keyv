@@ -6,6 +6,7 @@ async function createBunSqliteConnection(
 	options: SqliteDriverConnectOptions,
 ): Promise<Db> {
 	// Dynamic import — only available in Bun runtime
+	// @ts-expect-error: bun:sqlite types may not be available
 	// biome-ignore lint/suspicious/noExplicitAny: bun:sqlite types may not be available
 	const { Database } = (await import("bun:sqlite")) as any;
 	const db = new Database(options.filename);

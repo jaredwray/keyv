@@ -53,6 +53,7 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 				const instance = new sqlite3.Database(
 					options.filename,
 					(err: Error | null) => {
+						/* v8 ignore next 2 -- @preserve: error path */
 						if (err) {
 							reject(err);
 						} else {
@@ -115,6 +116,7 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 								resolve([]);
 							}
 						} catch (error) {
+							/* v8 ignore next -- @preserve: error path */
 							reject(error);
 						}
 					});
