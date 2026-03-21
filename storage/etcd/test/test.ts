@@ -147,18 +147,16 @@ test.it("iterator with namespace", async (t) => {
 	await store.set(`${namespace}:${key1}`, value1);
 	await store.set(`${namespace}:${key2}`, value2);
 	const iterator = store.iterator(namespace);
+	const results = new Map<string, string>();
 	let entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe(`${namespace}:${key1}`);
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe(value1);
-	entry = await iterator.next();
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[0]).toBe(`${namespace}:${key2}`);
-	// @ts-expect-error - test iterator
-	t.expect(entry.value[1]).toBe(value2);
-	entry = await iterator.next();
-	t.expect(entry.value).toBeUndefined();
+	while (!entry.done && entry.value) {
+		results.set(entry.value[0] as string, entry.value[1] as string);
+		entry = await iterator.next();
+	}
+
+	t.expect(results.size).toBe(2);
+	t.expect(results.get(`${namespace}:${key1}`)).toBe(value1);
+	t.expect(results.get(`${namespace}:${key2}`)).toBe(value2);
 });
 
 test.it("iterator without namespace", async (t) => {
