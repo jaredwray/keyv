@@ -20,10 +20,11 @@ export type KeyvEtcdOptions = {
 
 // biome-ignore lint/suspicious/noExplicitAny: any is allowed
 export class KeyvEtcd<Value = any> extends Hookified {
-	public opts: KeyvEtcdOptions;
 	public client: Etcd3;
 	public lease?: Lease;
-	public namespace?: string;
+	private _opts: KeyvEtcdOptions;
+	private _namespace?: string;
+	private _keyPrefixSeparator = ":";
 
 	constructor(url?: KeyvEtcdOptions | string, options?: KeyvEtcdOptions) {
 		super({ throwOnEmptyListeners: false });
@@ -38,37 +39,89 @@ export class KeyvEtcd<Value = any> extends Hookified {
 			url = { url: url.uri, ...url };
 		}
 
-		this.opts = {
+		this._opts = {
 			url: "127.0.0.1:2379",
 			...url,
 			...options,
 			dialect: "etcd",
 		};
 		/* c8 ignore next -- @preserve */
-		if (this.opts.url) {
-			this.opts.url = this.opts.url?.replace(/^etcd:\/\//, "");
+		if (this._opts.url) {
+			this._opts.url = this._opts.url?.replace(/^etcd:\/\//, "");
 		} else {
 			/* c8 ignore next -- @preserve */
-			this.opts.url = "127.0.0.1:2379";
+			this._opts.url = "127.0.0.1:2379";
 		}
 
 		this.client = new Etcd3({
-			hosts: this.opts.url,
+			hosts: this._opts.url,
 		});
 
 		// Https://github.com/microsoft/etcd3/issues/105
 		this.client.getRoles().catch((error) => this.emit("error", error));
 
-		if (typeof this.opts.ttl === "number") {
+		if (typeof this._opts.ttl === "number") {
 			// biome-ignore lint/style/noNonNullAssertion: allowed
-			this.lease = this.client.lease(this.opts.ttl! / 1000, {
+			this.lease = this.client.lease(this._opts.ttl! / 1000, {
 				autoKeepAlive: false,
 			});
 		}
 	}
 
+	get opts(): KeyvEtcdOptions {
+		return {
+			...this._opts,
+			namespace: this._namespace,
+		} as KeyvEtcdOptions;
+	}
+
+	get namespace(): string | undefined {
+		return this._namespace;
+	}
+
+	set namespace(value: string | undefined) {
+		this._namespace = value;
+	}
+
+	get keyPrefixSeparator(): string {
+		return this._keyPrefixSeparator;
+	}
+
+	set keyPrefixSeparator(value: string) {
+		this._keyPrefixSeparator = value;
+	}
+
+	createKeyPrefix(key: string, namespace?: string): string {
+		if (namespace) {
+			return `${namespace}${this._keyPrefixSeparator}${key}`;
+		}
+
+		return key;
+	}
+
+	removeKeyPrefix(key: string, namespace?: string): string {
+		if (namespace) {
+			return key.replace(`${namespace}${this._keyPrefixSeparator}`, "");
+		}
+
+		return key;
+	}
+
+	formatKey(key: string): string {
+		if (!this._namespace) {
+			return key;
+		}
+
+		const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
+		if (key.startsWith(prefix)) {
+			return key;
+		}
+
+		return `${prefix}${key}`;
+	}
+
 	async get(key: string): GetOutput<Value> {
-		return this.client.get(key) as unknown as GetOutput<Value>;
+		return this.client.get(this.formatKey(key)) as unknown as GetOutput<Value>;
 	}
 
 	async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
@@ -96,12 +149,12 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	async set(key: string, value: Value): SetOutput {
 		let client: "lease" | "client" = "client";
 
-		if (this.opts.ttl) {
+		if (this._opts.ttl) {
 			client = "lease";
 		}
 
 		// @ts-expect-error - Value needs to be number, string or buffer
-		await this[client]?.put(key).value(value);
+		await this[client]?.put(this.formatKey(key)).value(value);
 	}
 
 	async delete(key: string): DeleteOutput {
@@ -111,7 +164,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 
 		return this.client
 			.delete()
-			.key(key)
+			.key(this.formatKey(key))
 			.then((key) => key.deleted !== "0");
 	}
 
@@ -128,26 +181,26 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	}
 
 	async clear(): ClearOutput {
-		const promise = this.namespace
-			? this.client.delete().prefix(this.namespace)
+		const promise = this._namespace
+			? this.client
+					.delete()
+					.prefix(`${this._namespace}${this._keyPrefixSeparator}`)
 			: this.client.delete().all();
 		return promise.then(() => undefined);
 	}
 
 	async *iterator(namespace?: string) {
-		const iterator = await this.client
-			.getAll()
-			.prefix(namespace ? `${namespace}:` : "")
-			.keys();
+		const prefix = namespace ? `${namespace}${this._keyPrefixSeparator}` : "";
+		const iterator = await this.client.getAll().prefix(prefix).keys();
 
 		for await (const key of iterator) {
-			const value = await this.get(key);
+			const value = (await this.client.get(key)) as unknown as Value;
 			yield [key, value];
 		}
 	}
 
 	async has(key: string): HasOutput {
-		return this.client.get(key).exists();
+		return this.client.get(this.formatKey(key)).exists();
 	}
 
 	async disconnect() {

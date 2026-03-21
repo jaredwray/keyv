@@ -11,16 +11,12 @@ const store = () => new KeyvEtcd({ uri: etcdUrl, busyTimeout: 3000 });
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 
-test.beforeEach(async () => {
-	const keyv = new KeyvEtcd(etcdUrl);
-	await keyv.clear();
-});
-
 test.it("default options", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.opts).toEqual({
 		url: "127.0.0.1:2379",
 		dialect: "etcd",
+		namespace: undefined,
 	});
 });
 
@@ -30,6 +26,7 @@ test.it("enable ttl using default url", (t) => {
 		url: "127.0.0.1:2379",
 		ttl: 1000,
 		dialect: "etcd",
+		namespace: undefined,
 	});
 	t.expect(store.lease).toBeDefined();
 });
@@ -41,6 +38,7 @@ test.it("disable ttl using default url", (t) => {
 		url: "127.0.0.1:2379",
 		ttl: true,
 		dialect: "etcd",
+		namespace: undefined,
 	});
 	t.expect(store.lease).toBeUndefined();
 });
@@ -54,6 +52,7 @@ test.it("enable ttl using url", (t) => {
 		url: "127.0.0.1:2379",
 		ttl: 1000,
 		dialect: "etcd",
+		namespace: undefined,
 	});
 	t.expect(store.lease).toBeDefined();
 });
@@ -64,6 +63,7 @@ test.it("enable ttl using url and options", (t) => {
 		url: "127.0.0.1:2379",
 		ttl: 1000,
 		dialect: "etcd",
+		namespace: undefined,
 	});
 	t.expect(store.lease).toBeDefined();
 });
@@ -75,6 +75,7 @@ test.it("disable ttl using url and options", (t) => {
 		url: "127.0.0.1:2379",
 		ttl: true,
 		dialect: "etcd",
+		namespace: undefined,
 	});
 	t.expect(store.lease).toBeUndefined();
 });
@@ -118,9 +119,9 @@ test.it(".clear() with namespace", async (t) => {
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
 	const key = faker.string.uuid();
-	await store.set(`${store.namespace}:${key}`, faker.lorem.word());
+	await store.set(key, faker.lorem.word());
 	await store.clear();
-	t.expect(await store.get(`${store.namespace}:${key}`)).toBe(null);
+	t.expect(await store.get(key)).toBe(null);
 });
 
 test.it("close connection successfully", async (t) => {
@@ -144,8 +145,8 @@ test.it("iterator with namespace", async (t) => {
 	const value1 = faker.lorem.word();
 	const key2 = faker.string.uuid();
 	const value2 = faker.lorem.word();
-	await store.set(`${namespace}:${key1}`, value1);
-	await store.set(`${namespace}:${key2}`, value2);
+	await store.set(key1, value1);
+	await store.set(key2, value2);
 	const iterator = store.iterator(namespace);
 	const results = new Map<string, string>();
 	let entry = await iterator.next();
@@ -161,6 +162,7 @@ test.it("iterator with namespace", async (t) => {
 
 test.it("iterator without namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
+	await store.clear();
 	const key = faker.string.uuid();
 	const value = faker.lorem.word();
 	await store.set(key, value);
@@ -170,4 +172,89 @@ test.it("iterator without namespace", async (t) => {
 	t.expect(entry.value[0]).toBe(key);
 	// @ts-expect-error - test iterator
 	t.expect(entry.value[1]).toBe(value);
+});
+
+test.it("get/set with namespace", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
+	t.expect(await store.get(key)).toBe(value);
+});
+
+test.it("delete with namespace", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key = faker.string.uuid();
+	await store.set(key, faker.lorem.word());
+	t.expect(await store.delete(key)).toBe(true);
+	t.expect(await store.get(key)).toBe(null);
+});
+
+test.it("has with namespace", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key = faker.string.uuid();
+	await store.set(key, faker.lorem.word());
+	t.expect(await store.has(key)).toBe(true);
+	await store.delete(key);
+	t.expect(await store.has(key)).toBe(false);
+});
+
+test.it("getMany with namespace", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key1 = faker.string.uuid();
+	const value1 = faker.lorem.word();
+	const key2 = faker.string.uuid();
+	const value2 = faker.lorem.word();
+	await store.set(key1, value1);
+	await store.set(key2, value2);
+	const results = await store.getMany([key1, key2]);
+	t.expect(results).toEqual([value1, value2]);
+});
+
+test.it("formatKey prefixes key and avoids double prefix", (t) => {
+	const store = new KeyvEtcd();
+	store.namespace = "ns";
+	t.expect(store.formatKey("key")).toBe("ns:key");
+	t.expect(store.formatKey("ns:key")).toBe("ns:key");
+	store.namespace = undefined;
+	t.expect(store.formatKey("key")).toBe("key");
+});
+
+test.it("createKeyPrefix returns prefixed key when namespace is set", (t) => {
+	const store = new KeyvEtcd();
+	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
+	t.expect(store.createKeyPrefix("key")).toBe("key");
+	t.expect(store.createKeyPrefix("key", undefined)).toBe("key");
+});
+
+test.it("removeKeyPrefix strips prefix when namespace is set", (t) => {
+	const store = new KeyvEtcd();
+	t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
+	t.expect(store.removeKeyPrefix("key")).toBe("key");
+	t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
+});
+
+test.it("namespace getter and setter", (t) => {
+	const store = new KeyvEtcd();
+	t.expect(store.namespace).toBeUndefined();
+	store.namespace = "test-ns";
+	t.expect(store.namespace).toBe("test-ns");
+	store.namespace = undefined;
+	t.expect(store.namespace).toBeUndefined();
+});
+
+test.it("keyPrefixSeparator getter and setter", (t) => {
+	const store = new KeyvEtcd();
+	t.expect(store.keyPrefixSeparator).toBe(":");
+	store.keyPrefixSeparator = "::";
+	t.expect(store.keyPrefixSeparator).toBe("::");
+	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
 });
