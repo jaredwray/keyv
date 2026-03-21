@@ -1,4 +1,3 @@
-import { Hashery } from "hashery";
 import { Hookified, type HookifiedOptions } from "hookified";
 import { Keyv } from "keyv";
 
@@ -22,10 +21,13 @@ export type MapInterfacee<K, V> = {
 
 export type StoreHashFunction = (key: string, storeSize: number) => number;
 
-const defaultHashery = new Hashery({ cache: { enabled: true } });
-
 export function defaultHashFunction(key: string, storeSize: number): number {
-	return defaultHashery.toNumberSync(key, { min: 0, max: storeSize - 1 });
+	let hash = 5381;
+	for (let i = 0; i < key.length; i++) {
+		hash = (hash * 33) ^ key.charCodeAt(i);
+	}
+
+	return Math.abs(hash) % storeSize;
 }
 
 export type BigMapOptions = {
@@ -164,60 +166,38 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * Returns an iterable of key-value pairs in the map.
 	 * @returns {IterableIterator<[K, V]>} An iterable of key-value pairs in the map.
 	 */
-	public entries(): IterableIterator<[K, V]> {
-		const entries: Array<[K, V]> = [];
+	public *entries(): IterableIterator<[K, V]> {
 		for (const store of this._store) {
-			for (const entry of store) {
-				entries.push(entry);
-			}
+			yield* store.entries();
 		}
-
-		return entries[Symbol.iterator]();
 	}
 
 	/**
 	 * Returns an iterable of keys in the map.
 	 * @returns {IterableIterator<K>} An iterable of keys in the map.
 	 */
-	public keys(): IterableIterator<K> {
-		const keys: K[] = [];
+	public *keys(): IterableIterator<K> {
 		for (const store of this._store) {
-			for (const key of store.keys()) {
-				keys.push(key);
-			}
+			yield* store.keys();
 		}
-
-		return keys[Symbol.iterator]();
 	}
 
 	/**
 	 * Returns an iterable of values in the map.
 	 * @returns {IterableIterator<V>} An iterable of values in the map.
 	 */
-	public values(): IterableIterator<V> {
-		const values: V[] = [];
+	public *values(): IterableIterator<V> {
 		for (const store of this._store) {
-			for (const value of store.values()) {
-				values.push(value);
-			}
+			yield* store.values();
 		}
-
-		return values[Symbol.iterator]();
 	}
 
 	/**
 	 * Returns an iterator that iterates over the key-value pairs in the map.
 	 * @returns {IterableIterator<[K, V]>} An iterator that iterates over the key-value pairs in the map.
 	 */
-	public [Symbol.iterator](): IterableIterator<[K, V]> {
-		const entries: Array<[K, V]> = [];
-		for (const store of this._store) {
-			for (const entry of store) {
-				entries.push(entry);
-			}
-		}
-
-		return entries[Symbol.iterator]();
+	public *[Symbol.iterator](): IterableIterator<[K, V]> {
+		yield* this.entries();
 	}
 
 	/**
