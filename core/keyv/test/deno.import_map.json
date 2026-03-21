@@ -1,6 +1,0 @@
-{
-	"imports": {
-		"@keyv/serialize": "../../../serialization/serialize/dist/index.js",
-		"buffer": "node:buffer"
-	}
-}
