@@ -295,7 +295,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 }
 
 /**
- * Will create a Keyv instance with the BigMap adapter. This will also set the namespace and useKeyPrefix to false.
+ * Will create a Keyv instance with the BigMap adapter.
  * @param {BigMapOptions} options - Options for the BigMap adapter such as storeSize and storeHashFunction.
  * @returns {Keyv} - Keyv instance with the BigMap adapter
  */
