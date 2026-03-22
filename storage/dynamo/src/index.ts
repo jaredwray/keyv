@@ -206,16 +206,51 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 	public async setMany(
 		entries: Array<{ key: string; value: unknown; ttl?: number }>,
 	): Promise<void> {
-		const promises = entries.map(async ({ key, value, ttl }) =>
-			this.set(key, value, ttl),
-		);
-		const results = await Promise.allSettled(promises);
-		for (const result of results) {
-			/* v8 ignore next 3 -- @preserve */
-			if (result.status === "rejected") {
-				this.emit("error", result.reason);
+		try {
+			await this._tableReady;
+
+			if (entries.length === 0) {
+				return;
 			}
+
+			const sixHoursFromNowEpoch = Math.floor(
+				(Date.now() + this._sixHoursInMilliseconds) / 1000,
+			);
+
+			const putRequests = entries.map(({ key, value, ttl }) => {
+				const expiresAt =
+					typeof ttl === "number"
+						? Math.floor((Date.now() + (ttl + 1000)) / 1000)
+						: sixHoursFromNowEpoch;
+
+				return {
+					PutRequest: {
+						Item: {
+							id: this.formatKey(key),
+							value,
+							expiresAt,
+						},
+					},
+				};
+			});
+
+			// BatchWrite supports max 25 items per request
+			const chunkSize = 25;
+			for (let i = 0; i < putRequests.length; i += chunkSize) {
+				const chunk = putRequests.slice(i, i + chunkSize);
+				const batchWriteInput: BatchWriteCommandInput = {
+					RequestItems: {
+						[this._opts.tableName]: chunk,
+					},
+				};
+
+				await this._client.batchWrite(batchWriteInput);
+			}
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
 		}
+		/* v8 ignore stop -- @preserve */
 	}
 
 	/**
@@ -380,8 +415,25 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 	 */
 	public async has(key: string): Promise<boolean> {
 		try {
-			const value = await this.get(key);
-			return value !== undefined;
+			await this._tableReady;
+
+			const getInput: GetCommandInput = {
+				TableName: this._opts.tableName,
+				Key: {
+					id: this.formatKey(key),
+				},
+			};
+			const { Item } = await this._client.get(getInput);
+			if (!Item) {
+				return false;
+			}
+
+			const nowInSeconds = Math.floor(Date.now() / 1000);
+			if (typeof Item.expiresAt === "number" && Item.expiresAt <= nowInSeconds) {
+				return false;
+			}
+
+			return Item.value !== undefined;
 			/* v8 ignore start -- @preserve */
 		} catch {
 			return false;
@@ -395,11 +447,41 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 	 * @returns An array of booleans indicating whether each key exists.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const promises = keys.map(async (key) => this.has(key));
-		const results = await Promise.allSettled(promises);
-		return results.map((result) =>
-			result.status === "fulfilled" ? result.value : false,
-		);
+		try {
+			await this._tableReady;
+
+			const formattedKeys = keys.map((key) => this.formatKey(key));
+
+			const batchGetInput: BatchGetCommandInput = {
+				RequestItems: {
+					[this._opts.tableName]: {
+						Keys: formattedKeys.map((key) => ({
+							id: key,
+						})),
+					},
+				},
+			};
+			const { Responses: { [this._opts.tableName]: items = [] } = {} } =
+				await this._client.batchGet(batchGetInput);
+
+			const nowInSeconds = Math.floor(Date.now() / 1000);
+			return formattedKeys.map((key) => {
+				const item = items.find((item) => item?.id === key);
+				if (!item || item.value === undefined) {
+					return false;
+				}
+
+				if (typeof item.expiresAt === "number" && item.expiresAt <= nowInSeconds) {
+					return false;
+				}
+
+				return true;
+			});
+			/* v8 ignore start -- @preserve */
+		} catch {
+			return keys.map(() => false);
+		}
+		/* v8 ignore stop -- @preserve */
 	}
 
 	/**
@@ -409,9 +491,12 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 	 * @returns An array of matching keys.
 	 */
 	public extractKey(output: ScanCommandOutput, keyProperty = "id"): string[] {
+		const prefix = this._namespace
+			? `${this._namespace}${this._keyPrefixSeparator}`
+			: "";
 		return (output.Items ?? [])
 			.map((item) => item[keyProperty])
-			.filter((key) => key.startsWith(this._namespace ?? ""));
+			.filter((key) => key.startsWith(prefix));
 	}
 
 	/**
