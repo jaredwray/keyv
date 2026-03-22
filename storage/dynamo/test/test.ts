@@ -387,7 +387,6 @@ test.describe("createKeyv", () => {
 		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
 		t.expect(keyv.namespace).toBeUndefined();
 		t.expect((keyv.store as KeyvDynamo).namespace).toBeUndefined();
-
 	});
 
 	test.it("should create Keyv instance with string endpoint", (t) => {
@@ -432,7 +431,7 @@ test.describe("createKeyv", () => {
 			t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
 			t.expect(keyv.namespace).toBe(namespace);
 			t.expect((keyv.store as KeyvDynamo).namespace).toBe(namespace);
-	
+
 			t.expect((keyv.store as KeyvDynamo).opts.tableName).toBe(tableName);
 		},
 	);
