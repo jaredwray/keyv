@@ -17,31 +17,35 @@ async function createReadyCluster() {
 	return cluster;
 }
 
-test.it("cluster: setMany should work without CROSSSLOT errors", async (t) => {
-	const cluster = await createReadyCluster();
-	const keyv = new KeyvValkey(cluster as Cluster);
+test.it(
+	"cluster: setMany should work without CROSSSLOT errors",
+	{ retry: 3 },
+	async (t) => {
+		const cluster = await createReadyCluster();
+		const keyv = new KeyvValkey(cluster as Cluster);
 
-	const key1 = faker.string.alphanumeric(10);
-	const key2 = faker.string.alphanumeric(10);
-	const key3 = faker.string.alphanumeric(10);
-	const key4 = faker.string.alphanumeric(10);
-	const val1 = faker.string.alphanumeric(10);
-	const val2 = faker.string.alphanumeric(10);
-	const val3 = faker.string.alphanumeric(10);
-	const val4 = faker.string.alphanumeric(10);
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		const key3 = faker.string.alphanumeric(10);
+		const key4 = faker.string.alphanumeric(10);
+		const val1 = faker.string.alphanumeric(10);
+		const val2 = faker.string.alphanumeric(10);
+		const val3 = faker.string.alphanumeric(10);
+		const val4 = faker.string.alphanumeric(10);
 
-	await keyv.setMany([
-		{ key: key1, value: val1 },
-		{ key: key2, value: val2 },
-		{ key: key3, value: val3 },
-		{ key: key4, value: val4 },
-	]);
+		await keyv.setMany([
+			{ key: key1, value: val1 },
+			{ key: key2, value: val2 },
+			{ key: key3, value: val3 },
+			{ key: key4, value: val4 },
+		]);
 
-	const results = await keyv.getMany([key1, key2, key3, key4]);
-	t.expect(results).toEqual([val1, val2, val3, val4]);
+		const results = await keyv.getMany([key1, key2, key3, key4]);
+		t.expect(results).toEqual([val1, val2, val3, val4]);
 
-	await keyv.disconnect();
-}, { retry: 3 });
+		await keyv.disconnect();
+	},
+);
 
 test.it("cluster: getMany should work without CROSSSLOT errors", async (t) => {
 	const cluster = await createReadyCluster();
