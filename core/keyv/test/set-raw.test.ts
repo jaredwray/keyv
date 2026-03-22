@@ -236,8 +236,18 @@ describe("Keyv Set Many Raw", async () => {
 		}
 	});
 
-	test("should work with store that has setMany", async () => {
-		const keyv = new Keyv({ store: createStore() });
+	test("should work with store that has setMany returning void", async () => {
+		const store = createStore();
+		// biome-ignore lint/suspicious/noExplicitAny: add setMany to test store
+		(store as any).setMany = async (
+			// biome-ignore lint/suspicious/noExplicitAny: test mock
+			entries: Array<{ key: string; value: any }>,
+		) => {
+			for (const { key, value } of entries) {
+				await store.set(key, value);
+			}
+		};
+		const keyv = new Keyv({ store });
 		const keys = Array.from({ length: 2 }, () => faker.string.alphanumeric(10));
 		const entries = keys.map((key) => ({
 			key,
@@ -248,8 +258,41 @@ describe("Keyv Set Many Raw", async () => {
 		expect(results).toEqual([true, true]);
 	});
 
+	test("should work with store that has setMany returning boolean[]", async () => {
+		const store = createStore();
+		// biome-ignore lint/suspicious/noExplicitAny: add setMany to test store
+		(store as any).setMany = async (
+			// biome-ignore lint/suspicious/noExplicitAny: test mock
+			entries: Array<{ key: string; value: any }>,
+		) => {
+			for (const { key, value } of entries) {
+				await store.set(key, value);
+			}
+
+			return entries.map(() => true);
+		};
+		const keyv = new Keyv({ store });
+		const keys = Array.from({ length: 2 }, () => faker.string.alphanumeric(10));
+		const entries = keys.map((key) => ({
+			key,
+			value: { value: "test" },
+		}));
+		const results = await keyv.setManyRaw(entries);
+		expect(results).toEqual([true, true]);
+	});
+
 	test("should compute expires from ttl via store setMany path", async () => {
-		const keyv = new Keyv({ store: createStore() });
+		const store = createStore();
+		// biome-ignore lint/suspicious/noExplicitAny: add setMany to test store
+		(store as any).setMany = async (
+			// biome-ignore lint/suspicious/noExplicitAny: test mock
+			entries: Array<{ key: string; value: any; ttl?: number }>,
+		) => {
+			for (const { key, value } of entries) {
+				await store.set(key, value);
+			}
+		};
+		const keyv = new Keyv({ store });
 		const key = faker.string.alphanumeric(10);
 		const before = Date.now();
 		await keyv.setManyRaw([{ key, value: { value: "test" }, ttl: 60_000 }]);
