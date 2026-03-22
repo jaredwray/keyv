@@ -70,8 +70,6 @@ Unified versioning simplifies dependency management and ensures compatibility ac
 | Task | Status |
 |------|--------|
 | Remove `opts` property in Keyv and Storage Adapters | IN PROGRESS |
-| Update `@keyv/sqlite`  | NOT STARTED |
-| Update `@keyv/dynamo`  | NOT STARTED |
 | Integrate Hookified library in Keyv | NOT STARTED |
 | Update `deleteMany` return type | NOT STARTED |
 | Update `setMany` signature and return type | NOT STARTED |
@@ -80,7 +78,11 @@ Unified versioning simplifies dependency management and ensures compatibility ac
 | Add compression interface standardization | NOT STARTED |
 | Browser compatibility | NOT STARTED |
 | Stats System to be Event Driven | NOT STARTED |
-| Hash Keys by maxlength via Keyv | NOT STARTED |
+| Test Suite Overhaul | NOT STARTED |
+| Storage Adapters no Longer need to emit | NOT STARTED |
+| Keyv core does not do keyPrefixing | COMPLETED |
+| Update `@keyv/sqlite`  | COMPLETE |
+| Update `@keyv/dynamo`  | COMPLETE |
 | Update `@keyv/etcd`  | COMPLETE |
 | Update `@keyv/valkey`  | COMPLETE |
 | Finalize namespace handling in storage adapters | COMPLETE |
