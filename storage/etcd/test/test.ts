@@ -280,16 +280,14 @@ test.it("setMany sets multiple keys", async (t) => {
 	t.expect(await store.get(key2)).toBe(value2);
 });
 
-test.it("setMany emits error and throws on failure", async (t) => {
+test.it("setMany emits error on failure", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.disconnect();
 	const errors: unknown[] = [];
 	store.on("error", (error: unknown) => {
 		errors.push(error);
 	});
-	await t
-		.expect(store.setMany([{ key: "key", value: "value" }]))
-		.rejects.toThrow();
+	await store.setMany([{ key: "key", value: "value" }]);
 	t.expect(errors.length).toBeGreaterThan(0);
 });
 
@@ -361,4 +359,61 @@ test.it("createKeyv set and get", async (t) => {
 	await keyv.set(key, value);
 	t.expect(await keyv.get(key)).toBe(value);
 	await keyv.delete(key);
+});
+
+test.it("get emits error on disconnected client", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	await store.disconnect();
+	const errors: unknown[] = [];
+	store.on("error", (error: unknown) => {
+		errors.push(error);
+	});
+	await store.get("key");
+	t.expect(errors.length).toBeGreaterThan(0);
+});
+
+test.it("delete emits error on disconnected client", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	await store.disconnect();
+	const errors: unknown[] = [];
+	store.on("error", (error: unknown) => {
+		errors.push(error);
+	});
+	const result = await store.delete("key");
+	t.expect(result).toBe(false);
+	t.expect(errors.length).toBeGreaterThan(0);
+});
+
+test.it("clear emits error on disconnected client", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	await store.disconnect();
+	const errors: unknown[] = [];
+	store.on("error", (error: unknown) => {
+		errors.push(error);
+	});
+	await store.clear();
+	t.expect(errors.length).toBeGreaterThan(0);
+});
+
+test.it("has returns false on disconnected client", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	await store.disconnect();
+	t.expect(await store.has("key")).toBe(false);
+});
+
+test.it("client getter and setter", (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const originalClient = store.client;
+	t.expect(originalClient).toBeDefined();
+	const newStore = new KeyvEtcd(etcdUrl);
+	store.client = newStore.client;
+	t.expect(store.client).toBe(newStore.client);
+	t.expect(store.client).not.toBe(originalClient);
+});
+
+test.it("lease getter and setter", (t) => {
+	const store = new KeyvEtcd(etcdUrl, { ttl: 1000 });
+	t.expect(store.lease).toBeDefined();
+	store.lease = undefined;
+	t.expect(store.lease).toBeUndefined();
 });

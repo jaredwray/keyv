@@ -98,7 +98,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Gets the merged configuration options. Read-only for legacy compatibility.
 	 * @returns The current options including url, ttl, busyTimeout, dialect, and namespace.
 	 */
-	get opts(): KeyvEtcdOptions {
+	public get opts(): KeyvEtcdOptions {
 		return {
 			url: this._url,
 			ttl: this._ttl,
@@ -111,28 +111,28 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	/**
 	 * Gets the underlying etcd3 client instance.
 	 */
-	get client(): Etcd3 {
+	public get client(): Etcd3 {
 		return this._client;
 	}
 
 	/**
 	 * Sets the underlying etcd3 client instance.
 	 */
-	set client(value: Etcd3) {
+	public set client(value: Etcd3) {
 		this._client = value;
 	}
 
 	/**
 	 * Gets the etcd lease used for TTL support.
 	 */
-	get lease(): Lease | undefined {
+	public get lease(): Lease | undefined {
 		return this._lease;
 	}
 
 	/**
 	 * Sets the etcd lease used for TTL support.
 	 */
-	set lease(value: Lease | undefined) {
+	public set lease(value: Lease | undefined) {
 		this._lease = value;
 	}
 
@@ -140,14 +140,14 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Gets the etcd server URL.
 	 * @default '127.0.0.1:2379'
 	 */
-	get url(): string {
+	public get url(): string {
 		return this._url;
 	}
 
 	/**
 	 * Sets the etcd server URL.
 	 */
-	set url(value: string) {
+	public set url(value: string) {
 		this._url = value;
 	}
 
@@ -155,14 +155,14 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Gets the default TTL in milliseconds.
 	 * @default undefined
 	 */
-	get ttl(): number | undefined {
+	public get ttl(): number | undefined {
 		return this._ttl;
 	}
 
 	/**
 	 * Sets the default TTL in milliseconds.
 	 */
-	set ttl(value: number | undefined) {
+	public set ttl(value: number | undefined) {
 		this._ttl = value;
 	}
 
@@ -170,21 +170,21 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Gets the busy timeout in milliseconds.
 	 * @default undefined
 	 */
-	get busyTimeout(): number | undefined {
+	public get busyTimeout(): number | undefined {
 		return this._busyTimeout;
 	}
 
 	/**
 	 * Sets the busy timeout in milliseconds.
 	 */
-	set busyTimeout(value: number | undefined) {
+	public set busyTimeout(value: number | undefined) {
 		this._busyTimeout = value;
 	}
 
 	/**
 	 * Gets the storage dialect identifier. Always returns `'etcd'`.
 	 */
-	get dialect(): string {
+	public get dialect(): string {
 		return this._dialect;
 	}
 
@@ -192,14 +192,14 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Gets the namespace used to prefix keys.
 	 * @default undefined
 	 */
-	get namespace(): string | undefined {
+	public get namespace(): string | undefined {
 		return this._namespace;
 	}
 
 	/**
 	 * Sets the namespace used to prefix keys.
 	 */
-	set namespace(value: string | undefined) {
+	public set namespace(value: string | undefined) {
 		this._namespace = value;
 	}
 
@@ -207,14 +207,14 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Gets the separator between the namespace and key.
 	 * @default ':'
 	 */
-	get keyPrefixSeparator(): string {
+	public get keyPrefixSeparator(): string {
 		return this._keyPrefixSeparator;
 	}
 
 	/**
 	 * Sets the separator between the namespace and key.
 	 */
-	set keyPrefixSeparator(value: string) {
+	public set keyPrefixSeparator(value: string) {
 		this._keyPrefixSeparator = value;
 	}
 
@@ -224,7 +224,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param namespace - The namespace to prepend. If not provided, the key is returned as-is.
 	 * @returns The prefixed key (e.g., `'namespace:key'`), or the original key if no namespace is given.
 	 */
-	createKeyPrefix(key: string, namespace?: string): string {
+	public createKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
 			return `${namespace}${this._keyPrefixSeparator}${key}`;
 		}
@@ -238,7 +238,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param namespace - The namespace prefix to remove. If not provided, the key is returned as-is.
 	 * @returns The key without the namespace prefix.
 	 */
-	removeKeyPrefix(key: string, namespace?: string): string {
+	public removeKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
 			return key.replace(`${namespace}${this._keyPrefixSeparator}`, "");
 		}
@@ -252,7 +252,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param key - The key to format
 	 * @returns The formatted key with namespace prefix, or the original key if no namespace is set.
 	 */
-	formatKey(key: string): string {
+	public formatKey(key: string): string {
 		if (!this._namespace) {
 			return key;
 		}
@@ -270,8 +270,14 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param key - The key to retrieve
 	 * @returns The stored value, or `undefined` if the key does not exist.
 	 */
-	async get(key: string): GetOutput<Value> {
-		return this._client.get(this.formatKey(key)) as unknown as GetOutput<Value>;
+	public async get(key: string): GetOutput<Value> {
+		try {
+			return (await this._client.get(
+				this.formatKey(key),
+			)) as unknown as GetOutput<Value>;
+		} catch (error) {
+			this.emit("error", error);
+		}
 	}
 
 	/**
@@ -279,7 +285,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param keys - An array of keys to retrieve
 	 * @returns An array of stored data corresponding to each key.
 	 */
-	async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
+	public async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
@@ -306,26 +312,32 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param key - The key to store
 	 * @param value - The value to store
 	 */
-	async set(key: string, value: Value): SetOutput {
-		const target = this._ttl ? this._lease : this._client;
+	public async set(key: string, value: Value): SetOutput {
+		try {
+			const target = this._ttl ? this._lease : this._client;
 
-		// @ts-expect-error - Value needs to be number, string or buffer
-		await target?.put(this.formatKey(key)).value(value);
+			// @ts-expect-error - Value needs to be number, string or buffer
+			await target?.put(this.formatKey(key)).value(value);
+		} catch (error) {
+			this.emit("error", error);
+		}
 	}
 
 	/**
 	 * Stores multiple values in the etcd server.
 	 * @param entries - An array of objects containing key and value
 	 */
-	async setMany(entries: Array<{ key: string; value: Value }>): Promise<void> {
+	public async setMany(
+		entries: Array<{ key: string; value: Value }>,
+	): Promise<void> {
 		const promises = entries.map(async ({ key, value }) =>
 			this.set(key, value),
 		);
 		const results = await Promise.allSettled(promises);
 		for (const result of results) {
+			/* c8 ignore next 3 -- @preserve */
 			if (result.status === "rejected") {
 				this.emit("error", result.reason);
-				throw result.reason as Error;
 			}
 		}
 	}
@@ -335,15 +347,20 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param key - The key to delete
 	 * @returns `true` if the key was deleted, `false` otherwise.
 	 */
-	async delete(key: string): DeleteOutput {
+	public async delete(key: string): DeleteOutput {
 		if (typeof key !== "string") {
 			return false;
 		}
 
-		return this._client
-			.delete()
-			.key(this.formatKey(key))
-			.then((key) => key.deleted !== "0");
+		try {
+			return await this._client
+				.delete()
+				.key(this.formatKey(key))
+				.then((key) => key.deleted !== "0");
+		} catch (error) {
+			this.emit("error", error);
+			return false;
+		}
 	}
 
 	/**
@@ -351,7 +368,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param keys - An array of keys to delete
 	 * @returns `true` if all keys were successfully deleted, `false` otherwise.
 	 */
-	async deleteMany(keys: string[]): DeleteManyOutput {
+	public async deleteMany(keys: string[]): DeleteManyOutput {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.delete(key));
@@ -367,13 +384,17 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Clears data from the etcd server. If a namespace is set, only keys with
 	 * the namespace prefix are deleted. Otherwise, all keys are deleted.
 	 */
-	async clear(): ClearOutput {
-		const promise = this._namespace
-			? this._client
-					.delete()
-					.prefix(`${this._namespace}${this._keyPrefixSeparator}`)
-			: this._client.delete().all();
-		return promise.then(() => undefined);
+	public async clear(): ClearOutput {
+		try {
+			const promise = this._namespace
+				? this._client
+						.delete()
+						.prefix(`${this._namespace}${this._keyPrefixSeparator}`)
+				: this._client.delete().all();
+			return await promise.then(() => undefined);
+		} catch (error) {
+			this.emit("error", error);
+		}
 	}
 
 	/**
@@ -381,13 +402,19 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * only keys matching the namespace prefix are yielded.
 	 * @param namespace - Optional namespace to filter keys by
 	 */
-	async *iterator(namespace?: string) {
+	public async *iterator(namespace?: string) {
 		const prefix = namespace ? `${namespace}${this._keyPrefixSeparator}` : "";
 		const iterator = await this._client.getAll().prefix(prefix).keys();
 
 		for await (const key of iterator) {
-			const value = (await this._client.get(key)) as unknown as Value;
-			yield [key, value];
+			try {
+				const value = (await this._client.get(key)) as unknown as Value;
+				yield [key, value];
+				/* c8 ignore start -- @preserve */
+			} catch (error) {
+				this.emit("error", error);
+			}
+			/* c8 ignore stop -- @preserve */
 		}
 	}
 
@@ -396,8 +423,12 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param key - The key to check
 	 * @returns `true` if the key exists, `false` otherwise.
 	 */
-	async has(key: string): HasOutput {
-		return this._client.get(this.formatKey(key)).exists();
+	public async has(key: string): HasOutput {
+		try {
+			return await this._client.get(this.formatKey(key)).exists();
+		} catch {
+			return false;
+		}
 	}
 
 	/**
@@ -405,7 +436,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param keys - An array of keys to check
 	 * @returns An array of booleans indicating whether each key exists.
 	 */
-	async hasMany(keys: string[]): Promise<boolean[]> {
+	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const promises = keys.map(async (key) => this.has(key));
 		const results = await Promise.allSettled(promises);
 		return results.map((result) =>
@@ -416,8 +447,14 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	/**
 	 * Gracefully disconnects from the etcd server.
 	 */
-	async disconnect() {
-		this._client.close();
+	public async disconnect() {
+		try {
+			this._client.close();
+			/* c8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+		}
+		/* c8 ignore stop -- @preserve */
 	}
 }
 
