@@ -227,6 +227,156 @@ test.it(
 	},
 );
 
+test.it("formatKey prefixes key and avoids double prefix", (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	store.namespace = "ns";
+	t.expect(store.formatKey("key")).toBe("ns:key");
+	t.expect(store.formatKey("ns:key")).toBe("ns:key");
+	store.namespace = undefined;
+	t.expect(store.formatKey("key")).toBe("key");
+});
+
+test.it("createKeyPrefix returns prefixed key when namespace is set", (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
+	t.expect(store.createKeyPrefix("key")).toBe("key");
+	t.expect(store.createKeyPrefix("key", undefined)).toBe("key");
+});
+
+test.it("removeKeyPrefix strips prefix when namespace is set", (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
+	t.expect(store.removeKeyPrefix("key")).toBe("key");
+	t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
+});
+
+test.it("namespace getter and setter", (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	t.expect(store.namespace).toBeUndefined();
+	store.namespace = "test-ns";
+	t.expect(store.namespace).toBe("test-ns");
+	store.namespace = undefined;
+	t.expect(store.namespace).toBeUndefined();
+});
+
+test.it("keyPrefixSeparator getter and setter", (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	t.expect(store.keyPrefixSeparator).toBe(":");
+	store.keyPrefixSeparator = "::";
+	t.expect(store.keyPrefixSeparator).toBe("::");
+	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
+});
+
+test.it("client getter and setter", (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const originalClient = store.client;
+	t.expect(originalClient).toBeDefined();
+	const newStore = new KeyvDynamo({ endpoint: dynamoURL });
+	store.client = newStore.client;
+	t.expect(store.client).toBe(newStore.client);
+});
+
+test.it("sixHoursInMilliseconds getter and setter", (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	t.expect(store.sixHoursInMilliseconds).toBe(6 * 60 * 60 * 1000);
+	store.sixHoursInMilliseconds = 1000;
+	t.expect(store.sixHoursInMilliseconds).toBe(1000);
+});
+
+test.it("get/set with namespace", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
+	t.expect(await store.get(key)).toBe(value);
+});
+
+test.it("delete with namespace", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const namespace = faker.string.alphanumeric(10);
+	store.namespace = namespace;
+	const key = faker.string.uuid();
+	await store.set(key, faker.lorem.word());
+	t.expect(await store.delete(key)).toBe(true);
+	t.expect(await store.get(key)).toBeUndefined();
+});
+
+test.it("setMany sets multiple keys", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key1 = faker.string.uuid();
+	const value1 = faker.lorem.word();
+	const key2 = faker.string.uuid();
+	const value2 = faker.lorem.word();
+	await store.setMany([
+		{ key: key1, value: value1 },
+		{ key: key2, value: value2 },
+	]);
+	t.expect(await store.get(key1)).toBe(value1);
+	t.expect(await store.get(key2)).toBe(value2);
+});
+
+test.it("has returns true for existing key", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key = faker.string.uuid();
+	await store.set(key, faker.lorem.word());
+	t.expect(await store.has(key)).toBe(true);
+	t.expect(await store.has("nonExistingKey")).toBe(false);
+});
+
+test.it("hasMany checks multiple keys", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const key3 = faker.string.uuid();
+	await store.set(key1, faker.lorem.word());
+	await store.set(key2, faker.lorem.word());
+	const results = await store.hasMany([key1, key2, key3]);
+	t.expect(results).toEqual([true, true, false]);
+});
+
+test.it("setMany with empty entries should not fail", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	await t.expect(store.setMany([])).resolves.toBeUndefined();
+});
+
+test.it("has returns false for expired key", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key = faker.string.uuid();
+	// Set with a TTL of 0ms so it expires immediately (expiresAt will be ~now+1s)
+	await store.set(key, "value", 0);
+	// Manually overwrite with an already-expired expiresAt
+	await store.client.put({
+		TableName: store.opts.tableName,
+		Item: {
+			id: store.formatKey(key),
+			value: "value",
+			expiresAt: Math.floor(Date.now() / 1000) - 10,
+		},
+	});
+	t.expect(await store.has(key)).toBe(false);
+});
+
+test.it("hasMany returns false for expired keys", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	await store.set(key1, "value1");
+	await store.set(key2, "value2");
+	// Overwrite key1 with an expired expiresAt
+	await store.client.put({
+		TableName: store.opts.tableName,
+		Item: {
+			id: store.formatKey(key1),
+			value: "value1",
+			expiresAt: Math.floor(Date.now() / 1000) - 10,
+		},
+	});
+	const results = await store.hasMany([key1, key2]);
+	t.expect(results).toEqual([false, true]);
+});
+
 test.describe("createKeyv", () => {
 	test.it("should create Keyv instance with default options", (t) => {
 		const keyv = createKeyv();

@@ -72,7 +72,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 			...options,
 		};
 
-		/* c8 ignore next -- @preserve */
+		/* v8 ignore next -- @preserve */
 		if (merged.url) {
 			this._url = merged.url.replace(/^etcd:\/\//, "");
 		}
@@ -335,7 +335,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 		);
 		const results = await Promise.allSettled(promises);
 		for (const result of results) {
-			/* c8 ignore next 3 -- @preserve */
+			/* v8 ignore next 3 -- @preserve */
 			if (result.status === "rejected") {
 				this.emit("error", result.reason);
 			}
@@ -410,11 +410,11 @@ export class KeyvEtcd<Value = any> extends Hookified {
 			try {
 				const value = (await this._client.get(key)) as unknown as Value;
 				yield [key, value];
-				/* c8 ignore start -- @preserve */
+				/* v8 ignore start -- @preserve */
 			} catch (error) {
 				this.emit("error", error);
 			}
-			/* c8 ignore stop -- @preserve */
+			/* v8 ignore stop -- @preserve */
 		}
 	}
 
@@ -450,11 +450,11 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	public async disconnect() {
 		try {
 			this._client.close();
-			/* c8 ignore start -- @preserve */
+			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
 		}
-		/* c8 ignore stop -- @preserve */
+		/* v8 ignore stop -- @preserve */
 	}
 }
 
