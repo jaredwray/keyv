@@ -163,8 +163,8 @@ test.it("iterator with namespace", async (t) => {
 	}
 
 	t.expect(results.size).toBe(2);
-	t.expect(results.get(`${namespace}:${key1}`)).toBe(value1);
-	t.expect(results.get(`${namespace}:${key2}`)).toBe(value2);
+	t.expect(results.get(key1)).toBe(value1);
+	t.expect(results.get(key2)).toBe(value2);
 });
 
 test.it("iterator without namespace", async (t) => {
