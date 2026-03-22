@@ -584,7 +584,7 @@ Returns a promise which resolves to an array of raw stored data for the keys or 
 
 ## .setRaw(key, value, [ttl])
 
-Sets a raw value in the store without wrapping or serialization. This is the write-side counterpart to `.getRaw()`. The value should be a `DeserializedData` object with `{ value, expires? }`. If `expires` is not set in the value and `ttl` is provided, `expires` will be computed from `ttl`.
+Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `DeserializedData` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If `expires` is not set in the value and `ttl` is provided, `expires` will be computed from `ttl`.
 
 Returns a promise which resolves to `true`.
 
@@ -605,7 +605,7 @@ await keyv.setRaw('foo', { value: 'bar' }, 60000);
 
 ## .setManyRaw(entries)
 
-Sets many raw values in the store without wrapping or serialization. Each entry should have a `key`, a `value` (`DeserializedData` object), and an optional `ttl`.
+Sets many raw values in the store without wrapping. Each entry should have a `key`, a `value` (`DeserializedData` envelope), and an optional `ttl`. Like `setRaw()`, the envelopes are serialized before storing.
 
 Returns a promise which resolves to an array of booleans.
 

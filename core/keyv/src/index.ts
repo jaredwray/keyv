@@ -1008,7 +1008,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 		let result = true;
 
 		try {
-			const storeResult = await store.set(keyPrefixed, data.value, data.ttl);
+			const serializedValue = await this.serializeData(data.value);
+			const storeResult = await store.set(
+				keyPrefixed,
+				serializedValue,
+				data.ttl,
+			);
 
 			if (typeof storeResult === "boolean") {
 				result = storeResult;
@@ -1122,21 +1127,24 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 				results = await Promise.all(promises);
 			} else {
-				const rawEntries = entries.map(({ key, value, ttl }) => {
-					ttl ??= this._ttl;
+				const rawEntries = await Promise.all(
+					entries.map(async ({ key, value, ttl }) => {
+						ttl ??= this._ttl;
 
-					/* v8 ignore next -- @preserve */
-					if (ttl === 0) {
-						ttl = undefined;
-					}
+						/* v8 ignore next -- @preserve */
+						if (ttl === 0) {
+							ttl = undefined;
+						}
 
-					if (value.expires === undefined && typeof ttl === "number") {
-						value.expires = Date.now() + ttl;
-					}
+						if (value.expires === undefined && typeof ttl === "number") {
+							value.expires = Date.now() + ttl;
+						}
 
-					const keyPrefixed = this._getKeyPrefix(key);
-					return { key: keyPrefixed, value, ttl };
-				});
+						const serializedValue = await this.serializeData(value);
+						const keyPrefixed = this._getKeyPrefix(key);
+						return { key: keyPrefixed, value: serializedValue, ttl };
+					}),
+				);
 				const storeResult = await this._store.setMany(rawEntries);
 				results = Array.isArray(storeResult)
 					? (storeResult as boolean[])

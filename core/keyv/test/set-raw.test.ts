@@ -135,6 +135,48 @@ describe("Keyv Set Raw", async () => {
 		).rejects.toThrow("store error");
 	});
 
+	test("should treat ttl of 0 as no ttl", async () => {
+		const keyv = new Keyv();
+		const key = faker.string.alphanumeric(10);
+		await keyv.setRaw(key, { value: "test" }, 0);
+		const result = await keyv.getRaw(key);
+		expect(result).toBeDefined();
+		expect(result?.expires).toBeUndefined();
+	});
+
+	test("should use store boolean return value", async () => {
+		const store = createStore();
+		const originalSet = store.set.bind(store);
+		store.set = async (...args: unknown[]) => {
+			// biome-ignore lint/suspicious/noExplicitAny: test override
+			await (originalSet as any)(...args);
+			return true;
+		};
+		const keyv = new Keyv({ store });
+		const result = await keyv.setRaw(faker.string.alphanumeric(10), {
+			value: "test",
+		});
+		expect(result).toBe(true);
+	});
+
+	test("should be readable by has() after setRaw", async () => {
+		const keyv = new Keyv();
+		const key = faker.string.alphanumeric(10);
+		await keyv.setRaw(key, { value: "test" });
+		const result = await keyv.has(key);
+		expect(result).toBe(true);
+	});
+
+	test("should be readable by getManyRaw() after setRaw", async () => {
+		const keyv = new Keyv();
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await keyv.setRaw(key, { value });
+		const results = await keyv.getManyRaw([key]);
+		expect(results).toHaveLength(1);
+		expect(results[0]?.value).toBe(value);
+	});
+
 	test("getRaw -> modify -> setRaw round-trip", async () => {
 		const keyv = new Keyv();
 		const key = faker.string.alphanumeric(10);
@@ -204,6 +246,29 @@ describe("Keyv Set Many Raw", async () => {
 		const results = await keyv.setManyRaw(entries);
 		expect(Array.isArray(results)).toBe(true);
 		expect(results).toEqual([true, true]);
+	});
+
+	test("should compute expires from ttl via store setMany path", async () => {
+		const keyv = new Keyv({ store: createStore() });
+		const key = faker.string.alphanumeric(10);
+		const before = Date.now();
+		await keyv.setManyRaw([{ key, value: { value: "test" }, ttl: 60_000 }]);
+		const result = await keyv.getRaw(key);
+		expect(result).toBeDefined();
+		expect(result?.expires).toBeGreaterThanOrEqual(before + 60_000);
+		expect(result?.expires).toBeLessThanOrEqual(Date.now() + 60_000);
+	});
+
+	test("should throw on store failure when throwOnErrors is true", async () => {
+		const store = createStore();
+		store.setMany = async () => {
+			throw new Error("batch error");
+		};
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		keyv.on("error", () => {});
+		await expect(
+			keyv.setManyRaw([{ key: "a", value: { value: "test" } }]),
+		).rejects.toThrow("batch error");
 	});
 
 	test("should emit error on failure", async () => {

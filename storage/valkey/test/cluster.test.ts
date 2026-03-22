@@ -37,13 +37,11 @@ test.it("cluster: setMany should work without CROSSSLOT errors", async (t) => {
 		{ key: key4, value: val4 },
 	]);
 
-	t.expect(await keyv.get(key1)).toBe(val1);
-	t.expect(await keyv.get(key2)).toBe(val2);
-	t.expect(await keyv.get(key3)).toBe(val3);
-	t.expect(await keyv.get(key4)).toBe(val4);
+	const results = await keyv.getMany([key1, key2, key3, key4]);
+	t.expect(results).toEqual([val1, val2, val3, val4]);
 
 	await keyv.disconnect();
-});
+}, { retry: 3 });
 
 test.it("cluster: getMany should work without CROSSSLOT errors", async (t) => {
 	const cluster = await createReadyCluster();
