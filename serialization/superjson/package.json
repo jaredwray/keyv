@@ -1,0 +1,69 @@
+{
+  "name": "@keyv/serialize-superjson",
+  "version": "6.0.0-alpha.2",
+  "description": "SuperJSON serialization adapter for Keyv",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "rimraf ./dist && tsup src/index.ts --format cjs,esm --dts --clean",
+    "prepublishOnly": "pnpm build",
+    "lint": "biome check --write --error-on-warnings",
+    "lint:ci": "biome check --error-on-warnings",
+    "test": "pnpm lint && vitest run --coverage",
+    "test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+    "clean": "rimraf ./node_modules ./coverage ./dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/keyv.git"
+  },
+  "keywords": [
+    "keyv",
+    "serialize",
+    "superjson",
+    "key",
+    "value",
+    "store"
+  ],
+  "author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/keyv/issues"
+  },
+  "homepage": "https://github.com/jaredwray/keyv",
+  "dependencies": {
+    "superjson": "^2.2.2"
+  },
+  "peerDependencies": {
+    "keyv": "workspace:^"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.13",
+    "@vitest/coverage-v8": "^4.0.18",
+    "rimraf": "^6.1.2",
+    "tsd": "^0.33.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "tsd": {
+    "directory": "test"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ]
+}
