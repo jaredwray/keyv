@@ -57,7 +57,11 @@ jobs:
     needs: detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Node 24 (filtered)
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [ '20', '22', '24' ]
+    name: Node ${{ matrix.node }} (filtered)
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +71,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node }}
           cache: 'pnpm'
 
       - name: Start Services
