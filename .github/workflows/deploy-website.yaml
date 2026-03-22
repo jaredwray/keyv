@@ -12,26 +12,27 @@ jobs:
   setup-build-deploy:
     name: Deploy Website
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    # Test
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
     - name: Use Node.js 22
       uses: actions/setup-node@v4
       with:
         node-version: 22
+        cache: 'pnpm'
 
-    - name: Install pnpm
-      run: npm install -g pnpm
-
-    - name: Install Dependencies  
+    - name: Install Dependencies
       run: pnpm install
 
     - name: Build Packages
       run: pnpm build
-      
+
     - name: Build Website
       run: pnpm website:build
 

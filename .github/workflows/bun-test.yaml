@@ -13,6 +13,7 @@ permissions:
 jobs:
   bun-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     name: bun
     steps:
       - uses: actions/checkout@v4
@@ -23,10 +24,16 @@ jobs:
           bun-version: latest
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
 
       - name: Start Services
-        run: pnpm test:services:start
+        run: pnpm test:services:start &
 
       - name: Install Dependencies
         run: pnpm install

@@ -13,24 +13,28 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
-        node: [ '24' ]
+        node: [ '20', '22', '24' ]
     name: Node ${{ matrix.node }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      
-      - name: Install pnpm
-        run: npm install -g pnpm
+          cache: 'pnpm'
 
       - name: Start Services
-        run: pnpm test:services:start
+        run: pnpm test:services:start &
 
-      - name: Install Dependencies  
+      - name: Install Dependencies
         run: pnpm install
 
       - name: Approve Builds
@@ -38,6 +42,6 @@ jobs:
 
       - name: Build
         run: pnpm build
-        
+
       - name: Test Packages
         run: pnpm test
