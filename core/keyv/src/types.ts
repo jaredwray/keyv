@@ -1,3 +1,5 @@
+import type { IEventEmitter } from "hookified";
+
 export type KeyvSerializationAdapter = {
 	stringify: (object: unknown) => string | Promise<string>;
 	parse: <T>(data: string) => T | Promise<T>;
@@ -21,22 +23,55 @@ export type DeserializedData<Value> = {
 };
 
 export enum KeyvHooks {
+	/** @deprecated Use BEFORE_SET instead */
 	PRE_SET = "preSet",
+	/** @deprecated Use AFTER_SET instead */
 	POST_SET = "postSet",
+	/** @deprecated Use BEFORE_GET instead */
 	PRE_GET = "preGet",
+	/** @deprecated Use AFTER_GET instead */
 	POST_GET = "postGet",
+	/** @deprecated Use BEFORE_GET_MANY instead */
 	PRE_GET_MANY = "preGetMany",
+	/** @deprecated Use AFTER_GET_MANY instead */
 	POST_GET_MANY = "postGetMany",
+	/** @deprecated Use BEFORE_GET_RAW instead */
 	PRE_GET_RAW = "preGetRaw",
+	/** @deprecated Use AFTER_GET_RAW instead */
 	POST_GET_RAW = "postGetRaw",
+	/** @deprecated Use BEFORE_GET_MANY_RAW instead */
 	PRE_GET_MANY_RAW = "preGetManyRaw",
+	/** @deprecated Use AFTER_GET_MANY_RAW instead */
 	POST_GET_MANY_RAW = "postGetManyRaw",
+	/** @deprecated Use BEFORE_SET_RAW instead */
 	PRE_SET_RAW = "preSetRaw",
+	/** @deprecated Use AFTER_SET_RAW instead */
 	POST_SET_RAW = "postSetRaw",
+	/** @deprecated Use BEFORE_SET_MANY_RAW instead */
 	PRE_SET_MANY_RAW = "preSetManyRaw",
+	/** @deprecated Use AFTER_SET_MANY_RAW instead */
 	POST_SET_MANY_RAW = "postSetManyRaw",
+	/** @deprecated Use BEFORE_DELETE instead */
 	PRE_DELETE = "preDelete",
+	/** @deprecated Use AFTER_DELETE instead */
 	POST_DELETE = "postDelete",
+
+	BEFORE_SET = "before:set",
+	AFTER_SET = "after:set",
+	BEFORE_GET = "before:get",
+	AFTER_GET = "after:get",
+	BEFORE_GET_MANY = "before:getMany",
+	AFTER_GET_MANY = "after:getMany",
+	BEFORE_GET_RAW = "before:getRaw",
+	AFTER_GET_RAW = "after:getRaw",
+	BEFORE_GET_MANY_RAW = "before:getManyRaw",
+	AFTER_GET_MANY_RAW = "after:getManyRaw",
+	BEFORE_SET_RAW = "before:setRaw",
+	AFTER_SET_RAW = "after:setRaw",
+	BEFORE_SET_MANY_RAW = "before:setManyRaw",
+	AFTER_SET_MANY_RAW = "after:setManyRaw",
+	BEFORE_DELETE = "before:delete",
+	AFTER_DELETE = "after:delete",
 }
 
 export type KeyvEntry = {
@@ -60,11 +95,6 @@ export type StoredDataNoRaw<Value> = Value | undefined;
 export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
-
-export type IEventEmitter = {
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	on(event: string, listener: (...arguments_: any[]) => void): IEventEmitter;
-};
 
 export type KeyvStorageAdapter = {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -92,11 +122,6 @@ export type KeyvStorageAdapter = {
 } & IEventEmitter;
 
 export type KeyvOptions = {
-	/**
-	 * Emit errors
-	 * @default true
-	 */
-	emitErrors?: boolean;
 	/**
 	 * Namespace for the current instance.
 	 * @default 'keyv'
@@ -130,6 +155,7 @@ export type KeyvOptions = {
 	 */
 	stats?: boolean;
 	/**
+	 * @deprecated Use hookified's `throwOnEmitError` instead. Access via `keyv.throwOnEmitError`.
 	 * Will enable throwing errors on methods in addition to emitting them.
 	 * @default false
 	 */

@@ -86,20 +86,20 @@ describe("Keyv Set Raw", async () => {
 		expect(keyv.stats.sets).toBe(1);
 	});
 
-	test("should trigger PRE_SET_RAW hook", async () => {
+	test("should trigger BEFORE_SET_RAW hook", async () => {
 		const keyv = new Keyv();
 		let hookTriggered = false;
-		keyv.hooks.addHandler(KeyvHooks.PRE_SET_RAW, () => {
+		keyv.addHook(KeyvHooks.BEFORE_SET_RAW, () => {
 			hookTriggered = true;
 		});
 		await keyv.setRaw(faker.string.alphanumeric(10), { value: "test" });
 		expect(hookTriggered).toBe(true);
 	});
 
-	test("should trigger POST_SET_RAW hook", async () => {
+	test("should trigger AFTER_SET_RAW hook", async () => {
 		const keyv = new Keyv();
 		let hookTriggered = false;
-		keyv.hooks.addHandler(KeyvHooks.POST_SET_RAW, () => {
+		keyv.addHook(KeyvHooks.AFTER_SET_RAW, () => {
 			hookTriggered = true;
 		});
 		await keyv.setRaw(faker.string.alphanumeric(10), { value: "test" });
@@ -331,14 +331,14 @@ describe("Keyv Set Many Raw", async () => {
 		expect(results).toEqual([false]);
 	});
 
-	test("should trigger PRE_SET_MANY_RAW and POST_SET_MANY_RAW hooks", async () => {
+	test("should trigger BEFORE_SET_MANY_RAW and AFTER_SET_MANY_RAW hooks", async () => {
 		const keyv = new Keyv();
 		let preHookTriggered = false;
 		let postHookTriggered = false;
-		keyv.hooks.addHandler(KeyvHooks.PRE_SET_MANY_RAW, () => {
+		keyv.addHook(KeyvHooks.BEFORE_SET_MANY_RAW, () => {
 			preHookTriggered = true;
 		});
-		keyv.hooks.addHandler(KeyvHooks.POST_SET_MANY_RAW, () => {
+		keyv.addHook(KeyvHooks.AFTER_SET_MANY_RAW, () => {
 			postHookTriggered = true;
 		});
 		await keyv.setManyRaw([
