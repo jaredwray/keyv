@@ -133,9 +133,9 @@ it("keyv get / expired", async () => {
 	const key = faker.string.uuid();
 	const val = faker.lorem.word();
 
-	await keyv.set(key, val, 250);
+	await keyv.set(key, val, 1000);
 
-	await snooze(500);
+	await snooze(2000);
 
 	const value = await keyv.get(key);
 
@@ -147,9 +147,9 @@ it("keyv has / expired", async () => {
 	const key = faker.string.uuid();
 	const val = faker.lorem.word();
 
-	await keyv.set(key, val, 250);
+	await keyv.set(key, val, 1000);
 
-	await snooze(500);
+	await snooze(2000);
 
 	const value = await keyv.has(key);
 
