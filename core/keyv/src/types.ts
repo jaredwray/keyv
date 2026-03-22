@@ -130,11 +130,6 @@ export type KeyvOptions = {
 	 */
 	stats?: boolean;
 	/**
-	 * Enable or disable key prefixing (default is true)
-	 * @default true
-	 */
-	useKeyPrefix?: boolean;
-	/**
 	 * Will enable throwing errors on methods in addition to emitting them.
 	 * @default false
 	 */

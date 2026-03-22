@@ -399,7 +399,6 @@ export function createKeyv(
 	const genericStore = new KeyvGenericStore(store, options);
 	const keyv = new Keyv({
 		store: genericStore,
-		useKeyPrefix: false,
 		serialization: false,
 	});
 	return keyv;

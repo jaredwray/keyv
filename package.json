@@ -1,6 +1,6 @@
 {
   "name": "@keyv/mono-repo",
-  "version": "6.0.0-alpha.2",
+  "version": "6.0.0-alpha.3",
   "type": "module",
   "description": "Keyv Mono Repo",
   "repository": "https://github.com/jaredwray/keyv.git",
@@ -14,7 +14,8 @@
   "scripts": {
     "build:keyv": "pnpm recursive --filter=keyv run build",
     "build": "pnpm build:keyv && pnpm recursive --filter '!keyv' run build",
-    "test": "pnpm -r test:ci",
+    "test": "pnpm -r test",
+    "test:ci": "pnpm -r test:ci",
     "test:services:start": "chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh",
     "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
     "website:build": "pnpm recursive --filter @keyv/website run website:build",

@@ -23,18 +23,18 @@ test.it("iterator with explicit namespace", async (t) => {
 	const val2 = faker.string.alphanumeric(10);
 	const key3 = faker.string.alphanumeric(10);
 	const val3 = faker.string.alphanumeric(10);
-	await keyv.set(`${ns}:${key1}`, val1);
-	await keyv.set(`${ns}:${key2}`, val2);
-	await keyv.set(`${ns}:${key3}`, val3);
+	await keyv.set(key1, val1);
+	await keyv.set(key2, val2);
+	await keyv.set(key3, val3);
 	const collected = new Map<string, string>();
 	for await (const [key, value] of keyv.iterator(ns)) {
 		collected.set(key, value);
 	}
 
 	t.expect(collected.size).toBe(3);
-	t.expect(collected.get(`${ns}:${key1}`)).toBe(val1);
-	t.expect(collected.get(`${ns}:${key2}`)).toBe(val2);
-	t.expect(collected.get(`${ns}:${key3}`)).toBe(val3);
+	t.expect(collected.get(key1)).toBe(val1);
+	t.expect(collected.get(key2)).toBe(val2);
+	t.expect(collected.get(key3)).toBe(val3);
 });
 
 test.it("iterator with default namespace", async (t) => {
@@ -526,9 +526,9 @@ test.it(
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		const key3 = faker.string.alphanumeric(10);
-		await mysql1.set(`${ns1}:${key1}`, "val1");
-		await mysql1.set(`${ns1}:${key2}`, "val2");
-		await mysql2.set(`${ns2}:${key3}`, "val3");
+		await mysql1.set(key1, "val1");
+		await mysql1.set(key2, "val2");
+		await mysql2.set(key3, "val3");
 
 		const keys: string[] = [];
 		for await (const [key] of mysql1.iterator(ns1)) {
@@ -536,8 +536,8 @@ test.it(
 		}
 
 		t.expect(keys.length).toBe(2);
-		t.expect(keys).toContain(`${ns1}:${key1}`);
-		t.expect(keys).toContain(`${ns1}:${key2}`);
+		t.expect(keys).toContain(key1);
+		t.expect(keys).toContain(key2);
 	},
 );
 

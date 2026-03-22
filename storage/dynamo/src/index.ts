@@ -626,8 +626,7 @@ export type KeyvDynamoOptions = {
 } & DynamoDBClientConfig;
 
 /**
- * Creates a Keyv instance with the DynamoDB adapter. Sets useKeyPrefix to false
- * since the adapter handles its own key prefixing via namespace.
+ * Creates a Keyv instance with the DynamoDB adapter.
  * @param options - Options for the adapter including DynamoDB client configuration and table settings.
  * @returns A Keyv instance with the DynamoDB adapter
  */
@@ -638,13 +637,12 @@ export function createKeyv(options?: KeyvDynamoOptions | string): Keyv {
 		adapter.namespace = options.namespace;
 		const keyv = new Keyv(adapter, {
 			namespace: options.namespace,
-			useKeyPrefix: false,
 		});
 
 		return keyv;
 	}
 
-	const keyv = new Keyv(adapter, { useKeyPrefix: false });
+	const keyv = new Keyv(adapter);
 	keyv.namespace = undefined; // Ensure no namespace is set
 	return keyv;
 }

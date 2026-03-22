@@ -3,12 +3,12 @@ import Keyv from "keyv";
 import * as test from "vitest";
 import KeyvSqlite from "../src/index.js";
 
-test.it("Async Iterator with Keyv and useKeyPrefix true", async (t) => {
+test.it("Async Iterator with Keyv", async (t) => {
 	const store = new KeyvSqlite({
 		uri: "sqlite://test/testdb2.sqlite",
 		busyTimeout: 3000,
 	});
-	const keyv = new Keyv({ store, useKeyPrefix: true });
+	const keyv = new Keyv({ store });
 	await keyv.clear();
 	// Test with Keyv instance
 	const keyvData = {
@@ -37,14 +37,13 @@ test.it("Async Iterator with Keyv and useKeyPrefix true", async (t) => {
 	}
 });
 
-test.it("Async Iterator with Keyv and useKeyPrefix false", async (t) => {
+test.it("Async Iterator with Keyv and no namespace", async (t) => {
 	const store = new KeyvSqlite({
 		uri: "sqlite://test/testdb2.sqlite",
 		busyTimeout: 3000,
 	});
 	const keyv = new Keyv({ store });
 	keyv.namespace = undefined;
-	keyv.useKeyPrefix = false;
 	await keyv.clear();
 	// Test with Keyv instance
 	const keyvData = {

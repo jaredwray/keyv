@@ -5,7 +5,7 @@ import KeyvRedis from "./index.js";
 import type { KeyvRedisOptions } from "./types.js";
 
 /**
- * Will create a Keyv instance with the Redis adapter. This will also set the namespace and useKeyPrefix to false.
+ * Will create a Keyv instance with the Redis adapter. This will also set the namespace.
  * @param connect - How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client. If nothing is passed in, it will default to 'redis://localhost:6379'.
  * @param {KeyvRedisOptions} options - Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
  * @returns {Keyv} - Keyv instance with the Redis adapter
@@ -21,7 +21,6 @@ export function createKeyv(
 		adapter.namespace = options.namespace;
 		const keyv = new Keyv(adapter, {
 			namespace: options?.namespace,
-			useKeyPrefix: false,
 		});
 
 		if (options?.throwOnConnectError) {
@@ -37,7 +36,7 @@ export function createKeyv(
 		return keyv;
 	}
 
-	const keyv = new Keyv(adapter, { useKeyPrefix: false });
+	const keyv = new Keyv(adapter);
 
 	if (options?.throwOnConnectError) {
 		// Set the throwOnError in Keyv so it throws

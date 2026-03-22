@@ -75,7 +75,7 @@ describe("Keyv", async () => {
 			);
 			const store = Object.assign(new Map(map), { getMany: getManyMock });
 			const getSpy = vi.spyOn(store, "get");
-			const keyv = new Keyv({ store, useKeyPrefix: false });
+			const keyv = new Keyv({ store });
 
 			await keyv.getMany(testKeys);
 			expect(getManyMock).toHaveBeenCalled();
@@ -92,8 +92,7 @@ describe("Keyv", async () => {
 				deleteMany: deleteManyMock,
 			});
 			const deleteSpy = vi.spyOn(store, "delete");
-			// UseKeyPrefix is false so it's easy to check the keys that deleteMany is called with
-			const keyv = new Keyv({ store, useKeyPrefix: false });
+			const keyv = new Keyv({ store });
 			await keyv.setMany(
 				testData.map((data) => ({
 					key: data.key,

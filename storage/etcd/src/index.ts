@@ -409,7 +409,8 @@ export class KeyvEtcd<Value = any> extends Hookified {
 		for await (const key of iterator) {
 			try {
 				const value = (await this._client.get(key)) as unknown as Value;
-				yield [key, value];
+				const unprefixedKey = this.removeKeyPrefix(key, namespace);
+				yield [unprefixedKey, value];
 				/* v8 ignore start -- @preserve */
 			} catch (error) {
 				this.emit("error", error);

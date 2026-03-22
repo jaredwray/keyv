@@ -308,8 +308,8 @@ test.it("iterator with namespace", async (t) => {
 	const ns = faker.string.alphanumeric(8);
 	const store = new KeyvMongo({ namespace: ns, ...options });
 	await store.clear();
-	const key1 = `${ns}:${faker.string.alphanumeric(10)}`;
-	const key2 = `${ns}:${faker.string.alphanumeric(10)}`;
+	const key1 = faker.string.alphanumeric(10);
+	const key2 = faker.string.alphanumeric(10);
 	await store.set(key1, "bar");
 	await store.set(key2, "bar2");
 	const results: Array<[string, string]> = [];
@@ -349,8 +349,8 @@ test.it("iterator with namespace using GridFS", async (t) => {
 		...options,
 	});
 	await store.clear();
-	const key1 = `${ns}:${faker.string.alphanumeric(10)}`;
-	const key2 = `${ns}:${faker.string.alphanumeric(10)}`;
+	const key1 = faker.string.alphanumeric(10);
+	const key2 = faker.string.alphanumeric(10);
 	await store.set(key1, "bar");
 	await store.set(key2, "bar2");
 	const results: Array<[string, string]> = [];
@@ -558,11 +558,11 @@ test.it(
 		const mongo2 = new KeyvMongo({ ...options });
 		mongo2.namespace = ns2;
 
-		const key1 = `${ns1}:${faker.string.alphanumeric(10)}`;
-		const key2 = `${ns1}:${faker.string.alphanumeric(10)}`;
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
 		await mongo1.set(key1, "val1");
 		await mongo1.set(key2, "val2");
-		await mongo2.set(`${ns2}:${faker.string.alphanumeric(10)}`, "val3");
+		await mongo2.set(faker.string.alphanumeric(10), "val3");
 
 		const keys: string[] = [];
 		for await (const [key] of mongo1.iterator(ns1)) {
