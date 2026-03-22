@@ -231,13 +231,10 @@ it("keyvMemcache setMany should emit error on failure", async () => {
 		errorEmitted = true;
 	});
 
-	try {
-		await badMemcache.setMany([
-			{ key: faker.string.uuid(), value: faker.lorem.word() },
-		]);
-	} catch {
-		expect(errorEmitted).toBeTruthy();
-	}
+	await badMemcache.setMany([
+		{ key: faker.string.uuid(), value: faker.lorem.word() },
+	]);
+	expect(errorEmitted).toBeTruthy();
 });
 
 it("keyv has / false", async () => {
@@ -248,53 +245,50 @@ it("keyv has / false", async () => {
 	expect(value).toBeFalsy();
 });
 
-// Simplified error tests without using withCallback wrapper
 it("clear should emit an error", async () => {
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
-
-	keyv.on("error", () => {
-		expect(true).toBeTruthy();
+	const badMemcache = new KeyvMemcache("baduri:11211");
+	let errorEmitted = false;
+	badMemcache.on("error", () => {
+		errorEmitted = true;
 	});
 
-	try {
-		await keyv.clear();
-	} catch {}
+	await badMemcache.clear();
+	expect(errorEmitted).toBeTruthy();
 });
 
 it("delete should emit an error", async () => {
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
-
-	keyv.on("error", () => {
-		expect(true).toBeTruthy();
+	const badMemcache = new KeyvMemcache("baduri:11211");
+	let errorEmitted = false;
+	badMemcache.on("error", () => {
+		errorEmitted = true;
 	});
 
-	try {
-		await keyv.delete(faker.string.uuid());
-	} catch {}
+	const result = await badMemcache.delete(faker.string.uuid());
+	expect(errorEmitted).toBeTruthy();
+	expect(result).toBe(false);
 });
 
 it("set should emit an error", async () => {
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
-
-	keyv.on("error", () => {
-		expect(true).toBeTruthy();
+	const badMemcache = new KeyvMemcache("baduri:11211");
+	let errorEmitted = false;
+	badMemcache.on("error", () => {
+		errorEmitted = true;
 	});
 
-	try {
-		await keyv.set(faker.string.uuid(), faker.lorem.word());
-	} catch {}
+	await badMemcache.set(faker.string.uuid(), faker.lorem.word());
+	expect(errorEmitted).toBeTruthy();
 });
 
 it("get should emit an error", async () => {
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
-
-	keyv.on("error", () => {
-		expect(true).toBeTruthy();
+	const badMemcache = new KeyvMemcache("baduri:11211");
+	let errorEmitted = false;
+	badMemcache.on("error", () => {
+		errorEmitted = true;
 	});
 
-	try {
-		await keyv.get(faker.string.uuid());
-	} catch {}
+	const result = await badMemcache.get(faker.string.uuid());
+	expect(errorEmitted).toBeTruthy();
+	expect(result).toBeUndefined();
 });
 
 it("disconnect should work", async () => {
@@ -350,6 +344,23 @@ it("nodes from options takes precedence over string URI", () => {
 it("createKeyv with options passes them through", () => {
 	const keyv = createKeyv({ nodes: [uri], timeout: 3000 });
 	expect(keyv).toBeInstanceOf(Keyv);
+});
+
+it("clear flushes the entire server", async () => {
+	const store1 = new KeyvMemcache(uri);
+	const store2 = new KeyvMemcache(uri);
+	const keyv1 = new Keyv({ store: store1, namespace: "ns1" });
+	const keyv2 = new Keyv({ store: store2, namespace: "ns2" });
+
+	const key = faker.string.uuid();
+	await keyv1.set(key, faker.lorem.word());
+	await keyv2.set(key, faker.lorem.word());
+
+	// Clear from one instance flushes everything
+	await keyv1.clear();
+
+	expect(await keyv1.get(key)).toBeUndefined();
+	expect(await keyv2.get(key)).toBeUndefined();
 });
 
 const store = () => keyvMemcache;

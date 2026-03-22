@@ -9,8 +9,16 @@ const clusterNodes = [
 	{ host: "127.0.0.1", port: 7003 },
 ];
 
-test.it("cluster: setMany should work without CROSSSLOT errors", async (t) => {
+async function createReadyCluster() {
 	const cluster = new Redis.Cluster(clusterNodes);
+	await new Promise<void>((resolve) => {
+		cluster.once("ready", resolve);
+	});
+	return cluster;
+}
+
+test.it("cluster: setMany should work without CROSSSLOT errors", async (t) => {
+	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
 	const key1 = faker.string.alphanumeric(10);
@@ -38,7 +46,7 @@ test.it("cluster: setMany should work without CROSSSLOT errors", async (t) => {
 });
 
 test.it("cluster: getMany should work without CROSSSLOT errors", async (t) => {
-	const cluster = new Redis.Cluster(clusterNodes);
+	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
 	const key1 = faker.string.alphanumeric(10);
@@ -61,7 +69,7 @@ test.it("cluster: getMany should work without CROSSSLOT errors", async (t) => {
 test.it(
 	"cluster: deleteMany should work without CROSSSLOT errors",
 	async (t) => {
-		const cluster = new Redis.Cluster(clusterNodes);
+		const cluster = await createReadyCluster();
 		const keyv = new KeyvValkey(cluster as Cluster);
 
 		const key1 = faker.string.alphanumeric(10);
@@ -86,7 +94,7 @@ test.it(
 );
 
 test.it("cluster: hasMany should work without CROSSSLOT errors", async (t) => {
-	const cluster = new Redis.Cluster(clusterNodes);
+	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
 	const key1 = faker.string.alphanumeric(10);

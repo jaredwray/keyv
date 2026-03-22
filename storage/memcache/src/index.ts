@@ -72,8 +72,9 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 			return value as StoredData<Value>;
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
+
+		return undefined;
 	}
 
 	/**
@@ -107,12 +108,10 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
 		const exptime = ttl !== undefined ? Math.floor(ttl / 1000) : 0;
-
 		try {
 			await this.client.set(this.formatKey(key), value as string, exptime);
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
 	}
 
@@ -127,13 +126,7 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 		const promises = entries.map(async ({ key, value, ttl }) =>
 			this.set(key, value, ttl),
 		);
-		const results = await Promise.allSettled(promises);
-		for (const result of results) {
-			if (result.status === "rejected") {
-				this.emit("error", result.reason);
-				throw result.reason as Error;
-			}
-		}
+		await Promise.allSettled(promises);
 	}
 
 	/**
@@ -146,8 +139,9 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 			return await this.client.delete(this.formatKey(key));
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
+
+		return false;
 	}
 
 	/**
@@ -191,14 +185,14 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 
 	/**
 	 * Clears all data from the memcache server by flushing it.
-	 * Note: this flushes the entire server, not just the current namespace.
+	 * Note: memcached does not support key enumeration, so this always
+	 * flushes the entire server regardless of namespace.
 	 */
 	async clear(): Promise<void> {
 		try {
 			await this.client.flush();
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
 	}
 
