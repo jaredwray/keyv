@@ -1,6 +1,6 @@
-import { KeyvJsonSerializer } from "@keyv/serialize";
 import EventManager from "./event-manager.js";
 import HooksManager from "./hooks-manager.js";
+import { KeyvJsonSerializer } from "./json-serializer.js";
 import StatsManager from "./stats-manager.js";
 import {
 	type DeserializedData,
@@ -14,6 +14,7 @@ import {
 	type StoredDataRaw,
 } from "./types.js";
 
+export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export type {
 	DeserializedData,
 	IEventEmitter,

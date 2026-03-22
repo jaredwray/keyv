@@ -3,8 +3,7 @@
 ## Common Commands
 
 ### Build
-- `pnpm build` - Build all packages (serialize first, then keyv, then all others)
-- `pnpm build:keyv:serialize` - Build only the serialize package
+- `pnpm build` - Build all packages (keyv first, then all others)
 - `pnpm build:keyv` - Build only the keyv package
 
 ### Testing
@@ -37,7 +36,8 @@ Individual package tests:
 - **Root**: Workspace configuration with pnpm
 - **core/keyv**: Core Keyv library - the main key-value storage interface
 - **core/test-suite**: Shared test suite (@keyv/test-suite) for API compliance testing
-- **serialization/serialize**: Serialization utilities (@keyv/serialize) - used by core and adapters
+- **serialization/superjson**: SuperJSON serializer (@keyv/serialize-superjson) - optional
+- **serialization/msgpackr**: MessagePack serializer (@keyv/serialize-msgpackr) - optional
 - **core/bigmap**: BigMap - scalable in-memory Map implementation
 - **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB
 - **compression/**: Compression adapters - Brotli, Gzip, LZ4
@@ -58,14 +58,13 @@ Individual package tests:
 - Should emit events and extend EventEmitter-like interface
 
 **Serialization**:
-- Default uses `@keyv/serialize` package with JSON.stringify/parse
+- Default uses built-in `KeyvJsonSerializer` with JSON.stringify/parse
 - Compression adapters can be plugged in
 - Data format: `{ value: T, expires?: number }`
 
 ### Build Dependencies
-1. `@keyv/serialize` must be built first (used by keyv core)
-2. `keyv` core must be built second (used by adapters)
-3. All other packages can be built in parallel
+1. `keyv` core must be built first (used by adapters and serialization packages)
+2. All other packages can be built in parallel
 
 ### Testing Requirements
 - Docker is required for integration tests with databases/services
@@ -83,7 +82,7 @@ Individual package tests:
 
 ### Package Dependencies
 - Workspace packages use `workspace:^` protocol
-- Core package (`keyv`) depends only on `@keyv/serialize`
+- Core package (`keyv`) has no external dependencies (serializer is built-in)
 - Storage adapters depend on `keyv` as peer dependency
 - Test suite depends on `keyv` and various testing utilities
 

@@ -19,7 +19,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - Suitable as a TTL based cache or persistent key-value store
 - [Easily embeddable](#add-cache-support-to-your-module) inside another module
 - Works with any storage that implements the [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) API
-- Handles all JSON types plus `Buffer` and `BigInt` (with `@keyv/serialize`)
+- Handles all JSON types plus `Buffer` and `BigInt` via the built-in `KeyvJsonSerializer`
 - Supports namespaces
 - Wide range of [**efficient, well tested**](#official-storage-adapters) storage adapters
 - Connection errors are passed through (db failures won't kill your app)
@@ -300,7 +300,7 @@ In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an 
 
 # Serialization
 
-By default, Keyv uses `@keyv/serialize` — a JSON-based serializer with support for `Buffer` and `BigInt` types. This works out of the box with all storage adapters.
+By default, Keyv uses its built-in `KeyvJsonSerializer` — a JSON-based serializer with support for `Buffer` and `BigInt` types. This works out of the box with all storage adapters.
 
 ## Custom Serializers
 
@@ -570,7 +570,7 @@ Compression package to use. See [Compression](#compression) for more details.
 ## options.serialization
 
 Type: `KeyvSerializationAdapter | false`<br />
-Default: `KeyvJsonSerializer` (from `@keyv/serialize`)
+Default: `KeyvJsonSerializer` (built-in)
 
 A serialization object with `stringify` and `parse` methods. Set to `false` to disable serialization and store raw objects. See [Serialization](#serialization) for more details.
 
@@ -764,7 +764,7 @@ console.log(keyv.store instanceof KeyvSqlite); // true
 ## .serialization
 
 Type: `KeyvSerializationAdapter | false | undefined`<br />
-Default: `KeyvJsonSerializer` (from `@keyv/serialize`)
+Default: `KeyvJsonSerializer` (built-in)
 
 The serialization object used for storing and retrieving values. Set to `false` or `undefined` to disable serialization and use raw object pass-through. See [Serialization](#serialization) for more details.
 

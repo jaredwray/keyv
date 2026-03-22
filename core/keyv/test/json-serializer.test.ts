@@ -1,6 +1,10 @@
 import { Buffer } from "node:buffer";
-import { describe, expect, it } from "vitest";
-import { jsonSerializer, KeyvJsonSerializer } from "../src/index.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { jsonSerializer, KeyvJsonSerializer } from "../src/json-serializer.js";
+
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
 
 describe("KeyvJsonSerializer", () => {
 	it("should be instantiable", () => {
@@ -78,6 +82,12 @@ describe("KeyvJsonSerializer", () => {
 		expect(result).toBe(expectedResult);
 	});
 
+	it("stringify converts Uint8Array to base64 JSON string", () => {
+		const bytes = new Uint8Array([104, 101, 108, 108, 111]);
+		const result = jsonSerializer.stringify(bytes);
+		expect(result).toBe(JSON.stringify(":base64:aGVsbG8="));
+	});
+
 	it("stringify toJSON is called on object", () => {
 		const serialized = jsonSerializer.stringify({
 			value: { toJSON: () => "foo" },
@@ -140,6 +150,17 @@ describe("KeyvJsonSerializer", () => {
 		});
 		const result = jsonSerializer.parse<{ encoded: Buffer }>(json);
 		expect(result.encoded.toString()).toBe("hello world");
+	});
+
+	it("parse falls back to Uint8Array when Buffer is unavailable", () => {
+		vi.stubGlobal("Buffer", undefined);
+		const json = JSON.stringify({
+			encoded: ":base64:aGVsbG8=",
+		});
+
+		const result = jsonSerializer.parse<{ encoded: Uint8Array }>(json);
+		expect(result.encoded).toBeInstanceOf(Uint8Array);
+		expect(Array.from(result.encoded)).toEqual([104, 101, 108, 108, 111]);
 	});
 
 	it("stringify accepts objects created with null", () => {

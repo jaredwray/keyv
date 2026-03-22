@@ -104,7 +104,7 @@ export type KeyvOptions = {
 	namespace?: string;
 	/**
 	 * A custom serialization adapter with stringify and parse methods.
-	 * @default KeyvJsonSerializer from @keyv/serialize
+	 * @default KeyvJsonSerializer (built-in)
 	 */
 	serialization?: KeyvSerializationAdapter | false;
 	/**

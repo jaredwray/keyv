@@ -1,5 +1,56 @@
-import { Buffer } from "node:buffer";
-import type { KeyvSerializationAdapter } from "keyv";
+import type { KeyvSerializationAdapter } from "./types.js";
+
+type BufferLike = Uint8Array & {
+	toString(encoding?: string): string;
+};
+
+type GlobalBuffer = {
+	isBuffer(value: unknown): value is BufferLike;
+	from(data: Uint8Array): BufferLike;
+	from(data: string, encoding: "base64"): BufferLike;
+};
+
+function getGlobalBuffer(): GlobalBuffer | undefined {
+	return (globalThis as { Buffer?: GlobalBuffer }).Buffer;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+	const buffer = getGlobalBuffer();
+	if (buffer) {
+		return buffer.from(bytes).toString("base64");
+	}
+
+	let binary = "";
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+
+	return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+	const buffer = getGlobalBuffer();
+	if (buffer) {
+		return buffer.from(value, "base64");
+	}
+
+	const binary = atob(value);
+	const bytes = new Uint8Array(binary.length);
+	for (let index = 0; index < binary.length; index++) {
+		bytes[index] = binary.charCodeAt(index);
+	}
+
+	return bytes;
+}
+
+function isBinaryValue(value: unknown): value is Uint8Array {
+	const buffer = getGlobalBuffer();
+	if (buffer?.isBuffer(value)) {
+		return true;
+	}
+
+	return value instanceof Uint8Array;
+}
 
 /**
  * Pre-process a value tree, converting Buffer and BigInt to tagged strings
@@ -11,8 +62,8 @@ function prepare(value: any): any {
 		return value;
 	}
 
-	if (Buffer.isBuffer(value)) {
-		return `:base64:${value.toString("base64")}`;
+	if (isBinaryValue(value)) {
+		return `:base64:${bytesToBase64(value)}`;
 	}
 
 	if (typeof value === "bigint") {
@@ -60,7 +111,7 @@ export class KeyvJsonSerializer implements KeyvSerializationAdapter {
 				}
 
 				if (value.startsWith(":base64:")) {
-					return Buffer.from(value.slice(8), "base64");
+					return base64ToBytes(value.slice(8));
 				}
 
 				return value.startsWith(":") ? value.slice(1) : value;
