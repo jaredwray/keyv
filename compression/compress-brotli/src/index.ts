@@ -3,7 +3,6 @@ import {
 	type BrotliOptions,
 	brotliCompress,
 	brotliDecompress,
-	type InputType,
 } from "node:zlib";
 import type { Options } from "./types.js";
 
@@ -22,19 +21,20 @@ export class KeyvBrotli {
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: needed for this type
-	async compress(value: any, options?: BrotliOptions) {
+	async compress(value: any, options?: BrotliOptions): Promise<string> {
 		if (!this._enable) {
-			return value;
+			return typeof value === "string" ? value : JSON.stringify(value);
 		}
 
 		const input = typeof value === "string" ? value : JSON.stringify(value);
-		return brotliCompressAsync(input, {
+		const compressed = await brotliCompressAsync(input, {
 			...this._compressOptions,
 			...options,
 		});
+		return compressed.toString("base64");
 	}
 
-	async decompress<T>(data?: InputType, options?: BrotliOptions): Promise<T> {
+	async decompress<T>(data?: string, options?: BrotliOptions): Promise<T> {
 		if (!data) {
 			return undefined as unknown as T;
 		}
@@ -43,7 +43,8 @@ export class KeyvBrotli {
 			return data as unknown as T;
 		}
 
-		const decompressedBuffer = await brotliDecompressAsync(data, {
+		const buffer = Buffer.from(data, "base64");
+		const decompressedBuffer = await brotliDecompressAsync(buffer, {
 			...this._decompressOptions,
 			...options,
 		});

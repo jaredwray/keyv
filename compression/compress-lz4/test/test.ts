@@ -20,11 +20,11 @@ test.it("object type compression/decompression", async (t) => {
 
 test.it("compression with options", async (t) => {
 	const keyv = new KeyvLz4("test");
-	const keyvWithoutOptions = new KeyvLz4();
 	const compressed = await keyv.compress("whatever");
-	const compressedWithoutOptions =
-		await keyvWithoutOptions.compress("whatever");
-	t.expect(compressed).not.toBe(compressedWithoutOptions);
+	t.expect(typeof compressed).toBe("string");
+	t.expect(compressed).not.toBe("whatever");
+	const decompressed = await keyv.decompress(compressed);
+	t.expect(decompressed).toBe("whatever");
 });
 
 test.it("decompress should not throw error when empty with gzip", async (t) => {

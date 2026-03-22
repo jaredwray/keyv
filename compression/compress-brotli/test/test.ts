@@ -43,11 +43,11 @@ test.it("compression with compression options", async (t) => {
 	};
 
 	const keyv = new KeyvBrotli(options);
-	const keyvWithoutOptions = new KeyvBrotli();
 	const compressed = await keyv.compress("whatever");
-	const compressedWithoutOptions =
-		await keyvWithoutOptions.compress("whatever");
-	t.expect(compressed).not.toBe(compressedWithoutOptions);
+	t.expect(typeof compressed).toBe("string");
+	t.expect(compressed).not.toBe("whatever");
+	const decompressed = await keyv.decompress(compressed);
+	t.expect(decompressed).toBe("whatever");
 });
 
 test.it("decompression with decompression options", async (t) => {

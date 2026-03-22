@@ -18,32 +18,27 @@ test.it("object type compression/decompression", async (t) => {
 	t.expect(decompressed).toEqual(testValue);
 });
 
-// Test options while compress
-test.it("options while compress", async (t) => {
+test.it("compress returns a base64 string", async (t) => {
 	const keyv = new KeyvGzip();
 	const compressed = await keyv.compress("whatever");
+	t.expect(typeof compressed).toBe("string");
 	t.expect(compressed).not.toBe("whatever");
-	const compressedWithoutOptions = await keyv.compress("whatever");
-	t.expect(compressed).not.toBe(compressedWithoutOptions);
 });
-// Test options at class level
+
 test.it("options at class level", async (t) => {
 	const keyv = new KeyvGzip({ chunkSize: 32 * 1024 });
 	const compressed = await keyv.compress("whatever");
+	t.expect(typeof compressed).toBe("string");
 	t.expect(compressed).not.toBe("whatever");
-	const compressedWithoutOptions = await new KeyvGzip().compress("whatever");
-	t.expect(compressed).not.toBe(compressedWithoutOptions);
+	const decompressed = await keyv.decompress(compressed);
+	t.expect(decompressed).toBe("whatever");
 });
 
 test.it("compression with compression options", async (t) => {
-	const options = {};
-
-	const keyv = new KeyvGzip(options);
-	const keyvWithoutOptions = new KeyvGzip();
+	const keyv = new KeyvGzip();
 	const compressed = await keyv.compress("whatever");
-	const compressedWithoutOptions =
-		await keyvWithoutOptions.compress("whatever");
-	t.expect(compressed).not.toBe(compressedWithoutOptions);
+	const decompressed = await keyv.decompress(compressed);
+	t.expect(decompressed).toBe("whatever");
 });
 
 test.it("decompression with decompression options", async (t) => {
