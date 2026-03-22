@@ -3,7 +3,7 @@ import EventManager from "./event-manager.js";
 import {
 	Keyv,
 	type KeyvEntry,
-	type KeyvStoreAdapter,
+	type KeyvStorageAdapter,
 	type StoredData,
 } from "./index.js";
 
@@ -92,7 +92,10 @@ export type KeyPrefixData = {
  * });
  * ```
  */
-export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
+export class KeyvGenericStore
+	extends EventManager
+	implements KeyvStorageAdapter
+{
 	private readonly _options?: KeyvGenericStoreOptions;
 	private _store: KeyvMapType;
 	private _namespace?: string | (() => string);
@@ -394,8 +397,10 @@ export function createKeyv(
 	options?: KeyvGenericStoreOptions,
 ) {
 	const genericStore = new KeyvGenericStore(store, options);
-	const keyv = new Keyv({ store: genericStore, useKeyPrefix: false });
-	keyv.serialize = undefined;
-	keyv.deserialize = undefined;
+	const keyv = new Keyv({
+		store: genericStore,
+		useKeyPrefix: false,
+		serialization: false,
+	});
 	return keyv;
 }

@@ -49,9 +49,7 @@
 		"url": "https://github.com/jaredwray/keyv/issues"
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
-	"dependencies": {
-		"@keyv/serialize": "workspace:^"
-	},
+	"dependencies": {},
 	"peerDependencies": {
 		"keyv": "workspace:^"
 	},

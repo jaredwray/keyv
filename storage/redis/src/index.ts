@@ -17,7 +17,7 @@ import {
 } from "@redis/client";
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
-import type { KeyvEntry, KeyvStoreAdapter } from "keyv";
+import type { KeyvEntry, KeyvStorageAdapter } from "keyv";
 import {
 	defaultReconnectStrategy,
 	type KeyvRedisEntry,
@@ -44,7 +44,7 @@ export {
 
 export default class KeyvRedis<T>
 	extends Hookified
-	implements KeyvStoreAdapter
+	implements KeyvStorageAdapter
 {
 	private _client!: RedisClientConnectionType;
 	private _namespace: string | undefined;

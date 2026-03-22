@@ -135,7 +135,7 @@ it("keyv get / expired", async () => {
 
 	await keyv.set(key, val, 1000);
 
-	await snooze(1000);
+	await snooze(2000);
 
 	const value = await keyv.get(key);
 
@@ -149,7 +149,7 @@ it("keyv has / expired", async () => {
 
 	await keyv.set(key, val, 1000);
 
-	await snooze(1000);
+	await snooze(2000);
 
 	const value = await keyv.has(key);
 

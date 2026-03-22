@@ -1,7 +1,7 @@
 import { Hookified } from "hookified";
 import Keyv, {
 	type KeyvEntry,
-	type KeyvStoreAdapter,
+	type KeyvStorageAdapter,
 	type StoredData,
 } from "keyv";
 import { resolveDriver } from "./drivers/index.js";
@@ -51,7 +51,7 @@ function escapeIdentifier(identifier: string): string {
  * const keyv = new Keyv({ store });
  * ```
  */
-export class KeyvSqlite extends Hookified implements KeyvStoreAdapter {
+export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
 

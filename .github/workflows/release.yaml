@@ -96,11 +96,8 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @keyv/serialize
-        run: pnpm --filter @keyv/serialize publish --tag alpha --no-git-checks
-
       - name: Publish keyv
         run: pnpm --filter keyv publish --tag alpha --no-git-checks
 
       - name: Publish remaining packages
-        run: pnpm --filter '!keyv' --filter '!@keyv/serialize' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag alpha --no-git-checks
+        run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag alpha --no-git-checks

@@ -19,7 +19,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - Suitable as a TTL based cache or persistent key-value store
 - [Easily embeddable](#add-cache-support-to-your-module) inside another module
 - Works with any storage that implements the [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) API
-- Handles all JSON types plus `Buffer`
+- Handles all JSON types plus `Buffer` and `BigInt` via the built-in `KeyvJsonSerializer`
 - Supports namespaces
 - Wide range of [**efficient, well tested**](#official-storage-adapters) storage adapters
 - Connection errors are passed through (db failures won't kill your app)
@@ -32,7 +32,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - [Namespaces](#namespaces)
 - [Events](#events)
 - [Hooks](#hooks)
-- [Custom Serializers](#custom-serializers)
+- [Serialization](#serialization)
 - [Official Storage Adapters](#official-storage-adapters)
 - [Third-party Storage Adapters](#third-party-storage-adapters)
 - [Using BigMap to Scale](#using-bigmap-to-scale)
@@ -42,10 +42,11 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.namespace](#namespace)
   - [.ttl](#ttl)
   - [.store](#store)
-  - [.serialize](#serialize)
-  - [.deserialize](#deserialize)
+  - [.serialization](#serialization-1)
   - [.compression](#compression)
   - [.useKeyPrefix](#usekeyprefix)
+  - [.emitErrors](#emiterrors)
+  - [.throwOnErrors](#throwonerrors)
   - [.stats](#stats)
   - [Keyv Instance](#keyv-instance)
 	- [.set(key, value, [ttl])](#setkey-value-ttl)
@@ -59,6 +60,9 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 	- [.delete(key)](#deletekey)
 	- [.deleteMany(keys)](#deletemanykeys)
 	- [.clear()](#clear)
+	- [.has(key)](#haskey)
+	- [.hasMany(keys)](#hasmanykeys)
+	- [.disconnect()](#disconnect)
 	- [.iterator()](#iterator)
 - [Bun Support](#bun-support)
 - [How to Contribute](#how-to-contribute)
@@ -221,6 +225,10 @@ PRE_GET_MANY_RAW
 POST_GET_MANY_RAW
 PRE_SET
 POST_SET
+PRE_SET_RAW
+POST_SET_RAW
+PRE_SET_MANY_RAW
+POST_SET_MANY_RAW
 PRE_DELETE
 POST_DELETE
 ```
@@ -290,25 +298,59 @@ Now this key will have prefix- added to it before it is set.
 In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an `Array`. This is based on the fact that `delete` can accept a single key or an `Array` of keys.
 
 
-# Custom Serializers
+# Serialization
 
-Keyv uses [`buffer`](https://nodejs.org/api/buffer.html) for data serialization to ensure consistency across different backends.
+By default, Keyv uses its built-in `KeyvJsonSerializer` — a JSON-based serializer with support for `Buffer` and `BigInt` types. This works out of the box with all storage adapters.
 
-You can optionally provide your own serialization functions to support extra data types or to serialize to something other than JSON.
+## Custom Serializers
 
-```js
-const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
+You can provide your own serializer by implementing the `KeyvSerializationAdapter` interface:
+
+```typescript
+interface KeyvSerializationAdapter {
+  stringify: (object: unknown) => string | Promise<string>;
+  parse: <T>(data: string) => T | Promise<T>;
+}
 ```
 
-**Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialisation functions and chosen storage engine.
-
-If you do not want to use serialization you can set the `serialize` and `deserialize` functions to `undefined`. This will also turn off compression.
+For example, using the built-in `JSON` object:
 
 ```js
-const keyv = new Keyv();
-keyv.serialize = undefined;
-keyv.deserialize = undefined;
+const keyv = new Keyv({
+  serialization: { stringify: JSON.stringify, parse: JSON.parse },
+});
 ```
+
+Or a custom async serializer:
+
+```js
+const keyv = new Keyv({
+  serialization: {
+    stringify: async (value) => JSON.stringify(value),
+    parse: async (data) => JSON.parse(data),
+  },
+});
+```
+
+**Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialization functions and chosen storage engine.
+
+## Disabling Serialization
+
+You can disable serialization entirely by passing `false`. This stores data as raw objects, which works for in-memory `Map` storage where string conversion is not needed:
+
+```js
+const keyv = new Keyv({ serialization: false });
+```
+
+## Pipeline
+
+When serialization and/or compression are configured, Keyv applies them in this order:
+
+**On set:** serialize (optional) → compress (optional) → store
+
+**On get:** store → decompress (optional) → parse (optional) → value
+
+If compression is configured without a serializer, Keyv will use `JSON.stringify`/`JSON.parse` as a minimum fallback since compression adapters require string input.
 
 # Official Storage Adapters
 
@@ -445,16 +487,14 @@ const keyv = new Keyv({ compression: keyvLz4 });
 
 You can also pass a custom compression function to the `compression` option. Following the pattern of the official compression adapters.
 
-## Want to build your own CompressionAdapter? 
+## Want to build your own KeyvCompressionAdapter?
 
 Great! Keyv is designed to be easily extended. You can build your own compression adapter by following the pattern of the official compression adapters based on this interface:
 
 ```typescript
-interface CompressionAdapter {
-	async compress(value: any, options?: any);
-	async decompress(value: any, options?: any);
-	async serialize(value: any);
-	async deserialize(value: any);
+interface KeyvCompressionAdapter {
+	compress(value: any, options?: any): Promise<any>;
+	decompress(value: any, options?: any): Promise<any>;
 }
 ```
 
@@ -465,6 +505,17 @@ import { keyvCompresstionTests } from '@keyv/test-suite';
 import KeyvGzip from '@keyv/compress-gzip';
 
 keyvCompresstionTests(test, new KeyvGzip());
+```
+
+# Encryption
+
+Keyv provides a `KeyvEncryptionAdapter` interface for encryption support. This interface is available for custom implementations but is not yet wired into the core pipeline.
+
+```typescript
+interface KeyvEncryptionAdapter {
+  encrypt: (data: string) => string | Promise<string>;
+  decrypt: (data: string) => string | Promise<string>;
+}
 ```
 
 # API
@@ -480,9 +531,7 @@ The Keyv instance is also an `EventEmitter` that will emit an `'error'` event if
 Type: `KeyvStorageAdapter`<br />
 Default: `undefined`
 
-The connection string URI.
-
-Merged into the options object as options.uri.
+The storage adapter instance to be used by Keyv.
 
 ## .namespace
 
@@ -513,24 +562,17 @@ Default TTL. Can be overridden by specififying a TTL on `.set()`.
 
 ## options.compression
 
-Type: `@keyv/compress-<compression_package_name>`<br />
+Type: `KeyvCompressionAdapter`<br />
 Default: `undefined`
 
 Compression package to use. See [Compression](#compression) for more details.
 
-## options.serialize
+## options.serialization
 
-Type: `Function`<br />
-Default: `JSON.stringify`
+Type: `KeyvSerializationAdapter | false`<br />
+Default: `KeyvJsonSerializer` (built-in)
 
-A custom serialization function.
-
-## options.deserialize
-
-Type: `Function`<br />
-Default: `JSON.parse`
-
-A custom deserialization function.
+A serialization object with `stringify` and `parse` methods. Set to `false` to disable serialization and store raw objects. See [Serialization](#serialization) for more details.
 
 ## options.store
 
@@ -562,17 +604,6 @@ Returns a promise which resolves to the retrieved value.
 ## .getMany(keys, [options])
 
 Returns a promise which resolves to an array of retrieved values.
-
-### options.raw - (Will be deprecated in v6)
-
-Type: `Boolean`<br />
-Default: `false`
-
-If set to true the raw DB object Keyv stores internally will be returned instead of just the value.
-
-This contains the TTL timestamp.
-
-NOTE: This option will be deprecated in v6 and replaced with `.getRaw()` and `.getManyRaw()` methods.
 
 ## .getRaw(key)
 
@@ -625,13 +656,46 @@ Returns a promise which resolves to `true` if the key existed, `false` if not.
 
 ## .deleteMany(keys)
 Deletes multiple entries.
-Returns a promise which resolves to an array of booleans indicating if the key existed or not.
+Returns a promise which resolves to `true` if all keys were deleted successfully, `false` otherwise.
 
 ## .clear()
 
 Delete all entries in the current namespace.
 
 Returns a promise which is resolved when the entries have been cleared.
+
+## .has(key)
+
+Check if a key exists in the store.
+
+Returns a promise which resolves to `true` if the key exists, `false` if not.
+
+```js
+await keyv.set('foo', 'bar');
+await keyv.has('foo'); // true
+await keyv.has('unknown'); // false
+```
+
+## .hasMany(keys)
+
+Check if multiple keys exist in the store.
+
+Returns a promise which resolves to an array of booleans indicating if each key exists.
+
+```js
+await keyv.set('foo', 'bar');
+await keyv.hasMany(['foo', 'unknown']); // [true, false]
+```
+
+## .disconnect()
+
+Disconnect from the storage adapter. Emits a `'disconnect'` event.
+
+Returns a promise which is resolved when the connection has been closed.
+
+```js
+await keyv.disconnect();
+```
 
 ## .iterator()
 
@@ -697,40 +761,26 @@ keyv.store = new KeyvSqlite('sqlite://path/to/database.sqlite');
 console.log(keyv.store instanceof KeyvSqlite); // true
 ```
 
-## .serialize
+## .serialization
 
-Type: `Function`<br />
-Default: `JSON.stringify`
+Type: `KeyvSerializationAdapter | false | undefined`<br />
+Default: `KeyvJsonSerializer` (built-in)
 
-A custom serialization function used for any value. 
-
-```js
-const keyv = new Keyv();
-console.log(keyv.serialize); // JSON.stringify
-keyv.serialize = value => value.toString();
-console.log(keyv.serialize); // value => value.toString()
-```
-
-## .deserialize
-
-Type: `Function`<br />
-Default: `JSON.parse`
-
-A custom deserialization function used for any value.
+The serialization object used for storing and retrieving values. Set to `false` or `undefined` to disable serialization and use raw object pass-through. See [Serialization](#serialization) for more details.
 
 ```js
 const keyv = new Keyv();
-console.log(keyv.deserialize); // JSON.parse
-keyv.deserialize = value => parseInt(value);
-console.log(keyv.deserialize); // value => parseInt(value)
+console.log(keyv.serialization); // KeyvJsonSerializer (default)
+keyv.serialization = false; // disable serialization
+console.log(keyv.serialization); // undefined
 ```
 
 ## .compression
 
-Type: `CompressionAdapter`<br />
+Type: `KeyvCompressionAdapter`<br />
 Default: `undefined`
 
-this is the compression package to use. See [Compression](#compression) for more details. If it is undefined it will not compress (default).
+This is the compression package to use. See [Compression](#compression) for more details. If it is undefined it will not compress (default).
 
 ```js
 import KeyvGzip from '@keyv/compress-gzip';
@@ -769,6 +819,20 @@ store.namespace = undefined; // disable namespacing in the storage adapter
 await keyv.set('foo', 'bar'); // true
 await keyv.get('foo'); // 'bar'
 await keyv.clear();
+```
+
+## .emitErrors
+
+Type: `Boolean`<br />
+Default: `true`
+
+If set to `true`, Keyv will emit an `'error'` event when an error occurs. Set to `false` to suppress error events.
+
+```js
+const keyv = new Keyv({ emitErrors: false });
+console.log(keyv.emitErrors); // false
+keyv.emitErrors = true;
+console.log(keyv.emitErrors); // true
 ```
 
 ## .throwOnErrors

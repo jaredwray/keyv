@@ -113,11 +113,12 @@ const keyvValueTests = (
 	test.it(
 		"value can be BigInt using other serializer/deserializer",
 		async (t) => {
-			store().opts.deserialize = JSONbig.parse;
 			const keyv = new Keyv({
 				store: store(),
-				serialize: JSONbig.stringify,
-				deserialize: JSONbig.parse,
+				serialization: {
+					stringify: (data: unknown) => JSONbig.stringify(data),
+					parse: <T>(data: string) => JSONbig.parse(data) as T,
+				},
 			});
 			const key = faker.string.alphanumeric(10);
 			const value = BigInt("9223372036854775807") as unknown as BigNumber.Value;

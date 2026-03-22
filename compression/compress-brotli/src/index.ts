@@ -3,15 +3,8 @@ import {
 	type BrotliOptions,
 	brotliCompress,
 	brotliDecompress,
-	type InputType,
 } from "node:zlib";
-import { defaultDeserialize, defaultSerialize } from "@keyv/serialize";
-import type {
-	CompressResult,
-	Options,
-	Serialize,
-	SerializeResult,
-} from "./types.js";
+import type { Options } from "./types.js";
 
 const brotliCompressAsync = promisify(brotliCompress);
 const brotliDecompressAsync = promisify(brotliDecompress);
@@ -20,33 +13,28 @@ export class KeyvBrotli {
 	private readonly _enable: boolean;
 	private readonly _compressOptions?: BrotliOptions;
 	private readonly _decompressOptions?: BrotliOptions;
-	// biome-ignore lint/suspicious/noExplicitAny: needed for custom serializers like v8
-	private readonly _serialize: (value: any) => any;
-	// biome-ignore lint/suspicious/noExplicitAny: needed for custom serializers like v8
-	private readonly _deserialize: (data: any) => any;
 
 	constructor(options?: Options) {
 		this._enable = options?.enable ?? true;
 		this._compressOptions = options?.compressOptions;
 		this._decompressOptions = options?.decompressOptions;
-		this._serialize = options?.serialize ?? defaultSerialize;
-		this._deserialize = options?.deserialize ?? defaultDeserialize;
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: needed for this type
-	async compress(value: any, options?: BrotliOptions): CompressResult {
+	async compress(value: any, options?: BrotliOptions): Promise<string> {
 		if (!this._enable) {
-			return value;
+			return typeof value === "string" ? value : JSON.stringify(value);
 		}
 
-		const serializedData = this._serialize(value);
-		return brotliCompressAsync(serializedData, {
+		const input = typeof value === "string" ? value : JSON.stringify(value);
+		const compressed = await brotliCompressAsync(input, {
 			...this._compressOptions,
 			...options,
 		});
+		return compressed.toString("base64");
 	}
 
-	async decompress<T>(data?: InputType, options?: BrotliOptions): Promise<T> {
+	async decompress<T>(data?: string, options?: BrotliOptions): Promise<T> {
 		if (!data) {
 			return undefined as unknown as T;
 		}
@@ -55,24 +43,12 @@ export class KeyvBrotli {
 			return data as unknown as T;
 		}
 
-		const decompressedBuffer = await brotliDecompressAsync(data, {
+		const buffer = Buffer.from(data, "base64");
+		const decompressedBuffer = await brotliDecompressAsync(buffer, {
 			...this._decompressOptions,
 			...options,
 		});
-		return this._deserialize(decompressedBuffer) as T;
-	}
-
-	async serialize({ value, expires }: Serialize): Promise<SerializeResult> {
-		return defaultSerialize({ value: await this.compress(value), expires });
-	}
-
-	async deserialize(data?: CompressResult): Promise<Serialize> {
-		if (data) {
-			const { value, expires }: Serialize = defaultDeserialize(data);
-			return { value: await this.decompress(value), expires };
-		}
-
-		return { value: undefined, expires: undefined };
+		return decompressedBuffer.toString() as unknown as T;
 	}
 }
 

@@ -1,4 +1,7 @@
-import type { CompressionAdapter, KeyvStoreAdapter } from "../src/index.js";
+import type {
+	KeyvCompressionAdapter,
+	KeyvStorageAdapter,
+} from "../src/index.js";
 
 export const delay = async (ms: number) =>
 	new Promise<void>((resolve) => {
@@ -6,18 +9,12 @@ export const delay = async (ms: number) =>
 	});
 
 // Mock compression adapter for testing compression code paths
-export const createMockCompression = (): CompressionAdapter => ({
+export const createMockCompression = (): KeyvCompressionAdapter => ({
 	async compress(value: unknown) {
 		return value;
 	},
 	async decompress(value: unknown) {
 		return value;
-	},
-	serialize(data: Record<string, unknown>) {
-		return JSON.stringify(data);
-	},
-	deserialize(data: string) {
-		return JSON.parse(data);
 	},
 });
 
@@ -57,6 +54,6 @@ export const createStore = () => {
 		on() {
 			return store;
 		},
-	} as unknown as KeyvStoreAdapter;
+	} as unknown as KeyvStorageAdapter;
 	return store;
 };

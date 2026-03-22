@@ -1,6 +1,6 @@
 import Keyv from "keyv";
 import * as test from "vitest";
-import { CompressionAdapter } from "../src/compression-adapter.js";
+import { KeyvLz4TestAdapter } from "../src/compression-adapter.js";
 import keyvTestSuite, {
 	keyvCompresstionTests,
 	keyvIteratorTests,
@@ -24,4 +24,4 @@ const storeExtended = () => {
 keyvTestSuite(test, Keyv, storeExtended);
 keyvIteratorTests(test, Keyv, storeExtended);
 // @ts-expect-error - compression
-keyvCompresstionTests(test, new CompressionAdapter());
+keyvCompresstionTests(test, new KeyvLz4TestAdapter());

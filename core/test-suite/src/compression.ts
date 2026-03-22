@@ -1,16 +1,19 @@
 import { faker } from "@faker-js/faker";
-import Keyv, { type CompressionAdapter, type KeyvStoreAdapter } from "keyv";
+import Keyv, {
+	type KeyvCompressionAdapter,
+	type KeyvStorageAdapter,
+} from "keyv";
 import type * as Vitest from "vitest";
 
 const keyvCompressionTests = (
 	test: typeof Vitest,
-	compression: CompressionAdapter,
+	compression: KeyvCompressionAdapter,
 ) => {
 	// biome-ignore lint/suspicious/noImplicitAnyLet: test file
 	let keyv;
 	test.beforeEach(async () => {
 		keyv = new Keyv({
-			store: new Map() as unknown as KeyvStoreAdapter,
+			store: new Map() as unknown as KeyvStorageAdapter,
 			compression,
 		});
 		await keyv.clear();
@@ -36,25 +39,6 @@ const keyvCompressionTests = (
 		t.expect(compressed).not.toBe(5);
 		const decompressed = JSON.parse(await compression.decompress(compressed));
 		t.expect(decompressed).toBe(5);
-	});
-
-	// Test serialize compression
-	test.it("serialize compression", async (t) => {
-		const json = await compression.serialize({
-			value: "whatever",
-			expires: undefined,
-		});
-		t.expect(JSON.parse(json).value).not.toBe("whatever");
-	});
-
-	// Test deserialize compression
-	test.it("deserialize compression", async (t) => {
-		const json = await compression.serialize({
-			value: "whatever",
-			expires: undefined,
-		});
-		const djson = await compression.deserialize(json);
-		t.expect(djson).toEqual({ expires: undefined, value: "whatever" });
 	});
 
 	test.it("compress/decompress with main keyv", async (t) => {

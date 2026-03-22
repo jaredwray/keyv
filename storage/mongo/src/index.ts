@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
-import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
+import Keyv, { type KeyvStorageAdapter, type StoredData } from "keyv";
 import {
 	type Document,
 	GridFSBucket,
@@ -15,7 +15,7 @@ import type { KeyvMongoConnect, KeyvMongoOptions, Options } from "./types.js";
  * MongoDB storage adapter for Keyv.
  * Provides a persistent key-value store using MongoDB as the backend.
  */
-export class KeyvMongo extends Hookified implements KeyvStoreAdapter {
+export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * The MongoDB connection URI.
 	 * @default 'mongodb://127.0.0.1:27017'

@@ -46,7 +46,8 @@ core/             Core packages
   test-suite/       Shared test suite for API compliance
   bigmap/           Scalable in-memory Map
 serialization/    Serialization packages
-  serialize/        Default serializer (@keyv/serialize)
+  superjson/        SuperJSON serializer (@keyv/serialize-superjson)
+  msgpackr/         MessagePack serializer (@keyv/serialize-msgpackr)
 compression/      Compression adapters
   compress-brotli/
   compress-gzip/
@@ -82,7 +83,10 @@ website/          Documentation website (keyv.org)
 
 ## Serialization
 
-* [serialize](https://github.com/jaredwray/keyv/tree/main/serialization/serialize) - Default serializer for Keyv (@keyv/serialize)
+The default serializer (`KeyvJsonSerializer`) is built into the core `keyv` package. Alternative serializers are available as separate packages:
+
+* [serialize-superjson](https://github.com/jaredwray/keyv/tree/main/serialization/superjson) - SuperJSON serializer with Date, Map, Set, BigInt support (@keyv/serialize-superjson)
+* [serialize-msgpackr](https://github.com/jaredwray/keyv/tree/main/serialization/msgpackr) - High-performance MessagePack serializer (@keyv/serialize-msgpackr)
 
 ## Third-party Storage Adapters
 

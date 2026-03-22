@@ -18,9 +18,9 @@ import {
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { Hookified } from "hookified";
-import { Keyv, type KeyvStoreAdapter, type StoredData } from "keyv";
+import { Keyv, type KeyvStorageAdapter, type StoredData } from "keyv";
 
-export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
+export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	private _sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
 	private _namespace?: string;
 	private _opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
