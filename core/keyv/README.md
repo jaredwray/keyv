@@ -291,22 +291,7 @@ In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an 
 
 # Serialization
 
-Serialization in Keyv is **fully optional**. By default, no serializer is configured — data is stored as raw objects, which works for in-memory `Map` storage. When using storage adapters that require string values (Redis, SQLite, etc.), you should add a serializer.
-
-## Using `@keyv/serialize`
-
-The official `@keyv/serialize` package provides a JSON-based serializer with support for `Buffer` and `BigInt` types:
-
-```bash
-npm install --save @keyv/serialize
-```
-
-```js
-import Keyv from 'keyv';
-import { jsonSerializer } from '@keyv/serialize';
-
-const keyv = new Keyv({ serialization: jsonSerializer });
-```
+By default, Keyv uses `@keyv/serialize` — a JSON-based serializer with support for `Buffer` and `BigInt` types. This works out of the box with all storage adapters.
 
 ## Custom Serializers
 
@@ -339,6 +324,14 @@ const keyv = new Keyv({
 ```
 
 **Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialization functions and chosen storage engine.
+
+## Disabling Serialization
+
+You can disable serialization entirely by passing `false`. This stores data as raw objects, which works for in-memory `Map` storage where string conversion is not needed:
+
+```js
+const keyv = new Keyv({ serialization: false });
+```
 
 ## Pipeline
 
@@ -558,10 +551,10 @@ Compression package to use. See [Compression](#compression) for more details.
 
 ## options.serialization
 
-Type: `KeyvSerialization`<br />
-Default: `undefined`
+Type: `KeyvSerialization | false`<br />
+Default: `KeyvJsonSerializer` (from `@keyv/serialize`)
 
-A serialization object with `stringify` and `parse` methods. When `undefined`, data is stored as raw objects (suitable for in-memory `Map` storage). See [Serialization](#serialization) for more details.
+A serialization object with `stringify` and `parse` methods. Set to `false` to disable serialization and store raw objects. See [Serialization](#serialization) for more details.
 
 ## options.store
 
@@ -730,18 +723,16 @@ console.log(keyv.store instanceof KeyvSqlite); // true
 
 ## .serialization
 
-Type: `KeyvSerialization`<br />
-Default: `undefined`
+Type: `KeyvSerialization | false | undefined`<br />
+Default: `KeyvJsonSerializer` (from `@keyv/serialize`)
 
-The serialization object used for storing and retrieving values. When `undefined`, data passes through as raw objects. See [Serialization](#serialization) for more details.
+The serialization object used for storing and retrieving values. Set to `false` or `undefined` to disable serialization and use raw object pass-through. See [Serialization](#serialization) for more details.
 
 ```js
-import { jsonSerializer } from '@keyv/serialize';
-
 const keyv = new Keyv();
-console.log(keyv.serialization); // undefined (no serialization, raw objects)
-keyv.serialization = jsonSerializer;
-console.log(keyv.serialization); // KeyvJsonSerializer
+console.log(keyv.serialization); // KeyvJsonSerializer (default)
+keyv.serialization = false; // disable serialization
+console.log(keyv.serialization); // undefined
 ```
 
 ## .compression

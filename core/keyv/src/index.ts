@@ -1,3 +1,4 @@
+import { KeyvJsonSerializer } from "@keyv/serialize";
 import EventManager from "./event-manager.js";
 import HooksManager from "./hooks-manager.js";
 import StatsManager from "./stats-manager.js";
@@ -101,9 +102,9 @@ export type KeyvOptions = {
 	namespace?: string;
 	/**
 	 * A custom serialization adapter with stringify and parse methods.
-	 * @default undefined (no serialization, data passed through as-is)
+	 * @default KeyvJsonSerializer from @keyv/serialize
 	 */
-	serialization?: KeyvSerialization;
+	serialization?: KeyvSerialization | false;
 	/**
 	 * The storage adapter instance to be used by Keyv.
 	 * @default new Map() - in-memory store
@@ -228,7 +229,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		this._compression = mergedOptions.compression;
 
-		this._serialization = mergedOptions.serialization;
+		if (mergedOptions.serialization === false) {
+			this._serialization = undefined;
+		} else {
+			this._serialization =
+				mergedOptions.serialization ?? new KeyvJsonSerializer();
+		}
 
 		/* v8 ignore next -- @preserve */
 		if (mergedOptions.namespace) {
@@ -397,8 +403,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Set the current serialization adapter.
 	 * @param {KeyvSerialization | undefined} serialization The serialization adapter to set.
 	 */
-	public set serialization(serialization: KeyvSerialization | undefined) {
-		this._serialization = serialization;
+	public set serialization(serialization:
+		| KeyvSerialization
+		| false
+		| undefined) {
+		this._serialization = serialization === false ? undefined : serialization;
 	}
 
 	/**
