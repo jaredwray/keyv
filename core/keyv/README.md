@@ -289,25 +289,66 @@ Now this key will have prefix- added to it before it is set.
 In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an `Array`. This is based on the fact that `delete` can accept a single key or an `Array` of keys.
 
 
-# Custom Serializers
+# Serialization
 
-Keyv uses [`buffer`](https://nodejs.org/api/buffer.html) for data serialization to ensure consistency across different backends.
+Serialization in Keyv is **fully optional**. By default, no serializer is configured — data is stored as raw objects, which works for in-memory `Map` storage. When using storage adapters that require string values (Redis, SQLite, etc.), you should add a serializer.
 
-You can optionally provide your own serialization functions to support extra data types or to serialize to something other than JSON.
+## Using `@keyv/serialize`
 
-```js
-const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
+The official `@keyv/serialize` package provides a JSON-based serializer with support for `Buffer` and `BigInt` types:
+
+```bash
+npm install --save @keyv/serialize
 ```
 
-**Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialisation functions and chosen storage engine.
+```js
+import Keyv from 'keyv';
+import { jsonSerializer } from '@keyv/serialize';
 
-If you do not want to use serialization you can set the `serialize` and `deserialize` functions to `undefined`. This will also turn off compression.
+const keyv = new Keyv({ serialization: jsonSerializer });
+```
+
+## Custom Serializers
+
+You can provide your own serializer by implementing the `KeyvSerialization` interface:
+
+```typescript
+interface KeyvSerialization {
+  stringify: (object: unknown) => string | Promise<string>;
+  parse: <T>(data: string) => T | Promise<T>;
+}
+```
+
+For example, using the built-in `JSON` object:
 
 ```js
-const keyv = new Keyv();
-keyv.serialize = undefined;
-keyv.deserialize = undefined;
+const keyv = new Keyv({
+  serialization: { stringify: JSON.stringify, parse: JSON.parse },
+});
 ```
+
+Or a custom async serializer:
+
+```js
+const keyv = new Keyv({
+  serialization: {
+    stringify: async (value) => JSON.stringify(value),
+    parse: async (data) => JSON.parse(data),
+  },
+});
+```
+
+**Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialization functions and chosen storage engine.
+
+## Pipeline
+
+When serialization, compression, and/or encryption are configured, Keyv applies them in this order:
+
+**On set:** serialize (optional) → compress (optional) → encrypt (optional) → store
+
+**On get:** store → decrypt (optional) → decompress (optional) → parse (optional) → value
+
+If compression is configured without a serializer, Keyv will use `JSON.stringify`/`JSON.parse` as a minimum fallback since compression adapters require string input.
 
 # Official Storage Adapters
 
@@ -517,19 +558,12 @@ Default: `undefined`
 
 Compression package to use. See [Compression](#compression) for more details.
 
-## options.serialize
+## options.serialization
 
-Type: `Function`<br />
-Default: `JSON.stringify`
+Type: `KeyvSerialization`<br />
+Default: `undefined`
 
-A custom serialization function.
-
-## options.deserialize
-
-Type: `Function`<br />
-Default: `JSON.parse`
-
-A custom deserialization function.
+A serialization object with `stringify` and `parse` methods. When `undefined`, data is stored as raw objects (suitable for in-memory `Map` storage). See [Serialization](#serialization) for more details.
 
 ## options.store
 
