@@ -210,10 +210,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		}));
 
 		const result = await keyv.setMany(testData);
-		// KeyvStoreAdapter.setMany returns Promise<void> which makes it impossible to return an array of booleans
-		// from Keyv.setMany, either it needs to be allowed to return void or KeyvStoreAdapter.setMany needs to be changed
-		// expect(result).toEqual([true, true, true, true, true]);
-		expect(result).toBeUndefined();
+		expect(result).toEqual([true, true, true, true, true]);
 		const resultValue = await keyv.get(testData[0].key);
 		expect(resultValue.value).toEqual(testData[0].value);
 	});

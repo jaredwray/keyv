@@ -49,13 +49,34 @@ describe("Keyv Set Raw", async () => {
 		expect(result).toBe(true);
 	});
 
-	test("should apply default ttl", async () => {
+	test("should apply default ttl and compute expires", async () => {
 		const keyv = new Keyv({ ttl: 60_000 });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
 		await keyv.setRaw(key, { value });
 		const result = await keyv.getRaw(key);
-		expect(result).toEqual({ value });
+		expect(result?.value).toBe(value);
+		expect(result?.expires).toBeGreaterThan(Date.now());
+	});
+
+	test("should compute expires from ttl when expires is not set", async () => {
+		const keyv = new Keyv();
+		const key = faker.string.alphanumeric(10);
+		const before = Date.now();
+		await keyv.setRaw(key, { value: "test" }, 60_000);
+		const result = await keyv.getRaw(key);
+		expect(result).toBeDefined();
+		expect(result?.expires).toBeGreaterThanOrEqual(before + 60_000);
+		expect(result?.expires).toBeLessThanOrEqual(Date.now() + 60_000);
+	});
+
+	test("should not override existing expires when ttl is provided", async () => {
+		const keyv = new Keyv();
+		const key = faker.string.alphanumeric(10);
+		const customExpires = Date.now() + 120_000;
+		await keyv.setRaw(key, { value: "test", expires: customExpires }, 60_000);
+		const result = await keyv.getRaw(key);
+		expect(result?.expires).toBe(customExpires);
 	});
 
 	test("should track stats", async () => {
@@ -173,8 +194,8 @@ describe("Keyv Set Many Raw", async () => {
 		}
 	});
 
-	test("should return results from store.setMany", async () => {
-		const keyv = new Keyv();
+	test("should work with store that has setMany", async () => {
+		const keyv = new Keyv({ store: createStore() });
 		const keys = Array.from({ length: 2 }, () => faker.string.alphanumeric(10));
 		const entries = keys.map((key) => ({
 			key,
@@ -182,6 +203,7 @@ describe("Keyv Set Many Raw", async () => {
 		}));
 		const results = await keyv.setManyRaw(entries);
 		expect(Array.isArray(results)).toBe(true);
+		expect(results).toEqual([true, true]);
 	});
 
 	test("should emit error on failure", async () => {

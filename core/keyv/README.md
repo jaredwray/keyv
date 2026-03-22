@@ -54,6 +54,8 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 	- [.getMany(keys, [options])](#getmanykeys-options)
   - [.getRaw(key)](#getrawkey)
   - [.getManyRaw(keys)](#getmanyrawkeys)
+  - [.setRaw(key, value, [ttl])](#setrawkey-value-ttl)
+  - [.setManyRaw(entries)](#setmanyrawentries)
 	- [.delete(key)](#deletekey)
 	- [.deleteMany(keys)](#deletemanykeys)
 	- [.clear()](#clear)
@@ -579,6 +581,41 @@ Returns a promise which resolves to the raw stored data for the key or `undefine
 ## .getManyRaw(keys)
 
 Returns a promise which resolves to an array of raw stored data for the keys or `undefined` if the key does not exist or is expired.
+
+## .setRaw(key, value, [ttl])
+
+Sets a raw value in the store without wrapping or serialization. This is the write-side counterpart to `.getRaw()`. The value should be a `DeserializedData` object with `{ value, expires? }`. If `expires` is not set in the value and `ttl` is provided, `expires` will be computed from `ttl`.
+
+Returns a promise which resolves to `true`.
+
+```js
+const keyv = new Keyv();
+
+// Set a raw value directly
+await keyv.setRaw('foo', { value: 'bar', expires: Date.now() + 60000 });
+
+// Round-trip: get raw, modify, set raw
+const raw = await keyv.getRaw('foo');
+raw.value = 'updated';
+await keyv.setRaw('foo', raw);
+
+// TTL computes expires automatically if not set
+await keyv.setRaw('foo', { value: 'bar' }, 60000);
+```
+
+## .setManyRaw(entries)
+
+Sets many raw values in the store without wrapping or serialization. Each entry should have a `key`, a `value` (`DeserializedData` object), and an optional `ttl`.
+
+Returns a promise which resolves to an array of booleans.
+
+```js
+const keyv = new Keyv();
+await keyv.setManyRaw([
+  { key: 'foo', value: { value: 'bar' } },
+  { key: 'baz', value: { value: 'qux', expires: Date.now() + 60000 } },
+]);
+```
 
 ## .delete(key)
 

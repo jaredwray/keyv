@@ -982,7 +982,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * The value should be a DeserializedData object with { value, expires? }.
 	 * @param {string} key the key to set
 	 * @param {DeserializedData<Value>} value the raw value envelope to store
-	 * @param {number} [ttl] time to live in milliseconds (passed to the store for native TTL support)
+	 * @param {number} [ttl] time to live in milliseconds. If the raw value does not already have an expires field, it will be computed from ttl.
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
 	async setRaw<Value = GenericValue>(
@@ -998,6 +998,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (data.ttl === 0) {
 			data.ttl = undefined;
+		}
+
+		if (data.value.expires === undefined && typeof data.ttl === "number") {
+			data.value.expires = Date.now() + data.ttl;
 		}
 
 		const store = this._store;
@@ -1074,9 +1078,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 						return { key: keyPrefixed, value: serializedValue, ttl };
 					}),
 				);
-				results = (await this._store.setMany(
-					serializedEntries,
-				)) as unknown as boolean[];
+				const storeResult = await this._store.setMany(serializedEntries);
+				results = Array.isArray(storeResult)
+					? (storeResult as boolean[])
+					: entries.map(() => true);
 			}
 		} catch (error) {
 			this.emit("error", error);
@@ -1125,12 +1130,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 						ttl = undefined;
 					}
 
+					if (value.expires === undefined && typeof ttl === "number") {
+						value.expires = Date.now() + ttl;
+					}
+
 					const keyPrefixed = this._getKeyPrefix(key);
 					return { key: keyPrefixed, value, ttl };
 				});
-				results = (await this._store.setMany(
-					rawEntries,
-				)) as unknown as boolean[];
+				const storeResult = await this._store.setMany(rawEntries);
+				results = Array.isArray(storeResult)
+					? (storeResult as boolean[])
+					: entries.map(() => true);
 			}
 		} catch (error) {
 			this.emit("error", error);
