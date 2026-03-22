@@ -140,3 +140,13 @@ export type KeyvOptions = {
 	 */
 	throwOnErrors?: boolean;
 };
+
+/**
+ * @deprecated Use `KeyvStorageAdapter` instead.
+ */
+export type KeyvStoreAdapter = KeyvStorageAdapter;
+
+/**
+ * @deprecated Use `KeyvCompressionAdapter` instead.
+ */
+export type KeyvCompression = KeyvCompressionAdapter;

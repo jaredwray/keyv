@@ -17,21 +17,18 @@ import {
 export type {
 	DeserializedData,
 	IEventEmitter,
+	KeyvCompression,
 	KeyvCompressionAdapter,
 	KeyvEntry,
 	KeyvOptions,
 	KeyvSerializationAdapter,
 	KeyvStorageAdapter,
+	KeyvStoreAdapter,
 	StoredData,
 	StoredDataNoRaw,
 	StoredDataRaw,
 } from "./types.js";
 export { KeyvHooks } from "./types.js";
-
-/**
- * @deprecated Use `KeyvStorageAdapter` instead.
- */
-export type KeyvStoreAdapter = KeyvStorageAdapter;
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
