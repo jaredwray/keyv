@@ -657,8 +657,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 			const deserializedRows = await Promise.allSettled(promises);
 			result = deserializedRows.map(
-				// biome-ignore lint/suspicious/noExplicitAny: type format
 				(row: PromiseSettledResult<StoredDataRaw<Value> | undefined>) =>
+					// biome-ignore lint/suspicious/noExplicitAny: type format
 					(row as PromiseFulfilledResult<any>).value,
 			);
 		} else {
