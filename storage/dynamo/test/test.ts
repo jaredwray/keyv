@@ -25,7 +25,10 @@ test.beforeEach(async () => {
 });
 
 test.it("should ensure table creation", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: "newTable" });
+	const store = new KeyvDynamo({
+		endpoint: dynamoURL,
+		tableName: faker.string.uuid(),
+	});
 	const key = faker.string.uuid();
 	const value = faker.lorem.word();
 	await store.set(key, value);
@@ -107,7 +110,7 @@ test.it(
 	async (t) => {
 		const store = new KeyvDynamo({
 			endpoint: dynamoURL,
-			tableName: "resourceInUseExceptionTable",
+			tableName: faker.string.uuid(),
 		});
 
 		const originalSend = (store as any).client.send;
