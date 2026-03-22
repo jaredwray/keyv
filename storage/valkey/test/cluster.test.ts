@@ -47,26 +47,30 @@ test.it(
 	},
 );
 
-test.it("cluster: getMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
-	const cluster = await createReadyCluster();
-	const keyv = new KeyvValkey(cluster as Cluster);
+test.it(
+	"cluster: getMany should work without CROSSSLOT errors",
+	{ retry: 3 },
+	async (t) => {
+		const cluster = await createReadyCluster();
+		const keyv = new KeyvValkey(cluster as Cluster);
 
-	const key1 = faker.string.alphanumeric(10);
-	const key2 = faker.string.alphanumeric(10);
-	const key3 = faker.string.alphanumeric(10);
-	const val1 = faker.string.alphanumeric(10);
-	const val2 = faker.string.alphanumeric(10);
-	const val3 = faker.string.alphanumeric(10);
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		const key3 = faker.string.alphanumeric(10);
+		const val1 = faker.string.alphanumeric(10);
+		const val2 = faker.string.alphanumeric(10);
+		const val3 = faker.string.alphanumeric(10);
 
-	await keyv.set(key1, val1);
-	await keyv.set(key2, val2);
-	await keyv.set(key3, val3);
+		await keyv.set(key1, val1);
+		await keyv.set(key2, val2);
+		await keyv.set(key3, val3);
 
-	const values = await keyv.getMany([key1, key2, key3]);
-	t.expect(values).toEqual([val1, val2, val3]);
+		const values = await keyv.getMany([key1, key2, key3]);
+		t.expect(values).toEqual([val1, val2, val3]);
 
-	await keyv.disconnect();
-});
+		await keyv.disconnect();
+	},
+);
 
 test.it(
 	"cluster: deleteMany should work without CROSSSLOT errors",
@@ -96,21 +100,25 @@ test.it(
 	},
 );
 
-test.it("cluster: hasMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
-	const cluster = await createReadyCluster();
-	const keyv = new KeyvValkey(cluster as Cluster);
+test.it(
+	"cluster: hasMany should work without CROSSSLOT errors",
+	{ retry: 3 },
+	async (t) => {
+		const cluster = await createReadyCluster();
+		const keyv = new KeyvValkey(cluster as Cluster);
 
-	const key1 = faker.string.alphanumeric(10);
-	const key2 = faker.string.alphanumeric(10);
-	const key3 = faker.string.alphanumeric(10);
-	const val1 = faker.string.alphanumeric(10);
-	const val2 = faker.string.alphanumeric(10);
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		const key3 = faker.string.alphanumeric(10);
+		const val1 = faker.string.alphanumeric(10);
+		const val2 = faker.string.alphanumeric(10);
 
-	await keyv.set(key1, val1);
-	await keyv.set(key2, val2);
+		await keyv.set(key1, val1);
+		await keyv.set(key2, val2);
 
-	const results = await keyv.hasMany([key1, key2, key3]);
-	t.expect(results).toEqual([true, true, false]);
+		const results = await keyv.hasMany([key1, key2, key3]);
+		t.expect(results).toEqual([true, true, false]);
 
-	await keyv.disconnect();
-});
+		await keyv.disconnect();
+	},
+);
