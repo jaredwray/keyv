@@ -671,9 +671,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			}
 
 			for (const entry of entries) {
-				// Re-add namespace prefix for core compatibility
-				const prefixedKey = namespace ? `${namespace}:${entry.key}` : entry.key;
-				yield [prefixedKey, entry.value];
+				yield [entry.key, entry.value];
 			}
 
 			// Update cursor to the last key processed

@@ -517,9 +517,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			}
 
 			for (const entry of entries) {
-				// Re-add namespace prefix for core compatibility
-				const prefixedKey = namespace ? `${namespace}:${entry.id}` : entry.id;
-				yield [prefixedKey, entry.value];
+				yield [entry.id, entry.value];
 			}
 
 			// Update cursor to the last key processed

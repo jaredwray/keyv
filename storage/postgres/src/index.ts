@@ -547,11 +547,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 				// Validate entry has key before yielding
 				/* v8 ignore next -- @preserve */
 				if (entry.key !== undefined && entry.key !== null) {
-					// Re-add namespace prefix for core compatibility
-					const prefixedKey = namespace
-						? `${namespace}:${entry.key}`
-						: entry.key;
-					yield [prefixedKey, entry.value];
+					yield [entry.key, entry.value];
 				}
 			}
 

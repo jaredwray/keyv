@@ -335,14 +335,14 @@ test.it(
 		const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 0 });
 		postgres.namespace = "nslimit";
 
-		await postgres.set("nslimit:a", "v1");
+		await postgres.set("a", "v1");
 
 		const keys: string[] = [];
 		for await (const [key] of postgres.iterator("nslimit")) {
 			keys.push(key);
 		}
 
-		t.expect(keys).toContain("nslimit:a");
+		t.expect(keys).toContain("a");
 	},
 );
 
@@ -375,9 +375,9 @@ test.it(
 		const postgres2 = new KeyvPostgres({ uri: postgresUri });
 		postgres2.namespace = "ns2";
 
-		await postgres1.set("ns1:key1", "val1");
-		await postgres1.set("ns1:key2", "val2");
-		await postgres2.set("ns2:key3", "val3");
+		await postgres1.set("key1", "val1");
+		await postgres1.set("key2", "val2");
+		await postgres2.set("key3", "val3");
 
 		const keys: string[] = [];
 		for await (const [key] of postgres1.iterator("ns1")) {
@@ -385,8 +385,8 @@ test.it(
 		}
 
 		t.expect(keys.length).toBe(2);
-		t.expect(keys).toContain("ns1:key1");
-		t.expect(keys).toContain("ns1:key2");
+		t.expect(keys).toContain("key1");
+		t.expect(keys).toContain("key2");
 	},
 );
 

@@ -601,9 +601,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			const gridIterator = client.store
 				.find({ "metadata.namespace": { $eq: namespaceValue } })
 				.map(async (x: WithId<Document>) => {
-					const prefixedKey = namespace
-						? `${namespace}:${x.filename}`
-						: x.filename;
+					const prefixedKey = x.filename;
 					// biome-ignore lint/style/noNonNullAssertion: need to fix
 					const stream = client.bucket!.openDownloadStream(x._id);
 					const data = await new Promise<string | undefined>((resolve) => {
@@ -628,8 +626,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const iterator = client.store
 			.find({ namespace: { $eq: namespaceValue } })
 			.map((x: WithId<Document>) => {
-				const prefixedKey = namespace ? `${namespace}:${x.key}` : x.key;
-				return [prefixedKey, x.value];
+				return [x.key, x.value];
 			});
 
 		yield* iterator;
