@@ -21,11 +21,12 @@ import { Hookified } from "hookified";
 import { Keyv, type KeyvStoreAdapter, type StoredData } from "keyv";
 
 export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
-	sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
-	namespace?: string;
-	opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
-	readonly client: DynamoDBDocument;
-	private readonly tableReady: Promise<void>;
+	private _sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
+	private _namespace?: string;
+	private _opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
+	private _client: DynamoDBDocument;
+	private readonly _tableReady: Promise<void>;
+	private _keyPrefixSeparator = ":";
 
 	constructor(options: KeyvDynamoOptions | string) {
 		super({ throwOnEmptyListeners: false });
@@ -34,153 +35,398 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 			options = { endpoint: options };
 		}
 
-		this.opts = {
+		this._opts = {
 			tableName: "keyv",
 			dialect: "dynamo",
 			...options,
 		};
 
-		this.client = DynamoDBDocument.from(new DynamoDB(this.opts));
+		this._client = DynamoDBDocument.from(new DynamoDB(this._opts));
 
-		this.tableReady = this.ensureTable(this.opts.tableName).catch(
+		this._tableReady = this.ensureTable(this._opts.tableName).catch(
 			(error: unknown) => {
 				this.emit("error", error);
 			},
 		);
 	}
 
-	async set(key: string, value: unknown, ttl?: number) {
-		await this.tableReady;
+	/**
+	 * Gets the default TTL fallback in milliseconds (6 hours).
+	 */
+	public get sixHoursInMilliseconds(): number {
+		return this._sixHoursInMilliseconds;
+	}
 
-		const sixHoursFromNowEpoch = Math.floor(
-			(Date.now() + this.sixHoursInMilliseconds) / 1000,
+	/**
+	 * Sets the default TTL fallback in milliseconds.
+	 */
+	public set sixHoursInMilliseconds(value: number) {
+		this._sixHoursInMilliseconds = value;
+	}
+
+	/**
+	 * Gets the namespace used to prefix keys.
+	 */
+	public get namespace(): string | undefined {
+		return this._namespace;
+	}
+
+	/**
+	 * Sets the namespace used to prefix keys.
+	 */
+	public set namespace(value: string | undefined) {
+		this._namespace = value;
+	}
+
+	/**
+	 * Gets the merged configuration options. Read-only.
+	 */
+	public get opts(): Omit<KeyvDynamoOptions, "tableName"> & {
+		tableName: string;
+	} {
+		return this._opts;
+	}
+
+	/**
+	 * Gets the underlying DynamoDB Document client instance.
+	 */
+	public get client(): DynamoDBDocument {
+		return this._client;
+	}
+
+	/**
+	 * Sets the underlying DynamoDB Document client instance.
+	 */
+	public set client(value: DynamoDBDocument) {
+		this._client = value;
+	}
+
+	/**
+	 * Gets the separator between the namespace and key.
+	 * @default ':'
+	 */
+	public get keyPrefixSeparator(): string {
+		return this._keyPrefixSeparator;
+	}
+
+	/**
+	 * Sets the separator between the namespace and key.
+	 */
+	public set keyPrefixSeparator(value: string) {
+		this._keyPrefixSeparator = value;
+	}
+
+	/**
+	 * Creates a prefixed key by prepending the namespace and separator.
+	 * @param key - The key to prefix
+	 * @param namespace - The namespace to prepend. If not provided, the key is returned as-is.
+	 * @returns The prefixed key (e.g., `'namespace:key'`), or the original key if no namespace is given.
+	 */
+	public createKeyPrefix(key: string, namespace?: string): string {
+		if (namespace) {
+			return `${namespace}${this._keyPrefixSeparator}${key}`;
+		}
+
+		return key;
+	}
+
+	/**
+	 * Removes the namespace prefix from a key.
+	 * @param key - The key to strip the prefix from
+	 * @param namespace - The namespace prefix to remove. If not provided, the key is returned as-is.
+	 * @returns The key without the namespace prefix.
+	 */
+	public removeKeyPrefix(key: string, namespace?: string): string {
+		if (namespace) {
+			return key.replace(`${namespace}${this._keyPrefixSeparator}`, "");
+		}
+
+		return key;
+	}
+
+	/**
+	 * Formats a key by prepending the namespace if one is set. Avoids double-prefixing
+	 * by checking if the key already starts with the namespace prefix.
+	 * @param key - The key to format
+	 * @returns The formatted key with namespace prefix, or the original key if no namespace is set.
+	 */
+	public formatKey(key: string): string {
+		if (!this._namespace) {
+			return key;
+		}
+
+		const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
+		if (key.startsWith(prefix)) {
+			return key;
+		}
+
+		return `${prefix}${key}`;
+	}
+
+	/**
+	 * Stores a value in DynamoDB. Uses a 6-hour default TTL if no TTL is specified.
+	 * @param key - The key to store
+	 * @param value - The value to store
+	 * @param ttl - Optional TTL in milliseconds
+	 */
+	public async set(key: string, value: unknown, ttl?: number) {
+		try {
+			await this._tableReady;
+
+			const sixHoursFromNowEpoch = Math.floor(
+				(Date.now() + this._sixHoursInMilliseconds) / 1000,
+			);
+
+			const expiresAt =
+				typeof ttl === "number"
+					? Math.floor((Date.now() + (ttl + 1000)) / 1000)
+					: sixHoursFromNowEpoch;
+
+			const putInput: PutCommandInput = {
+				TableName: this._opts.tableName,
+				Item: {
+					id: this.formatKey(key),
+					value,
+					expiresAt,
+				},
+			};
+
+			await this._client.put(putInput);
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+		}
+		/* v8 ignore stop -- @preserve */
+	}
+
+	/**
+	 * Stores multiple values in DynamoDB.
+	 * @param entries - An array of objects containing key, value, and optional ttl
+	 */
+	public async setMany(
+		entries: Array<{ key: string; value: unknown; ttl?: number }>,
+	): Promise<void> {
+		const promises = entries.map(async ({ key, value, ttl }) =>
+			this.set(key, value, ttl),
 		);
-
-		const expiresAt =
-			typeof ttl === "number"
-				? Math.floor((Date.now() + (ttl + 1000)) / 1000)
-				: sixHoursFromNowEpoch;
-
-		const putInput: PutCommandInput = {
-			TableName: this.opts.tableName,
-			Item: {
-				id: key,
-				value,
-				expiresAt,
-			},
-		};
-
-		await this.client.put(putInput);
+		const results = await Promise.allSettled(promises);
+		for (const result of results) {
+			/* v8 ignore next 3 -- @preserve */
+			if (result.status === "rejected") {
+				this.emit("error", result.reason);
+			}
+		}
 	}
 
-	async get<Value>(key: string): Promise<StoredData<Value>> {
-		await this.tableReady;
+	/**
+	 * Retrieves a value from DynamoDB.
+	 * @param key - The key to retrieve
+	 * @returns The stored value, or `undefined` if the key does not exist.
+	 */
+	public async get<Value>(key: string): Promise<StoredData<Value>> {
+		try {
+			await this._tableReady;
 
-		const getInput: GetCommandInput = {
-			TableName: this.opts.tableName,
-			Key: {
-				id: key,
-			},
-		};
-		const { Item } = await this.client.get(getInput);
-		return Item?.value as StoredData<Value>;
+			const getInput: GetCommandInput = {
+				TableName: this._opts.tableName,
+				Key: {
+					id: this.formatKey(key),
+				},
+			};
+			const { Item } = await this._client.get(getInput);
+			return Item?.value as StoredData<Value>;
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+			return undefined as StoredData<Value>;
+		}
+		/* v8 ignore stop -- @preserve */
 	}
 
-	async delete(key: string) {
-		await this.tableReady;
-
-		const deleteInput: DeleteCommandInput = {
-			TableName: this.opts.tableName,
-			Key: {
-				id: key,
-			},
-			ReturnValues: "ALL_OLD",
-		};
-
-		const { Attributes } = await this.client.delete(deleteInput);
-		return Boolean(Attributes);
-	}
-
-	async getMany<Value>(
+	/**
+	 * Retrieves multiple values from DynamoDB.
+	 * @param keys - An array of keys to retrieve
+	 * @returns An array of stored data corresponding to each key.
+	 */
+	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<StoredData<Value | undefined>>> {
-		await this.tableReady;
+		try {
+			await this._tableReady;
 
-		const batchGetInput: BatchGetCommandInput = {
-			RequestItems: {
-				[this.opts.tableName]: {
-					Keys: keys.map((key) => ({
-						id: key,
+			const formattedKeys = keys.map((key) => this.formatKey(key));
+
+			const batchGetInput: BatchGetCommandInput = {
+				RequestItems: {
+					[this._opts.tableName]: {
+						Keys: formattedKeys.map((key) => ({
+							id: key,
+						})),
+					},
+				},
+			};
+			const { Responses: { [this._opts.tableName]: items = [] } = {} } =
+				await this._client.batchGet(batchGetInput);
+
+			return formattedKeys.map(
+				(key) =>
+					items.find((item) => item?.id === key)?.value as StoredData<Value>,
+			);
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+			return keys.map(() => undefined as StoredData<Value>);
+		}
+		/* v8 ignore stop -- @preserve */
+	}
+
+	/**
+	 * Deletes a key from DynamoDB.
+	 * @param key - The key to delete
+	 * @returns `true` if the key was deleted, `false` otherwise.
+	 */
+	public async delete(key: string) {
+		try {
+			await this._tableReady;
+
+			const deleteInput: DeleteCommandInput = {
+				TableName: this._opts.tableName,
+				Key: {
+					id: this.formatKey(key),
+				},
+				ReturnValues: "ALL_OLD",
+			};
+
+			const { Attributes } = await this._client.delete(deleteInput);
+			return Boolean(Attributes);
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+			return false;
+		}
+		/* v8 ignore stop -- @preserve */
+	}
+
+	/**
+	 * Deletes multiple keys from DynamoDB.
+	 * @param keys - An array of keys to delete
+	 * @returns `true` if all keys were successfully deleted, `false` otherwise.
+	 */
+	public async deleteMany(keys: string[]) {
+		try {
+			await this._tableReady;
+
+			if (keys.length === 0) {
+				return false;
+			}
+
+			const formattedKeys = keys.map((key) => this.formatKey(key));
+
+			const items = await this.getMany(keys);
+
+			if (items.filter(Boolean).length === 0) {
+				return false;
+			}
+
+			const batchDeleteInput: BatchWriteCommandInput = {
+				RequestItems: {
+					[this._opts.tableName]: formattedKeys.map((key) => ({
+						DeleteRequest: {
+							TableName: this._opts.tableName,
+							Key: {
+								id: key,
+							},
+						},
 					})),
 				},
-			},
-		};
-		const { Responses: { [this.opts.tableName]: items = [] } = {} } =
-			await this.client.batchGet(batchGetInput);
+			};
 
-		return keys.map(
-			(key) =>
-				items.find((item) => item?.id === key)?.value as StoredData<Value>,
+			const response = await this._client.batchWrite(batchDeleteInput);
+			return Boolean(response);
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+			return false;
+		}
+		/* v8 ignore stop -- @preserve */
+	}
+
+	/**
+	 * Clears data from DynamoDB. If a namespace is set, only keys with
+	 * the namespace prefix are deleted. Otherwise, all keys are deleted.
+	 */
+	public async clear() {
+		try {
+			await this._tableReady;
+
+			const scanResult = await this._client.scan({
+				TableName: this._opts.tableName,
+			});
+
+			const keys = this.extractKey(scanResult);
+
+			await this.deleteMany(keys);
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+		}
+		/* v8 ignore stop -- @preserve */
+	}
+
+	/**
+	 * Checks whether a key exists in DynamoDB.
+	 * @param key - The key to check
+	 * @returns `true` if the key exists, `false` otherwise.
+	 */
+	public async has(key: string): Promise<boolean> {
+		try {
+			const value = await this.get(key);
+			return value !== undefined;
+			/* v8 ignore start -- @preserve */
+		} catch {
+			return false;
+		}
+		/* v8 ignore stop -- @preserve */
+	}
+
+	/**
+	 * Checks whether multiple keys exist in DynamoDB.
+	 * @param keys - An array of keys to check
+	 * @returns An array of booleans indicating whether each key exists.
+	 */
+	public async hasMany(keys: string[]): Promise<boolean[]> {
+		const promises = keys.map(async (key) => this.has(key));
+		const results = await Promise.allSettled(promises);
+		return results.map((result) =>
+			result.status === "fulfilled" ? result.value : false,
 		);
 	}
 
-	async deleteMany(keys: string[]) {
-		await this.tableReady;
-
-		if (keys.length === 0) {
-			return false;
-		}
-
-		const items = await this.getMany(keys);
-
-		if (items.filter(Boolean).length === 0) {
-			return false;
-		}
-
-		const batchDeleteInput: BatchWriteCommandInput = {
-			RequestItems: {
-				[this.opts.tableName]: keys.map((key) => ({
-					DeleteRequest: {
-						TableName: this.opts.tableName,
-						Key: {
-							id: key,
-						},
-					},
-				})),
-			},
-		};
-
-		const response = await this.client.batchWrite(batchDeleteInput);
-		return Boolean(response);
-	}
-
-	async clear() {
-		await this.tableReady;
-
-		const scanResult = await this.client.scan({
-			TableName: this.opts.tableName,
-		});
-
-		const keys = this.extractKey(scanResult);
-
-		await this.deleteMany(keys);
-	}
-
+	/**
+	 * Extracts keys from a DynamoDB scan result, filtering by namespace.
+	 * @param output - The scan command output
+	 * @param keyProperty - The property name for the key field (default: 'id')
+	 * @returns An array of matching keys.
+	 */
 	public extractKey(output: ScanCommandOutput, keyProperty = "id"): string[] {
 		return (output.Items ?? [])
 			.map((item) => item[keyProperty])
-			.filter((key) => key.startsWith(this.namespace ?? ""));
+			.filter((key) => key.startsWith(this._namespace ?? ""));
 	}
 
+	/**
+	 * Ensures the DynamoDB table exists and is active.
+	 * @param tableName - The table name to check or create
+	 */
 	public async ensureTable(tableName: string): Promise<void> {
 		try {
-			const response = await this.client.send(
+			const response = await this._client.send(
 				new DescribeTableCommand({ TableName: tableName }),
 			);
 			// Table exists but may be in CREATING status - wait if needed
 			if (response.Table?.TableStatus !== "ACTIVE") {
 				await waitUntilTableExists(
-					{ client: this.client, maxWaitTime: 60 },
+					{ client: this._client, maxWaitTime: 60 },
 					{ TableName: tableName },
 				);
 			}
@@ -193,9 +439,13 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 		}
 	}
 
+	/**
+	 * Creates a new DynamoDB table with TTL support.
+	 * @param tableName - The table name to create
+	 */
 	public async createTable(tableName: string): Promise<void> {
 		try {
-			await this.client.send(
+			await this._client.send(
 				new CreateTableCommand({
 					TableName: tableName,
 					KeySchema: [{ AttributeName: "id", KeyType: "HASH" }],
@@ -205,11 +455,11 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 			);
 
 			await waitUntilTableExists(
-				{ client: this.client, maxWaitTime: 60 },
+				{ client: this._client, maxWaitTime: 60 },
 				{ TableName: tableName },
 			);
 
-			await this.client.send(
+			await this._client.send(
 				new UpdateTimeToLiveCommand({
 					TableName: tableName,
 					TimeToLiveSpecification: {
@@ -219,10 +469,10 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 				}),
 			);
 		} catch (error) {
-			/* c8 ignore next -- @preserve */
+			/* v8 ignore next -- @preserve */
 			if (error instanceof ResourceInUseException) {
 				await waitUntilTableExists(
-					{ client: this.client, maxWaitTime: 60 },
+					{ client: this._client, maxWaitTime: 60 },
 					{ TableName: tableName },
 				);
 			} else {
@@ -240,9 +490,10 @@ export type KeyvDynamoOptions = {
 } & DynamoDBClientConfig;
 
 /**
- * Will create a Keyv instance with the DynamoDB adapter. This will also set the namespace and useKeyPrefix to false.
+ * Creates a Keyv instance with the DynamoDB adapter. Sets useKeyPrefix to false
+ * since the adapter handles its own key prefixing via namespace.
  * @param options - Options for the adapter including DynamoDB client configuration and table settings.
- * @returns {Keyv} - Keyv instance with the DynamoDB adapter
+ * @returns A Keyv instance with the DynamoDB adapter
  */
 export function createKeyv(options?: KeyvDynamoOptions | string): Keyv {
 	const adapter = new KeyvDynamo(options ?? {});
