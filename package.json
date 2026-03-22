@@ -15,7 +15,7 @@
     "build:keyv:serialize": "pnpm recursive --filter=@keyv/serialize run build",
     "build:keyv": "pnpm recursive --filter=keyv run build",
     "build": "pnpm build:keyv:serialize && pnpm build:keyv && pnpm recursive --filter '!keyv' --filter '!@keyv/serialize' run build",
-    "test": "pnpm -r --workspace-concurrency 4 test:ci",
+    "test": "pnpm -r test:ci",
     "test:services:start": "chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh",
     "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
     "website:build": "pnpm recursive --filter @keyv/website run website:build",
