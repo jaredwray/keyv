@@ -602,9 +602,8 @@ test.it(
 		// Validate all keys exist
 		t.expect(collected.size).toBe(Object.keys(testData).length);
 		for (const [key, value] of Object.entries(testData)) {
-			const fullKey = `${ns}:${key}`;
-			t.expect(collected.has(fullKey)).toBe(true);
-			t.expect(collected.get(fullKey)).toBe(JSON.stringify({ value }));
+			t.expect(collected.has(key)).toBe(true);
+			t.expect(collected.get(key)).toBe(JSON.stringify({ value }));
 		}
 
 		await keyv.disconnect();
