@@ -102,6 +102,38 @@ describe("KeyvJsonSerializer", () => {
 		]);
 	});
 
+	it("stringify and parse of nested Buffer", () => {
+		const buffer = Buffer.from("hello world", "utf8");
+		const serialized = jsonSerializer.stringify({ data: buffer });
+		const deserialized = jsonSerializer.parse<{ data: Buffer }>(serialized);
+		expect(Buffer.isBuffer(deserialized.data)).toBe(true);
+		expect(deserialized.data.toString()).toBe("hello world");
+	});
+
+	it("stringify and parse of Buffer in array", () => {
+		const buf1 = Buffer.from("one", "utf8");
+		const buf2 = Buffer.from("two", "utf8");
+		const serialized = jsonSerializer.stringify({ items: [buf1, buf2] });
+		const deserialized = jsonSerializer.parse<{ items: Buffer[] }>(serialized);
+		expect(Buffer.isBuffer(deserialized.items[0])).toBe(true);
+		expect(deserialized.items[0].toString()).toBe("one");
+		expect(deserialized.items[1].toString()).toBe("two");
+	});
+
+	it("stringify and parse of BigInt in array", () => {
+		const serialized = jsonSerializer.stringify({
+			values: [BigInt(1), BigInt(2), BigInt(3)],
+		});
+		const deserialized = jsonSerializer.parse<{ values: bigint[] }>(serialized);
+		expect(deserialized.values).toEqual([BigInt(1), BigInt(2), BigInt(3)]);
+	});
+
+	it("stringify and parse of top-level array", () => {
+		const serialized = jsonSerializer.stringify([1, "hello", true, null]);
+		const deserialized = jsonSerializer.parse<unknown[]>(serialized);
+		expect(deserialized).toEqual([1, "hello", true, null]);
+	});
+
 	it("parse detects base64 on string", () => {
 		const json = JSON.stringify({
 			encoded: ":base64:aGVsbG8gd29ybGQ=", // "hello world" in base64

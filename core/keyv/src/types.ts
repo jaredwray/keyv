@@ -11,8 +11,8 @@ export type KeyvCompressionAdapter = {
 };
 
 export type KeyvEncryptionAdapter = {
-	encrypt: (data: string) => string;
-	decrypt: (data: string) => string;
+	encrypt: (data: string) => string | Promise<string>;
+	decrypt: (data: string) => string | Promise<string>;
 };
 
 export type DeserializedData<Value> = {

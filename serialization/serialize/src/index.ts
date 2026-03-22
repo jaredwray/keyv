@@ -1,65 +1,55 @@
 import { Buffer } from "node:buffer";
+import type { KeyvSerializationAdapter } from "keyv";
 
-// biome-ignore lint/suspicious/noExplicitAny: allowed
-const _stringify = (data: any, escapeColonStrings: boolean = true): string => {
-	if (data === undefined || data === null) {
-		return "null";
+/**
+ * Pre-process a value tree, converting Buffer and BigInt to tagged strings
+ * before JSON.stringify can call toJSON() on them.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: needed for recursive traversal
+function prepare(value: any): any {
+	if (value === null || value === undefined) {
+		return value;
 	}
 
-	if (typeof data === "string") {
-		return JSON.stringify(
-			escapeColonStrings && data.startsWith(":") ? `:${data}` : data,
-		);
+	if (Buffer.isBuffer(value)) {
+		return `:base64:${value.toString("base64")}`;
 	}
 
-	if (typeof data === "bigint") {
-		return JSON.stringify(`:bigint:${data.toString()}`);
+	if (typeof value === "bigint") {
+		return `:bigint:${value.toString()}`;
 	}
 
-	if (Buffer.isBuffer(data)) {
-		return JSON.stringify(`:base64:${data.toString("base64")}`);
+	if (typeof value === "string") {
+		return value.startsWith(":") ? `:${value}` : value;
 	}
 
-	if (data?.toJSON) {
-		// biome-ignore lint/suspicious/noExplicitAny: allowed
-		data = data.toJSON() as unknown as Record<string, any>;
+	if (Array.isArray(value)) {
+		return value.map((item) => prepare(item));
 	}
 
-	if (typeof data === "object") {
-		let s = "";
-		const array = Array.isArray(data);
-		s = array ? "[" : "{";
-		let first = true;
+	if (typeof value === "object") {
+		// Call toJSON if present (e.g. Date), then continue processing
+		if (typeof value.toJSON === "function") {
+			return prepare(value.toJSON());
+		}
 
-		for (const k in data) {
-			const ignore =
-				typeof data[k] === "function" || (!array && data[k] === undefined);
-			if (!Object.hasOwn(data, k) || ignore) {
-				continue;
-			}
-
-			if (!first) {
-				s += ",";
-			}
-
-			first = false;
-			if (array) {
-				s += _stringify(data[k], escapeColonStrings);
-			} else if (data[k] !== undefined) {
-				s += `${_stringify(k, false)}:${_stringify(data[k], escapeColonStrings)}`;
+		// biome-ignore lint/suspicious/noExplicitAny: needed for object rebuild
+		const result: Record<string, any> = {};
+		for (const key of Object.keys(value)) {
+			if (value[key] !== undefined) {
+				result[key] = prepare(value[key]);
 			}
 		}
 
-		s += array ? "]" : "}";
-		return s;
+		return result;
 	}
 
-	return JSON.stringify(data);
-};
+	return value;
+}
 
-export class KeyvJsonSerializer {
+export class KeyvJsonSerializer implements KeyvSerializationAdapter {
 	stringify(object: unknown): string {
-		return _stringify(object, true);
+		return JSON.stringify(prepare(object));
 	}
 
 	parse<T>(data: string): T {

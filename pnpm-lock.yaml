@@ -238,6 +238,10 @@ importers:
         version: 6.1.2
 
   serialization/serialize:
+    dependencies:
+      keyv:
+        specifier: workspace:^
+        version: link:../../core/keyv
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.13

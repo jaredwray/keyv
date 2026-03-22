@@ -1256,7 +1256,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		}
 
 		if (this._serialization && typeof result === "string") {
-			return this._serialization.parse<DeserializedData<T>>(result);
+			return await this._serialization.parse<DeserializedData<T>>(result);
 		}
 
 		// If compression was used without serialization, JSON was used as fallback
