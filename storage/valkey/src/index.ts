@@ -1,15 +1,15 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
-import Keyv, { type KeyvStoreAdapter, type StoredData } from "keyv";
+import Keyv, { type KeyvStorageAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 /**
  * Valkey storage adapter for Keyv. Supports both standalone and cluster modes
- * using iovalkey as the underlying client. Implements the {@link KeyvStoreAdapter}
+ * using iovalkey as the underlying client. Implements the {@link KeyvStorageAdapter}
  * interface with support for namespacing, TTL, batch operations, and async iteration.
  */
-class KeyvValkey extends Hookified implements KeyvStoreAdapter {
+class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * The namespace used to prefix keys for multi-tenant separation.
 	 * When set, all keys are scoped under this namespace to prevent collisions

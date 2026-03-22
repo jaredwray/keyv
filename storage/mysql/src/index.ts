@@ -1,7 +1,7 @@
 import { Hookified } from "hookified";
 import Keyv, {
 	type KeyvEntry,
-	type KeyvStoreAdapter,
+	type KeyvStorageAdapter,
 	type StoredData,
 } from "keyv";
 import mysql, { type ConnectionOptions } from "mysql2";
@@ -36,7 +36,7 @@ type QueryType<T> = Promise<
  * MySQL storage adapter for Keyv.
  * Provides a persistent key-value store using MySQL as the backend.
  */
-export class KeyvMysql extends Hookified implements KeyvStoreAdapter {
+export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * The MySQL connection URI.
 	 * @default 'mysql://localhost'

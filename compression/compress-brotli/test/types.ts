@@ -28,7 +28,7 @@ test.it("compression user defined options", async (t) => {
 	};
 
 	const keyv = new Keyv({
-		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
+		// @ts-expect-error - KeyvBrotli and KeyvCompressionAdapter type
 		compression: new KeyvBrotli(options),
 	});
 
@@ -47,7 +47,7 @@ test.it("user defined options", async (t) => {
 	};
 
 	const keyv = new Keyv({
-		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
+		// @ts-expect-error - KeyvBrotli and KeyvCompressionAdapter type
 		compression: new KeyvBrotli(options),
 	});
 
@@ -66,7 +66,7 @@ test.it("using number array", async (t) => {
 	};
 
 	const keyv = new Keyv({
-		// @ts-expect-error - KeyvBrotli and CompressionAdapter type
+		// @ts-expect-error - KeyvBrotli and KeyvCompressionAdapter type
 		compression: new KeyvBrotli(options),
 	});
 

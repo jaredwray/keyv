@@ -1,5 +1,5 @@
 import { Hookified } from "hookified";
-import type { KeyvStoreAdapter, StoredData } from "keyv";
+import type { KeyvStorageAdapter, StoredData } from "keyv";
 import { Keyv } from "keyv";
 import { Memcache, type MemcacheOptions } from "memcache";
 
@@ -22,7 +22,7 @@ export type KeyvMemcacheOptions = {
  * const keyv = new Keyv({ store });
  * ```
  */
-export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
+export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	/** Optional namespace used to prefix all keys */
 	public namespace?: string;
 	/** The underlying Memcache client instance */

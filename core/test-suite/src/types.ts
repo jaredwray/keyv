@@ -1,4 +1,4 @@
-import type { KeyvStoreAdapter } from "keyv";
+import type { KeyvStorageAdapter } from "keyv";
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
-export type KeyvStoreFn = () => KeyvStoreAdapter | any;
+export type KeyvStoreFn = () => KeyvStorageAdapter | any;

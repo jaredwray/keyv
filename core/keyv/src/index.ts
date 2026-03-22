@@ -2,142 +2,36 @@ import { KeyvJsonSerializer } from "@keyv/serialize";
 import EventManager from "./event-manager.js";
 import HooksManager from "./hooks-manager.js";
 import StatsManager from "./stats-manager.js";
-import type { KeyvSerialization } from "./types.js";
+import {
+	type DeserializedData,
+	type KeyvCompressionAdapter,
+	type KeyvEntry,
+	KeyvHooks,
+	type KeyvOptions,
+	type KeyvSerializationAdapter,
+	type KeyvStorageAdapter,
+	type StoredDataNoRaw,
+	type StoredDataRaw,
+} from "./types.js";
 
-export type { KeyvSerialization } from "./types.js";
+export type {
+	DeserializedData,
+	IEventEmitter,
+	KeyvCompressionAdapter,
+	KeyvEntry,
+	KeyvOptions,
+	KeyvSerializationAdapter,
+	KeyvStorageAdapter,
+	StoredData,
+	StoredDataNoRaw,
+	StoredDataRaw,
+} from "./types.js";
+export { KeyvHooks } from "./types.js";
 
-export type DeserializedData<Value> = {
-	value?: Value;
-	expires?: number | undefined;
-};
-
-export type CompressionAdapter = {
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	compress(value: any, options?: any): Promise<any>;
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	decompress(value: any, options?: any): Promise<any>;
-};
-
-export enum KeyvHooks {
-	PRE_SET = "preSet",
-	POST_SET = "postSet",
-	PRE_GET = "preGet",
-	POST_GET = "postGet",
-	PRE_GET_MANY = "preGetMany",
-	POST_GET_MANY = "postGetMany",
-	PRE_GET_RAW = "preGetRaw",
-	POST_GET_RAW = "postGetRaw",
-	PRE_GET_MANY_RAW = "preGetManyRaw",
-	POST_GET_MANY_RAW = "postGetManyRaw",
-	PRE_SET_RAW = "preSetRaw",
-	POST_SET_RAW = "postSetRaw",
-	PRE_SET_MANY_RAW = "preSetManyRaw",
-	POST_SET_MANY_RAW = "postSetManyRaw",
-	PRE_DELETE = "preDelete",
-	POST_DELETE = "postDelete",
-}
-
-export type KeyvEntry = {
-	/**
-	 * Key to set.
-	 */
-	key: string;
-	/**
-	 * Value to set.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	value: any;
-	/**
-	 * Time to live in milliseconds.
-	 */
-	ttl?: number;
-};
-
-export type StoredDataNoRaw<Value> = Value | undefined;
-
-export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
-
-export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
-
-export type IEventEmitter = {
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	on(event: string, listener: (...arguments_: any[]) => void): IEventEmitter;
-};
-
-export type KeyvStoreAdapter = {
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	opts: any;
-	namespace?: string | undefined;
-	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	set(key: string, value: any, ttl?: number): any;
-	setMany?(
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		values: Array<{ key: string; value: any; ttl?: number }>,
-	): Promise<void>;
-	delete(key: string): Promise<boolean>;
-	clear(): Promise<void>;
-	has?(key: string): Promise<boolean>;
-	hasMany?(keys: string[]): Promise<boolean[]>;
-	getMany?<Value>(
-		keys: string[],
-	): Promise<Array<StoredData<Value | undefined>>>;
-	disconnect?(): Promise<void>;
-	deleteMany?(key: string[]): Promise<boolean>;
-	iterator?<Value>(
-		namespace?: string,
-	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
-} & IEventEmitter;
-
-export type KeyvOptions = {
-	/**
-	 * Emit errors
-	 * @default true
-	 */
-	emitErrors?: boolean;
-	/**
-	 * Namespace for the current instance.
-	 * @default 'keyv'
-	 */
-	namespace?: string;
-	/**
-	 * A custom serialization adapter with stringify and parse methods.
-	 * @default KeyvJsonSerializer from @keyv/serialize
-	 */
-	serialization?: KeyvSerialization | false;
-	/**
-	 * The storage adapter instance to be used by Keyv.
-	 * @default new Map() - in-memory store
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	store?: KeyvStoreAdapter | Map<any, any> | any;
-	/**
-	 * Default TTL in milliseconds. Can be overridden by specifying a TTL on `.set()`.
-	 * @default undefined
-	 */
-	ttl?: number;
-	/**
-	 * Enable compression option
-	 * @default false
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	compression?: CompressionAdapter | any;
-	/**
-	 * Enable or disable statistics (default is false)
-	 * @default false
-	 */
-	stats?: boolean;
-	/**
-	 * Enable or disable key prefixing (default is true)
-	 * @default true
-	 */
-	useKeyPrefix?: boolean;
-	/**
-	 * Will enable throwing errors on methods in addition to emitting them.
-	 * @default false
-	 */
-	throwOnErrors?: boolean;
-};
+/**
+ * @deprecated Use `KeyvStorageAdapter` instead.
+ */
+export type KeyvStoreAdapter = KeyvStorageAdapter;
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
@@ -172,11 +66,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Store
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private _store: KeyvStoreAdapter = new Map() as any;
+	private _store: KeyvStorageAdapter = new Map() as any;
 
-	private _serialization: KeyvSerialization | undefined;
+	private _serialization: KeyvSerializationAdapter | undefined;
 
-	private _compression: CompressionAdapter | undefined;
+	private _compression: KeyvCompressionAdapter | undefined;
 
 	private _useKeyPrefix = true;
 
@@ -186,12 +80,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Keyv Constructor
-	 * @param {KeyvStoreAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
+	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
 	constructor(
 		// biome-ignore lint/suspicious/noExplicitAny: type format
-		store?: KeyvStoreAdapter | KeyvOptions | Map<any, any>,
+		store?: KeyvStorageAdapter | KeyvOptions | Map<any, any>,
 		options?: Omit<KeyvOptions, "store">,
 	);
 	/**
@@ -201,11 +95,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 	constructor(options?: KeyvOptions);
 	/**
 	 * Keyv Constructor
-	 * @param {KeyvStoreAdapter | KeyvOptions} store
+	 * @param {KeyvStorageAdapter | KeyvOptions} store
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
 	constructor(
-		store?: KeyvStoreAdapter | KeyvOptions,
+		store?: KeyvStorageAdapter | KeyvOptions,
 		options?: Omit<KeyvOptions, "store">,
 	) {
 		super();
@@ -219,8 +113,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 			...options,
 		};
 
-		if (store && (store as KeyvStoreAdapter).get) {
-			mergedOptions.store = store as KeyvStoreAdapter;
+		if (store && (store as KeyvStorageAdapter).get) {
+			mergedOptions.store = store as KeyvStorageAdapter;
 		} else {
 			Object.assign(mergedOptions, store);
 		}
@@ -300,16 +194,16 @@ export class Keyv<GenericValue = any> extends EventManager {
 	 * Get the current store
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get store(): KeyvStoreAdapter | Map<any, any> | any {
+	public get store(): KeyvStorageAdapter | Map<any, any> | any {
 		return this._store;
 	}
 
 	/**
 	 * Set the current store. This will also set the namespace, event error handler, and generate the iterator. If the store is not valid it will throw an error.
-	 * @param {KeyvStoreAdapter | Map<any, any> | any} store the store to set
+	 * @param {KeyvStorageAdapter | Map<any, any> | any} store the store to set
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public set store(store: KeyvStoreAdapter | Map<any, any> | any) {
+	public set store(store: KeyvStorageAdapter | Map<any, any> | any) {
 		if (this._isValidStorageAdapter(store)) {
 			this._store = store;
 
@@ -344,17 +238,17 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Get the current compression function
-	 * @returns {CompressionAdapter} The current compression function
+	 * @returns {KeyvCompressionAdapter} The current compression function
 	 */
-	public get compression(): CompressionAdapter | undefined {
+	public get compression(): KeyvCompressionAdapter | undefined {
 		return this._compression;
 	}
 
 	/**
 	 * Set the current compression function
-	 * @param {CompressionAdapter} compress The compression function to set
+	 * @param {KeyvCompressionAdapter} compress The compression function to set
 	 */
-	public set compression(compress: CompressionAdapter | undefined) {
+	public set compression(compress: KeyvCompressionAdapter | undefined) {
 		this._compression = compress;
 	}
 
@@ -393,18 +287,18 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 	/**
 	 * Get the current serialization adapter.
-	 * @returns {KeyvSerialization | undefined} The current serialization adapter.
+	 * @returns {KeyvSerializationAdapter | undefined} The current serialization adapter.
 	 */
-	public get serialization(): KeyvSerialization | undefined {
+	public get serialization(): KeyvSerializationAdapter | undefined {
 		return this._serialization;
 	}
 
 	/**
 	 * Set the current serialization adapter.
-	 * @param {KeyvSerialization | undefined} serialization The serialization adapter to set.
+	 * @param {KeyvSerializationAdapter | undefined} serialization The serialization adapter to set.
 	 */
 	public set serialization(serialization:
-		| KeyvSerialization
+		| KeyvSerializationAdapter
 		| false
 		| undefined) {
 		this._serialization = serialization === false ? undefined : serialization;
@@ -534,7 +428,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	_isValidStorageAdapter(store: KeyvStoreAdapter | any): boolean {
+	_isValidStorageAdapter(store: KeyvStorageAdapter | any): boolean {
 		return (
 			store instanceof Map ||
 			(typeof store.get === "function" &&

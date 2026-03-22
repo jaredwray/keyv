@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { compress, uncompress } from "lz4-napi";
 
-export class CompressionAdapter {
+export class KeyvLz4TestAdapter {
 	constructor(private readonly dictionary?: string) {}
 
 	async compress(data: string): Promise<Uint8Array> {

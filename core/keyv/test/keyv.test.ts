@@ -1,7 +1,10 @@
 import { faker } from "@faker-js/faker";
 import tk from "timekeeper";
 import * as test from "vitest";
-import Keyv, { type StoredDataNoRaw } from "../src/index.js";
+import Keyv, {
+	type KeyvStorageAdapter,
+	type StoredDataNoRaw,
+} from "../src/index.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
 const snooze = delay;
@@ -209,7 +212,7 @@ test.it("Keyv should wait for the expired get", async (t) => {
 			});
 			return _store.delete(key);
 		},
-	} as KeyvStoreAdapter;
+	} as KeyvStorageAdapter;
 
 	const keyv = new Keyv({ store });
 
@@ -915,6 +918,55 @@ test.it(
 		const complexObject = { foo: "bar", fizz: "buzz" };
 		const result = await keyv.deserializeData({ value: complexObject });
 		t.expect(result).toStrictEqual({ value: complexObject });
+	},
+);
+
+test.it(
+	"deserializeData returns undefined for null/undefined input",
+	async (t) => {
+		const keyv = new Keyv();
+		// biome-ignore lint/suspicious/noExplicitAny: test
+		t.expect(await keyv.deserializeData(undefined as any)).toBeUndefined();
+		// biome-ignore lint/suspicious/noExplicitAny: test
+		t.expect(await keyv.deserializeData(null as any)).toBeUndefined();
+	},
+);
+
+test.it(
+	"deserializeData with no serialization and no compression returns raw object",
+	async (t) => {
+		const keyv = new Keyv({ serialization: false });
+		const data = { value: "hello", expires: undefined };
+		const result = await keyv.deserializeData(data);
+		t.expect(result).toStrictEqual(data);
+	},
+);
+
+test.it(
+	"deserializeData with no serialization and no compression returns undefined for string",
+	async (t) => {
+		const keyv = new Keyv({ serialization: false });
+		const result = await keyv.deserializeData("some-string");
+		t.expect(result).toBeUndefined();
+	},
+);
+
+test.it(
+	"deserializeData returns undefined when decompressed string is invalid JSON",
+	async (t) => {
+		const keyv = new Keyv({
+			serialization: false,
+			compression: {
+				async compress(value: unknown) {
+					return value;
+				},
+				async decompress(_value: unknown) {
+					return "not-valid-json{{{";
+				},
+			},
+		});
+		const result = await keyv.deserializeData("anything");
+		t.expect(result).toBeUndefined();
 	},
 );
 

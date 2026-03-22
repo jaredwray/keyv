@@ -1,6 +1,6 @@
 import type { ConnectionOptions } from "node:tls";
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStoreAdapter } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter } from "keyv";
 import type { DatabaseError, PoolConfig } from "pg";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
@@ -19,7 +19,7 @@ function escapeIdentifier(identifier: string): string {
  * PostgreSQL storage adapter for Keyv.
  * Uses the `pg` library for connection pooling and parameterized queries.
  */
-export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
+export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	/** Function for executing SQL queries against the PostgreSQL database. */
 	private query: Query;
 
@@ -332,7 +332,7 @@ export class KeyvPostgres extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Get the options for the adapter. This is required by the KeyvStoreAdapter interface.
+	 * Get the options for the adapter. This is required by the KeyvStorageAdapter interface.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public get opts(): any {

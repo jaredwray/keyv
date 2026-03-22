@@ -3,7 +3,7 @@ import EventManager from "./event-manager.js";
 import {
 	Keyv,
 	type KeyvEntry,
-	type KeyvStoreAdapter,
+	type KeyvStorageAdapter,
 	type StoredData,
 } from "./index.js";
 
@@ -92,7 +92,10 @@ export type KeyPrefixData = {
  * });
  * ```
  */
-export class KeyvGenericStore extends EventManager implements KeyvStoreAdapter {
+export class KeyvGenericStore
+	extends EventManager
+	implements KeyvStorageAdapter
+{
 	private readonly _options?: KeyvGenericStoreOptions;
 	private _store: KeyvMapType;
 	private _namespace?: string | (() => string);
