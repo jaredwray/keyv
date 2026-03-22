@@ -346,26 +346,21 @@ it("createKeyv with options passes them through", () => {
 	expect(keyv).toBeInstanceOf(Keyv);
 });
 
-it("clear with namespace should only clear namespaced keys", async () => {
+it("clear flushes the entire server", async () => {
 	const store1 = new KeyvMemcache(uri);
 	const store2 = new KeyvMemcache(uri);
 	const keyv1 = new Keyv({ store: store1, namespace: "ns1" });
 	const keyv2 = new Keyv({ store: store2, namespace: "ns2" });
 
 	const key = faker.string.uuid();
-	const val1 = faker.lorem.word();
-	const val2 = faker.lorem.word();
+	await keyv1.set(key, faker.lorem.word());
+	await keyv2.set(key, faker.lorem.word());
 
-	await keyv1.set(key, val1);
-	await keyv2.set(key, val2);
-
-	// Clear only ns1
+	// Clear from one instance flushes everything
 	await keyv1.clear();
 
-	// ns1 key should be gone
 	expect(await keyv1.get(key)).toBeUndefined();
-	// ns2 key should still exist
-	expect(await keyv2.get(key)).toBe(val2);
+	expect(await keyv2.get(key)).toBeUndefined();
 });
 
 const store = () => keyvMemcache;

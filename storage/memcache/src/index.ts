@@ -29,7 +29,6 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	public client: Memcache;
 	/** Merged configuration options */
 	public opts: KeyvMemcacheOptions;
-	private readonly _keys = new Set<string>();
 
 	/**
 	 * Creates a new KeyvMemcache instance.
@@ -109,11 +108,8 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
 		const exptime = ttl !== undefined ? Math.floor(ttl / 1000) : 0;
-		const formattedKey = this.formatKey(key);
-
 		try {
-			await this.client.set(formattedKey, value as string, exptime);
-			this._keys.add(formattedKey);
+			await this.client.set(this.formatKey(key), value as string, exptime);
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -139,11 +135,8 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key was deleted, `false` otherwise
 	 */
 	async delete(key: string): Promise<boolean> {
-		const formattedKey = this.formatKey(key);
 		try {
-			const result = await this.client.delete(formattedKey);
-			this._keys.delete(formattedKey);
-			return result;
+			return await this.client.delete(this.formatKey(key));
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -191,24 +184,13 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Clears data from the memcache server.
-	 * When a namespace is set, only keys within the namespace are deleted.
-	 * When no namespace is set, flushes the entire server.
+	 * Clears all data from the memcache server by flushing it.
+	 * Note: memcached does not support key enumeration, so this always
+	 * flushes the entire server regardless of namespace.
 	 */
 	async clear(): Promise<void> {
 		try {
-			if (this.namespace) {
-				const promises = [];
-				for (const key of this._keys) {
-					promises.push(this.client.delete(key));
-				}
-
-				await Promise.allSettled(promises);
-				this._keys.clear();
-			} else {
-				await this.client.flush();
-				this._keys.clear();
-			}
+			await this.client.flush();
 		} catch (error) {
 			this.emit("error", error);
 		}
