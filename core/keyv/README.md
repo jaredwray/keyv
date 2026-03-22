@@ -491,10 +491,8 @@ Great! Keyv is designed to be easily extended. You can build your own compressio
 
 ```typescript
 interface CompressionAdapter {
-	async compress(value: any, options?: any);
-	async decompress(value: any, options?: any);
-	async serialize(value: any);
-	async deserialize(value: any);
+	compress(value: any, options?: any): Promise<any>;
+	decompress(value: any, options?: any): Promise<any>;
 }
 ```
 
@@ -730,32 +728,20 @@ keyv.store = new KeyvSqlite('sqlite://path/to/database.sqlite');
 console.log(keyv.store instanceof KeyvSqlite); // true
 ```
 
-## .serialize
+## .serialization
 
-Type: `Function`<br />
-Default: `JSON.stringify`
+Type: `KeyvSerialization`<br />
+Default: `undefined`
 
-A custom serialization function used for any value. 
-
-```js
-const keyv = new Keyv();
-console.log(keyv.serialize); // JSON.stringify
-keyv.serialize = value => value.toString();
-console.log(keyv.serialize); // value => value.toString()
-```
-
-## .deserialize
-
-Type: `Function`<br />
-Default: `JSON.parse`
-
-A custom deserialization function used for any value.
+The serialization object used for storing and retrieving values. When `undefined`, data passes through as raw objects. See [Serialization](#serialization) for more details.
 
 ```js
+import { jsonSerializer } from '@keyv/serialize';
+
 const keyv = new Keyv();
-console.log(keyv.deserialize); // JSON.parse
-keyv.deserialize = value => parseInt(value);
-console.log(keyv.deserialize); // value => parseInt(value)
+console.log(keyv.serialization); // undefined (no serialization, raw objects)
+keyv.serialization = jsonSerializer;
+console.log(keyv.serialization); // KeyvJsonSerializer
 ```
 
 ## .compression
