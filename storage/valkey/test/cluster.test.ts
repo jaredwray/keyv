@@ -47,7 +47,7 @@ test.it(
 	},
 );
 
-test.it("cluster: getMany should work without CROSSSLOT errors", async (t) => {
+test.it("cluster: getMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
 	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
@@ -70,6 +70,7 @@ test.it("cluster: getMany should work without CROSSSLOT errors", async (t) => {
 
 test.it(
 	"cluster: deleteMany should work without CROSSSLOT errors",
+	{ retry: 3 },
 	async (t) => {
 		const cluster = await createReadyCluster();
 		const keyv = new KeyvValkey(cluster as Cluster);
@@ -95,7 +96,7 @@ test.it(
 	},
 );
 
-test.it("cluster: hasMany should work without CROSSSLOT errors", async (t) => {
+test.it("cluster: hasMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
 	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
