@@ -44,6 +44,10 @@ export enum KeyvHooks {
 	POST_GET_RAW = "postGetRaw",
 	PRE_GET_MANY_RAW = "preGetManyRaw",
 	POST_GET_MANY_RAW = "postGetManyRaw",
+	PRE_SET_RAW = "preSetRaw",
+	POST_SET_RAW = "postSetRaw",
+	PRE_SET_MANY_RAW = "preSetManyRaw",
+	POST_SET_MANY_RAW = "postSetManyRaw",
 	PRE_DELETE = "preDelete",
 	POST_DELETE = "postDelete",
 }
@@ -974,6 +978,65 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	/**
+	 * Set a raw value to the store without wrapping or serialization. This is the write-side counterpart to getRaw().
+	 * The value should be a DeserializedData object with { value, expires? }.
+	 * @param {string} key the key to set
+	 * @param {DeserializedData<Value>} value the raw value envelope to store
+	 * @param {number} [ttl] time to live in milliseconds. If the raw value does not already have an expires field, it will be computed from ttl.
+	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
+	 */
+	async setRaw<Value = GenericValue>(
+		key: string,
+		value: DeserializedData<Value>,
+		ttl?: number,
+	): Promise<boolean> {
+		const data = { key, value, ttl };
+		this.hooks.trigger(KeyvHooks.PRE_SET_RAW, data);
+		const keyPrefixed = this._getKeyPrefix(data.key);
+
+		data.ttl ??= this._ttl;
+
+		if (data.ttl === 0) {
+			data.ttl = undefined;
+		}
+
+		if (data.value.expires === undefined && typeof data.ttl === "number") {
+			data.value.expires = Date.now() + data.ttl;
+		}
+
+		const store = this._store;
+		let result = true;
+
+		try {
+			const serializedValue = await this.serializeData(data.value);
+			const storeResult = await store.set(
+				keyPrefixed,
+				serializedValue,
+				data.ttl,
+			);
+
+			if (typeof storeResult === "boolean") {
+				result = storeResult;
+			}
+		} catch (error) {
+			result = false;
+			this.emit("error", error);
+			if (this._throwOnErrors) {
+				throw error;
+			}
+		}
+
+		this.hooks.trigger(KeyvHooks.POST_SET_RAW, {
+			key: keyPrefixed,
+			value: data.value,
+			ttl: data.ttl,
+		});
+		this.stats.set();
+
+		return result;
+	}
+
+	/**
 	 * Set many items to the store
 	 * @param {Array<KeyvEntry>} entries the entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
@@ -1020,9 +1083,10 @@ export class Keyv<GenericValue = any> extends EventManager {
 						return { key: keyPrefixed, value: serializedValue, ttl };
 					}),
 				);
-				results = (await this._store.setMany(
-					serializedEntries,
-				)) as unknown as boolean[];
+				const storeResult = await this._store.setMany(serializedEntries);
+				results = Array.isArray(storeResult)
+					? (storeResult as boolean[])
+					: entries.map(() => true);
 			}
 		} catch (error) {
 			this.emit("error", error);
@@ -1033,6 +1097,70 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 			results = entries.map(() => false);
 		}
+
+		return results;
+	}
+
+	/**
+	 * Set many raw values to the store without wrapping or serialization. This is the write-side counterpart to getManyRaw().
+	 * Each entry's value should be a DeserializedData object with { value, expires? }.
+	 * @param {Array<{key: string, value: DeserializedData<Value>, ttl?: number}>} entries the raw entries to set
+	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
+	 */
+	async setManyRaw<Value = GenericValue>(
+		entries: Array<{
+			key: string;
+			value: DeserializedData<Value>;
+			ttl?: number;
+		}>,
+	): Promise<boolean[]> {
+		let results: boolean[] = [];
+
+		this.hooks.trigger(KeyvHooks.PRE_SET_MANY_RAW, { entries });
+
+		try {
+			if (this._store.setMany === undefined) {
+				const promises: Array<Promise<boolean>> = [];
+				for (const entry of entries) {
+					promises.push(this.setRaw(entry.key, entry.value, entry.ttl));
+				}
+
+				results = await Promise.all(promises);
+			} else {
+				const rawEntries = await Promise.all(
+					entries.map(async ({ key, value, ttl }) => {
+						ttl ??= this._ttl;
+
+						/* v8 ignore next -- @preserve */
+						if (ttl === 0) {
+							ttl = undefined;
+						}
+
+						if (value.expires === undefined && typeof ttl === "number") {
+							value.expires = Date.now() + ttl;
+						}
+
+						const serializedValue = await this.serializeData(value);
+						const keyPrefixed = this._getKeyPrefix(key);
+						return { key: keyPrefixed, value: serializedValue, ttl };
+					}),
+				);
+				const storeResult = await this._store.setMany(rawEntries);
+				results = Array.isArray(storeResult)
+					? (storeResult as boolean[])
+					: entries.map(() => true);
+			}
+		} catch (error) {
+			this.emit("error", error);
+
+			if (this._throwOnErrors) {
+				throw error;
+			}
+
+			results = entries.map(() => false);
+		}
+
+		this.hooks.trigger(KeyvHooks.POST_SET_MANY_RAW, { entries, results });
 
 		return results;
 	}

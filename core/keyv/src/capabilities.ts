@@ -12,6 +12,8 @@ export type IsKeyvResult = {
 	disconnect: boolean;
 	getRaw: boolean;
 	getManyRaw: boolean;
+	setRaw: boolean;
+	setManyRaw: boolean;
 	hooks: boolean;
 	stats: boolean;
 	iterator: boolean;
@@ -62,14 +64,14 @@ export type IsKeyvEncryptionResult = {
  * isKeyv(new Map());
  * // { keyv: false, get: true, set: true, delete: true, clear: true, has: true,
  * //   getMany: false, setMany: false, deleteMany: false, hasMany: false,
- * //   disconnect: false, getRaw: false, getManyRaw: false, hooks: false,
- * //   stats: false, iterator: false }
+ * //   disconnect: false, getRaw: false, getManyRaw: false, setRaw: false,
+ * //   setManyRaw: false, hooks: false, stats: false, iterator: false }
  *
  * isKeyv(new Keyv());
  * // { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
  * //   getMany: true, setMany: true, deleteMany: true, hasMany: true,
- * //   disconnect: true, getRaw: true, getManyRaw: true, hooks: true,
- * //   stats: true, iterator: false }
+ * //   disconnect: true, getRaw: true, getManyRaw: true, setRaw: true,
+ * //   setManyRaw: true, hooks: true, stats: true, iterator: false }
  * ```
  */
 export function isKeyv(obj: unknown): IsKeyvResult {
@@ -88,6 +90,8 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 			disconnect: false,
 			getRaw: false,
 			getManyRaw: false,
+			setRaw: false,
+			setManyRaw: false,
 			hooks: false,
 			stats: false,
 			iterator: false,
@@ -109,6 +113,8 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 			disconnect: false,
 			getRaw: false,
 			getManyRaw: false,
+			setRaw: false,
+			setManyRaw: false,
 			hooks: false,
 			stats: false,
 			iterator: false,
@@ -148,6 +154,12 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 	const hasGetManyRaw =
 		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
 		"getManyRaw" in obj && typeof (obj as any).getManyRaw === "function";
+	const hasSetRaw =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"setRaw" in obj && typeof (obj as any).setRaw === "function";
+	const hasSetManyRaw =
+		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
+		"setManyRaw" in obj && typeof (obj as any).setManyRaw === "function";
 	const hasHooks = "hooks" in obj;
 	const hasStats = "stats" in obj;
 	const hasIterator = "iterator" in obj;
@@ -170,6 +182,8 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 		disconnect: hasDisconnect,
 		getRaw: hasGetRaw,
 		getManyRaw: hasGetManyRaw,
+		setRaw: hasSetRaw,
+		setManyRaw: hasSetManyRaw,
 		hooks: hasHooks,
 		stats: hasStats,
 		iterator: hasIterator,
