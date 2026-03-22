@@ -336,6 +336,47 @@ test.it("hasMany checks multiple keys", async (t) => {
 	t.expect(results).toEqual([true, true, false]);
 });
 
+test.it("setMany with empty entries should not fail", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	await t.expect(store.setMany([])).resolves.toBeUndefined();
+});
+
+test.it("has returns false for expired key", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key = faker.string.uuid();
+	// Set with a TTL of 0ms so it expires immediately (expiresAt will be ~now+1s)
+	await store.set(key, "value", 0);
+	// Manually overwrite with an already-expired expiresAt
+	await store.client.put({
+		TableName: store.opts.tableName,
+		Item: {
+			id: store.formatKey(key),
+			value: "value",
+			expiresAt: Math.floor(Date.now() / 1000) - 10,
+		},
+	});
+	t.expect(await store.has(key)).toBe(false);
+});
+
+test.it("hasMany returns false for expired keys", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	await store.set(key1, "value1");
+	await store.set(key2, "value2");
+	// Overwrite key1 with an expired expiresAt
+	await store.client.put({
+		TableName: store.opts.tableName,
+		Item: {
+			id: store.formatKey(key1),
+			value: "value1",
+			expiresAt: Math.floor(Date.now() / 1000) - 10,
+		},
+	});
+	const results = await store.hasMany([key1, key2]);
+	t.expect(results).toEqual([false, true]);
+});
+
 test.describe("createKeyv", () => {
 	test.it("should create Keyv instance with default options", (t) => {
 		const keyv = createKeyv();
