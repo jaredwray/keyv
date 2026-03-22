@@ -50,7 +50,6 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "@keyv/serialize": "workspace:^",
     "@types/pako": "^2.0.4",
     "pako": "^2.1.0"
   },

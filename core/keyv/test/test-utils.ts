@@ -13,12 +13,6 @@ export const createMockCompression = (): CompressionAdapter => ({
 	async decompress(value: unknown) {
 		return value;
 	},
-	serialize(data: Record<string, unknown>) {
-		return JSON.stringify(data);
-	},
-	deserialize(data: string) {
-		return JSON.parse(data);
-	},
 });
 
 // In-memory store adapter with getMany, iterator, disconnect, and namespace support

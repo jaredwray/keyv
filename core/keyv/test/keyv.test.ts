@@ -153,17 +153,18 @@ test.it(
 	async (t) => {
 		t.expect.assertions(3);
 		const store = new Map();
-		const serialize = (data: Record<string, unknown>) => {
-			t.expect(true).toBeTruthy();
-			return JSON.stringify(data);
+		const serialization = {
+			stringify(data: unknown) {
+				t.expect(true).toBeTruthy();
+				return JSON.stringify(data);
+			},
+			parse<T>(data: string) {
+				t.expect(true).toBeTruthy();
+				return JSON.parse(data) as T;
+			},
 		};
 
-		const deserialize = (data: string) => {
-			t.expect(true).toBeTruthy();
-			return JSON.parse(data);
-		};
-
-		const keyv = new Keyv({ store, serialize, deserialize });
+		const keyv = new Keyv({ store, serialization });
 		await keyv.set("foo", "bar");
 		t.expect(await keyv.get("foo")).toBe("bar");
 	},
@@ -171,17 +172,18 @@ test.it(
 
 test.it("Keyv supports async serializer/deserializer", async (t) => {
 	t.expect.assertions(3);
-	const serialize = (data: Record<string, unknown>) => {
-		t.expect(true).toBeTruthy();
-		return JSON.stringify(data);
+	const serialization = {
+		async stringify(data: unknown) {
+			t.expect(true).toBeTruthy();
+			return JSON.stringify(data);
+		},
+		async parse<T>(data: string) {
+			t.expect(true).toBeTruthy();
+			return JSON.parse(data) as T;
+		},
 	};
 
-	const deserialize = (data: string) => {
-		t.expect(true).toBeTruthy();
-		return JSON.parse(data);
-	};
-
-	const keyv = new Keyv({ serialize, deserialize });
+	const keyv = new Keyv({ serialization });
 	await keyv.set("foo", "bar");
 	t.expect(await keyv.get("foo")).toBe("bar");
 });
@@ -544,14 +546,14 @@ test.it(
 	async (t) => {
 		const keyvStore = new Map();
 
-		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
-
-		const deserialize = (data: string) => JSON.parse(data);
+		const serialization = {
+			stringify: (data: unknown) => JSON.stringify(data),
+			parse: <T>(data: string) => JSON.parse(data) as T,
+		};
 
 		const keyv1 = new Keyv({
 			store: keyvStore,
-			serialize,
-			deserialize,
+			serialization,
 			namespace: "keyv1",
 		});
 		const map1 = new Map(
@@ -568,8 +570,7 @@ test.it(
 
 		const keyv2 = new Keyv({
 			store: keyvStore,
-			serialize,
-			deserialize,
+			serialization,
 			namespace: "keyv2",
 		});
 		const map2 = new Map(
@@ -599,13 +600,14 @@ test.it(
 	async (t) => {
 		const keyvStore = new Map();
 
-		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
-		const deserialize = (data: string) => JSON.parse(data);
+		const serialization = {
+			stringify: (data: unknown) => JSON.stringify(data),
+			parse: <T>(data: string) => JSON.parse(data) as T,
+		};
 
 		const keyv1 = new Keyv({
 			store: keyvStore,
-			serialize,
-			deserialize,
+			serialization,
 			namespace: "keyv1",
 			compression: createMockCompression(),
 		});
@@ -623,8 +625,7 @@ test.it(
 
 		const keyv2 = new Keyv({
 			store: keyvStore,
-			serialize,
-			deserialize,
+			serialization,
 			namespace: "keyv2",
 		});
 		const map2 = new Map(
@@ -805,26 +806,25 @@ test.it(
 	},
 );
 
-test.it(
-	"Keyv does get and set on serialize / deserialize function",
-	async (t) => {
-		const keyv = new Keyv({
-			store: new Map(),
-			serialize: (data) => JSON.stringify(data),
-			deserialize: (data) => JSON.parse(data),
-		});
-		await keyv.set("foo", "bar");
-		t.expect(await keyv.get("foo")).toBe("bar");
+test.it("Keyv does get and set on serialization property", async (t) => {
+	const serialization = {
+		stringify: (data: unknown) => JSON.stringify(data),
+		parse: <T>(data: string) => JSON.parse(data) as T,
+	};
+	const keyv = new Keyv({
+		store: new Map(),
+		serialization,
+	});
+	await keyv.set("foo", "bar");
+	t.expect(await keyv.get("foo")).toBe("bar");
 
-		const serialize = (data: Record<string, unknown>) => JSON.stringify(data);
-		keyv.serialize = serialize;
-		t.expect(keyv.serialize).toBe(serialize);
-
-		const deserialize = (data: string) => JSON.parse(data);
-		keyv.deserialize = deserialize;
-		t.expect(keyv.deserialize).toBe(deserialize);
-	},
-);
+	const newSerialization = {
+		stringify: (data: unknown) => JSON.stringify(data),
+		parse: <T>(data: string) => JSON.parse(data) as T,
+	};
+	keyv.serialization = newSerialization;
+	t.expect(keyv.serialization).toBe(newSerialization);
+});
 
 test.it("Keyv can get and set the compress property", async (t) => {
 	const keyv = new Keyv();
@@ -896,11 +896,10 @@ test.it("Keyv will not prefix if there is no namespace", async (t) => {
 });
 
 test.it(
-	"Keyv will not serialize / deserialize / compress if it is undefined",
+	"Keyv will not serialize / deserialize / compress if serialization is undefined",
 	async (t) => {
 		const keyv = new Keyv({ compression: createMockCompression() });
-		keyv.serialize = undefined;
-		keyv.deserialize = undefined;
+		keyv.serialization = undefined;
 		const complexObject = { foo: "bar", fizz: "buzz" };
 		await keyv.set("foo-complex", complexObject);
 		await keyv.set("foo", "bar");
@@ -909,12 +908,15 @@ test.it(
 	},
 );
 
-test.it("Keyv deserlize will return undefined if not string", async (t) => {
-	const keyv = new Keyv({ compression: createMockCompression() });
-	const complexObject = { foo: "bar", fizz: "buzz" };
-	const result = await keyv.deserializeData({ value: complexObject });
-	t.expect(result).toBeUndefined();
-});
+test.it(
+	"Keyv deserializeData will return the data object if not string",
+	async (t) => {
+		const keyv = new Keyv();
+		const complexObject = { foo: "bar", fizz: "buzz" };
+		const result = await keyv.deserializeData({ value: complexObject });
+		t.expect(result).toStrictEqual({ value: complexObject });
+	},
+);
 
 test.it("should emit error if set fails", async (t) => {
 	const store = new Map();

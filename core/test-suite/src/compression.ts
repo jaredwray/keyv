@@ -38,25 +38,6 @@ const keyvCompressionTests = (
 		t.expect(decompressed).toBe(5);
 	});
 
-	// Test serialize compression
-	test.it("serialize compression", async (t) => {
-		const json = await compression.serialize({
-			value: "whatever",
-			expires: undefined,
-		});
-		t.expect(JSON.parse(json).value).not.toBe("whatever");
-	});
-
-	// Test deserialize compression
-	test.it("deserialize compression", async (t) => {
-		const json = await compression.serialize({
-			value: "whatever",
-			expires: undefined,
-		});
-		const djson = await compression.deserialize(json);
-		t.expect(djson).toEqual({ expires: undefined, value: "whatever" });
-	});
-
 	test.it("compress/decompress with main keyv", async (t) => {
 		const keyv = new Keyv({ compression });
 		const key = faker.string.alphanumeric(10);

@@ -1,4 +1,3 @@
-import v8 from "node:v8";
 import zlib from "node:zlib";
 import { Keyv } from "keyv";
 import * as test from "vitest";
@@ -56,7 +55,7 @@ test.it("user defined options", async (t) => {
 	t.expect(await keyv.get<MyType>("testkey")).toEqual({ a: "testvalue" });
 });
 
-test.it("using number array with v8", async (t) => {
+test.it("using number array", async (t) => {
 	const options = {
 		decompressOptions: {
 			chunkSize: 1024,
@@ -64,8 +63,6 @@ test.it("using number array with v8", async (t) => {
 				[zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT,
 			},
 		},
-		serialize: v8.serialize,
-		deserialize: v8.deserialize,
 	};
 
 	const keyv = new Keyv({

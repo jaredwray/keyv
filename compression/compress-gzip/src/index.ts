@@ -1,6 +1,5 @@
-import { defaultDeserialize, defaultSerialize } from "@keyv/serialize";
 import { deflate, inflate } from "pako";
-import type { Options, Serialize } from "./types.js";
+import type { Options } from "./types.js";
 
 export class KeyvGzip {
 	opts: Options;
@@ -21,21 +20,6 @@ export class KeyvGzip {
 		}
 
 		return inflate(value, options || this.opts);
-	}
-
-	async serialize({ value, expires }: Serialize) {
-		return defaultSerialize({ value: await this.compress(value), expires });
-	}
-
-	async deserialize(data: string) {
-		/* v8 ignore next -- @preserve */
-		if (data) {
-			const { value, expires }: Serialize = defaultDeserialize(data);
-			return { value: await this.decompress(value as pako.Data), expires };
-		}
-
-		/* v8 ignore next -- @preserve */
-		return { value: undefined, expires: undefined };
 	}
 }
 

@@ -4,8 +4,8 @@ export type KeyvCompression = {
 };
 
 export type KeyvSerialization = {
-	stringify: (object: unknown) => string;
-	parse: <T>(data: string) => T;
+	stringify: (object: unknown) => string | Promise<string>;
+	parse: <T>(data: string) => T | Promise<T>;
 };
 
 export type KeyvEncryption = {

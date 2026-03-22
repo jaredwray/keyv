@@ -19,7 +19,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - Suitable as a TTL based cache or persistent key-value store
 - [Easily embeddable](#add-cache-support-to-your-module) inside another module
 - Works with any storage that implements the [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) API
-- Handles all JSON types plus `Buffer`
+- Handles all JSON types plus `Buffer` and `BigInt` (with `@keyv/serialize`)
 - Supports namespaces
 - Wide range of [**efficient, well tested**](#official-storage-adapters) storage adapters
 - Connection errors are passed through (db failures won't kill your app)
@@ -32,7 +32,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - [Namespaces](#namespaces)
 - [Events](#events)
 - [Hooks](#hooks)
-- [Custom Serializers](#custom-serializers)
+- [Serialization](#serialization)
 - [Official Storage Adapters](#official-storage-adapters)
 - [Third-party Storage Adapters](#third-party-storage-adapters)
 - [Using BigMap to Scale](#using-bigmap-to-scale)
@@ -42,8 +42,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.namespace](#namespace)
   - [.ttl](#ttl)
   - [.store](#store)
-  - [.serialize](#serialize)
-  - [.deserialize](#deserialize)
+  - [.serialization](#serialization-1)
   - [.compression](#compression)
   - [.useKeyPrefix](#usekeyprefix)
   - [.stats](#stats)

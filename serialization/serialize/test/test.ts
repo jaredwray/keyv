@@ -1,40 +1,49 @@
 import { Buffer } from "node:buffer";
 import { describe, expect, it } from "vitest";
-import { defaultDeserialize, defaultSerialize } from "../src/index.js";
+import { jsonSerializer, KeyvJsonSerializer } from "../src/index.js";
 
-describe("Serialize package tests", () => {
-	it("serialization and deserialization of string value", () => {
-		const serialized = defaultSerialize({ value: "foo" });
-		const deserialized = defaultDeserialize<{ value: string }>(serialized);
+describe("KeyvJsonSerializer", () => {
+	it("should be instantiable", () => {
+		const serializer = new KeyvJsonSerializer();
+		expect(serializer).toBeInstanceOf(KeyvJsonSerializer);
+	});
+
+	it("jsonSerializer is a default instance", () => {
+		expect(jsonSerializer).toBeInstanceOf(KeyvJsonSerializer);
+	});
+
+	it("stringify and parse of string value", () => {
+		const serialized = jsonSerializer.stringify({ value: "foo" });
+		const deserialized = jsonSerializer.parse<{ value: string }>(serialized);
 		expect(deserialized.value).toBe("foo");
 	});
 
-	it("serialization and deserialization of number value", () => {
-		const serialized = defaultSerialize({ value: 5 });
-		const deserialized = defaultDeserialize<{ value: number }>(serialized);
+	it("stringify and parse of number value", () => {
+		const serialized = jsonSerializer.stringify({ value: 5 });
+		const deserialized = jsonSerializer.parse<{ value: number }>(serialized);
 		expect(deserialized.value).toBe(5);
 	});
 
-	it("serialization and deserialization of boolean value", () => {
-		const serialized = defaultSerialize({ value: true });
-		const deserialized = defaultDeserialize<{ value: boolean }>(serialized);
+	it("stringify and parse of boolean value", () => {
+		const serialized = jsonSerializer.stringify({ value: true });
+		const deserialized = jsonSerializer.parse<{ value: boolean }>(serialized);
 		expect(deserialized.value).toBe(true);
 	});
 
-	it("serialization and deserialization of only string value", () => {
-		const serialized = defaultSerialize("foo");
-		expect(defaultDeserialize<string>(serialized)).toBe("foo");
+	it("stringify and parse of only string value", () => {
+		const serialized = jsonSerializer.stringify("foo");
+		expect(jsonSerializer.parse<string>(serialized)).toBe("foo");
 	});
 
-	it("serialization and deserialization of only string value with colon", () => {
-		const serialized = defaultSerialize(":base64:aGVsbG8gd29ybGQ=");
-		expect(defaultDeserialize<string>(serialized)).toBe(
+	it("stringify and parse of only string value with colon", () => {
+		const serialized = jsonSerializer.stringify(":base64:aGVsbG8gd29ybGQ=");
+		expect(jsonSerializer.parse<string>(serialized)).toBe(
 			":base64:aGVsbG8gd29ybGQ=",
 		);
 	});
 
-	it("serialization and deserialization of object value", () => {
-		const serialized = defaultSerialize({
+	it("stringify and parse of object value", () => {
+		const serialized = jsonSerializer.stringify({
 			value: {
 				foo: "bar",
 				bar: 5,
@@ -43,7 +52,7 @@ describe("Serialize package tests", () => {
 				nul: null,
 			},
 		});
-		const deserialized = defaultDeserialize<{
+		const deserialized = jsonSerializer.parse<{
 			value: {
 				foo: string;
 				bar: number;
@@ -60,59 +69,85 @@ describe("Serialize package tests", () => {
 		});
 	});
 
-	it("defaultSerialize converts Buffer to base64 JSON string", () => {
+	it("stringify converts Buffer to base64 JSON string", () => {
 		const buffer = Buffer.from("hello world", "utf8");
 		const expectedResult = JSON.stringify(
 			`:base64:${buffer.toString("base64")}`,
 		);
-		const result = defaultSerialize(buffer);
+		const result = jsonSerializer.stringify(buffer);
 		expect(result).toBe(expectedResult);
 	});
 
-	it("serialization toJSON is called on object", () => {
-		const serialized = defaultSerialize({ value: { toJSON: () => "foo" } });
-		const deserialized = defaultDeserialize<{ value: string }>(serialized);
+	it("stringify toJSON is called on object", () => {
+		const serialized = jsonSerializer.stringify({
+			value: { toJSON: () => "foo" },
+		});
+		const deserialized = jsonSerializer.parse<{ value: string }>(serialized);
 		expect(deserialized.value).toBe("foo");
 	});
 
-	it("serialization with array in array", () => {
-		const serialized = defaultSerialize({
+	it("stringify and parse with array in array", () => {
+		const serialized = jsonSerializer.stringify({
 			value: [
 				[1, 2],
 				[3, 4],
 			],
 		});
-		const deserialized = defaultDeserialize<{ value: number[][] }>(serialized);
+		const deserialized = jsonSerializer.parse<{ value: number[][] }>(
+			serialized,
+		);
 		expect(deserialized.value).toEqual([
 			[1, 2],
 			[3, 4],
 		]);
 	});
 
-	it("defaultSerialize detects base64 on string", () => {
+	it("parse detects base64 on string", () => {
 		const json = JSON.stringify({
 			encoded: ":base64:aGVsbG8gd29ybGQ=", // "hello world" in base64
 		});
-		const result = defaultDeserialize<{ encoded: Buffer }>(json);
+		const result = jsonSerializer.parse<{ encoded: Buffer }>(json);
 		expect(result.encoded.toString()).toBe("hello world");
 	});
 
-	it("defaultSerialize accepts objects created with null", () => {
+	it("stringify accepts objects created with null", () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test file
 		const json = Object.create(null) as Record<string, any>;
 		json.someKey = "value";
 
-		const result = defaultSerialize(json);
+		const result = jsonSerializer.stringify(json);
 		expect(result).toStrictEqual('{"someKey":"value"}');
 	});
 
-	it("removes the first colon from strings not prefixed by base64", () => {
+	it("parse removes the first colon from strings not prefixed by base64", () => {
 		const json = JSON.stringify({
 			simple: ":hello",
 		});
 
-		const result = defaultDeserialize<{ simple: string }>(json);
+		const result = jsonSerializer.parse<{ simple: string }>(json);
 		expect(result.simple).toBe("hello");
+	});
+
+	it("stringify and parse of BigInt value", () => {
+		const serialized = jsonSerializer.stringify({
+			value: BigInt("9223372036854775807"),
+		});
+		const deserialized = jsonSerializer.parse<{ value: bigint }>(serialized);
+		expect(deserialized.value).toBe(BigInt("9223372036854775807"));
+	});
+
+	it("stringify and parse of BigInt zero", () => {
+		const serialized = jsonSerializer.stringify({ value: BigInt(0) });
+		const deserialized = jsonSerializer.parse<{ value: bigint }>(serialized);
+		expect(deserialized.value).toBe(BigInt(0));
+	});
+
+	it("stringify and parse of negative BigInt", () => {
+		const serialized = jsonSerializer.stringify({
+			value: BigInt("-123456789"),
+		});
+		const deserialized = jsonSerializer.parse<{ value: bigint }>(serialized);
+		expect(deserialized.value).toBe(BigInt("-123456789"));
 	});
 });
 
@@ -126,8 +161,8 @@ describe("Colon-prefixed keys bug fix", () => {
 			},
 		};
 
-		const serialized = defaultSerialize(originalData);
-		const deserialized = defaultDeserialize<typeof originalData>(serialized);
+		const serialized = jsonSerializer.stringify(originalData);
+		const deserialized = jsonSerializer.parse<typeof originalData>(serialized);
 
 		expect(deserialized).toEqual(originalData);
 
@@ -147,8 +182,8 @@ describe("Colon-prefixed keys bug fix", () => {
 			normal: "value4",
 		};
 
-		const serialized = defaultSerialize(originalData);
-		const deserialized = defaultDeserialize<typeof originalData>(serialized);
+		const serialized = jsonSerializer.stringify(originalData);
+		const deserialized = jsonSerializer.parse<typeof originalData>(serialized);
 
 		expect(deserialized).toEqual(originalData);
 
@@ -170,8 +205,8 @@ describe("Colon-prefixed keys bug fix", () => {
 			},
 		};
 
-		const serialized = defaultSerialize(originalData);
-		const deserialized = defaultDeserialize<typeof originalData>(serialized);
+		const serialized = jsonSerializer.stringify(originalData);
+		const deserialized = jsonSerializer.parse<typeof originalData>(serialized);
 
 		expect(deserialized).toEqual(originalData);
 	});
@@ -183,8 +218,8 @@ describe("Colon-prefixed keys bug fix", () => {
 			anotherKey: "::doubleColonValue",
 		};
 
-		const serialized = defaultSerialize(originalData);
-		const deserialized = defaultDeserialize<typeof originalData>(serialized);
+		const serialized = jsonSerializer.stringify(originalData);
+		const deserialized = jsonSerializer.parse<typeof originalData>(serialized);
 
 		expect(deserialized).toEqual(originalData);
 	});
@@ -194,8 +229,8 @@ describe("Colon-prefixed keys bug fix", () => {
 			items: [":first", "::second", "normal"],
 		};
 
-		const serialized = defaultSerialize(originalData);
-		const deserialized = defaultDeserialize<typeof originalData>(serialized);
+		const serialized = jsonSerializer.stringify(originalData);
+		const deserialized = jsonSerializer.parse<typeof originalData>(serialized);
 
 		expect(deserialized).toEqual(originalData);
 	});
@@ -208,8 +243,8 @@ describe("Colon-prefixed keys bug fix", () => {
 			content: ":base64:aGVsbG8gd29ybGQ=", // This should be preserved as a string
 		};
 
-		const serialized = defaultSerialize(originalData);
-		const deserialized = defaultDeserialize<typeof originalData>(serialized);
+		const serialized = jsonSerializer.stringify(originalData);
+		const deserialized = jsonSerializer.parse<typeof originalData>(serialized);
 
 		// The key should be preserved
 		expect(Object.keys(deserialized)).toContain(":normalKey");

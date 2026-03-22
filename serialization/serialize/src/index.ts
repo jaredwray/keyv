@@ -1,9 +1,7 @@
 import { Buffer } from "node:buffer";
 
-// Improved version of the deprecated `json-buffer` (https://github.com/dominictarr/json-buffer) package.
-// These default functionalities can be improved separately from the dependant packages.
 // biome-ignore lint/suspicious/noExplicitAny: allowed
-const _serialize = (data: any, escapeColonStrings: boolean = true): string => {
+const _stringify = (data: any, escapeColonStrings: boolean = true): string => {
 	if (data === undefined || data === null) {
 		return "null";
 	}
@@ -12,6 +10,10 @@ const _serialize = (data: any, escapeColonStrings: boolean = true): string => {
 		return JSON.stringify(
 			escapeColonStrings && data.startsWith(":") ? `:${data}` : data,
 		);
+	}
+
+	if (typeof data === "bigint") {
+		return JSON.stringify(`:bigint:${data.toString()}`);
 	}
 
 	if (Buffer.isBuffer(data)) {
@@ -42,9 +44,9 @@ const _serialize = (data: any, escapeColonStrings: boolean = true): string => {
 
 			first = false;
 			if (array) {
-				s += _serialize(data[k], escapeColonStrings);
+				s += _stringify(data[k], escapeColonStrings);
 			} else if (data[k] !== undefined) {
-				s += `${_serialize(k, false)}:${_serialize(data[k], escapeColonStrings)}`;
+				s += `${_stringify(k, false)}:${_stringify(data[k], escapeColonStrings)}`;
 			}
 		}
 
@@ -55,21 +57,30 @@ const _serialize = (data: any, escapeColonStrings: boolean = true): string => {
 	return JSON.stringify(data);
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: allowed
-export const defaultSerialize = (data: any): string => {
-	return _serialize(data, true);
-};
+export class KeyvJsonSerializer {
+	stringify(object: unknown): string {
+		return _stringify(object, true);
+	}
 
-// biome-ignore lint/suspicious/noExplicitAny: type format
-export const defaultDeserialize = <Value>(data: any) =>
-	JSON.parse(data as unknown as string, (_, value) => {
-		if (typeof value === "string") {
-			if (value.startsWith(":base64:")) {
-				return Buffer.from(value.slice(8), "base64");
+	parse<T>(data: string): T {
+		return JSON.parse(data, (_, value) => {
+			if (typeof value === "string") {
+				if (value.startsWith(":bigint:")) {
+					return BigInt(value.slice(8));
+				}
+
+				if (value.startsWith(":base64:")) {
+					return Buffer.from(value.slice(8), "base64");
+				}
+
+				return value.startsWith(":") ? value.slice(1) : value;
 			}
 
-			return value.startsWith(":") ? value.slice(1) : value;
-		}
+			return value;
+		}) as T;
+	}
+}
 
-		return value;
-	}) as Value;
+export const jsonSerializer = new KeyvJsonSerializer();
+
+export default KeyvJsonSerializer;

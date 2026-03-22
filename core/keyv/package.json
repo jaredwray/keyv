@@ -58,9 +58,7 @@
 		"url": "https://github.com/jaredwray/keyv/issues"
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
-	"dependencies": {
-		"@keyv/serialize": "workspace:^"
-	},
+	"dependencies": {},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.13",
 		"@faker-js/faker": "^10.2.0",

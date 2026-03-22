@@ -1,7 +1,9 @@
-import { defaultDeserialize, defaultSerialize } from "@keyv/serialize";
 import EventManager from "./event-manager.js";
 import HooksManager from "./hooks-manager.js";
 import StatsManager from "./stats-manager.js";
+import type { KeyvSerialization } from "./types.js";
+
+export type { KeyvSerialization } from "./types.js";
 
 export type DeserializedData<Value> = {
 	value?: Value;
@@ -13,25 +15,7 @@ export type CompressionAdapter = {
 	compress(value: any, options?: any): Promise<any>;
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	decompress(value: any, options?: any): Promise<any>;
-	serialize<Value>(data: DeserializedData<Value>): Promise<string> | string;
-	deserialize<Value>(
-		data: string,
-	):
-		| Promise<DeserializedData<Value> | undefined>
-		| DeserializedData<Value>
-		| undefined;
 };
-
-export type Serialize = <Value>(
-	data: DeserializedData<Value>,
-) => Promise<string> | string;
-
-export type Deserialize = <Value>(
-	data: string,
-) =>
-	| Promise<DeserializedData<Value> | undefined>
-	| DeserializedData<Value>
-	| undefined;
 
 export enum KeyvHooks {
 	PRE_SET = "preSet",
@@ -116,15 +100,10 @@ export type KeyvOptions = {
 	 */
 	namespace?: string;
 	/**
-	 * A custom serialization function.
-	 * @default defaultSerialize using JSON.stringify
+	 * A custom serialization adapter with stringify and parse methods.
+	 * @default undefined (no serialization, data passed through as-is)
 	 */
-	serialize?: Serialize;
-	/**
-	 * A custom deserialization function.
-	 * @default defaultDeserialize using JSON.parse
-	 */
-	deserialize?: Deserialize;
+	serialization?: KeyvSerialization;
 	/**
 	 * The storage adapter instance to be used by Keyv.
 	 * @default new Map() - in-memory store
@@ -194,8 +173,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	private _store: KeyvStoreAdapter = new Map() as any;
 
-	private _serialize: Serialize | undefined = defaultSerialize;
-	private _deserialize: Deserialize | undefined = defaultDeserialize;
+	private _serialization: KeyvSerialization | undefined;
 
 	private _compression: CompressionAdapter | undefined;
 
@@ -236,8 +214,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		const mergedOptions: KeyvOptions = {
 			namespace: "keyv",
-			serialize: defaultSerialize,
-			deserialize: defaultDeserialize,
 			emitErrors: true,
 			...options,
 		};
@@ -252,10 +228,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		this._compression = mergedOptions.compression;
 
-		// biome-ignore lint/style/noNonNullAssertion: need to fix
-		this._serialize = mergedOptions.serialize!;
-		// biome-ignore lint/style/noNonNullAssertion: need to fix
-		this._deserialize = mergedOptions.deserialize!;
+		this._serialization = mergedOptions.serialization;
 
 		/* v8 ignore next -- @preserve */
 		if (mergedOptions.namespace) {
@@ -413,35 +386,19 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	/**
-	 * Get the current serialize function.
-	 * @returns {Serialize} The current serialize function.
+	 * Get the current serialization adapter.
+	 * @returns {KeyvSerialization | undefined} The current serialization adapter.
 	 */
-	public get serialize(): Serialize | undefined {
-		return this._serialize;
+	public get serialization(): KeyvSerialization | undefined {
+		return this._serialization;
 	}
 
 	/**
-	 * Set the current serialize function.
-	 * @param {Serialize} serialize The serialize function to set.
+	 * Set the current serialization adapter.
+	 * @param {KeyvSerialization | undefined} serialization The serialization adapter to set.
 	 */
-	public set serialize(serialize: Serialize | undefined) {
-		this._serialize = serialize;
-	}
-
-	/**
-	 * Get the current deserialize function.
-	 * @returns {Deserialize} The current deserialize function.
-	 */
-	public get deserialize(): Deserialize | undefined {
-		return this._deserialize;
-	}
-
-	/**
-	 * Set the current deserialize function.
-	 * @param {Deserialize} deserialize The deserialize function to set.
-	 */
-	public set deserialize(deserialize: Deserialize | undefined) {
-		this._deserialize = deserialize;
+	public set serialization(serialization: KeyvSerialization | undefined) {
+		this._serialization = serialization;
 	}
 
 	/**
@@ -1350,40 +1307,65 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public async serializeData<T>(
 		data: DeserializedData<T>,
 	): Promise<string | DeserializedData<T>> {
-		if (!this._serialize) {
+		// Pipeline: serialize (optional) -> compress (optional)
+		if (!this._serialization && !this._compression) {
 			return data;
 		}
 
-		if (this._compression?.compress) {
-			return this._serialize({
-				value: await this._compression.compress(data.value),
-				expires: data.expires,
-			});
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		let result: any = data;
+
+		if (this._serialization) {
+			result = await this._serialization.stringify(data);
+		} else if (this._compression) {
+			// Compression needs string input; use JSON as minimum serialization
+			result = JSON.stringify(data);
 		}
 
-		return this._serialize(data);
+		if (this._compression?.compress) {
+			result = await this._compression.compress(result);
+		}
+
+		return result;
 	}
 
 	public async deserializeData<T>(
 		data: string | DeserializedData<T>,
 	): Promise<DeserializedData<T> | undefined> {
-		if (!this._deserialize) {
+		if (data === undefined || data === null) {
+			return undefined;
+		}
+
+		// Pipeline: decompress (optional) -> parse (optional)
+		if (!this._serialization && !this._compression) {
+			if (typeof data === "string") {
+				return undefined;
+			}
+
 			return data as DeserializedData<T>;
 		}
 
-		if (this._compression?.decompress && typeof data === "string") {
-			const result = await this._deserialize(data);
-			return {
-				value: await this._compression.decompress(result?.value),
-				expires: result?.expires,
-			};
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		let result: any = data;
+
+		if (this._compression?.decompress) {
+			result = await this._compression.decompress(result);
 		}
 
-		if (typeof data === "string") {
-			return this._deserialize(data);
+		if (this._serialization && typeof result === "string") {
+			return this._serialization.parse<DeserializedData<T>>(result);
 		}
 
-		return undefined;
+		// If compression was used without serialization, JSON was used as fallback
+		if (typeof result === "string") {
+			try {
+				return JSON.parse(result) as DeserializedData<T>;
+			} catch {
+				return undefined;
+			}
+		}
+
+		return result as DeserializedData<T>;
 	}
 }
 
