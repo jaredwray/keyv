@@ -29,6 +29,7 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	public client: Memcache;
 	/** Merged configuration options */
 	public opts: KeyvMemcacheOptions;
+	private readonly _keys = new Set<string>();
 
 	/**
 	 * Creates a new KeyvMemcache instance.
@@ -72,8 +73,9 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 			return value as StoredData<Value>;
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
+
+		return undefined;
 	}
 
 	/**
@@ -107,12 +109,13 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number) {
 		const exptime = ttl !== undefined ? Math.floor(ttl / 1000) : 0;
+		const formattedKey = this.formatKey(key);
 
 		try {
-			await this.client.set(this.formatKey(key), value as string, exptime);
+			await this.client.set(formattedKey, value as string, exptime);
+			this._keys.add(formattedKey);
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
 	}
 
@@ -127,13 +130,7 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 		const promises = entries.map(async ({ key, value, ttl }) =>
 			this.set(key, value, ttl),
 		);
-		const results = await Promise.allSettled(promises);
-		for (const result of results) {
-			if (result.status === "rejected") {
-				this.emit("error", result.reason);
-				throw result.reason as Error;
-			}
-		}
+		await Promise.allSettled(promises);
 	}
 
 	/**
@@ -142,12 +139,16 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	 * @returns `true` if the key was deleted, `false` otherwise
 	 */
 	async delete(key: string): Promise<boolean> {
+		const formattedKey = this.formatKey(key);
 		try {
-			return await this.client.delete(this.formatKey(key));
+			const result = await this.client.delete(formattedKey);
+			this._keys.delete(formattedKey);
+			return result;
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
+
+		return false;
 	}
 
 	/**
@@ -190,15 +191,26 @@ export class KeyvMemcache extends Hookified implements KeyvStoreAdapter {
 	}
 
 	/**
-	 * Clears all data from the memcache server by flushing it.
-	 * Note: this flushes the entire server, not just the current namespace.
+	 * Clears data from the memcache server.
+	 * When a namespace is set, only keys within the namespace are deleted.
+	 * When no namespace is set, flushes the entire server.
 	 */
 	async clear(): Promise<void> {
 		try {
-			await this.client.flush();
+			if (this.namespace) {
+				const promises = [];
+				for (const key of this._keys) {
+					promises.push(this.client.delete(key));
+				}
+
+				await Promise.allSettled(promises);
+				this._keys.clear();
+			} else {
+				await this.client.flush();
+				this._keys.clear();
+			}
 		} catch (error) {
 			this.emit("error", error);
-			throw error;
 		}
 	}
 
