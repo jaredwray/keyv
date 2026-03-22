@@ -1,18 +1,14 @@
-name: codecov
+name: tests-pr
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   detect-changes:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -57,48 +53,7 @@ jobs:
             dynamo:
               - 'storage/dynamo/**'
 
-  # Full coverage on push to main
-  codecov-full:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    name: Node 24 (full)
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'pnpm'
-
-      - name: Start Services
-        run: pnpm test:services:start
-
-      - name: Install Dependencies
-        run: pnpm install
-
-      - name: Approve Builds
-        run: pnpm approve-builds
-
-      - name: Build
-        run: pnpm build
-
-      - name: Test Packages
-        run: pnpm test
-
-      - name: Code Coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_KEY }}
-          verbose: true
-
-  # Path-filtered coverage on PRs
-  codecov-pr:
-    if: github.event_name == 'pull_request'
+  test:
     needs: detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -112,7 +67,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
           cache: 'pnpm'
 
       - name: Start Services
@@ -173,9 +128,3 @@ jobs:
       - name: Test DynamoDB
         if: needs.detect-changes.outputs.core != 'true' && needs.detect-changes.outputs.dynamo == 'true'
         run: pnpm --filter @keyv/dynamo test:ci
-
-      - name: Code Coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_KEY }}
-          verbose: true
