@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/valkey",
-	"version": "6.0.0-alpha.2",
+	"version": "6.0.0-alpha.3",
 	"description": "Valkey storage adapter for Keyv",
 	"type": "module",
 	"main": "./dist/index.js",

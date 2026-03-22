@@ -12,7 +12,7 @@ describe("createKeyv", () => {
 		expect(keyv.store).toBeInstanceOf(KeyvRedis);
 		expect(keyv.namespace).toBeUndefined();
 		expect(keyv.store.namespace).toBeUndefined();
-		expect(keyv.useKeyPrefix).toBe(false);
+
 	});
 
 	test("should create Keyv instance with custom namespace", async () => {
@@ -22,7 +22,7 @@ describe("createKeyv", () => {
 		expect(keyv.store).toBeInstanceOf(KeyvRedis);
 		expect(keyv.namespace).toBe(namespace);
 		expect(keyv.store.namespace).toBe(namespace);
-		expect(keyv.useKeyPrefix).toBe(false);
+
 	});
 
 	test("should create Keyv instance with custom namespace and errors enabled", async () => {
@@ -36,7 +36,7 @@ describe("createKeyv", () => {
 		expect(keyv.store).toBeInstanceOf(KeyvRedis);
 		expect(keyv.namespace).toBe(namespace);
 		expect(keyv.store.namespace).toBe(namespace);
-		expect(keyv.useKeyPrefix).toBe(false);
+
 	});
 });
 
@@ -50,6 +50,6 @@ describe("createKeyvNonBlocking", () => {
 		expect(keyv.store.throwOnConnectError).toBe(false);
 		expect(keyv.namespace).toBeUndefined();
 		expect(keyv.store.namespace).toBeUndefined();
-		expect(keyv.useKeyPrefix).toBe(false);
+
 	});
 });

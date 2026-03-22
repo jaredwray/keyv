@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/compress-lz4",
-	"version": "6.0.0-alpha.2",
+	"version": "6.0.0-alpha.3",
 	"description": "lz4 compression for Keyv",
 	"type": "module",
 	"main": "./dist/index.js",
