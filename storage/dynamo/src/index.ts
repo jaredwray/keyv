@@ -290,22 +290,37 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 			await this._tableReady;
 
 			const formattedKeys = keys.map((key) => this.formatKey(key));
+			const allItems: Record<string, unknown>[] = [];
 
-			const batchGetInput: BatchGetCommandInput = {
-				RequestItems: {
-					[this._opts.tableName]: {
-						Keys: formattedKeys.map((key) => ({
-							id: key,
-						})),
-					},
-				},
-			};
-			const { Responses: { [this._opts.tableName]: items = [] } = {} } =
-				await this._client.batchGet(batchGetInput);
+			// BatchGetItem supports max 100 keys per request
+			const chunkSize = 100;
+			for (let i = 0; i < formattedKeys.length; i += chunkSize) {
+				const chunk = formattedKeys.slice(i, i + chunkSize);
+				let unprocessedKeys: BatchGetCommandInput["RequestItems"] | undefined =
+					{
+						[this._opts.tableName]: {
+							Keys: chunk.map((key) => ({ id: key })),
+						},
+					};
+
+				while (unprocessedKeys && Object.keys(unprocessedKeys).length > 0) {
+					const batchGetInput: BatchGetCommandInput = {
+						RequestItems: unprocessedKeys,
+					};
+					const result = await this._client.batchGet(batchGetInput);
+					const items = result.Responses?.[this._opts.tableName] ?? [];
+					allItems.push(...items);
+					unprocessedKeys =
+						result.UnprocessedKeys &&
+						Object.keys(result.UnprocessedKeys).length > 0
+							? result.UnprocessedKeys
+							: undefined;
+				}
+			}
 
 			return formattedKeys.map(
 				(key) =>
-					items.find((item) => item?.id === key)?.value as StoredData<Value>,
+					allItems.find((item) => item?.id === key)?.value as StoredData<Value>,
 			);
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
@@ -363,21 +378,36 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 				return false;
 			}
 
-			const batchDeleteInput: BatchWriteCommandInput = {
-				RequestItems: {
-					[this._opts.tableName]: formattedKeys.map((key) => ({
+			// BatchWriteItem supports max 25 items per request
+			const chunkSize = 25;
+			for (let i = 0; i < formattedKeys.length; i += chunkSize) {
+				const chunk = formattedKeys.slice(i, i + chunkSize);
+				let unprocessedItems:
+					| BatchWriteCommandInput["RequestItems"]
+					| undefined = {
+					[this._opts.tableName]: chunk.map((key) => ({
 						DeleteRequest: {
-							TableName: this._opts.tableName,
 							Key: {
 								id: key,
 							},
 						},
 					})),
-				},
-			};
+				};
 
-			const response = await this._client.batchWrite(batchDeleteInput);
-			return Boolean(response);
+				while (unprocessedItems && Object.keys(unprocessedItems).length > 0) {
+					const batchDeleteInput: BatchWriteCommandInput = {
+						RequestItems: unprocessedItems,
+					};
+					const response = await this._client.batchWrite(batchDeleteInput);
+					unprocessedItems =
+						response.UnprocessedItems &&
+						Object.keys(response.UnprocessedItems).length > 0
+							? response.UnprocessedItems
+							: undefined;
+				}
+			}
+
+			return true;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
@@ -429,7 +459,10 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 			}
 
 			const nowInSeconds = Math.floor(Date.now() / 1000);
-			if (typeof Item.expiresAt === "number" && Item.expiresAt <= nowInSeconds) {
+			if (
+				typeof Item.expiresAt === "number" &&
+				Item.expiresAt <= nowInSeconds
+			) {
 				return false;
 			}
 
@@ -451,27 +484,45 @@ export class KeyvDynamo extends Hookified implements KeyvStoreAdapter {
 			await this._tableReady;
 
 			const formattedKeys = keys.map((key) => this.formatKey(key));
+			const allItems: Record<string, unknown>[] = [];
 
-			const batchGetInput: BatchGetCommandInput = {
-				RequestItems: {
-					[this._opts.tableName]: {
-						Keys: formattedKeys.map((key) => ({
-							id: key,
-						})),
-					},
-				},
-			};
-			const { Responses: { [this._opts.tableName]: items = [] } = {} } =
-				await this._client.batchGet(batchGetInput);
+			// BatchGetItem supports max 100 keys per request
+			const chunkSize = 100;
+			for (let i = 0; i < formattedKeys.length; i += chunkSize) {
+				const chunk = formattedKeys.slice(i, i + chunkSize);
+				let unprocessedKeys: BatchGetCommandInput["RequestItems"] | undefined =
+					{
+						[this._opts.tableName]: {
+							Keys: chunk.map((key) => ({ id: key })),
+						},
+					};
+
+				while (unprocessedKeys && Object.keys(unprocessedKeys).length > 0) {
+					const batchGetInput: BatchGetCommandInput = {
+						RequestItems: unprocessedKeys,
+					};
+					const result = await this._client.batchGet(batchGetInput);
+					const items = result.Responses?.[this._opts.tableName] ?? [];
+					allItems.push(...items);
+					unprocessedKeys =
+						result.UnprocessedKeys &&
+						Object.keys(result.UnprocessedKeys).length > 0
+							? result.UnprocessedKeys
+							: undefined;
+				}
+			}
 
 			const nowInSeconds = Math.floor(Date.now() / 1000);
 			return formattedKeys.map((key) => {
-				const item = items.find((item) => item?.id === key);
+				const item = allItems.find((item) => item?.id === key);
 				if (!item || item.value === undefined) {
 					return false;
 				}
 
-				if (typeof item.expiresAt === "number" && item.expiresAt <= nowInSeconds) {
+				if (
+					typeof item.expiresAt === "number" &&
+					item.expiresAt <= nowInSeconds
+				) {
 					return false;
 				}
 
