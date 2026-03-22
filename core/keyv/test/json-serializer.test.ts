@@ -88,6 +88,13 @@ describe("KeyvJsonSerializer", () => {
 		expect(result).toBe(JSON.stringify(":base64:aGVsbG8="));
 	});
 
+	it("stringify falls back to btoa when Buffer is unavailable", () => {
+		vi.stubGlobal("Buffer", undefined);
+		const bytes = new Uint8Array([104, 101, 108, 108, 111]);
+		const result = jsonSerializer.stringify(bytes);
+		expect(result).toBe(JSON.stringify(":base64:aGVsbG8="));
+	});
+
 	it("stringify toJSON is called on object", () => {
 		const serialized = jsonSerializer.stringify({
 			value: { toJSON: () => "foo" },
