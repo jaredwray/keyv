@@ -320,7 +320,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current throwErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * Get the current throwOnErrors value. When enabled, errors will throw if there are no error listeners registered.
 	 * @return {boolean} The current throwOnErrors value.
 	 */
 	public get throwOnErrors(): boolean {
@@ -328,7 +328,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Set the current throwOnErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * Set the current throwOnErrors value. When enabled, errors will throw if there are no error listeners registered.
 	 * @param {boolean} value The throwOnErrors value to set.
 	 */
 	public set throwOnErrors(value: boolean) {

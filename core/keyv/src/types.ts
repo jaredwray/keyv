@@ -155,8 +155,8 @@ export type KeyvOptions = {
 	 */
 	stats?: boolean;
 	/**
-	 * @deprecated Use hookified's `throwOnEmitError` instead. Access via `keyv.throwOnEmitError`.
-	 * Will enable throwing errors on methods in addition to emitting them.
+	 * Will enable throwing errors when there are no error listeners registered.
+	 * This maps to hookified's `throwOnEmitError` under the hood.
 	 * @default false
 	 */
 	throwOnErrors?: boolean;
