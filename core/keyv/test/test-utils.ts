@@ -10,10 +10,10 @@ export const delay = async (ms: number) =>
 
 // Mock compression adapter for testing compression code paths
 export const createMockCompression = (): KeyvCompressionAdapter => ({
-	async compress(value: unknown) {
+	async compress(value: string) {
 		return value;
 	},
-	async decompress(value: unknown) {
+	async decompress(value: string) {
 		return value;
 	},
 });

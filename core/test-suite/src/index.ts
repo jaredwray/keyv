@@ -18,7 +18,7 @@ const keyvTestSuite = (
 export default keyvTestSuite;
 
 export { default as keyvApiTests } from "./api.js";
-export { default as keyvCompresstionTests } from "./compression.js";
+export { default as keyvCompressionTests } from "./compression.js";
 export { delay } from "./helper.js";
 export { default as keyvIteratorTests } from "./iterator.js";
 export { default as keyvNamespaceTest } from "./namespace.js";

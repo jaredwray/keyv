@@ -50,14 +50,14 @@ Take a look at [keyv/redis](https://github.com/jaredwray/keyv/tree/main/storage/
 
 ## Testing Compression Adapters
 
-If you're testing a compression adapter, you can use the `keyvCompresstionTests` method instead of `keyvTestSuite`.
+If you're testing a compression adapter, you can use the `keyvCompressionTests` method instead of `keyvTestSuite`.
 
 ```js
 import test from 'vitest';
-import { keyvCompresstionTests, KeyvGzip } from '@keyv/test-suite';
+import { keyvCompressionTests, KeyvGzip } from '@keyv/test-suite';
 import Keyv from 'keyv';
 
-keyvCompresstionTests(test, new KeyvGzip());
+keyvCompressionTests(test, new KeyvGzip());
 ```
 
 ## License

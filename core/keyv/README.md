@@ -501,10 +501,10 @@ interface KeyvCompressionAdapter {
 In addition to the interface, you can test it with our compression test suite using @keyv/test-suite:
 
 ```js
-import { keyvCompresstionTests } from '@keyv/test-suite';
+import { keyvCompressionTests } from '@keyv/test-suite';
 import KeyvGzip from '@keyv/compress-gzip';
 
-keyvCompresstionTests(test, new KeyvGzip());
+keyvCompressionTests(test, new KeyvGzip());
 ```
 
 # Encryption

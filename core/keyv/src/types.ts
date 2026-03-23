@@ -6,10 +6,8 @@ export type KeyvSerializationAdapter = {
 };
 
 export type KeyvCompressionAdapter = {
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	compress(value: any, options?: any): Promise<any>;
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	decompress(value: any, options?: any): Promise<any>;
+	compress(value: string): Promise<string>;
+	decompress(value: string): Promise<string>;
 };
 
 export type KeyvEncryptionAdapter = {
