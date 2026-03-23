@@ -32,6 +32,28 @@ export { KeyvHooks } from "./types.js";
 // biome-ignore lint/suspicious/noExplicitAny: type format
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
 
+/**
+ * Maps new hook names to their deprecated equivalents so both fire during migration.
+ */
+const deprecatedHookAliases = new Map<string, string>([
+	[KeyvHooks.BEFORE_SET, KeyvHooks.PRE_SET],
+	[KeyvHooks.AFTER_SET, KeyvHooks.POST_SET],
+	[KeyvHooks.BEFORE_GET, KeyvHooks.PRE_GET],
+	[KeyvHooks.AFTER_GET, KeyvHooks.POST_GET],
+	[KeyvHooks.BEFORE_GET_MANY, KeyvHooks.PRE_GET_MANY],
+	[KeyvHooks.AFTER_GET_MANY, KeyvHooks.POST_GET_MANY],
+	[KeyvHooks.BEFORE_GET_RAW, KeyvHooks.PRE_GET_RAW],
+	[KeyvHooks.AFTER_GET_RAW, KeyvHooks.POST_GET_RAW],
+	[KeyvHooks.BEFORE_GET_MANY_RAW, KeyvHooks.PRE_GET_MANY_RAW],
+	[KeyvHooks.AFTER_GET_MANY_RAW, KeyvHooks.POST_GET_MANY_RAW],
+	[KeyvHooks.BEFORE_SET_RAW, KeyvHooks.PRE_SET_RAW],
+	[KeyvHooks.AFTER_SET_RAW, KeyvHooks.POST_SET_RAW],
+	[KeyvHooks.BEFORE_SET_MANY_RAW, KeyvHooks.PRE_SET_MANY_RAW],
+	[KeyvHooks.AFTER_SET_MANY_RAW, KeyvHooks.POST_SET_MANY_RAW],
+	[KeyvHooks.BEFORE_DELETE, KeyvHooks.PRE_DELETE],
+	[KeyvHooks.AFTER_DELETE, KeyvHooks.POST_DELETE],
+]);
+
 const iterableAdapters = [
 	"sqlite",
 	"postgres",
@@ -355,6 +377,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 		return function_.bind(this);
 	}
 
+	/**
+	 * Fires a hook under its new name and also under the deprecated alias (if any),
+	 * so that integrations still subscribing to the old PRE_/POST_ names keep working.
+	 */
+	private async hookWithDeprecated(
+		event: string,
+		// biome-ignore lint/suspicious/noExplicitAny: hook data varies
+		...args: any[]
+	): Promise<void> {
+		await this.hook(event, ...args);
+		const deprecated = deprecatedHookAliases.get(event);
+		if (deprecated && this.getHooks(deprecated)?.length) {
+			await this.hook(deprecated, ...args);
+		}
+	}
+
 	_checkIterableAdapter(): boolean {
 		return (
 			iterableAdapters.includes(this._store.opts.dialect as string) ||
@@ -420,7 +458,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.getMany<Value>(key, { raw: false });
 		}
 
-		this.hookSync(KeyvHooks.BEFORE_GET, { key });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET, { key });
 		// biome-ignore lint/suspicious/noImplicitAnyLet: need to fix
 		let rawData;
 		try {
@@ -435,7 +473,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				: rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
-			this.hookSync(KeyvHooks.AFTER_GET, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 				key,
 				value: undefined,
 			});
@@ -445,7 +483,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		if (isDataExpired(deserializedData as DeserializedData<Value>)) {
 			await this.delete(key);
-			this.hookSync(KeyvHooks.AFTER_GET, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 				key,
 				value: undefined,
 			});
@@ -453,7 +491,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return undefined;
 		}
 
-		this.hookSync(KeyvHooks.AFTER_GET, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 			key,
 			value: deserializedData,
 		});
@@ -485,7 +523,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const isDataExpired = (data: DeserializedData<Value>): boolean =>
 			typeof data.expires === "number" && Date.now() > data.expires;
 
-		this.hookSync(KeyvHooks.BEFORE_GET_MANY, { keys });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
 		if (store.getMany === undefined) {
 			const promises = keys.map(async (key: string) => {
 				const rawData = await store.get<Value>(key);
@@ -514,7 +552,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
 				(row) => (row as PromiseFulfilledResult<any>).value,
 			);
-			this.hookSync(KeyvHooks.AFTER_GET_MANY, result);
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 			if (result.length > 0) {
 				this.stats.hit();
 			}
@@ -556,7 +594,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			await this.deleteMany(expiredKeys);
 		}
 
-		this.hookSync(KeyvHooks.AFTER_GET_MANY, result);
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 		/* v8 ignore next -- @preserve */
 		if (result.length > 0) {
 			this.stats.hit();
@@ -576,11 +614,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
 		const store = this._store;
-		this.hookSync(KeyvHooks.BEFORE_GET_RAW, { key });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
 		const rawData = await store.get(key);
 
 		if (rawData === undefined || rawData === null) {
-			this.hookSync(KeyvHooks.AFTER_GET_RAW, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
 				value: undefined,
 			});
@@ -602,7 +640,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			(deserializedData as DeserializedData<Value>).expires! < Date.now()
 		) {
-			this.hookSync(KeyvHooks.AFTER_GET_RAW, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
 				value: undefined,
 			});
@@ -614,7 +652,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		// Add a hit
 		this.stats.hit();
 
-		this.hookSync(KeyvHooks.AFTER_GET_RAW, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 			key,
 			value: deserializedData,
 		});
@@ -639,7 +677,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			// Add in misses
 			this.stats.misses += keys.length;
 			// Trigger the after get many raw hook
-			this.hookSync(KeyvHooks.AFTER_GET_MANY_RAW, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
 				values: result,
 			});
@@ -698,7 +736,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		// Add in hits and misses
 		this.stats.hitsOrMisses(result);
 		// Trigger the after get many raw hook
-		this.hookSync(KeyvHooks.AFTER_GET_MANY_RAW, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 			keys,
 			values: result,
 		});
@@ -718,7 +756,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		ttl?: number,
 	): Promise<boolean> {
 		const data = { key, value, ttl };
-		this.hookSync(KeyvHooks.BEFORE_SET, data);
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET, data);
 
 		data.ttl ??= this._ttl;
 
@@ -752,7 +790,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this.emit("error", error);
 		}
 
-		this.hookSync(KeyvHooks.AFTER_SET, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET, {
 			key,
 			value: serializedValue,
 			ttl,
@@ -776,7 +814,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		ttl?: number,
 	): Promise<boolean> {
 		const data = { key, value, ttl };
-		this.hookSync(KeyvHooks.BEFORE_SET_RAW, data);
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
 		data.ttl ??= this._ttl;
 
@@ -803,7 +841,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this.emit("error", error);
 		}
 
-		this.hookSync(KeyvHooks.AFTER_SET_RAW, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_RAW, {
 			key,
 			value: data.value,
 			ttl: data.ttl,
@@ -888,7 +926,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	): Promise<boolean[]> {
 		let results: boolean[] = [];
 
-		this.hookSync(KeyvHooks.BEFORE_SET_MANY_RAW, { entries });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY_RAW, { entries });
 
 		try {
 			if (this._store.setMany === undefined) {
@@ -927,7 +965,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 			results = entries.map(() => false);
 		}
 
-		this.hookSync(KeyvHooks.AFTER_SET_MANY_RAW, { entries, results });
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY_RAW, {
+			entries,
+			results,
+		});
 
 		return results;
 	}
@@ -943,7 +984,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.deleteMany(key);
 		}
 
-		this.hookSync(KeyvHooks.BEFORE_DELETE, { key });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key });
 
 		let result = true;
 
@@ -959,7 +1000,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this.emit("error", error);
 		}
 
-		this.hookSync(KeyvHooks.AFTER_DELETE, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 			key,
 			value: result,
 		});
@@ -976,7 +1017,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		try {
 			const store = this._store;
-			this.hookSync(KeyvHooks.BEFORE_DELETE, { key: keys });
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
 			if (store.deleteMany !== undefined) {
 				return await store.deleteMany(keys);
 			}
@@ -985,7 +1026,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 			const results = await Promise.all(promises);
 			const returnResult = results.every(Boolean);
-			this.hookSync(KeyvHooks.AFTER_DELETE, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 				key: keys,
 				value: returnResult,
 			});
