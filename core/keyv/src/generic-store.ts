@@ -1,5 +1,5 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
-import EventManager from "./event-manager.js";
+import { Hookified } from "hookified";
 import {
 	Keyv,
 	type KeyvEntry,
@@ -92,10 +92,7 @@ export type KeyPrefixData = {
  * });
  * ```
  */
-export class KeyvGenericStore
-	extends EventManager
-	implements KeyvStorageAdapter
-{
+export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	private readonly _options?: KeyvGenericStoreOptions;
 	private _store: KeyvMapType;
 	private _namespace?: string | (() => string);

@@ -984,24 +984,6 @@ test.it("should handle error on store has / get", async (t) => {
 	t.expect(errorHandler).toHaveBeenCalledWith(new Error("store has error"));
 });
 
-test.it("should not emit error with opts.emitErrors false", async (t) => {
-	const store = new Map();
-	store.set = test.vi.fn().mockRejectedValue(new Error("store set error"));
-	const keyv = new Keyv({ store, emitErrors: false });
-	const errorHandler = test.vi.fn();
-	keyv.on("error", errorHandler);
-	const result = await keyv.set("foo", "bar");
-	t.expect(result).toBe(false);
-	t.expect(errorHandler).not.toHaveBeenCalled();
-});
-
-test.it("should be able to get and set emitErrors via property", async (t) => {
-	const keyv = new Keyv({ store: new Map() });
-	t.expect(keyv.emitErrors).toBe(true);
-	keyv.emitErrors = false;
-	t.expect(keyv.emitErrors).toBe(false);
-});
-
 test.it(
 	"should emit error and throw when setting a Symbol value",
 	async (t) => {

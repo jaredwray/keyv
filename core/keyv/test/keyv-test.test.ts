@@ -191,6 +191,7 @@ describe("Keyv", async () => {
 		test("should not throw when setting a value with throwOnErrors set to false", async () => {
 			const keyv = new Keyv(throwingStore);
 			keyv.throwOnErrors = false;
+			keyv.on("error", () => {});
 			const result = await keyv.set(
 				faker.string.alphanumeric(10),
 				faker.string.alphanumeric(10),
@@ -207,6 +208,7 @@ describe("Keyv", async () => {
 		test("should not throw when getting a value with throwOnErrors set to false", async () => {
 			const keyv = new Keyv(throwingStore);
 			keyv.throwOnErrors = false;
+			keyv.on("error", () => {});
 			const result = await keyv.get(faker.string.alphanumeric(10));
 			expect(result).toBeUndefined();
 		});
@@ -220,6 +222,7 @@ describe("Keyv", async () => {
 		test("should not throw when deleting a value with throwOnErrors set to false", async () => {
 			const keyv = new Keyv(throwingStore);
 			keyv.throwOnErrors = false;
+			keyv.on("error", () => {});
 			const result = await keyv.delete(faker.string.alphanumeric(10));
 			expect(result).toBe(false);
 		});
@@ -233,6 +236,7 @@ describe("Keyv", async () => {
 		test("should not throw when clearing the store with throwOnErrors set to false", async () => {
 			const keyv = new Keyv(throwingStore);
 			keyv.throwOnErrors = false;
+			keyv.on("error", () => {});
 			const result = await keyv.clear();
 			expect(result).toBeUndefined();
 		});
@@ -246,6 +250,7 @@ describe("Keyv", async () => {
 		test("should not throw when checking if a key exists with throwOnErrors set to false", async () => {
 			const keyv = new Keyv(throwingStore);
 			keyv.throwOnErrors = false;
+			keyv.on("error", () => {});
 			const result = await keyv.has(faker.string.alphanumeric(10));
 			expect(result).toBe(false);
 		});

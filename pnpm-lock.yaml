@@ -164,6 +164,10 @@ importers:
         version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
 
   core/keyv:
+    dependencies:
+      hookified:
+        specifier: ^2.0.1
+        version: 2.0.1
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.13

@@ -1,5 +1,4 @@
-import EventManager from "./event-manager.js";
-import HooksManager from "./hooks-manager.js";
+import { Hookified } from "hookified";
 import { KeyvJsonSerializer } from "./json-serializer.js";
 import StatsManager from "./stats-manager.js";
 import {
@@ -17,7 +16,6 @@ import {
 export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export type {
 	DeserializedData,
-	IEventEmitter,
 	KeyvCompression,
 	KeyvCompressionAdapter,
 	KeyvEntry,
@@ -34,6 +32,28 @@ export { KeyvHooks } from "./types.js";
 // biome-ignore lint/suspicious/noExplicitAny: type format
 type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
 
+/**
+ * Maps new hook names to their deprecated equivalents so both fire during migration.
+ */
+const deprecatedHookAliases = new Map<string, string>([
+	[KeyvHooks.BEFORE_SET, KeyvHooks.PRE_SET],
+	[KeyvHooks.AFTER_SET, KeyvHooks.POST_SET],
+	[KeyvHooks.BEFORE_GET, KeyvHooks.PRE_GET],
+	[KeyvHooks.AFTER_GET, KeyvHooks.POST_GET],
+	[KeyvHooks.BEFORE_GET_MANY, KeyvHooks.PRE_GET_MANY],
+	[KeyvHooks.AFTER_GET_MANY, KeyvHooks.POST_GET_MANY],
+	[KeyvHooks.BEFORE_GET_RAW, KeyvHooks.PRE_GET_RAW],
+	[KeyvHooks.AFTER_GET_RAW, KeyvHooks.POST_GET_RAW],
+	[KeyvHooks.BEFORE_GET_MANY_RAW, KeyvHooks.PRE_GET_MANY_RAW],
+	[KeyvHooks.AFTER_GET_MANY_RAW, KeyvHooks.POST_GET_MANY_RAW],
+	[KeyvHooks.BEFORE_SET_RAW, KeyvHooks.PRE_SET_RAW],
+	[KeyvHooks.AFTER_SET_RAW, KeyvHooks.POST_SET_RAW],
+	[KeyvHooks.BEFORE_SET_MANY_RAW, KeyvHooks.PRE_SET_MANY_RAW],
+	[KeyvHooks.AFTER_SET_MANY_RAW, KeyvHooks.POST_SET_MANY_RAW],
+	[KeyvHooks.BEFORE_DELETE, KeyvHooks.PRE_DELETE],
+	[KeyvHooks.AFTER_DELETE, KeyvHooks.POST_DELETE],
+]);
+
 const iterableAdapters = [
 	"sqlite",
 	"postgres",
@@ -45,9 +65,8 @@ const iterableAdapters = [
 ];
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
-export class Keyv<GenericValue = any> extends EventManager {
+export class Keyv<GenericValue = any> extends Hookified {
 	iterator?: IteratorFunction;
-	hooks = new HooksManager();
 	stats = new StatsManager(false);
 
 	/**
@@ -69,10 +88,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 	private _serialization: KeyvSerializationAdapter | undefined;
 
 	private _compression: KeyvCompressionAdapter | undefined;
-
-	private _throwOnErrors = false;
-
-	private _emitErrors = true;
 
 	/**
 	 * Keyv Constructor
@@ -98,14 +113,12 @@ export class Keyv<GenericValue = any> extends EventManager {
 		store?: KeyvStorageAdapter | KeyvOptions,
 		options?: Omit<KeyvOptions, "store">,
 	) {
-		super();
 		options ??= {};
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		store ??= {} as KeyvOptions;
 
 		const mergedOptions: KeyvOptions = {
 			namespace: "keyv",
-			emitErrors: true,
 			...options,
 		};
 
@@ -114,6 +127,46 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} else {
 			Object.assign(mergedOptions, store);
 		}
+
+		super({
+			throwOnHookError: false,
+			throwOnEmptyListeners: true,
+			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
+		});
+
+		this.deprecatedHooks = new Map([
+			["preSet", "Use KeyvHooks.BEFORE_SET ('before:set') instead"],
+			["postSet", "Use KeyvHooks.AFTER_SET ('after:set') instead"],
+			["preGet", "Use KeyvHooks.BEFORE_GET ('before:get') instead"],
+			["postGet", "Use KeyvHooks.AFTER_GET ('after:get') instead"],
+			[
+				"preGetMany",
+				"Use KeyvHooks.BEFORE_GET_MANY ('before:getMany') instead",
+			],
+			["postGetMany", "Use KeyvHooks.AFTER_GET_MANY ('after:getMany') instead"],
+			["preGetRaw", "Use KeyvHooks.BEFORE_GET_RAW ('before:getRaw') instead"],
+			["postGetRaw", "Use KeyvHooks.AFTER_GET_RAW ('after:getRaw') instead"],
+			[
+				"preGetManyRaw",
+				"Use KeyvHooks.BEFORE_GET_MANY_RAW ('before:getManyRaw') instead",
+			],
+			[
+				"postGetManyRaw",
+				"Use KeyvHooks.AFTER_GET_MANY_RAW ('after:getManyRaw') instead",
+			],
+			["preSetRaw", "Use KeyvHooks.BEFORE_SET_RAW ('before:setRaw') instead"],
+			["postSetRaw", "Use KeyvHooks.AFTER_SET_RAW ('after:setRaw') instead"],
+			[
+				"preSetManyRaw",
+				"Use KeyvHooks.BEFORE_SET_MANY_RAW ('before:setManyRaw') instead",
+			],
+			[
+				"postSetManyRaw",
+				"Use KeyvHooks.AFTER_SET_MANY_RAW ('after:setManyRaw') instead",
+			],
+			["preDelete", "Use KeyvHooks.BEFORE_DELETE ('before:delete') instead"],
+			["postDelete", "Use KeyvHooks.AFTER_DELETE ('after:delete') instead"],
+		]);
 
 		this._store = mergedOptions.store ?? new Map();
 
@@ -171,14 +224,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (mergedOptions.ttl) {
 			this._ttl = mergedOptions.ttl;
-		}
-
-		if (mergedOptions.emitErrors !== undefined) {
-			this._emitErrors = mergedOptions.emitErrors;
-		}
-
-		if (mergedOptions.throwOnErrors !== undefined) {
-			this._throwOnErrors = mergedOptions.throwOnErrors;
 		}
 	}
 
@@ -297,36 +342,19 @@ export class Keyv<GenericValue = any> extends EventManager {
 	}
 
 	/**
-	 * Get the current throwErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * Get the current throwOnErrors value. When enabled, errors will throw if there are no error listeners registered.
 	 * @return {boolean} The current throwOnErrors value.
 	 */
 	public get throwOnErrors(): boolean {
-		return this._throwOnErrors;
+		return this.throwOnEmitError;
 	}
 
 	/**
-	 * Set the current throwOnErrors value. This will enable or disable throwing errors on methods in addition to emitting them.
+	 * Set the current throwOnErrors value. When enabled, errors will throw if there are no error listeners registered.
 	 * @param {boolean} value The throwOnErrors value to set.
 	 */
 	public set throwOnErrors(value: boolean) {
-		this._throwOnErrors = value;
-	}
-
-	/**
-	 * Get the current emitErrors value. This will enable or disable emitting errors on methods.
-	 * @return {boolean} The current emitErrors value.
-	 * @default true
-	 */
-	public get emitErrors(): boolean {
-		return this._emitErrors;
-	}
-
-	/**
-	 * Set the current emitErrors value. This will enable or disable emitting errors on methods.
-	 * @param {boolean} value The emitErrors value to set.
-	 */
-	public set emitErrors(value: boolean) {
-		this._emitErrors = value;
+		this.throwOnEmitError = value;
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
@@ -347,6 +375,22 @@ export class Keyv<GenericValue = any> extends EventManager {
 		};
 
 		return function_.bind(this);
+	}
+
+	/**
+	 * Fires a hook under its new name and also under the deprecated alias (if any),
+	 * so that integrations still subscribing to the old PRE_/POST_ names keep working.
+	 */
+	private async hookWithDeprecated(
+		event: string,
+		// biome-ignore lint/suspicious/noExplicitAny: hook data varies
+		...args: any[]
+	): Promise<void> {
+		await this.hook(event, ...args);
+		const deprecated = deprecatedHookAliases.get(event);
+		if (deprecated && this.getHooks(deprecated)?.length) {
+			await this.hook(deprecated, ...args);
+		}
 	}
 
 	_checkIterableAdapter(): boolean {
@@ -414,15 +458,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return this.getMany<Value>(key, { raw: false });
 		}
 
-		this.hooks.trigger(KeyvHooks.PRE_GET, { key });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET, { key });
 		// biome-ignore lint/suspicious/noImplicitAnyLet: need to fix
 		let rawData;
 		try {
 			rawData = await store.get<Value>(key as string);
 		} catch (error) {
-			if (this.throwOnErrors) {
-				throw error;
-			}
+			this.emit("error", error);
 		}
 
 		const deserializedData =
@@ -431,7 +473,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				: rawData;
 
 		if (deserializedData === undefined || deserializedData === null) {
-			this.hooks.trigger(KeyvHooks.POST_GET, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 				key,
 				value: undefined,
 			});
@@ -441,7 +483,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		if (isDataExpired(deserializedData as DeserializedData<Value>)) {
 			await this.delete(key);
-			this.hooks.trigger(KeyvHooks.POST_GET, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 				key,
 				value: undefined,
 			});
@@ -449,7 +491,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return undefined;
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_GET, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 			key,
 			value: deserializedData,
 		});
@@ -481,7 +523,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		const isDataExpired = (data: DeserializedData<Value>): boolean =>
 			typeof data.expires === "number" && Date.now() > data.expires;
 
-		this.hooks.trigger(KeyvHooks.PRE_GET_MANY, { keys });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
 		if (store.getMany === undefined) {
 			const promises = keys.map(async (key: string) => {
 				const rawData = await store.get<Value>(key);
@@ -510,7 +552,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
 				(row) => (row as PromiseFulfilledResult<any>).value,
 			);
-			this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 			if (result.length > 0) {
 				this.stats.hit();
 			}
@@ -552,7 +594,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			await this.deleteMany(expiredKeys);
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_GET_MANY, result);
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 		/* v8 ignore next -- @preserve */
 		if (result.length > 0) {
 			this.stats.hit();
@@ -572,11 +614,11 @@ export class Keyv<GenericValue = any> extends EventManager {
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
 		const store = this._store;
-		this.hooks.trigger(KeyvHooks.PRE_GET_RAW, { key });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
 		const rawData = await store.get(key);
 
 		if (rawData === undefined || rawData === null) {
-			this.hooks.trigger(KeyvHooks.POST_GET_RAW, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
 				value: undefined,
 			});
@@ -598,7 +640,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			// biome-ignore lint/style/noNonNullAssertion: need to fix
 			(deserializedData as DeserializedData<Value>).expires! < Date.now()
 		) {
-			this.hooks.trigger(KeyvHooks.POST_GET_RAW, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
 				value: undefined,
 			});
@@ -610,7 +652,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		// Add a hit
 		this.stats.hit();
 
-		this.hooks.trigger(KeyvHooks.POST_GET_RAW, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 			key,
 			value: deserializedData,
 		});
@@ -634,8 +676,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 			) as Array<StoredDataRaw<Value>>;
 			// Add in misses
 			this.stats.misses += keys.length;
-			// Trigger the post get many raw hook
-			this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {
+			// Trigger the after get many raw hook
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
 				values: result,
 			});
@@ -693,8 +735,8 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 		// Add in hits and misses
 		this.stats.hitsOrMisses(result);
-		// Trigger the post get many raw hook
-		this.hooks.trigger(KeyvHooks.POST_GET_MANY_RAW, {
+		// Trigger the after get many raw hook
+		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 			keys,
 			values: result,
 		});
@@ -714,7 +756,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		ttl?: number,
 	): Promise<boolean> {
 		const data = { key, value, ttl };
-		this.hooks.trigger(KeyvHooks.PRE_SET, data);
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET, data);
 
 		data.ttl ??= this._ttl;
 
@@ -746,12 +788,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			result = false;
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_SET, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET, {
 			key,
 			value: serializedValue,
 			ttl,
@@ -775,7 +814,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 		ttl?: number,
 	): Promise<boolean> {
 		const data = { key, value, ttl };
-		this.hooks.trigger(KeyvHooks.PRE_SET_RAW, data);
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
 		data.ttl ??= this._ttl;
 
@@ -800,12 +839,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			result = false;
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_SET_RAW, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_RAW, {
 			key,
 			value: data.value,
 			ttl: data.ttl,
@@ -869,10 +905,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			this.emit("error", error);
 
-			if (this._throwOnErrors) {
-				throw error;
-			}
-
 			results = entries.map(() => false);
 		}
 
@@ -894,7 +926,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	): Promise<boolean[]> {
 		let results: boolean[] = [];
 
-		this.hooks.trigger(KeyvHooks.PRE_SET_MANY_RAW, { entries });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY_RAW, { entries });
 
 		try {
 			if (this._store.setMany === undefined) {
@@ -930,14 +962,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			this.emit("error", error);
 
-			if (this._throwOnErrors) {
-				throw error;
-			}
-
 			results = entries.map(() => false);
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_SET_MANY_RAW, { entries, results });
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY_RAW, {
+			entries,
+			results,
+		});
 
 		return results;
 	}
@@ -953,7 +984,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 			return this.deleteMany(key);
 		}
 
-		this.hooks.trigger(KeyvHooks.PRE_DELETE, { key });
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key });
 
 		let result = true;
 
@@ -967,12 +998,9 @@ export class Keyv<GenericValue = any> extends EventManager {
 		} catch (error) {
 			result = false;
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 
-		this.hooks.trigger(KeyvHooks.POST_DELETE, {
+		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 			key,
 			value: result,
 		});
@@ -989,7 +1017,7 @@ export class Keyv<GenericValue = any> extends EventManager {
 	public async deleteMany(keys: string[]): Promise<boolean> {
 		try {
 			const store = this._store;
-			this.hooks.trigger(KeyvHooks.PRE_DELETE, { key: keys });
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
 			if (store.deleteMany !== undefined) {
 				return await store.deleteMany(keys);
 			}
@@ -998,17 +1026,13 @@ export class Keyv<GenericValue = any> extends EventManager {
 
 			const results = await Promise.all(promises);
 			const returnResult = results.every(Boolean);
-			this.hooks.trigger(KeyvHooks.POST_DELETE, {
+			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 				key: keys,
 				value: returnResult,
 			});
 			return returnResult;
 		} catch (error) {
 			this.emit("error", error);
-
-			if (this._throwOnErrors) {
-				throw error;
-			}
 
 			return false;
 		}
@@ -1026,9 +1050,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 			await store.clear();
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 	}
 
@@ -1056,9 +1077,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 			rawData = await store.get(key);
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 
 			return false;
 		}
@@ -1109,15 +1127,6 @@ export class Keyv<GenericValue = any> extends EventManager {
 		if (typeof store.disconnect === "function") {
 			return store.disconnect();
 		}
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public emit(event: string, ...arguments_: any[]): void {
-		if (event === "error" && !this._emitErrors) {
-			return;
-		}
-
-		super.emit(event, ...arguments_);
 	}
 
 	public async serializeData<T>(

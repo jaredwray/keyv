@@ -1,6 +1,6 @@
-import EventManager from "./event-manager.js";
+import { Eventified } from "hookified";
 
-class StatsManager extends EventManager {
+class StatsManager extends Eventified {
 	public enabled = true;
 
 	public hits = 0;

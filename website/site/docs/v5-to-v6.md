@@ -70,7 +70,7 @@ Unified versioning simplifies dependency management and ensures compatibility ac
 | Task | Status |
 |------|--------|
 | Remove `opts` property in Keyv and Storage Adapters | IN PROGRESS |
-| Integrate Hookified library in Keyv | NOT STARTED |
+| Integrate Hookified library in Keyv | COMPLETE |
 | Update `deleteMany` return type | NOT STARTED |
 | Update `setMany` signature and return type | NOT STARTED |
 | Refactor iterator implementation | NOT STARTED |
@@ -203,53 +203,48 @@ See [Serialization Adapters](#serialization-adapters) for more details.
 
 ### Hookified for Events and Hooks
 
-We have moved to the standard [Hookified](https://hookified.org) library instead of our custom implementation. This introduces some changes to hook function calls and naming conventions.
+Keyv now extends [Hookified](https://hookified.org) directly, replacing the custom `EventManager` and `HooksManager` classes. This unifies the event/hook system across Keyv and all storage adapters.
 
-**Available Hooks:**
+**Breaking Changes:**
+- `keyv.hooks.addHandler(event, fn)` is replaced by `keyv.addHook(event, fn)`
+- `keyv.hooks.removeHandler(event, fn)` is replaced by `keyv.removeHook({ event, handler: fn })`
+- `keyv.hooks.handlers` is replaced by `keyv.hooks` (a `Map<string, IHook[]>`)
+- Hook names changed from `pre`/`post` to `before:`/`after:` convention
+- The `emitErrors` option has been removed
+- `throwOnErrors` behavior changed: it now only throws when there are **no** error listeners registered (standard EventEmitter pattern). In v5, it would always re-throw after emitting.
+
+**Hook Name Migration:**
+
+| v5 Hook | v6 Hook |
+|---------|---------|
+| `KeyvHooks.PRE_SET` (`"preSet"`) | `KeyvHooks.BEFORE_SET` (`"before:set"`) |
+| `KeyvHooks.POST_SET` (`"postSet"`) | `KeyvHooks.AFTER_SET` (`"after:set"`) |
+| `KeyvHooks.PRE_GET` (`"preGet"`) | `KeyvHooks.BEFORE_GET` (`"before:get"`) |
+| `KeyvHooks.POST_GET` (`"postGet"`) | `KeyvHooks.AFTER_GET` (`"after:get"`) |
+| `KeyvHooks.PRE_DELETE` (`"preDelete"`) | `KeyvHooks.BEFORE_DELETE` (`"before:delete"`) |
+| `KeyvHooks.POST_DELETE` (`"postDelete"`) | `KeyvHooks.AFTER_DELETE` (`"after:delete"`) |
+
+The same pattern applies for `GET_MANY`, `GET_RAW`, `GET_MANY_RAW`, `SET_RAW`, `SET_MANY_RAW` hooks.
+
+The old `PRE_`/`POST_` enum values are deprecated but still work. Keyv will emit deprecation warnings when they are used.
+
+**v5 (before):**
 ```javascript
-import Keyv from 'keyv';
+import Keyv, { KeyvHooks } from 'keyv';
 
 const keyv = new Keyv();
-
-// Available hooks
-keyv.onHook('preSet', async (key, value, ttl) => {
-  console.log(`Setting ${key}`);
+keyv.hooks.addHandler(KeyvHooks.PRE_SET, (data) => {
+  console.log(`Setting ${data.key}`);
 });
+```
 
-keyv.onHook('postSet', async (key, value, ttl) => {
-  console.log(`Set ${key}`);
-});
+**v6 (after):**
+```javascript
+import Keyv, { KeyvHooks } from 'keyv';
 
-keyv.onHook('preGet', async (key) => {
-  console.log(`Getting ${key}`);
-});
-
-keyv.onHook('postGet', async (key, value) => {
-  console.log(`Got ${key}: ${value}`);
-});
-
-keyv.onHook('preGetMany', async (keys) => {
-  console.log(`Getting keys: ${keys}`);
-});
-
-keyv.onHook('postGetMany', async (keys, values) => {
-  console.log(`Got values for keys`);
-});
-
-keyv.onHook('preDelete', async (key) => {
-  console.log(`Deleting ${key}`);
-});
-
-keyv.onHook('postDelete', async (key, deleted) => {
-  console.log(`Deleted ${key}: ${deleted}`);
-});
-
-keyv.onHook('preClear', async () => {
-  console.log('Clearing store');
-});
-
-keyv.onHook('postClear', async () => {
-  console.log('Store cleared');
+const keyv = new Keyv();
+keyv.addHook(KeyvHooks.BEFORE_SET, (data) => {
+  console.log(`Setting ${data.key}`);
 });
 ```
 
@@ -270,16 +265,24 @@ keyv.on('disconnect', () => {
 });
 ```
 
-**Important:** By default, `throwOnErrors` is set to `true`. If there are no listeners for the `error` event, it will throw an `Error`. You can disable this:
+**Error Handling:**
+The `throwOnErrors` option still works and defaults to `false`. When enabled, errors will throw if there are **no** error listeners registered (via hookified's `throwOnEmitError`). If you have an error listener, the error is passed to the listener instead of being thrown. This follows the standard Node.js EventEmitter pattern.
 
 ```javascript
-const keyv = new Keyv({ throwOnErrors: false });
+const keyv = new Keyv({ throwOnErrors: true });
+
+// Error will throw because there is no error listener
+await keyv.get('key'); // throws if the store errors
+
+// Error will NOT throw because there is a listener handling it
+keyv.on('error', (err) => console.error(err));
+await keyv.get('key'); // error passed to listener instead
 ```
 
-To have errors thrown on hooks, set `throwOnHooks` to `true`:
+Additionally, `throwOnEmptyListeners` is now enabled by default. This means that if an error event is emitted with **no** error listeners registered, it will always throw — even without `throwOnErrors` enabled. This is the standard Node.js EventEmitter behavior for unhandled errors. To silently discard errors, register a no-op listener:
 
 ```javascript
-const keyv = new Keyv({ throwOnHooks: true });
+keyv.on('error', () => {});
 ```
 
 For more about Hookified, visit [https://hookified.org](https://hookified.org).
