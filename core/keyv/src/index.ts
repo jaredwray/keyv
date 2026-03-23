@@ -67,8 +67,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	private _compression: KeyvCompressionAdapter | undefined;
 
-	private _throwOnErrors = false;
-
 	/**
 	 * Keyv Constructor
 	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
@@ -110,7 +108,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		super({
 			throwOnHookError: false,
-			throwOnEmptyListeners: false,
+			throwOnEmptyListeners: true,
+			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
 		});
 
 		this.deprecatedHooks = new Map([
@@ -203,10 +202,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		if (mergedOptions.ttl) {
 			this._ttl = mergedOptions.ttl;
-		}
-
-		if (mergedOptions.throwOnErrors !== undefined) {
-			this._throwOnErrors = mergedOptions.throwOnErrors;
 		}
 	}
 
@@ -329,7 +324,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @return {boolean} The current throwOnErrors value.
 	 */
 	public get throwOnErrors(): boolean {
-		return this._throwOnErrors;
+		return this.throwOnEmitError;
 	}
 
 	/**
@@ -337,7 +332,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {boolean} value The throwOnErrors value to set.
 	 */
 	public set throwOnErrors(value: boolean) {
-		this._throwOnErrors = value;
+		this.throwOnEmitError = value;
 	}
 
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
@@ -432,9 +427,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			rawData = await store.get<Value>(key as string);
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 
 		const deserializedData =
@@ -758,9 +750,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 		} catch (error) {
 			result = false;
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 
 		this.hookSync(KeyvHooks.AFTER_SET, {
@@ -812,9 +801,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 		} catch (error) {
 			result = false;
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 
 		this.hookSync(KeyvHooks.AFTER_SET_RAW, {
@@ -880,9 +866,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 
 			results = entries.map(() => false);
 		}
@@ -940,9 +923,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 
 			results = entries.map(() => false);
 		}
@@ -977,9 +957,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 		} catch (error) {
 			result = false;
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 
 		this.hookSync(KeyvHooks.AFTER_DELETE, {
@@ -1015,9 +992,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return returnResult;
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 
 			return false;
 		}
@@ -1035,9 +1009,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			await store.clear();
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 		}
 	}
 
@@ -1065,9 +1036,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			rawData = await store.get(key);
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
 
 			return false;
 		}

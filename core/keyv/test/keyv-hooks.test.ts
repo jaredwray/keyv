@@ -32,7 +32,7 @@ test.it("AFTER_SET hook", async (t) => {
 	const keyv = new Keyv();
 	keyv.addHook(KeyvHooks.AFTER_SET, (data) => {
 		t.expect(data.key).toBe("foo");
-		t.expect(data.value).toBe('{"value":"bar","expires":null}');
+		t.expect(data.value).toBe('{"value":"bar"}');
 	});
 	t.expect(keyv.getHooks(KeyvHooks.AFTER_SET)?.length).toBe(1);
 	await keyv.set("foo", "bar");

@@ -129,7 +129,6 @@ describe("Keyv Set Raw", async () => {
 			throw new Error("store error");
 		};
 		const keyv = new Keyv({ store, throwOnErrors: true });
-		keyv.on("error", () => {});
 		await expect(
 			keyv.setRaw(faker.string.alphanumeric(10), { value: "test" }),
 		).rejects.toThrow("store error");
@@ -308,7 +307,6 @@ describe("Keyv Set Many Raw", async () => {
 			throw new Error("batch error");
 		};
 		const keyv = new Keyv({ store, throwOnErrors: true });
-		keyv.on("error", () => {});
 		await expect(
 			keyv.setManyRaw([{ key: "a", value: { value: "test" } }]),
 		).rejects.toThrow("batch error");
