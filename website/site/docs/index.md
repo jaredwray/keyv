@@ -208,10 +208,10 @@ interface CompressionAdapter {
 In addition to the interface, you can test it with our compression test suite using `@keyv/test-suite`:
 
 ```js
-const {keyvCompresstionTests} = require('@keyv/test-suite');
+const {keyvCompressionTests} = require('@keyv/test-suite');
 const KeyvGzip = require('@keyv/compress-gzip');
 
-keyvCompresstionTests(test, new KeyvGzip());
+keyvCompressionTests(test, new KeyvGzip());
 ```
 
 ## 7. Advanced - Extend your own Module with Keyv
