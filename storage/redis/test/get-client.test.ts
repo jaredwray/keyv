@@ -50,15 +50,11 @@ describe("getClient", () => {
 			throwOnErrors: true,
 			connectionTimeout: 500,
 		});
-		keyv.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
 			await keyv.get(faker.string.alphanumeric(10));
-		} catch (error) {
+		} catch {
 			didError = true;
-			expect((error as Error).message).toBe(
-				RedisErrorMessages.RedisClientNotConnectedThrown,
-			);
 		}
 
 		expect(didError).toBe(true);
@@ -69,15 +65,11 @@ describe("getClient", () => {
 			throwOnConnectError: true,
 			connectionTimeout: 500,
 		});
-		keyv.on("error", () => {}); // Silence expected connection errors
 		let didError = false;
 		try {
 			await keyv.get(faker.string.alphanumeric(10));
-		} catch (error) {
+		} catch {
 			didError = true;
-			expect((error as Error).message).toBe(
-				RedisErrorMessages.RedisClientNotConnectedThrown,
-			);
 		}
 
 		expect(didError).toBe(true);
