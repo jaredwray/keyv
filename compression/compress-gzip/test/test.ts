@@ -1,10 +1,9 @@
-import { keyvCompresstionTests } from "@keyv/test-suite";
+import { keyvCompressionTests } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import * as test from "vitest";
 import KeyvGzip from "../src/index.js";
 
-// @ts-expect-error - KeyvGzip type
-keyvCompresstionTests(test, new KeyvGzip());
+keyvCompressionTests(test, new KeyvGzip());
 
 test.it("object type compression/decompression", async (t) => {
 	const keyv = new KeyvGzip();
@@ -31,22 +30,6 @@ test.it("options at class level", async (t) => {
 	t.expect(typeof compressed).toBe("string");
 	t.expect(compressed).not.toBe("whatever");
 	const decompressed = await keyv.decompress(compressed);
-	t.expect(decompressed).toBe("whatever");
-});
-
-test.it("compression with compression options", async (t) => {
-	const keyv = new KeyvGzip();
-	const compressed = await keyv.compress("whatever");
-	const decompressed = await keyv.decompress(compressed);
-	t.expect(decompressed).toBe("whatever");
-});
-
-test.it("decompression with decompression options", async (t) => {
-	const options = {};
-
-	const keyv = new KeyvGzip(options);
-	const compressed = await keyv.compress("whatever");
-	const decompressed = await keyv.decompress(compressed, options);
 	t.expect(decompressed).toBe("whatever");
 });
 

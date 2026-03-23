@@ -1,10 +1,9 @@
-import { keyvCompresstionTests } from "@keyv/test-suite";
+import { keyvCompressionTests } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import * as test from "vitest";
 import KeyvLz4 from "../src/index.js";
 
-// @ts-expect-error - KeyvLz4 type
-keyvCompresstionTests(test, new KeyvLz4());
+keyvCompressionTests(test, new KeyvLz4());
 
 test.it("object type compression/decompression", async (t) => {
 	const keyv = new KeyvLz4();
@@ -18,7 +17,7 @@ test.it("object type compression/decompression", async (t) => {
 	t.expect(decompressed).toEqual(value);
 });
 
-test.it("compression with options", async (t) => {
+test.it("compression with dictionary option", async (t) => {
 	const keyv = new KeyvLz4("test");
 	const compressed = await keyv.compress("whatever");
 	t.expect(typeof compressed).toBe("string");
@@ -27,7 +26,7 @@ test.it("compression with options", async (t) => {
 	t.expect(decompressed).toBe("whatever");
 });
 
-test.it("decompress should not throw error when empty with gzip", async (t) => {
+test.it("decompress should not throw error when empty with lz4", async (t) => {
 	const keyv = new Keyv({ store: new Map(), compression: new KeyvLz4() });
 	await t.expect(keyv.get("foo")).resolves.not.toThrowError();
 });

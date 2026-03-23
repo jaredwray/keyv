@@ -1,7 +1,8 @@
 import { Buffer } from "node:buffer";
+import type { KeyvCompressionAdapter } from "keyv";
 import { compress, uncompress } from "lz4-napi";
 
-export class KeyvLz4 {
+export class KeyvLz4 implements KeyvCompressionAdapter {
 	constructor(private readonly dictionary?: string) {}
 
 	async compress(data: string): Promise<string> {
