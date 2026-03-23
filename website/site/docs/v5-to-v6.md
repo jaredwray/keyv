@@ -211,6 +211,7 @@ Keyv now extends [Hookified](https://hookified.org) directly, replacing the cust
 - `keyv.hooks.handlers` is replaced by `keyv.hooks` (a `Map<string, IHook[]>`)
 - Hook names changed from `pre`/`post` to `before:`/`after:` convention
 - The `emitErrors` option has been removed
+- `throwOnErrors` behavior changed: it now only throws when there are **no** error listeners registered (standard EventEmitter pattern). In v5, it would always re-throw after emitting.
 
 **Hook Name Migration:**
 
@@ -265,10 +266,23 @@ keyv.on('disconnect', () => {
 ```
 
 **Error Handling:**
-The `throwOnErrors` option still works and defaults to `false`. When enabled, errors are emitted AND thrown:
+The `throwOnErrors` option still works and defaults to `false`. When enabled, errors will throw if there are **no** error listeners registered (via hookified's `throwOnEmitError`). If you have an error listener, the error is passed to the listener instead of being thrown. This follows the standard Node.js EventEmitter pattern.
 
 ```javascript
 const keyv = new Keyv({ throwOnErrors: true });
+
+// Error will throw because there is no error listener
+await keyv.get('key'); // throws if the store errors
+
+// Error will NOT throw because there is a listener handling it
+keyv.on('error', (err) => console.error(err));
+await keyv.get('key'); // error passed to listener instead
+```
+
+Additionally, `throwOnEmptyListeners` is now enabled by default. This means that if an error event is emitted with **no** error listeners registered, it will always throw — even without `throwOnErrors` enabled. This is the standard Node.js EventEmitter behavior for unhandled errors. To silently discard errors, register a no-op listener:
+
+```javascript
+keyv.on('error', () => {});
 ```
 
 For more about Hookified, visit [https://hookified.org](https://hookified.org).
