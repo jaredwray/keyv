@@ -491,9 +491,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * More efficient than calling {@link set} in a loop for bulk operations.
 	 * @param entries - An array of `{ key, value }` entry objects to store.
 	 */
-	async setMany(entries: KeyvEntry[]): Promise<void> {
+	async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return;
+			return entries.map(() => true);
 		}
 
 		// Each entry uses 4 parameters. SQLite defaults to a max of 999 bind
@@ -520,6 +520,8 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
 			await this.query(upsert, ...params);
 		}
+
+		return entries.map(() => true);
 	}
 
 	/**
@@ -538,27 +540,18 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the store using parameterized `IN (?, ?)` queries.
+	 * Deletes multiple keys from the store by deleting each key individually.
 	 * @param keys - An array of keys to delete.
-	 * @returns `true` if any of the keys existed and were deleted, `false` if none were found.
+	 * @returns An array of booleans in the same order as the input keys,
+	 *   where `true` indicates the key existed and was deleted, `false` indicates it was not found.
 	 */
-	async deleteMany(keys: string[]) {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const ns = this.getNamespaceValue();
-		const batchSize = 998; // 999 max params - 1 for namespace
-		let totalAffected = 0;
-
-		for (let i = 0; i < strippedKeys.length; i += batchSize) {
-			const batch = strippedKeys.slice(i, i + batchSize);
-			const placeholders = batch.map(() => "?").join(", ");
-			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ? RETURNING key`;
-			const result = (await this.query(del, ...batch, ns)) as Array<{
-				key: string;
-			}>;
-			totalAffected += result.length;
+	async deleteMany(keys: string[]): Promise<boolean[]> {
+		const results: boolean[] = [];
+		for (const key of keys) {
+			results.push(await this.delete(key));
 		}
 
-		return totalAffected > 0;
+		return results;
 	}
 
 	/**

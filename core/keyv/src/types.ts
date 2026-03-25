@@ -104,7 +104,7 @@ export type KeyvStorageAdapter = {
 	setMany?(
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		values: Array<{ key: string; value: any; ttl?: number }>,
-	): Promise<void>;
+	): Promise<boolean[] | undefined>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
@@ -113,7 +113,7 @@ export type KeyvStorageAdapter = {
 		keys: string[],
 	): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
-	deleteMany?(key: string[]): Promise<boolean>;
+	deleteMany?(key: string[]): Promise<boolean[]>;
 	iterator?<Value>(
 		namespace?: string,
 	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;

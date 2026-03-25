@@ -341,7 +341,7 @@ test.it("hasMany checks multiple keys", async (t) => {
 
 test.it("setMany with empty entries should not fail", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	await t.expect(store.setMany([])).resolves.toBeUndefined();
+	await t.expect(store.setMany([])).resolves.toEqual([]);
 });
 
 test.it("has returns false for expired key", async (t) => {

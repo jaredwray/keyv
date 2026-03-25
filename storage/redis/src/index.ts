@@ -363,7 +363,7 @@ export default class KeyvRedis<T>
 	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<void> {
+	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		try {
 			if (this.isCluster()) {
 				// Ensure cluster is connected first
@@ -409,6 +409,8 @@ export default class KeyvRedis<T>
 				}
 				await multi.exec();
 			}
+
+			return entries.map(() => true);
 		} catch (error) {
 			this.emit("error", error);
 			// Re-throw connection errors if throwOnConnectError is true
@@ -423,6 +425,8 @@ export default class KeyvRedis<T>
 			if (this._throwOnErrors) {
 				throw error;
 			}
+
+			return entries.map(() => false);
 		}
 	}
 
@@ -598,15 +602,15 @@ export default class KeyvRedis<T>
 	/**
 	 * Delete many keys from the store. This will be done as a single transaction.
 	 * @param {Array<string>} keys - the keys to delete
-	 * @returns {Promise<boolean>} - true if any key was deleted, false if not
+	 * @returns {Promise<boolean[]>} - array of booleans indicating whether each key was successfully deleted
 	 */
-	public async deleteMany(keys: string[]): Promise<boolean> {
-		let result = false;
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		const resultMap = new Map<string, boolean>();
+		const prefixedKeys = keys.map((key) =>
+			this.createKeyPrefix(key, this._namespace),
+		);
 
 		try {
-			const prefixedKeys = keys.map((key) =>
-				this.createKeyPrefix(key, this._namespace),
-			);
 
 			if (this.isCluster()) {
 				// Group keys by slot to avoid CROSSSLOT errors
@@ -624,11 +628,12 @@ export default class KeyvRedis<T>
 							}
 						}
 						const results = await multi.exec();
-						for (const deleted of results) {
+						for (const [index, deleted] of results.entries()) {
 							/* v8 ignore next -- @preserve */
-							if (typeof deleted === "number" && deleted > 0) {
-								result = true;
-							}
+							resultMap.set(
+								slotKeys[index],
+								typeof deleted === "number" && deleted > 0,
+							);
 						}
 					}),
 				);
@@ -645,12 +650,16 @@ export default class KeyvRedis<T>
 				}
 
 				const results = await multi.exec();
-				for (const deleted of results) {
-					if (typeof deleted === "number" && deleted > 0) {
-						result = true;
-					}
+				for (const [index, deleted] of results.entries()) {
+					resultMap.set(
+						prefixedKeys[index],
+						typeof deleted === "number" && deleted > 0,
+					);
 				}
 			}
+
+			/* v8 ignore next -- @preserve */
+			return prefixedKeys.map((key) => resultMap.get(key) ?? false);
 		} catch (error) {
 			this.emit("error", error);
 			// Re-throw connection errors if throwOnConnectError is true
@@ -664,9 +673,9 @@ export default class KeyvRedis<T>
 			if (this._throwOnErrors) {
 				throw error;
 			}
-		}
 
-		return result;
+			return Array.from({length: keys.length}).fill(false) as boolean[];
+		}
 	}
 
 	/**

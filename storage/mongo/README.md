@@ -212,7 +212,7 @@ await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
 `setMany(entries)` - Set multiple values in the store at once.
 
 - `entries` *(Array<{ key: string, value: any, ttl?: number }>)* - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds.
-- Returns: `Promise<void>`
+- Returns: `Promise<boolean[]>` - An array of booleans indicating whether each entry was set successfully.
 
 In standard mode, uses a single MongoDB `bulkWrite` operation for efficiency. In GridFS mode, each entry is set individually in parallel.
 
@@ -220,10 +220,10 @@ In standard mode, uses a single MongoDB `bulkWrite` operation for efficiency. In
 const store = new KeyvMongo('mongodb://localhost:27017');
 const keyv = new Keyv({ store });
 
-await keyv.set([
+const results = await keyv.set([
   { key: 'key1', value: 'value1' },
   { key: 'key2', value: 'value2', ttl: 5000 },
-]);
+]); // [true, true]
 ```
 
 ### get
@@ -324,7 +324,7 @@ console.log(await keyv.delete('nonexistent')); // false
 `deleteMany(keys)` - Delete multiple keys from the store at once.
 
 - `keys` *(string[])* - Array of keys to delete.
-- Returns: `Promise<boolean>` - `true` if any keys were deleted, `false` if none were found.
+- Returns: `Promise<boolean[]>` - An array of booleans indicating whether each key was deleted.
 
 In standard mode, uses a single MongoDB query with the `$in` operator. In GridFS mode, all matching files are found and deleted in parallel.
 
@@ -335,7 +335,7 @@ const keyv = new Keyv({ store });
 await keyv.set('key1', 'value1');
 await keyv.set('key2', 'value2');
 
-console.log(await keyv.delete(['key1', 'key2', 'key3'])); // true
+const results = await keyv.delete(['key1', 'key2', 'key3']); // [true, true, false]
 ```
 
 ### clear

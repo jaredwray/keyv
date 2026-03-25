@@ -291,14 +291,14 @@ await store.set('foo', 'bar');
 
 ### .setMany(entries)
 
-Stores multiple values in the etcd server. Each entry is an object with `key` and `value` properties.
+Stores multiple values in the etcd server. Each entry is an object with `key` and `value` properties. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
-await store.setMany([
+const results = await store.setMany([
   { key: 'key1', value: 'value1' },
   { key: 'key2', value: 'value2' },
-]);
+]); // [true, true]
 ```
 
 ### .delete(key)
@@ -313,13 +313,13 @@ const deleted = await store.delete('foo'); // true
 
 ### .deleteMany(keys)
 
-Deletes multiple keys from the etcd server. Returns `true` only if all keys were successfully deleted.
+Deletes multiple keys from the etcd server. Returns a `boolean[]` indicating whether each key was deleted.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
 await store.set('key1', 'value1');
 await store.set('key2', 'value2');
-const allDeleted = await store.deleteMany(['key1', 'key2']); // true
+const results = await store.deleteMany(['key1', 'key2']); // [true, true]
 ```
 
 ### .clear()

@@ -263,7 +263,7 @@ describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
 			expires: undefined,
 			value: "value2",
 		});
-		expect(result).toBeUndefined();
+		expect(result).toEqual([true, true]);
 	});
 
 	test("should get undefined for non-existent key", async () => {
@@ -875,7 +875,7 @@ describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
 			expires: undefined,
 			value: "value2",
 		});
-		expect(result).toBeUndefined();
+		expect(result).toEqual([true, true]);
 	});
 
 	test("should get undefined for non-existent key", async () => {
@@ -1157,7 +1157,7 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 			expires: undefined,
 			value: "value2",
 		});
-		expect(result).toBeUndefined();
+		expect(result).toEqual([true, true]);
 	});
 
 	test("should get undefined for non-existent key", async () => {

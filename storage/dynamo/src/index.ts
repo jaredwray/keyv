@@ -205,12 +205,12 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async setMany(
 		entries: Array<{ key: string; value: unknown; ttl?: number }>,
-	): Promise<void> {
+	): Promise<boolean[] | undefined> {
 		try {
 			await this._tableReady;
 
 			if (entries.length === 0) {
-				return;
+				return entries.map(() => true);
 			}
 
 			const sixHoursFromNowEpoch = Math.floor(
@@ -246,9 +246,12 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 				await this._client.batchWrite(batchWriteInput);
 			}
+
+			return entries.map(() => true);
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
+			return entries.map(() => false);
 		}
 		/* v8 ignore stop -- @preserve */
 	}
@@ -360,58 +363,25 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes multiple keys from DynamoDB.
 	 * @param keys - An array of keys to delete
-	 * @returns `true` if all keys were successfully deleted, `false` otherwise.
+	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
-	public async deleteMany(keys: string[]) {
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		try {
 			await this._tableReady;
 
 			if (keys.length === 0) {
-				return false;
+				return [];
 			}
 
-			const formattedKeys = keys.map((key) => this.formatKey(key));
+			const results = await Promise.all(
+				keys.map(async (key) => this.delete(key)),
+			);
 
-			const items = await this.getMany(keys);
-
-			if (items.filter(Boolean).length === 0) {
-				return false;
-			}
-
-			// BatchWriteItem supports max 25 items per request
-			const chunkSize = 25;
-			for (let i = 0; i < formattedKeys.length; i += chunkSize) {
-				const chunk = formattedKeys.slice(i, i + chunkSize);
-				let unprocessedItems:
-					| BatchWriteCommandInput["RequestItems"]
-					| undefined = {
-					[this._opts.tableName]: chunk.map((key) => ({
-						DeleteRequest: {
-							Key: {
-								id: key,
-							},
-						},
-					})),
-				};
-
-				while (unprocessedItems && Object.keys(unprocessedItems).length > 0) {
-					const batchDeleteInput: BatchWriteCommandInput = {
-						RequestItems: unprocessedItems,
-					};
-					const response = await this._client.batchWrite(batchDeleteInput);
-					unprocessedItems =
-						response.UnprocessedItems &&
-						Object.keys(response.UnprocessedItems).length > 0
-							? response.UnprocessedItems
-							: undefined;
-				}
-			}
-
-			return true;
+			return results;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
-			return false;
+			return keys.map(() => false);
 		}
 		/* v8 ignore stop -- @preserve */
 	}

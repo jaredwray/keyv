@@ -418,7 +418,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * Sets multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
 	 * @param entries - An array of key-value entry objects.
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<void> {
+	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		const keys = [];
 		const values = [];
 		const expiresArray: Array<number | null> = [];
@@ -437,6 +437,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			this.getNamespaceValue(),
 			expiresArray,
 		]);
+		return entries.map(() => true);
 	}
 
 	/**
@@ -455,14 +456,11 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes multiple keys from the store at once.
 	 * @param keys - An array of keys to delete.
-	 * @returns `true` if any of the keys existed and were deleted, `false` otherwise.
+	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
-	public async deleteMany(keys: string[]): Promise<boolean> {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const ns = this.getNamespaceValue();
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
-		const rows = await this.query(del, [strippedKeys, ns]);
-		return rows.length > 0;
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		const results = await Promise.all(keys.map(async (key) => this.delete(key)));
+		return results;
 	}
 
 	/**

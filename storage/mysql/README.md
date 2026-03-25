@@ -339,13 +339,13 @@ await keyvMysql.set('foo', 'bar');
 
 ### .setMany(entries)
 
-Set multiple key-value pairs at once. Each entry is an object with `key` and `value` properties.
+Set multiple key-value pairs at once. Each entry is an object with `key` and `value` properties. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
-await keyvMysql.setMany([
+const results = await keyvMysql.setMany([
   { key: 'foo', value: 'bar' },
   { key: 'baz', value: 'qux' },
-]);
+]); // [true, true]
 ```
 
 ### .delete(key)
@@ -358,10 +358,10 @@ const deleted = await keyvMysql.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store. Returns `true` if at least one key was deleted, `false` otherwise.
+Deletes multiple key-value pairs from the store. Returns a `boolean[]` indicating whether each key was deleted.
 
 ```js
-const deleted = await keyvMysql.deleteMany(['foo', 'bar']);
+const results = await keyvMysql.deleteMany(['foo', 'bar']); // [true, true]
 ```
 
 ### .clear()

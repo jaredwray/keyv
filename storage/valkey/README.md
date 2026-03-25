@@ -249,13 +249,13 @@ await store.set('foo', 'bar', 5000); // expires in 5 seconds
 
 ### .setMany(entries)
 
-Sets multiple key-value pairs in a single batch operation. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped.
+Sets multiple key-value pairs in a single batch operation. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
-await store.setMany([
+const results = await store.setMany([
   { key: 'foo', value: 'bar' },
   { key: 'baz', value: 'qux', ttl: 5000 },
-]);
+]); // [true, true]
 ```
 
 ### .delete(key)
@@ -268,10 +268,10 @@ const deleted = await store.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store in a single batch operation. Returns `true` if at least one key was deleted, `false` otherwise.
+Deletes multiple key-value pairs from the store in a single batch operation. Returns a `boolean[]` indicating whether each key was deleted.
 
 ```js
-const deleted = await store.deleteMany(['foo', 'bar']);
+const results = await store.deleteMany(['foo', 'bar']); // [true, true]
 ```
 
 ### .has(key)

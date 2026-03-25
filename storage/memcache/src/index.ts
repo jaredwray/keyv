@@ -122,11 +122,12 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	async setMany(
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		entries: Array<{ key: string; value: any; ttl?: number }>,
-	): Promise<void> {
+	): Promise<boolean[] | undefined> {
 		const promises = entries.map(async ({ key, value, ttl }) =>
 			this.set(key, value, ttl),
 		);
-		await Promise.allSettled(promises);
+		const results = await Promise.allSettled(promises);
+		return results.map((result) => result.status === "fulfilled");
 	}
 
 	/**
@@ -147,13 +148,12 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes multiple keys from the memcache server.
 	 * @param keys - An array of keys to delete
-	 * @returns `true` if all keys were successfully deleted, `false` otherwise
+	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
-	async deleteMany(keys: string[]) {
+	async deleteMany(keys: string[]): Promise<boolean[]> {
 		const promises = keys.map(async (key) => this.delete(key));
 		const results = await Promise.allSettled(promises);
-		// @ts-expect-error - x is an object
-		return results.every((x) => x.value === true);
+		return results.map((x) => (x.status === "fulfilled" ? x.value : false));
 	}
 
 	/**

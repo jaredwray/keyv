@@ -9,7 +9,6 @@ import {
 	type KeyvOptions,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
-	type StoredDataNoRaw,
 	type StoredDataRaw,
 } from "./types.js";
 
@@ -53,16 +52,6 @@ const deprecatedHookAliases = new Map<string, string>([
 	[KeyvHooks.BEFORE_DELETE, KeyvHooks.PRE_DELETE],
 	[KeyvHooks.AFTER_DELETE, KeyvHooks.POST_DELETE],
 ]);
-
-const iterableAdapters = [
-	"sqlite",
-	"postgres",
-	"mysql",
-	"mongo",
-	"redis",
-	"valkey",
-	"etcd",
-];
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends Hookified {
@@ -206,11 +195,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				this.iterator = this.generateIterator(
 					this._store as unknown as IteratorFunction,
 				);
-			} else if (
-				"iterator" in this._store &&
-				this._store.opts &&
-				this._checkIterableAdapter()
-			) {
+			} else if ("iterator" in this._store) {
 				this.iterator = this.generateIterator(
 					// biome-ignore lint/style/noNonNullAssertion: need to fix
 					this._store.iterator!.bind(this._store),
@@ -261,11 +246,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 					store as unknown as IteratorFunction,
 				);
 				/* v8 ignore next -- @preserve */
-			} else if (
-				"iterator" in store &&
-				store.opts &&
-				this._checkIterableAdapter()
-			) {
+			} else if ("iterator" in store) {
 				this.iterator = this.generateIterator(store.iterator?.bind(store));
 			}
 		} else {
@@ -393,15 +374,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 	}
 
-	_checkIterableAdapter(): boolean {
-		return (
-			iterableAdapters.includes(this._store.opts.dialect as string) ||
-			iterableAdapters.some((element) =>
-				(this._store.opts.url as string).includes(element),
-			)
-		);
-	}
-
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	_isValidStorageAdapter(store: KeyvStorageAdapter | any): boolean {
 		return (
@@ -416,34 +388,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Get the Value of a Key
 	 * @param {string | string[]} key passing in a single key or multiple as an array
-	 * @param {{raw: boolean} | undefined} options can pass in to return the raw value by setting { raw: true }
 	 */
-	async get<Value = GenericValue>(
-		key: string,
-		options?: { raw: false },
-	): Promise<StoredDataNoRaw<Value>>;
-	async get<Value = GenericValue>(
-		key: string,
-		options?: { raw: true },
-	): Promise<StoredDataRaw<Value>>;
+	async get<Value = GenericValue>(key: string): Promise<Value | undefined>;
 	async get<Value = GenericValue>(
 		key: string[],
-		options?: { raw: false },
-	): Promise<Array<StoredDataNoRaw<Value>>>;
-	async get<Value = GenericValue>(
-		key: string[],
-		options?: { raw: true },
-	): Promise<Array<StoredDataRaw<Value>>>;
-	// eslint-disable-next-line @stylistic/max-len
+	): Promise<Array<Value | undefined>>;
 	async get<Value = GenericValue>(
 		key: string | string[],
-		options?: { raw: boolean },
-	): Promise<
-		| StoredDataNoRaw<Value>
-		| Array<StoredDataNoRaw<Value>>
-		| StoredDataRaw<Value>
-		| Array<StoredDataRaw<Value>>
-	> {
+	): Promise<Value | undefined | Array<Value | undefined>> {
 		const store = this._store;
 		const isArray = Array.isArray(key);
 
@@ -451,11 +403,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			typeof data.expires === "number" && Date.now() > data.expires;
 
 		if (isArray) {
-			if (options?.raw === true) {
-				return this.getMany<Value>(key, { raw: true });
-			}
-
-			return this.getMany<Value>(key, { raw: false });
+			return this.getMany<Value>(key);
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET, { key });
@@ -496,28 +444,16 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: deserializedData,
 		});
 		this.stats.hit();
-		return options?.raw
-			? deserializedData
-			: (deserializedData as DeserializedData<Value>).value;
+		return (deserializedData as DeserializedData<Value>).value;
 	}
 
 	/**
 	 * Get many values of keys
 	 * @param {string[]} keys passing in a single key or multiple as an array
-	 * @param {{raw: boolean} | undefined} options can pass in to return the raw value by setting { raw: true }
 	 */
 	public async getMany<Value = GenericValue>(
 		keys: string[],
-		options?: { raw: false },
-	): Promise<Array<StoredDataNoRaw<Value>>>;
-	public async getMany<Value = GenericValue>(
-		keys: string[],
-		options?: { raw: true },
-	): Promise<Array<StoredDataRaw<Value>>>;
-	public async getMany<Value = GenericValue>(
-		keys: string[],
-		options?: { raw: boolean },
-	): Promise<Array<StoredDataNoRaw<Value>> | Array<StoredDataRaw<Value>>> {
+	): Promise<Array<Value | undefined>> {
 		const store = this._store;
 
 		const isDataExpired = (data: DeserializedData<Value>): boolean =>
@@ -541,10 +477,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 					return undefined;
 				}
 
-				return options?.raw
-					? (deserializedRow as StoredDataRaw<Value>)
-					: ((deserializedRow as DeserializedData<Value>)
-							.value as StoredDataNoRaw<Value>);
+				return (deserializedRow as DeserializedData<Value>).value;
 			});
 
 			const deserializedRows = await Promise.allSettled(promises);
@@ -584,10 +517,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				continue;
 			}
 
-			const value = options?.raw
-				? (row as StoredDataRaw<Value>)
-				: ((row as DeserializedData<Value>).value as StoredDataNoRaw<Value>);
-			result.push(value);
+			result.push((row as DeserializedData<Value>).value);
 		}
 
 		if (expiredKeys.length > 0) {
@@ -600,9 +530,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this.stats.hit();
 		}
 
-		return result as
-			| Array<StoredDataNoRaw<Value>>
-			| Array<StoredDataRaw<Value>>;
+		return result as Array<Value | undefined>;
 	}
 
 	/**
@@ -975,10 +903,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Delete an Entry
-	 * @param {string | string[]} key the key to be deleted. if an array it will delete many items
-	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
+	 * @param {string} key the key to be deleted
+	 * @returns {boolean} will return true if item is deleted. false if there is an error
 	 */
-	public async delete(key: string | string[]): Promise<boolean> {
+	public async delete(key: string): Promise<boolean>;
+	/**
+	 * Delete multiple Entries
+	 * @param {string[]} keys the keys to be deleted
+	 * @returns {boolean[]} will return array of booleans for each key
+	 */
+	public async delete(keys: string[]): Promise<boolean[]>;
+	public async delete(key: string | string[]): Promise<boolean | boolean[]> {
 		const store = this._store;
 		if (Array.isArray(key)) {
 			return this.deleteMany(key);
@@ -1012,29 +947,37 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Delete many items from the store
 	 * @param {string[]} keys the keys to be deleted
-	 * @returns {boolean} will return true if item or items are deleted. false if there is an error
+	 * @returns {boolean[]} array of booleans indicating success for each key
 	 */
-	public async deleteMany(keys: string[]): Promise<boolean> {
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		try {
 			const store = this._store;
 			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
 			if (store.deleteMany !== undefined) {
-				return await store.deleteMany(keys);
+				const storeResult = await store.deleteMany(keys);
+				// Support adapters that still return a single boolean
+				const results = Array.isArray(storeResult)
+					? storeResult
+					: keys.map(() => storeResult);
+				await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
+					key: keys,
+					value: results,
+				});
+				return results;
 			}
 
 			const promises = keys.map(async (key: string) => store.delete(key));
 
 			const results = await Promise.all(promises);
-			const returnResult = results.every(Boolean);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 				key: keys,
-				value: returnResult,
+				value: results,
 			});
-			return returnResult;
+			return results;
 		} catch (error) {
 			this.emit("error", error);
 
-			return false;
+			return keys.map(() => false);
 		}
 	}
 

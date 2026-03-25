@@ -113,7 +113,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 			expires: undefined,
 			value: "value2",
 		});
-		expect(result).toBeUndefined();
+		expect(result).toEqual([true, true]);
 	});
 
 	test("should get undefined for a non-existent key", async () => {
@@ -252,7 +252,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		const testKeys = Array.from({ length: 5 }, () => faker.string.uuid());
 
 		const result = await keyv.deleteMany(testKeys);
-		expect(result).toEqual(false);
+		expect(result).toEqual(testKeys.map(() => false));
 		expect(errorEmitted).toBe(true);
 	});
 
@@ -298,7 +298,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 			const testKeys = testData.map((data) => data.key);
 
 			await keyv.setMany(testData);
-			const result = await keyv.getMany(testKeys, { raw: true });
+			const result = await keyv.getManyRaw(testKeys);
 			expect(result.length).toBe(5);
 			expect(result[0]?.value.value).toBe(testData[0].value);
 		});

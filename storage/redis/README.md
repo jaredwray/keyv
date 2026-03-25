@@ -544,13 +544,13 @@ export type KeyvRedisOptions = {
 * **useUnlink** - Use the `UNLINK` command for deleting keys isntead of `DEL`.
 * **noNamespaceAffectsAll**: Whether to allow clearing all keys when no namespace is set (default is `false`).
 * **set** - Set a key.
-* **setMany** - Set multiple keys.
+* **setMany** - Set multiple keys. Returns `boolean[]`.
 * **get** - Get a key.
 * **getMany** - Get multiple keys.
 * **has** - Check if a key exists.
 * **hasMany** - Check if multiple keys exist.
 * **delete** - Delete a key.
-* **deleteMany** - Delete multiple keys.
+* **deleteMany** - Delete multiple keys. Returns `boolean[]`.
 * **clear** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
 * **disconnect** - Disconnect from the Redis server using `Quit` command. If you set `force` to `true` it will force the disconnect.
 * **iterator** - Create a new iterator for the keys. If the namespace is not set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.

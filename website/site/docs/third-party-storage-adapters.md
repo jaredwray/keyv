@@ -82,12 +82,12 @@ type KeyvStoreAdapter = {
   clear(): Promise<void>;
 
   // Optional methods for better performance
-  setMany?(values: Array<{ key: string; value: any; ttl?: number }>): Promise<void>;
+  setMany?(values: Array<{ key: string; value: any; ttl?: number }>): Promise<boolean[] | undefined>;
   has?(key: string): Promise<boolean>;
   hasMany?(keys: string[]): Promise<boolean[]>;
   getMany?<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>>;
   disconnect?(): Promise<void>;
-  deleteMany?(key: string[]): Promise<boolean>;
+  deleteMany?(key: string[]): Promise<boolean[]>;
   iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 ```
@@ -180,11 +180,8 @@ class MyCustomStore extends EventEmitter implements KeyvStoreAdapter {
     return values;
   }
 
-  async deleteMany(keys: string[]): Promise<boolean> {
-    for (const key of keys) {
-      this.store.delete(key);
-    }
-    return true;
+  async deleteMany(keys: string[]): Promise<boolean[]> {
+    return keys.map((key) => this.store.delete(key));
   }
 
   async has(key: string): Promise<boolean> {

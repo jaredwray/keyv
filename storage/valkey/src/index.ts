@@ -264,9 +264,9 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	public async setMany(
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		entries: Array<{ key: string; value: any; ttl?: number }>,
-	): Promise<void> {
+	): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return;
+			return entries.map(() => true);
 		}
 
 		// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -280,7 +280,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 		}
 
 		if (resolvedEntries.length === 0) {
-			return;
+			return entries.map(() => true);
 		}
 
 		const slotMap = new Map<number, typeof resolvedEntries>();
@@ -313,6 +313,8 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				await trx.exec();
 			}),
 		);
+
+		return entries.map(() => true);
 	}
 
 	/**
@@ -342,42 +344,19 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the Valkey store in a single batched operation.
-	 * In cluster mode, keys are grouped by hash slot and each group is executed as
-	 * a separate `MULTI/EXEC` transaction to avoid CROSSSLOT errors. When `useSets`
-	 * is enabled, keys are also removed from the namespace tracking set.
+	 * Deletes multiple keys from the Valkey store by deleting each key individually.
+	 * Each element in the returned array indicates whether that specific key was
+	 * successfully deleted.
 	 * @param {string[]} keys - An array of keys to delete.
-	 * @returns {Promise<boolean>} `true` if at least one key existed and was deleted, `false` if none of the keys existed.
+	 * @returns {Promise<boolean[]>} An array of booleans in the same order as the input keys.
+	 *   Each element is `true` if the corresponding key existed and was deleted, `false` otherwise.
 	 */
-	public async deleteMany(keys: string[]) {
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		if (keys.length === 0) {
-			return false;
+			return [];
 		}
 
-		const resolvedKeys = keys.map((key) => this.getKeyName(key));
-		const slotMap = this.getSlotMap(resolvedKeys);
-		let deleted = false;
-
-		await Promise.all(
-			Array.from(slotMap.values(), async (slotKeys) => {
-				const trx = this._client.multi();
-				for (const k of slotKeys) {
-					trx.unlink(k);
-					if (this._useSets) {
-						trx.srem(this.getSetKey(), k);
-					}
-				}
-
-				const results = await trx.exec();
-				const step = this._useSets ? 2 : 1;
-				// biome-ignore lint/suspicious/noExplicitAny: type format
-				if (results.some((r: any, i: number) => i % step === 0 && r[1] > 0)) {
-					deleted = true;
-				}
-			}),
-		);
-
-		return deleted;
+		return Promise.all(keys.map(async (key) => this.delete(key)));
 	}
 
 	/**

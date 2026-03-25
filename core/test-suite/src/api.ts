@@ -195,20 +195,23 @@ const keyvApiTests = (
 		await keyv.set(key1, value1);
 		await keyv.set(key2, value2);
 		await keyv.set(key3, value3);
-		t.expect(await keyv.delete([key1, key2, key3])).toBeTruthy();
+		const result = await keyv.delete([key1, key2, key3]);
+		t.expect(Array.isArray(result)).toBe(true);
 		t.expect(await keyv.get(key1)).toBeUndefined();
 		t.expect(await keyv.get(key2)).toBeUndefined();
 		t.expect(await keyv.get(key3)).toBeUndefined();
 	});
 
 	test.it(
-		".deleteMany([keys]) with nonexistent keys resolves to false",
+		".deleteMany([keys]) with nonexistent keys resolves to array of false",
 		async (t) => {
 			const keyv = new Keyv({ store: store() });
 			const key1 = faker.string.alphanumeric(10);
 			const key2 = faker.string.alphanumeric(10);
 			const key3 = faker.string.alphanumeric(10);
-			t.expect(await keyv.delete([key1, key2, key3])).toBeFalsy();
+			const result = await keyv.delete([key1, key2, key3]);
+			t.expect(Array.isArray(result)).toBe(true);
+			t.expect((result as boolean[]).every((v) => v === false)).toBe(true);
 		},
 	);
 

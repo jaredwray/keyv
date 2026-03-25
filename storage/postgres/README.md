@@ -353,13 +353,13 @@ await keyv.set('foo', 'bar');
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
+Set multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
-await keyv.setMany([
+const results = await keyv.setMany([
   { key: 'foo', value: 'bar' },
   { key: 'baz', value: 'qux' },
-]);
+]); // [true, true]
 ```
 
 ## .get(key)
@@ -407,10 +407,10 @@ const deleted = await keyv.delete('foo'); // true
 
 ## .deleteMany(keys)
 
-Delete multiple keys at once. Returns `true` if any of the keys existed.
+Delete multiple keys at once. Returns a `boolean[]` indicating whether each key existed.
 
 ```js
-const deleted = await keyv.deleteMany(['foo', 'baz']); // true
+const results = await keyv.deleteMany(['foo', 'baz']); // [true, true]
 ```
 
 ## .clear()

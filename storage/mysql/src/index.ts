@@ -409,9 +409,9 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @param entries - Array of key-value entry objects
 	 * @returns Promise that resolves when the operation completes
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<void> {
+	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return;
+			return entries.map(() => true);
 		}
 
 		const ns = this.getNamespaceValue();
@@ -428,6 +428,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			ON DUPLICATE KEY UPDATE value=VALUES(value), expires=VALUES(expires);`;
 		const upsert = mysql.format(sql, flatValues);
 		await this.query(upsert);
+		return entries.map(() => true);
 	}
 
 	/**
@@ -457,16 +458,15 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes multiple key-value pairs from the store.
 	 * @param key - Array of keys to delete
-	 * @returns True if at least one key was deleted, false if no keys were found
+	 * @returns Array of booleans indicating whether each specific key was successfully deleted
 	 */
-	public async deleteMany(key: string[]) {
-		const strippedKeys = key.map((k) => this.removeKeyPrefix(k));
-		const ns = this.getNamespaceValue();
-		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-		const del = mysql.format(sql, [strippedKeys, ns]);
+	public async deleteMany(key: string[]): Promise<boolean[]> {
+		const results: boolean[] = [];
+		for (const k of key) {
+			results.push(await this.delete(k));
+		}
 
-		const result: mysql.ResultSetHeader = await this.query(del);
-		return result.affectedRows !== 0;
+		return results;
 	}
 
 	/**
