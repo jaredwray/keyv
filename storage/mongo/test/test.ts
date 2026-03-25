@@ -9,9 +9,7 @@ const options = { serverSelectionTimeoutMS: 5000, db: "keyvdb" };
 const mongoURL = "mongodb://127.0.0.1:27017";
 const store = () => new KeyvMongo(mongoURL, options);
 
-// @ts-expect-error
 keyvTestSuite(test, Keyv, store);
-// @ts-expect-error
 keyvIteratorTests(test, Keyv, store);
 
 test.afterAll(async () => {
@@ -205,7 +203,7 @@ test.it(
 				faker.string.alphanumeric(10),
 				faker.string.alphanumeric(10),
 			]),
-		).toBeFalsy();
+		).toEqual([false, false]);
 	},
 );
 
@@ -528,7 +526,7 @@ test.it("native namespace: deleteMany scoped to namespace", async (t) => {
 	await mongo2.set(`${ns2}:${key}`, "val2");
 
 	const deleted = await mongo1.deleteMany([`${ns1}:${key}`]);
-	t.expect(deleted).toBe(true);
+	t.expect(deleted).toEqual([true]);
 	t.expect(await mongo1.get(`${ns1}:${key}`)).toBeUndefined();
 	t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("val2");
 });

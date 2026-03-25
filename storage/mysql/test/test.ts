@@ -226,7 +226,7 @@ test.it(".setMany() sets multiple key-value pairs", async (t) => {
 
 test.it(".setMany() with empty array is a no-op", async (t) => {
 	const keyv = new KeyvMysql(uri);
-	await t.expect(keyv.setMany([])).resolves.toBeUndefined();
+	await t.expect(keyv.setMany([])).resolves.toEqual([]);
 });
 
 test.it(".setMany() updates existing keys", async (t) => {
@@ -470,7 +470,7 @@ test.it("native namespace: deleteMany scoped to namespace", async (t) => {
 	await mysql2.set(`${ns2}:${key}`, val2);
 
 	const deleted = await mysql1.deleteMany([`${ns1}:${key}`]);
-	t.expect(deleted).toBe(true);
+	t.expect(deleted).toEqual([true]);
 	t.expect(await mysql1.get(`${ns1}:${key}`)).toBeUndefined();
 	t.expect(await mysql2.get(`${ns2}:${key}`)).toBe(val2);
 });

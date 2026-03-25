@@ -135,7 +135,7 @@ describe("better-sqlite3 driver operations", () => {
 		const values = await store.getMany([keyX, keyY, keyZ, missingKey]);
 		expect(values).toEqual([valX, valY, valZ, undefined]);
 		expect(await store.hasMany([keyX, missingKey])).toEqual([true, false]);
-		expect(await store.deleteMany([keyX, keyY])).toBe(true);
+		expect(await store.deleteMany([keyX, keyY])).toEqual([true, true]);
 		expect(await store.get(keyX)).toBeUndefined();
 		await store.disconnect();
 	});
@@ -279,7 +279,7 @@ describe("sqlite3 helper driver", () => {
 		const values = await store.getMany([keyX, keyY, keyZ, missingKey]);
 		expect(values).toEqual([valX, valY, valZ, undefined]);
 		expect(await store.hasMany([keyX, missingKey])).toEqual([true, false]);
-		expect(await store.deleteMany([keyX, keyY])).toBe(true);
+		expect(await store.deleteMany([keyX, keyY])).toEqual([true, true]);
 		expect(await store.get(keyX)).toBeUndefined();
 		await store.disconnect();
 	});

@@ -610,7 +610,7 @@ test.it("deleteMany returns false when no keys exist", async (t) => {
 		faker.string.uuid(),
 		faker.string.uuid(),
 	]);
-	t.expect(result).toBe(false);
+	t.expect(result).toEqual([false, false]);
 });
 
 test.it("has returns false for non-existent key", async (t) => {

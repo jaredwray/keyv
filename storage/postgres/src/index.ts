@@ -459,7 +459,9 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		const results = await Promise.all(keys.map(async (key) => this.delete(key)));
+		const results = await Promise.all(
+			keys.map(async (key) => this.delete(key)),
+		);
 		return results;
 	}
 

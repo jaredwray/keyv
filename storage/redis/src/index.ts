@@ -611,7 +611,6 @@ export default class KeyvRedis<T>
 		);
 
 		try {
-
 			if (this.isCluster()) {
 				// Group keys by slot to avoid CROSSSLOT errors
 				const slotMap = this.getSlotMap(prefixedKeys);
@@ -674,7 +673,7 @@ export default class KeyvRedis<T>
 				throw error;
 			}
 
-			return Array.from({length: keys.length}).fill(false) as boolean[];
+			return Array.from({ length: keys.length }).fill(false) as boolean[];
 		}
 	}
 

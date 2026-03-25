@@ -91,7 +91,7 @@ test.it(
 		await keyv.set(key3, val3);
 
 		const result = await keyv.deleteMany([key1, key2, key3]);
-		t.expect(result).toBe(true);
+		t.expect(result).toEqual([true, true, true]);
 		t.expect(await keyv.get(key1)).toBe(undefined);
 		t.expect(await keyv.get(key2)).toBe(undefined);
 		t.expect(await keyv.get(key3)).toBe(undefined);
