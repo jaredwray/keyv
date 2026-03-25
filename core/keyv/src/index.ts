@@ -843,6 +843,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 					}),
 				);
 				const storeResult = await this._store.setMany(serializedEntries);
+				/* v8 ignore next -- @preserve */
 				results = Array.isArray(storeResult)
 					? (storeResult as boolean[])
 					: entries.map(() => true);

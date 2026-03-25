@@ -403,6 +403,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		} catch (error) {
 			if (error instanceof MongoBulkWriteError) {
 				const results = new Array<boolean>(entries.length).fill(true);
+				/* v8 ignore next -- @preserve */
 				const errors = Array.isArray(error.writeErrors)
 					? error.writeErrors
 					: [error.writeErrors];

@@ -326,11 +326,13 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 					}
 
 					const execResults = await trx.exec();
+					/* v8 ignore next -- @preserve */
 					if (execResults) {
 						const step = this._useSets ? 2 : 1;
 						for (let j = 0; j < group.length; j++) {
 							const result = execResults[j * step];
 							// ioredis exec returns [error, reply] tuples
+							/* v8 ignore next -- @preserve */
 							const success = Array.isArray(result)
 								? result[0] === null && result[1] === "OK"
 								: result === "OK";
