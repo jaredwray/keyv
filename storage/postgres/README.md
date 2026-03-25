@@ -353,7 +353,7 @@ await keyv.set('foo', 'bar');
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once using a single atomic PostgreSQL `INSERT ... UNNEST ... ON CONFLICT` statement. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
+Set multiple key-value pairs at once using a single atomic PostgreSQL `INSERT ... UNNEST ... ON CONFLICT` statement. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
 
 ```js
 const results = await keyv.setMany([

@@ -255,7 +255,9 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple entries in the store at once.
 	 * @param entries - Array of entries containing key, value, and optional TTL
 	 */
-	async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			const result = await this.set(entry.key, entry.value, entry.ttl);

@@ -291,7 +291,7 @@ await store.set('foo', 'bar');
 
 ### .setMany(entries)
 
-Stores multiple values in the etcd server. Each entry is an object with `key` and `value` properties. Returns a `boolean[]` indicating whether each entry was set successfully.
+Stores multiple values in the etcd server. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');

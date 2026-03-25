@@ -690,7 +690,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Set an item to the store
-	 * @param {string | Array<KeyvEntry>} key the key to use. If you pass in an array of KeyvEntry it will set many items
+	 * @param {string | Array<KeyvEntry<Value>>} key the key to use. If you pass in an array of KeyvEntry it will set many items
 	 * @param {Value} value the value of the key
 	 * @param {number} [ttl] time to live in milliseconds
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
@@ -798,7 +798,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Set many items to the store
-	 * @param {Array<KeyvEntry>} entries the entries to set
+	 * @param {Array<KeyvEntry<Value>>} entries the entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
 	async setMany<Value = GenericValue>(

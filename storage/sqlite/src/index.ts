@@ -491,7 +491,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * More efficient than calling {@link set} in a loop for bulk operations.
 	 * @param entries - An array of `{ key, value }` entry objects to store.
 	 */
-	async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}

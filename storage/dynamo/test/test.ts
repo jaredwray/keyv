@@ -548,10 +548,8 @@ test.it("setMany returns false entries when batchWrite fails", async (t) => {
 	// Wait for table to be ready before mocking
 	await dynamo.set("_warmup", "ok");
 	// Mock batchWrite to simulate failure
-	const originalBatchWrite = dynamo["_client"].batchWrite.bind(
-		dynamo["_client"],
-	);
-	dynamo["_client"].batchWrite = async () => {
+	const originalBatchWrite = dynamo._client.batchWrite.bind(dynamo._client);
+	dynamo._client.batchWrite = async () => {
 		throw new Error("batchWrite failure");
 	};
 
@@ -560,7 +558,7 @@ test.it("setMany returns false entries when batchWrite fails", async (t) => {
 		{ key: "key2", value: "val2" },
 	]);
 	t.expect(result).toEqual([false, false]);
-	dynamo["_client"].batchWrite = originalBatchWrite;
+	dynamo._client.batchWrite = originalBatchWrite;
 });
 
 test.it("setMany marks unprocessed items as false", async (t) => {
@@ -570,7 +568,7 @@ test.it("setMany marks unprocessed items as false", async (t) => {
 	await dynamo.set("_warmup", "ok");
 	// Mock batchWrite to return UnprocessedItems for the second key
 	const key2Formatted = dynamo.formatKey("key2");
-	dynamo["_client"].batchWrite = async (input: any) => {
+	dynamo._client.batchWrite = async (input: any) => {
 		const tableName = Object.keys(input.RequestItems)[0];
 		return {
 			UnprocessedItems: {

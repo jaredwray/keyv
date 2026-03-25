@@ -595,7 +595,7 @@ Returns a promise which resolves to `true`.
 
 ## .setMany(entries)
 
-Set multiple values using KeyvEntrys `{ key: string, value: any, ttl?: number }`.
+Set multiple values using `KeyvEntry<Value>` objects (`{ key: string, value: Value, ttl?: number }`). The `Value` type is inferred from the entries provided.
 
 ## .get(key, [options])
 

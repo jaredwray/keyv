@@ -418,7 +418,9 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * Sets multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
 	 * @param entries - An array of key-value entry objects.
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		try {
 			const keys = [];
 			const values = [];

@@ -72,8 +72,7 @@ export enum KeyvHooks {
 	AFTER_DELETE = "after:delete",
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: type format
-export type KeyvEntry<Value = any> = {
+export type KeyvEntry<Value> = {
 	/**
 	 * Key to set.
 	 */
@@ -101,7 +100,7 @@ export type KeyvStorageAdapter = {
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	set(key: string, value: any, ttl?: number): any;
-	setMany?(values: KeyvEntry[]): Promise<boolean[] | undefined>;
+	setMany?<Value>(values: KeyvEntry<Value>[]): Promise<boolean[] | undefined>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;

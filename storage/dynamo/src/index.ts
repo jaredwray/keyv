@@ -208,7 +208,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple values in DynamoDB.
 	 * @param entries - An array of objects containing key, value, and optional ttl
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		try {
 			await this._tableReady;
 

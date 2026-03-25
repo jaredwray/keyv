@@ -504,7 +504,7 @@ await keyv.set('foo', 'bar');
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a `boolean[]` with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return `false` while entries in successful batches return `true`. On batch failure, an `error` event is emitted.
+Set multiple key-value pairs at once. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a `boolean[]` with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return `false` while entries in successful batches return `true`. On batch failure, an `error` event is emitted.
 
 ```js
 const results = await keyv.setMany([

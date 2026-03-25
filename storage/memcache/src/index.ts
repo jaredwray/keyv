@@ -119,7 +119,9 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple values in the memcache server.
 	 * @param entries - An array of objects containing key, value, and optional ttl
 	 */
-	async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		const promises = entries.map(async ({ key, value, ttl }) =>
 			this.set(key, value, ttl),
 		);

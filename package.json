@@ -15,6 +15,7 @@
     "build:keyv": "pnpm recursive --filter=keyv run build",
     "build": "pnpm build:keyv && pnpm recursive --filter '!keyv' run build",
     "test": "pnpm -r test",
+    "test:sequential": "pnpm -r --workspace-concurrency 1 test",
     "test:ci": "pnpm -r test:ci",
     "test:services:start": "chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh",
     "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",

@@ -373,7 +373,9 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * In GridFS mode, each entry is set individually in parallel.
 	 * @param entries - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds.
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		if (this._useGridFS) {
 			const settled = await Promise.allSettled(
 				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
