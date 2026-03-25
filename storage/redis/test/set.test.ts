@@ -158,6 +158,25 @@ describe("set", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
+	test("setMany should return false entries on error when throwOnErrors is false", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		keyvRedis.on("error", () => {}); // Silence expected errors
+
+		const data = {
+			key: faker.string.alphanumeric(10),
+			value: faker.lorem.sentence(),
+		};
+
+		// Mock the multi method to throw an error
+		vi.spyOn(keyvRedis.client, "multi").mockImplementation(() => {
+			throw new Error("Redis setMany error");
+		});
+
+		const result = await keyvRedis.setMany([data, data, data]);
+		expect(result).toEqual([false, false, false]);
+		vi.spyOn(keyvRedis.client, "multi").mockRestore();
+	});
+
 	test("should be able to set a ttl", async () => {
 		const keyvRedis = new KeyvRedis();
 		const key = faker.string.uuid();

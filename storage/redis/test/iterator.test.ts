@@ -56,7 +56,7 @@ describe("iterators", () => {
 		await keyvRedis.set(nsKey3, nsVal3);
 		const keys = [];
 		const values = [];
-		for await (const [key, value] of keyvRedis.iterator(namespace)) {
+		for await (const [key, value] of keyvRedis.iterator()) {
 			keys.push(key);
 			values.push(value);
 		}

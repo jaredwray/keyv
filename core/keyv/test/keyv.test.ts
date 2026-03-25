@@ -1,10 +1,7 @@
 import { faker } from "@faker-js/faker";
 import tk from "timekeeper";
 import * as test from "vitest";
-import Keyv, {
-	type KeyvStorageAdapter,
-	type StoredDataNoRaw,
-} from "../src/index.js";
+import Keyv, { type KeyvStorageAdapter } from "../src/index.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
 const snooze = delay;
@@ -22,7 +19,6 @@ test.it("Keyv accepts storage adapters", async (t) => {
 	t.expect(store.size).toBe(0);
 	await keyv.set("foo", "bar");
 	t.expect(await keyv.get("foo")).toBe("bar");
-	t.expect(await keyv.get("foo", { raw: true })).toEqual({ value: "bar" });
 	t.expect(store.size).toBe(1);
 });
 
@@ -40,7 +36,6 @@ test.it("Keyv accepts storage adapters instead of options", async (t) => {
 	t.expect(store.size).toBe(0);
 	await keyv.set("foo", "bar");
 	t.expect(await keyv.get("foo")).toBe("bar");
-	t.expect(await keyv.get("foo", { raw: true })).toEqual({ value: "bar" });
 	t.expect(store.size).toBe(1);
 });
 
@@ -51,7 +46,6 @@ test.it("Keyv allows get and set the store via property", async (t) => {
 	t.expect(store.size).toBe(0);
 	await keyv.set("foo", "bar");
 	t.expect(await keyv.get("foo")).toBe("bar");
-	t.expect(await keyv.get("foo", { raw: true })).toEqual({ value: "bar" });
 	t.expect(store.size).toBe(1);
 	t.expect(keyv.store).toBe(store);
 });
@@ -65,7 +59,6 @@ test.it(
 		t.expect(store.size).toBe(0);
 		await keyv.set("foo", "bar");
 		t.expect(await keyv.get("foo")).toBe("bar");
-		t.expect(await keyv.get("foo", { raw: true })).toEqual({ value: "bar" });
 		t.expect(store.size).toBe(1);
 		t.expect(keyv.store).toBe(store);
 
@@ -140,12 +133,12 @@ test.it(
 );
 
 test.it(
-	".get(key, {raw: true}) returns the raw object instead of the value",
+	".getRaw(key) returns the raw object instead of the value",
 	async (t) => {
 		const keyv = new Keyv();
 		await keyv.set("foo", "bar");
 		const value = await keyv.get("foo");
-		const rawObject = await keyv.get("foo", { raw: true });
+		const rawObject = await keyv.getRaw("foo");
 		t.expect(value).toBe("bar");
 		t.expect(rawObject?.value).toBe("bar");
 	},
@@ -276,10 +269,14 @@ test.it(
 );
 
 test.it(
-	".delete([keys]) with nonexistent keys resolves to false for storage adapter not supporting deleteMany",
+	".delete([keys]) with nonexistent keys resolves to array of false for storage adapter not supporting deleteMany",
 	async (t) => {
 		const keyv = new Keyv({ store: new Map() });
-		t.expect(await keyv.delete(["foo", "foo1", "foo2"])).toBe(false);
+		t.expect(await keyv.delete(["foo", "foo1", "foo2"])).toEqual([
+			false,
+			false,
+			false,
+		]);
 	},
 );
 
@@ -294,9 +291,7 @@ test.it("keyv.get([keys]) should return array values", async (t) => {
 	t.expect(values[1]).toBe("bar1");
 	t.expect(values[2]).toBe("bar2");
 
-	const rawValues = await keyv.get<string>(["foo", "foo1", "foo2"], {
-		raw: true,
-	});
+	const rawValues = await keyv.getManyRaw<string>(["foo", "foo1", "foo2"]);
 	t.expect(Array.isArray(rawValues)).toBeTruthy();
 	t.expect(rawValues[0]).toEqual({ value: "bar" });
 	t.expect(rawValues[1]).toEqual({ value: "bar1" });
@@ -377,15 +372,13 @@ test.it(
 );
 
 test.it(
-	"keyv.get([keys]) should return array raw values with storage adapter",
+	"keyv.getManyRaw([keys]) should return array raw values with storage adapter",
 	async (t) => {
 		const keyv = new Keyv({ store: createStore() });
 		await keyv.clear();
 		await keyv.set("foo", "bar");
 		await keyv.set("foo1", "bar1");
-		const values = (await keyv.get<string>(["foo", "foo1"], {
-			raw: true,
-		})) as Array<StoredDataNoRaw<string>>;
+		const values = await keyv.getManyRaw<string>(["foo", "foo1"]);
 		t.expect(Array.isArray(values)).toBeTruthy();
 		t.expect(values[0]).toEqual({ value: "bar" });
 		t.expect(values[1]).toEqual({ value: "bar1" });
@@ -393,11 +386,11 @@ test.it(
 );
 
 test.it(
-	"keyv.get([keys]) should return array raw values undefined with storage adapter",
+	"keyv.getManyRaw([keys]) should return array raw values undefined with storage adapter",
 	async (t) => {
 		const keyv = new Keyv({ store: createStore() });
 		await keyv.clear();
-		const values = await keyv.get<string>(["foo", "foo1"], { raw: true });
+		const values = await keyv.getManyRaw<string>(["foo", "foo1"]);
 		t.expect(Array.isArray(values)).toBeTruthy();
 		t.expect(values[0]).toBeUndefined();
 		t.expect(values[1]).toBeUndefined();
@@ -998,7 +991,7 @@ test.it(
 );
 
 test.it(
-	"should detect iterable adapter by URL when dialect is not set",
+	"should detect iterable adapter when store has iterator method",
 	async (t) => {
 		const map = new Map<string, unknown>();
 		const store = {
@@ -1029,5 +1022,152 @@ test.it(
 		// biome-ignore lint/suspicious/noExplicitAny: test mock
 		const keyv = new Keyv(store as any);
 		t.expect(keyv.iterator).toBeDefined();
+	},
+);
+
+test.it(
+	"fallback iterator emits error when store does not support iteration",
+	async (t) => {
+		const store = {
+			namespace: undefined as string | undefined,
+			async get(_key: string) {
+				return undefined;
+			},
+			async set(_key: string, _value: unknown) {},
+			async delete(_key: string) {
+				return true;
+			},
+			async clear() {},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv(store as any);
+		t.expect(typeof keyv.iterator).toBe("function");
+
+		let errorEmitted = false;
+		keyv.on("error", (error: Error) => {
+			t.expect(error.message).toBe(
+				"Iterator not supported by this storage adapter",
+			);
+			errorEmitted = true;
+		});
+
+		// Consume the iterator
+		const entries: unknown[] = [];
+		// @ts-expect-error - iterator
+		for await (const entry of keyv.iterator()) {
+			entries.push(entry);
+		}
+
+		t.expect(entries.length).toBe(0);
+		t.expect(errorEmitted).toBe(true);
+	},
+);
+
+test.it(
+	"fallback iterator assigned when store is set via setter without iterator support",
+	async (t) => {
+		const keyv = new Keyv();
+		const store: KeyvStorageAdapter = {
+			namespace: undefined as string | undefined,
+			async get(_key: string) {
+				return undefined;
+			},
+			async set(_key: string, _value: unknown) {},
+			async delete(_key: string) {
+				return true;
+			},
+			async clear() {},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		keyv.store = store as any;
+		t.expect(typeof keyv.iterator).toBe("function");
+
+		let errorEmitted = false;
+		keyv.on("error", (error: Error) => {
+			errorEmitted = true;
+			t.expect(error.message).toBe(
+				"Iterator not supported by this storage adapter",
+			);
+		});
+
+		// @ts-expect-error - iterator
+		for await (const _entry of keyv.iterator()) {
+			// should not yield
+		}
+
+		t.expect(errorEmitted).toBe(true);
+	},
+);
+
+test.it(
+	"setMany returns array of true when store.setMany returns void (backward compat)",
+	async (t) => {
+		const map = new Map<string, unknown>();
+		const store: KeyvStorageAdapter = {
+			namespace: undefined as string | undefined,
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+			async setMany(
+				_entries: Array<{ key: string; value: unknown; ttl?: number }>,
+			) {
+				// Intentionally returns void/undefined to simulate old adapter
+			},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv({ store: store as any });
+		const result = await keyv.setMany([
+			{ key: "a", value: "1" },
+			{ key: "b", value: "2" },
+		]);
+		t.expect(result).toEqual([true, true]);
+	},
+);
+
+test.it(
+	"setMany returns false entries when store.setMany throws",
+	async (t) => {
+		const store = {
+			async get(_key: string) {},
+			async set(_key: string, _value: unknown) {},
+			async delete(_key: string) {
+				return true;
+			},
+			async clear() {},
+			async setMany(
+				_entries: Array<{ key: string; value: unknown; ttl?: number }>,
+			) {
+				throw new Error("store setMany failure");
+			},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv({ store: store as any });
+		keyv.on("error", () => {});
+		const result = await keyv.setMany([
+			{ key: "a", value: "1" },
+			{ key: "b", value: "2" },
+		]);
+		t.expect(result).toEqual([false, false]);
 	},
 );

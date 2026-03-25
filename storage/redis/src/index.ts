@@ -363,20 +363,26 @@ export default class KeyvRedis<T>
 	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<void> {
+	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		try {
+			const results = new Array<boolean>(entries.length).fill(false);
+
 			if (this.isCluster()) {
 				// Ensure cluster is connected first
 				await this.getClient();
 
-				// Group entries by slot to avoid CROSSSLOT errors
-				const slotMap = new Map<number, KeyvEntry[]>();
-				for (const entry of entries) {
+				// Group entries by slot to avoid CROSSSLOT errors, tracking original indices
+				const slotMap = new Map<
+					number,
+					Array<{ entry: KeyvEntry; index: number }>
+				>();
+				for (let i = 0; i < entries.length; i++) {
+					const entry = entries[i];
 					const prefixedKey = this.createKeyPrefix(entry.key, this._namespace);
 					const slot = calculateSlot(prefixedKey);
-					const slotEntries = slotMap.get(slot) ?? [];
-					slotEntries.push(entry);
-					slotMap.set(slot, slotEntries);
+					const group = slotMap.get(slot) ?? [];
+					group.push({ entry, index: i });
+					slotMap.set(slot, group);
 				}
 
 				// Execute multi for each slot group
@@ -384,7 +390,9 @@ export default class KeyvRedis<T>
 					Array.from(slotMap.entries(), async ([slot, slotEntries]) => {
 						const client = await this.getSlotMaster(slot);
 						const multi = client.multi();
-						for (const { key, value, ttl } of slotEntries) {
+						for (const {
+							entry: { key, value, ttl },
+						} of slotEntries) {
 							const prefixedKey = this.createKeyPrefix(key, this._namespace);
 							if (ttl) {
 								multi.set(prefixedKey, value, { PX: ttl });
@@ -392,7 +400,10 @@ export default class KeyvRedis<T>
 								multi.set(prefixedKey, value);
 							}
 						}
-						await multi.exec();
+						const execResults = await multi.exec();
+						for (let j = 0; j < slotEntries.length; j++) {
+							results[slotEntries[j].index] = String(execResults[j]) === "OK";
+						}
 					}),
 				);
 			} else {
@@ -407,8 +418,13 @@ export default class KeyvRedis<T>
 						multi.set(prefixedKey, value);
 					}
 				}
-				await multi.exec();
+				const execResults = await multi.exec();
+				for (let i = 0; i < entries.length; i++) {
+					results[i] = String(execResults[i]) === "OK";
+				}
 			}
+
+			return results;
 		} catch (error) {
 			this.emit("error", error);
 			// Re-throw connection errors if throwOnConnectError is true
@@ -423,6 +439,8 @@ export default class KeyvRedis<T>
 			if (this._throwOnErrors) {
 				throw error;
 			}
+
+			return entries.map(() => false);
 		}
 	}
 
@@ -598,16 +616,15 @@ export default class KeyvRedis<T>
 	/**
 	 * Delete many keys from the store. This will be done as a single transaction.
 	 * @param {Array<string>} keys - the keys to delete
-	 * @returns {Promise<boolean>} - true if any key was deleted, false if not
+	 * @returns {Promise<boolean[]>} - array of booleans indicating whether each key was successfully deleted
 	 */
-	public async deleteMany(keys: string[]): Promise<boolean> {
-		let result = false;
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		const resultMap = new Map<string, boolean>();
+		const prefixedKeys = keys.map((key) =>
+			this.createKeyPrefix(key, this._namespace),
+		);
 
 		try {
-			const prefixedKeys = keys.map((key) =>
-				this.createKeyPrefix(key, this._namespace),
-			);
-
 			if (this.isCluster()) {
 				// Group keys by slot to avoid CROSSSLOT errors
 				const slotMap = this.getSlotMap(prefixedKeys);
@@ -624,11 +641,12 @@ export default class KeyvRedis<T>
 							}
 						}
 						const results = await multi.exec();
-						for (const deleted of results) {
+						for (const [index, deleted] of results.entries()) {
 							/* v8 ignore next -- @preserve */
-							if (typeof deleted === "number" && deleted > 0) {
-								result = true;
-							}
+							resultMap.set(
+								slotKeys[index],
+								typeof deleted === "number" && deleted > 0,
+							);
 						}
 					}),
 				);
@@ -645,12 +663,16 @@ export default class KeyvRedis<T>
 				}
 
 				const results = await multi.exec();
-				for (const deleted of results) {
-					if (typeof deleted === "number" && deleted > 0) {
-						result = true;
-					}
+				for (const [index, deleted] of results.entries()) {
+					resultMap.set(
+						prefixedKeys[index],
+						typeof deleted === "number" && deleted > 0,
+					);
 				}
 			}
+
+			/* v8 ignore next -- @preserve */
+			return prefixedKeys.map((key) => resultMap.get(key) ?? false);
 		} catch (error) {
 			this.emit("error", error);
 			// Re-throw connection errors if throwOnConnectError is true
@@ -664,9 +686,9 @@ export default class KeyvRedis<T>
 			if (this._throwOnErrors) {
 				throw error;
 			}
-		}
 
-		return result;
+			return Array.from({ length: keys.length }).fill(false) as boolean[];
+		}
 	}
 
 	/**
@@ -749,19 +771,20 @@ export default class KeyvRedis<T>
 	}
 
 	/**
-	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
-	 * @param {string} [namespace] - the namespace to iterate over
+	 * Get an async iterator for the keys and values in the store. It will only iterate over keys with the current namespace.
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
-	public async *iterator<U = T>(
-		namespace?: string,
-	): AsyncGenerator<[string, U | undefined], void, unknown> {
+	public async *iterator<U = T>(): AsyncGenerator<
+		[string, U | undefined],
+		void,
+		unknown
+	> {
 		// When instance is not a cluster, it will only have one client
 		const clients = await this.getMasterNodes();
 
 		for (const client of clients) {
-			const match = namespace
-				? `${namespace}${this._keyPrefixSeparator}*`
+			const match = this._namespace
+				? `${this._namespace}${this._keyPrefixSeparator}*`
 				: "*";
 			let cursor = "0";
 			do {
@@ -772,14 +795,14 @@ export default class KeyvRedis<T>
 				cursor = result.cursor.toString();
 				let { keys } = result;
 
-				if (!namespace && !this._noNamespaceAffectsAll) {
+				if (!this._namespace && !this._noNamespaceAffectsAll) {
 					keys = keys.filter((key) => !key.includes(this._keyPrefixSeparator));
 				}
 
 				if (keys.length > 0) {
 					const values = await this.mget<U>(keys);
 					for (const i of keys.keys()) {
-						const key = this.getKeyWithoutPrefix(keys[i], namespace);
+						const key = this.getKeyWithoutPrefix(keys[i], this._namespace);
 						const value = values[i];
 						yield [key, value];
 					}

@@ -4,6 +4,7 @@ import Keyv, { type KeyvStorageAdapter, type StoredData } from "keyv";
 import {
 	type Document,
 	GridFSBucket,
+	MongoBulkWriteError,
 	type MongoClientOptions,
 	MongoClient as mongoClient,
 	type ReadPreference,
@@ -371,12 +372,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	public async setMany(
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		entries: Array<{ key: string; value: any; ttl?: number }>,
-	): Promise<void> {
+	): Promise<boolean[] | undefined> {
 		if (this._useGridFS) {
-			await Promise.all(
+			const settled = await Promise.allSettled(
 				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
 			);
-			return;
+			return settled.map((result) => result.status === "fulfilled");
 		}
 
 		const client = await this.connect;
@@ -396,7 +397,27 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			};
 		});
 
-		await client.store.bulkWrite(operations);
+		try {
+			await client.store.bulkWrite(operations, { ordered: false });
+			return entries.map(() => true);
+		} catch (error) {
+			if (error instanceof MongoBulkWriteError) {
+				const results = new Array<boolean>(entries.length).fill(true);
+				/* v8 ignore next -- @preserve */
+				const errors = Array.isArray(error.writeErrors)
+					? error.writeErrors
+					: [error.writeErrors];
+				for (const writeError of errors) {
+					results[writeError.index] = false;
+				}
+
+				this.emit("error", error);
+				return results;
+			}
+
+			this.emit("error", error);
+			return entries.map(() => false);
+		}
 	}
 
 	/**
@@ -446,44 +467,16 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Delete multiple keys from the store at once. In standard mode, uses a single query with the `$in` operator.
-	 * In GridFS mode, all matching files are found and deleted in parallel.
+	 * Delete multiple keys from the store at once. Each key is deleted individually
+	 * so that per-key success/failure information is preserved.
 	 * @param keys - Array of keys to delete.
-	 * @returns `true` if any keys were deleted, `false` if none were found.
+	 * @returns Array of booleans indicating whether each key was successfully deleted.
 	 */
-	public async deleteMany(keys: string[]) {
-		const client = await this.connect;
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const ns = this.getNamespaceValue();
-
-		if (this._useGridFS) {
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const connection = client.db!;
-			const bucket = new GridFSBucket(connection, {
-				bucketName: this._collection,
-			});
-			const files = await bucket
-				.find({
-					filename: { $in: strippedKeys },
-					"metadata.namespace": { $eq: ns },
-				})
-				.toArray();
-			if (files.length === 0) {
-				return false;
-			}
-
-			await Promise.all(
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				files.map(async (file) => client.bucket!.delete(file._id)),
-			);
-			return true;
-		}
-
-		const object = await client.store.deleteMany({
-			key: { $in: strippedKeys },
-			namespace: { $eq: ns },
-		});
-		return object.deletedCount > 0;
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		const results = await Promise.all(
+			keys.map(async (key) => this.delete(key)),
+		);
+		return results;
 	}
 
 	/**
@@ -589,13 +582,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Iterate over all key-value pairs in the store matching the given namespace.
-	 * @param namespace - The namespace to iterate over. When used through Keyv, this is passed automatically.
+	 * Iterate over all key-value pairs in the store matching the configured namespace.
 	 * @yields `[key, value]` pairs as an async generator.
 	 */
-	public async *iterator(namespace?: string) {
+	public async *iterator() {
 		const client = await this.connect;
-		const namespaceValue = namespace ?? "";
+		const namespaceValue = this.getNamespaceValue();
 
 		if (this._useGridFS) {
 			const gridIterator = client.store

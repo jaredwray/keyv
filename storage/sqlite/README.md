@@ -46,7 +46,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
   - [.clearExpired()](#clearexpired)
-  - [.iterator(namespace?)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [Clearing Expired Keys](#clearing-expired-keys)
 - [WAL Mode](#wal-mode)
@@ -504,13 +504,13 @@ await keyv.set('foo', 'bar');
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit.
+Set multiple key-value pairs at once. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a `boolean[]` with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return `false` while entries in successful batches return `true`. On batch failure, an `error` event is emitted.
 
 ```js
-await keyv.setMany([
+const results = await keyv.setMany([
   { key: 'foo', value: 'bar' },
   { key: 'baz', value: 'qux' },
-]);
+]); // [true, true]
 ```
 
 ## .get(key)
@@ -555,10 +555,10 @@ const deleted = await keyv.delete('foo'); // true
 
 ## .deleteMany(keys)
 
-Delete multiple keys at once. Returns `true` if any of the keys existed.
+Delete multiple keys at once. Returns a `boolean[]` indicating whether each key existed.
 
 ```js
-const deleted = await keyv.deleteMany(['foo', 'baz']); // true
+const results = await keyv.deleteMany(['foo', 'baz']); // [true, true]
 ```
 
 ## .clear()
@@ -577,9 +577,9 @@ Utility helper method to delete all expired entries from the store. This removes
 await store.clearExpired();
 ```
 
-## .iterator(namespace?)
+## .iterator()
 
-Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` option.
+Iterate over all key-value pairs. The iterator uses the namespace configured on the instance. Uses cursor-based pagination controlled by the `iterationLimit` option.
 
 ```js
 const iterator = keyv.iterator();

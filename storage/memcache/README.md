@@ -291,14 +291,14 @@ await memcache.set('foo', 'bar', 5000); // expires in 5 seconds
 
 ### .setMany(entries)
 
-Stores multiple values in the memcache server. Each entry can have an optional `ttl` in milliseconds.
+Stores multiple values in the memcache server. Each entry can have an optional `ttl` in milliseconds. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
-await memcache.setMany([
+const results = await memcache.setMany([
   { key: 'key1', value: 'value1' },
   { key: 'key2', value: 'value2', ttl: 5000 },
-]);
+]); // [true, true]
 ```
 
 ### .delete(key)
@@ -313,13 +313,13 @@ const deleted = await memcache.delete('foo'); // true
 
 ### .deleteMany(keys)
 
-Deletes multiple keys from the memcache server. Returns `true` only if all keys were successfully deleted.
+Deletes multiple keys from the memcache server. Returns a `boolean[]` indicating whether each key was deleted.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 await memcache.set('key1', 'value1');
 await memcache.set('key2', 'value2');
-const allDeleted = await memcache.deleteMany(['key1', 'key2']); // true
+const results = await memcache.deleteMany(['key1', 'key2']); // [true, true]
 ```
 
 ### .clear()

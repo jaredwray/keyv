@@ -418,25 +418,31 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * Sets multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
 	 * @param entries - An array of key-value entry objects.
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<void> {
-		const keys = [];
-		const values = [];
-		const expiresArray: Array<number | null> = [];
-		for (const { key, value } of entries) {
-			keys.push(this.removeKeyPrefix(key));
-			values.push(value);
-			expiresArray.push(this.getExpiresFromValue(value));
-		}
-		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
+	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+		try {
+			const keys = [];
+			const values = [];
+			const expiresArray: Array<number | null> = [];
+			for (const { key, value } of entries) {
+				keys.push(this.removeKeyPrefix(key));
+				values.push(value);
+				expiresArray.push(this.getExpiresFromValue(value));
+			}
+			const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
       SELECT k, v, $3, e FROM UNNEST($1::text[], $2::text[], $4::bigint[]) AS t(k, v, e)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-		await this.query(upsert, [
-			keys,
-			values,
-			this.getNamespaceValue(),
-			expiresArray,
-		]);
+			await this.query(upsert, [
+				keys,
+				values,
+				this.getNamespaceValue(),
+				expiresArray,
+			]);
+			return entries.map(() => true);
+		} catch (error) {
+			this.emit("error", error);
+			return entries.map(() => false);
+		}
 	}
 
 	/**
@@ -455,14 +461,13 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes multiple keys from the store at once.
 	 * @param keys - An array of keys to delete.
-	 * @returns `true` if any of the keys existed and were deleted, `false` otherwise.
+	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
-	public async deleteMany(keys: string[]): Promise<boolean> {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const ns = this.getNamespaceValue();
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
-		const rows = await this.query(del, [strippedKeys, ns]);
-		return rows.length > 0;
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		const results = await Promise.all(
+			keys.map(async (key) => this.delete(key)),
+		);
+		return results;
 	}
 
 	/**
@@ -489,14 +494,11 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Iterates over all key-value pairs, optionally filtered by namespace.
 	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`.
-	 * @param namespace - Optional namespace to filter keys by.
 	 * @yields A `[key, value]` tuple for each entry.
 	 */
-	public async *iterator(
-		namespace?: string,
-	): AsyncGenerator<[string, string], void, unknown> {
+	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
 		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
-		const namespaceValue = namespace ?? null;
+		const namespaceValue = this.getNamespaceValue() || null;
 
 		// Use keyset pagination (cursor-based) instead of OFFSET to handle
 		// concurrent deletions during iteration without skipping entries

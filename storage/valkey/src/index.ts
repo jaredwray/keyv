@@ -264,23 +264,37 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	public async setMany(
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		entries: Array<{ key: string; value: any; ttl?: number }>,
-	): Promise<void> {
+	): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return;
+			return entries.map(() => true);
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		const resolvedEntries: Array<{ k: string; value: any; ttl?: number }> = [];
-		for (const { key, value, ttl } of entries) {
+		const results = new Array<boolean>(entries.length).fill(false);
+
+		const resolvedEntries: Array<{
+			k: string;
+			// biome-ignore lint/suspicious/noExplicitAny: type format
+			value: any;
+			ttl?: number;
+			originalIndex: number;
+		}> = [];
+		for (let i = 0; i < entries.length; i++) {
+			const { key, value, ttl } = entries[i];
 			if (value === undefined) {
+				results[i] = true;
 				continue;
 			}
 
-			resolvedEntries.push({ k: this.getKeyName(key), value, ttl });
+			resolvedEntries.push({
+				k: this.getKeyName(key),
+				value,
+				ttl,
+				originalIndex: i,
+			});
 		}
 
 		if (resolvedEntries.length === 0) {
-			return;
+			return results;
 		}
 
 		const slotMap = new Map<number, typeof resolvedEntries>();
@@ -295,24 +309,43 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			slotMap.set(0, resolvedEntries);
 		}
 
-		await Promise.all(
-			Array.from(slotMap.values(), async (group) => {
-				const trx = this._client.multi();
-				for (const { k, value, ttl } of group) {
-					if (typeof ttl === "number") {
-						trx.set(k, value, "PX", ttl);
-					} else {
-						trx.set(k, value);
+		try {
+			await Promise.all(
+				Array.from(slotMap.values(), async (group) => {
+					const trx = this._client.multi();
+					for (const { k, value, ttl } of group) {
+						if (typeof ttl === "number") {
+							trx.set(k, value, "PX", ttl);
+						} else {
+							trx.set(k, value);
+						}
+
+						if (this._useSets) {
+							trx.sadd(this.getSetKey(), k);
+						}
 					}
 
-					if (this._useSets) {
-						trx.sadd(this.getSetKey(), k);
+					const execResults = await trx.exec();
+					/* v8 ignore next -- @preserve */
+					if (execResults) {
+						const step = this._useSets ? 2 : 1;
+						for (let j = 0; j < group.length; j++) {
+							const result = execResults[j * step];
+							// ioredis exec returns [error, reply] tuples
+							/* v8 ignore next -- @preserve */
+							const success = Array.isArray(result)
+								? result[0] === null && result[1] === "OK"
+								: result === "OK";
+							results[group[j].originalIndex] = success;
+						}
 					}
-				}
+				}),
+			);
+		} catch (error) {
+			this.emit("error", error);
+		}
 
-				await trx.exec();
-			}),
-		);
+		return results;
 	}
 
 	/**
@@ -342,42 +375,19 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the Valkey store in a single batched operation.
-	 * In cluster mode, keys are grouped by hash slot and each group is executed as
-	 * a separate `MULTI/EXEC` transaction to avoid CROSSSLOT errors. When `useSets`
-	 * is enabled, keys are also removed from the namespace tracking set.
+	 * Deletes multiple keys from the Valkey store by deleting each key individually.
+	 * Each element in the returned array indicates whether that specific key was
+	 * successfully deleted.
 	 * @param {string[]} keys - An array of keys to delete.
-	 * @returns {Promise<boolean>} `true` if at least one key existed and was deleted, `false` if none of the keys existed.
+	 * @returns {Promise<boolean[]>} An array of booleans in the same order as the input keys.
+	 *   Each element is `true` if the corresponding key existed and was deleted, `false` otherwise.
 	 */
-	public async deleteMany(keys: string[]) {
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		if (keys.length === 0) {
-			return false;
+			return [];
 		}
 
-		const resolvedKeys = keys.map((key) => this.getKeyName(key));
-		const slotMap = this.getSlotMap(resolvedKeys);
-		let deleted = false;
-
-		await Promise.all(
-			Array.from(slotMap.values(), async (slotKeys) => {
-				const trx = this._client.multi();
-				for (const k of slotKeys) {
-					trx.unlink(k);
-					if (this._useSets) {
-						trx.srem(this.getSetKey(), k);
-					}
-				}
-
-				const results = await trx.exec();
-				const step = this._useSets ? 2 : 1;
-				// biome-ignore lint/suspicious/noExplicitAny: type format
-				if (results.some((r: any, i: number) => i % step === 0 && r[1] > 0)) {
-					deleted = true;
-				}
-			}),
-		);
-
-		return deleted;
+		return Promise.all(keys.map(async (key) => this.delete(key)));
 	}
 
 	/**
@@ -471,7 +481,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @yields {[string, string]} A tuple of `[key, value]` for each matching entry.
 	 *   The key has the internal namespace prefix stripped when `useSets` is disabled.
 	 */
-	public async *iterator(_namespace?: string) {
+	public async *iterator() {
 		const scan = this._client.scan.bind(this._client);
 		const get = this._client.mget.bind(this._client);
 		const prefix = `${this.getKeyPrefix()}:`;

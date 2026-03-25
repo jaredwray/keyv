@@ -155,6 +155,12 @@ describe("KeyvRedis", () => {
 		});
 	});
 
+	test("opts should return the url from client options", () => {
+		const uri = "redis://foo:6379";
+		const keyvRedis = new KeyvRedis(uri);
+		expect(keyvRedis.opts.url).toBe(uri);
+	});
+
 	test("should get and set throwOnConnectError", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnConnectError: true });
 		const client = await keyvRedis.getClient();

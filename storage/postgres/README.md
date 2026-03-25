@@ -39,7 +39,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
   - [.clearExpired()](#clearexpired)
-  - [.iterator(namespace?)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
 - [Connection Pooling](#connection-pooling)
@@ -353,13 +353,13 @@ await keyv.set('foo', 'bar');
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
+Set multiple key-value pairs at once using a single atomic PostgreSQL `INSERT ... UNNEST ... ON CONFLICT` statement. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
 
 ```js
-await keyv.setMany([
+const results = await keyv.setMany([
   { key: 'foo', value: 'bar' },
   { key: 'baz', value: 'qux' },
-]);
+]); // [true, true]
 ```
 
 ## .get(key)
@@ -407,10 +407,10 @@ const deleted = await keyv.delete('foo'); // true
 
 ## .deleteMany(keys)
 
-Delete multiple keys at once. Returns `true` if any of the keys existed.
+Delete multiple keys at once. Returns a `boolean[]` indicating whether each key existed.
 
 ```js
-const deleted = await keyv.deleteMany(['foo', 'baz']); // true
+const results = await keyv.deleteMany(['foo', 'baz']); // [true, true]
 ```
 
 ## .clear()
@@ -429,9 +429,9 @@ Utility helper method to delete all expired entries from the store. This removes
 await keyv.clearExpired();
 ```
 
-## .iterator(namespace?)
+## .iterator()
 
-Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` property.
+Iterate over all key-value pairs. The iterator uses the namespace configured on the instance. Uses cursor-based pagination controlled by the `iterationLimit` property.
 
 ```js
 const iterator = keyv.iterator();

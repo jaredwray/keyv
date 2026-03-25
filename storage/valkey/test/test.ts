@@ -386,25 +386,28 @@ test.it("deleteMany should batch delete keys", async (t) => {
 	await keyv.set(key1, val1);
 	await keyv.set(key2, val2);
 	const result = await keyv.deleteMany([key1, key2]);
-	t.expect(result).toBe(true);
+	t.expect(result).toEqual([true, true]);
 	t.expect(await keyv.get(key1)).toBe(undefined);
 	t.expect(await keyv.get(key2)).toBe(undefined);
 	await keyv.disconnect();
 });
 
-test.it("deleteMany with nonexistent keys should return false", async (t) => {
-	const keyv = new KeyvValkey(redisURI);
-	const key1 = faker.string.alphanumeric(10);
-	const key2 = faker.string.alphanumeric(10);
-	const result = await keyv.deleteMany([key1, key2]);
-	t.expect(result).toBe(false);
-	await keyv.disconnect();
-});
+test.it(
+	"deleteMany with nonexistent keys should return array of false",
+	async (t) => {
+		const keyv = new KeyvValkey(redisURI);
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		const result = await keyv.deleteMany([key1, key2]);
+		t.expect(result).toEqual([false, false]);
+		await keyv.disconnect();
+	},
+);
 
-test.it("deleteMany with empty array should return false", async (t) => {
+test.it("deleteMany with empty array should return empty array", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const result = await keyv.deleteMany([]);
-	t.expect(result).toBe(false);
+	t.expect(result).toEqual([]);
 	await keyv.disconnect();
 });
 
@@ -609,3 +612,26 @@ test.it(
 		await keyv.disconnect();
 	},
 );
+
+test.it("setMany returns false entries on exec error", async (t) => {
+	const store = new KeyvValkey(redisURI);
+	let emittedError = false;
+	store.on("error", () => {
+		emittedError = true;
+	});
+	// Mock multi to throw
+	const client = store["_client"];
+	const originalMulti = client.multi.bind(client);
+	client.multi = () => {
+		throw new Error("multi failure");
+	};
+
+	const result = await store.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([false, false]);
+	t.expect(emittedError).toBe(true);
+	client.multi = originalMulti;
+	await store.disconnect();
+});

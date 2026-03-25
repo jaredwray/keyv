@@ -255,12 +255,14 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple entries in the store at once.
 	 * @param entries - Array of entries containing key, value, and optional TTL
 	 */
-	async setMany(entries: KeyvEntry[]): Promise<void> {
+	async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			const result = await this.set(entry.key, entry.value, entry.ttl);
 			results.push(result);
 		}
+
+		return results;
 	}
 
 	/**
@@ -309,20 +311,23 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes multiple keys from the store at once.
 	 * @param keys - Array of keys to delete
-	 * @returns True if all deletions succeeded, false if an error occurred
+	 * @returns Array of booleans indicating success for each key
 	 */
-	async deleteMany(keys: string[]): Promise<boolean> {
-		try {
-			for (const key of keys) {
+	async deleteMany(keys: string[]): Promise<boolean[]> {
+		const results: boolean[] = [];
+		for (const key of keys) {
+			try {
 				const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+				const existed = this._store.has(keyPrefix);
 				this._store.delete(keyPrefix);
+				results.push(existed);
+			} catch (error) {
+				this.emit("error", error);
+				results.push(false);
 			}
-		} catch (error) {
-			this.emit("error", error);
-			return false;
 		}
 
-		return true;
+		return results;
 	}
 
 	/**
@@ -331,18 +336,20 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param namespace - Optional namespace to filter entries by
 	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding [key, value] pairs
 	 */
-	async *iterator<Value>(
-		namespace?: string,
-	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
+	async *iterator<Value>(): AsyncGenerator<
+		Array<string | Awaited<Value> | undefined>,
+		void
+	> {
 		// Check if store supports iteration
 		if (typeof (this._store as Map<any, any>).entries !== "function") {
 			return;
 		}
 
+		const namespace = this.getNamespace();
 		const iterator = (this._store as Map<any, any>).entries();
 
 		for (const [key, data] of iterator) {
-			// Filter by namespace if provided
+			// Filter by namespace if set
 			if (namespace) {
 				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {
 					continue;

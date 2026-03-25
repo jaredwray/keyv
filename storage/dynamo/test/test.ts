@@ -341,7 +341,7 @@ test.it("hasMany checks multiple keys", async (t) => {
 
 test.it("setMany with empty entries should not fail", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	await t.expect(store.setMany([])).resolves.toBeUndefined();
+	await t.expect(store.setMany([])).resolves.toEqual([]);
 });
 
 test.it("has returns false for expired key", async (t) => {
@@ -540,4 +540,49 @@ test.describe("createKeyv", () => {
 		await keyv.delete(arrayKey);
 		await keyv.delete(dateKey);
 	});
+});
+
+test.it("setMany returns false entries when batchWrite fails", async (t) => {
+	const dynamo = store();
+	dynamo.on("error", () => {});
+	// Wait for table to be ready before mocking
+	await dynamo.set("_warmup", "ok");
+	// Mock batchWrite to simulate failure
+	const originalBatchWrite = dynamo["_client"].batchWrite.bind(
+		dynamo["_client"],
+	);
+	dynamo["_client"].batchWrite = async () => {
+		throw new Error("batchWrite failure");
+	};
+
+	const result = await dynamo.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([false, false]);
+	dynamo["_client"].batchWrite = originalBatchWrite;
+});
+
+test.it("setMany marks unprocessed items as false", async (t) => {
+	const dynamo = store();
+	dynamo.on("error", () => {});
+	// Wait for table to be ready before mocking
+	await dynamo.set("_warmup", "ok");
+	// Mock batchWrite to return UnprocessedItems for the second key
+	const key2Formatted = dynamo.formatKey("key2");
+	dynamo["_client"].batchWrite = async (input: any) => {
+		const tableName = Object.keys(input.RequestItems)[0];
+		return {
+			UnprocessedItems: {
+				[tableName]: [{ PutRequest: { Item: { id: key2Formatted } } }],
+			},
+		};
+	};
+
+	const result = await dynamo.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result?.[0]).toBe(true);
+	t.expect(result?.[1]).toBe(false);
 });

@@ -9,9 +9,7 @@ const options = { serverSelectionTimeoutMS: 5000, db: "keyvdb" };
 const mongoURL = "mongodb://127.0.0.1:27017";
 const store = () => new KeyvMongo(mongoURL, options);
 
-// @ts-expect-error
 keyvTestSuite(test, Keyv, store);
-// @ts-expect-error
 keyvIteratorTests(test, Keyv, store);
 
 test.afterAll(async () => {
@@ -205,7 +203,7 @@ test.it(
 				faker.string.alphanumeric(10),
 				faker.string.alphanumeric(10),
 			]),
-		).toBeFalsy();
+		).toEqual([false, false]);
 	},
 );
 
@@ -313,7 +311,7 @@ test.it("iterator with namespace", async (t) => {
 	await store.set(key1, "bar");
 	await store.set(key2, "bar2");
 	const results: Array<[string, string]> = [];
-	for await (const entry of store.iterator(ns)) {
+	for await (const entry of store.iterator()) {
 		results.push(entry as [string, string]);
 	}
 
@@ -354,7 +352,7 @@ test.it("iterator with namespace using GridFS", async (t) => {
 	await store.set(key1, "bar");
 	await store.set(key2, "bar2");
 	const results: Array<[string, string]> = [];
-	for await (const entry of store.iterator(ns)) {
+	for await (const entry of store.iterator()) {
 		results.push(entry as [string, string]);
 	}
 
@@ -528,7 +526,7 @@ test.it("native namespace: deleteMany scoped to namespace", async (t) => {
 	await mongo2.set(`${ns2}:${key}`, "val2");
 
 	const deleted = await mongo1.deleteMany([`${ns1}:${key}`]);
-	t.expect(deleted).toBe(true);
+	t.expect(deleted).toEqual([true]);
 	t.expect(await mongo1.get(`${ns1}:${key}`)).toBeUndefined();
 	t.expect(await mongo2.get(`${ns2}:${key}`)).toBe("val2");
 });
@@ -565,7 +563,7 @@ test.it(
 		await mongo2.set(faker.string.alphanumeric(10), "val3");
 
 		const keys: string[] = [];
-		for await (const [key] of mongo1.iterator(ns1)) {
+		for await (const [key] of mongo1.iterator()) {
 			keys.push(key);
 		}
 
@@ -837,6 +835,91 @@ test.it("hasMany with namespace in GridFS mode", async (t) => {
 		`${ns1}:${faker.string.alphanumeric(10)}`,
 	]);
 	t.expect(results).toEqual([true, false]);
+});
+
+test.it(
+	"setMany returns false entries on bulkWrite error in standard mode",
+	async (t) => {
+		const store = new KeyvMongo({ ...options });
+		const client = await store.connect;
+		// Close the connection to make bulkWrite throw
+		await client.mongoClient.close();
+		let emittedError = false;
+		store.on("error", () => {
+			emittedError = true;
+		});
+		const result = await store.setMany([
+			{ key: "key1", value: "val1" },
+			{ key: "key2", value: "val2" },
+		]);
+		t.expect(result).toEqual([false, false]);
+		t.expect(emittedError).toBe(true);
+	},
+);
+
+test.it(
+	"setMany handles MongoBulkWriteError with per-entry tracking",
+	async (t) => {
+		const { MongoBulkWriteError } = await import("mongodb");
+		const store = new KeyvMongo({ ...options });
+		const client = await store.connect;
+		const originalBulkWrite = client.store.bulkWrite.bind(client.store);
+		// Mock bulkWrite to throw a MongoBulkWriteError with a write error at index 1
+		client.store.bulkWrite = async () => {
+			const bulkError = new MongoBulkWriteError(
+				{
+					message: "write error",
+					code: 11000,
+					writeErrors: [{ index: 1, code: 11000, errmsg: "dup key" }] as any,
+				},
+				{
+					insertedCount: 1,
+					matchedCount: 0,
+					modifiedCount: 0,
+					deletedCount: 0,
+					upsertedCount: 0,
+					insertedIds: {},
+					upsertedIds: {},
+				} as any,
+			);
+			throw bulkError;
+		};
+
+		let emittedError = false;
+		store.on("error", () => {
+			emittedError = true;
+		});
+		const result = await store.setMany([
+			{ key: "key1", value: "val1" },
+			{ key: "key2", value: "val2" },
+			{ key: "key3", value: "val3" },
+		]);
+		t.expect(result).toEqual([true, false, true]);
+		t.expect(emittedError).toBe(true);
+		client.store.bulkWrite = originalBulkWrite;
+	},
+);
+
+test.it("setMany returns per-entry results on GridFS error", async (t) => {
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	// Mock the set method to throw for the second call
+	let callCount = 0;
+	const originalSet = store.set.bind(store);
+	store.set = async (key: string, value: any, ttl?: number) => {
+		callCount++;
+		if (callCount === 2) {
+			throw new Error("GridFS set failure");
+		}
+
+		return originalSet(key, value, ttl);
+	};
+
+	const result = await store.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([true, false]);
+	store.set = originalSet;
 });
 
 test.it("GridFS delete returns false when bucket.delete throws", async (t) => {

@@ -3,7 +3,6 @@ import { Hookified } from "hookified";
 import { Keyv, type StoredData } from "keyv";
 import type {
 	ClearOutput,
-	DeleteManyOutput,
 	DeleteOutput,
 	GetOutput,
 	HasOutput,
@@ -329,17 +328,23 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 */
 	public async setMany(
 		entries: Array<{ key: string; value: Value }>,
-	): Promise<void> {
+	): Promise<boolean[] | undefined> {
 		const promises = entries.map(async ({ key, value }) =>
 			this.set(key, value),
 		);
 		const results = await Promise.allSettled(promises);
+		const boolResults: boolean[] = [];
 		for (const result of results) {
 			/* v8 ignore next 3 -- @preserve */
 			if (result.status === "rejected") {
 				this.emit("error", result.reason);
+				boolResults.push(false);
+			} else {
+				boolResults.push(true);
 			}
 		}
+
+		return boolResults;
 	}
 
 	/**
@@ -366,17 +371,16 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	/**
 	 * Deletes multiple keys from the etcd server.
 	 * @param keys - An array of keys to delete
-	 * @returns `true` if all keys were successfully deleted, `false` otherwise.
+	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
-	public async deleteMany(keys: string[]): DeleteManyOutput {
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.delete(key));
 		}
 
 		return Promise.allSettled(promises).then((values) =>
-			// @ts-expect-error - x is an object
-			values.every((x) => x.value === true),
+			values.map((x) => (x.status === "fulfilled" ? x.value : false)),
 		);
 	}
 
@@ -398,18 +402,19 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	}
 
 	/**
-	 * Returns an async iterator over key-value pairs. If a namespace is provided,
+	 * Returns an async iterator over key-value pairs. If a namespace is set,
 	 * only keys matching the namespace prefix are yielded.
-	 * @param namespace - Optional namespace to filter keys by
 	 */
-	public async *iterator(namespace?: string) {
-		const prefix = namespace ? `${namespace}${this._keyPrefixSeparator}` : "";
+	public async *iterator() {
+		const prefix = this._namespace
+			? `${this._namespace}${this._keyPrefixSeparator}`
+			: "";
 		const iterator = await this._client.getAll().prefix(prefix).keys();
 
 		for await (const key of iterator) {
 			try {
 				const value = (await this._client.get(key)) as unknown as Value;
-				const unprefixedKey = this.removeKeyPrefix(key, namespace);
+				const unprefixedKey = this.removeKeyPrefix(key, this._namespace);
 				yield [unprefixedKey, value];
 				/* v8 ignore start -- @preserve */
 			} catch (error) {

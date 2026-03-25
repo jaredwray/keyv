@@ -430,7 +430,9 @@ describe("KeyvRedis Cluster", () => {
 			}));
 
 			// Should not throw CROSSSLOT error
-			await expect(keyvRedis.setMany(entries)).resolves.toBeUndefined();
+			await expect(keyvRedis.setMany(entries)).resolves.toEqual(
+				entries.map(() => true),
+			);
 
 			// Verify all keys were set
 			const values = await keyvRedis.getMany(entries.map((e) => e.key));
@@ -477,7 +479,7 @@ describe("KeyvRedis Cluster", () => {
 
 			// Should not throw CROSSSLOT error
 			const result = await keyvRedis.deleteMany(keysToDelete);
-			expect(result).toBe(true);
+			expect(result).toEqual([true, true, true]);
 
 			// Verify keys were deleted
 			const hasKeys = await keyvRedis.hasMany(allKeys);
@@ -498,7 +500,9 @@ describe("KeyvRedis Cluster", () => {
 			}));
 
 			// Should not throw CROSSSLOT error
-			await expect(keyvRedis.setMany(entries)).resolves.toBeUndefined();
+			await expect(keyvRedis.setMany(entries)).resolves.toEqual(
+				entries.map(() => true),
+			);
 
 			// Verify all keys were set
 			const values = await keyvRedis.getMany(entries.map((e) => e.key));
@@ -523,7 +527,7 @@ describe("KeyvRedis Cluster", () => {
 
 			// Should not throw CROSSSLOT error and should use del command
 			const result = await keyvRedis.deleteMany(keysToDelete);
-			expect(result).toBe(true);
+			expect(result).toEqual([true, true, true]);
 
 			// Verify keys were deleted
 			const hasKeys = await keyvRedis.hasMany(allKeys);

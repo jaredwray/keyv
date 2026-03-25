@@ -491,15 +491,16 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * More efficient than calling {@link set} in a loop for bulk operations.
 	 * @param entries - An array of `{ key, value }` entry objects to store.
 	 */
-	async setMany(entries: KeyvEntry[]): Promise<void> {
+	async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return;
+			return entries.map(() => true);
 		}
 
 		// Each entry uses 4 parameters. SQLite defaults to a max of 999 bind
 		// parameters (SQLITE_MAX_VARIABLE_NUMBER), so batch to stay under that.
 		const batchSize = 249; // floor(999 / 4)
 		const ns = this.getNamespaceValue();
+		const results = new Array<boolean>(entries.length).fill(false);
 
 		for (let i = 0; i < entries.length; i += batchSize) {
 			const batch = entries.slice(i, i + batchSize);
@@ -518,8 +519,17 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			VALUES ${placeholders.join(", ")}
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, ...params);
+			try {
+				await this.query(upsert, ...params);
+				for (let j = i; j < i + batch.length; j++) {
+					results[j] = true;
+				}
+			} catch (error) {
+				this.emit("error", error);
+			}
 		}
+
+		return results;
 	}
 
 	/**
@@ -538,27 +548,18 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the store using parameterized `IN (?, ?)` queries.
+	 * Deletes multiple keys from the store by deleting each key individually.
 	 * @param keys - An array of keys to delete.
-	 * @returns `true` if any of the keys existed and were deleted, `false` if none were found.
+	 * @returns An array of booleans in the same order as the input keys,
+	 *   where `true` indicates the key existed and was deleted, `false` indicates it was not found.
 	 */
-	async deleteMany(keys: string[]) {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const ns = this.getNamespaceValue();
-		const batchSize = 998; // 999 max params - 1 for namespace
-		let totalAffected = 0;
-
-		for (let i = 0; i < strippedKeys.length; i += batchSize) {
-			const batch = strippedKeys.slice(i, i + batchSize);
-			const placeholders = batch.map(() => "?").join(", ");
-			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ? RETURNING key`;
-			const result = (await this.query(del, ...batch, ns)) as Array<{
-				key: string;
-			}>;
-			totalAffected += result.length;
+	async deleteMany(keys: string[]): Promise<boolean[]> {
+		const results: boolean[] = [];
+		for (const key of keys) {
+			results.push(await this.delete(key));
 		}
 
-		return totalAffected > 0;
+		return results;
 	}
 
 	/**
@@ -624,14 +625,11 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * Iterates over all key-value pairs, optionally filtered by namespace.
 	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`
 	 * to safely handle concurrent modifications without skipping entries.
-	 * @param namespace - Optional namespace to filter entries by. If omitted, iterates
-	 *   over entries in the default (empty) namespace.
-	 * @yields A `[key, value]` tuple for each entry. Keys include the namespace prefix
-	 *   when a namespace is provided, for compatibility with Keyv core.
+	 * @yields A `[key, value]` tuple for each entry.
 	 */
-	async *iterator(namespace?: string) {
+	async *iterator() {
 		const limit = this._iterationLimit > 0 ? this._iterationLimit : 10;
-		const ns = namespace ?? "";
+		const ns = this.getNamespaceValue();
 		let lastKey: string | null = null;
 
 		while (true) {

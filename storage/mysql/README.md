@@ -35,7 +35,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.has(key)](#haskey)
   - [.hasMany(keys)](#hasmanykeys)
   - [.clearExpired()](#clearexpired)
-  - [.iterator(namespace)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [SSL](#ssl)
 - [License](#license)
@@ -339,13 +339,13 @@ await keyvMysql.set('foo', 'bar');
 
 ### .setMany(entries)
 
-Set multiple key-value pairs at once. Each entry is an object with `key` and `value` properties.
+Set multiple key-value pairs at once using a single atomic `INSERT ... ON DUPLICATE KEY UPDATE` statement. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
 
 ```js
-await keyvMysql.setMany([
+const results = await keyvMysql.setMany([
   { key: 'foo', value: 'bar' },
   { key: 'baz', value: 'qux' },
-]);
+]); // [true, true]
 ```
 
 ### .delete(key)
@@ -358,10 +358,10 @@ const deleted = await keyvMysql.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store. Returns `true` if at least one key was deleted, `false` otherwise.
+Deletes multiple key-value pairs from the store. Returns a `boolean[]` indicating whether each key was deleted.
 
 ```js
-const deleted = await keyvMysql.deleteMany(['foo', 'bar']);
+const results = await keyvMysql.deleteMany(['foo', 'bar']); // [true, true]
 ```
 
 ### .clear()
@@ -399,9 +399,9 @@ Deletes all entries where the `expires` column is set and the timestamp is in th
 await keyvMysql.clearExpired();
 ```
 
-### .iterator(namespace)
+### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store. Uses keyset pagination to efficiently handle large datasets.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance. Uses keyset pagination to efficiently handle large datasets.
 
 ```js
 for await (const [key, value] of keyvMysql.iterator()) {

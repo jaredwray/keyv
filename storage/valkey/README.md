@@ -34,7 +34,7 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [.has(key)](#haskey)
   - [.hasMany(keys)](#hasmanykeys)
   - [.clear()](#clear)
-  - [.iterator(namespace?)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [Clustering](#clustering)
 - [License](#license)
@@ -249,13 +249,13 @@ await store.set('foo', 'bar', 5000); // expires in 5 seconds
 
 ### .setMany(entries)
 
-Sets multiple key-value pairs in a single batch operation. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped.
+Sets multiple key-value pairs in a single batch operation using `MULTI/EXEC` transactions. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped. Returns a `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
 
 ```js
-await store.setMany([
+const results = await store.setMany([
   { key: 'foo', value: 'bar' },
   { key: 'baz', value: 'qux', ttl: 5000 },
-]);
+]); // [true, true]
 ```
 
 ### .delete(key)
@@ -268,10 +268,10 @@ const deleted = await store.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store in a single batch operation. Returns `true` if at least one key was deleted, `false` otherwise.
+Deletes multiple key-value pairs from the store in a single batch operation. Returns a `boolean[]` indicating whether each key was deleted.
 
 ```js
-const deleted = await store.deleteMany(['foo', 'bar']);
+const results = await store.deleteMany(['foo', 'bar']); // [true, true]
 ```
 
 ### .has(key)
@@ -299,12 +299,12 @@ Clears all entries from the store. If a namespace is set, only entries within th
 await store.clear();
 ```
 
-### .iterator(namespace?)
+### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance.
 
 ```js
-for await (const [key, value] of store.iterator('my-namespace')) {
+for await (const [key, value] of store.iterator()) {
   console.log(key, value);
 }
 ```
