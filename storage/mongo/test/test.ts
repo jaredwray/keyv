@@ -311,7 +311,7 @@ test.it("iterator with namespace", async (t) => {
 	await store.set(key1, "bar");
 	await store.set(key2, "bar2");
 	const results: Array<[string, string]> = [];
-	for await (const entry of store.iterator(ns)) {
+	for await (const entry of store.iterator()) {
 		results.push(entry as [string, string]);
 	}
 
@@ -352,7 +352,7 @@ test.it("iterator with namespace using GridFS", async (t) => {
 	await store.set(key1, "bar");
 	await store.set(key2, "bar2");
 	const results: Array<[string, string]> = [];
-	for await (const entry of store.iterator(ns)) {
+	for await (const entry of store.iterator()) {
 		results.push(entry as [string, string]);
 	}
 
@@ -563,7 +563,7 @@ test.it(
 		await mongo2.set(faker.string.alphanumeric(10), "val3");
 
 		const keys: string[] = [];
-		for await (const [key] of mongo1.iterator(ns1)) {
+		for await (const [key] of mongo1.iterator()) {
 			keys.push(key);
 		}
 

@@ -1024,3 +1024,120 @@ test.it(
 		t.expect(keyv.iterator).toBeDefined();
 	},
 );
+
+test.it(
+	"fallback iterator emits error when store does not support iteration",
+	async (t) => {
+		const store = {
+			namespace: undefined as string | undefined,
+			async get(_key: string) {
+				return undefined;
+			},
+			async set(_key: string, _value: unknown) {},
+			async delete(_key: string) {
+				return true;
+			},
+			async clear() {},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv(store as any);
+		t.expect(typeof keyv.iterator).toBe("function");
+
+		let errorEmitted = false;
+		keyv.on("error", (error: Error) => {
+			t.expect(error.message).toBe(
+				"Iterator not supported by this storage adapter",
+			);
+			errorEmitted = true;
+		});
+
+		// Consume the iterator
+		const entries: unknown[] = [];
+		// @ts-expect-error - iterator
+		for await (const entry of keyv.iterator()) {
+			entries.push(entry);
+		}
+
+		t.expect(entries.length).toBe(0);
+		t.expect(errorEmitted).toBe(true);
+	},
+);
+
+test.it(
+	"fallback iterator assigned when store is set via setter without iterator support",
+	async (t) => {
+		const keyv = new Keyv();
+		const store: KeyvStorageAdapter = {
+			namespace: undefined as string | undefined,
+			async get(_key: string) {
+				return undefined;
+			},
+			async set(_key: string, _value: unknown) {},
+			async delete(_key: string) {
+				return true;
+			},
+			async clear() {},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		keyv.store = store as any;
+		t.expect(typeof keyv.iterator).toBe("function");
+
+		let errorEmitted = false;
+		keyv.on("error", (error: Error) => {
+			errorEmitted = true;
+			t.expect(error.message).toBe(
+				"Iterator not supported by this storage adapter",
+			);
+		});
+
+		// @ts-expect-error - iterator
+		for await (const _entry of keyv.iterator()) {
+			// should not yield
+		}
+
+		t.expect(errorEmitted).toBe(true);
+	},
+);
+
+test.it(
+	"setMany returns array of true when store.setMany returns void (backward compat)",
+	async (t) => {
+		const map = new Map<string, unknown>();
+		const store: KeyvStorageAdapter = {
+			namespace: undefined as string | undefined,
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+			async setMany(
+				_entries: Array<{ key: string; value: unknown; ttl?: number }>,
+			) {
+				// Intentionally returns void/undefined to simulate old adapter
+			},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv({ store: store as any });
+		const result = await keyv.setMany([
+			{ key: "a", value: "1" },
+			{ key: "b", value: "2" },
+		]);
+		t.expect(result).toEqual([true, true]);
+	},
+);
