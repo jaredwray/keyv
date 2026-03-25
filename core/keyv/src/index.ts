@@ -801,7 +801,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {Array<KeyvEntry>} entries the entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
-	// biome-ignore lint/correctness/noUnusedVariables: type format
 	async setMany<Value = GenericValue>(
 		entries: KeyvEntry<Value>[],
 	): Promise<boolean[]> {
