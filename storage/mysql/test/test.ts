@@ -711,6 +711,22 @@ test.it("createKeyv with URI string returns a Keyv instance", async (t) => {
 	t.expect(await keyv.get(key)).toBe(value);
 });
 
+test.it("setMany returns false entries on query error", async (t) => {
+	const store = new KeyvMysql(uri);
+	let emittedError = false;
+	store.on("error", () => {
+		emittedError = true;
+	});
+	// Close the connection to force an error
+	await store.disconnect();
+	const result = await store.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([false, false]);
+	t.expect(emittedError).toBe(true);
+});
+
 test.it("createKeyv with options object returns a Keyv instance", async (t) => {
 	const keyv = createKeyv({ uri, table: "keyv" });
 	t.expect(keyv).toBeInstanceOf(Keyv);

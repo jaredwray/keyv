@@ -628,6 +628,22 @@ test.it("disconnect stops the clearExpiredInterval timer", async (t) => {
 	t.expect(keyv.clearExpiredInterval).toBe(100);
 });
 
+test.it("setMany returns false entries on query error", async (t) => {
+	const store = new KeyvPostgres({ uri: postgresUri });
+	let emittedError = false;
+	store.on("error", () => {
+		emittedError = true;
+	});
+	// Close the connection to force an error
+	await store.disconnect();
+	const result = await store.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([false, false]);
+	t.expect(emittedError).toBe(true);
+});
+
 test.it("setting clearExpiredInterval to 0 stops an active timer", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,

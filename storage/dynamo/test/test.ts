@@ -541,3 +541,42 @@ test.describe("createKeyv", () => {
 		await keyv.delete(dateKey);
 	});
 });
+
+test.it("setMany returns false entries when batchWrite fails", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	store.on("error", () => {});
+	// Mock batchWrite to simulate failure
+	const originalBatchWrite = store["_client"].batchWrite.bind(store["_client"]);
+	store["_client"].batchWrite = async () => {
+		throw new Error("batchWrite failure");
+	};
+
+	const result = await store.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([false, false]);
+	store["_client"].batchWrite = originalBatchWrite;
+});
+
+test.it("setMany marks unprocessed items as false", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	store.on("error", () => {});
+	// Mock batchWrite to return UnprocessedItems for the second key
+	const key2Formatted = store.formatKey("key2");
+	store["_client"].batchWrite = async (input: any) => {
+		const tableName = Object.keys(input.RequestItems)[0];
+		return {
+			UnprocessedItems: {
+				[tableName]: [{ PutRequest: { Item: { id: key2Formatted } } }],
+			},
+		};
+	};
+
+	const result = await store.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result?.[0]).toBe(true);
+	t.expect(result?.[1]).toBe(false);
+});

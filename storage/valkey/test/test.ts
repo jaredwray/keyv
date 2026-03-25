@@ -612,3 +612,26 @@ test.it(
 		await keyv.disconnect();
 	},
 );
+
+test.it("setMany returns false entries on exec error", async (t) => {
+	const store = new KeyvValkey(redisURI);
+	let emittedError = false;
+	store.on("error", () => {
+		emittedError = true;
+	});
+	// Mock multi to throw
+	const client = store["_client"];
+	const originalMulti = client.multi.bind(client);
+	client.multi = () => {
+		throw new Error("multi failure");
+	};
+
+	const result = await store.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([false, false]);
+	t.expect(emittedError).toBe(true);
+	client.multi = originalMulti;
+	await store.disconnect();
+});

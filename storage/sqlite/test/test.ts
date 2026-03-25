@@ -849,6 +849,22 @@ test.it("namespaceLength setter updates value", async (t) => {
 	await keyv.disconnect();
 });
 
+test.it("setMany returns false entries on query error", async (t) => {
+	const keyv = new KeyvSqlite("sqlite://:memory:");
+	let emittedError = false;
+	keyv.on("error", () => {
+		emittedError = true;
+	});
+	// Close the connection to force an error
+	await keyv.disconnect();
+	const result = await keyv.setMany([
+		{ key: "key1", value: "val1" },
+		{ key: "key2", value: "val2" },
+	]);
+	t.expect(result).toEqual([false, false]);
+	t.expect(emittedError).toBe(true);
+});
+
 test.it("iterationLimit setter updates value", async (t) => {
 	const keyv = new KeyvSqlite("sqlite://:memory:");
 	t.expect(keyv.iterationLimit).toBe(10);

@@ -1141,3 +1141,33 @@ test.it(
 		t.expect(result).toEqual([true, true]);
 	},
 );
+
+test.it(
+	"setMany returns false entries when store.setMany throws",
+	async (t) => {
+		const store = {
+			async get(_key: string) {},
+			async set(_key: string, _value: unknown) {},
+			async delete(_key: string) {
+				return true;
+			},
+			async clear() {},
+			async setMany(
+				_entries: Array<{ key: string; value: unknown; ttl?: number }>,
+			) {
+				throw new Error("store setMany failure");
+			},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv({ store: store as any });
+		keyv.on("error", () => {});
+		const result = await keyv.setMany([
+			{ key: "a", value: "1" },
+			{ key: "b", value: "2" },
+		]);
+		t.expect(result).toEqual([false, false]);
+	},
+);
