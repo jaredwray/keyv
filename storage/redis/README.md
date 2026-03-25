@@ -544,7 +544,7 @@ export type KeyvRedisOptions = {
 * **useUnlink** - Use the `UNLINK` command for deleting keys isntead of `DEL`.
 * **noNamespaceAffectsAll**: Whether to allow clearing all keys when no namespace is set (default is `false`).
 * **set** - Set a key.
-* **setMany** - Set multiple keys. Returns `boolean[]`.
+* **setMany** - Set multiple keys using `MULTI/EXEC` transactions. Returns `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
 * **get** - Get a key.
 * **getMany** - Get multiple keys.
 * **has** - Check if a key exists.

@@ -234,6 +234,15 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				};
 			});
 
+			const results = new Array<boolean>(entries.length).fill(true);
+
+			// Build a map from formatted key to original index for unprocessed item lookup
+			const keyToIndex = new Map<string, number>();
+			for (let idx = 0; idx < putRequests.length; idx++) {
+				const id = putRequests[idx].PutRequest.Item.id as string;
+				keyToIndex.set(id, idx);
+			}
+
 			// BatchWrite supports max 25 items per request
 			const chunkSize = 25;
 			for (let i = 0; i < putRequests.length; i += chunkSize) {
@@ -244,10 +253,20 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					},
 				};
 
-				await this._client.batchWrite(batchWriteInput);
+				const response = await this._client.batchWrite(batchWriteInput);
+				const unprocessed = response.UnprocessedItems?.[this._opts.tableName];
+				if (unprocessed) {
+					for (const item of unprocessed) {
+						const id = item.PutRequest?.Item?.id as string | undefined;
+						const index = id ? keyToIndex.get(id) : undefined;
+						if (index !== undefined) {
+							results[index] = false;
+						}
+					}
+				}
 			}
 
-			return entries.map(() => true);
+			return results;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);

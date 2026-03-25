@@ -339,7 +339,7 @@ await keyvMysql.set('foo', 'bar');
 
 ### .setMany(entries)
 
-Set multiple key-value pairs at once. Each entry is an object with `key` and `value` properties. Returns a `boolean[]` indicating whether each entry was set successfully.
+Set multiple key-value pairs at once using a single atomic `INSERT ... ON DUPLICATE KEY UPDATE` statement. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
 
 ```js
 const results = await keyvMysql.setMany([

@@ -249,7 +249,7 @@ await store.set('foo', 'bar', 5000); // expires in 5 seconds
 
 ### .setMany(entries)
 
-Sets multiple key-value pairs in a single batch operation. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped. Returns a `boolean[]` indicating whether each entry was set successfully.
+Sets multiple key-value pairs in a single batch operation using `MULTI/EXEC` transactions. Each entry can have an optional TTL in milliseconds. Entries with `undefined` values are skipped. Returns a `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
 
 ```js
 const results = await store.setMany([

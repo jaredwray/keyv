@@ -414,21 +414,26 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			return entries.map(() => true);
 		}
 
-		const ns = this.getNamespaceValue();
-		const values = entries.map(({ key, value }) => [
-			this.removeKeyPrefix(key),
-			value,
-			ns,
-			this.getExpiresFromValue(value),
-		]);
-		const placeholders = values.map(() => "(?, ?, ?, ?)").join(", ");
-		const flatValues = values.flat();
-		const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
+		try {
+			const ns = this.getNamespaceValue();
+			const values = entries.map(({ key, value }) => [
+				this.removeKeyPrefix(key),
+				value,
+				ns,
+				this.getExpiresFromValue(value),
+			]);
+			const placeholders = values.map(() => "(?, ?, ?, ?)").join(", ");
+			const flatValues = values.flat();
+			const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
 			VALUES ${placeholders}
 			ON DUPLICATE KEY UPDATE value=VALUES(value), expires=VALUES(expires);`;
-		const upsert = mysql.format(sql, flatValues);
-		await this.query(upsert);
-		return entries.map(() => true);
+			const upsert = mysql.format(sql, flatValues);
+			await this.query(upsert);
+			return entries.map(() => true);
+		} catch (error) {
+			this.emit("error", error);
+			return entries.map(() => false);
+		}
 	}
 
 	/**

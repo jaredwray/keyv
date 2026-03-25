@@ -419,25 +419,30 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @param entries - An array of key-value entry objects.
 	 */
 	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
-		const keys = [];
-		const values = [];
-		const expiresArray: Array<number | null> = [];
-		for (const { key, value } of entries) {
-			keys.push(this.removeKeyPrefix(key));
-			values.push(value);
-			expiresArray.push(this.getExpiresFromValue(value));
-		}
-		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
+		try {
+			const keys = [];
+			const values = [];
+			const expiresArray: Array<number | null> = [];
+			for (const { key, value } of entries) {
+				keys.push(this.removeKeyPrefix(key));
+				values.push(value);
+				expiresArray.push(this.getExpiresFromValue(value));
+			}
+			const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
       SELECT k, v, $3, e FROM UNNEST($1::text[], $2::text[], $4::bigint[]) AS t(k, v, e)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-		await this.query(upsert, [
-			keys,
-			values,
-			this.getNamespaceValue(),
-			expiresArray,
-		]);
-		return entries.map(() => true);
+			await this.query(upsert, [
+				keys,
+				values,
+				this.getNamespaceValue(),
+				expiresArray,
+			]);
+			return entries.map(() => true);
+		} catch (error) {
+			this.emit("error", error);
+			return entries.map(() => false);
+		}
 	}
 
 	/**

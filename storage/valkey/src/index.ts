@@ -269,18 +269,32 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			return entries.map(() => true);
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		const resolvedEntries: Array<{ k: string; value: any; ttl?: number }> = [];
-		for (const { key, value, ttl } of entries) {
+		const results = new Array<boolean>(entries.length).fill(false);
+
+		const resolvedEntries: Array<{
+			k: string;
+			// biome-ignore lint/suspicious/noExplicitAny: type format
+			value: any;
+			ttl?: number;
+			originalIndex: number;
+		}> = [];
+		for (let i = 0; i < entries.length; i++) {
+			const { key, value, ttl } = entries[i];
 			if (value === undefined) {
+				results[i] = true;
 				continue;
 			}
 
-			resolvedEntries.push({ k: this.getKeyName(key), value, ttl });
+			resolvedEntries.push({
+				k: this.getKeyName(key),
+				value,
+				ttl,
+				originalIndex: i,
+			});
 		}
 
 		if (resolvedEntries.length === 0) {
-			return entries.map(() => true);
+			return results;
 		}
 
 		const slotMap = new Map<number, typeof resolvedEntries>();
@@ -295,26 +309,41 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			slotMap.set(0, resolvedEntries);
 		}
 
-		await Promise.all(
-			Array.from(slotMap.values(), async (group) => {
-				const trx = this._client.multi();
-				for (const { k, value, ttl } of group) {
-					if (typeof ttl === "number") {
-						trx.set(k, value, "PX", ttl);
-					} else {
-						trx.set(k, value);
+		try {
+			await Promise.all(
+				Array.from(slotMap.values(), async (group) => {
+					const trx = this._client.multi();
+					for (const { k, value, ttl } of group) {
+						if (typeof ttl === "number") {
+							trx.set(k, value, "PX", ttl);
+						} else {
+							trx.set(k, value);
+						}
+
+						if (this._useSets) {
+							trx.sadd(this.getSetKey(), k);
+						}
 					}
 
-					if (this._useSets) {
-						trx.sadd(this.getSetKey(), k);
+					const execResults = await trx.exec();
+					if (execResults) {
+						const step = this._useSets ? 2 : 1;
+						for (let j = 0; j < group.length; j++) {
+							const result = execResults[j * step];
+							// ioredis exec returns [error, reply] tuples
+							const success = Array.isArray(result)
+								? result[0] === null && result[1] === "OK"
+								: result === "OK";
+							results[group[j].originalIndex] = success;
+						}
 					}
-				}
+				}),
+			);
+		} catch (error) {
+			this.emit("error", error);
+		}
 
-				await trx.exec();
-			}),
-		);
-
-		return entries.map(() => true);
+		return results;
 	}
 
 	/**

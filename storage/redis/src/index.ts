@@ -365,18 +365,24 @@ export default class KeyvRedis<T>
 	 */
 	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		try {
+			const results = new Array<boolean>(entries.length).fill(false);
+
 			if (this.isCluster()) {
 				// Ensure cluster is connected first
 				await this.getClient();
 
-				// Group entries by slot to avoid CROSSSLOT errors
-				const slotMap = new Map<number, KeyvEntry[]>();
-				for (const entry of entries) {
+				// Group entries by slot to avoid CROSSSLOT errors, tracking original indices
+				const slotMap = new Map<
+					number,
+					Array<{ entry: KeyvEntry; index: number }>
+				>();
+				for (let i = 0; i < entries.length; i++) {
+					const entry = entries[i];
 					const prefixedKey = this.createKeyPrefix(entry.key, this._namespace);
 					const slot = calculateSlot(prefixedKey);
-					const slotEntries = slotMap.get(slot) ?? [];
-					slotEntries.push(entry);
-					slotMap.set(slot, slotEntries);
+					const group = slotMap.get(slot) ?? [];
+					group.push({ entry, index: i });
+					slotMap.set(slot, group);
 				}
 
 				// Execute multi for each slot group
@@ -384,7 +390,9 @@ export default class KeyvRedis<T>
 					Array.from(slotMap.entries(), async ([slot, slotEntries]) => {
 						const client = await this.getSlotMaster(slot);
 						const multi = client.multi();
-						for (const { key, value, ttl } of slotEntries) {
+						for (const {
+							entry: { key, value, ttl },
+						} of slotEntries) {
 							const prefixedKey = this.createKeyPrefix(key, this._namespace);
 							if (ttl) {
 								multi.set(prefixedKey, value, { PX: ttl });
@@ -392,7 +400,10 @@ export default class KeyvRedis<T>
 								multi.set(prefixedKey, value);
 							}
 						}
-						await multi.exec();
+						const execResults = await multi.exec();
+						for (let j = 0; j < slotEntries.length; j++) {
+							results[slotEntries[j].index] = String(execResults[j]) === "OK";
+						}
 					}),
 				);
 			} else {
@@ -407,10 +418,13 @@ export default class KeyvRedis<T>
 						multi.set(prefixedKey, value);
 					}
 				}
-				await multi.exec();
+				const execResults = await multi.exec();
+				for (let i = 0; i < entries.length; i++) {
+					results[i] = String(execResults[i]) === "OK";
+				}
 			}
 
-			return entries.map(() => true);
+			return results;
 		} catch (error) {
 			this.emit("error", error);
 			// Re-throw connection errors if throwOnConnectError is true

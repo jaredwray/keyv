@@ -500,6 +500,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		// parameters (SQLITE_MAX_VARIABLE_NUMBER), so batch to stay under that.
 		const batchSize = 249; // floor(999 / 4)
 		const ns = this.getNamespaceValue();
+		const results = new Array<boolean>(entries.length).fill(false);
 
 		for (let i = 0; i < entries.length; i += batchSize) {
 			const batch = entries.slice(i, i + batchSize);
@@ -518,10 +519,17 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			VALUES ${placeholders.join(", ")}
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, ...params);
+			try {
+				await this.query(upsert, ...params);
+				for (let j = i; j < i + batch.length; j++) {
+					results[j] = true;
+				}
+			} catch (error) {
+				this.emit("error", error);
+			}
 		}
 
-		return entries.map(() => true);
+		return results;
 	}
 
 	/**

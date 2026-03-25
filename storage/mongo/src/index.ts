@@ -4,6 +4,7 @@ import Keyv, { type KeyvStorageAdapter, type StoredData } from "keyv";
 import {
 	type Document,
 	GridFSBucket,
+	MongoBulkWriteError,
 	type MongoClientOptions,
 	MongoClient as mongoClient,
 	type ReadPreference,
@@ -373,10 +374,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		entries: Array<{ key: string; value: any; ttl?: number }>,
 	): Promise<boolean[] | undefined> {
 		if (this._useGridFS) {
-			await Promise.all(
+			const settled = await Promise.allSettled(
 				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
 			);
-			return entries.map(() => true);
+			return settled.map((result) => result.status === "fulfilled");
 		}
 
 		const client = await this.connect;
@@ -396,8 +397,26 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			};
 		});
 
-		await client.store.bulkWrite(operations);
-		return entries.map(() => true);
+		try {
+			await client.store.bulkWrite(operations, { ordered: false });
+			return entries.map(() => true);
+		} catch (error) {
+			if (error instanceof MongoBulkWriteError) {
+				const results = new Array<boolean>(entries.length).fill(true);
+				const errors = Array.isArray(error.writeErrors)
+					? error.writeErrors
+					: [error.writeErrors];
+				for (const writeError of errors) {
+					results[writeError.index] = false;
+				}
+
+				this.emit("error", error);
+				return results;
+			}
+
+			this.emit("error", error);
+			return entries.map(() => false);
+		}
 	}
 
 	/**

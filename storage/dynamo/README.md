@@ -323,7 +323,7 @@ await store.set('foo', 'bar', 60000);
 
 ### .setMany(entries)
 
-Stores multiple values in DynamoDB. Each entry is an object with `key`, `value`, and optional `ttl` properties. Returns a `boolean[]` indicating whether each entry was set successfully.
+Stores multiple values in DynamoDB using `BatchWriteItem` in chunks of 25. Each entry is an object with `key`, `value`, and optional `ttl` properties. Returns a `boolean[]` with per-entry success tracking — any items reported as `UnprocessedItems` by DynamoDB are marked as `false`.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });

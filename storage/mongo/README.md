@@ -214,7 +214,7 @@ await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
 - `entries` *(Array<{ key: string, value: any, ttl?: number }>)* - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds.
 - Returns: `Promise<boolean[]>` - An array of booleans indicating whether each entry was set successfully.
 
-In standard mode, uses a single MongoDB `bulkWrite` operation for efficiency. In GridFS mode, each entry is set individually in parallel.
+In standard mode, uses a single unordered MongoDB `bulkWrite` operation for efficiency with per-entry error tracking — if individual writes fail, only those entries return `false`. In GridFS mode, each entry is set individually in parallel using `Promise.allSettled`, providing per-entry success tracking.
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
