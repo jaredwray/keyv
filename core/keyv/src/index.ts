@@ -803,7 +803,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	// biome-ignore lint/correctness/noUnusedVariables: type format
 	async setMany<Value = GenericValue>(
-		entries: KeyvEntry[],
+		entries: KeyvEntry<Value>[],
 	): Promise<boolean[]> {
 		let results: boolean[] = [];
 

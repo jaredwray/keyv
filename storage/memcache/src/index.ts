@@ -1,5 +1,5 @@
 import { Hookified } from "hookified";
-import type { KeyvStorageAdapter, StoredData } from "keyv";
+import type { KeyvEntry, KeyvStorageAdapter, StoredData } from "keyv";
 import { Keyv } from "keyv";
 import { Memcache, type MemcacheOptions } from "memcache";
 
@@ -119,10 +119,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple values in the memcache server.
 	 * @param entries - An array of objects containing key, value, and optional ttl
 	 */
-	async setMany(
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		entries: Array<{ key: string; value: any; ttl?: number }>,
-	): Promise<boolean[] | undefined> {
+	async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		const promises = entries.map(async ({ key, value, ttl }) =>
 			this.set(key, value, ttl),
 		);

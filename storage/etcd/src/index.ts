@@ -1,6 +1,6 @@
 import { Etcd3, type Lease } from "etcd3";
 import { Hookified } from "hookified";
-import { Keyv, type StoredData } from "keyv";
+import { Keyv, type KeyvEntry, type StoredData } from "keyv";
 import type {
 	ClearOutput,
 	DeleteOutput,
@@ -326,9 +326,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Stores multiple values in the etcd server.
 	 * @param entries - An array of objects containing key and value
 	 */
-	public async setMany(
-		entries: Array<{ key: string; value: Value }>,
-	): Promise<boolean[] | undefined> {
+	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
 		const promises = entries.map(async ({ key, value }) =>
 			this.set(key, value),
 		);
