@@ -381,7 +381,7 @@ describe("Keyv Generic Store Iterator", () => {
 
 	test("should filter by namespace", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvGenericStore(store, { namespace: "ns1" });
 
 		// Set entries with different namespaces manually
 		store.set("ns1::key1", { value: "value1", expires: undefined });
@@ -389,7 +389,7 @@ describe("Keyv Generic Store Iterator", () => {
 		store.set("ns2::key3", { value: "value3", expires: undefined });
 
 		const entries: Array<[string, unknown]> = [];
-		for await (const entry of keyv.iterator("ns1")) {
+		for await (const entry of keyv.iterator()) {
 			entries.push(entry as [string, unknown]);
 		}
 
@@ -446,7 +446,7 @@ describe("Keyv Generic Store Iterator", () => {
 		await keyv.set("key2", "value2");
 
 		const entries: Array<[string, unknown]> = [];
-		for await (const entry of keyv.iterator("myns")) {
+		for await (const entry of keyv.iterator()) {
 			entries.push(entry as [string, unknown]);
 		}
 
@@ -457,7 +457,10 @@ describe("Keyv Generic Store Iterator", () => {
 
 	test("should work with custom key separator", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { keySeparator: ":" });
+		const keyv = new KeyvGenericStore(store, {
+			namespace: "ns1",
+			keySeparator: ":",
+		});
 
 		// Set entries with custom separator manually
 		store.set("ns1:key1", { value: "value1", expires: undefined });
@@ -465,7 +468,7 @@ describe("Keyv Generic Store Iterator", () => {
 		store.set("ns2:key3", { value: "value3", expires: undefined });
 
 		const entries: Array<[string, unknown]> = [];
-		for await (const entry of keyv.iterator("ns1")) {
+		for await (const entry of keyv.iterator()) {
 			entries.push(entry as [string, unknown]);
 		}
 

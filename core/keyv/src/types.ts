@@ -114,9 +114,10 @@ export type KeyvStorageAdapter = {
 	): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean[]>;
-	iterator?<Value>(
-		namespace?: string,
-	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
+	iterator?<Value>(): AsyncGenerator<
+		Array<string | Awaited<Value> | undefined>,
+		void
+	>;
 } & IEventEmitter;
 
 export type KeyvOptions = {

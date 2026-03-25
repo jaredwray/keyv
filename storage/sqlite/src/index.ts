@@ -617,14 +617,11 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * Iterates over all key-value pairs, optionally filtered by namespace.
 	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`
 	 * to safely handle concurrent modifications without skipping entries.
-	 * @param namespace - Optional namespace to filter entries by. If omitted, iterates
-	 *   over entries in the default (empty) namespace.
-	 * @yields A `[key, value]` tuple for each entry. Keys include the namespace prefix
-	 *   when a namespace is provided, for compatibility with Keyv core.
+	 * @yields A `[key, value]` tuple for each entry.
 	 */
-	async *iterator(namespace?: string) {
+	async *iterator() {
 		const limit = this._iterationLimit > 0 ? this._iterationLimit : 10;
-		const ns = namespace ?? "";
+		const ns = this.getNamespaceValue();
 		let lastKey: string | null = null;
 
 		while (true) {

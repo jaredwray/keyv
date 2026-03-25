@@ -450,7 +450,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @yields {[string, string]} A tuple of `[key, value]` for each matching entry.
 	 *   The key has the internal namespace prefix stripped when `useSets` is disabled.
 	 */
-	public async *iterator(_namespace?: string) {
+	public async *iterator() {
 		const scan = this._client.scan.bind(this._client);
 		const get = this._client.mget.bind(this._client);
 		const prefix = `${this.getKeyPrefix()}:`;

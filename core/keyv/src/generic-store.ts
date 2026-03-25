@@ -336,18 +336,20 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param namespace - Optional namespace to filter entries by
 	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding [key, value] pairs
 	 */
-	async *iterator<Value>(
-		namespace?: string,
-	): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
+	async *iterator<Value>(): AsyncGenerator<
+		Array<string | Awaited<Value> | undefined>,
+		void
+	> {
 		// Check if store supports iteration
 		if (typeof (this._store as Map<any, any>).entries !== "function") {
 			return;
 		}
 
+		const namespace = this.getNamespace();
 		const iterator = (this._store as Map<any, any>).entries();
 
 		for (const [key, data] of iterator) {
-			// Filter by namespace if provided
+			// Filter by namespace if set
 			if (namespace) {
 				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {
 					continue;

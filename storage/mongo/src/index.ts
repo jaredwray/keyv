@@ -562,13 +562,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Iterate over all key-value pairs in the store matching the given namespace.
-	 * @param namespace - The namespace to iterate over. When used through Keyv, this is passed automatically.
+	 * Iterate over all key-value pairs in the store matching the configured namespace.
 	 * @yields `[key, value]` pairs as an async generator.
 	 */
-	public async *iterator(namespace?: string) {
+	public async *iterator() {
 		const client = await this.connect;
-		const namespaceValue = namespace ?? "";
+		const namespaceValue = this.getNamespaceValue();
 
 		if (this._useGridFS) {
 			const gridIterator = client.store

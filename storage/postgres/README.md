@@ -39,7 +39,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
   - [.clearExpired()](#clearexpired)
-  - [.iterator(namespace?)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance)
 - [Connection Pooling](#connection-pooling)
@@ -429,9 +429,9 @@ Utility helper method to delete all expired entries from the store. This removes
 await keyv.clearExpired();
 ```
 
-## .iterator(namespace?)
+## .iterator()
 
-Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` property.
+Iterate over all key-value pairs. The iterator uses the namespace configured on the instance. Uses cursor-based pagination controlled by the `iterationLimit` property.
 
 ```js
 const iterator = keyv.iterator();

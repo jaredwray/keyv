@@ -757,19 +757,20 @@ export default class KeyvRedis<T>
 	}
 
 	/**
-	 * Get an async iterator for the keys and values in the store. If a namespace is provided, it will only iterate over keys with that namespace.
-	 * @param {string} [namespace] - the namespace to iterate over
+	 * Get an async iterator for the keys and values in the store. It will only iterate over keys with the current namespace.
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
-	public async *iterator<U = T>(
-		namespace?: string,
-	): AsyncGenerator<[string, U | undefined], void, unknown> {
+	public async *iterator<U = T>(): AsyncGenerator<
+		[string, U | undefined],
+		void,
+		unknown
+	> {
 		// When instance is not a cluster, it will only have one client
 		const clients = await this.getMasterNodes();
 
 		for (const client of clients) {
-			const match = namespace
-				? `${namespace}${this._keyPrefixSeparator}*`
+			const match = this._namespace
+				? `${this._namespace}${this._keyPrefixSeparator}*`
 				: "*";
 			let cursor = "0";
 			do {
@@ -780,14 +781,14 @@ export default class KeyvRedis<T>
 				cursor = result.cursor.toString();
 				let { keys } = result;
 
-				if (!namespace && !this._noNamespaceAffectsAll) {
+				if (!this._namespace && !this._noNamespaceAffectsAll) {
 					keys = keys.filter((key) => !key.includes(this._keyPrefixSeparator));
 				}
 
 				if (keys.length > 0) {
 					const values = await this.mget<U>(keys);
 					for (const i of keys.keys()) {
-						const key = this.getKeyWithoutPrefix(keys[i], namespace);
+						const key = this.getKeyWithoutPrefix(keys[i], this._namespace);
 						const value = values[i];
 						yield [key, value];
 					}

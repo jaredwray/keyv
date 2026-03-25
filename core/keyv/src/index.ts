@@ -29,7 +29,7 @@ export type {
 export { KeyvHooks } from "./types.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
-type IteratorFunction = (argument: any) => AsyncGenerator<any, void>;
+type IteratorFunction = (argument?: any) => AsyncGenerator<any, void>;
 
 /**
  * Maps new hook names to their deprecated equivalents so both fire during migration.
@@ -200,6 +200,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 					// biome-ignore lint/style/noNonNullAssertion: need to fix
 					this._store.iterator!.bind(this._store),
 				);
+			} else {
+				this.iterator = this.generateFallbackIterator();
 			}
 		}
 
@@ -248,6 +250,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 				/* v8 ignore next -- @preserve */
 			} else if ("iterator" in store) {
 				this.iterator = this.generateIterator(store.iterator?.bind(store));
+			} else {
+				this.iterator = this.generateFallbackIterator();
 			}
 		} else {
 			throw new Error("Invalid storage adapter");
@@ -342,7 +346,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		const function_: IteratorFunction = async function* (this: any) {
 			for await (const [key, raw] of typeof iterator === "function"
-				? iterator(this._store.namespace)
+				? iterator()
 				: iterator) {
 				const data = await this.deserializeData(raw);
 
@@ -353,6 +357,19 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 				yield [key, data.value];
 			}
+		};
+
+		return function_.bind(this);
+	}
+
+	generateFallbackIterator(): IteratorFunction {
+		// biome-ignore lint/suspicious/noExplicitAny: type format
+		// biome-ignore lint/correctness/useYield: fallback iterator intentionally yields nothing
+		const function_: IteratorFunction = async function* (this: any) {
+			this.emit(
+				"error",
+				new Error("Iterator not supported by this storage adapter"),
+			);
 		};
 
 		return function_.bind(this);

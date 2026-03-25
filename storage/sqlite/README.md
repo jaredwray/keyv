@@ -46,7 +46,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.deleteMany(keys)](#deletemanykeys)
   - [.clear()](#clear)
   - [.clearExpired()](#clearexpired)
-  - [.iterator(namespace?)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [Clearing Expired Keys](#clearing-expired-keys)
 - [WAL Mode](#wal-mode)
@@ -577,9 +577,9 @@ Utility helper method to delete all expired entries from the store. This removes
 await store.clearExpired();
 ```
 
-## .iterator(namespace?)
+## .iterator()
 
-Iterate over all key-value pairs, optionally filtered by namespace. Uses cursor-based pagination controlled by the `iterationLimit` option.
+Iterate over all key-value pairs. The iterator uses the namespace configured on the instance. Uses cursor-based pagination controlled by the `iterationLimit` option.
 
 ```js
 const iterator = keyv.iterator();

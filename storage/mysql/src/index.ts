@@ -485,14 +485,11 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Returns an async iterator for iterating over all key-value pairs in the store.
 	 * Uses keyset pagination (cursor-based) to handle concurrent deletions without skipping entries.
-	 * @param namespace - Optional namespace to filter results
 	 * @yields Arrays containing [key, value] pairs
 	 */
-	public async *iterator(
-		namespace?: string,
-	): AsyncGenerator<[string, string], void, unknown> {
+	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
 		const limit = this._iterationLimit || 10;
-		const namespaceValue = namespace ?? "";
+		const namespaceValue = this.getNamespaceValue();
 		let lastKey: string | null = null;
 
 		while (true) {

@@ -358,12 +358,9 @@ await keyv.clear(); // removes all keys in 'my-namespace'
 
 ### iterator
 
-`iterator(namespace?)` - Iterate over all key-value pairs in the store.
+`iterator()` - Iterate over all key-value pairs in the store. The iterator uses the namespace configured on the instance.
 
-- `namespace` *(string, optional)* - The namespace to iterate over. When used through Keyv, the namespace is passed automatically from the Keyv instance.
 - Returns: `AsyncGenerator<[string, any]>` - An async generator yielding `[key, value]` pairs.
-
-When used through Keyv, the namespace prefix is stripped from keys automatically.
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');

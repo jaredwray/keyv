@@ -489,14 +489,11 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Iterates over all key-value pairs, optionally filtered by namespace.
 	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`.
-	 * @param namespace - Optional namespace to filter keys by.
 	 * @yields A `[key, value]` tuple for each entry.
 	 */
-	public async *iterator(
-		namespace?: string,
-	): AsyncGenerator<[string, string], void, unknown> {
+	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
 		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
-		const namespaceValue = namespace ?? null;
+		const namespaceValue = this.getNamespaceValue() || null;
 
 		// Use keyset pagination (cursor-based) instead of OFFSET to handle
 		// concurrent deletions during iteration without skipping entries

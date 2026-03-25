@@ -35,7 +35,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.has(key)](#haskey)
   - [.hasMany(keys)](#hasmanykeys)
   - [.clearExpired()](#clearexpired)
-  - [.iterator(namespace)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [SSL](#ssl)
 - [License](#license)
@@ -399,9 +399,9 @@ Deletes all entries where the `expires` column is set and the timestamp is in th
 await keyvMysql.clearExpired();
 ```
 
-### .iterator(namespace)
+### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store. Uses keyset pagination to efficiently handle large datasets.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance. Uses keyset pagination to efficiently handle large datasets.
 
 ```js
 for await (const [key, value] of keyvMysql.iterator()) {

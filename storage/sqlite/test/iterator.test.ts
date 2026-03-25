@@ -21,7 +21,7 @@ test.it("Async Iterator with Keyv", async (t) => {
 	// Ensure the Keyv instance can still use the iterator
 	t.expect(keyv.iterator).toBeDefined();
 	if (typeof keyv.iterator === "function") {
-		const keyvIterator = keyv.iterator({});
+		const keyvIterator = keyv.iterator();
 		let keyvDataFound = false;
 		for await (const [key, raw] of keyvIterator) {
 			t.expect(key).toBe(keyvData.key);
@@ -56,7 +56,7 @@ test.it("Async Iterator with Keyv and no namespace", async (t) => {
 	// Ensure the Keyv instance can still use the iterator
 	t.expect(keyv.iterator).toBeDefined();
 	if (typeof keyv.iterator === "function") {
-		const keyvIterator = keyv.iterator({});
+		const keyvIterator = keyv.iterator();
 		let keyvDataFound = false;
 		for await (const [key, raw] of keyvIterator) {
 			t.expect(key).toBe(keyvData.key);

@@ -34,7 +34,7 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [.has(key)](#haskey)
   - [.hasMany(keys)](#hasmanykeys)
   - [.clear()](#clear)
-  - [.iterator(namespace?)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
 - [Clustering](#clustering)
 - [License](#license)
@@ -299,12 +299,12 @@ Clears all entries from the store. If a namespace is set, only entries within th
 await store.clear();
 ```
 
-### .iterator(namespace?)
+### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance.
 
 ```js
-for await (const [key, value] of store.iterator('my-namespace')) {
+for await (const [key, value] of store.iterator()) {
   console.log(key, value);
 }
 ```

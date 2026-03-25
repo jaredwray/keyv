@@ -45,7 +45,7 @@
   - [.clear()](#clear)
   - [.has(key)](#haskey)
   - [.hasMany(keys)](#hasmanykeys)
-  - [.iterator(namespace?)](#iteratornamespace)
+  - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
   - [.formatKey(key)](#formatkeykey)
 - [License](#license)
@@ -353,9 +353,9 @@ await store.set('key2', 'value2');
 const results = await store.hasMany(['key1', 'key2', 'key3']); // [true, true, false]
 ```
 
-### .iterator(namespace?)
+### .iterator()
 
-Returns an async iterator over key-value pairs. If a namespace is provided, only keys matching the namespace prefix are yielded.
+Returns an async iterator over key-value pairs. The iterator uses the namespace configured on the instance.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');

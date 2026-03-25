@@ -402,18 +402,19 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	}
 
 	/**
-	 * Returns an async iterator over key-value pairs. If a namespace is provided,
+	 * Returns an async iterator over key-value pairs. If a namespace is set,
 	 * only keys matching the namespace prefix are yielded.
-	 * @param namespace - Optional namespace to filter keys by
 	 */
-	public async *iterator(namespace?: string) {
-		const prefix = namespace ? `${namespace}${this._keyPrefixSeparator}` : "";
+	public async *iterator() {
+		const prefix = this._namespace
+			? `${this._namespace}${this._keyPrefixSeparator}`
+			: "";
 		const iterator = await this._client.getAll().prefix(prefix).keys();
 
 		for await (const key of iterator) {
 			try {
 				const value = (await this._client.get(key)) as unknown as Value;
-				const unprefixedKey = this.removeKeyPrefix(key, namespace);
+				const unprefixedKey = this.removeKeyPrefix(key, this._namespace);
 				yield [unprefixedKey, value];
 				/* v8 ignore start -- @preserve */
 			} catch (error) {
