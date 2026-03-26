@@ -23,20 +23,20 @@ test.it("table name can be numeric, alphabet, special case", (t) => {
 		// @ts-expect-error testing
 		table: 3000,
 	});
-	t.expect(keyv.opts.table).toBe("_3000");
+	t.expect(keyv.table).toBe("_3000");
 
 	keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		table: "sample",
 	});
-	t.expect(keyv.opts.table).toBe("sample");
+	t.expect(keyv.table).toBe("sample");
 
 	// Special characters are now stripped for SQL injection prevention
 	keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		table: "$sample",
 	});
-	t.expect(keyv.opts.table).toBe("sample");
+	t.expect(keyv.table).toBe("sample");
 
 	// Table name with only special characters should throw
 	t.expect(
@@ -101,19 +101,19 @@ test.it("keySize accepts valid values", (t) => {
 		uri: "sqlite://test/testdb.sqlite",
 		keySize: 100,
 	});
-	t.expect(keyv1.opts.keySize).toBe(100);
+	t.expect(keyv1.keySize).toBe(100);
 
 	const keyv2 = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		keySize: 65535,
 	});
-	t.expect(keyv2.opts.keySize).toBe(65535);
+	t.expect(keyv2.keySize).toBe(65535);
 
 	const keyv3 = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		keySize: 1,
 	});
-	t.expect(keyv3.opts.keySize).toBe(1);
+	t.expect(keyv3.keySize).toBe(1);
 });
 
 test.it("keyLength alias works for keySize", (t) => {
@@ -121,14 +121,14 @@ test.it("keyLength alias works for keySize", (t) => {
 		uri: "sqlite://test/testdb.sqlite",
 		keyLength: 512,
 	});
-	t.expect(keyv.opts.keySize).toBe(512);
-	t.expect(keyv.opts.keyLength).toBe(512);
+	t.expect(keyv.keySize).toBe(512);
+	t.expect(keyv.keyLength).toBe(512);
 });
 
 test.it("keyv options as a string", (t) => {
 	const uri = "sqlite://test/testdb.sqlite";
 	const keyv = new KeyvSqlite(uri);
-	t.expect(keyv.opts.uri).toBe(uri);
+	t.expect(keyv.uri).toBe(uri);
 });
 
 test.it("getMany will return multiple values", async (t) => {
@@ -575,10 +575,10 @@ test.it("namespaceLength option is respected", (t) => {
 		uri: "sqlite://test/testdb.sqlite",
 		namespaceLength: 128,
 	});
-	t.expect(keyv.opts.namespaceLength).toBe(128);
+	t.expect(keyv.namespaceLength).toBe(128);
 });
 
-test.it("opts getter returns all options", (t) => {
+test.it("property getters return all configured values", (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		keySize: 512,
@@ -588,16 +588,14 @@ test.it("opts getter returns all options", (t) => {
 		wal: false,
 		clearExpiredInterval: 1000,
 	});
-	const opts = keyv.opts;
-	t.expect(opts.uri).toBe("sqlite://test/testdb.sqlite");
-	t.expect(opts.keySize).toBe(512);
-	t.expect(opts.keyLength).toBe(512);
-	t.expect(opts.namespaceLength).toBe(128);
-	t.expect(opts.busyTimeout).toBe(5000);
-	t.expect(opts.iterationLimit).toBe(50);
-	t.expect(opts.wal).toBe(false);
-	t.expect(opts.clearExpiredInterval).toBe(1000);
-	t.expect(opts.dialect).toBe("sqlite");
+	t.expect(keyv.uri).toBe("sqlite://test/testdb.sqlite");
+	t.expect(keyv.keySize).toBe(512);
+	t.expect(keyv.keyLength).toBe(512);
+	t.expect(keyv.namespaceLength).toBe(128);
+	t.expect(keyv.busyTimeout).toBe(5000);
+	t.expect(keyv.iterationLimit).toBe(50);
+	t.expect(keyv.wal).toBe(false);
+	t.expect(keyv.clearExpiredInterval).toBe(1000);
 });
 
 test.it("deleteMany returns false when no keys exist", async (t) => {
@@ -698,10 +696,10 @@ test.it(
 	},
 );
 
-test.it("opts setter updates options", (t) => {
+test.it("iterationLimit can be updated after construction", (t) => {
 	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
-	keyv.opts = { iterationLimit: 99 };
-	t.expect(keyv.opts.iterationLimit).toBe(99);
+	keyv.iterationLimit = 99;
+	t.expect(keyv.iterationLimit).toBe(99);
 });
 
 test.it("getExpiresFromValue handles non-string object values", async (t) => {
@@ -729,7 +727,7 @@ test.it(
 			busyTimeout: 3000,
 		});
 		// Sanitized to "keyvDROPTABLEkeyv" (only alphanumeric chars kept)
-		t.expect(keyv.opts.table).toBe("keyvDROPTABLEkeyv");
+		t.expect(keyv.table).toBe("keyvDROPTABLEkeyv");
 		// Operations should work on the sanitized table name
 		const testKey = faker.string.uuid();
 		const testVal = faker.lorem.word();
@@ -741,12 +739,12 @@ test.it(
 );
 
 test.it(
-	"opts setter sanitizes table name (prevents post-construction injection)",
+	"table setter sanitizes table name (prevents post-construction injection)",
 	(t) => {
 		const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
-		keyv.opts = { table: "evil'; DROP TABLE keyv;--" };
+		keyv.table = "evil'; DROP TABLE keyv;--";
 		// Should be sanitized, not the raw malicious string
-		t.expect(keyv.opts.table).toBe("evilDROPTABLEkeyv");
+		t.expect(keyv.table).toBe("evilDROPTABLEkeyv");
 	},
 );
 
@@ -759,7 +757,7 @@ test.it(
 			busyTimeout: 3000,
 		});
 		// escapeIdentifier wraps in double quotes, so "select" is safe as a table name
-		t.expect(keyv.opts.table).toBe("select");
+		t.expect(keyv.table).toBe("select");
 		const testKey = faker.string.uuid();
 		const testVal = faker.lorem.word();
 		await keyv.set(testKey, testVal);
@@ -778,7 +776,7 @@ test.it("table name with double quotes is escaped correctly", async (t) => {
 		busyTimeout: 3000,
 	});
 	// toTableString strips the double-quote character
-	t.expect(keyv.opts.table).toBe("mytable");
+	t.expect(keyv.table).toBe("mytable");
 	const testKey = faker.string.uuid();
 	const testVal = faker.lorem.word();
 	await keyv.set(testKey, testVal);
@@ -790,7 +788,6 @@ test.it("table name with double quotes is escaped correctly", async (t) => {
 test.it("property getters return correct defaults", async (t) => {
 	const keyv = new KeyvSqlite();
 	t.expect(keyv.uri).toBe("sqlite://:memory:");
-	t.expect(keyv.dialect).toBe("sqlite");
 	t.expect(keyv.table).toBe("keyv");
 	t.expect(keyv.keySize).toBe(255);
 	t.expect(keyv.namespaceLength).toBe(255);

@@ -30,10 +30,8 @@
   - [.url](#url)
   - [.ttl](#ttl)
   - [.busyTimeout](#busytimeout)
-  - [.dialect](#dialect)
   - [.namespace](#namespace)
   - [.keyPrefixSeparator](#keyprefixseparator)
-  - [.opts](#opts)
 - [Methods](#methods)
   - [constructor(url?, options?)](#constructorurl-options)
   - [.get(key)](#getkey)
@@ -141,7 +139,6 @@ const value2 = await keyv2.get('foo'); // 'bar2'
 | `uri` | `string` | — | Alias for `url` |
 | `ttl` | `number` | `undefined` | Default TTL in milliseconds for all keys. Uses etcd leases internally. |
 | `busyTimeout` | `number` | `undefined` | Busy timeout in milliseconds |
-| `dialect` | `string` | `'etcd'` | Storage dialect identifier (read-only) |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
 
 ```js
@@ -199,14 +196,6 @@ Busy timeout in milliseconds.
 |---|---|
 | `number \| undefined` | `undefined` |
 
-### .dialect
-
-Storage dialect identifier. Always returns `'etcd'`. Read-only.
-
-| Type | Default |
-|---|---|
-| `string` | `'etcd'` |
-
 ### .namespace
 
 Key prefix for namespace isolation. When set, all keys are prefixed with `namespace:`.
@@ -222,20 +211,6 @@ The separator between the namespace and key.
 | Type | Default |
 |---|---|
 | `string` | `':'` |
-
-### .opts
-
-Read-only object containing the current configuration options. Provided for legacy compatibility.
-
-| Type |
-|---|
-| `KeyvEtcdOptions` |
-
-```js
-const store = new KeyvEtcd('etcd://localhost:2379', { ttl: 5000 });
-console.log(store.opts);
-// { url: '127.0.0.1:2379', ttl: 5000, busyTimeout: undefined, dialect: 'etcd', namespace: undefined }
-```
 
 ## Methods
 

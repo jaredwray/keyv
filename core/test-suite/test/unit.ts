@@ -8,17 +8,14 @@ import keyvTestSuite, {
 
 const storeExtended = () => {
 	class MapExtend extends Map {
-		// biome-ignore lint/correctness/noUnusedPrivateClassMembers: allowed
-		private readonly opts: { timeout: number };
 		// biome-ignore lint/suspicious/noExplicitAny: type format for Map
-		constructor(map: Map<any, any>, options: { timeout: number }) {
+		constructor(map: Map<any, any>) {
 			// @ts-expect-error - super don't accept arguments
 			super(map);
-			this.opts = options;
 		}
 	}
 
-	return new MapExtend(new Map(), { timeout: 1000 });
+	return new MapExtend(new Map());
 };
 
 keyvTestSuite(test, Keyv, storeExtended);

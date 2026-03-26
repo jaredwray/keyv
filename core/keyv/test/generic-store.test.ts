@@ -30,11 +30,10 @@ describe("Keyv Generic Store Options", () => {
 		expect(keyv.keySeparator).toBe("new");
 	});
 
-	test("should be able to get the options", () => {
+	test("should be able to get the namespace from options", () => {
 		const store = new Map();
-		const options = { namespace: "test" };
-		const keyv = new KeyvGenericStore(store, options);
-		expect(keyv.opts).toEqual(options);
+		const keyv = new KeyvGenericStore(store, { namespace: "test" });
+		expect(keyv.namespace).toBe("test");
 	});
 });
 

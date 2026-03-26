@@ -61,10 +61,6 @@ export type KeyvRedisOptions = {
 
 export type KeyvRedisPropertyOptions = KeyvRedisOptions & {
 	/**
-	 * Dialect used by the adapter. This is legacy so Keyv knows what is iteratable.
-	 */
-	dialect: "redis";
-	/**
 	 * URL used to connect to the Redis server. This is legacy so Keyv knows what is iteratable.
 	 */
 	url: string;

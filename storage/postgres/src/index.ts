@@ -332,33 +332,6 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the options for the adapter. This is required by the KeyvStorageAdapter interface.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get opts(): any {
-		return {
-			uri: this._uri,
-			table: this._table,
-			keyLength: this._keyLength,
-			namespaceLength: this._namespaceLength,
-			schema: this._schema,
-			ssl: this._ssl,
-			dialect: "postgres",
-			iterationLimit: this._iterationLimit,
-			useUnloggedTable: this._useUnloggedTable,
-			clearExpiredInterval: this._clearExpiredInterval,
-			...this._poolConfig,
-		};
-	}
-
-	/**
-	 * Set the options for the adapter.
-	 */
-	public set opts(options: KeyvPostgresOptions) {
-		this.setOptions(options);
-	}
-
-	/**
 	 * Gets a value by key.
 	 * @param key - The key to retrieve.
 	 * @returns The value associated with the key, or `undefined` if not found.

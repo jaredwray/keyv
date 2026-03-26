@@ -195,24 +195,6 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the options for the adapter. This is provided for backward compatibility.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get opts(): any {
-		return {
-			dialect: "mysql",
-			url: this._uri,
-			uri: this._uri,
-			table: this._table,
-			keyLength: this._keyLength,
-			namespaceLength: this._namespaceLength,
-			intervalExpiration: this._intervalExpiration,
-			iterationLimit: this._iterationLimit,
-			...this._mysqlOptions,
-		};
-	}
-
-	/**
 	 * Creates a new KeyvMysql instance.
 	 * @param options - Configuration options or connection URI string
 	 */

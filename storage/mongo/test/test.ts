@@ -26,9 +26,6 @@ test.it(
 		const store = new KeyvMongo(mongoURL, { collection: "foo" });
 		t.expect(store.url).toBe(mongoURL);
 		t.expect(store.collection).toBe("foo");
-		// Backward compatibility
-		t.expect(store.opts.url).toBe(mongoURL);
-		t.expect(store.opts.collection).toBe("foo");
 	},
 );
 
@@ -36,8 +33,6 @@ test.it("URI is passed it is correct", (t) => {
 	const options_ = { uri: "mongodb://127.0.0.1:27017" };
 	const store = new KeyvMongo(options_);
 	t.expect(store.url).toBe(options_.uri);
-	// Backward compatibility
-	t.expect(store.opts.uri).toBe(options_.uri);
 });
 
 test.it("default properties are set correctly", (t) => {
@@ -88,13 +83,10 @@ test.it("constructor with undefined url and options sets properties", (t) => {
 	t.expect(store.readPreference).toBe("primary");
 });
 
-test.it("opts getter returns backward-compatible object", (t) => {
+test.it("properties are set correctly with url and options", (t) => {
 	const store = new KeyvMongo(mongoURL, { collection: "cache", ...options });
-	const opts = store.opts;
-	t.expect(opts.url).toBe(mongoURL);
-	t.expect(opts.uri).toBe(mongoURL);
-	t.expect(opts.collection).toBe("cache");
-	t.expect(opts.dialect).toBe("mongo");
+	t.expect(store.url).toBe(mongoURL);
+	t.expect(store.collection).toBe("cache");
 });
 
 test.it("Stores value in GridFS", async (t) => {

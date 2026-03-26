@@ -106,13 +106,6 @@ const keyv = new Keyv({ store: KeyvValkey });
 
 #### Properties instead of opts
 
-In v5, configuration was accessed through the `opts` object:
-
-```js
-// v5
-store.opts.useRedisSets; // true
-```
-
 In v6, all configuration options are exposed as top-level properties with getters and setters:
 
 ```js

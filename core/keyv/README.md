@@ -538,7 +538,7 @@ The storage adapter instance to be used by Keyv.
 Type: `String`
 Default: `'keyv'`
 
-This is the namespace for the current instance. When you set it it will set it also on the storage adapter. This is the preferred way to set the namespace over `.opts.namespace`.
+This is the namespace for the current instance. When you set it it will set it also on the storage adapter.
 
 ## options
 
@@ -630,8 +630,10 @@ await keyv.setRaw('foo', { value: 'bar' });
 
 // Round-trip: get raw, modify, set raw
 const raw = await keyv.getRaw('foo');
-raw.value = 'updated';
-await keyv.setRaw('foo', raw);
+if (raw) {
+  raw.value = 'updated';
+  await keyv.setRaw('foo', raw);
+}
 ```
 
 ## .setManyRaw(entries)

@@ -464,20 +464,6 @@ const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true 
 console.log(store.useGridFS); // true (read-only)
 ```
 
-#### Property Access Changed from `opts` to Direct Getters/Setters
-
-Properties are no longer accessed through an `opts` object. Use the direct getters and setters on the instance instead.
-
-```js
-// v3
-store.opts.url;
-store.opts.collection = 'cache';
-
-// v6
-store.url;
-store.collection = 'cache';
-```
-
 #### `ttlSupport` Property Removed
 
 The `ttlSupport` property has been removed. If your code checks for TTL support on the adapter, remove those checks.

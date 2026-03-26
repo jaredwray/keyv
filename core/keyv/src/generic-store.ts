@@ -93,7 +93,6 @@ export type KeyPrefixData = {
  * ```
  */
 export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
-	private readonly _options?: KeyvGenericStoreOptions;
 	private _store: KeyvMapType;
 	private _namespace?: string | (() => string);
 	private _keySeparator = "::";
@@ -106,7 +105,6 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	constructor(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
 		super();
 		this._store = store;
-		this._options = options;
 
 		if (options?.keySeparator) {
 			this._keySeparator = options.keySeparator;
@@ -143,13 +141,6 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 */
 	public set keySeparator(separator: string) {
 		this._keySeparator = separator;
-	}
-
-	/**
-	 * Gets the options passed to the constructor.
-	 */
-	public get opts() {
-		return this._options;
 	}
 
 	/**

@@ -27,8 +27,6 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	public namespace?: string;
 	/** The underlying Memcache client instance */
 	public client: Memcache;
-	/** Merged configuration options */
-	public opts: KeyvMemcacheOptions;
 
 	/**
 	 * Creates a new KeyvMemcache instance.
@@ -50,7 +48,6 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 			allOptions.nodes = typeof uri === "string" ? [uri] : ["localhost:11211"];
 		}
 
-		this.opts = allOptions;
 		this.namespace = allOptions.namespace;
 
 		const { namespace: _namespace, ...memcacheOptions } = allOptions;

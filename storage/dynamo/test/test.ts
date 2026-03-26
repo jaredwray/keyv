@@ -37,15 +37,15 @@ test.it("should ensure table creation", async (t) => {
 
 test.it("should be able to create a keyv instance", (t) => {
 	const keyv = new Keyv<string>({ store: keyvDynamodb });
-	t.expect(keyv.store.opts.endpoint).toEqual(dynamoURL);
+	t.expect((keyv.store as KeyvDynamo).endpoint).toEqual(dynamoURL);
 });
 
 test.it("should be able to create a keyv instance with namespace", (t) => {
 	const keyv = new Keyv<string>({
 		store: new KeyvDynamo({ endpoint: dynamoURL, namespace: "test" }),
 	});
-	t.expect(keyv.store.opts.endpoint).toEqual(dynamoURL);
-	t.expect(keyv.store.opts.namespace).toEqual("test");
+	t.expect((keyv.store as KeyvDynamo).endpoint).toEqual(dynamoURL);
+	t.expect((keyv.store as KeyvDynamo).namespace).toEqual("test");
 });
 
 test.it(".clear() entire cache store with default namespace", async (t) => {
@@ -351,7 +351,7 @@ test.it("has returns false for expired key", async (t) => {
 	await store.set(key, "value", 0);
 	// Manually overwrite with an already-expired expiresAt
 	await store.client.put({
-		TableName: store.opts.tableName,
+		TableName: store.tableName,
 		Item: {
 			id: store.formatKey(key),
 			value: "value",
@@ -369,7 +369,7 @@ test.it("hasMany returns false for expired keys", async (t) => {
 	await store.set(key2, "value2");
 	// Overwrite key1 with an expired expiresAt
 	await store.client.put({
-		TableName: store.opts.tableName,
+		TableName: store.tableName,
 		Item: {
 			id: store.formatKey(key1),
 			value: "value1",
@@ -396,7 +396,7 @@ test.describe("createKeyv", () => {
 		t.expect(keyv.namespace).toBeUndefined();
 		t.expect((keyv.store as KeyvDynamo).namespace).toBeUndefined();
 
-		t.expect((keyv.store as KeyvDynamo).opts.endpoint).toBe(dynamoURL);
+		t.expect((keyv.store as KeyvDynamo).endpoint).toBe(dynamoURL);
 	});
 
 	test.it("should create Keyv instance with custom namespace", (t) => {
@@ -407,7 +407,7 @@ test.describe("createKeyv", () => {
 		t.expect(keyv.namespace).toBe(namespace);
 		t.expect((keyv.store as KeyvDynamo).namespace).toBe(namespace);
 
-		t.expect((keyv.store as KeyvDynamo).opts.endpoint).toBe(dynamoURL);
+		t.expect((keyv.store as KeyvDynamo).endpoint).toBe(dynamoURL);
 	});
 
 	test.it("should create Keyv instance with custom table name", (t) => {
@@ -418,7 +418,7 @@ test.describe("createKeyv", () => {
 		t.expect(keyv.namespace).toBeUndefined();
 		t.expect((keyv.store as KeyvDynamo).namespace).toBeUndefined();
 
-		t.expect((keyv.store as KeyvDynamo).opts.tableName).toBe(tableName);
+		t.expect((keyv.store as KeyvDynamo).tableName).toBe(tableName);
 	});
 
 	test.it(
@@ -432,7 +432,7 @@ test.describe("createKeyv", () => {
 			t.expect(keyv.namespace).toBe(namespace);
 			t.expect((keyv.store as KeyvDynamo).namespace).toBe(namespace);
 
-			t.expect((keyv.store as KeyvDynamo).opts.tableName).toBe(tableName);
+			t.expect((keyv.store as KeyvDynamo).tableName).toBe(tableName);
 		},
 	);
 

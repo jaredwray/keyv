@@ -2,7 +2,6 @@ import type { Cluster, Redis, RedisOptions } from "iovalkey";
 
 export type KeyvValkeyOptions = RedisOptions & {
 	uri?: string;
-	dialect?: string;
 	useSets?: boolean;
 };
 

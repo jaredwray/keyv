@@ -133,32 +133,26 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.clearBatchSize).toBe(200);
 	});
 
-	test("should be able to get and set opts", async () => {
+	test("should be able to get and set properties individually", async () => {
 		const keyvRedis = new KeyvRedis();
-		keyvRedis.opts = {
-			namespace: "test",
-			keyPrefixSeparator: ":1",
-			clearBatchSize: 2000,
-			noNamespaceAffectsAll: true,
-		};
+		keyvRedis.namespace = "test";
+		keyvRedis.keyPrefixSeparator = ":1";
+		keyvRedis.clearBatchSize = 2000;
+		keyvRedis.noNamespaceAffectsAll = true;
 
-		expect(keyvRedis.opts).toEqual({
-			namespace: "test",
-			keyPrefixSeparator: ":1",
-			clearBatchSize: 2000,
-			dialect: "redis",
-			url: "redis://localhost:6379",
-			noNamespaceAffectsAll: true,
-			throwOnErrors: false,
-			throwOnConnectError: true,
-			useUnlink: true,
-		});
+		expect(keyvRedis.namespace).toBe("test");
+		expect(keyvRedis.keyPrefixSeparator).toBe(":1");
+		expect(keyvRedis.clearBatchSize).toBe(2000);
+		expect(keyvRedis.noNamespaceAffectsAll).toBe(true);
+		expect(keyvRedis.throwOnErrors).toBe(false);
+		expect(keyvRedis.throwOnConnectError).toBe(true);
+		expect(keyvRedis.useUnlink).toBe(true);
 	});
 
-	test("opts should return the url from client options", () => {
+	test("client options should contain the url", () => {
 		const uri = "redis://foo:6379";
 		const keyvRedis = new KeyvRedis(uri);
-		expect(keyvRedis.opts.url).toBe(uri);
+		expect((keyvRedis.client as RedisClientType).options?.url).toBe(uri);
 	});
 
 	test("should get and set throwOnConnectError", async () => {
