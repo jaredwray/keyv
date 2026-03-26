@@ -100,7 +100,7 @@ export type KeyvStorageAdapter = {
 	namespace?: string | undefined;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	set(key: string, value: any, ttl?: number): any;
+	set(key: string, value: any, ttl?: number): Promise<boolean>;
 	setMany?<Value>(values: KeyvEntry<Value>[]): Promise<boolean[] | undefined>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;

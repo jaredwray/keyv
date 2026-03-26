@@ -313,7 +313,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * @param value - The value to store
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, ttl?: number): Promise<void> {
+	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		try {
 			const target =
 				typeof ttl === "number"
@@ -325,8 +325,10 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 						: this._client;
 
 			await target?.put(this.formatKey(key)).value(value);
+			return true;
 		} catch (error) {
 			this.emit("error", error);
+			return false;
 		}
 	}
 

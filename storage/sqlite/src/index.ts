@@ -475,15 +475,20 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * @param value - The value to store. May be a serialized JSON string containing an `expires` timestamp.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	async set(key: string, value: any) {
-		const strippedKey = this.removeKeyPrefix(key);
-		const ns = this.getNamespaceValue();
-		const expires = this.getExpiresFromValue(value);
-		const upsert = `INSERT INTO ${this.getCleanTableName()} (key, value, namespace, expires)
+	async set(key: string, value: any): Promise<boolean> {
+		try {
+			const strippedKey = this.removeKeyPrefix(key);
+			const ns = this.getNamespaceValue();
+			const expires = this.getExpiresFromValue(value);
+			const upsert = `INSERT INTO ${this.getCleanTableName()} (key, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-		return this.query(upsert, strippedKey, value, ns, expires);
+			await this.query(upsert, strippedKey, value, ns, expires);
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
 	/**

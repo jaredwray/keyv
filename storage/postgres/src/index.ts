@@ -399,19 +399,24 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @param value - The value to store.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any): Promise<void> {
-		const strippedKey = this.removeKeyPrefix(key);
-		const expires = this.getExpiresFromValue(value);
-		const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
+	public async set(key: string, value: any): Promise<boolean> {
+		try {
+			const strippedKey = this.removeKeyPrefix(key);
+			const expires = this.getExpiresFromValue(value);
+			const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
       VALUES($1, $2, $3, $4)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-		await this.query(upsert, [
-			strippedKey,
-			value,
-			this.getNamespaceValue(),
-			expires,
-		]);
+			await this.query(upsert, [
+				strippedKey,
+				value,
+				this.getNamespaceValue(),
+				expires,
+			]);
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
 	/**

@@ -335,37 +335,45 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @param ttl - Time to live in milliseconds. If specified, the key will expire after this duration.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, ttl?: number) {
-		const expiresAt =
-			typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
-		const strippedKey = this.removeKeyPrefix(key);
-		const ns = this.getNamespaceValue();
+	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+		try {
+			const expiresAt =
+				typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
+			const strippedKey = this.removeKeyPrefix(key);
+			const ns = this.getNamespaceValue();
 
-		if (this._useGridFS) {
-			const client = await this.connect;
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const stream = client.bucket!.openUploadStream(strippedKey, {
-				metadata: {
-					expiresAt,
-					lastAccessed: new Date(),
-					namespace: ns,
-				},
-			});
-
-			return new Promise((resolve) => {
-				stream.on("finish", () => {
-					resolve(stream);
+			if (this._useGridFS) {
+				const client = await this.connect;
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
+				const stream = client.bucket!.openUploadStream(strippedKey, {
+					metadata: {
+						expiresAt,
+						lastAccessed: new Date(),
+						namespace: ns,
+					},
 				});
-				stream.end(value);
-			});
-		}
 
-		const client = await this.connect;
-		await client.store.updateOne(
-			{ key: { $eq: strippedKey }, namespace: { $eq: ns } },
-			{ $set: { key: strippedKey, value, namespace: ns, expiresAt } },
-			{ upsert: true },
-		);
+				return new Promise((resolve) => {
+					stream.on("finish", () => {
+						resolve(true);
+					});
+					stream.on("error", () => {
+						resolve(false);
+					});
+					stream.end(value);
+				});
+			}
+
+			const client = await this.connect;
+			await client.store.updateOne(
+				{ key: { $eq: strippedKey }, namespace: { $eq: ns } },
+				{ $set: { key: strippedKey, value, namespace: ns, expiresAt } },
+				{ upsert: true },
+			);
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
 	/**

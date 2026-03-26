@@ -106,12 +106,14 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 * @param ttl - Time to live in milliseconds. Converted to seconds internally for memcache.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	async set(key: string, value: any, ttl?: number) {
+	async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const exptime = ttl !== undefined ? Math.floor(ttl / 1000) : 0;
 		try {
 			await this.client.set(this.formatKey(key), value as string, exptime);
+			return true;
 		} catch (error) {
 			this.emit("error", error);
+			return false;
 		}
 	}
 

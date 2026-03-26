@@ -340,7 +340,7 @@ export default class KeyvRedis<T>
 	 * @param {string} value - the value to set
 	 * @param {number} [ttl] - the time to live in milliseconds
 	 */
-	public async set(key: string, value: string, ttl?: number): Promise<void> {
+	public async set(key: string, value: string, ttl?: number): Promise<boolean> {
 		const client = await this.getClient();
 
 		try {
@@ -351,11 +351,15 @@ export default class KeyvRedis<T>
 			} else {
 				await client.set(key, value);
 			}
+
+			return true;
 		} catch (error) {
 			this.emit("error", error);
 			if (this._throwOnErrors) {
 				throw error;
 			}
+
+			return false;
 		}
 	}
 

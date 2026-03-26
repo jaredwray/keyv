@@ -8,6 +8,9 @@ export type GetManyOutput<Value> = Promise<
 	Array<StoredData<Value | undefined> | undefined>
 >;
 
+/** Resolves to `true` if the value was stored, `false` otherwise. */
+export type SetOutput = Promise<boolean>;
+
 /** Resolves to `true` if the key was deleted, `false` otherwise. */
 export type DeleteOutput = Promise<boolean>;
 

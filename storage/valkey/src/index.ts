@@ -229,29 +229,35 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<undefined>} Returns `undefined` if the value is `undefined`.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, ttl?: number) {
+	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		if (value === undefined) {
-			return undefined;
+			return false;
 		}
 
-		key = this.getKeyName(key);
+		try {
+			key = this.getKeyName(key);
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		const set = async (redis: any) => {
-			if (typeof ttl === "number") {
-				await redis.set(key, value, "PX", ttl);
+			// biome-ignore lint/suspicious/noExplicitAny: type format
+			const set = async (redis: any) => {
+				if (typeof ttl === "number") {
+					await redis.set(key, value, "PX", ttl);
+				} else {
+					await redis.set(key, value);
+				}
+			};
+
+			if (this._useSets) {
+				const trx = await this._client.multi();
+				await set(trx);
+				await trx.sadd(this.getSetKey(), key);
+				await trx.exec();
 			} else {
-				await redis.set(key, value);
+				await set(this._client);
 			}
-		};
 
-		if (this._useSets) {
-			const trx = await this._client.multi();
-			await set(trx);
-			await trx.sadd(this.getSetKey(), key);
-			await trx.exec();
-		} else {
-			await set(this._client);
+			return true;
+		} catch {
+			return false;
 		}
 	}
 
