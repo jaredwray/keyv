@@ -153,18 +153,6 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the adapter options for backward compatibility with Keyv internals.
-	 * Returns the dialect identifier and current `useSets` setting.
-	 * @returns {{ dialect: string; useSets: boolean }} The adapter options object.
-	 */
-	public get opts(): Record<string, unknown> {
-		return {
-			dialect: "redis",
-			useSets: this._useSets,
-		};
-	}
-
-	/**
 	 * Retrieves the value associated with a key from the Valkey store.
 	 * The key is resolved through the namespace prefix before querying.
 	 * @template Value - The type of the stored value.

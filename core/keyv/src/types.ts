@@ -95,8 +95,6 @@ export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
 export type KeyvStorageAdapter = {
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	opts: any;
 	namespace?: string | undefined;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	// biome-ignore lint/suspicious/noExplicitAny: type format

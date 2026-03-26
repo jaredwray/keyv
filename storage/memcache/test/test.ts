@@ -39,7 +39,7 @@ it("keyv get / no expired", async () => {
 
 it("testing defaults", () => {
 	const m = new KeyvMemcache();
-	expect(m.opts.nodes).toEqual(["localhost:11211"]);
+	expect(m.nodes).toEqual(["localhost:11211"]);
 });
 
 it("keyv clear", async () => {
@@ -306,39 +306,39 @@ it("createKeyv returns a Keyv instance", () => {
 
 it("constructor with string URI sets nodes", () => {
 	const m = new KeyvMemcache("myserver:11211");
-	expect(m.opts.nodes).toEqual(["myserver:11211"]);
+	expect(m.nodes).toEqual(["myserver:11211"]);
 });
 
 it("constructor with options object containing nodes", () => {
 	const m = new KeyvMemcache({ nodes: ["server1:11211", "server2:11211"] });
-	expect(m.opts.nodes).toEqual(["server1:11211", "server2:11211"]);
+	expect(m.nodes).toEqual(["server1:11211", "server2:11211"]);
 });
 
 it("constructor with options passes timeout to memcache client", () => {
 	const m = new KeyvMemcache({ nodes: [uri], timeout: 3000 });
-	expect(m.opts.timeout).toBe(3000);
+	expect(m.timeout).toBe(3000);
 });
 
 it("constructor with options passes keepAlive to memcache client", () => {
 	const m = new KeyvMemcache({ nodes: [uri], keepAlive: false });
-	expect(m.opts.keepAlive).toBe(false);
+	expect(m.keepAlive).toBe(false);
 });
 
 it("constructor with options passes retries to memcache client", () => {
 	const m = new KeyvMemcache({ nodes: [uri], retries: 3, retryDelay: 200 });
-	expect(m.opts.retries).toBe(3);
-	expect(m.opts.retryDelay).toBe(200);
+	expect(m.retries).toBe(3);
+	expect(m.retryDelay).toBe(200);
 });
 
 it("string URI with additional options merges correctly", () => {
 	const m = new KeyvMemcache(uri, { timeout: 2000 });
-	expect(m.opts.nodes).toEqual([uri]);
-	expect(m.opts.timeout).toBe(2000);
+	expect(m.nodes).toEqual([uri]);
+	expect(m.timeout).toBe(2000);
 });
 
 it("nodes from options takes precedence over string URI", () => {
 	const m = new KeyvMemcache("ignored:11211", { nodes: ["server1:11211"] });
-	expect(m.opts.nodes).toEqual(["server1:11211"]);
+	expect(m.nodes).toEqual(["server1:11211"]);
 });
 
 it("createKeyv with options passes them through", () => {

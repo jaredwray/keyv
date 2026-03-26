@@ -148,23 +148,6 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the options for the adapter. This is provided for backward compatibility.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get opts(): any {
-		return {
-			url: this._url,
-			uri: this._url,
-			collection: this._collection,
-			useGridFS: this._useGridFS,
-			db: this._db,
-			readPreference: this._readPreference,
-			dialect: "mongo",
-			...this._mongoOptions,
-		};
-	}
-
-	/**
 	 * Creates a new KeyvMongo instance.
 	 * @param url - Configuration options, connection URI string, or undefined for defaults.
 	 * @param options - Additional configuration options that override the first parameter.
@@ -741,7 +724,6 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			"deserialize",
 			"uri",
 			"useGridFS",
-			"dialect",
 			"db",
 			"readPreference",
 			"emitErrors",

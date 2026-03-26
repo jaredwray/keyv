@@ -42,9 +42,12 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 		this._opts = {
 			tableName: "keyv",
-			dialect: "dynamo",
 			...options,
 		};
+
+		if (this._opts.namespace) {
+			this._namespace = this._opts.namespace;
+		}
 
 		this._client = DynamoDBDocument.from(new DynamoDB(this._opts));
 
@@ -84,15 +87,6 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the merged configuration options. Read-only.
-	 */
-	public get opts(): Omit<KeyvDynamoOptions, "tableName"> & {
-		tableName: string;
-	} {
-		return this._opts;
-	}
-
-	/**
 	 * Gets the underlying DynamoDB Document client instance.
 	 */
 	public get client(): DynamoDBDocument {
@@ -104,6 +98,20 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public set client(value: DynamoDBDocument) {
 		this._client = value;
+	}
+
+	/**
+	 * Gets the DynamoDB table name.
+	 */
+	public get tableName(): string {
+		return this._opts.tableName;
+	}
+
+	/**
+	 * Gets the DynamoDB endpoint URL, if configured.
+	 */
+	public get endpoint(): string | undefined {
+		return this._opts.endpoint as string | undefined;
 	}
 
 	/**
@@ -621,7 +629,6 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 export default KeyvDynamo;
 export type KeyvDynamoOptions = {
 	namespace?: string;
-	dialect?: string;
 	tableName?: string;
 } & DynamoDBClientConfig;
 

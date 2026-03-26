@@ -13,37 +13,28 @@ keyvIteratorTests(test, Keyv, store);
 
 test.it("default options", (t) => {
 	const store = new KeyvEtcd();
-	t.expect(store.opts).toEqual({
-		url: "127.0.0.1:2379",
-		ttl: undefined,
-		busyTimeout: undefined,
-		dialect: "etcd",
-		namespace: undefined,
-	});
+	t.expect(store.url).toBe("127.0.0.1:2379");
+	t.expect(store.ttl).toBeUndefined();
+	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
 });
 
 test.it("enable ttl using default url", (t) => {
 	const store = new KeyvEtcd({ ttl: 1000 });
-	t.expect(store.opts).toEqual({
-		url: "127.0.0.1:2379",
-		ttl: 1000,
-		busyTimeout: undefined,
-		dialect: "etcd",
-		namespace: undefined,
-	});
+	t.expect(store.url).toBe("127.0.0.1:2379");
+	t.expect(store.ttl).toBe(1000);
+	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
 	t.expect(store.lease).toBeDefined();
 });
 
 test.it("disable ttl using default url", (t) => {
 	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd({ ttl: true });
-	t.expect(store.opts).toEqual({
-		url: "127.0.0.1:2379",
-		ttl: undefined,
-		busyTimeout: undefined,
-		dialect: "etcd",
-		namespace: undefined,
-	});
+	t.expect(store.url).toBe("127.0.0.1:2379");
+	t.expect(store.ttl).toBeUndefined();
+	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
 	t.expect(store.lease).toBeUndefined();
 });
 
@@ -52,38 +43,29 @@ test.it("enable ttl using url", (t) => {
 		url: "127.0.0.1:2379",
 		ttl: 1000,
 	});
-	t.expect(store.opts).toEqual({
-		url: "127.0.0.1:2379",
-		ttl: 1000,
-		busyTimeout: undefined,
-		dialect: "etcd",
-		namespace: undefined,
-	});
+	t.expect(store.url).toBe("127.0.0.1:2379");
+	t.expect(store.ttl).toBe(1000);
+	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
 	t.expect(store.lease).toBeDefined();
 });
 
 test.it("enable ttl using url and options", (t) => {
 	const store = new KeyvEtcd("127.0.0.1:2379", { ttl: 1000 });
-	t.expect(store.opts).toEqual({
-		url: "127.0.0.1:2379",
-		ttl: 1000,
-		busyTimeout: undefined,
-		dialect: "etcd",
-		namespace: undefined,
-	});
+	t.expect(store.url).toBe("127.0.0.1:2379");
+	t.expect(store.ttl).toBe(1000);
+	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
 	t.expect(store.lease).toBeDefined();
 });
 
 test.it("disable ttl using url and options", (t) => {
 	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd("127.0.0.1:2379", { ttl: true });
-	t.expect(store.opts).toEqual({
-		url: "127.0.0.1:2379",
-		ttl: undefined,
-		busyTimeout: undefined,
-		dialect: "etcd",
-		namespace: undefined,
-	});
+	t.expect(store.url).toBe("127.0.0.1:2379");
+	t.expect(store.ttl).toBeUndefined();
+	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
 	t.expect(store.lease).toBeUndefined();
 });
 
@@ -334,11 +316,6 @@ test.it("busyTimeout getter and setter", (t) => {
 	t.expect(store.busyTimeout).toBe(5000);
 	store.busyTimeout = undefined;
 	t.expect(store.busyTimeout).toBeUndefined();
-});
-
-test.it("dialect getter is always etcd", (t) => {
-	const store = new KeyvEtcd();
-	t.expect(store.dialect).toBe("etcd");
 });
 
 test.it("createKeyv returns a Keyv instance with KeyvEtcd store", (t) => {

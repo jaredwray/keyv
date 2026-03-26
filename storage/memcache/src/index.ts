@@ -27,8 +27,11 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	public namespace?: string;
 	/** The underlying Memcache client instance */
 	public client: Memcache;
-	/** Merged configuration options */
-	public opts: KeyvMemcacheOptions;
+	private readonly _nodes: (string | import("memcache").MemcacheNode)[];
+	private readonly _timeout?: number;
+	private readonly _keepAlive?: boolean;
+	private readonly _retries?: number;
+	private readonly _retryDelay?: number;
 
 	/**
 	 * Creates a new KeyvMemcache instance.
@@ -50,11 +53,50 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 			allOptions.nodes = typeof uri === "string" ? [uri] : ["localhost:11211"];
 		}
 
-		this.opts = allOptions;
+		this._nodes = allOptions.nodes;
+		this._timeout = allOptions.timeout;
+		this._keepAlive = allOptions.keepAlive;
+		this._retries = allOptions.retries;
+		this._retryDelay = allOptions.retryDelay;
 		this.namespace = allOptions.namespace;
 
 		const { namespace: _namespace, ...memcacheOptions } = allOptions;
 		this.client = new Memcache(memcacheOptions);
+	}
+
+	/**
+	 * Gets the configured nodes.
+	 */
+	public get nodes(): (string | import("memcache").MemcacheNode)[] {
+		return this._nodes;
+	}
+
+	/**
+	 * Gets the configured timeout.
+	 */
+	public get timeout(): number | undefined {
+		return this._timeout;
+	}
+
+	/**
+	 * Gets the configured keepAlive setting.
+	 */
+	public get keepAlive(): boolean | undefined {
+		return this._keepAlive;
+	}
+
+	/**
+	 * Gets the configured retries.
+	 */
+	public get retries(): number | undefined {
+		return this._retries;
+	}
+
+	/**
+	 * Gets the configured retry delay.
+	 */
+	public get retryDelay(): number | undefined {
+		return this._retryDelay;
 	}
 
 	/**

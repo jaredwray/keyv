@@ -82,24 +82,6 @@ const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', t
 
 ## Breaking changes
 
-### Properties instead of opts
-
-In v5, configuration was accessed through the `opts` object:
-
-```js
-// v5
-store.opts.table; // 'keyv'
-store.opts.schema; // 'public'
-```
-
-In v6, all configuration options are exposed as top-level properties with getters and setters:
-
-```js
-// v6
-store.table; // 'keyv'
-store.schema; // 'public'
-store.table = 'cache';
-```
 
 The `opts` getter still exists for backward compatibility but should not be used for new code.
 

@@ -22,7 +22,6 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Properties](#properties)
   - [namespace](#namespace)
   - [uri](#uri)
-  - [dialect](#dialect)
   - [table](#table)
   - [keySize](#keysize)
   - [namespaceLength](#namespacelength)
@@ -325,17 +324,6 @@ const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
 console.log(store.uri); // 'sqlite://path/to/database.sqlite'
 ```
 
-## dialect
-
-Get the storage adapter dialect identifier.
-
-- Type: `string`
-- Default: `'sqlite'`
-
-```js
-console.log(store.dialect); // 'sqlite'
-```
-
 ## table
 
 Get or set the table name used for storage. The name is sanitized and escaped for safe use in SQL queries to prevent SQL injection.
@@ -488,8 +476,8 @@ const store = new KeyvSqlite({
   table: 'cache',
   wal: true,
 });
-console.log(store.opts);
-// { uri: 'sqlite://:memory:', table: 'cache', keySize: 255, ... }
+console.log(store.uri); // 'sqlite://:memory:'
+console.log(store.table); // 'cache'
 ```
 
 # Methods

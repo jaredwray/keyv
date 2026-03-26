@@ -181,7 +181,7 @@ test.it("when passing in ioredis set the options.useSets", (t) => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
 
-	t.expect(keyv.opts.useSets).toBe(false);
+	t.expect(keyv.useSets).toBe(false);
 });
 
 test.it("del should work when not using useSets", async (t) => {
@@ -237,7 +237,6 @@ test.it("should allow setting useSets via setter", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	keyv.useSets = false;
 	t.expect(keyv.useSets).toBe(false);
-	t.expect(keyv.opts.useSets).toBe(false);
 });
 
 test.it("should allow setting and getting namespace via setter", (t) => {
@@ -254,16 +253,11 @@ test.it("should allow setting redis instance via setter", (t) => {
 	t.expect(keyv.client).toBe(newRedis);
 });
 
-test.it("opts getter should return dialect as redis", (t) => {
+test.it("useSets getter should reflect current useSets value", (t) => {
 	const keyv = new KeyvValkey(redisURI);
-	t.expect(keyv.opts.dialect).toBe("redis");
-});
-
-test.it("opts getter should reflect current useSets value", (t) => {
-	const keyv = new KeyvValkey(redisURI);
-	t.expect(keyv.opts.useSets).toBe(false);
+	t.expect(keyv.useSets).toBe(false);
 	keyv.useSets = true;
-	t.expect(keyv.opts.useSets).toBe(true);
+	t.expect(keyv.useSets).toBe(true);
 });
 
 test.it("deprecated useRedisSets getter/setter should still work", (t) => {

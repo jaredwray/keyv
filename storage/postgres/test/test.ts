@@ -245,29 +245,25 @@ test.it("should be able to get and set individual properties", (t) => {
 	t.expect(keyv.namespace).toBeUndefined();
 });
 
-test.it("opts getter should return correct object", (t) => {
+test.it("property getters should return correct values", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		table: "opts_table",
 		iterationLimit: 99,
 	});
-	const opts = keyv.opts;
-	t.expect(opts.table).toBe("opts_table");
-	t.expect(opts.iterationLimit).toBe(99);
-	t.expect(opts.dialect).toBe("postgres");
-	t.expect(opts.uri).toBe(postgresUri);
-	t.expect(opts.schema).toBe("public");
-	t.expect(opts.keyLength).toBe(255);
-	t.expect(opts.useUnloggedTable).toBe(false);
+	t.expect(keyv.table).toBe("opts_table");
+	t.expect(keyv.iterationLimit).toBe(99);
+	t.expect(keyv.uri).toBe(postgresUri);
+	t.expect(keyv.schema).toBe("public");
+	t.expect(keyv.keyLength).toBe(255);
+	t.expect(keyv.useUnloggedTable).toBe(false);
 });
 
-test.it("opts setter should update individual properties", (t) => {
+test.it("property setters should update individual properties", (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
-	keyv.opts = {
-		table: "updated_table",
-		schema: "updated_schema",
-		keyLength: 1024,
-	};
+	keyv.table = "updated_table";
+	keyv.schema = "updated_schema";
+	keyv.keyLength = 1024;
 	t.expect(keyv.table).toBe("updated_table");
 	t.expect(keyv.schema).toBe("updated_schema");
 	t.expect(keyv.keyLength).toBe(1024);
@@ -577,12 +573,12 @@ test.it("clearExpiredInterval getter and setter work", (t) => {
 	keyv.clearExpiredInterval = 0;
 });
 
-test.it("clearExpiredInterval is included in opts getter", (t) => {
+test.it("clearExpiredInterval is accessible via property getter", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		clearExpiredInterval: 10_000,
 	});
-	t.expect(keyv.opts.clearExpiredInterval).toBe(10_000);
+	t.expect(keyv.clearExpiredInterval).toBe(10_000);
 	keyv.clearExpiredInterval = 0;
 });
 

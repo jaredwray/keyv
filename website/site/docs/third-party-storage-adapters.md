@@ -72,7 +72,6 @@ type IEventEmitter = {
 };
 
 type KeyvStoreAdapter = {
-  opts: any;
   namespace?: string | undefined;
 
   // Required methods
@@ -128,13 +127,11 @@ interface CacheItem {
 
 class MyCustomStore extends EventEmitter implements KeyvStoreAdapter {
   private store: Map<string, CacheItem>;
-  public opts: any;
   public namespace?: string;
 
   constructor(options: any = {}) {
     super();
     this.store = new Map();
-    this.opts = options;
     this.namespace = options.namespace;
   }
 

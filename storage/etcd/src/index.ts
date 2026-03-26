@@ -20,8 +20,6 @@ export type KeyvEtcdOptions = {
 	ttl?: number;
 	/** Busy timeout in milliseconds */
 	busyTimeout?: number;
-	/** Storage dialect identifier, always `'etcd'` */
-	dialect?: "etcd";
 	/** Optional namespace for key prefixing */
 	namespace?: string;
 };
@@ -43,7 +41,6 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	private _url = "127.0.0.1:2379";
 	private _ttl?: number;
 	private _busyTimeout?: number;
-	private _dialect = "etcd";
 	private _namespace?: string;
 	private _keyPrefixSeparator = ":";
 
@@ -90,20 +87,6 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 				autoKeepAlive: false,
 			});
 		}
-	}
-
-	/**
-	 * Gets the merged configuration options. Read-only for legacy compatibility.
-	 * @returns The current options including url, ttl, busyTimeout, dialect, and namespace.
-	 */
-	public get opts(): KeyvEtcdOptions {
-		return {
-			url: this._url,
-			ttl: this._ttl,
-			busyTimeout: this._busyTimeout,
-			dialect: this._dialect as "etcd",
-			namespace: this._namespace,
-		};
 	}
 
 	/**
@@ -177,13 +160,6 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 */
 	public set busyTimeout(value: number | undefined) {
 		this._busyTimeout = value;
-	}
-
-	/**
-	 * Gets the storage dialect identifier. Always returns `'etcd'`.
-	 */
-	public get dialect(): string {
-		return this._dialect;
 	}
 
 	/**

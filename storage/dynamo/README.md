@@ -32,7 +32,6 @@
   - [.namespace](#namespace)
   - [.keyPrefixSeparator](#keyprefixseparator)
   - [.sixHoursInMilliseconds](#sixhoursinmilliseconds)
-  - [.opts](#opts)
 - [Methods](#methods)
   - [constructor(options?)](#constructoroptions)
   - [.get(key)](#getkey)
@@ -208,7 +207,6 @@ Options extend [`DynamoDBClientConfig`](https://docs.aws.amazon.com/AWSJavaScrip
 |---|---|---|---|
 | `tableName` | `string` | `'keyv'` | The DynamoDB table name. Created automatically if it doesn't exist. |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
-| `dialect` | `string` | `'dynamo'` | Storage dialect identifier (read-only) |
 | `endpoint` | `string` | — | The DynamoDB endpoint URL (e.g., `'http://localhost:8000'` for local development) |
 | `region` | `string` | — | The AWS region (e.g., `'us-east-1'`) |
 
@@ -256,27 +254,13 @@ The default TTL fallback in milliseconds. Used when no TTL is specified in a `se
 |---|---|
 | `number` | `21600000` (6 hours) |
 
-### .opts
-
-Read-only object containing the current configuration options.
-
-| Type |
-|---|
-| `KeyvDynamoOptions` |
-
-```js
-const store = new KeyvDynamo({ endpoint: 'http://localhost:8000', tableName: 'cacheTable' });
-console.log(store.opts);
-// { tableName: 'cacheTable', dialect: 'dynamo', endpoint: 'http://localhost:8000' }
-```
-
 ## Methods
 
 ### constructor(options?)
 
 Creates a new `KeyvDynamo` instance. Automatically creates the DynamoDB table if it doesn't exist.
 
-- `options` — A `KeyvDynamoOptions` object or an endpoint string. Defaults to `{ tableName: 'keyv', dialect: 'dynamo' }`.
+- `options` — A `KeyvDynamoOptions` object or an endpoint string. Defaults to `{ tableName: 'keyv' }`.
 
 ```js
 import KeyvDynamo from '@keyv/dynamo';

@@ -259,14 +259,6 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the storage adapter dialect identifier.
-	 * @default 'sqlite'
-	 */
-	public get dialect(): string {
-		return "sqlite";
-	}
-
-	/**
 	 * Get the table name used for storage.
 	 * @default 'keyv'
 	 */
@@ -295,6 +287,13 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 */
 	public set keySize(value: number) {
 		this._keySize = value;
+	}
+
+	/**
+	 * Alias for `keySize`. Returns the maximum key length.
+	 */
+	public get keyLength(): number {
+		return this._keySize;
 	}
 
 	/**
@@ -368,43 +367,6 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 */
 	public get driverName(): string | undefined {
 		return this._resolvedDriverName;
-	}
-
-	/**
-	 * Get the current configuration options as a plain object.
-	 * Includes all adapter settings such as `uri`, `table`, `keySize`, `keyLength`,
-	 * `namespaceLength`, `iterationLimit`, `wal`, `busyTimeout`, `clearExpiredInterval`,
-	 * `dialect`, and `db`.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get opts(): any {
-		return {
-			uri: this._uri,
-			dialect: "sqlite",
-			table: this._table,
-			keySize: this._keySize,
-			keyLength: this._keySize,
-			namespaceLength: this._namespaceLength,
-			db: this._db,
-			iterationLimit: this._iterationLimit,
-			wal: this._wal,
-			busyTimeout: this._busyTimeout,
-			clearExpiredInterval: this._clearExpiredInterval,
-			driver: this._driver,
-		};
-	}
-
-	/**
-	 * Set the configuration options for the adapter. Only provided properties
-	 * are updated; omitted properties retain their current values.
-	 * Table names are sanitized via {@link toTableString} to prevent SQL injection.
-	 * @param options - A partial {@link KeyvSqliteOptions} object with the properties to update.
-	 */
-	public set opts(options: KeyvSqliteOptions) {
-		this.setOptions(options);
-		if (options.table !== undefined) {
-			this._table = toTableString(this._table);
-		}
 	}
 
 	/**

@@ -129,41 +129,6 @@ export default class KeyvRedis<T>
 	}
 
 	/**
-	 * Get the options for the adapter.
-	 */
-	public get opts(): KeyvRedisPropertyOptions {
-		let url = "redis://localhost:6379";
-		if ((this._client as RedisClientType).options) {
-			const redisUrl = (this._client as RedisClientType).options?.url;
-			if (redisUrl) {
-				url = redisUrl;
-			}
-		}
-
-		const results: KeyvRedisPropertyOptions = {
-			namespace: this._namespace,
-			keyPrefixSeparator: this._keyPrefixSeparator,
-			clearBatchSize: this._clearBatchSize,
-			noNamespaceAffectsAll: this._noNamespaceAffectsAll,
-			useUnlink: this._useUnlink,
-			throwOnConnectError: this._throwOnConnectError,
-			throwOnErrors: this._throwOnErrors,
-			connectionTimeout: this._connectionTimeout,
-			dialect: "redis",
-			url,
-		};
-
-		return results;
-	}
-
-	/**
-	 * Set the options for the adapter.
-	 */
-	public set opts(options: KeyvRedisOptions) {
-		this.setOptions(options);
-	}
-
-	/**
 	 * Get the namespace for the adapter. If undefined, it will not use a namespace including keyPrefixing.
 	 * @default undefined
 	 */

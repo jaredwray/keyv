@@ -42,16 +42,15 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 | Task | Status |
 |------|--------|
 | Remove `opts` property in Keyv and Storage Adapters | IN PROGRESS |
-| Integrate Hookified library in Keyv | COMPLETE |
-| Update `deleteMany` return type | NOT STARTED |
-| Update `setMany` signature and return type | NOT STARTED |
-| Refactor iterator implementation | NOT STARTED |
 | Add encryption adapters | NOT STARTED |
-| Add compression interface standardization | NOT STARTED |
 | Browser compatibility | NOT STARTED |
 | Stats System to be Event Driven | NOT STARTED |
 | Test Suite Overhaul | NOT STARTED |
-| Storage Adapters no Longer need to emit | NOT STARTED |
+| Refactor iterator implementation | COMPLETED |
+| Update `deleteMany` return type | COMPLETED |
+| Update `setMany` signature and return type | COMPLETED |
+| Add compression interface standardization | COMPLETED |
+| Integrate Hookified library in Keyv | COMPLETE |
 | Keyv core does not do keyPrefixing | COMPLETED |
 | Update `@keyv/sqlite`  | COMPLETE |
 | Update `@keyv/dynamo`  | COMPLETE |
@@ -75,7 +74,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 For most users, migrating from v5 to v6 involves a few key changes:
 
-1. **Update property access** - Replace `keyv.opts.*` with direct property access (`keyv.namespace` instead of `keyv.opts.namespace`)
+1. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
 
 2. **Update serialization** - Replace `serialize`/`deserialize` options with the new `serialization` adapter:
    ```javascript
@@ -131,7 +130,7 @@ For legacy storage adapters or `Map`-compatible stores, we have added `KeyvGener
 
 ### `opts` Property Removed
 
-In Keyv v5, we began removing `opts` as a passed-around value. In v6, `opts` is no longer passed around or provided as a property. All properties are now directly part of the Keyv class.
+In Keyv v5, we began removing `opts` as a passed-around value. In v6, `opts` has been fully removed from the `KeyvStorageAdapter` interface and all storage adapters. The `dialect` property has also been removed. All properties are now directly part of the Keyv class and each storage adapter.
 
 **v5 (before):**
 ```javascript

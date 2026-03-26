@@ -39,9 +39,12 @@ describe("KeyvGenericStore with QuickLRU - Store Options", () => {
 
 	test("should be able to get the options", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const options = { namespace: "test", keySeparator: ":" };
-		const keyv = new KeyvGenericStore(lru, options);
-		expect(keyv.opts).toEqual(options);
+		const keyv = new KeyvGenericStore(lru, {
+			namespace: "test",
+			keySeparator: ":",
+		});
+		expect(keyv.namespace).toBe("test");
+		expect(keyv.keySeparator).toBe(":");
 	});
 });
 
@@ -689,9 +692,12 @@ describe("KeyvGenericStore with lru.min - Store Options", () => {
 
 	test("should be able to get the options", () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const options = { namespace: "test", keySeparator: ":" };
-		const keyv = new KeyvGenericStore(lru, options);
-		expect(keyv.opts).toEqual(options);
+		const keyv = new KeyvGenericStore(lru, {
+			namespace: "test",
+			keySeparator: ":",
+		});
+		expect(keyv.namespace).toBe("test");
+		expect(keyv.keySeparator).toBe(":");
 	});
 });
 
@@ -1128,9 +1134,12 @@ describe("KeyvGenericStore with Map - Store Options", () => {
 
 	test("should be able to get the options", () => {
 		const map = new Map<string, unknown>();
-		const options = { namespace: "test", keySeparator: ":" };
-		const keyv = new KeyvGenericStore(map, options);
-		expect(keyv.opts).toEqual(options);
+		const keyv = new KeyvGenericStore(map, {
+			namespace: "test",
+			keySeparator: ":",
+		});
+		expect(keyv.namespace).toBe("test");
+		expect(keyv.keySeparator).toBe(":");
 	});
 });
 
