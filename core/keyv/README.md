@@ -55,7 +55,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 	- [.getMany(keys, [options])](#getmanykeys-options)
   - [.getRaw(key)](#getrawkey)
   - [.getManyRaw(keys)](#getmanyrawkeys)
-  - [.setRaw(key, value, [ttl])](#setrawkey-value-ttl)
+  - [.setRaw(key, value)](#setrawkey-value)
   - [.setManyRaw(entries)](#setmanyrawentries)
 	- [.delete(key)](#deletekey)
 	- [.deleteMany(keys)](#deletemanykeys)
@@ -613,30 +613,30 @@ Returns a promise which resolves to the raw stored data for the key or `undefine
 
 Returns a promise which resolves to an array of raw stored data for the keys or `undefined` if the key does not exist or is expired.
 
-## .setRaw(key, value, [ttl])
+## .setRaw(key, value)
 
-Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `DeserializedData` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If `expires` is not set in the value and `ttl` is provided, `expires` will be computed from `ttl`.
+Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `DeserializedData` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If you need TTL-based expiration, set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`). The store-level TTL is derived automatically from `value.expires`.
 
 Returns a promise which resolves to `true`.
 
 ```js
 const keyv = new Keyv();
 
-// Set a raw value directly
+// Set a raw value with expiration
 await keyv.setRaw('foo', { value: 'bar', expires: Date.now() + 60000 });
+
+// Set a raw value without expiration
+await keyv.setRaw('foo', { value: 'bar' });
 
 // Round-trip: get raw, modify, set raw
 const raw = await keyv.getRaw('foo');
 raw.value = 'updated';
 await keyv.setRaw('foo', raw);
-
-// TTL computes expires automatically if not set
-await keyv.setRaw('foo', { value: 'bar' }, 60000);
 ```
 
 ## .setManyRaw(entries)
 
-Sets many raw values in the store without wrapping. Each entry should have a `key`, a `value` (`DeserializedData` envelope), and an optional `ttl`. Like `setRaw()`, the envelopes are serialized before storing.
+Sets many raw values in the store without wrapping. Each entry should have a `key` and a `value` (`DeserializedData` envelope). Like `setRaw()`, the envelopes are serialized before storing and the store-level TTL is derived from each entry's `value.expires`.
 
 Returns a promise which resolves to an array of booleans.
 

@@ -49,34 +49,45 @@ describe("Keyv Set Raw", async () => {
 		expect(result).toBe(true);
 	});
 
-	test("should apply default ttl and compute expires", async () => {
-		const keyv = new Keyv({ ttl: 60_000 });
-		const key = faker.string.alphanumeric(10);
-		const value = faker.string.alphanumeric(10);
-		await keyv.setRaw(key, { value });
-		const result = await keyv.getRaw(key);
-		expect(result?.value).toBe(value);
-		expect(result?.expires).toBeGreaterThan(Date.now());
-	});
-
-	test("should compute expires from ttl when expires is not set", async () => {
+	test("should derive store ttl from value.expires", async () => {
 		const keyv = new Keyv();
 		const key = faker.string.alphanumeric(10);
-		const before = Date.now();
-		await keyv.setRaw(key, { value: "test" }, 60_000);
+		const expires = Date.now() + 60_000;
+		await keyv.setRaw(key, { value: "test", expires });
 		const result = await keyv.getRaw(key);
 		expect(result).toBeDefined();
-		expect(result?.expires).toBeGreaterThanOrEqual(before + 60_000);
-		expect(result?.expires).toBeLessThanOrEqual(Date.now() + 60_000);
+		expect(result?.expires).toBe(expires);
 	});
 
-	test("should not override existing expires when ttl is provided", async () => {
-		const keyv = new Keyv();
+	test("should pass derived ttl to store adapter", async () => {
+		let receivedTtl: number | undefined;
+		const store = createStore();
+		const originalSet = store.set.bind(store);
+		store.set = async (key: string, value: unknown, ttl?: number) => {
+			receivedTtl = ttl;
+			return originalSet(key, value, ttl);
+		};
+		const keyv = new Keyv({ store });
 		const key = faker.string.alphanumeric(10);
-		const customExpires = Date.now() + 120_000;
-		await keyv.setRaw(key, { value: "test", expires: customExpires }, 60_000);
-		const result = await keyv.getRaw(key);
-		expect(result?.expires).toBe(customExpires);
+		const expires = Date.now() + 60_000;
+		await keyv.setRaw(key, { value: "test", expires });
+		expect(receivedTtl).toBeDefined();
+		expect(receivedTtl).toBeGreaterThan(59_000);
+		expect(receivedTtl).toBeLessThanOrEqual(60_000);
+	});
+
+	test("should not pass ttl to store when expires is not set", async () => {
+		let receivedTtl: number | undefined;
+		const store = createStore();
+		const originalSet = store.set.bind(store);
+		store.set = async (key: string, value: unknown, ttl?: number) => {
+			receivedTtl = ttl;
+			return originalSet(key, value, ttl);
+		};
+		const keyv = new Keyv({ store });
+		const key = faker.string.alphanumeric(10);
+		await keyv.setRaw(key, { value: "test" });
+		expect(receivedTtl).toBeUndefined();
 	});
 
 	test("should track stats", async () => {
@@ -132,15 +143,6 @@ describe("Keyv Set Raw", async () => {
 		await expect(
 			keyv.setRaw(faker.string.alphanumeric(10), { value: "test" }),
 		).rejects.toThrow("store error");
-	});
-
-	test("should treat ttl of 0 as no ttl", async () => {
-		const keyv = new Keyv();
-		const key = faker.string.alphanumeric(10);
-		await keyv.setRaw(key, { value: "test" }, 0);
-		const result = await keyv.getRaw(key);
-		expect(result).toBeDefined();
-		expect(result?.expires).toBeUndefined();
 	});
 
 	test("should use store boolean return value", async () => {
@@ -280,25 +282,32 @@ describe("Keyv Set Many Raw", async () => {
 		expect(results).toEqual([true, true]);
 	});
 
-	test("should compute expires from ttl via store setMany path", async () => {
+	test("setManyRaw should derive ttl from value.expires per entry", async () => {
+		const receivedTtls: Array<number | undefined> = [];
 		const store = createStore();
 		// biome-ignore lint/suspicious/noExplicitAny: add setMany to test store
 		(store as any).setMany = async (
 			// biome-ignore lint/suspicious/noExplicitAny: test mock
 			entries: Array<{ key: string; value: any; ttl?: number }>,
 		) => {
-			for (const { key, value } of entries) {
+			for (const { key, value, ttl } of entries) {
+				receivedTtls.push(ttl);
 				await store.set(key, value);
 			}
 		};
 		const keyv = new Keyv({ store });
-		const key = faker.string.alphanumeric(10);
-		const before = Date.now();
-		await keyv.setManyRaw([{ key, value: { value: "test" }, ttl: 60_000 }]);
-		const result = await keyv.getRaw(key);
-		expect(result).toBeDefined();
-		expect(result?.expires).toBeGreaterThanOrEqual(before + 60_000);
-		expect(result?.expires).toBeLessThanOrEqual(Date.now() + 60_000);
+		const expires = Date.now() + 60_000;
+		await keyv.setManyRaw([
+			{
+				key: faker.string.alphanumeric(10),
+				value: { value: "with-ttl", expires },
+			},
+			{ key: faker.string.alphanumeric(10), value: { value: "no-ttl" } },
+		]);
+		expect(receivedTtls).toHaveLength(2);
+		expect(receivedTtls[0]).toBeGreaterThan(59_000);
+		expect(receivedTtls[0]).toBeLessThanOrEqual(60_000);
+		expect(receivedTtls[1]).toBeUndefined();
 	});
 
 	test("should throw on store failure when throwOnErrors is true", async () => {

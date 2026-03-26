@@ -747,36 +747,31 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Set a raw value to the store without wrapping or serialization. This is the write-side counterpart to getRaw().
-	 * The value should be a DeserializedData object with { value, expires? }.
+	 * The value should be a DeserializedData object with { value, expires? }. If you need TTL-based expiration,
+	 * set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`).
+	 * The store-level TTL is derived automatically from `value.expires`.
 	 * @param {string} key the key to set
 	 * @param {DeserializedData<Value>} value the raw value envelope to store
-	 * @param {number} [ttl] time to live in milliseconds. If the raw value does not already have an expires field, it will be computed from ttl.
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
 	async setRaw<Value = GenericValue>(
 		key: string,
 		value: DeserializedData<Value>,
-		ttl?: number,
 	): Promise<boolean> {
-		const data = { key, value, ttl };
+		const data = { key, value };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
-		data.ttl ??= this._ttl;
-
-		if (data.ttl === 0) {
-			data.ttl = undefined;
-		}
-
-		if (data.value.expires === undefined && typeof data.ttl === "number") {
-			data.value.expires = Date.now() + data.ttl;
-		}
+		const ttl =
+			typeof data.value.expires === "number"
+				? data.value.expires - Date.now()
+				: undefined;
 
 		const store = this._store;
 		let result = true;
 
 		try {
 			const serializedValue = await this.serializeData(data.value);
-			const storeResult = await store.set(data.key, serializedValue, data.ttl);
+			const storeResult = await store.set(data.key, serializedValue, ttl);
 
 			if (typeof storeResult === "boolean") {
 				result = storeResult;
@@ -789,7 +784,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_RAW, {
 			key,
 			value: data.value,
-			ttl: data.ttl,
+			ttl,
 		});
 		this.stats.set();
 
@@ -858,15 +853,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Set many raw values to the store without wrapping or serialization. This is the write-side counterpart to getManyRaw().
-	 * Each entry's value should be a DeserializedData object with { value, expires? }.
-	 * @param {Array<{key: string, value: DeserializedData<Value>, ttl?: number}>} entries the raw entries to set
+	 * Each entry's value should be a DeserializedData object with { value, expires? }. If you need TTL-based expiration,
+	 * set `expires` on each value directly. The store-level TTL is derived automatically from `value.expires`.
+	 * @param {Array<{key: string, value: DeserializedData<Value>}>} entries the raw entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
 	async setManyRaw<Value = GenericValue>(
 		entries: Array<{
 			key: string;
 			value: DeserializedData<Value>;
-			ttl?: number;
 		}>,
 	): Promise<boolean[]> {
 		let results: boolean[] = [];
@@ -877,24 +872,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 			if (this._store.setMany === undefined) {
 				const promises: Array<Promise<boolean>> = [];
 				for (const entry of entries) {
-					promises.push(this.setRaw(entry.key, entry.value, entry.ttl));
+					promises.push(this.setRaw(entry.key, entry.value));
 				}
 
 				results = await Promise.all(promises);
 			} else {
 				const rawEntries = await Promise.all(
-					entries.map(async ({ key, value, ttl }) => {
-						ttl ??= this._ttl;
-
-						/* v8 ignore next -- @preserve */
-						if (ttl === 0) {
-							ttl = undefined;
-						}
-
-						if (value.expires === undefined && typeof ttl === "number") {
-							value.expires = Date.now() + ttl;
-						}
-
+					entries.map(async ({ key, value }) => {
+						const ttl =
+							typeof value.expires === "number"
+								? value.expires - Date.now()
+								: undefined;
 						const serializedValue = await this.serializeData(value);
 						return { key, value: serializedValue, ttl };
 					}),
