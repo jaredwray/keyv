@@ -71,7 +71,7 @@ function hasProp(obj: object, name: string): boolean {
 	return name in obj;
 }
 
-export function checkCapabilities<T extends Record<string, boolean>>(
+function checkCapabilities<T extends Record<string, boolean>>(
 	obj: unknown,
 	spec: CheckCapabilitiesSpec,
 ): T {

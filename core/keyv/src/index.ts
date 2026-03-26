@@ -13,7 +13,6 @@ import {
 } from "./types.js";
 
 export type {
-	CheckCapabilitiesSpec,
 	IsKeyvCompressionResult,
 	IsKeyvEncryptionResult,
 	IsKeyvResult,
@@ -21,7 +20,6 @@ export type {
 	IsKeyvStorageResult,
 } from "./capabilities.js";
 export {
-	checkCapabilities,
 	isKeyv,
 	isKeyvCompression,
 	isKeyvEncryption,

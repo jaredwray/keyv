@@ -38,6 +38,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - [Third-party Storage Adapters](#third-party-storage-adapters)
 - [Using BigMap to Scale](#using-bigmap-to-scale)
 - [Compression](#compression)
+- [Capability Detection](#capability-detection)
 - [API](#api)
   - [new Keyv([storage-adapter], [options]) or new Keyv([options])](#new-keyvstorage-adapter-options-or-new-keyvoptions)
   - [.namespace](#namespace)
@@ -303,9 +304,35 @@ In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an 
 
 By default, Keyv uses its built-in `KeyvJsonSerializer` — a JSON-based serializer with support for `Buffer` and `BigInt` types. This works out of the box with all storage adapters.
 
+## Official Serializers
+
+In addition to the built-in serializer, Keyv offers two official serialization packages:
+
+### SuperJSON
+
+[`@keyv/serialize-superjson`](https://github.com/jaredwray/keyv/tree/main/serialization/superjson) supports `Date`, `RegExp`, `Map`, `Set`, `BigInt`, `undefined`, `Error`, and `URL` types.
+
+```js
+import Keyv from 'keyv';
+import { superJsonSerializer } from '@keyv/serialize-superjson'; // using the helper function that does new KeyvSuperJsonSerializer()
+
+const keyv = new Keyv({ serialization: superJsonSerializer });
+```
+
+### MessagePack (msgpackr)
+
+[`@keyv/serialize-msgpackr`](https://github.com/jaredwray/keyv/tree/main/serialization/msgpackr) is a binary serializer that supports `Date`, `RegExp`, `Map`, `Set`, `Error`, `undefined`, `NaN`, and `Infinity` types.
+
+```js
+import Keyv from 'keyv';
+import { KeyvMsgpackrSerializer } from '@keyv/serialize-msgpackr';
+
+const keyv = new Keyv({ serialization: new KeyvMsgpackrSerializer() });
+```
+
 ## Custom Serializers
 
-You can provide your own serializer by implementing the `KeyvSerializationAdapter` interface:
+You can provide your own serializer by implementing the `KeyvSerializationAdapter` interface with `stringify` and `parse` methods:
 
 ```typescript
 interface KeyvSerializationAdapter {
@@ -313,27 +340,6 @@ interface KeyvSerializationAdapter {
   parse: <T>(data: string) => T | Promise<T>;
 }
 ```
-
-For example, using the built-in `JSON` object:
-
-```js
-const keyv = new Keyv({
-  serialization: { stringify: JSON.stringify, parse: JSON.parse },
-});
-```
-
-Or a custom async serializer:
-
-```js
-const keyv = new Keyv({
-  serialization: {
-    stringify: async (value) => JSON.stringify(value),
-    parse: async (data) => JSON.parse(data),
-  },
-});
-```
-
-**Warning:** Using custom serializers means you lose any guarantee of data consistency. You should do extensive testing with your serialization functions and chosen storage engine.
 
 ## Disabling Serialization
 
@@ -517,6 +523,82 @@ interface KeyvEncryptionAdapter {
   encrypt: (data: string) => string | Promise<string>;
   decrypt: (data: string) => string | Promise<string>;
 }
+```
+
+# Capability Detection
+
+Keyv exports helper functions to check whether an object implements the expected interface for a Keyv instance, storage adapter, compression adapter, serialization adapter, or encryption adapter. Each function returns an object with boolean flags for every capability, plus a top-level boolean indicating whether the object fully satisfies the interface.
+
+```ts
+import {
+  isKeyv,
+  isKeyvStorage,
+  isKeyvCompression,
+  isKeyvSerialization,
+  isKeyvEncryption,
+} from 'keyv';
+```
+
+## isKeyv(obj)
+
+Returns an `IsKeyvResult` with a boolean for each Keyv method/property. The `keyv` flag is `true` only when **all** capabilities are present.
+
+```ts
+import Keyv, { isKeyv } from 'keyv';
+
+isKeyv(new Keyv());
+// { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
+//   getMany: true, setMany: true, deleteMany: true, hasMany: true,
+//   disconnect: true, getRaw: true, getManyRaw: true, setRaw: true,
+//   setManyRaw: true, hooks: true, stats: true, iterator: true, namespace: true }
+
+isKeyv(new Map());
+// { keyv: false, get: true, set: true, ... }
+```
+
+## isKeyvStorage(obj)
+
+Returns an `IsKeyvStorageResult`. The `keyvStorage` flag is `true` when the object has `get`, `set`, `delete`, `clear`, and `namespace`.
+
+```ts
+import { isKeyvStorage } from 'keyv';
+
+const adapter = { namespace: 'test', get: async () => {}, set: async () => {}, delete: async () => {}, clear: async () => {} };
+isKeyvStorage(adapter);
+// { keyvStorage: true, get: true, set: true, delete: true, clear: true, has: false, ... }
+```
+
+## isKeyvCompression(obj)
+
+Returns an `IsKeyvCompressionResult`. The `keyvCompression` flag is `true` when both `compress` and `decompress` methods are present.
+
+```ts
+import { isKeyvCompression } from 'keyv';
+
+isKeyvCompression({ compress: (d) => d, decompress: (d) => d });
+// { keyvCompression: true, compress: true, decompress: true }
+```
+
+## isKeyvSerialization(obj)
+
+Returns an `IsKeyvSerializationResult`. The `keyvSerialization` flag is `true` when both `stringify` and `parse` methods are present.
+
+```ts
+import { isKeyvSerialization } from 'keyv';
+
+isKeyvSerialization(JSON);
+// { keyvSerialization: true, stringify: true, parse: true }
+```
+
+## isKeyvEncryption(obj)
+
+Returns an `IsKeyvEncryptionResult`. The `keyvEncryption` flag is `true` when both `encrypt` and `decrypt` methods are present.
+
+```ts
+import { isKeyvEncryption } from 'keyv';
+
+isKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
+// { keyvEncryption: true, encrypt: true, decrypt: true }
 ```
 
 # API
