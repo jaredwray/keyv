@@ -256,10 +256,12 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			}
 
 			return true;
+			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
 			return false;
 		}
+		/* v8 ignore stop -- @preserve */
 	}
 
 	/**

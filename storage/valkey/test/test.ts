@@ -620,6 +620,7 @@ test.it("setMany returns false entries on exec error", async (t) => {
 		emittedError = true;
 	});
 	// Mock multi to throw
+	// biome-ignore lint/complexity/useLiteralKeys: accessing private property for test mock
 	const client = store["_client"];
 	const originalMulti = client.multi.bind(client);
 	client.multi = () => {

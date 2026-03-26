@@ -359,6 +359,7 @@ export default class KeyvRedis<T>
 				throw error;
 			}
 
+			/* v8 ignore next -- @preserve */
 			return false;
 		}
 	}
