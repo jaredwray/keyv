@@ -12,6 +12,22 @@ import {
 	type StoredDataRaw,
 } from "./types.js";
 
+export type {
+	CheckCapabilitiesSpec,
+	IsKeyvCompressionResult,
+	IsKeyvEncryptionResult,
+	IsKeyvResult,
+	IsKeyvSerializationResult,
+	IsKeyvStorageResult,
+} from "./capabilities.js";
+export {
+	checkCapabilities,
+	isKeyv,
+	isKeyvCompression,
+	isKeyvEncryption,
+	isKeyvSerialization,
+	isKeyvStorage,
+} from "./capabilities.js";
 export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export type {
 	DeserializedData,
