@@ -761,10 +761,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const data = { key, value };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
-		const ttl =
+		const derivedTtl =
 			typeof data.value.expires === "number"
 				? data.value.expires - Date.now()
 				: undefined;
+		const ttl =
+			typeof derivedTtl === "number" && derivedTtl > 0 ? derivedTtl : undefined;
 
 		const store = this._store;
 		let result = true;
@@ -879,9 +881,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 			} else {
 				const rawEntries = await Promise.all(
 					entries.map(async ({ key, value }) => {
-						const ttl =
+						const derivedTtl =
 							typeof value.expires === "number"
 								? value.expires - Date.now()
+								: undefined;
+						const ttl =
+							typeof derivedTtl === "number" && derivedTtl > 0
+								? derivedTtl
 								: undefined;
 						const serializedValue = await this.serializeData(value);
 						return { key, value: serializedValue, ttl };

@@ -90,6 +90,20 @@ describe("Keyv Set Raw", async () => {
 		expect(receivedTtl).toBeUndefined();
 	});
 
+	test("should not pass negative ttl to store when expires is in the past", async () => {
+		let receivedTtl: number | undefined;
+		const store = createStore();
+		const originalSet = store.set.bind(store);
+		store.set = async (key: string, value: unknown, ttl?: number) => {
+			receivedTtl = ttl;
+			return originalSet(key, value, ttl);
+		};
+		const keyv = new Keyv({ store });
+		const key = faker.string.alphanumeric(10);
+		await keyv.setRaw(key, { value: "test", expires: Date.now() - 1000 });
+		expect(receivedTtl).toBeUndefined();
+	});
+
 	test("should track stats", async () => {
 		const keyv = new Keyv({ stats: true });
 		const key = faker.string.alphanumeric(10);
