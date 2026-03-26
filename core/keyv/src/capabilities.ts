@@ -17,6 +17,7 @@ export type IsKeyvResult = {
 	hooks: boolean;
 	stats: boolean;
 	iterator: boolean;
+	namespace: boolean;
 };
 
 export type IsKeyvStorageResult = {
@@ -53,6 +54,51 @@ export type IsKeyvEncryptionResult = {
 	decrypt: boolean;
 };
 
+export type CheckCapabilitiesSpec = {
+	methods: string[];
+	properties: string[];
+	requiredKeys: string[];
+	compositeKey: string;
+};
+
+function hasMethod(obj: object, name: string): boolean {
+	return (
+		name in obj && typeof (obj as Record<string, unknown>)[name] === "function"
+	);
+}
+
+function hasProp(obj: object, name: string): boolean {
+	return name in obj;
+}
+
+export function checkCapabilities<T extends Record<string, boolean>>(
+	obj: unknown,
+	spec: CheckCapabilitiesSpec,
+): T {
+	const allKeys = [spec.compositeKey, ...spec.methods, ...spec.properties];
+
+	if (obj === null || obj === undefined || typeof obj !== "object") {
+		const result: Record<string, boolean> = {};
+		for (const key of allKeys) {
+			result[key] = false;
+		}
+
+		return result as T;
+	}
+
+	const result: Record<string, boolean> = {};
+	for (const key of spec.methods) {
+		result[key] = hasMethod(obj, key);
+	}
+
+	for (const key of spec.properties) {
+		result[key] = hasProp(obj, key);
+	}
+
+	result[spec.compositeKey] = spec.requiredKeys.every((k) => result[k]);
+	return result as T;
+}
+
 /**
  * Check if an object is a Keyv instance or has Keyv-like capabilities
  * @param obj - The object to check
@@ -75,119 +121,46 @@ export type IsKeyvEncryptionResult = {
  * ```
  */
 export function isKeyv(obj: unknown): IsKeyvResult {
-	if (obj === null || obj === undefined) {
-		return {
-			keyv: false,
-			get: false,
-			set: false,
-			delete: false,
-			clear: false,
-			has: false,
-			getMany: false,
-			setMany: false,
-			deleteMany: false,
-			hasMany: false,
-			disconnect: false,
-			getRaw: false,
-			getManyRaw: false,
-			setRaw: false,
-			setManyRaw: false,
-			hooks: false,
-			stats: false,
-			iterator: false,
-		};
-	}
-
-	if (typeof obj !== "object") {
-		return {
-			keyv: false,
-			get: false,
-			set: false,
-			delete: false,
-			clear: false,
-			has: false,
-			getMany: false,
-			setMany: false,
-			deleteMany: false,
-			hasMany: false,
-			disconnect: false,
-			getRaw: false,
-			getManyRaw: false,
-			setRaw: false,
-			setManyRaw: false,
-			hooks: false,
-			stats: false,
-			iterator: false,
-		};
-	}
-
-	// Check for each method/property
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasGet = "get" in obj && typeof (obj as any).get === "function";
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasSet = "set" in obj && typeof (obj as any).set === "function";
-	const hasDelete =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"delete" in obj && typeof (obj as any).delete === "function";
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasClear = "clear" in obj && typeof (obj as any).clear === "function";
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasHas = "has" in obj && typeof (obj as any).has === "function";
-	const hasGetMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"getMany" in obj && typeof (obj as any).getMany === "function";
-	const hasSetMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"setMany" in obj && typeof (obj as any).setMany === "function";
-	const hasDeleteMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"deleteMany" in obj && typeof (obj as any).deleteMany === "function";
-	const hasHasMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"hasMany" in obj && typeof (obj as any).hasMany === "function";
-	const hasDisconnect =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"disconnect" in obj && typeof (obj as any).disconnect === "function";
-	const hasGetRaw =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"getRaw" in obj && typeof (obj as any).getRaw === "function";
-	const hasGetManyRaw =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"getManyRaw" in obj && typeof (obj as any).getManyRaw === "function";
-	const hasSetRaw =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"setRaw" in obj && typeof (obj as any).setRaw === "function";
-	const hasSetManyRaw =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"setManyRaw" in obj && typeof (obj as any).setManyRaw === "function";
-	const hasHooks = "hooks" in obj;
-	const hasStats = "stats" in obj;
-	const hasIterator = "iterator" in obj;
-
-	// Determine if it's a Keyv instance based on core methods and properties
-	const isKeyvInstance =
-		hasGet && hasSet && hasDelete && hasClear && hasHooks && hasStats;
-
-	return {
-		keyv: isKeyvInstance,
-		get: hasGet,
-		set: hasSet,
-		delete: hasDelete,
-		clear: hasClear,
-		has: hasHas,
-		getMany: hasGetMany,
-		setMany: hasSetMany,
-		deleteMany: hasDeleteMany,
-		hasMany: hasHasMany,
-		disconnect: hasDisconnect,
-		getRaw: hasGetRaw,
-		getManyRaw: hasGetManyRaw,
-		setRaw: hasSetRaw,
-		setManyRaw: hasSetManyRaw,
-		hooks: hasHooks,
-		stats: hasStats,
-		iterator: hasIterator,
-	};
+	return checkCapabilities<IsKeyvResult>(obj, {
+		methods: [
+			"get",
+			"set",
+			"delete",
+			"clear",
+			"has",
+			"getMany",
+			"setMany",
+			"deleteMany",
+			"hasMany",
+			"disconnect",
+			"getRaw",
+			"getManyRaw",
+			"setRaw",
+			"setManyRaw",
+		],
+		properties: ["hooks", "stats", "iterator", "namespace"],
+		requiredKeys: [
+			"get",
+			"set",
+			"delete",
+			"clear",
+			"has",
+			"getMany",
+			"setMany",
+			"deleteMany",
+			"hasMany",
+			"disconnect",
+			"getRaw",
+			"getManyRaw",
+			"setRaw",
+			"setManyRaw",
+			"hooks",
+			"stats",
+			"iterator",
+			"namespace",
+		],
+		compositeKey: "keyv",
+	});
 }
 
 /**
@@ -211,93 +184,24 @@ export function isKeyv(obj: unknown): IsKeyvResult {
  * ```
  */
 export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
-	if (obj === null || obj === undefined) {
-		return {
-			keyvStorage: false,
-			get: false,
-			set: false,
-			delete: false,
-			clear: false,
-			has: false,
-			getMany: false,
-			setMany: false,
-			deleteMany: false,
-			hasMany: false,
-			disconnect: false,
-			iterator: false,
-			namespace: false,
-		};
-	}
-
-	if (typeof obj !== "object") {
-		return {
-			keyvStorage: false,
-			get: false,
-			set: false,
-			delete: false,
-			clear: false,
-			has: false,
-			getMany: false,
-			setMany: false,
-			deleteMany: false,
-			hasMany: false,
-			disconnect: false,
-			iterator: false,
-			namespace: false,
-		};
-	}
-
-	// Check for each method/property
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasGet = "get" in obj && typeof (obj as any).get === "function";
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasSet = "set" in obj && typeof (obj as any).set === "function";
-	const hasDelete =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"delete" in obj && typeof (obj as any).delete === "function";
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasClear = "clear" in obj && typeof (obj as any).clear === "function";
-	// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-	const hasHas = "has" in obj && typeof (obj as any).has === "function";
-	const hasGetMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"getMany" in obj && typeof (obj as any).getMany === "function";
-	const hasSetMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"setMany" in obj && typeof (obj as any).setMany === "function";
-	const hasDeleteMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"deleteMany" in obj && typeof (obj as any).deleteMany === "function";
-	const hasHasMany =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"hasMany" in obj && typeof (obj as any).hasMany === "function";
-	const hasDisconnect =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"disconnect" in obj && typeof (obj as any).disconnect === "function";
-	const hasIterator =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"iterator" in obj && typeof (obj as any).iterator === "function";
-	const hasNamespace = "namespace" in obj;
-
-	// Determine if it's a Keyv storage adapter based on core methods
-	// Must have: get, set, delete, clear (core required methods)
-	const isKeyvStorageAdapter = hasGet && hasSet && hasDelete && hasClear;
-
-	return {
-		keyvStorage: isKeyvStorageAdapter,
-		get: hasGet,
-		set: hasSet,
-		delete: hasDelete,
-		clear: hasClear,
-		has: hasHas,
-		getMany: hasGetMany,
-		setMany: hasSetMany,
-		deleteMany: hasDeleteMany,
-		hasMany: hasHasMany,
-		disconnect: hasDisconnect,
-		iterator: hasIterator,
-		namespace: hasNamespace,
-	};
+	return checkCapabilities<IsKeyvStorageResult>(obj, {
+		methods: [
+			"get",
+			"set",
+			"delete",
+			"clear",
+			"has",
+			"getMany",
+			"setMany",
+			"deleteMany",
+			"hasMany",
+			"disconnect",
+			"iterator",
+		],
+		properties: ["namespace"],
+		requiredKeys: ["get", "set", "delete", "clear", "namespace"],
+		compositeKey: "keyvStorage",
+	});
 }
 
 /**
@@ -320,39 +224,12 @@ export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
  * ```
  */
 export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
-	if (obj === null || obj === undefined) {
-		return {
-			keyvCompression: false,
-			compress: false,
-			decompress: false,
-		};
-	}
-
-	if (typeof obj !== "object") {
-		return {
-			keyvCompression: false,
-			compress: false,
-			decompress: false,
-		};
-	}
-
-	// Check for compress and decompress methods
-	const hasCompress =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"compress" in obj && typeof (obj as any).compress === "function";
-	const hasDecompress =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"decompress" in obj && typeof (obj as any).decompress === "function";
-
-	// Determine if it's a Keyv compression adapter
-	// Must have both compress and decompress methods
-	const isKeyvCompressionAdapter = hasCompress && hasDecompress;
-
-	return {
-		keyvCompression: isKeyvCompressionAdapter,
-		compress: hasCompress,
-		decompress: hasDecompress,
-	};
+	return checkCapabilities<IsKeyvCompressionResult>(obj, {
+		methods: ["compress", "decompress"],
+		properties: [],
+		requiredKeys: ["compress", "decompress"],
+		compositeKey: "keyvCompression",
+	});
 }
 
 /**
@@ -375,39 +252,12 @@ export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
  * ```
  */
 export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
-	if (obj === null || obj === undefined) {
-		return {
-			keyvSerialization: false,
-			stringify: false,
-			parse: false,
-		};
-	}
-
-	if (typeof obj !== "object") {
-		return {
-			keyvSerialization: false,
-			stringify: false,
-			parse: false,
-		};
-	}
-
-	// Check for stringify and parse methods
-	const hasStringify =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"stringify" in obj && typeof (obj as any).stringify === "function";
-	const hasParse =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"parse" in obj && typeof (obj as any).parse === "function";
-
-	// Determine if it's a Keyv serialization adapter
-	// Must have both stringify and parse methods
-	const isKeyvSerializationAdapter = hasStringify && hasParse;
-
-	return {
-		keyvSerialization: isKeyvSerializationAdapter,
-		stringify: hasStringify,
-		parse: hasParse,
-	};
+	return checkCapabilities<IsKeyvSerializationResult>(obj, {
+		methods: ["stringify", "parse"],
+		properties: [],
+		requiredKeys: ["stringify", "parse"],
+		compositeKey: "keyvSerialization",
+	});
 }
 
 /**
@@ -430,37 +280,10 @@ export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
  * ```
  */
 export function isKeyvEncryption(obj: unknown): IsKeyvEncryptionResult {
-	if (obj === null || obj === undefined) {
-		return {
-			keyvEncryption: false,
-			encrypt: false,
-			decrypt: false,
-		};
-	}
-
-	if (typeof obj !== "object") {
-		return {
-			keyvEncryption: false,
-			encrypt: false,
-			decrypt: false,
-		};
-	}
-
-	// Check for encrypt and decrypt methods
-	const hasEncrypt =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"encrypt" in obj && typeof (obj as any).encrypt === "function";
-	const hasDecrypt =
-		// biome-ignore lint/suspicious/noExplicitAny: need to check unknown object properties
-		"decrypt" in obj && typeof (obj as any).decrypt === "function";
-
-	// Determine if it's a Keyv encryption adapter
-	// Must have both encrypt and decrypt methods
-	const isKeyvEncryptionAdapter = hasEncrypt && hasDecrypt;
-
-	return {
-		keyvEncryption: isKeyvEncryptionAdapter,
-		encrypt: hasEncrypt,
-		decrypt: hasDecrypt,
-	};
+	return checkCapabilities<IsKeyvEncryptionResult>(obj, {
+		methods: ["encrypt", "decrypt"],
+		properties: [],
+		requiredKeys: ["encrypt", "decrypt"],
+		compositeKey: "keyvEncryption",
+	});
 }

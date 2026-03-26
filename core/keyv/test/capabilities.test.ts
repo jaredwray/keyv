@@ -31,6 +31,7 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
+				namespace: false,
 			});
 		});
 
@@ -55,6 +56,7 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
+				namespace: false,
 			});
 		});
 
@@ -79,6 +81,7 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
+				namespace: false,
 			});
 		});
 
@@ -108,6 +111,7 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
+				namespace: false,
 			});
 		});
 
@@ -139,6 +143,7 @@ describe("capabilities", () => {
 				hooks: true,
 				stats: true,
 				iterator: true, // Iterator is present for Map store
+				namespace: true,
 			});
 		});
 
@@ -208,9 +213,48 @@ describe("capabilities", () => {
 				stats: {},
 			};
 			const result = isKeyv(obj);
-			expect(result.keyv).toBe(true); // Has all required core methods and properties
+			expect(result.keyv).toBe(false); // Missing namespace
 			expect(result.hooks).toBe(true);
 			expect(result.stats).toBe(true);
+		});
+
+		test("should return keyv: false when missing many required capabilities", () => {
+			const obj = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				hooks: {},
+				stats: {},
+				namespace: "test",
+			};
+			const result = isKeyv(obj);
+			expect(result.keyv).toBe(false); // Missing has, getMany, setMany, deleteMany, hasMany, disconnect, getRaw, getManyRaw, setRaw, setManyRaw, iterator
+		});
+
+		test("should return keyv: true when all required properties are present", () => {
+			const obj = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				has: () => {},
+				getMany: () => {},
+				setMany: () => {},
+				deleteMany: () => {},
+				hasMany: () => {},
+				disconnect: () => {},
+				getRaw: () => {},
+				getManyRaw: () => {},
+				setRaw: () => {},
+				setManyRaw: () => {},
+				hooks: {},
+				stats: {},
+				iterator: () => {},
+				namespace: "test",
+			};
+			const result = isKeyv(obj);
+			expect(result.keyv).toBe(true); // Has all required capabilities
 		});
 
 		test("should handle empty object", () => {
@@ -234,6 +278,7 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
+				namespace: false,
 			});
 		});
 
@@ -255,9 +300,10 @@ describe("capabilities", () => {
 				getMany: () => {},
 				hooks: {},
 				stats: {},
+				namespace: "test",
 			};
 			const result = isKeyv(obj);
-			expect(result.keyv).toBe(true);
+			expect(result.keyv).toBe(false); // Missing has, setMany, deleteMany, hasMany, disconnect, getRaw, getManyRaw, setRaw, setManyRaw, iterator
 			expect(result.getMany).toBe(true);
 			expect(result.setMany).toBe(false);
 			expect(result.deleteMany).toBe(false);
@@ -323,15 +369,15 @@ describe("capabilities", () => {
 			});
 		});
 
-		test("should return keyvStorage: true for new Map()", () => {
+		test("should return keyvStorage: false for new Map() (no namespace)", () => {
 			const result = isKeyvStorage(new Map());
-			expect(result.keyvStorage).toBe(true);
+			expect(result.keyvStorage).toBe(false);
 		});
 
 		test("should detect Map capabilities correctly", () => {
 			const result = isKeyvStorage(new Map());
 			expect(result).toEqual({
-				keyvStorage: true, // Map has core methods
+				keyvStorage: false, // Map lacks namespace property
 				get: true,
 				set: true,
 				delete: true,
@@ -394,7 +440,7 @@ describe("capabilities", () => {
 			});
 		});
 
-		test("should handle partial storage adapter objects", () => {
+		test("should handle partial storage adapter objects (no namespace)", () => {
 			const partialAdapter = {
 				get: () => {},
 				set: () => {},
@@ -402,11 +448,24 @@ describe("capabilities", () => {
 				clear: () => {},
 			};
 			const result = isKeyvStorage(partialAdapter);
-			expect(result.keyvStorage).toBe(true); // Has all core methods
+			expect(result.keyvStorage).toBe(false); // Missing namespace
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
 			expect(result.clear).toBe(true);
+		});
+
+		test("should handle partial storage adapter objects (with namespace)", () => {
+			const partialAdapter = {
+				namespace: undefined,
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+			};
+			const result = isKeyvStorage(partialAdapter);
+			expect(result.keyvStorage).toBe(true); // Has core methods + namespace
+			expect(result.namespace).toBe(true);
 		});
 
 		test("should detect objects with only some methods", () => {
@@ -475,7 +534,7 @@ describe("capabilities", () => {
 				clear: async () => {},
 			};
 			const result = isKeyvStorage(adapter);
-			expect(result.keyvStorage).toBe(true);
+			expect(result.keyvStorage).toBe(false); // Missing namespace
 			expect(result.namespace).toBe(false);
 		});
 	});
