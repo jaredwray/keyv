@@ -124,10 +124,12 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	async setMany<Value>(
 		entries: KeyvEntry<Value>[],
 	): Promise<boolean[] | undefined> {
-		const results = await Promise.all(
+		const settled = await Promise.allSettled(
 			entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
 		);
-		return results;
+		return settled.map((result) =>
+			result.status === "fulfilled" ? result.value : false,
+		);
 	}
 
 	/**
