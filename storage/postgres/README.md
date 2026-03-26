@@ -29,7 +29,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [clearExpiredInterval](#clearexpiredinterval)
   - [namespace](#namespace)
 - [Methods](#methods)
-  - [.set(key, value)](#setkey-value)
+  - [.set(key, value, ttl?)](#setkey-value-ttl)
   - [.setMany(entries)](#setmanyentries)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
@@ -343,12 +343,18 @@ console.log(store.namespace); // 'my-namespace'
 
 # Methods
 
-## .set(key, value)
+## .set(key, value, ttl?)
 
-Set a key-value pair.
+Set a key-value pair. Returns `true` on success, `false` on failure.
+
+- `key` *(string)* - The key to set.
+- `value` *(any)* - The value to store.
+- `ttl` *(number, optional)* - Time to live in milliseconds.
+- Returns: `Promise<boolean>`
 
 ```js
 await keyv.set('foo', 'bar');
+await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
 ## .setMany(entries)

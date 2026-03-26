@@ -27,7 +27,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Methods](#methods)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value)](#setkey-value)
+  - [.set(key, value, ttl?)](#setkey-value-ttl)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -329,12 +329,18 @@ Returns an array of values for the given keys. Returns `undefined` for any key t
 const values = await keyvMysql.getMany(['foo', 'bar']);
 ```
 
-### .set(key, value)
+### .set(key, value, ttl?)
 
-Sets a value for the given key. If the key already exists, it will be updated.
+Sets a value for the given key. If the key already exists, it will be updated. Returns `true` on success, `false` on failure.
+
+- `key` *(string)* - The key to set.
+- `value` *(any)* - The value to store.
+- `ttl` *(number, optional)* - Time to live in milliseconds.
+- Returns: `Promise<boolean>`
 
 ```js
 await keyvMysql.set('foo', 'bar');
+await keyvMysql.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
 ### .setMany(entries)

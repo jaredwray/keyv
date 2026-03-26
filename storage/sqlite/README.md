@@ -36,7 +36,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [ready](#ready)
   - [opts](#opts)
 - [Methods](#methods)
-  - [.set(key, value)](#setkey-value)
+  - [.set(key, value, ttl?)](#setkey-value-ttl)
   - [.setMany(entries)](#setmanyentries)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
@@ -494,12 +494,18 @@ console.log(store.opts);
 
 # Methods
 
-## .set(key, value)
+## .set(key, value, ttl?)
 
-Set a key-value pair.
+Set a key-value pair. Returns `true` on success, `false` on failure.
+
+- `key` *(string)* - The key to set.
+- `value` *(any)* - The value to store.
+- `ttl` *(number, optional)* - Time to live in milliseconds.
+- Returns: `Promise<boolean>`
 
 ```js
 await keyv.set('foo', 'bar');
+await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
 ## .setMany(entries)
