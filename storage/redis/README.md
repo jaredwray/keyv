@@ -669,8 +669,9 @@ export class CacheService {
     return this.cacheManager.get<T>(key);
   }
 
-  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+  async set<T>(key: string, value: T, ttl?: number): Promise<boolean> {
     await this.cacheManager.set(key, value, ttl);
+    return true;
   }
 
   async delete(key: string): Promise<void> {

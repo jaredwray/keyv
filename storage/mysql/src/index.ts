@@ -392,16 +392,24 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @returns Promise that resolves when the operation completes
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any) {
-		const strippedKey = this.removeKeyPrefix(key);
-		const ns = this.getNamespaceValue();
-		const expires = this.getExpiresFromValue(value);
-		const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
+	public async set(key: string, value: any): Promise<boolean> {
+		try {
+			const strippedKey = this.removeKeyPrefix(key);
+			const ns = this.getNamespaceValue();
+			const expires = this.getExpiresFromValue(value);
+			const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE value=?, expires=?;`;
-		const insert = [strippedKey, value, ns, expires, value, expires];
-		const upsert = mysql.format(sql, insert);
-		return this.query(upsert);
+			const insert = [strippedKey, value, ns, expires, value, expires];
+			const upsert = mysql.format(sql, insert);
+			await this.query(upsert);
+			return true;
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+			return false;
+		}
+		/* v8 ignore stop -- @preserve */
 	}
 
 	/**

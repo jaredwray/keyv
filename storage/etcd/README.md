@@ -38,7 +38,7 @@
   - [constructor(url?, options?)](#constructorurl-options)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value)](#setkey-value)
+  - [.set(key, value, ttl?)](#setkey-value-ttl)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -280,13 +280,19 @@ await store.set('key2', 'value2');
 const results = await store.getMany(['key1', 'key2']);
 ```
 
-### .set(key, value)
+### .set(key, value, ttl?)
 
-Stores a value in the etcd server. If a default TTL is configured via the `ttl` option, the value is stored with an etcd lease that expires automatically.
+Stores a value in the etcd server. If a `ttl` is provided, a dedicated etcd lease is created for that key. Otherwise, if a default TTL is configured via the constructor `ttl` option, the shared lease is used. Returns `true` on success, `false` on failure.
+
+- `key` *(string)* - The key to set.
+- `value` *(any)* - The value to store.
+- `ttl` *(number, optional)* - Time to live in milliseconds.
+- Returns: `Promise<boolean>`
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
 await store.set('foo', 'bar');
+await store.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
 ### .setMany(entries)

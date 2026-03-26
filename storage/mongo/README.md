@@ -197,7 +197,7 @@ console.log(store.readPreference); // ReadPreference.SECONDARY
 - `key` *(string)* - The key to set.
 - `value` *(any)* - The value to store.
 - `ttl` *(number, optional)* - Time to live in milliseconds. If specified, the key will expire after this duration.
-- Returns: `Promise<void>`
+- Returns: `Promise<boolean>`
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');

@@ -174,7 +174,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @param value - The value to store
 	 * @param ttl - Optional TTL in milliseconds
 	 */
-	public async set(key: string, value: unknown, ttl?: number) {
+	public async set(
+		key: string,
+		value: unknown,
+		ttl?: number,
+	): Promise<boolean> {
 		try {
 			await this._tableReady;
 
@@ -197,9 +201,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			};
 
 			await this._client.put(putInput);
+			return true;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
+			return false;
 		}
 		/* v8 ignore stop -- @preserve */
 	}

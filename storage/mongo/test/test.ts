@@ -102,7 +102,7 @@ test.it("Stores value in GridFS", async (t) => {
 	const key = faker.string.alphanumeric(10);
 	const result = await store.set(key, "keyv1", 0);
 	const get = await store.get(key);
-	t.expect((result as any).filename).toBe(key);
+	t.expect(result).toBe(true);
 	t.expect(get).toBe("keyv1");
 });
 
@@ -132,7 +132,7 @@ test.it("Stores value with TTL in GridFS", async (t) => {
 	const store = new KeyvMongo({ useGridFS: true, ...options });
 	const key = faker.string.alphanumeric(10);
 	const result = await store.set(key, "keyv1", 0);
-	t.expect((result as any).filename).toBe(key);
+	t.expect(result).toBe(true);
 });
 
 test.it("Clears expired value from GridFS", async (t) => {

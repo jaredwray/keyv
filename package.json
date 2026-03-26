@@ -14,6 +14,7 @@
   "scripts": {
     "build:keyv": "pnpm recursive --filter=keyv run build",
     "build": "pnpm build:keyv && pnpm recursive --filter '!keyv' run build",
+    "build:sequential": "pnpm build:keyv && pnpm --filter '!keyv' --workspace-concurrency 1 -r build",
     "test": "pnpm -r test",
     "test:sequential": "pnpm -r --workspace-concurrency 1 test",
     "test:ci": "pnpm -r test:ci",
