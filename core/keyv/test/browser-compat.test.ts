@@ -25,28 +25,25 @@ const NODE_BUILTIN_MODULES = [
 	"node:worker_threads",
 ];
 
-// Bare specifier equivalents (without node: prefix)
-const BARE_NODE_MODULES = [
-	"events",
-	"fs",
-	"path",
-	"os",
-	"crypto",
-	"stream",
-	"buffer",
-	"util",
-	"http",
-	"https",
-	"net",
-	"child_process",
-	"cluster",
-	"dgram",
-	"dns",
-	"tls",
-	"zlib",
-	"readline",
-	"worker_threads",
-];
+// Derive bare specifiers from the node: prefixed list
+const BARE_NODE_MODULES = NODE_BUILTIN_MODULES.map((mod) =>
+	mod.replace("node:", ""),
+);
+
+// Patterns that catch all import forms:
+//   import ... from "mod"
+//   import "mod" (side-effect)
+//   import("mod") (dynamic)
+//   require("mod")
+function buildPatterns(mod: string): RegExp[] {
+	const escaped = mod.replace(/[.*+?^${}()|[\\\]]/g, "\\$&");
+	return [
+		new RegExp(`from\\s+["']${escaped}["']`),
+		new RegExp(`import\\s+["']${escaped}["']`),
+		new RegExp(`import\\s*\\(\\s*["']${escaped}["']`),
+		new RegExp(`require\\s*\\(\\s*["']${escaped}["']`),
+	];
+}
 
 const srcDir = resolve(import.meta.dirname, "../src");
 const sourceFiles = readdirSync(srcDir)
@@ -59,24 +56,13 @@ const sourceFiles = readdirSync(srcDir)
 describe("browser compatibility - static analysis", () => {
 	for (const file of sourceFiles) {
 		test(`${file.name} has no Node.js built-in imports`, () => {
-			for (const mod of NODE_BUILTIN_MODULES) {
-				expect(file.content, `found "${mod}" in ${file.name}`).not.toMatch(
-					new RegExp(`from\\s+["']${mod}["']`),
-				);
-				expect(file.content, `found "${mod}" in ${file.name}`).not.toMatch(
-					new RegExp(`require\\s*\\(\\s*["']${mod}["']`),
-				);
-			}
-
-			for (const mod of BARE_NODE_MODULES) {
-				expect(
-					file.content,
-					`found bare "${mod}" import in ${file.name}`,
-				).not.toMatch(new RegExp(`from\\s+["']${mod}["']`));
-				expect(
-					file.content,
-					`found bare "${mod}" require in ${file.name}`,
-				).not.toMatch(new RegExp(`require\\s*\\(\\s*["']${mod}["']`));
+			for (const mod of [...NODE_BUILTIN_MODULES, ...BARE_NODE_MODULES]) {
+				for (const pattern of buildPatterns(mod)) {
+					expect(
+						file.content,
+						`found "${mod}" (${pattern.source}) in ${file.name}`,
+					).not.toMatch(pattern);
+				}
 			}
 		});
 	}
