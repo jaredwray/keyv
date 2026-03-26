@@ -1,17 +1,17 @@
 import { describe, expect, test } from "vitest";
 import {
-	isKeyv,
-	isKeyvCompression,
-	isKeyvEncryption,
-	isKeyvSerialization,
-	isKeyvStorage,
+	detectKeyv,
+	detectKeyvCompression,
+	detectKeyvEncryption,
+	detectKeyvSerialization,
+	detectKeyvStorage,
 } from "../src/capabilities.js";
 import { Keyv } from "../src/index.js";
 
 describe("capabilities", () => {
-	describe("isKeyv", () => {
+	describe("detectKeyv", () => {
 		test("should return all false for null", () => {
-			const result = isKeyv(null);
+			const result = detectKeyv(null);
 			expect(result).toEqual({
 				keyv: false,
 				get: false,
@@ -35,7 +35,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for undefined", () => {
-			const result = isKeyv(undefined);
+			const result = detectKeyv(undefined);
 			expect(result).toEqual({
 				keyv: false,
 				get: false,
@@ -59,7 +59,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for non-object types", () => {
-			const result = isKeyv("string");
+			const result = detectKeyv("string");
 			expect(result).toEqual({
 				keyv: false,
 				get: false,
@@ -83,12 +83,12 @@ describe("capabilities", () => {
 		});
 
 		test("should return keyv: false for new Map()", () => {
-			const result = isKeyv(new Map());
+			const result = detectKeyv(new Map());
 			expect(result.keyv).toBe(false);
 		});
 
 		test("should detect Map capabilities correctly", () => {
-			const result = isKeyv(new Map());
+			const result = detectKeyv(new Map());
 			expect(result).toEqual({
 				keyv: false,
 				get: true,
@@ -113,13 +113,13 @@ describe("capabilities", () => {
 
 		test("should return keyv: true for Keyv instance", () => {
 			const keyv = new Keyv();
-			const result = isKeyv(keyv);
+			const result = detectKeyv(keyv);
 			expect(result.keyv).toBe(true);
 		});
 
 		test("should detect all Keyv capabilities", () => {
 			const keyv = new Keyv();
-			const result = isKeyv(keyv);
+			const result = detectKeyv(keyv);
 			expect(result).toEqual({
 				keyv: true,
 				get: true,
@@ -148,7 +148,7 @@ describe("capabilities", () => {
 			keyv.iterator = async function* () {
 				yield ["key", "value"];
 			};
-			const result = isKeyv(keyv);
+			const result = detectKeyv(keyv);
 			expect(result.iterator).toBe(true);
 		});
 
@@ -159,7 +159,7 @@ describe("capabilities", () => {
 				delete: () => {},
 				clear: () => {},
 			};
-			const result = isKeyv(partialKeyv);
+			const result = detectKeyv(partialKeyv);
 			expect(result.keyv).toBe(false); // Missing hooks and stats
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
@@ -174,7 +174,7 @@ describe("capabilities", () => {
 				get: () => {},
 				set: () => {},
 			};
-			const result = isKeyv(obj);
+			const result = detectKeyv(obj);
 			expect(result.keyv).toBe(false);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
@@ -190,7 +190,7 @@ describe("capabilities", () => {
 				clear: "not a function",
 				has: "not a function",
 			};
-			const result = isKeyv(obj);
+			const result = detectKeyv(obj);
 			expect(result.get).toBe(false);
 			expect(result.set).toBe(false);
 			expect(result.delete).toBe(false);
@@ -207,14 +207,51 @@ describe("capabilities", () => {
 				hooks: {},
 				stats: {},
 			};
-			const result = isKeyv(obj);
-			expect(result.keyv).toBe(true); // Has all required core methods and properties
+			const result = detectKeyv(obj);
+			expect(result.keyv).toBe(false); // Missing many required methods
 			expect(result.hooks).toBe(true);
 			expect(result.stats).toBe(true);
 		});
 
+		test("should return keyv: false when missing many required capabilities", () => {
+			const obj = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				hooks: {},
+				stats: {},
+			};
+			const result = detectKeyv(obj);
+			expect(result.keyv).toBe(false); // Missing has, getMany, setMany, deleteMany, hasMany, disconnect, getRaw, getManyRaw, setRaw, setManyRaw, iterator
+		});
+
+		test("should return keyv: true when all required properties are present", () => {
+			const obj = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				has: () => {},
+				getMany: () => {},
+				setMany: () => {},
+				deleteMany: () => {},
+				hasMany: () => {},
+				disconnect: () => {},
+				getRaw: () => {},
+				getManyRaw: () => {},
+				setRaw: () => {},
+				setManyRaw: () => {},
+				hooks: {},
+				stats: {},
+				iterator: () => {},
+			};
+			const result = detectKeyv(obj);
+			expect(result.keyv).toBe(true); // Has all required capabilities
+		});
+
 		test("should handle empty object", () => {
-			const result = isKeyv({});
+			const result = detectKeyv({});
 			expect(result).toEqual({
 				keyv: false,
 				get: false,
@@ -240,7 +277,7 @@ describe("capabilities", () => {
 		test("should detect Keyv with custom store", () => {
 			const customStore = new Map();
 			const keyv = new Keyv({ store: customStore });
-			const result = isKeyv(keyv);
+			const result = detectKeyv(keyv);
 			expect(result.keyv).toBe(true);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
@@ -256,8 +293,8 @@ describe("capabilities", () => {
 				hooks: {},
 				stats: {},
 			};
-			const result = isKeyv(obj);
-			expect(result.keyv).toBe(true);
+			const result = detectKeyv(obj);
+			expect(result.keyv).toBe(false); // Missing has, setMany, deleteMany, hasMany, disconnect, getRaw, getManyRaw, setRaw, setManyRaw, iterator
 			expect(result.getMany).toBe(true);
 			expect(result.setMany).toBe(false);
 			expect(result.deleteMany).toBe(false);
@@ -265,11 +302,26 @@ describe("capabilities", () => {
 		});
 	});
 
-	describe("isKeyvStorage", () => {
+	describe("detectKeyvStorage", () => {
+		const allNoneMethodTypes = {
+			get: "none",
+			set: "none",
+			delete: "none",
+			clear: "none",
+			has: "none",
+			getMany: "none",
+			setMany: "none",
+			deleteMany: "none",
+			hasMany: "none",
+			disconnect: "none",
+			iterator: "none",
+		};
+
 		test("should return all false for null", () => {
-			const result = isKeyvStorage(null);
+			const result = detectKeyvStorage(null);
 			expect(result).toEqual({
 				keyvStorage: false,
+				mapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -281,14 +333,15 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
 		test("should return all false for undefined", () => {
-			const result = isKeyvStorage(undefined);
+			const result = detectKeyvStorage(undefined);
 			expect(result).toEqual({
 				keyvStorage: false,
+				mapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -300,14 +353,15 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
 		test("should return all false for non-object types", () => {
-			const result = isKeyvStorage("string");
+			const result = detectKeyvStorage("string");
 			expect(result).toEqual({
 				keyvStorage: false,
+				mapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -319,19 +373,21 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
-		test("should return keyvStorage: true for new Map()", () => {
-			const result = isKeyvStorage(new Map());
-			expect(result.keyvStorage).toBe(true);
+		test("should return keyvStorage: false and mapLike: true for new Map()", () => {
+			const result = detectKeyvStorage(new Map());
+			expect(result.keyvStorage).toBe(false); // Missing setMany, deleteMany, hasMany
+			expect(result.mapLike).toBe(true);
 		});
 
 		test("should detect Map capabilities correctly", () => {
-			const result = isKeyvStorage(new Map());
+			const result = detectKeyvStorage(new Map());
 			expect(result).toEqual({
-				keyvStorage: true, // Map has core methods
+				keyvStorage: false, // Missing setMany, deleteMany, hasMany
+				mapLike: true,
 				get: true,
 				set: true,
 				delete: true,
@@ -343,25 +399,53 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false, // Map has Symbol.iterator, not iterator method
-				namespace: false,
+				methodTypes: {
+					get: "sync",
+					set: "sync",
+					delete: "sync",
+					clear: "sync",
+					has: "sync",
+					getMany: "none",
+					setMany: "none",
+					deleteMany: "none",
+					hasMany: "none",
+					disconnect: "none",
+					iterator: "none",
+				},
 			});
 		});
 
-		test("should return keyvStorage: true for storage adapter-like object", () => {
+		test("should return keyvStorage: true for Map with required methods added", () => {
+			const store = Object.assign(new Map(), {
+				hasMany: () => [],
+				setMany: () => {},
+				deleteMany: () => [],
+			});
+			const result = detectKeyvStorage(store);
+			expect(result.keyvStorage).toBe(true);
+			expect(result.mapLike).toBe(true);
+			expect(result.methodTypes.get).toBe("sync");
+			expect(result.methodTypes.set).toBe("sync");
+			expect(result.methodTypes.has).toBe("sync");
+			expect(result.methodTypes.hasMany).toBe("sync");
+			expect(result.methodTypes.setMany).toBe("sync");
+			expect(result.methodTypes.deleteMany).toBe("sync");
+		});
+
+		test("should return keyvStorage: false for object with only core CRUD methods", () => {
 			const adapter = {
-				namespace: "test",
 				get: async () => {},
 				set: async () => {},
 				delete: async () => {},
 				clear: async () => {},
 			};
-			const result = isKeyvStorage(adapter);
-			expect(result.keyvStorage).toBe(true);
+			const result = detectKeyvStorage(adapter);
+			expect(result.keyvStorage).toBe(false); // Missing has, setMany, deleteMany, hasMany
+			expect(result.mapLike).toBe(false);
 		});
 
 		test("should detect all storage adapter capabilities", () => {
 			const adapter = {
-				namespace: "test",
 				get: async () => {},
 				set: async () => {},
 				delete: async () => {},
@@ -376,9 +460,10 @@ describe("capabilities", () => {
 					yield ["key", "value"];
 				},
 			};
-			const result = isKeyvStorage(adapter);
+			const result = detectKeyvStorage(adapter);
 			expect(result).toEqual({
 				keyvStorage: true,
+				mapLike: false,
 				get: true,
 				set: true,
 				delete: true,
@@ -390,19 +475,48 @@ describe("capabilities", () => {
 				hasMany: true,
 				disconnect: true,
 				iterator: true,
-				namespace: true,
+				methodTypes: {
+					get: "async",
+					set: "async",
+					delete: "async",
+					clear: "async",
+					has: "async",
+					getMany: "async",
+					setMany: "async",
+					deleteMany: "async",
+					hasMany: "async",
+					disconnect: "async",
+					iterator: "sync",
+				},
 			});
 		});
 
-		test("should handle partial storage adapter objects", () => {
+		test("should return keyvStorage: true when all required methods are present", () => {
+			const adapter = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				has: () => {},
+				setMany: () => {},
+				deleteMany: () => {},
+				hasMany: () => {},
+			};
+			const result = detectKeyvStorage(adapter);
+			expect(result.keyvStorage).toBe(true);
+			expect(result.mapLike).toBe(false);
+		});
+
+		test("should handle partial storage adapter objects with core methods", () => {
 			const partialAdapter = {
 				get: () => {},
 				set: () => {},
 				delete: () => {},
 				clear: () => {},
 			};
-			const result = isKeyvStorage(partialAdapter);
-			expect(result.keyvStorage).toBe(true); // Has all core methods
+			const result = detectKeyvStorage(partialAdapter);
+			expect(result.keyvStorage).toBe(false); // Missing has, setMany, deleteMany, hasMany
+			expect(result.mapLike).toBe(false);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
@@ -414,8 +528,9 @@ describe("capabilities", () => {
 				get: () => {},
 				set: () => {},
 			};
-			const result = isKeyvStorage(obj);
+			const result = detectKeyvStorage(obj);
 			expect(result.keyvStorage).toBe(false); // Missing delete and clear
+			expect(result.mapLike).toBe(false);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(false);
@@ -430,18 +545,20 @@ describe("capabilities", () => {
 				clear: "not a function",
 				has: "not a function",
 			};
-			const result = isKeyvStorage(obj);
+			const result = detectKeyvStorage(obj);
 			expect(result.get).toBe(false);
 			expect(result.set).toBe(false);
 			expect(result.delete).toBe(false);
 			expect(result.clear).toBe(false);
 			expect(result.has).toBe(false);
+			expect(result.methodTypes.get).toBe("none");
 		});
 
 		test("should handle empty object", () => {
-			const result = isKeyvStorage({});
+			const result = detectKeyvStorage({});
 			expect(result).toEqual({
 				keyvStorage: false,
+				mapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -453,36 +570,85 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
-		test("should detect Keyv.store as storage adapter", () => {
+		test("should detect Keyv.store capabilities", () => {
 			const keyv = new Keyv();
-			const result = isKeyvStorage(keyv.store);
-			expect(result.keyvStorage).toBe(true); // Map has core methods
+			const result = detectKeyvStorage(keyv.store);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
 			expect(result.clear).toBe(true);
 		});
 
-		test("should handle storage adapter without namespace", () => {
+		test("should detect sync method types", () => {
+			const adapter = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				has: () => {},
+				setMany: () => {},
+				deleteMany: () => {},
+				hasMany: () => {},
+			};
+			const result = detectKeyvStorage(adapter);
+			expect(result.methodTypes.get).toBe("sync");
+			expect(result.methodTypes.set).toBe("sync");
+			expect(result.methodTypes.delete).toBe("sync");
+			expect(result.methodTypes.clear).toBe("sync");
+			expect(result.methodTypes.has).toBe("sync");
+			expect(result.methodTypes.getMany).toBe("none");
+		});
+
+		test("should detect async method types", () => {
 			const adapter = {
 				get: async () => {},
 				set: async () => {},
 				delete: async () => {},
 				clear: async () => {},
+				has: async () => {},
+				setMany: async () => {},
+				deleteMany: async () => {},
+				hasMany: async () => {},
 			};
-			const result = isKeyvStorage(adapter);
-			expect(result.keyvStorage).toBe(true);
-			expect(result.namespace).toBe(false);
+			const result = detectKeyvStorage(adapter);
+			expect(result.methodTypes.get).toBe("async");
+			expect(result.methodTypes.set).toBe("async");
+			expect(result.methodTypes.delete).toBe("async");
+			expect(result.methodTypes.clear).toBe("async");
+			expect(result.methodTypes.has).toBe("async");
+			expect(result.methodTypes.getMany).toBe("none");
+		});
+
+		test("should detect mixed sync and async method types", () => {
+			const adapter = {
+				get: async () => {},
+				set: () => {},
+				delete: async () => {},
+				clear: () => {},
+				has: async () => {},
+				setMany: () => {},
+				deleteMany: async () => {},
+				hasMany: () => {},
+			};
+			const result = detectKeyvStorage(adapter);
+			expect(result.methodTypes.get).toBe("async");
+			expect(result.methodTypes.set).toBe("sync");
+			expect(result.methodTypes.delete).toBe("async");
+			expect(result.methodTypes.clear).toBe("sync");
+			expect(result.methodTypes.has).toBe("async");
+			expect(result.methodTypes.setMany).toBe("sync");
+			expect(result.methodTypes.deleteMany).toBe("async");
+			expect(result.methodTypes.hasMany).toBe("sync");
 		});
 	});
 
-	describe("isKeyvCompression", () => {
+	describe("detectKeyvCompression", () => {
 		test("should return all false for null", () => {
-			const result = isKeyvCompression(null);
+			const result = detectKeyvCompression(null);
 			expect(result).toEqual({
 				keyvCompression: false,
 				compress: false,
@@ -491,7 +657,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for undefined", () => {
-			const result = isKeyvCompression(undefined);
+			const result = detectKeyvCompression(undefined);
 			expect(result).toEqual({
 				keyvCompression: false,
 				compress: false,
@@ -500,7 +666,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for non-object types", () => {
-			const result = isKeyvCompression("string");
+			const result = detectKeyvCompression("string");
 			expect(result).toEqual({
 				keyvCompression: false,
 				compress: false,
@@ -513,7 +679,7 @@ describe("capabilities", () => {
 				compress: (data: string) => data,
 				decompress: (data: string) => data,
 			};
-			const result = isKeyvCompression(adapter);
+			const result = detectKeyvCompression(adapter);
 			expect(result).toEqual({
 				keyvCompression: true,
 				compress: true,
@@ -525,7 +691,7 @@ describe("capabilities", () => {
 			const adapter = {
 				compress: (data: string) => data,
 			};
-			const result = isKeyvCompression(adapter);
+			const result = detectKeyvCompression(adapter);
 			expect(result).toEqual({
 				keyvCompression: false,
 				compress: true,
@@ -537,7 +703,7 @@ describe("capabilities", () => {
 			const adapter = {
 				decompress: (data: string) => data,
 			};
-			const result = isKeyvCompression(adapter);
+			const result = detectKeyvCompression(adapter);
 			expect(result).toEqual({
 				keyvCompression: false,
 				compress: false,
@@ -546,7 +712,7 @@ describe("capabilities", () => {
 		});
 
 		test("should handle empty object", () => {
-			const result = isKeyvCompression({});
+			const result = detectKeyvCompression({});
 			expect(result).toEqual({
 				keyvCompression: false,
 				compress: false,
@@ -559,7 +725,7 @@ describe("capabilities", () => {
 				compress: "not a function",
 				decompress: "not a function",
 			};
-			const result = isKeyvCompression(obj);
+			const result = detectKeyvCompression(obj);
 			expect(result).toEqual({
 				keyvCompression: false,
 				compress: false,
@@ -572,7 +738,7 @@ describe("capabilities", () => {
 				compress: async (data: string) => data,
 				decompress: async (data: string) => data,
 			};
-			const result = isKeyvCompression(adapter);
+			const result = detectKeyvCompression(adapter);
 			expect(result).toEqual({
 				keyvCompression: true,
 				compress: true,
@@ -587,7 +753,7 @@ describe("capabilities", () => {
 				serialize: (data: unknown) => JSON.stringify(data),
 				deserialize: (data: string) => JSON.parse(data),
 			};
-			const result = isKeyvCompression(adapter);
+			const result = detectKeyvCompression(adapter);
 			expect(result).toEqual({
 				keyvCompression: true,
 				compress: true,
@@ -596,9 +762,9 @@ describe("capabilities", () => {
 		});
 	});
 
-	describe("isKeyvSerialization", () => {
+	describe("detectKeyvSerialization", () => {
 		test("should return all false for null", () => {
-			const result = isKeyvSerialization(null);
+			const result = detectKeyvSerialization(null);
 			expect(result).toEqual({
 				keyvSerialization: false,
 				stringify: false,
@@ -607,7 +773,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for undefined", () => {
-			const result = isKeyvSerialization(undefined);
+			const result = detectKeyvSerialization(undefined);
 			expect(result).toEqual({
 				keyvSerialization: false,
 				stringify: false,
@@ -616,7 +782,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for non-object types", () => {
-			const result = isKeyvSerialization("string");
+			const result = detectKeyvSerialization("string");
 			expect(result).toEqual({
 				keyvSerialization: false,
 				stringify: false,
@@ -629,7 +795,7 @@ describe("capabilities", () => {
 				stringify: (obj: unknown) => JSON.stringify(obj),
 				parse: (data: string) => JSON.parse(data),
 			};
-			const result = isKeyvSerialization(adapter);
+			const result = detectKeyvSerialization(adapter);
 			expect(result).toEqual({
 				keyvSerialization: true,
 				stringify: true,
@@ -641,7 +807,7 @@ describe("capabilities", () => {
 			const adapter = {
 				stringify: (obj: unknown) => JSON.stringify(obj),
 			};
-			const result = isKeyvSerialization(adapter);
+			const result = detectKeyvSerialization(adapter);
 			expect(result).toEqual({
 				keyvSerialization: false,
 				stringify: true,
@@ -653,7 +819,7 @@ describe("capabilities", () => {
 			const adapter = {
 				parse: (data: string) => JSON.parse(data),
 			};
-			const result = isKeyvSerialization(adapter);
+			const result = detectKeyvSerialization(adapter);
 			expect(result).toEqual({
 				keyvSerialization: false,
 				stringify: false,
@@ -662,7 +828,7 @@ describe("capabilities", () => {
 		});
 
 		test("should handle empty object", () => {
-			const result = isKeyvSerialization({});
+			const result = detectKeyvSerialization({});
 			expect(result).toEqual({
 				keyvSerialization: false,
 				stringify: false,
@@ -675,7 +841,7 @@ describe("capabilities", () => {
 				stringify: "not a function",
 				parse: "not a function",
 			};
-			const result = isKeyvSerialization(obj);
+			const result = detectKeyvSerialization(obj);
 			expect(result).toEqual({
 				keyvSerialization: false,
 				stringify: false,
@@ -684,7 +850,7 @@ describe("capabilities", () => {
 		});
 
 		test("should detect JSON as serialization adapter", () => {
-			const result = isKeyvSerialization(JSON);
+			const result = detectKeyvSerialization(JSON);
 			expect(result).toEqual({
 				keyvSerialization: true,
 				stringify: true,
@@ -699,7 +865,7 @@ describe("capabilities", () => {
 				compress: (data: string) => data,
 				decompress: (data: string) => data,
 			};
-			const result = isKeyvSerialization(adapter);
+			const result = detectKeyvSerialization(adapter);
 			expect(result).toEqual({
 				keyvSerialization: true,
 				stringify: true,
@@ -708,9 +874,9 @@ describe("capabilities", () => {
 		});
 	});
 
-	describe("isKeyvEncryption", () => {
+	describe("detectKeyvEncryption", () => {
 		test("should return all false for null", () => {
-			const result = isKeyvEncryption(null);
+			const result = detectKeyvEncryption(null);
 			expect(result).toEqual({
 				keyvEncryption: false,
 				encrypt: false,
@@ -719,7 +885,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for undefined", () => {
-			const result = isKeyvEncryption(undefined);
+			const result = detectKeyvEncryption(undefined);
 			expect(result).toEqual({
 				keyvEncryption: false,
 				encrypt: false,
@@ -728,7 +894,7 @@ describe("capabilities", () => {
 		});
 
 		test("should return all false for non-object types", () => {
-			const result = isKeyvEncryption("string");
+			const result = detectKeyvEncryption("string");
 			expect(result).toEqual({
 				keyvEncryption: false,
 				encrypt: false,
@@ -741,7 +907,7 @@ describe("capabilities", () => {
 				encrypt: (data: string) => data,
 				decrypt: (data: string) => data,
 			};
-			const result = isKeyvEncryption(adapter);
+			const result = detectKeyvEncryption(adapter);
 			expect(result).toEqual({
 				keyvEncryption: true,
 				encrypt: true,
@@ -753,7 +919,7 @@ describe("capabilities", () => {
 			const adapter = {
 				encrypt: (data: string) => data,
 			};
-			const result = isKeyvEncryption(adapter);
+			const result = detectKeyvEncryption(adapter);
 			expect(result).toEqual({
 				keyvEncryption: false,
 				encrypt: true,
@@ -765,7 +931,7 @@ describe("capabilities", () => {
 			const adapter = {
 				decrypt: (data: string) => data,
 			};
-			const result = isKeyvEncryption(adapter);
+			const result = detectKeyvEncryption(adapter);
 			expect(result).toEqual({
 				keyvEncryption: false,
 				encrypt: false,
@@ -774,7 +940,7 @@ describe("capabilities", () => {
 		});
 
 		test("should handle empty object", () => {
-			const result = isKeyvEncryption({});
+			const result = detectKeyvEncryption({});
 			expect(result).toEqual({
 				keyvEncryption: false,
 				encrypt: false,
@@ -787,7 +953,7 @@ describe("capabilities", () => {
 				encrypt: "not a function",
 				decrypt: "not a function",
 			};
-			const result = isKeyvEncryption(obj);
+			const result = detectKeyvEncryption(obj);
 			expect(result).toEqual({
 				keyvEncryption: false,
 				encrypt: false,
@@ -800,7 +966,7 @@ describe("capabilities", () => {
 				encrypt: async (data: string) => data,
 				decrypt: async (data: string) => data,
 			};
-			const result = isKeyvEncryption(adapter);
+			const result = detectKeyvEncryption(adapter);
 			expect(result).toEqual({
 				keyvEncryption: true,
 				encrypt: true,
@@ -815,7 +981,7 @@ describe("capabilities", () => {
 				algorithm: "AES-256-GCM",
 				key: "secret-key",
 			};
-			const result = isKeyvEncryption(adapter);
+			const result = detectKeyvEncryption(adapter);
 			expect(result).toEqual({
 				keyvEncryption: true,
 				encrypt: true,
