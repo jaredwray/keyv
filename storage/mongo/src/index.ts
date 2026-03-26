@@ -386,10 +386,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		entries: KeyvEntry<Value>[],
 	): Promise<boolean[] | undefined> {
 		if (this._useGridFS) {
-			const settled = await Promise.allSettled(
+			const results = await Promise.all(
 				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
 			);
-			return settled.map((result) => result.status === "fulfilled");
+			return results;
 		}
 
 		const client = await this.connect;
