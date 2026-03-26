@@ -531,46 +531,46 @@ Keyv exports helper functions to check whether an object implements the expected
 
 ```ts
 import {
-  isKeyv,
-  isKeyvStorage,
-  isKeyvCompression,
-  isKeyvSerialization,
-  isKeyvEncryption,
-  checkCapabilities,
+  detectKeyv,
+  detectKeyvStorage,
+  detectKeyvCompression,
+  detectKeyvSerialization,
+  detectKeyvEncryption,
+  detectCapabilities,
 } from 'keyv';
 ```
 
-## isKeyv(obj)
+## detectKeyv(obj)
 
-Returns an `IsKeyvResult` with a boolean for each Keyv method/property. The `keyv` flag is `true` only when **all** capabilities are present.
+Returns a `KeyvCapability` with a boolean for each Keyv method/property. The `keyv` flag is `true` only when **all** capabilities are present.
 
 ```ts
-import Keyv, { isKeyv } from 'keyv';
+import Keyv, { detectKeyv } from 'keyv';
 
-isKeyv(new Keyv());
+detectKeyv(new Keyv());
 // { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
 //   getMany: true, setMany: true, deleteMany: true, hasMany: true,
 //   disconnect: true, getRaw: true, getManyRaw: true, setRaw: true,
 //   setManyRaw: true, hooks: true, stats: true, iterator: true }
 
-isKeyv(new Map());
+detectKeyv(new Map());
 // { keyv: false, get: true, set: true, ... }
 ```
 
-## isKeyvStorage(obj)
+## detectKeyvStorage(obj)
 
-Returns an `IsKeyvStorageResult`. The `keyvStorage` flag is `true` when the object has `get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, and `hasMany`.
+Returns a `KeyvStorageCapability`. The `keyvStorage` flag is `true` when the object has `get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, and `hasMany`.
 
 The result also includes:
-- **`isMapLike`** — `true` when the object has synchronous `get`, `set`, `delete`, `has`, `entries`, and `keys` methods (i.e. it behaves like a `Map`)
+- **`mapLike`** — `true` when the object has synchronous `get`, `set`, `delete`, `has`, `entries`, and `keys` methods (i.e. it behaves like a `Map`)
 - **`methodTypes`** — a record mapping each method name to `"sync"`, `"async"`, or `"none"` (not present)
 
 ```ts
-import { isKeyvStorage } from 'keyv';
+import { detectKeyvStorage } from 'keyv';
 
 // Map-like object
-const result = isKeyvStorage(new Map());
-result.isMapLike; // true
+const result = detectKeyvStorage(new Map());
+result.mapLike; // true
 result.methodTypes.get; // "sync"
 result.methodTypes.set; // "sync"
 
@@ -580,53 +580,53 @@ const adapter = {
   clear: async () => {}, has: async () => {}, setMany: async () => {},
   deleteMany: async () => {}, hasMany: async () => {},
 };
-const adapterResult = isKeyvStorage(adapter);
+const adapterResult = detectKeyvStorage(adapter);
 adapterResult.keyvStorage; // true
-adapterResult.isMapLike; // false
+adapterResult.mapLike; // false
 adapterResult.methodTypes.get; // "async"
 ```
 
-## isKeyvCompression(obj)
+## detectKeyvCompression(obj)
 
-Returns an `IsKeyvCompressionResult`. The `keyvCompression` flag is `true` when both `compress` and `decompress` methods are present.
+Returns a `KeyvCompressionCapability`. The `keyvCompression` flag is `true` when both `compress` and `decompress` methods are present.
 
 ```ts
-import { isKeyvCompression } from 'keyv';
+import { detectKeyvCompression } from 'keyv';
 
-isKeyvCompression({ compress: (d) => d, decompress: (d) => d });
+detectKeyvCompression({ compress: (d) => d, decompress: (d) => d });
 // { keyvCompression: true, compress: true, decompress: true }
 ```
 
-## isKeyvSerialization(obj)
+## detectKeyvSerialization(obj)
 
-Returns an `IsKeyvSerializationResult`. The `keyvSerialization` flag is `true` when both `stringify` and `parse` methods are present.
+Returns a `KeyvSerializationCapability`. The `keyvSerialization` flag is `true` when both `stringify` and `parse` methods are present.
 
 ```ts
-import { isKeyvSerialization } from 'keyv';
+import { detectKeyvSerialization } from 'keyv';
 
-isKeyvSerialization(JSON);
+detectKeyvSerialization(JSON);
 // { keyvSerialization: true, stringify: true, parse: true }
 ```
 
-## isKeyvEncryption(obj)
+## detectKeyvEncryption(obj)
 
-Returns an `IsKeyvEncryptionResult`. The `keyvEncryption` flag is `true` when both `encrypt` and `decrypt` methods are present.
+Returns a `KeyvEncryptionCapability`. The `keyvEncryption` flag is `true` when both `encrypt` and `decrypt` methods are present.
 
 ```ts
-import { isKeyvEncryption } from 'keyv';
+import { detectKeyvEncryption } from 'keyv';
 
-isKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
+detectKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
 // { keyvEncryption: true, encrypt: true, decrypt: true }
 ```
 
-## checkCapabilities(obj, spec)
+## detectCapabilities(obj, spec)
 
-A generic helper for building your own capability checks. Accepts a `CheckCapabilitiesSpec` describing which methods and properties to look for, which are required, and the name of the composite boolean key.
+A generic helper for building your own capability checks. Accepts a `CapabilitySpec` describing which methods and properties to look for, which are required, and the name of the composite boolean key.
 
 ```ts
-import { checkCapabilities } from 'keyv';
+import { detectCapabilities } from 'keyv';
 
-const result = checkCapabilities(myObject, {
+const result = detectCapabilities(myObject, {
   methods: ['read', 'write'],
   properties: ['name'],
   requiredKeys: ['read', 'write', 'name'],

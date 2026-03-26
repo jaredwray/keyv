@@ -1,4 +1,4 @@
-export type IsKeyvResult = {
+export type KeyvCapability = {
 	keyv: boolean;
 	get: boolean;
 	set: boolean;
@@ -19,11 +19,11 @@ export type IsKeyvResult = {
 	iterator: boolean;
 };
 
-export type KeyvStorageMethodType = "sync" | "async" | "none";
+export type MethodType = "sync" | "async" | "none";
 
-export type IsKeyvStorageResult = {
+export type KeyvStorageCapability = {
 	keyvStorage: boolean;
-	isMapLike: boolean;
+	mapLike: boolean;
 	get: boolean;
 	set: boolean;
 	delete: boolean;
@@ -35,45 +35,45 @@ export type IsKeyvStorageResult = {
 	hasMany: boolean;
 	disconnect: boolean;
 	iterator: boolean;
-	methodTypes: Record<string, KeyvStorageMethodType>;
+	methodTypes: Record<string, MethodType>;
 };
 
-export type IsKeyvCompressionResult = {
+export type KeyvCompressionCapability = {
 	keyvCompression: boolean;
 	compress: boolean;
 	decompress: boolean;
 };
 
-export type IsKeyvSerializationResult = {
+export type KeyvSerializationCapability = {
 	keyvSerialization: boolean;
 	stringify: boolean;
 	parse: boolean;
 };
 
-export type IsKeyvEncryptionResult = {
+export type KeyvEncryptionCapability = {
 	keyvEncryption: boolean;
 	encrypt: boolean;
 	decrypt: boolean;
 };
 
-export type CheckCapabilitiesSpec = {
+export type CapabilitySpec = {
 	methods: string[];
 	properties: string[];
 	requiredKeys: string[];
 	compositeKey: string;
 };
 
-function hasMethod(obj: object, name: string): boolean {
+function isMethod(obj: object, name: string): boolean {
 	return (
 		name in obj && typeof (obj as Record<string, unknown>)[name] === "function"
 	);
 }
 
-function hasProp(obj: object, name: string): boolean {
+function isProperty(obj: object, name: string): boolean {
 	return name in obj;
 }
 
-function getMethodType(obj: object, name: string): KeyvStorageMethodType {
+function resolveMethodType(obj: object, name: string): MethodType {
 	if (!(name in obj)) {
 		return "none";
 	}
@@ -86,9 +86,27 @@ function getMethodType(obj: object, name: string): KeyvStorageMethodType {
 	return value.constructor.name === "AsyncFunction" ? "async" : "sync";
 }
 
-function checkCapabilities<T extends Record<string, boolean>>(
+/**
+ * Generic capability detector that checks an object for the presence of methods and properties
+ * @param obj - The object to check
+ * @param spec - A {@link CapabilitySpec} describing which methods, properties, and required keys to check
+ * @returns An object with boolean flags for each capability and a composite key indicating full compliance
+ * @example
+ * ```typescript
+ * import { detectCapabilities } from 'keyv';
+ *
+ * const result = detectCapabilities(myObject, {
+ *   methods: ['read', 'write'],
+ *   properties: ['name'],
+ *   requiredKeys: ['read', 'write', 'name'],
+ *   compositeKey: 'isValid',
+ * });
+ * // { isValid: true/false, read: true/false, write: true/false, name: true/false }
+ * ```
+ */
+export function detectCapabilities<T extends Record<string, boolean>>(
 	obj: unknown,
-	spec: CheckCapabilitiesSpec,
+	spec: CapabilitySpec,
 ): T {
 	const allKeys = [spec.compositeKey, ...spec.methods, ...spec.properties];
 
@@ -103,11 +121,11 @@ function checkCapabilities<T extends Record<string, boolean>>(
 
 	const result: Record<string, boolean> = {};
 	for (const key of spec.methods) {
-		result[key] = hasMethod(obj, key);
+		result[key] = isMethod(obj, key);
 	}
 
 	for (const key of spec.properties) {
-		result[key] = hasProp(obj, key);
+		result[key] = isProperty(obj, key);
 	}
 
 	result[spec.compositeKey] = spec.requiredKeys.every((k) => result[k]);
@@ -115,28 +133,28 @@ function checkCapabilities<T extends Record<string, boolean>>(
 }
 
 /**
- * Check if an object is a Keyv instance or has Keyv-like capabilities
+ * Detect if an object is a Keyv instance or has Keyv-like capabilities
  * @param obj - The object to check
  * @returns An object with boolean properties for each Keyv method/property
  * @example
  * ```typescript
- * import { isKeyv } from 'keyv';
+ * import { detectKeyv } from 'keyv';
  *
- * isKeyv(new Map());
+ * detectKeyv(new Map());
  * // { keyv: false, get: true, set: true, delete: true, clear: true, has: true,
  * //   getMany: false, setMany: false, deleteMany: false, hasMany: false,
  * //   disconnect: false, getRaw: false, getManyRaw: false, setRaw: false,
  * //   setManyRaw: false, hooks: false, stats: false, iterator: false }
  *
- * isKeyv(new Keyv());
+ * detectKeyv(new Keyv());
  * // { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
  * //   getMany: true, setMany: true, deleteMany: true, hasMany: true,
  * //   disconnect: true, getRaw: true, getManyRaw: true, setRaw: true,
- * //   setManyRaw: true, hooks: true, stats: true, iterator: false }
+ * //   setManyRaw: true, hooks: true, stats: true, iterator: true }
  * ```
  */
-export function isKeyv(obj: unknown): IsKeyvResult {
-	return checkCapabilities<IsKeyvResult>(obj, {
+export function detectKeyv(obj: unknown): KeyvCapability {
+	return detectCapabilities<KeyvCapability>(obj, {
 		methods: [
 			"get",
 			"set",
@@ -179,26 +197,22 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 }
 
 /**
- * Check if an object is a Keyv storage adapter or has storage adapter-like capabilities
+ * Detect if an object is a Keyv storage adapter or has storage adapter-like capabilities
  * @param obj - The object to check
  * @returns An object with boolean properties for each storage adapter method/property
  * @example
  * ```typescript
- * import { isKeyvStorage } from 'keyv';
+ * import { detectKeyvStorage } from 'keyv';
  *
- * isKeyvStorage(new Map());
- * // { keyvStorage: false, get: true, set: true, delete: true, clear: true, has: true,
- * //   getMany: false, setMany: false, deleteMany: false, hasMany: false,
- * //   disconnect: false, iterator: false, namespace: false }
+ * detectKeyvStorage(new Map());
+ * // { keyvStorage: false, mapLike: true, get: true, set: true, ... }
  *
  * const adapter = new KeyvRedis();
- * isKeyvStorage(adapter);
- * // { keyvStorage: true, get: true, set: true, delete: true, clear: true, has: true,
- * //   getMany: true, setMany: true, deleteMany: true, hasMany: true,
- * //   disconnect: true, iterator: true, namespace: true }
+ * detectKeyvStorage(adapter);
+ * // { keyvStorage: true, mapLike: false, get: true, set: true, ... }
  * ```
  */
-export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
+export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 	const methodNames = [
 		"get",
 		"set",
@@ -224,14 +238,14 @@ export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
 	];
 
 	if (obj === null || obj === undefined || typeof obj !== "object") {
-		const methodTypes: Record<string, KeyvStorageMethodType> = {};
+		const methodTypes: Record<string, MethodType> = {};
 		for (const name of methodNames) {
 			methodTypes[name] = "none";
 		}
 
 		return {
 			keyvStorage: false,
-			isMapLike: false,
+			mapLike: false,
 			get: false,
 			set: false,
 			delete: false,
@@ -248,21 +262,21 @@ export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
 	}
 
 	const result: Record<string, boolean> = {};
-	const methodTypes: Record<string, KeyvStorageMethodType> = {};
+	const methodTypes: Record<string, MethodType> = {};
 	for (const name of methodNames) {
-		result[name] = hasMethod(obj, name);
-		methodTypes[name] = getMethodType(obj, name);
+		result[name] = isMethod(obj, name);
+		methodTypes[name] = resolveMethodType(obj, name);
 	}
 
 	const keyvStorage = requiredKeys.every((k) => result[k]);
 	const mapLikeMethods = ["get", "set", "delete", "has", "entries", "keys"];
-	const isMapLike = mapLikeMethods.every(
-		(m) => hasMethod(obj, m) && getMethodType(obj, m) === "sync",
+	const mapLike = mapLikeMethods.every(
+		(m) => isMethod(obj, m) && resolveMethodType(obj, m) === "sync",
 	);
 
 	return {
 		keyvStorage,
-		isMapLike,
+		mapLike,
 		get: result.get,
 		set: result.set,
 		delete: result.delete,
@@ -279,27 +293,27 @@ export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
 }
 
 /**
- * Check if an object is a Keyv compression adapter or has compression capabilities
+ * Detect if an object is a Keyv compression adapter or has compression capabilities
  * @param obj - The object to check
  * @returns An object with boolean properties for each compression method
  * @example
  * ```typescript
- * import { isKeyvCompression } from 'keyv';
+ * import { detectKeyvCompression } from 'keyv';
  *
  * const gzip = {
  *   compress: (data) => compressSync(data),
  *   decompress: (data) => decompressSync(data)
  * };
- * isKeyvCompression(gzip);
+ * detectKeyvCompression(gzip);
  * // { keyvCompression: true, compress: true, decompress: true }
  *
- * isKeyvCompression({});
+ * detectKeyvCompression({});
  * // { keyvCompression: false, compress: false, decompress: false }
  * ```
  */
-export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
+export function detectKeyvCompression(obj: unknown): KeyvCompressionCapability {
 	const methods = ["compress", "decompress"];
-	return checkCapabilities<IsKeyvCompressionResult>(obj, {
+	return detectCapabilities<KeyvCompressionCapability>(obj, {
 		methods,
 		properties: [],
 		requiredKeys: methods,
@@ -308,27 +322,29 @@ export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
 }
 
 /**
- * Check if an object is a Keyv serialization adapter or has serialization capabilities
+ * Detect if an object is a Keyv serialization adapter or has serialization capabilities
  * @param obj - The object to check
  * @returns An object with boolean properties for each serialization method
  * @example
  * ```typescript
- * import { isKeyvSerialization } from 'keyv';
+ * import { detectKeyvSerialization } from 'keyv';
  *
  * const json = {
  *   stringify: (obj) => JSON.stringify(obj),
  *   parse: (str) => JSON.parse(str)
  * };
- * isKeyvSerialization(json);
+ * detectKeyvSerialization(json);
  * // { keyvSerialization: true, stringify: true, parse: true }
  *
- * isKeyvSerialization({});
+ * detectKeyvSerialization({});
  * // { keyvSerialization: false, stringify: false, parse: false }
  * ```
  */
-export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
+export function detectKeyvSerialization(
+	obj: unknown,
+): KeyvSerializationCapability {
 	const methods = ["stringify", "parse"];
-	return checkCapabilities<IsKeyvSerializationResult>(obj, {
+	return detectCapabilities<KeyvSerializationCapability>(obj, {
 		methods,
 		properties: [],
 		requiredKeys: methods,
@@ -337,27 +353,27 @@ export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
 }
 
 /**
- * Check if an object is a Keyv encryption adapter or has encryption capabilities
+ * Detect if an object is a Keyv encryption adapter or has encryption capabilities
  * @param obj - The object to check
  * @returns An object with boolean properties for each encryption method
  * @example
  * ```typescript
- * import { isKeyvEncryption } from 'keyv';
+ * import { detectKeyvEncryption } from 'keyv';
  *
  * const aes = {
  *   encrypt: (data) => encryptAES(data),
  *   decrypt: (data) => decryptAES(data)
  * };
- * isKeyvEncryption(aes);
+ * detectKeyvEncryption(aes);
  * // { keyvEncryption: true, encrypt: true, decrypt: true }
  *
- * isKeyvEncryption({});
+ * detectKeyvEncryption({});
  * // { keyvEncryption: false, encrypt: false, decrypt: false }
  * ```
  */
-export function isKeyvEncryption(obj: unknown): IsKeyvEncryptionResult {
+export function detectKeyvEncryption(obj: unknown): KeyvEncryptionCapability {
 	const methods = ["encrypt", "decrypt"];
-	return checkCapabilities<IsKeyvEncryptionResult>(obj, {
+	return detectCapabilities<KeyvEncryptionCapability>(obj, {
 		methods,
 		properties: [],
 		requiredKeys: methods,

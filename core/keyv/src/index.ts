@@ -13,19 +13,21 @@ import {
 } from "./types.js";
 
 export type {
-	IsKeyvCompressionResult,
-	IsKeyvEncryptionResult,
-	IsKeyvResult,
-	IsKeyvSerializationResult,
-	IsKeyvStorageResult,
-	KeyvStorageMethodType,
+	CapabilitySpec,
+	KeyvCapability,
+	KeyvCompressionCapability,
+	KeyvEncryptionCapability,
+	KeyvSerializationCapability,
+	KeyvStorageCapability,
+	MethodType,
 } from "./capabilities.js";
 export {
-	isKeyv,
-	isKeyvCompression,
-	isKeyvEncryption,
-	isKeyvSerialization,
-	isKeyvStorage,
+	detectCapabilities,
+	detectKeyv,
+	detectKeyvCompression,
+	detectKeyvEncryption,
+	detectKeyvSerialization,
+	detectKeyvStorage,
 } from "./capabilities.js";
 export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export type {
