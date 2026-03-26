@@ -18,7 +18,12 @@ import {
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { Hookified } from "hookified";
-import { Keyv, type KeyvStorageAdapter, type StoredData } from "keyv";
+import {
+	Keyv,
+	type KeyvEntry,
+	type KeyvStorageAdapter,
+	type StoredData,
+} from "keyv";
 
 export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	private _sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
@@ -203,8 +208,8 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple values in DynamoDB.
 	 * @param entries - An array of objects containing key, value, and optional ttl
 	 */
-	public async setMany(
-		entries: Array<{ key: string; value: unknown; ttl?: number }>,
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
 	): Promise<boolean[] | undefined> {
 		try {
 			await this._tableReady;

@@ -1,12 +1,11 @@
 import { Etcd3, type Lease } from "etcd3";
 import { Hookified } from "hookified";
-import { Keyv, type StoredData } from "keyv";
+import { Keyv, type KeyvEntry, type StoredData } from "keyv";
 import type {
 	ClearOutput,
 	DeleteOutput,
 	GetOutput,
 	HasOutput,
-	SetOutput,
 } from "./types.js";
 
 /**
@@ -38,7 +37,7 @@ export type KeyvEtcdOptions = {
  * ```
  */
 // biome-ignore lint/suspicious/noExplicitAny: any is allowed
-export class KeyvEtcd<Value = any> extends Hookified {
+export class KeyvEtcd<GenericValue = any> extends Hookified {
 	private _client!: Etcd3;
 	private _lease?: Lease;
 	private _url = "127.0.0.1:2379";
@@ -269,11 +268,11 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param key - The key to retrieve
 	 * @returns The stored value, or `undefined` if the key does not exist.
 	 */
-	public async get(key: string): GetOutput<Value> {
+	public async get(key: string): GetOutput<GenericValue> {
 		try {
 			return (await this._client.get(
 				this.formatKey(key),
-			)) as unknown as GetOutput<Value>;
+			)) as unknown as GetOutput<GenericValue>;
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -284,21 +283,23 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param keys - An array of keys to retrieve
 	 * @returns An array of stored data corresponding to each key.
 	 */
-	public async getMany(keys: string[]): Promise<Array<StoredData<Value>>> {
+	public async getMany(
+		keys: string[],
+	): Promise<Array<StoredData<GenericValue>>> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
 		}
 
 		return Promise.allSettled(promises).then((values) => {
-			const data: Array<StoredData<Value>> = [];
+			const data: Array<StoredData<GenericValue>> = [];
 			for (const value of values) {
 				// @ts-expect-error - value is an object
 				if (value.value === null) {
 					data.push(undefined);
 				} else {
 					// @ts-expect-error - value is an object
-					data.push(value.value as StoredData<Value>);
+					data.push(value.value as StoredData<GenericValue>);
 				}
 			}
 
@@ -311,11 +312,18 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * @param key - The key to store
 	 * @param value - The value to store
 	 */
-	public async set(key: string, value: Value): SetOutput {
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	public async set(key: string, value: any, ttl?: number): Promise<void> {
 		try {
-			const target = this._ttl ? this._lease : this._client;
+			const target =
+				typeof ttl === "number"
+					? this._client.lease(Math.max(ttl / 1000, 1), {
+							autoKeepAlive: false,
+						})
+					: this._ttl
+						? this._lease
+						: this._client;
 
-			// @ts-expect-error - Value needs to be number, string or buffer
 			await target?.put(this.formatKey(key)).value(value);
 		} catch (error) {
 			this.emit("error", error);
@@ -326,11 +334,11 @@ export class KeyvEtcd<Value = any> extends Hookified {
 	 * Stores multiple values in the etcd server.
 	 * @param entries - An array of objects containing key and value
 	 */
-	public async setMany(
-		entries: Array<{ key: string; value: Value }>,
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
 	): Promise<boolean[] | undefined> {
-		const promises = entries.map(async ({ key, value }) =>
-			this.set(key, value),
+		const promises = entries.map(async ({ key, value, ttl }) =>
+			this.set(key, value, ttl),
 		);
 		const results = await Promise.allSettled(promises);
 		const boolResults: boolean[] = [];
@@ -413,7 +421,7 @@ export class KeyvEtcd<Value = any> extends Hookified {
 
 		for await (const key of iterator) {
 			try {
-				const value = (await this._client.get(key)) as unknown as Value;
+				const value = (await this._client.get(key)) as unknown as GenericValue;
 				const unprefixedKey = this.removeKeyPrefix(key, this._namespace);
 				yield [unprefixedKey, value];
 				/* v8 ignore start -- @preserve */

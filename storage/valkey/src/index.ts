@@ -1,7 +1,11 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
-import Keyv, { type KeyvStorageAdapter, type StoredData } from "keyv";
+import Keyv, {
+	type KeyvEntry,
+	type KeyvStorageAdapter,
+	type StoredData,
+} from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 /**
@@ -261,9 +265,8 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 *   containing `key`, `value`, and an optional `ttl` in milliseconds for each entry.
 	 * @returns {Promise<void>}
 	 */
-	public async setMany(
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		entries: Array<{ key: string; value: any; ttl?: number }>,
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
 	): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);

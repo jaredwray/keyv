@@ -409,7 +409,9 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @param entries - Array of key-value entry objects
 	 * @returns Promise that resolves when the operation completes
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}

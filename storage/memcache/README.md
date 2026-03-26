@@ -291,7 +291,7 @@ await memcache.set('foo', 'bar', 5000); // expires in 5 seconds
 
 ### .setMany(entries)
 
-Stores multiple values in the memcache server. Each entry can have an optional `ttl` in milliseconds. Returns a `boolean[]` indicating whether each entry was set successfully.
+Stores multiple values in the memcache server. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');

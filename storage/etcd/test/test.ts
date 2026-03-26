@@ -103,6 +103,15 @@ test.it("KeyvEtcd respects default tll option", async (t) => {
 	t.expect(await keyv.get(key)).toBe(null);
 });
 
+test.it("set respects per-call ttl", async (t) => {
+	const keyv = new KeyvEtcd(etcdUrl);
+	const key = faker.string.uuid();
+	await keyv.set(key, "value", 1000);
+	t.expect(await keyv.get(key)).toBe("value");
+	await sleep(3000);
+	t.expect(await keyv.get(key)).toBe(null);
+});
+
 test.it(".delete() with key as number", async (t) => {
 	const store = new KeyvEtcd({ uri: etcdUrl });
 	// @ts-expect-error - key needs be a string, just for test

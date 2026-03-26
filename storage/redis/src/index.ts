@@ -363,7 +363,9 @@ export default class KeyvRedis<T>
 	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
-	public async setMany(entries: KeyvEntry[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(
+		entries: KeyvEntry<Value>[],
+	): Promise<boolean[] | undefined> {
 		try {
 			const results = new Array<boolean>(entries.length).fill(false);
 
@@ -374,7 +376,7 @@ export default class KeyvRedis<T>
 				// Group entries by slot to avoid CROSSSLOT errors, tracking original indices
 				const slotMap = new Map<
 					number,
-					Array<{ entry: KeyvEntry; index: number }>
+					Array<{ entry: KeyvEntry<Value>; index: number }>
 				>();
 				for (let i = 0; i < entries.length; i++) {
 					const entry = entries[i];
@@ -395,9 +397,9 @@ export default class KeyvRedis<T>
 						} of slotEntries) {
 							const prefixedKey = this.createKeyPrefix(key, this._namespace);
 							if (ttl) {
-								multi.set(prefixedKey, value, { PX: ttl });
+								multi.set(prefixedKey, value as string, { PX: ttl });
 							} else {
-								multi.set(prefixedKey, value);
+								multi.set(prefixedKey, value as string);
 							}
 						}
 						const execResults = await multi.exec();
@@ -413,9 +415,9 @@ export default class KeyvRedis<T>
 				for (const { key, value, ttl } of entries) {
 					const prefixedKey = this.createKeyPrefix(key, this._namespace);
 					if (ttl) {
-						multi.set(prefixedKey, value, { PX: ttl });
+						multi.set(prefixedKey, value as string, { PX: ttl });
 					} else {
-						multi.set(prefixedKey, value);
+						multi.set(prefixedKey, value as string);
 					}
 				}
 				const execResults = await multi.exec();
