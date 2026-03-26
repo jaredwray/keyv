@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 // biome-ignore-all lint/suspicious/noExplicitAny: test file accessing globals dynamically
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import type Keyv from "../src/index.js";
 
 // Strip Buffer to verify the btoa/atob fallback path in the serializer.
 // We keep process because hookified (and vitest internals) reference it;
@@ -14,10 +15,6 @@ beforeAll(() => {
 		(globalThis as any).Buffer = originalBuffer;
 	};
 });
-
-// eslint-disable-next-line no-promise-executor-return
-const sleep = async (ms: number) =>
-	new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("browser runtime - import", () => {
 	test("can import Keyv", async () => {
@@ -35,24 +32,25 @@ describe("browser runtime - import", () => {
 });
 
 describe("browser runtime - core operations", () => {
-	test("set and get", async () => {
+	let keyv: Keyv;
+
+	beforeEach(async () => {
 		const { default: Keyv } = await import("../src/index.js");
-		const keyv = new Keyv();
+		keyv = new Keyv();
+	});
+
+	test("set and get", async () => {
 		await keyv.set("foo", "bar");
 		expect(await keyv.get("foo")).toBe("bar");
 	});
 
 	test("delete", async () => {
-		const { default: Keyv } = await import("../src/index.js");
-		const keyv = new Keyv();
 		await keyv.set("foo", "bar");
 		expect(await keyv.delete("foo")).toBe(true);
 		expect(await keyv.get("foo")).toBeUndefined();
 	});
 
 	test("clear", async () => {
-		const { default: Keyv } = await import("../src/index.js");
-		const keyv = new Keyv();
 		await keyv.set("a", 1);
 		await keyv.set("b", 2);
 		await keyv.clear();
@@ -61,16 +59,12 @@ describe("browser runtime - core operations", () => {
 	});
 
 	test("has", async () => {
-		const { default: Keyv } = await import("../src/index.js");
-		const keyv = new Keyv();
 		await keyv.set("exists", "yes");
 		expect(await keyv.has("exists")).toBe(true);
 		expect(await keyv.has("missing")).toBe(false);
 	});
 
 	test("getMany", async () => {
-		const { default: Keyv } = await import("../src/index.js");
-		const keyv = new Keyv();
 		await keyv.set("a", 1);
 		await keyv.set("b", 2);
 		const values = await keyv.get(["a", "b", "c"]);
@@ -78,11 +72,11 @@ describe("browser runtime - core operations", () => {
 	});
 
 	test("TTL expiration", async () => {
-		const { default: Keyv } = await import("../src/index.js");
-		const keyv = new Keyv();
+		vi.useFakeTimers();
 		await keyv.set("temp", "value", 10);
-		await sleep(20);
+		vi.advanceTimersByTime(20);
 		expect(await keyv.get("temp")).toBeUndefined();
+		vi.useRealTimers();
 	});
 });
 
