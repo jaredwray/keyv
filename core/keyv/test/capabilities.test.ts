@@ -31,7 +31,6 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
@@ -56,7 +55,6 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
@@ -81,7 +79,6 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
@@ -111,7 +108,6 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
@@ -143,7 +139,6 @@ describe("capabilities", () => {
 				hooks: true,
 				stats: true,
 				iterator: true, // Iterator is present for Map store
-				namespace: true,
 			});
 		});
 
@@ -213,7 +208,7 @@ describe("capabilities", () => {
 				stats: {},
 			};
 			const result = isKeyv(obj);
-			expect(result.keyv).toBe(false); // Missing namespace
+			expect(result.keyv).toBe(false); // Missing many required methods
 			expect(result.hooks).toBe(true);
 			expect(result.stats).toBe(true);
 		});
@@ -226,7 +221,6 @@ describe("capabilities", () => {
 				clear: () => {},
 				hooks: {},
 				stats: {},
-				namespace: "test",
 			};
 			const result = isKeyv(obj);
 			expect(result.keyv).toBe(false); // Missing has, getMany, setMany, deleteMany, hasMany, disconnect, getRaw, getManyRaw, setRaw, setManyRaw, iterator
@@ -251,7 +245,6 @@ describe("capabilities", () => {
 				hooks: {},
 				stats: {},
 				iterator: () => {},
-				namespace: "test",
 			};
 			const result = isKeyv(obj);
 			expect(result.keyv).toBe(true); // Has all required capabilities
@@ -278,7 +271,6 @@ describe("capabilities", () => {
 				hooks: false,
 				stats: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
@@ -300,7 +292,6 @@ describe("capabilities", () => {
 				getMany: () => {},
 				hooks: {},
 				stats: {},
-				namespace: "test",
 			};
 			const result = isKeyv(obj);
 			expect(result.keyv).toBe(false); // Missing has, setMany, deleteMany, hasMany, disconnect, getRaw, getManyRaw, setRaw, setManyRaw, iterator
@@ -366,15 +357,15 @@ describe("capabilities", () => {
 			});
 		});
 
-		test("should return keyvStorage: true for new Map()", () => {
+		test("should return keyvStorage: false for new Map()", () => {
 			const result = isKeyvStorage(new Map());
-			expect(result.keyvStorage).toBe(true);
+			expect(result.keyvStorage).toBe(false); // Missing setMany, deleteMany, hasMany
 		});
 
 		test("should detect Map capabilities correctly", () => {
 			const result = isKeyvStorage(new Map());
 			expect(result).toEqual({
-				keyvStorage: true,
+				keyvStorage: false, // Missing setMany, deleteMany, hasMany
 				get: true,
 				set: true,
 				delete: true,
@@ -389,7 +380,7 @@ describe("capabilities", () => {
 			});
 		});
 
-		test("should return keyvStorage: true for storage adapter-like object", () => {
+		test("should return keyvStorage: false for object with only core CRUD methods", () => {
 			const adapter = {
 				get: async () => {},
 				set: async () => {},
@@ -397,7 +388,7 @@ describe("capabilities", () => {
 				clear: async () => {},
 			};
 			const result = isKeyvStorage(adapter);
-			expect(result.keyvStorage).toBe(true);
+			expect(result.keyvStorage).toBe(false); // Missing has, setMany, deleteMany, hasMany
 		});
 
 		test("should detect all storage adapter capabilities", () => {
@@ -433,6 +424,21 @@ describe("capabilities", () => {
 			});
 		});
 
+		test("should return keyvStorage: true when all required methods are present", () => {
+			const adapter = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				has: () => {},
+				setMany: () => {},
+				deleteMany: () => {},
+				hasMany: () => {},
+			};
+			const result = isKeyvStorage(adapter);
+			expect(result.keyvStorage).toBe(true);
+		});
+
 		test("should handle partial storage adapter objects with core methods", () => {
 			const partialAdapter = {
 				get: () => {},
@@ -441,7 +447,7 @@ describe("capabilities", () => {
 				clear: () => {},
 			};
 			const result = isKeyvStorage(partialAdapter);
-			expect(result.keyvStorage).toBe(true);
+			expect(result.keyvStorage).toBe(false); // Missing has, setMany, deleteMany, hasMany
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
@@ -495,10 +501,9 @@ describe("capabilities", () => {
 			});
 		});
 
-		test("should detect Keyv.store as storage adapter", () => {
+		test("should detect Keyv.store capabilities", () => {
 			const keyv = new Keyv();
 			const result = isKeyvStorage(keyv.store);
-			expect(result.keyvStorage).toBe(true);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);

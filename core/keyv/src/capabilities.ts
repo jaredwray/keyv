@@ -17,7 +17,6 @@ export type IsKeyvResult = {
 	hooks: boolean;
 	stats: boolean;
 	iterator: boolean;
-	namespace: boolean;
 };
 
 export type IsKeyvStorageResult = {
@@ -136,8 +135,9 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 			"getManyRaw",
 			"setRaw",
 			"setManyRaw",
+			"iterator",
 		],
-		properties: ["hooks", "stats", "iterator", "namespace"],
+		properties: ["hooks", "stats"],
 		requiredKeys: [
 			"get",
 			"set",
@@ -156,7 +156,6 @@ export function isKeyv(obj: unknown): IsKeyvResult {
 			"hooks",
 			"stats",
 			"iterator",
-			"namespace",
 		],
 		compositeKey: "keyv",
 	});
@@ -198,7 +197,16 @@ export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
 			"iterator",
 		],
 		properties: [],
-		requiredKeys: ["get", "set", "delete", "clear"],
+		requiredKeys: [
+			"get",
+			"has",
+			"hasMany",
+			"set",
+			"setMany",
+			"delete",
+			"deleteMany",
+			"clear",
+		],
 		compositeKey: "keyvStorage",
 	});
 }
