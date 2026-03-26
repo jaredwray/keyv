@@ -19,8 +19,11 @@ export type IsKeyvResult = {
 	iterator: boolean;
 };
 
+export type KeyvStorageMethodType = "sync" | "async" | "none";
+
 export type IsKeyvStorageResult = {
 	keyvStorage: boolean;
+	isMapLike: boolean;
 	get: boolean;
 	set: boolean;
 	delete: boolean;
@@ -32,6 +35,7 @@ export type IsKeyvStorageResult = {
 	hasMany: boolean;
 	disconnect: boolean;
 	iterator: boolean;
+	methodTypes: Record<string, KeyvStorageMethodType>;
 };
 
 export type IsKeyvCompressionResult = {
@@ -67,6 +71,19 @@ function hasMethod(obj: object, name: string): boolean {
 
 function hasProp(obj: object, name: string): boolean {
 	return name in obj;
+}
+
+function getMethodType(obj: object, name: string): KeyvStorageMethodType {
+	if (!(name in obj)) {
+		return "none";
+	}
+
+	const value = (obj as Record<string, unknown>)[name];
+	if (typeof value !== "function") {
+		return "none";
+	}
+
+	return value.constructor.name === "AsyncFunction" ? "async" : "sync";
 }
 
 function checkCapabilities<T extends Record<string, boolean>>(
@@ -182,33 +199,83 @@ export function isKeyv(obj: unknown): IsKeyvResult {
  * ```
  */
 export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
-	return checkCapabilities<IsKeyvStorageResult>(obj, {
-		methods: [
-			"get",
-			"set",
-			"delete",
-			"clear",
-			"has",
-			"getMany",
-			"setMany",
-			"deleteMany",
-			"hasMany",
-			"disconnect",
-			"iterator",
-		],
-		properties: [],
-		requiredKeys: [
-			"get",
-			"has",
-			"hasMany",
-			"set",
-			"setMany",
-			"delete",
-			"deleteMany",
-			"clear",
-		],
-		compositeKey: "keyvStorage",
-	});
+	const methodNames = [
+		"get",
+		"set",
+		"delete",
+		"clear",
+		"has",
+		"getMany",
+		"setMany",
+		"deleteMany",
+		"hasMany",
+		"disconnect",
+		"iterator",
+	];
+	const requiredKeys = [
+		"get",
+		"has",
+		"hasMany",
+		"set",
+		"setMany",
+		"delete",
+		"deleteMany",
+		"clear",
+	];
+
+	if (obj === null || obj === undefined || typeof obj !== "object") {
+		const methodTypes: Record<string, KeyvStorageMethodType> = {};
+		for (const name of methodNames) {
+			methodTypes[name] = "none";
+		}
+
+		return {
+			keyvStorage: false,
+			isMapLike: false,
+			get: false,
+			set: false,
+			delete: false,
+			clear: false,
+			has: false,
+			getMany: false,
+			setMany: false,
+			deleteMany: false,
+			hasMany: false,
+			disconnect: false,
+			iterator: false,
+			methodTypes,
+		};
+	}
+
+	const result: Record<string, boolean> = {};
+	const methodTypes: Record<string, KeyvStorageMethodType> = {};
+	for (const name of methodNames) {
+		result[name] = hasMethod(obj, name);
+		methodTypes[name] = getMethodType(obj, name);
+	}
+
+	const keyvStorage = requiredKeys.every((k) => result[k]);
+	const mapLikeMethods = ["get", "set", "delete", "has", "entries", "keys"];
+	const isMapLike = mapLikeMethods.every(
+		(m) => hasMethod(obj, m) && getMethodType(obj, m) === "sync",
+	);
+
+	return {
+		keyvStorage,
+		isMapLike,
+		get: result.get,
+		set: result.set,
+		delete: result.delete,
+		clear: result.clear,
+		has: result.has,
+		getMany: result.getMany,
+		setMany: result.setMany,
+		deleteMany: result.deleteMany,
+		hasMany: result.hasMany,
+		disconnect: result.disconnect,
+		iterator: result.iterator,
+		methodTypes,
+	};
 }
 
 /**

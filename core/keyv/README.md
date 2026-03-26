@@ -536,6 +536,7 @@ import {
   isKeyvCompression,
   isKeyvSerialization,
   isKeyvEncryption,
+  checkCapabilities,
 } from 'keyv';
 ```
 
@@ -550,7 +551,7 @@ isKeyv(new Keyv());
 // { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
 //   getMany: true, setMany: true, deleteMany: true, hasMany: true,
 //   disconnect: true, getRaw: true, getManyRaw: true, setRaw: true,
-//   setManyRaw: true, hooks: true, stats: true, iterator: true, namespace: true }
+//   setManyRaw: true, hooks: true, stats: true, iterator: true }
 
 isKeyv(new Map());
 // { keyv: false, get: true, set: true, ... }
@@ -558,14 +559,31 @@ isKeyv(new Map());
 
 ## isKeyvStorage(obj)
 
-Returns an `IsKeyvStorageResult`. The `keyvStorage` flag is `true` when the object has `get`, `set`, `delete`, `clear`, and `namespace`.
+Returns an `IsKeyvStorageResult`. The `keyvStorage` flag is `true` when the object has `get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, and `hasMany`.
+
+The result also includes:
+- **`isMapLike`** — `true` when the object has synchronous `get`, `set`, `delete`, `has`, `entries`, and `keys` methods (i.e. it behaves like a `Map`)
+- **`methodTypes`** — a record mapping each method name to `"sync"`, `"async"`, or `"none"` (not present)
 
 ```ts
 import { isKeyvStorage } from 'keyv';
 
-const adapter = { namespace: 'test', get: async () => {}, set: async () => {}, delete: async () => {}, clear: async () => {} };
-isKeyvStorage(adapter);
-// { keyvStorage: true, get: true, set: true, delete: true, clear: true, has: false, ... }
+// Map-like object
+const result = isKeyvStorage(new Map());
+result.isMapLike; // true
+result.methodTypes.get; // "sync"
+result.methodTypes.set; // "sync"
+
+// Async storage adapter
+const adapter = {
+  get: async () => {}, set: async () => {}, delete: async () => {},
+  clear: async () => {}, has: async () => {}, setMany: async () => {},
+  deleteMany: async () => {}, hasMany: async () => {},
+};
+const adapterResult = isKeyvStorage(adapter);
+adapterResult.keyvStorage; // true
+adapterResult.isMapLike; // false
+adapterResult.methodTypes.get; // "async"
 ```
 
 ## isKeyvCompression(obj)
@@ -599,6 +617,22 @@ import { isKeyvEncryption } from 'keyv';
 
 isKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
 // { keyvEncryption: true, encrypt: true, decrypt: true }
+```
+
+## checkCapabilities(obj, spec)
+
+A generic helper for building your own capability checks. Accepts a `CheckCapabilitiesSpec` describing which methods and properties to look for, which are required, and the name of the composite boolean key.
+
+```ts
+import { checkCapabilities } from 'keyv';
+
+const result = checkCapabilities(myObject, {
+  methods: ['read', 'write'],
+  properties: ['name'],
+  requiredKeys: ['read', 'write', 'name'],
+  compositeKey: 'isValid',
+});
+// { isValid: true/false, read: true/false, write: true/false, name: true/false }
 ```
 
 # API

@@ -18,6 +18,7 @@ export type {
 	IsKeyvResult,
 	IsKeyvSerializationResult,
 	IsKeyvStorageResult,
+	KeyvStorageMethodType,
 } from "./capabilities.js";
 export {
 	isKeyv,

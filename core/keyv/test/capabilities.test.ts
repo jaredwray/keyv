@@ -303,10 +303,25 @@ describe("capabilities", () => {
 	});
 
 	describe("isKeyvStorage", () => {
+		const allNoneMethodTypes = {
+			get: "none",
+			set: "none",
+			delete: "none",
+			clear: "none",
+			has: "none",
+			getMany: "none",
+			setMany: "none",
+			deleteMany: "none",
+			hasMany: "none",
+			disconnect: "none",
+			iterator: "none",
+		};
+
 		test("should return all false for null", () => {
 			const result = isKeyvStorage(null);
 			expect(result).toEqual({
 				keyvStorage: false,
+				isMapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -318,6 +333,7 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
@@ -325,6 +341,7 @@ describe("capabilities", () => {
 			const result = isKeyvStorage(undefined);
 			expect(result).toEqual({
 				keyvStorage: false,
+				isMapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -336,6 +353,7 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
@@ -343,6 +361,7 @@ describe("capabilities", () => {
 			const result = isKeyvStorage("string");
 			expect(result).toEqual({
 				keyvStorage: false,
+				isMapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -354,18 +373,21 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
-		test("should return keyvStorage: false for new Map()", () => {
+		test("should return keyvStorage: false and isMapLike: true for new Map()", () => {
 			const result = isKeyvStorage(new Map());
 			expect(result.keyvStorage).toBe(false); // Missing setMany, deleteMany, hasMany
+			expect(result.isMapLike).toBe(true);
 		});
 
 		test("should detect Map capabilities correctly", () => {
 			const result = isKeyvStorage(new Map());
 			expect(result).toEqual({
 				keyvStorage: false, // Missing setMany, deleteMany, hasMany
+				isMapLike: true,
 				get: true,
 				set: true,
 				delete: true,
@@ -377,7 +399,37 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false, // Map has Symbol.iterator, not iterator method
+				methodTypes: {
+					get: "sync",
+					set: "sync",
+					delete: "sync",
+					clear: "sync",
+					has: "sync",
+					getMany: "none",
+					setMany: "none",
+					deleteMany: "none",
+					hasMany: "none",
+					disconnect: "none",
+					iterator: "none",
+				},
 			});
+		});
+
+		test("should return keyvStorage: true for Map with required methods added", () => {
+			const store = Object.assign(new Map(), {
+				hasMany: () => [],
+				setMany: () => {},
+				deleteMany: () => [],
+			});
+			const result = isKeyvStorage(store);
+			expect(result.keyvStorage).toBe(true);
+			expect(result.isMapLike).toBe(true);
+			expect(result.methodTypes.get).toBe("sync");
+			expect(result.methodTypes.set).toBe("sync");
+			expect(result.methodTypes.has).toBe("sync");
+			expect(result.methodTypes.hasMany).toBe("sync");
+			expect(result.methodTypes.setMany).toBe("sync");
+			expect(result.methodTypes.deleteMany).toBe("sync");
 		});
 
 		test("should return keyvStorage: false for object with only core CRUD methods", () => {
@@ -389,6 +441,7 @@ describe("capabilities", () => {
 			};
 			const result = isKeyvStorage(adapter);
 			expect(result.keyvStorage).toBe(false); // Missing has, setMany, deleteMany, hasMany
+			expect(result.isMapLike).toBe(false);
 		});
 
 		test("should detect all storage adapter capabilities", () => {
@@ -410,6 +463,7 @@ describe("capabilities", () => {
 			const result = isKeyvStorage(adapter);
 			expect(result).toEqual({
 				keyvStorage: true,
+				isMapLike: false,
 				get: true,
 				set: true,
 				delete: true,
@@ -421,6 +475,19 @@ describe("capabilities", () => {
 				hasMany: true,
 				disconnect: true,
 				iterator: true,
+				methodTypes: {
+					get: "async",
+					set: "async",
+					delete: "async",
+					clear: "async",
+					has: "async",
+					getMany: "async",
+					setMany: "async",
+					deleteMany: "async",
+					hasMany: "async",
+					disconnect: "async",
+					iterator: "sync",
+				},
 			});
 		});
 
@@ -437,6 +504,7 @@ describe("capabilities", () => {
 			};
 			const result = isKeyvStorage(adapter);
 			expect(result.keyvStorage).toBe(true);
+			expect(result.isMapLike).toBe(false);
 		});
 
 		test("should handle partial storage adapter objects with core methods", () => {
@@ -448,6 +516,7 @@ describe("capabilities", () => {
 			};
 			const result = isKeyvStorage(partialAdapter);
 			expect(result.keyvStorage).toBe(false); // Missing has, setMany, deleteMany, hasMany
+			expect(result.isMapLike).toBe(false);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
@@ -461,6 +530,7 @@ describe("capabilities", () => {
 			};
 			const result = isKeyvStorage(obj);
 			expect(result.keyvStorage).toBe(false); // Missing delete and clear
+			expect(result.isMapLike).toBe(false);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(false);
@@ -481,12 +551,14 @@ describe("capabilities", () => {
 			expect(result.delete).toBe(false);
 			expect(result.clear).toBe(false);
 			expect(result.has).toBe(false);
+			expect(result.methodTypes.get).toBe("none");
 		});
 
 		test("should handle empty object", () => {
 			const result = isKeyvStorage({});
 			expect(result).toEqual({
 				keyvStorage: false,
+				isMapLike: false,
 				get: false,
 				set: false,
 				delete: false,
@@ -498,6 +570,7 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
+				methodTypes: allNoneMethodTypes,
 			});
 		});
 
@@ -508,6 +581,68 @@ describe("capabilities", () => {
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
 			expect(result.clear).toBe(true);
+		});
+
+		test("should detect sync method types", () => {
+			const adapter = {
+				get: () => {},
+				set: () => {},
+				delete: () => {},
+				clear: () => {},
+				has: () => {},
+				setMany: () => {},
+				deleteMany: () => {},
+				hasMany: () => {},
+			};
+			const result = isKeyvStorage(adapter);
+			expect(result.methodTypes.get).toBe("sync");
+			expect(result.methodTypes.set).toBe("sync");
+			expect(result.methodTypes.delete).toBe("sync");
+			expect(result.methodTypes.clear).toBe("sync");
+			expect(result.methodTypes.has).toBe("sync");
+			expect(result.methodTypes.getMany).toBe("none");
+		});
+
+		test("should detect async method types", () => {
+			const adapter = {
+				get: async () => {},
+				set: async () => {},
+				delete: async () => {},
+				clear: async () => {},
+				has: async () => {},
+				setMany: async () => {},
+				deleteMany: async () => {},
+				hasMany: async () => {},
+			};
+			const result = isKeyvStorage(adapter);
+			expect(result.methodTypes.get).toBe("async");
+			expect(result.methodTypes.set).toBe("async");
+			expect(result.methodTypes.delete).toBe("async");
+			expect(result.methodTypes.clear).toBe("async");
+			expect(result.methodTypes.has).toBe("async");
+			expect(result.methodTypes.getMany).toBe("none");
+		});
+
+		test("should detect mixed sync and async method types", () => {
+			const adapter = {
+				get: async () => {},
+				set: () => {},
+				delete: async () => {},
+				clear: () => {},
+				has: async () => {},
+				setMany: () => {},
+				deleteMany: async () => {},
+				hasMany: () => {},
+			};
+			const result = isKeyvStorage(adapter);
+			expect(result.methodTypes.get).toBe("async");
+			expect(result.methodTypes.set).toBe("sync");
+			expect(result.methodTypes.delete).toBe("async");
+			expect(result.methodTypes.clear).toBe("sync");
+			expect(result.methodTypes.has).toBe("async");
+			expect(result.methodTypes.setMany).toBe("sync");
+			expect(result.methodTypes.deleteMany).toBe("async");
+			expect(result.methodTypes.hasMany).toBe("sync");
 		});
 	});
 
