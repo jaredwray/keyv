@@ -327,7 +327,6 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
@@ -346,7 +345,6 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
@@ -365,19 +363,18 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
-		test("should return keyvStorage: false for new Map() (no namespace)", () => {
+		test("should return keyvStorage: true for new Map()", () => {
 			const result = isKeyvStorage(new Map());
-			expect(result.keyvStorage).toBe(false);
+			expect(result.keyvStorage).toBe(true);
 		});
 
 		test("should detect Map capabilities correctly", () => {
 			const result = isKeyvStorage(new Map());
 			expect(result).toEqual({
-				keyvStorage: false, // Map lacks namespace property
+				keyvStorage: true,
 				get: true,
 				set: true,
 				delete: true,
@@ -389,13 +386,11 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false, // Map has Symbol.iterator, not iterator method
-				namespace: false,
 			});
 		});
 
 		test("should return keyvStorage: true for storage adapter-like object", () => {
 			const adapter = {
-				namespace: "test",
 				get: async () => {},
 				set: async () => {},
 				delete: async () => {},
@@ -407,7 +402,6 @@ describe("capabilities", () => {
 
 		test("should detect all storage adapter capabilities", () => {
 			const adapter = {
-				namespace: "test",
 				get: async () => {},
 				set: async () => {},
 				delete: async () => {},
@@ -436,11 +430,10 @@ describe("capabilities", () => {
 				hasMany: true,
 				disconnect: true,
 				iterator: true,
-				namespace: true,
 			});
 		});
 
-		test("should handle partial storage adapter objects (no namespace)", () => {
+		test("should handle partial storage adapter objects with core methods", () => {
 			const partialAdapter = {
 				get: () => {},
 				set: () => {},
@@ -448,24 +441,11 @@ describe("capabilities", () => {
 				clear: () => {},
 			};
 			const result = isKeyvStorage(partialAdapter);
-			expect(result.keyvStorage).toBe(false); // Missing namespace
+			expect(result.keyvStorage).toBe(true);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
 			expect(result.clear).toBe(true);
-		});
-
-		test("should handle partial storage adapter objects (with namespace)", () => {
-			const partialAdapter = {
-				namespace: undefined,
-				get: () => {},
-				set: () => {},
-				delete: () => {},
-				clear: () => {},
-			};
-			const result = isKeyvStorage(partialAdapter);
-			expect(result.keyvStorage).toBe(true); // Has core methods + namespace
-			expect(result.namespace).toBe(true);
 		});
 
 		test("should detect objects with only some methods", () => {
@@ -512,30 +492,17 @@ describe("capabilities", () => {
 				hasMany: false,
 				disconnect: false,
 				iterator: false,
-				namespace: false,
 			});
 		});
 
 		test("should detect Keyv.store as storage adapter", () => {
 			const keyv = new Keyv();
 			const result = isKeyvStorage(keyv.store);
-			expect(result.keyvStorage).toBe(true); // Map has core methods
+			expect(result.keyvStorage).toBe(true);
 			expect(result.get).toBe(true);
 			expect(result.set).toBe(true);
 			expect(result.delete).toBe(true);
 			expect(result.clear).toBe(true);
-		});
-
-		test("should handle storage adapter without namespace", () => {
-			const adapter = {
-				get: async () => {},
-				set: async () => {},
-				delete: async () => {},
-				clear: async () => {},
-			};
-			const result = isKeyvStorage(adapter);
-			expect(result.keyvStorage).toBe(false); // Missing namespace
-			expect(result.namespace).toBe(false);
 		});
 	});
 

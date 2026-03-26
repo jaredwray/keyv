@@ -33,7 +33,6 @@ export type IsKeyvStorageResult = {
 	hasMany: boolean;
 	disconnect: boolean;
 	iterator: boolean;
-	namespace: boolean;
 };
 
 export type IsKeyvCompressionResult = {
@@ -198,8 +197,8 @@ export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
 			"disconnect",
 			"iterator",
 		],
-		properties: ["namespace"],
-		requiredKeys: ["get", "set", "delete", "clear", "namespace"],
+		properties: [],
+		requiredKeys: ["get", "set", "delete", "clear"],
 		compositeKey: "keyvStorage",
 	});
 }
