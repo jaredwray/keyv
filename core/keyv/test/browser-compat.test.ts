@@ -36,7 +36,7 @@ const BARE_NODE_MODULES = NODE_BUILTIN_MODULES.map((mod) =>
 //   import("mod") (dynamic)
 //   require("mod")
 function buildPatterns(mod: string): RegExp[] {
- const escaped = mod.replace(/[.*+?^${}()|[\\\]]/g, "\\$&");
+	const escaped = mod.replace(/[.*+?^${}()|[\\\]]/g, "\\$&");
 	return [
 		new RegExp(`from\\s+["']${escaped}["']`),
 		new RegExp(`import\\s+["']${escaped}["']`),
