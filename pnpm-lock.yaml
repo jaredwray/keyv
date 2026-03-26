@@ -22,7 +22,7 @@ importers:
         version: 24.10.4
       '@vitest/coverage-v8':
         specifier: ^4.0.18
-        version: 4.0.18(vitest@4.0.18(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.4)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       js-yaml:
         specifier: ^4.1.1
         version: 4.1.1
@@ -43,7 +43,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@24.10.4)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   compression/compress-brotli:
     dependencies:
@@ -59,13 +59,13 @@ importers:
         version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.18
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   compression/compress-gzip:
     dependencies:
@@ -87,7 +87,7 @@ importers:
         version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.18
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
@@ -96,7 +96,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   compression/compress-lz4:
     dependencies:
@@ -115,13 +115,13 @@ importers:
         version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.14
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
       vitest:
         specifier: ^4.0.14
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   core/bigmap:
     dependencies:
@@ -146,7 +146,7 @@ importers:
         version: 0.3.0(tinybench@6.0.0)
       '@vitest/coverage-v8':
         specifier: ^4.0.17
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
@@ -161,7 +161,7 @@ importers:
         version: 4.21.0
       vitest:
         specifier: ^4.0.17
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   core/keyv:
     dependencies:
@@ -177,7 +177,10 @@ importers:
         version: 10.2.0
       '@vitest/coverage-v8':
         specifier: ^4.0.18
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
+      happy-dom:
+        specifier: ^18.0.1
+        version: 18.0.1
       lru.min:
         specifier: ^1.1.1
         version: 1.1.1
@@ -195,7 +198,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   core/test-suite:
     dependencies:
@@ -204,7 +207,7 @@ importers:
         version: 10.2.0
       '@vitest/coverage-v8':
         specifier: ^4.0.15
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       bignumber.js:
         specifier: ^9.3.1
         version: 9.3.1
@@ -222,7 +225,7 @@ importers:
         version: 2.3.1
       vitest:
         specifier: ^4.0.15
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.8
@@ -251,7 +254,7 @@ importers:
         version: 2.3.14
       '@vitest/coverage-v8':
         specifier: ^4.0.18
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
@@ -263,7 +266,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   serialization/superjson:
     dependencies:
@@ -279,7 +282,7 @@ importers:
         version: 2.3.14
       '@vitest/coverage-v8':
         specifier: ^4.0.18
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
@@ -291,7 +294,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   storage/dynamo:
     dependencies:
@@ -370,7 +373,7 @@ importers:
         version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.16
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
@@ -379,7 +382,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.0.16
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   storage/mysql:
     dependencies:
@@ -401,7 +404,7 @@ importers:
         version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.17
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -416,7 +419,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.0.17
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   storage/postgres:
     dependencies:
@@ -444,7 +447,7 @@ importers:
         version: 8.16.0
       '@vitest/coverage-v8':
         specifier: ^4.0.17
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       rimraf:
         specifier: ^6.1.2
         version: 6.1.2
@@ -453,7 +456,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.0.17
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   storage/redis:
     dependencies:
@@ -531,7 +534,7 @@ importers:
         version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.15
-        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))
+        version: 4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -546,7 +549,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.0.15
-        version: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+        version: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   website:
     devDependencies:
@@ -2013,6 +2016,9 @@ packages:
   '@types/ms@0.7.34':
     resolution: {integrity: sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==}
 
+  '@types/node@20.19.37':
+    resolution: {integrity: sha512-8kzdPJ3FsNsVIurqBs7oodNnCEVbni9yUEkaHbgptDACOPW04jimGagZ51E6+lXUwJjgnBw+hyko/lkFWCldqw==}
+
   '@types/node@24.10.4':
     resolution: {integrity: sha512-vnDVpYPMzs4wunl27jHrfmwojOGKya0xyM3sH+UE5iv5uPS6vX7UIoh6m+vQc5LGBq52HBKPIn/zcSZVzeDEZg==}
 
@@ -2039,6 +2045,9 @@ packages:
 
   '@types/webidl-conversions@7.0.3':
     resolution: {integrity: sha512-CiJJvcRtIgzadHCYXw7dqEnMNRjhGZlYK05Mj9OyktqV8uVT8fD2BFOB7S1uwBE3Kj2Z+4UyPmFw/Ixgw/LAlA==}
+
+  '@types/whatwg-mimetype@3.0.2':
+    resolution: {integrity: sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA==}
 
   '@types/whatwg-url@13.0.0':
     resolution: {integrity: sha512-N8WXpbE6Wgri7KUSvrmQcqrMllKZ9uxkYWMt+mCSGwNc0Hsw9VQTW7ApqI4XNrx6/SaM2QQJCzMPDEXE058s+Q==}
@@ -2952,6 +2961,10 @@ packages:
     resolution: {integrity: sha512-vafaFqs8MZkRrSX7sFVUdo3ap/eNiLnb4IakshzvP56X5Nr1iGKAIqdX6tMlm6HcNRIkr6AxO5jFEoJzzpT8aQ==}
     engines: {node: '>=0.4.7'}
     hasBin: true
+
+  happy-dom@18.0.1:
+    resolution: {integrity: sha512-qn+rKOW7KWpVTtgIUi6RVmTBZJSe2k0Db0vh1f7CWrWclkkc7/Q+FrOfkZIb2eiErLyqu5AXEzE7XthO9JVxRA==}
+    engines: {node: '>=20.0.0'}
 
   hard-rejection@2.1.0:
     resolution: {integrity: sha512-VIZB+ibDhx7ObhAe7OVtoEbuP4h/MuOTHJ+J8h/eBXotJYl0fBgR72xDFCKgIh22OJZIOVNxBMWuhAr10r8HdA==}
@@ -4662,6 +4675,9 @@ packages:
     engines: {node: '>=0.8.0'}
     hasBin: true
 
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
@@ -4821,6 +4837,10 @@ packages:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
     deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+
+  whatwg-mimetype@3.0.0:
+    resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
+    engines: {node: '>=12'}
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -6355,6 +6375,10 @@ snapshots:
 
   '@types/ms@0.7.34': {}
 
+  '@types/node@20.19.37':
+    dependencies:
+      undici-types: 6.21.0
+
   '@types/node@24.10.4':
     dependencies:
       undici-types: 7.16.0
@@ -6381,13 +6405,15 @@ snapshots:
 
   '@types/webidl-conversions@7.0.3': {}
 
+  '@types/whatwg-mimetype@3.0.2': {}
+
   '@types/whatwg-url@13.0.0':
     dependencies:
       '@types/webidl-conversions': 7.0.3
 
   '@ungap/structured-clone@1.2.1': {}
 
-  '@vitest/coverage-v8@4.0.18(vitest@4.0.18(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0))':
+  '@vitest/coverage-v8@4.0.18(vitest@4.0.18(@types/node@24.10.4)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.0.18
@@ -6399,9 +6425,9 @@ snapshots:
       obug: 2.1.1
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.18(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0)
+      vitest: 4.0.18(@types/node@24.10.4)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
-  '@vitest/coverage-v8@4.0.18(vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0))':
+  '@vitest/coverage-v8@4.0.18(vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.0.18
@@ -6413,7 +6439,7 @@ snapshots:
       obug: 2.1.1
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0)
+      vitest: 4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0)
 
   '@vitest/expect@4.0.18':
     dependencies:
@@ -7436,6 +7462,12 @@ snapshots:
       wordwrap: 1.0.0
     optionalDependencies:
       uglify-js: 3.19.3
+
+  happy-dom@18.0.1:
+    dependencies:
+      '@types/node': 20.19.37
+      '@types/whatwg-mimetype': 3.0.2
+      whatwg-mimetype: 3.0.0
 
   hard-rejection@2.1.0: {}
 
@@ -9678,6 +9710,8 @@ snapshots:
   uglify-js@3.19.3:
     optional: true
 
+  undici-types@6.21.0: {}
+
   undici-types@7.16.0: {}
 
   undici@7.16.0: {}
@@ -9806,7 +9840,7 @@ snapshots:
       terser: 5.37.0
       tsx: 4.21.0
 
-  vitest@4.0.18(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0):
+  vitest@4.0.18(@types/node@24.10.4)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.18
       '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0))
@@ -9830,6 +9864,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.4
+      happy-dom: 18.0.1
     transitivePeerDependencies:
       - jiti
       - less
@@ -9843,7 +9878,7 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@4.0.18(@types/node@25.0.2)(terser@5.37.0)(tsx@4.21.0):
+  vitest@4.0.18(@types/node@25.0.2)(happy-dom@18.0.1)(terser@5.37.0)(tsx@4.21.0):
     dependencies:
       '@vitest/expect': 4.0.18
       '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@24.10.4)(terser@5.37.0)(tsx@4.21.0))
@@ -9867,6 +9902,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.0.2
+      happy-dom: 18.0.1
     transitivePeerDependencies:
       - jiti
       - less
@@ -9891,6 +9927,8 @@ snapshots:
   whatwg-encoding@3.1.1:
     dependencies:
       iconv-lite: 0.6.3
+
+  whatwg-mimetype@3.0.0: {}
 
   whatwg-mimetype@4.0.0: {}
 

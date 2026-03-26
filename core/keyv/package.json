@@ -64,6 +64,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.13",
 		"@faker-js/faker": "^10.2.0",
+		"happy-dom": "^18.0.1",
 		"@vitest/coverage-v8": "^4.0.18",
 		"lru.min": "^1.1.1",
 		"quick-lru": "^7.0.0",
