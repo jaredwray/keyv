@@ -6,7 +6,6 @@ import type {
 	DeleteOutput,
 	GetOutput,
 	HasOutput,
-	SetOutput,
 } from "./types.js";
 
 /**
@@ -313,11 +312,11 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * @param key - The key to store
 	 * @param value - The value to store
 	 */
-	public async set(key: string, value: GenericValue): SetOutput {
+	// biome-ignore lint/suspicious/noExplicitAny: type format
+	public async set(key: string, value: any, ttl?: number): Promise<void> {
 		try {
 			const target = this._ttl ? this._lease : this._client;
 
-			// @ts-expect-error - Value needs to be number, string or buffer
 			await target?.put(this.formatKey(key)).value(value);
 		} catch (error) {
 			this.emit("error", error);
@@ -328,11 +327,11 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * Stores multiple values in the etcd server.
 	 * @param entries - An array of objects containing key and value
 	 */
-	public async setMany<Value = GenericValue>(
+	public async setMany<Value>(
 		entries: KeyvEntry<Value>[],
 	): Promise<boolean[] | undefined> {
 		const promises = entries.map(async ({ key, value }) =>
-			this.set(key, value as unknown as GenericValue),
+			this.set(key, value),
 		);
 		const results = await Promise.allSettled(promises);
 		const boolResults: boolean[] = [];

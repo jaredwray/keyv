@@ -72,7 +72,8 @@ export enum KeyvHooks {
 	AFTER_DELETE = "after:delete",
 }
 
-export type KeyvEntry<Value> = {
+// biome-ignore lint/suspicious/noExplicitAny: type format
+export type KeyvEntry<Value = any> = {
 	/**
 	 * Key to set.
 	 */
