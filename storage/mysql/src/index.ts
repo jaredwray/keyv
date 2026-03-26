@@ -404,7 +404,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			const upsert = mysql.format(sql, insert);
 			await this.query(upsert);
 			return true;
-		} catch {
+		} catch (error) {
+			this.emit("error", error);
 			return false;
 		}
 	}

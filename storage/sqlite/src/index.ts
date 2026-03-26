@@ -486,7 +486,8 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
 			await this.query(upsert, strippedKey, value, ns, expires);
 			return true;
-		} catch {
+		} catch (error) {
+			this.emit("error", error);
 			return false;
 		}
 	}

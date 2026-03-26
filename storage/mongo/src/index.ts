@@ -371,7 +371,8 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				{ upsert: true },
 			);
 			return true;
-		} catch {
+		} catch (error) {
+			this.emit("error", error);
 			return false;
 		}
 	}
@@ -465,7 +466,8 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				// biome-ignore lint/style/noNonNullAssertion: need to fix
 				await client.bucket!.delete(files[0]._id);
 				return true;
-			} catch {
+			} catch (error) {
+				this.emit("error", error);
 				return false;
 			}
 		}

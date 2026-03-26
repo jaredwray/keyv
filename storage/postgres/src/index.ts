@@ -414,7 +414,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 				expires,
 			]);
 			return true;
-		} catch {
+		} catch (error) {
+			this.emit("error", error);
 			return false;
 		}
 	}

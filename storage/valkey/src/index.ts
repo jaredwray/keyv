@@ -256,7 +256,8 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			}
 
 			return true;
-		} catch {
+		} catch (error) {
+			this.emit("error", error);
 			return false;
 		}
 	}
