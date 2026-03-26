@@ -315,7 +315,14 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any, ttl?: number): Promise<void> {
 		try {
-			const target = this._ttl ? this._lease : this._client;
+			const target =
+				typeof ttl === "number"
+					? this._client.lease(Math.max(ttl / 1000, 1), {
+							autoKeepAlive: false,
+						})
+					: this._ttl
+						? this._lease
+						: this._client;
 
 			await target?.put(this.formatKey(key)).value(value);
 		} catch (error) {
@@ -330,8 +337,8 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	public async setMany<Value>(
 		entries: KeyvEntry<Value>[],
 	): Promise<boolean[] | undefined> {
-		const promises = entries.map(async ({ key, value }) =>
-			this.set(key, value),
+		const promises = entries.map(async ({ key, value, ttl }) =>
+			this.set(key, value, ttl),
 		);
 		const results = await Promise.allSettled(promises);
 		const boolResults: boolean[] = [];
