@@ -1,0 +1,38 @@
+name: browser
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  browser-compat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: browser
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Keyv
+        run: pnpm build:keyv
+
+      - name: Run Browser Compatibility Tests
+        working-directory: core/keyv
+        run: pnpm vitest run test/browser-compat.test.ts test/browser-runtime.test.ts
