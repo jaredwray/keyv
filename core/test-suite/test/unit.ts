@@ -7,15 +7,9 @@ import keyvTestSuite, {
 } from "../src/index.js";
 
 const storeExtended = () => {
-	class MapExtend extends Map {
-		// biome-ignore lint/suspicious/noExplicitAny: type format for Map
-		constructor(map: Map<any, any>) {
-			// @ts-expect-error - super don't accept arguments
-			super(map);
-		}
-	}
+	class MapExtend extends Map {}
 
-	return new MapExtend(new Map());
+	return new MapExtend();
 };
 
 keyvTestSuite(test, Keyv, storeExtended);

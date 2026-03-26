@@ -41,11 +41,9 @@ test.it("should be able to create a keyv instance", (t) => {
 });
 
 test.it("should be able to create a keyv instance with namespace", (t) => {
-	const keyv = new Keyv<string>({
-		store: new KeyvDynamo({ endpoint: dynamoURL, namespace: "test" }),
-	});
-	t.expect((keyv.store as KeyvDynamo).endpoint).toEqual(dynamoURL);
-	t.expect((keyv.store as KeyvDynamo).namespace).toEqual("test");
+	const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: "test" });
+	t.expect(store.endpoint).toEqual(dynamoURL);
+	t.expect(store.namespace).toEqual("test");
 });
 
 test.it(".clear() entire cache store with default namespace", async (t) => {

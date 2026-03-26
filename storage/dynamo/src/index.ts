@@ -45,6 +45,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			...options,
 		};
 
+		if (this._opts.namespace) {
+			this._namespace = this._opts.namespace;
+		}
+
 		this._client = DynamoDBDocument.from(new DynamoDB(this._opts));
 
 		this._tableReady = this.ensureTable(this._opts.tableName).catch(

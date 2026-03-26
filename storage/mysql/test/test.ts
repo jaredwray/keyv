@@ -633,14 +633,13 @@ test.it("properties are set correctly via constructor options", (t) => {
 	t.expect(keyv.iterationLimit).toBe(50);
 });
 
-test.it("opts getter returns composed object", (t) => {
+test.it("property getters return configured values", (t) => {
 	const keyv = new KeyvMysql({ uri, table: "custom", keyLength: 512 });
-	const { opts } = keyv;
-	t.expect(opts.table).toBe("custom");
-	t.expect(opts.keyLength).toBe(512);
-	t.expect(opts.uri).toBe(uri);
-	t.expect(opts.namespaceLength).toBe(255);
-	t.expect(opts.iterationLimit).toBe(10);
+	t.expect(keyv.table).toBe("custom");
+	t.expect(keyv.keyLength).toBe(512);
+	t.expect(keyv.uri).toBe(uri);
+	t.expect(keyv.namespaceLength).toBe(255);
+	t.expect(keyv.iterationLimit).toBe(10);
 });
 
 test.it("individual property setters work", (t) => {

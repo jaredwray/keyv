@@ -290,6 +290,13 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
+	 * Alias for `keySize`. Returns the maximum key length.
+	 */
+	public get keyLength(): number {
+		return this._keySize;
+	}
+
+	/**
 	 * Get the maximum namespace length (VARCHAR length) for the namespace column.
 	 * @default 255
 	 */
