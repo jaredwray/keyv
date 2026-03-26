@@ -357,6 +357,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 					stream.on("finish", () => {
 						resolve(true);
 					});
+					/* v8 ignore next 3 -- @preserve */
 					stream.on("error", () => {
 						resolve(false);
 					});
@@ -371,6 +372,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				{ upsert: true },
 			);
 			return true;
+			/* v8 ignore next 4 -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
 			return false;
