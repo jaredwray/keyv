@@ -231,10 +231,11 @@ export function isKeyvStorage(obj: unknown): IsKeyvStorageResult {
  * ```
  */
 export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
+	const methods = ["compress", "decompress"];
 	return checkCapabilities<IsKeyvCompressionResult>(obj, {
-		methods: ["compress", "decompress"],
+		methods,
 		properties: [],
-		requiredKeys: ["compress", "decompress"],
+		requiredKeys: methods,
 		compositeKey: "keyvCompression",
 	});
 }
@@ -259,10 +260,11 @@ export function isKeyvCompression(obj: unknown): IsKeyvCompressionResult {
  * ```
  */
 export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
+	const methods = ["stringify", "parse"];
 	return checkCapabilities<IsKeyvSerializationResult>(obj, {
-		methods: ["stringify", "parse"],
+		methods,
 		properties: [],
-		requiredKeys: ["stringify", "parse"],
+		requiredKeys: methods,
 		compositeKey: "keyvSerialization",
 	});
 }
@@ -287,10 +289,11 @@ export function isKeyvSerialization(obj: unknown): IsKeyvSerializationResult {
  * ```
  */
 export function isKeyvEncryption(obj: unknown): IsKeyvEncryptionResult {
+	const methods = ["encrypt", "decrypt"];
 	return checkCapabilities<IsKeyvEncryptionResult>(obj, {
-		methods: ["encrypt", "decrypt"],
+		methods,
 		properties: [],
-		requiredKeys: ["encrypt", "decrypt"],
+		requiredKeys: methods,
 		compositeKey: "keyvEncryption",
 	});
 }
