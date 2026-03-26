@@ -133,24 +133,20 @@ export function detectCapabilities<T extends Record<string, boolean>>(
 }
 
 /**
- * Detect if an object is a Keyv instance or has Keyv-like capabilities
+ * Detect whether an object implements the full Keyv interface
  * @param obj - The object to check
- * @returns An object with boolean properties for each Keyv method/property
+ * @returns A {@link KeyvCapability} where `keyv` is `true` only when all required capabilities are present
  * @example
  * ```typescript
- * import { detectKeyv } from 'keyv';
+ * import Keyv, { detectKeyv } from 'keyv';
  *
- * detectKeyv(new Map());
- * // { keyv: false, get: true, set: true, delete: true, clear: true, has: true,
- * //   getMany: false, setMany: false, deleteMany: false, hasMany: false,
- * //   disconnect: false, getRaw: false, getManyRaw: false, setRaw: false,
- * //   setManyRaw: false, hooks: false, stats: false, iterator: false }
+ * const result = detectKeyv(new Keyv());
+ * result.keyv; // true — all capabilities present
  *
- * detectKeyv(new Keyv());
- * // { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
- * //   getMany: true, setMany: true, deleteMany: true, hasMany: true,
- * //   disconnect: true, getRaw: true, getManyRaw: true, setRaw: true,
- * //   setManyRaw: true, hooks: true, stats: true, iterator: true }
+ * const partial = detectKeyv(new Map());
+ * partial.keyv; // false — missing getMany, setMany, hooks, stats, etc.
+ * partial.get;  // true
+ * partial.set;  // true
  * ```
  */
 export function detectKeyv(obj: unknown): KeyvCapability {
@@ -197,19 +193,25 @@ export function detectKeyv(obj: unknown): KeyvCapability {
 }
 
 /**
- * Detect if an object is a Keyv storage adapter or has storage adapter-like capabilities
+ * Detect whether an object implements the Keyv storage adapter interface
  * @param obj - The object to check
- * @returns An object with boolean properties for each storage adapter method/property
+ * @returns A {@link KeyvStorageCapability} where:
+ * - `keyvStorage` is `true` when get, set, delete, clear, has, setMany, deleteMany, and hasMany are present
+ * - `mapLike` is `true` when the object has synchronous get, set, delete, has, entries, and keys methods
+ * - `methodTypes` maps each method name to `"sync"`, `"async"`, or `"none"`
  * @example
  * ```typescript
  * import { detectKeyvStorage } from 'keyv';
  *
- * detectKeyvStorage(new Map());
- * // { keyvStorage: false, mapLike: true, get: true, set: true, ... }
+ * const map = detectKeyvStorage(new Map());
+ * map.keyvStorage;        // false — missing setMany, deleteMany, hasMany
+ * map.mapLike;            // true — synchronous get/set/delete/has/entries/keys
+ * map.methodTypes.get;    // "sync"
  *
- * const adapter = new KeyvRedis();
- * detectKeyvStorage(adapter);
- * // { keyvStorage: true, mapLike: false, get: true, set: true, ... }
+ * const adapter = detectKeyvStorage(asyncAdapter);
+ * adapter.keyvStorage;    // true
+ * adapter.mapLike;        // false — methods are async
+ * adapter.methodTypes.get; // "async"
  * ```
  */
 export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
@@ -293,22 +295,18 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 }
 
 /**
- * Detect if an object is a Keyv compression adapter or has compression capabilities
+ * Detect whether an object implements the Keyv compression adapter interface
  * @param obj - The object to check
- * @returns An object with boolean properties for each compression method
+ * @returns A {@link KeyvCompressionCapability} where `keyvCompression` is `true` when both `compress` and `decompress` methods are present
  * @example
  * ```typescript
  * import { detectKeyvCompression } from 'keyv';
  *
- * const gzip = {
- *   compress: (data) => compressSync(data),
- *   decompress: (data) => decompressSync(data)
- * };
- * detectKeyvCompression(gzip);
+ * detectKeyvCompression({ compress: (d) => d, decompress: (d) => d });
  * // { keyvCompression: true, compress: true, decompress: true }
  *
- * detectKeyvCompression({});
- * // { keyvCompression: false, compress: false, decompress: false }
+ * detectKeyvCompression({ compress: (d) => d });
+ * // { keyvCompression: false, compress: true, decompress: false }
  * ```
  */
 export function detectKeyvCompression(obj: unknown): KeyvCompressionCapability {
@@ -322,22 +320,18 @@ export function detectKeyvCompression(obj: unknown): KeyvCompressionCapability {
 }
 
 /**
- * Detect if an object is a Keyv serialization adapter or has serialization capabilities
+ * Detect whether an object implements the Keyv serialization adapter interface
  * @param obj - The object to check
- * @returns An object with boolean properties for each serialization method
+ * @returns A {@link KeyvSerializationCapability} where `keyvSerialization` is `true` when both `stringify` and `parse` methods are present
  * @example
  * ```typescript
  * import { detectKeyvSerialization } from 'keyv';
  *
- * const json = {
- *   stringify: (obj) => JSON.stringify(obj),
- *   parse: (str) => JSON.parse(str)
- * };
- * detectKeyvSerialization(json);
+ * detectKeyvSerialization(JSON);
  * // { keyvSerialization: true, stringify: true, parse: true }
  *
- * detectKeyvSerialization({});
- * // { keyvSerialization: false, stringify: false, parse: false }
+ * detectKeyvSerialization({ stringify: (o) => JSON.stringify(o) });
+ * // { keyvSerialization: false, stringify: true, parse: false }
  * ```
  */
 export function detectKeyvSerialization(
@@ -353,22 +347,18 @@ export function detectKeyvSerialization(
 }
 
 /**
- * Detect if an object is a Keyv encryption adapter or has encryption capabilities
+ * Detect whether an object implements the Keyv encryption adapter interface
  * @param obj - The object to check
- * @returns An object with boolean properties for each encryption method
+ * @returns A {@link KeyvEncryptionCapability} where `keyvEncryption` is `true` when both `encrypt` and `decrypt` methods are present
  * @example
  * ```typescript
  * import { detectKeyvEncryption } from 'keyv';
  *
- * const aes = {
- *   encrypt: (data) => encryptAES(data),
- *   decrypt: (data) => decryptAES(data)
- * };
- * detectKeyvEncryption(aes);
+ * detectKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
  * // { keyvEncryption: true, encrypt: true, decrypt: true }
  *
- * detectKeyvEncryption({});
- * // { keyvEncryption: false, encrypt: false, decrypt: false }
+ * detectKeyvEncryption({ encrypt: (d) => d });
+ * // { keyvEncryption: false, encrypt: true, decrypt: false }
  * ```
  */
 export function detectKeyvEncryption(obj: unknown): KeyvEncryptionCapability {
