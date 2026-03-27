@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { Keyv } from "../src/index.js";
+import { Keyv, KeyvSanitize } from "../src/index.js";
 
 describe("Keyv", async () => {
 	type TestData = {
@@ -308,13 +308,13 @@ describe("Keyv", async () => {
 		});
 
 		test("should sanitize keys when explicitly enabled", async () => {
-			const keyv = new Keyv({ sanitize: true });
+			const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 			await keyv.set("test; DROP TABLE", "value");
 			expect(await keyv.get("test DROP TABLE")).toBe("value");
 		});
 
 		test("should not sanitize keys when disabled", async () => {
-			const keyv = new Keyv({ sanitize: false });
+			const keyv = new Keyv();
 			await keyv.set("test'; DROP TABLE", "value");
 			expect(await keyv.get("test'; DROP TABLE")).toBe("value");
 		});
@@ -326,7 +326,7 @@ describe("Keyv", async () => {
 		});
 
 		test("should sanitize keys in getMany", async () => {
-			const keyv = new Keyv({ sanitize: true });
+			const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 			await keyv.set("clean-key", "value1");
 			const result = await keyv.getMany(["clean-key", "miss;key"]);
 			expect(result[0]).toBe("value1");
@@ -334,21 +334,21 @@ describe("Keyv", async () => {
 		});
 
 		test("should sanitize keys in has", async () => {
-			const keyv = new Keyv({ sanitize: true });
+			const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 			await keyv.set("test-key", "value");
 			expect(await keyv.has("test-key")).toBe(true);
 			expect(await keyv.has("test'-key")).toBe(false);
 		});
 
 		test("should sanitize keys in delete", async () => {
-			const keyv = new Keyv({ sanitize: true });
+			const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 			await keyv.set("testkey", "value");
 			await keyv.delete("test;key");
 			expect(await keyv.has("testkey")).toBe(false);
 		});
 
 		test("should sanitize keys in setMany", async () => {
-			const keyv = new Keyv({ sanitize: true });
+			const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 			await keyv.setMany([
 				{ key: "key;1", value: "value1" },
 				{ key: "key--2", value: "value2" },
@@ -359,45 +359,47 @@ describe("Keyv", async () => {
 
 		test("getter and setter should work", () => {
 			const keyv = new Keyv();
-			expect(keyv.sanitize).toBeUndefined();
+			expect(keyv.sanitize).toBeInstanceOf(KeyvSanitize);
+			expect(keyv.sanitize.keysEnabled).toBe(false);
 
-			keyv.sanitize = true;
-			expect(keyv.sanitize).toBe(true);
+			keyv.sanitize.updateOptions({ keys: true, namespace: true });
+			expect(keyv.sanitize.keysEnabled).toBe(true);
 
-			keyv.sanitize = { keys: { sql: true, mongo: false } };
-			expect(keyv.sanitize).toEqual({ keys: { sql: true, mongo: false } });
+			keyv.sanitize.updateOptions({ keys: { sql: true, mongo: false } });
+			expect(keyv.sanitize.keys.sql).toBe(true);
+			expect(keyv.sanitize.keys.mongo).toBe(false);
 
-			keyv.sanitize = undefined;
-			expect(keyv.sanitize).toBeUndefined();
+			keyv.sanitize = new KeyvSanitize();
+			expect(keyv.sanitize.keysEnabled).toBe(false);
 		});
 
-		test("setter with true should enable all sanitization categories", async () => {
-			const keyv = new Keyv({ sanitize: false });
-			keyv.sanitize = true;
+		test("setter with updateOptions should enable all sanitization categories", async () => {
+			const keyv = new Keyv();
+			keyv.sanitize.updateOptions({ keys: true, namespace: true });
 			await keyv.set("test;../key\0val", "value");
 			expect(await keyv.get("testkeyval")).toBe("value");
 		});
 
 		test("setter with options object should apply granular sanitization", async () => {
 			const keyv = new Keyv();
-			keyv.sanitize = { keys: { sql: true, mongo: false, path: false } };
+			keyv.sanitize.updateOptions({ keys: { sql: true, mongo: false, path: false } });
 			await keyv.set("test;$key/../path", "value");
 			expect(await keyv.get("test$key/../path")).toBe("value");
 		});
 
 		test("harmless characters pass through when sanitization is enabled", async () => {
-			const keyv = new Keyv({ sanitize: true });
+			const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 			await keyv.set("user's-data", "value");
 			expect(await keyv.get("user's-data")).toBe("value");
 		});
 
 		test("should sanitize namespace at construction", () => {
-			const keyv = new Keyv({ namespace: "ns;evil", sanitize: true });
+			const keyv = new Keyv({ namespace: "ns;evil", sanitize: { keys: true, namespace: true } });
 			expect(keyv.namespace).toBe("nsevil");
 		});
 
 		test("should sanitize namespace on setter", () => {
-			const keyv = new Keyv({ sanitize: true });
+			const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 			keyv.namespace = "ns;evil";
 			expect(keyv.namespace).toBe("nsevil");
 		});

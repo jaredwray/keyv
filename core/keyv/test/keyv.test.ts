@@ -809,7 +809,7 @@ test.it("Keyv will not prefix if there is no namespace", async (t) => {
 });
 
 test.it("empty key after sanitization is gracefully rejected", async (t) => {
-	const keyv = new Keyv({ sanitize: true });
+	const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 	// ";" is stripped to "" (semicolon is a dangerous SQL pattern)
 	t.expect(await keyv.set(";", "value")).toBe(false);
 	t.expect(await keyv.get(";")).toBeUndefined();

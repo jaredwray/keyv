@@ -1,4 +1,8 @@
-import type { KeyvSanitizeOptions, KeyvSanitizePatterns, KeyvSanitizePatternsOptions } from "./types.js";
+import type {
+	KeyvSanitizeOptions,
+	KeyvSanitizePatterns,
+	KeyvSanitizePatternsOptions,
+} from "./types.js";
 
 const categoryPatterns: Record<keyof KeyvSanitizePatterns, RegExp[]> = {
 	sql: [/;/g, /--/g, /\/\*/g],
@@ -35,15 +39,15 @@ function applyPatterns(value: string, patterns: RegExp[]): string {
 	return value;
 }
 
-const allOn: KeyvSanitizePatterns = {escape: true, mongo: true, path: true, sql: true};
-const allOff: KeyvSanitizePatterns = {escape: false, mongo: false, path: false, sql: false};
+const allOn: KeyvSanitizePatterns = { escape: true, mongo: true, path: true, sql: true };
+const allOff: KeyvSanitizePatterns = { escape: false, mongo: false, path: false, sql: false };
 
 /**
  * Encapsulates key and namespace sanitization with an LRU result cache.
  */
 export class KeyvSanitize {
-	private _keys: KeyvSanitizePatterns = {...allOff};
-	private _namespace: KeyvSanitizePatterns = {...allOff}
+	private _keys: KeyvSanitizePatterns = { ...allOff };
+	private _namespace: KeyvSanitizePatterns = { ...allOff };
 	private _keyPatterns: RegExp[] | undefined;
 	private _namespacePatterns: RegExp[] | undefined;
 	private _keysEnabled = false;
@@ -53,7 +57,7 @@ export class KeyvSanitize {
 	private _cacheMax = 10_000;
 
 	constructor(options?: KeyvSanitizeOptions) {
-		if(options !== undefined) {
+		if (options !== undefined) {
 			this.updateOptions(options);
 		}
 	}
@@ -103,7 +107,7 @@ export class KeyvSanitize {
 	/**
 	 * Sanitize a single key. Uses an LRU cache for repeated lookups.
 	 */
-	public sanitizeKey(key: string): string {
+	public cleanKey(key: string): string {
 		if (!this._keyPatterns) {
 			return key;
 		}
@@ -131,18 +135,18 @@ export class KeyvSanitize {
 	/**
 	 * Sanitize an array of keys.
 	 */
-	public sanitizeKeys(keys: string[]): string[] {
+	public cleanKeys(keys: string[]): string[] {
 		if (!this._keyPatterns) {
 			return keys;
 		}
 
-		return keys.map((k) => this.sanitizeKey(k));
+		return keys.map((k) => this.cleanKey(k));
 	}
 
 	/**
 	 * Sanitize a namespace string. Uses an LRU cache for repeated lookups.
 	 */
-	public sanitizeNamespace(ns: string): string {
+	public cleanNamespace(ns: string): string {
 		if (!this._namespacePatterns) {
 			return ns;
 		}
@@ -175,20 +179,22 @@ export class KeyvSanitize {
 		this._cacheNamespaces.clear();
 	}
 
-	private resolvePatterns(config?: boolean | KeyvSanitizePatterns | KeyvSanitizePatternsOptions): KeyvSanitizePatterns {
-		if (config === false) {
-			return {escape: false, mongo: false, path: false, sql: false};
+	private resolvePatterns(
+		options?: boolean | KeyvSanitizePatterns | KeyvSanitizePatternsOptions,
+	): KeyvSanitizePatterns {
+		if (options === false || options === undefined) {
+			return { ...allOff };
 		}
 
-		if (config === true || config === undefined) {
-			return {escape: true, mongo: true, path: true, sql: true};
+		if (options === true) {
+			return { ...allOn };
 		}
 
 		return {
-			sql: config.sql !== false,
-			mongo: config.mongo !== false,
-			escape: config.escape !== false,
-			path: config.path !== false,
+			sql: options.sql !== false,
+			mongo: options.mongo !== false,
+			escape: options.escape !== false,
+			path: options.path !== false,
 		};
 	}
 }

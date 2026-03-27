@@ -116,7 +116,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		} else {
 			this._serialization = mergedOptions.serialization ?? new KeyvJsonSerializer();
 		}
-		
+
 		this._sanitize = new KeyvSanitize();
 
 		if (mergedOptions.sanitize) {
@@ -125,7 +125,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		this._namespace = mergedOptions.namespace;
 		if (this._namespace && this._sanitize.namespaceEnabled) {
-			this._namespace = this._sanitize.sanitizeNamespace(this._namespace);
+			this._namespace = this._sanitize.cleanNamespace(this._namespace);
 		}
 
 		/* v8 ignore next -- @preserve */
@@ -218,7 +218,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {string | undefined} namespace The namespace to set.
 	 */
 	public set namespace(namespace: string | undefined) {
-		this._namespace = namespace && this._sanitize.namespaceEnabled ? this._sanitize.sanitizeNamespace(namespace) : namespace;
+		this._namespace =
+			namespace && this._sanitize.namespaceEnabled
+				? this._sanitize.cleanNamespace(namespace)
+				: namespace;
 		this._store.namespace = this._namespace;
 	}
 
@@ -284,7 +287,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {KeyvSanitize} value The KeyvSanitize instance to use.
 	 */
 	public set sanitize(value: KeyvSanitize) {
-		this._sanitize = value
+		this._sanitize = value;
 	}
 
 	/**
@@ -337,7 +340,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.getMany<Value>(key as string[]);
 		}
 
-		key = this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(key as string) : (key as string);
+		key = this._sanitize.keysEnabled ? this._sanitize.cleanKey(key as string) : (key as string);
 		if (key === "") {
 			return undefined;
 		}
@@ -389,7 +392,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {string[]} keys passing in a single key or multiple as an array
 	 */
 	public async getMany<Value = GenericValue>(keys: string[]): Promise<Array<Value | undefined>> {
-		keys = this._sanitize.keysEnabled ? this._sanitize.sanitizeKeys(keys) : keys;
+		keys = this._sanitize.keysEnabled ? this._sanitize.cleanKeys(keys) : keys;
 		const store = this._store;
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
@@ -468,7 +471,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getRaw<Value = GenericValue>(
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
-		key = this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(key) : key;
+		key = this._sanitize.keysEnabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return undefined;
 		}
@@ -522,7 +525,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
-		keys = this._sanitize.keysEnabled ? this._sanitize.sanitizeKeys(keys) : keys;
+		keys = this._sanitize.keysEnabled ? this._sanitize.cleanKeys(keys) : keys;
 		const store = this._store;
 
 		if (keys.length === 0) {
@@ -607,7 +610,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		value: Value,
 		ttl?: number,
 	): Promise<boolean> {
-		key = this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(key) : key;
+		key = this._sanitize.keysEnabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -662,7 +665,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async setMany<Value = GenericValue>(entries: KeyvEntry<Value>[]): Promise<boolean[]> {
 		entries = entries.map((e) => ({
 			...e,
-			key: this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(e.key) : e.key,
+			key: this._sanitize.keysEnabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
 		let results: boolean[] = [];
 
@@ -730,7 +733,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		key: string,
 		value: KeyvValue<Value>,
 	): Promise<boolean> {
-		key = this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(key) : key;
+		key = this._sanitize.keysEnabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -778,7 +781,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	): Promise<boolean[]> {
 		entries = entries.map((e) => ({
 			...e,
-			key: this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(e.key) : e.key,
+			key: this._sanitize.keysEnabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
 		let results: boolean[] = [];
 
@@ -843,7 +846,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.deleteMany(key);
 		}
 
-		key = this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(key) : key;
+		key = this._sanitize.keysEnabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -880,7 +883,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} array of booleans indicating success for each key
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		keys = this._sanitize.keysEnabled ? this._sanitize.sanitizeKeys(keys) : keys;
+		keys = this._sanitize.keysEnabled ? this._sanitize.cleanKeys(keys) : keys;
 		try {
 			const store = this._store;
 			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
@@ -925,7 +928,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.hasMany(key);
 		}
 
-		key = this._sanitize.keysEnabled ? this._sanitize.sanitizeKey(key) : key;
+		key = this._sanitize.keysEnabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -965,7 +968,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} will return an array of booleans if the keys exist
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		keys = this._sanitize.keysEnabled ? this._sanitize.sanitizeKeys(keys) : keys;
+		keys = this._sanitize.keysEnabled ? this._sanitize.cleanKeys(keys) : keys;
 		const store = this._store;
 		if (store.hasMany !== undefined) {
 			return store.hasMany(keys);
