@@ -313,6 +313,12 @@ describe("Keyv", async () => {
 			expect(await keyv.get("test'; DROP TABLE")).toBe("value");
 		});
 
+		test("should sanitize keys when explicitly enabled", async () => {
+			const keyv = new Keyv({ sanitizeKey: true });
+			await keyv.set("test'; DROP TABLE", "value");
+			expect(await keyv.get("test DROP TABLE")).toBe("value");
+		});
+
 		test("should not sanitize keys when disabled", async () => {
 			const keyv = new Keyv({ sanitizeKey: false });
 			await keyv.set("test'; DROP TABLE", "value");
