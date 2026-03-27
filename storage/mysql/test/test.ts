@@ -368,7 +368,7 @@ test.it(
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value, 60_000);
 		const rows = await keyvMysql.query<mysql.RowDataPacket[]>(
-			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = 'keyv'`,
+			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
 		);
 		t.expect(rows[0].expires).not.toBeNull();
 		// expires should be roughly Date.now() + 60000

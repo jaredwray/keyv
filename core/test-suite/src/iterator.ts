@@ -16,7 +16,6 @@ const keyvIteratorTests = (
 
 	test.it(".iterator() returns an asyncIterator", (t) => {
 		const keyv = new Keyv({ store: store() });
-		// @ts-expect-error - iterator
 		t.expect(typeof keyv.iterator()[Symbol.asyncIterator]).toBe("function");
 	});
 
@@ -34,7 +33,6 @@ const keyvIteratorTests = (
 
 		await Promise.all(toResolve);
 		t.expect.assertions(map.size);
-		// @ts-expect-error - iterator
 		for await (const [key, value] of keyv.iterator()) {
 			const doesKeyExist = map.has(key);
 			const isValueSame = map.get(key) === value;
@@ -73,7 +71,6 @@ const keyvIteratorTests = (
 
 			await Promise.all(toResolve);
 			t.expect.assertions(map2.size);
-			// @ts-expect-error - iterator
 			for await (const [key, value] of keyv2.iterator()) {
 				const doesKeyExist = map2.has(key);
 				const isValueSame = map2.get(key) === value;
@@ -114,7 +111,6 @@ const keyvIteratorTests = (
 			await keyv.set(nonExpiringKey, nonExpiringValue);
 
 			await delay(300);
-			// @ts-expect-error - iterator
 			const iterator = keyv.iterator();
 
 			// Collect all yielded entries

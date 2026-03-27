@@ -1,11 +1,8 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
-import {
-	Keyv,
-	type KeyvEntry,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "./index.js";
+import { Keyv } from "./keyv.js";
+import type { KeyvEntry, KeyvStorageAdapter, StoredData } from "./types.js";
+import { isDataExpired } from "./utils.js";
 
 /**
  * Configuration options for KeyvGenericStore.
@@ -220,7 +217,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 		}
 
 		// Check if it is expired
-		if (data.expires && Date.now() > data.expires) {
+		if (isDataExpired(data)) {
 			this._store.delete(keyPrefix);
 			return undefined;
 		}
@@ -350,7 +347,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 			}
 
 			// Check expiration
-			if (data?.expires && Date.now() > data.expires) {
+			if (data && isDataExpired(data)) {
 				this._store.delete(key);
 				continue;
 			}

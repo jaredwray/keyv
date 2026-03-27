@@ -148,15 +148,19 @@ const keyvValueTests = (
 		t.expect(await keyv.get(key3)).toBe(value);
 	});
 
-	test.it("single quotes key should be saved", async (t) => {
-		const keyv = new Keyv({ store: store() });
+	test.it(
+		"single quotes key is rejected when sanitized to empty",
+		async (t) => {
+			const keyv = new Keyv({ store: store() });
 
-		const value = "'";
+			const value = "'";
 
-		const key = "'";
-		await keyv.set(key, value);
-		t.expect(await keyv.get(key)).toBe(value);
-	});
+			const key = "'";
+			const result = await keyv.set(key, value);
+			t.expect(result).toBe(false);
+			t.expect(await keyv.get(key)).toBeUndefined();
+		},
+	);
 };
 
 export default keyvValueTests;

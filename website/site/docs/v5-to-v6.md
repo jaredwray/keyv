@@ -367,7 +367,15 @@ const rawValues = await keyv.getManyRaw(['key1', 'key2']);
 
 ### Iterator Changes
 
-The iterator no longer requires an argument. We have also improved iteration handling and added an `isIterable()` function to check if iteration is supported.
+The iterator is now a proper class method instead of a dynamically assigned property. It no longer requires any arguments — namespace handling is automatic.
+
+Key changes:
+- `iterator()` is now a built-in async generator method, not an assignable property
+- No arguments required (previously required `keyv.namespace`)
+- Automatically handles Map stores, storage adapters with `iterator()`, and unsupported stores
+- Expired entries are automatically filtered and deleted during iteration
+- The `IteratorFunction` type has been removed
+- If the store does not support iteration, an `error` event is emitted instead of throwing
 
 **v5 (before):**
 ```javascript
@@ -390,12 +398,8 @@ const keyv = new Keyv();
 await keyv.set('key1', 'value1');
 await keyv.set('key2', 'value2');
 
-// Check if iteration is supported
-if (keyv.isIterable()) {
-  // No argument required
-  for await (const [key, value] of keyv.iterator()) {
-    console.log(key, value);
-  }
+for await (const [key, value] of keyv.iterator()) {
+  console.log(key, value);
 }
 ```
 

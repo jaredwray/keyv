@@ -50,6 +50,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.emitErrors](#emiterrors)
   - [.throwOnErrors](#throwonerrors)
   - [.stats](#stats)
+  - [.sanitizeKey](#sanitizekey)
   - [Keyv Instance](#keyv-instance)
 	- [.set(key, value, [ttl])](#setkey-value-ttl)
 	- [.setMany(entries)](#setmanyentries)
@@ -653,7 +654,7 @@ The storage adapter instance to be used by Keyv.
 ## .namespace
 
 Type: `String`
-Default: `'keyv'`
+Default: `undefined`
 
 This is the namespace for the current instance. When you set it it will set it also on the storage adapter.
 
@@ -666,7 +667,7 @@ The options object is also passed through to the storage adapter. Check your sto
 ## options.namespace
 
 Type: `String`<br />
-Default: `'keyv'`
+Default: `undefined`
 
 Namespace for the current instance.
 
@@ -732,7 +733,7 @@ Returns a promise which resolves to an array of raw stored data for the keys or 
 
 ## .setRaw(key, value)
 
-Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `DeserializedData` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If you need TTL-based expiration, set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`). The store-level TTL is derived automatically from `value.expires`.
+Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `KeyvValue` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If you need TTL-based expiration, set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`). The store-level TTL is derived automatically from `value.expires`.
 
 Returns a promise which resolves to `true`.
 
@@ -755,7 +756,7 @@ if (raw) {
 
 ## .setManyRaw(entries)
 
-Sets many raw values in the store without wrapping. Each entry should have a `key` and a `value` (`DeserializedData` envelope). Like `setRaw()`, the envelopes are serialized before storing and the store-level TTL is derived from each entry's `value.expires`.
+Sets many raw values in the store without wrapping. Each entry should have a `key` and a `value` (`KeyvValue` envelope). Like `setRaw()`, the envelopes are serialized before storing and the store-level TTL is derived from each entry's `value.expires`.
 
 Returns a promise which resolves to an array of booleans.
 
@@ -818,16 +819,20 @@ await keyv.disconnect();
 
 ## .iterator()
 
-Iterate over all entries of the current namespace.
+Iterate over all key-value pairs in the store. Automatically deserializes values, filters out expired entries, and deletes them.
 
-Returns a iterable that can be iterated by for-of loops. For example:
+Returns an async generator that yields `[key, value]` pairs. Use with `for await...of`:
 
 ```js
-// please note that the "await" keyword should be used here
-for await (const [key, value] of this.keyv.iterator()) {
+for await (const [key, value] of keyv.iterator()) {
   console.log(key, value);
-};
+}
 ```
+
+The iterator works with any storage backend:
+- **Map stores**: iterates using the built-in `Symbol.iterator`
+- **Storage adapters**: delegates to the adapter's `iterator()` method (e.g., Redis SCAN, SQL cursor)
+- **Unsupported stores**: emits an `error` event if the store does not support iteration
 
 # API - Properties
 
@@ -846,7 +851,7 @@ here is an example of setting the namespace to `undefined`:
 
 ```js
 const keyv = new Keyv();
-console.log(keyv.namespace); // 'keyv' which is default
+console.log(keyv.namespace); // undefined which is default
 keyv.namespace = undefined;
 console.log(keyv.namespace); // undefined
 ```
@@ -1030,6 +1035,55 @@ keyv.stats.enabled = true; // Enable stats tracking
 // ... perform operations ...
 keyv.stats.enabled = false; // Disable stats tracking
 ```
+
+## .sanitizeKey
+Type: `boolean | KeyvSanitizeOptions`<br />
+Default: `true`
+
+Sanitizes keys to strip characters that could be dangerous for SQL, MongoDB, Redis, or filesystem-based storage backends. This is enabled by default to protect against injection attacks.
+
+### Categories
+
+| Category | Characters | Purpose |
+|----------|-----------|---------|
+| `sql` | `'` `"` `` ` `` `;` | Prevents SQL injection |
+| `mongo` | `$` `{` `}` | Prevents MongoDB operator injection |
+| `escape` | `\` `\0` `\n` `\r` | Strips escape sequences, null bytes, CRLF injection |
+| `path` | `/` | Prevents path traversal |
+
+### Usage
+
+Enable all sanitization (default):
+```js
+const keyv = new Keyv(); // sanitizeKey defaults to true
+await keyv.set("test'; DROP TABLE", "value");
+// Key is stored as "test DROP TABLE"
+```
+
+Disable all sanitization:
+```js
+const keyv = new Keyv({ sanitizeKey: false });
+```
+
+Granular control per category:
+```js
+const keyv = new Keyv({
+  sanitizeKey: {
+    sql: true,    // strip SQL chars (default: true)
+    mongo: false, // keep MongoDB chars
+    escape: true, // strip escape chars (default: true)
+    path: false,  // keep path chars
+  }
+});
+```
+
+You can also change the setting at runtime:
+```js
+keyv.sanitizeKey = false; // disable
+keyv.sanitizeKey = { sql: true, mongo: false }; // granular
+```
+
+Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`.
 
 # Bun Support
 

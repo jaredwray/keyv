@@ -15,10 +15,13 @@ export type KeyvEncryptionAdapter = {
 	decrypt: (data: string) => string | Promise<string>;
 };
 
-export type DeserializedData<Value> = {
+export type KeyvValue<Value> = {
 	value?: Value;
 	expires?: number | undefined;
 };
+
+/** @deprecated Use `KeyvValue` instead. */
+export type DeserializedData<Value> = KeyvValue<Value>;
 
 export enum KeyvHooks {
 	/** @deprecated Use BEFORE_SET instead */
@@ -90,7 +93,7 @@ export type KeyvEntry<Value = any> = {
 
 export type StoredDataNoRaw<Value> = Value | undefined;
 
-export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
+export type StoredDataRaw<Value> = KeyvValue<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
@@ -115,10 +118,33 @@ export type KeyvStorageAdapter = {
 	>;
 } & IEventEmitter;
 
+export type KeyvSanitizeOptions = {
+	/**
+	 * Strip SQL injection characters: ' " ` ;
+	 * @default true
+	 */
+	sql?: boolean;
+	/**
+	 * Strip MongoDB operator characters: $ { }
+	 * @default true
+	 */
+	mongo?: boolean;
+	/**
+	 * Strip escape and control characters: \ \0 \n \r
+	 * @default true
+	 */
+	escape?: boolean;
+	/**
+	 * Strip path traversal characters: /
+	 * @default true
+	 */
+	path?: boolean;
+};
+
 export type KeyvOptions = {
 	/**
 	 * Namespace for the current instance.
-	 * @default 'keyv'
+	 * @default undefined
 	 */
 	namespace?: string;
 	/**
@@ -154,6 +180,14 @@ export type KeyvOptions = {
 	 * @default false
 	 */
 	throwOnErrors?: boolean;
+	/**
+	 * Sanitize keys to remove characters that could be dangerous for SQL,
+	 * MongoDB, Redis, or filesystem-based storage backends. Pass `true` to
+	 * enable all categories, `false` to disable, or a `KeyvSanitizeOptions`
+	 * object to toggle individual categories.
+	 * @default true
+	 */
+	sanitizeKey?: boolean | KeyvSanitizeOptions;
 };
 
 /**

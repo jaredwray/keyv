@@ -287,7 +287,7 @@ describe("Keyv", async () => {
 
 			let iterationCount = 0;
 			// Get all items using iterator
-			for await (const _ of keyv.iterator?.(keyv) ?? []) {
+			for await (const _ of keyv.iterator() ?? []) {
 				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}
@@ -296,12 +296,99 @@ describe("Keyv", async () => {
 
 			iterationCount = 0;
 			// Get all items using iterator
-			for await (const _ of keyv.iterator?.(keyv) ?? []) {
+			for await (const _ of keyv.iterator() ?? []) {
 				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}
 			expect(iterationCount).toBe(0);
 			expect(keyv.stats.deletes).toBe(1);
+		});
+	});
+
+	describe("sanitizeKey", () => {
+		test("should sanitize keys by default", async () => {
+			const keyv = new Keyv();
+			await keyv.set("test'; DROP TABLE", "value");
+			expect(await keyv.get("test DROP TABLE")).toBe("value");
+			expect(await keyv.get("test'; DROP TABLE")).toBe("value");
+		});
+
+		test("should sanitize keys when explicitly enabled", async () => {
+			const keyv = new Keyv({ sanitizeKey: true });
+			await keyv.set("test'; DROP TABLE", "value");
+			expect(await keyv.get("test DROP TABLE")).toBe("value");
+		});
+
+		test("should not sanitize keys when disabled", async () => {
+			const keyv = new Keyv({ sanitizeKey: false });
+			await keyv.set("test'; DROP TABLE", "value");
+			expect(await keyv.get("test'; DROP TABLE")).toBe("value");
+		});
+
+		test("should support granular category control", async () => {
+			const keyv = new Keyv({ sanitizeKey: { sql: true, mongo: false } });
+			await keyv.set("test'$key", "value");
+			// SQL chars stripped, mongo chars preserved
+			expect(await keyv.get("test$key")).toBe("value");
+		});
+
+		test("should sanitize keys in getMany", async () => {
+			const keyv = new Keyv();
+			await keyv.set("clean-key", "value1");
+			const result = await keyv.getMany(["clean-key", "miss'key"]);
+			expect(result[0]).toBe("value1");
+			expect(result[1]).toBeUndefined();
+		});
+
+		test("should sanitize keys in has", async () => {
+			const keyv = new Keyv();
+			await keyv.set("test-key", "value");
+			expect(await keyv.has("test-key")).toBe(true);
+			expect(await keyv.has("test'-key")).toBe(true);
+		});
+
+		test("should sanitize keys in delete", async () => {
+			const keyv = new Keyv();
+			await keyv.set("test-key", "value");
+			await keyv.delete("test'-key");
+			expect(await keyv.has("test-key")).toBe(false);
+		});
+
+		test("should sanitize keys in setMany", async () => {
+			const keyv = new Keyv();
+			await keyv.setMany([
+				{ key: "key'1", value: "value1" },
+				{ key: "key;2", value: "value2" },
+			]);
+			expect(await keyv.get("key1")).toBe("value1");
+			expect(await keyv.get("key2")).toBe("value2");
+		});
+
+		test("getter and setter should work", () => {
+			const keyv = new Keyv();
+			expect(keyv.sanitizeKey).toBe(true);
+
+			keyv.sanitizeKey = false;
+			expect(keyv.sanitizeKey).toBe(false);
+
+			keyv.sanitizeKey = { sql: true, mongo: false };
+			expect(keyv.sanitizeKey).toEqual({ sql: true, mongo: false });
+		});
+
+		test("setter with true should enable all sanitization categories", async () => {
+			const keyv = new Keyv({ sanitizeKey: false });
+			keyv.sanitizeKey = true;
+			await keyv.set("test'$key/path", "value");
+			// All categories stripped
+			expect(await keyv.get("testkeypath")).toBe("value");
+		});
+
+		test("setter with options object should apply granular sanitization", async () => {
+			const keyv = new Keyv();
+			keyv.sanitizeKey = { sql: true, mongo: false, path: false };
+			await keyv.set("test'$key/path", "value");
+			// SQL chars stripped, mongo and path chars preserved
+			expect(await keyv.get("test$key/path")).toBe("value");
 		});
 	});
 });

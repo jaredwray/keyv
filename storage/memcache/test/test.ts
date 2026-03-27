@@ -68,7 +68,7 @@ it("format key for namespace", () => {
 	const key = faker.string.uuid();
 	const localMemcache = new KeyvMemcache(uri);
 	new Keyv({ store: localMemcache });
-	expect(localMemcache.formatKey(key)).toBe(`keyv:${key}`);
+	expect(localMemcache.formatKey(key)).toBe(key);
 });
 
 it("keyv get with namespace", async () => {
@@ -224,21 +224,26 @@ it("keyvMemcache hasMany with no keys existing", async () => {
 	expect(result).toEqual([false, false, false]);
 });
 
-it("keyvMemcache setMany should emit error on failure", async () => {
-	const badMemcache = new KeyvMemcache("baduri:11211");
-	let errorEmitted = false;
-	badMemcache.on("error", () => {
-		errorEmitted = true;
-	});
+it(
+	"keyvMemcache setMany should emit error on failure",
+	{ timeout: 30_000 },
+	async () => {
+		const badMemcache = new KeyvMemcache("baduri:11211");
+		let errorEmitted = false;
+		badMemcache.on("error", () => {
+			errorEmitted = true;
+		});
 
-	await badMemcache.setMany([
-		{ key: faker.string.uuid(), value: faker.lorem.word() },
-	]);
-	expect(errorEmitted).toBeTruthy();
-});
+		await badMemcache.setMany([
+			{ key: faker.string.uuid(), value: faker.lorem.word() },
+		]);
+		expect(errorEmitted).toBeTruthy();
+	},
+);
 
-it("keyv has / false", async () => {
+it("keyv has / false", { timeout: 30_000 }, async () => {
 	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
+	keyv.on("error", () => {});
 
 	const value = await keyv.has(faker.string.uuid());
 
