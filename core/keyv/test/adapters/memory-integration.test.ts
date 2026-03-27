@@ -65,10 +65,7 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		await keyv.set("key3", "value3");
 
 		// All three should exist
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 
 		// Add a fourth entry - this triggers buffer swap
 		// Old buffer: key1, key2, key3
@@ -76,22 +73,13 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		await keyv.set("key4", "value4");
 
 		// key4 is in the new buffer
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
+		expect(await keyv.get("key4")).toBe("value4");
 
 		// key1 gets promoted to new buffer (now has: key4, key1)
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 
 		// key2 gets promoted to new buffer (now has: key4, key1, key2 = maxSize)
-		expect(await keyv.get("key2")).toStrictEqual({
-			value: "value2",
-			expires: undefined,
-		});
+		expect(await keyv.get("key2")).toBe("value2");
 
 		// key3 cannot be promoted (new buffer at maxSize) - evicted
 		expect(await keyv.get("key3")).toBe(undefined);
@@ -131,18 +119,9 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		await keyv.set("key6", "value6");
 
 		// key4, key5, key6 should be in the new buffer
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
-		expect(await keyv.get("key5")).toStrictEqual({
-			value: "value5",
-			expires: undefined,
-		});
-		expect(await keyv.get("key6")).toStrictEqual({
-			value: "value6",
-			expires: undefined,
-		});
+		expect(await keyv.get("key4")).toBe("value4");
+		expect(await keyv.get("key5")).toBe("value5");
+		expect(await keyv.get("key6")).toBe("value6");
 
 		// key1, key2, key3 are evicted (new buffer is full, can't promote)
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -159,10 +138,7 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		await keyv.set("key3", "value3");
 
 		// Access key1 first to make it recently used
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 
 		// Add key4 - triggers buffer swap
 		// Old buffer: key1, key2, key3
@@ -170,10 +146,7 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		await keyv.set("key4", "value4");
 
 		// Access key1 again - it gets promoted to new buffer
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 
 		// Add key5 - goes to new buffer (now: key4, key1, key5 = maxSize)
 		await keyv.set("key5", "value5");
@@ -183,14 +156,8 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		expect(await keyv.get("key3")).toBe(undefined);
 
 		// key1, key4, key5 should still be accessible
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
-		expect(await keyv.get("key5")).toStrictEqual({
-			value: "value5",
-			expires: undefined,
-		});
+		expect(await keyv.get("key4")).toBe("value4");
+		expect(await keyv.get("key5")).toBe("value5");
 	});
 
 	test("should handle updating existing keys without eviction", async () => {
@@ -205,18 +172,9 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		await keyv.set("key1", "updated1");
 
 		expect(lru.size).toBe(3);
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "updated1",
-			expires: undefined,
-		});
-		expect(await keyv.get("key2")).toStrictEqual({
-			value: "value2",
-			expires: undefined,
-		});
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("updated1");
+		expect(await keyv.get("key2")).toBe("value2");
+		expect(await keyv.get("key3")).toBe("value3");
 	});
 
 	test("should respect maxSize limit", async () => {
@@ -232,10 +190,7 @@ describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 		expect(lru.size).toBe(2);
 
 		// key3 is in new buffer
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
+		expect(await keyv.get("key3")).toBe("value3");
 	});
 });
 
@@ -244,10 +199,7 @@ describe("KeyvMemoryAdapter with QuickLRU - Basic CRUD Operations", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
 		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 	});
 
 	test("should set many keys", async () => {
@@ -257,14 +209,8 @@ describe("KeyvMemoryAdapter with QuickLRU - Basic CRUD Operations", () => {
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
 		]);
-		expect(await keyv.get("key1")).toStrictEqual({
-			expires: undefined,
-			value: "value1",
-		});
-		expect(await keyv.get("key2")).toStrictEqual({
-			expires: undefined,
-			value: "value2",
-		});
+		expect(await keyv.get("key1")).toBe("value1");
+		expect(await keyv.get("key2")).toBe("value2");
 		expect(result).toEqual([true, true]);
 	});
 
@@ -277,7 +223,7 @@ describe("KeyvMemoryAdapter with QuickLRU - Basic CRUD Operations", () => {
 	test("should handle get with TTL and expiration", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
 		const keyv = new KeyvMemoryAdapter(lru);
-		await keyv.set("key1", { val: "value1" }, 10);
+		await keyv.set("key1", { value: "value1", expires: Date.now() + 10 }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
 	});
@@ -297,9 +243,9 @@ describe("KeyvMemoryAdapter with QuickLRU - Basic CRUD Operations", () => {
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
 		const values = await keyv.getMany(["key1", "key2", "key3", "key4"]);
-		expect(values[0]).toStrictEqual({ value: "value1", expires: undefined });
-		expect(values[1]).toStrictEqual({ value: "value2", expires: undefined });
-		expect(values[2]).toStrictEqual({ value: "value3", expires: undefined });
+		expect(values[0]).toBe("value1");
+		expect(values[1]).toBe("value2");
+		expect(values[2]).toBe("value3");
 		expect(values[3]).toBe(undefined);
 	});
 
@@ -313,10 +259,7 @@ describe("KeyvMemoryAdapter with QuickLRU - Basic CRUD Operations", () => {
 		};
 		await keyv.set("complex", complexValue);
 		const result = await keyv.get("complex");
-		expect(result).toStrictEqual({
-			value: complexValue,
-			expires: undefined,
-		});
+		expect(result).toStrictEqual(complexValue);
 	});
 });
 
@@ -349,10 +292,7 @@ describe("KeyvMemoryAdapter with QuickLRU - Delete / Clear Operations", () => {
 		await keyv.deleteMany(["key1", "key2"]);
 		expect(await keyv.get("key1")).toBe(undefined);
 		expect(await keyv.get("key2")).toBe(undefined);
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
+		expect(await keyv.get("key3")).toBe("value3");
 	});
 
 	test("should emit error on delete many keys failure", async () => {
@@ -418,10 +358,7 @@ describe("KeyvMemoryAdapter with QuickLRU - Namespace", () => {
 		expect(lru.has("key1")).toBe(false);
 
 		// Should still be retrievable via KeyvMemoryAdapter
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 	});
 });
 
@@ -528,10 +465,7 @@ describe("KeyvMemoryAdapter with QuickLRU - createKeyv() Integration", () => {
 
 		await keyv.set("key1", "value1");
 		const result = await keyv.get("key1");
-		expect(result).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(result).toBe("value1");
 	});
 
 	test("should set many items and then get them", async () => {
@@ -585,10 +519,7 @@ describe("KeyvMemoryAdapter with QuickLRU - createKeyv() Integration", () => {
 		const keyv = new KeyvMemoryAdapter(lru, { namespace: "tenant1" });
 
 		await keyv.set("user", "john");
-		expect(await keyv.get("user")).toStrictEqual({
-			value: "john",
-			expires: undefined,
-		});
+		expect(await keyv.get("user")).toBe("john");
 
 		// Verify it's stored with namespace prefix in the underlying LRU
 		expect(lru.has("tenant1:user")).toBe(true);
@@ -608,18 +539,9 @@ describe("KeyvMemoryAdapter with QuickLRU - createKeyv() Integration", () => {
 		await keyv.set("key6", "value6");
 
 		// key4, key5, key6 are in new buffer
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
-		expect(await keyv.get("key5")).toStrictEqual({
-			value: "value5",
-			expires: undefined,
-		});
-		expect(await keyv.get("key6")).toStrictEqual({
-			value: "value6",
-			expires: undefined,
-		});
+		expect(await keyv.get("key4")).toBe("value4");
+		expect(await keyv.get("key5")).toBe("value5");
+		expect(await keyv.get("key6")).toBe("value6");
 
 		// key1, key2, key3 are evicted (new buffer is full)
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -698,18 +620,9 @@ describe("KeyvMemoryAdapter with lru.min - LRU Eviction Behavior", () => {
 		expect(await keyv.get("key1")).toBe(undefined);
 
 		// key2, key3, key4 should still exist
-		expect(await keyv.get("key2")).toStrictEqual({
-			value: "value2",
-			expires: undefined,
-		});
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
+		expect(await keyv.get("key2")).toBe("value2");
+		expect(await keyv.get("key3")).toBe("value3");
+		expect(await keyv.get("key4")).toBe("value4");
 	});
 
 	test("should track size correctly", async () => {
@@ -748,18 +661,9 @@ describe("KeyvMemoryAdapter with lru.min - LRU Eviction Behavior", () => {
 		expect(await keyv.get("key2")).toBe(undefined);
 
 		// key3, key4, key5 should exist
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
-		expect(await keyv.get("key5")).toStrictEqual({
-			value: "value5",
-			expires: undefined,
-		});
+		expect(await keyv.get("key3")).toBe("value3");
+		expect(await keyv.get("key4")).toBe("value4");
+		expect(await keyv.get("key5")).toBe("value5");
 	});
 
 	test("should update LRU order on get (most recently accessed stays)", async () => {
@@ -780,18 +684,9 @@ describe("KeyvMemoryAdapter with lru.min - LRU Eviction Behavior", () => {
 		expect(await keyv.get("key2")).toBe(undefined);
 
 		// key1, key3, key4 should still exist
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
+		expect(await keyv.get("key3")).toBe("value3");
+		expect(await keyv.get("key4")).toBe("value4");
 	});
 
 	test("should handle updating existing keys without eviction", async () => {
@@ -806,18 +701,9 @@ describe("KeyvMemoryAdapter with lru.min - LRU Eviction Behavior", () => {
 		await keyv.set("key1", "updated1");
 
 		expect(lru.size).toBe(3);
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "updated1",
-			expires: undefined,
-		});
-		expect(await keyv.get("key2")).toStrictEqual({
-			value: "value2",
-			expires: undefined,
-		});
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("updated1");
+		expect(await keyv.get("key2")).toBe("value2");
+		expect(await keyv.get("key3")).toBe("value3");
 	});
 
 	test("should support onEviction callback", async () => {
@@ -844,10 +730,7 @@ describe("KeyvMemoryAdapter with lru.min - Basic CRUD Operations", () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
 		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 	});
 
 	test("should set many keys", async () => {
@@ -857,14 +740,8 @@ describe("KeyvMemoryAdapter with lru.min - Basic CRUD Operations", () => {
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
 		]);
-		expect(await keyv.get("key1")).toStrictEqual({
-			expires: undefined,
-			value: "value1",
-		});
-		expect(await keyv.get("key2")).toStrictEqual({
-			expires: undefined,
-			value: "value2",
-		});
+		expect(await keyv.get("key1")).toBe("value1");
+		expect(await keyv.get("key2")).toBe("value2");
 		expect(result).toEqual([true, true]);
 	});
 
@@ -877,7 +754,7 @@ describe("KeyvMemoryAdapter with lru.min - Basic CRUD Operations", () => {
 	test("should handle get with TTL and expiration", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
 		const keyv = new KeyvMemoryAdapter(lru);
-		await keyv.set("key1", { val: "value1" }, 10);
+		await keyv.set("key1", { value: "value1", expires: Date.now() + 10 }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
 	});
@@ -897,9 +774,9 @@ describe("KeyvMemoryAdapter with lru.min - Basic CRUD Operations", () => {
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
 		const values = await keyv.getMany(["key1", "key2", "key3", "key4"]);
-		expect(values[0]).toStrictEqual({ value: "value1", expires: undefined });
-		expect(values[1]).toStrictEqual({ value: "value2", expires: undefined });
-		expect(values[2]).toStrictEqual({ value: "value3", expires: undefined });
+		expect(values[0]).toBe("value1");
+		expect(values[1]).toBe("value2");
+		expect(values[2]).toBe("value3");
 		expect(values[3]).toBe(undefined);
 	});
 
@@ -913,10 +790,7 @@ describe("KeyvMemoryAdapter with lru.min - Basic CRUD Operations", () => {
 		};
 		await keyv.set("complex", complexValue);
 		const result = await keyv.get("complex");
-		expect(result).toStrictEqual({
-			value: complexValue,
-			expires: undefined,
-		});
+		expect(result).toStrictEqual(complexValue);
 	});
 });
 
@@ -949,10 +823,7 @@ describe("KeyvMemoryAdapter with lru.min - Delete / Clear Operations", () => {
 		await keyv.deleteMany(["key1", "key2"]);
 		expect(await keyv.get("key1")).toBe(undefined);
 		expect(await keyv.get("key2")).toBe(undefined);
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
+		expect(await keyv.get("key3")).toBe("value3");
 	});
 });
 
@@ -968,10 +839,7 @@ describe("KeyvMemoryAdapter with lru.min - Namespace", () => {
 		expect(lru.has("key1")).toBe(false);
 
 		// Should still be retrievable via KeyvMemoryAdapter
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 	});
 
 	test("should set the key prefix", () => {
@@ -1042,10 +910,7 @@ describe("KeyvMemoryAdapter with lru.min - createKeyv() Integration", () => {
 
 		await keyv.set("key1", "value1");
 		const result = await keyv.get("key1");
-		expect(result).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(result).toBe("value1");
 	});
 
 	test("should respect LRU eviction with createKeyv", async () => {
@@ -1059,10 +924,7 @@ describe("KeyvMemoryAdapter with lru.min - createKeyv() Integration", () => {
 
 		// key1 should be evicted (standard LRU)
 		expect(await keyv.get("key1")).toBe(undefined);
-		expect(await keyv.get("key4")).toStrictEqual({
-			value: "value4",
-			expires: undefined,
-		});
+		expect(await keyv.get("key4")).toBe("value4");
 	});
 
 	test("should handle TTL with createKeyv", async () => {
@@ -1125,10 +987,7 @@ describe("KeyvMemoryAdapter with Map - Basic CRUD Operations", () => {
 		const map = new Map<string, unknown>();
 		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 	});
 
 	test("should set many keys", async () => {
@@ -1138,14 +997,8 @@ describe("KeyvMemoryAdapter with Map - Basic CRUD Operations", () => {
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
 		]);
-		expect(await keyv.get("key1")).toStrictEqual({
-			expires: undefined,
-			value: "value1",
-		});
-		expect(await keyv.get("key2")).toStrictEqual({
-			expires: undefined,
-			value: "value2",
-		});
+		expect(await keyv.get("key1")).toBe("value1");
+		expect(await keyv.get("key2")).toBe("value2");
 		expect(result).toEqual([true, true]);
 	});
 
@@ -1158,7 +1011,7 @@ describe("KeyvMemoryAdapter with Map - Basic CRUD Operations", () => {
 	test("should handle get with TTL and expiration", async () => {
 		const map = new Map<string, unknown>();
 		const keyv = new KeyvMemoryAdapter(map);
-		await keyv.set("key1", { val: "value1" }, 10);
+		await keyv.set("key1", { value: "value1", expires: Date.now() + 10 }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
 	});
@@ -1178,9 +1031,9 @@ describe("KeyvMemoryAdapter with Map - Basic CRUD Operations", () => {
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
 		const values = await keyv.getMany(["key1", "key2", "key3", "key4"]);
-		expect(values[0]).toStrictEqual({ value: "value1", expires: undefined });
-		expect(values[1]).toStrictEqual({ value: "value2", expires: undefined });
-		expect(values[2]).toStrictEqual({ value: "value3", expires: undefined });
+		expect(values[0]).toBe("value1");
+		expect(values[1]).toBe("value2");
+		expect(values[2]).toBe("value3");
 		expect(values[3]).toBe(undefined);
 	});
 
@@ -1194,10 +1047,7 @@ describe("KeyvMemoryAdapter with Map - Basic CRUD Operations", () => {
 		};
 		await keyv.set("complex", complexValue);
 		const result = await keyv.get("complex");
-		expect(result).toStrictEqual({
-			value: complexValue,
-			expires: undefined,
-		});
+		expect(result).toStrictEqual(complexValue);
 	});
 
 	test("should track size correctly", async () => {
@@ -1231,14 +1081,8 @@ describe("KeyvMemoryAdapter with Map - Basic CRUD Operations", () => {
 		expect(map.size).toBe(100);
 
 		// All entries should still exist
-		expect(await keyv.get("key0")).toStrictEqual({
-			value: "value0",
-			expires: undefined,
-		});
-		expect(await keyv.get("key99")).toStrictEqual({
-			value: "value99",
-			expires: undefined,
-		});
+		expect(await keyv.get("key0")).toBe("value0");
+		expect(await keyv.get("key99")).toBe("value99");
 	});
 });
 
@@ -1271,10 +1115,7 @@ describe("KeyvMemoryAdapter with Map - Delete / Clear Operations", () => {
 		await keyv.deleteMany(["key1", "key2"]);
 		expect(await keyv.get("key1")).toBe(undefined);
 		expect(await keyv.get("key2")).toBe(undefined);
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
+		expect(await keyv.get("key3")).toBe("value3");
 	});
 
 	test("should emit error on delete many keys failure", async () => {
@@ -1307,10 +1148,7 @@ describe("KeyvMemoryAdapter with Map - Namespace", () => {
 		expect(map.has("key1")).toBe(false);
 
 		// Should still be retrievable via KeyvMemoryAdapter
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 	});
 
 	test("should return the namespace if it is a string", () => {
@@ -1443,10 +1281,7 @@ describe("KeyvMemoryAdapter with Map - createKeyv() Integration", () => {
 
 		await keyv.set("key1", "value1");
 		const result = await keyv.get("key1");
-		expect(result).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(result).toBe("value1");
 	});
 
 	test("should set many items and then get them", async () => {

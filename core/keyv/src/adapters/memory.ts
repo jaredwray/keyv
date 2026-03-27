@@ -1,14 +1,8 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
 import { Keyv } from "../keyv.js";
-import {
-	type KeyvEntry,
-	KeyvEvents,
-	type KeyvStorageAdapter,
-	type KeyvValue,
-	type StoredData,
-} from "../types.js";
-import { calculateExpires, isDataExpired } from "../utils.js";
+import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "../types.js";
+import { isDataExpired } from "../utils.js";
 
 /**
  * Configuration options for KeyvMemoryAdapter.
@@ -172,8 +166,8 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async get<T>(key: string): Promise<StoredData<T> | undefined> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const data = this._store.get(keyPrefix) as KeyvValue<T>;
-		if (!data) {
+		const data = this._store.get(keyPrefix);
+		if (data === undefined || data === null) {
 			return undefined;
 		}
 
@@ -195,8 +189,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const data = { value, expires: calculateExpires(ttl) };
-		this._store.set(keyPrefix, data, ttl);
+		this._store.set(keyPrefix, value, ttl);
 		return true;
 	}
 
@@ -208,8 +201,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			const keyPrefix = this.getKeyPrefix(entry.key, this._namespace);
-			const data = { value: entry.value, expires: calculateExpires(entry.ttl) };
-			this._store.set(keyPrefix, data, entry.ttl);
+			this._store.set(keyPrefix, entry.value, entry.ttl);
 			results.push(true);
 		}
 
@@ -264,8 +256,8 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const values: Array<StoredData<T | undefined>> = [];
 		for (const key of keys) {
 			const keyPrefix = this.getKeyPrefix(key, this._namespace);
-			const data = this._store.get(keyPrefix) as KeyvValue<T>;
-			if (!data) {
+			const data = this._store.get(keyPrefix);
+			if (data === undefined || data === null) {
 				values.push(undefined as StoredData<T | undefined>);
 				continue;
 			}
@@ -340,7 +332,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 				? key.slice(namespace.length + this._keySeparator.length)
 				: key;
 
-			yield [keyWithoutPrefix, data?.value];
+			yield [keyWithoutPrefix, data];
 		}
 	}
 }

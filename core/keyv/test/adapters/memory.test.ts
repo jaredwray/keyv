@@ -76,10 +76,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 		const store = new Map();
 		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
-		expect(await keyv.get("key1")).toStrictEqual({
-			value: "value1",
-			expires: undefined,
-		});
+		expect(await keyv.get("key1")).toBe("value1");
 	});
 
 	test("should set many keys", async () => {
@@ -89,14 +86,8 @@ describe("Keyv Generic set / get / has Operations", () => {
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
 		]);
-		expect(await keyv.get("key1")).toStrictEqual({
-			expires: undefined,
-			value: "value1",
-		});
-		expect(await keyv.get("key2")).toStrictEqual({
-			expires: undefined,
-			value: "value2",
-		});
+		expect(await keyv.get("key1")).toBe("value1");
+		expect(await keyv.get("key2")).toBe("value2");
 		expect(result).toEqual([true, true]);
 	});
 
@@ -109,7 +100,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 	test("should handle get with a ttl and expiration", async () => {
 		const store = new Map();
 		const keyv = new KeyvMemoryAdapter(store);
-		await keyv.set("key1", { val: "value1" }, 10);
+		await keyv.set("key1", { value: "value1", expires: Date.now() + 10 }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
 	});
@@ -129,16 +120,16 @@ describe("Keyv Generic set / get / has Operations", () => {
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
 		const values = await keyv.getMany(["key1", "key2", "key3", "key4"]);
-		expect(values[0]).toStrictEqual({ value: "value1", expires: undefined });
-		expect(values[1]).toStrictEqual({ value: "value2", expires: undefined });
-		expect(values[2]).toStrictEqual({ value: "value3", expires: undefined });
+		expect(values[0]).toBe("value1");
+		expect(values[1]).toBe("value2");
+		expect(values[2]).toBe("value3");
 		expect(values[3]).toBe(undefined);
 	});
 
 	test("getMany should return undefined for expired keys and remove them from the store", async () => {
 		const store = new Map();
 		const keyv = new KeyvMemoryAdapter(store);
-		await keyv.set("key1", "value1", 1);
+		await keyv.set("key1", { value: "value1", expires: Date.now() + 1 }, 1);
 		await keyv.set("key2", "value2");
 
 		// Wait for key1 to expire
@@ -148,7 +139,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 
 		const values = await keyv.getMany(["key1", "key2"]);
 		expect(values[0]).toBe(undefined);
-		expect(values[1]).toStrictEqual({ value: "value2", expires: undefined });
+		expect(values[1]).toBe("value2");
 		// Expired key should be deleted from the store
 		expect(store.has("key1")).toBe(false);
 	});
@@ -208,10 +199,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		await keyv.deleteMany(["key1", "key2"]);
 		expect(await keyv.get("key1")).toBe(undefined);
 		expect(await keyv.get("key2")).toBe(undefined);
-		expect(await keyv.get("key3")).toStrictEqual({
-			value: "value3",
-			expires: undefined,
-		});
+		expect(await keyv.get("key3")).toBe("value3");
 	});
 
 	test("should emit error on delete many keys", async () => {
@@ -242,7 +230,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		const result = await keyv.setMany(testData);
 		expect(result).toEqual([true, true, true, true, true]);
 		const resultValue = await keyv.get(testData[0].key);
-		expect(resultValue.value).toEqual(testData[0].value);
+		expect(resultValue).toEqual(testData[0].value);
 	});
 
 	test("should emit and return false on error", async () => {
@@ -330,7 +318,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 			await keyv.setMany(testData);
 			const result = await keyv.getManyRaw(testKeys);
 			expect(result.length).toBe(5);
-			expect(result[0]?.value.value).toBe(testData[0].value);
+			expect(result[0]?.value).toBe(testData[0].value);
 		});
 	});
 
@@ -395,8 +383,7 @@ describe("createKeyv namespace forwarding", () => {
 		await keyv.set("user", "alice");
 		expect(store.has("tenant1:user")).toBe(true);
 		expect(store.has("user")).toBe(false);
-		const result = await keyv.get<{ value: string; expires: number | undefined }>("user");
-		expect(result?.value).toBe("alice");
+		expect(await keyv.get("user")).toBe("alice");
 	});
 
 	test("should isolate namespaces when using createKeyv", async () => {
@@ -405,10 +392,8 @@ describe("createKeyv namespace forwarding", () => {
 		const kv2 = createKeyv(store, { namespace: "ns2" });
 		await kv1.set("key", "value1");
 		await kv2.set("key", "value2");
-		const r1 = await kv1.get<{ value: string; expires: number | undefined }>("key");
-		const r2 = await kv2.get<{ value: string; expires: number | undefined }>("key");
-		expect(r1?.value).toBe("value1");
-		expect(r2?.value).toBe("value2");
+		expect(await kv1.get("key")).toBe("value1");
+		expect(await kv2.get("key")).toBe("value2");
 	});
 });
 
