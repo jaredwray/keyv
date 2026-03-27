@@ -845,6 +845,19 @@ test.it("Keyv will not prefix if there is no namespace", async (t) => {
 	t.expect(values).toStrictEqual(["bar", "bar1", "bar2"]);
 });
 
+test.it("empty key after sanitization is gracefully rejected", async (t) => {
+	const keyv = new Keyv();
+	// "'" is stripped by sanitizeKey to ""
+	t.expect(await keyv.set("'", "value")).toBe(false);
+	t.expect(await keyv.get("'")).toBeUndefined();
+	t.expect(await keyv.getRaw("'")).toBeUndefined();
+	t.expect(await keyv.setRaw("'", { value: "value", expires: undefined })).toBe(
+		false,
+	);
+	t.expect(await keyv.delete("'")).toBe(false);
+	t.expect(await keyv.has("'")).toBe(false);
+});
+
 test.it(
 	"Keyv will not serialize / deserialize / compress if serialization is undefined",
 	async (t) => {
