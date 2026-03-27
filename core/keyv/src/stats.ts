@@ -31,8 +31,12 @@ export class KeyvStats {
 
 		this.reset();
 
-		if (options?.emitter && this._enabled === true) {
-			this.subscribe(options.emitter);
+		if (options?.emitter) {
+			if (this._enabled === true) {
+				this.subscribe(options.emitter);
+			} else {
+				this._emitter = options.emitter;
+			}
 		}
 	}
 
@@ -139,7 +143,11 @@ export class KeyvStats {
 		this._enabled = value;
 
 		if (this._enabled === false && this._listeners.size !== 0) {
+			const emitter = this._emitter;
 			this.unsubscribe();
+			this._emitter = emitter;
+		} else if (this._enabled === true && this._emitter && this._listeners.size === 0) {
+			this.subscribe(this._emitter);
 		}
 	}
 

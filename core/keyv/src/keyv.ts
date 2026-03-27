@@ -288,6 +288,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public set sanitize(value: KeyvSanitize) {
 		this._sanitize = value;
+		if (this._namespace) {
+			this.namespace = this._namespace;
+		}
 	}
 
 	/**
@@ -303,6 +306,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {KeyvStats} stats The stats manager to set.
 	 */
 	public set stats(stats: KeyvStats) {
+		this._stats.unsubscribe();
 		this._stats = stats;
 		this._stats.subscribe(this);
 	}
