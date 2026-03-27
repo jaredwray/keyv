@@ -733,7 +733,7 @@ Returns a promise which resolves to an array of raw stored data for the keys or 
 
 ## .setRaw(key, value)
 
-Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `DeserializedData` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If you need TTL-based expiration, set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`). The store-level TTL is derived automatically from `value.expires`.
+Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `KeyvValue` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If you need TTL-based expiration, set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`). The store-level TTL is derived automatically from `value.expires`.
 
 Returns a promise which resolves to `true`.
 
@@ -756,7 +756,7 @@ if (raw) {
 
 ## .setManyRaw(entries)
 
-Sets many raw values in the store without wrapping. Each entry should have a `key` and a `value` (`DeserializedData` envelope). Like `setRaw()`, the envelopes are serialized before storing and the store-level TTL is derived from each entry's `value.expires`.
+Sets many raw values in the store without wrapping. Each entry should have a `key` and a `value` (`KeyvValue` envelope). Like `setRaw()`, the envelopes are serialized before storing and the store-level TTL is derived from each entry's `value.expires`.
 
 Returns a promise which resolves to an array of booleans.
 

@@ -15,10 +15,13 @@ export type KeyvEncryptionAdapter = {
 	decrypt: (data: string) => string | Promise<string>;
 };
 
-export type DeserializedData<Value> = {
+export type KeyvValue<Value> = {
 	value?: Value;
 	expires?: number | undefined;
 };
+
+/** @deprecated Use `KeyvValue` instead. */
+export type DeserializedData<Value> = KeyvValue<Value>;
 
 export enum KeyvHooks {
 	/** @deprecated Use BEFORE_SET instead */
@@ -90,7 +93,7 @@ export type KeyvEntry<Value = any> = {
 
 export type StoredDataNoRaw<Value> = Value | undefined;
 
-export type StoredDataRaw<Value> = DeserializedData<Value> | undefined;
+export type StoredDataRaw<Value> = KeyvValue<Value> | undefined;
 
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 

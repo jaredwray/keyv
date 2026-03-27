@@ -27,6 +27,7 @@ export type {
 	KeyvSerializationAdapter,
 	KeyvStorageAdapter,
 	KeyvStoreAdapter,
+	KeyvValue,
 	StoredData,
 	StoredDataNoRaw,
 	StoredDataRaw,

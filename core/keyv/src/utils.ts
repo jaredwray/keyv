@@ -1,13 +1,13 @@
 import {
-	type DeserializedData,
 	KeyvHooks,
 	type KeyvSanitizeOptions,
+	type KeyvValue,
 } from "./types.js";
 
 /**
  * Check whether a deserialized entry has expired based on its `expires` timestamp.
  */
-export function isDataExpired<Value>(data: DeserializedData<Value>): boolean {
+export function isDataExpired<Value>(data: KeyvValue<Value>): boolean {
 	return typeof data.expires === "number" && Date.now() > data.expires;
 }
 
@@ -56,7 +56,7 @@ export function ttlFromExpires(
  */
 export async function deleteExpiredKeys<Value>(
 	keys: string[],
-	data: Array<DeserializedData<Value> | undefined | null>,
+	data: Array<KeyvValue<Value> | undefined | null>,
 	keyv: { deleteMany(keys: string[]): Promise<boolean[]> },
 ): Promise<void> {
 	const expiredKeys: string[] = [];

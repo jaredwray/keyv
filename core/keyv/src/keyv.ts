@@ -3,7 +3,6 @@ import { detectKeyvStorage } from "./capabilities.js";
 import { KeyvJsonSerializer } from "./json-serializer.js";
 import StatsManager from "./stats-manager.js";
 import {
-	type DeserializedData,
 	type KeyvCompressionAdapter,
 	type KeyvEntry,
 	KeyvHooks,
@@ -11,6 +10,7 @@ import {
 	type KeyvSanitizeOptions,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
+	type KeyvValue,
 	type StoredDataRaw,
 } from "./types.js";
 import {
@@ -375,7 +375,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return undefined;
 		}
 
-		if (isDataExpired(deserializedData as DeserializedData<Value>)) {
+		if (isDataExpired(deserializedData as KeyvValue<Value>)) {
 			await this.delete(key);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 				key,
@@ -390,7 +390,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: deserializedData,
 		});
 		this._stats.hit();
-		return (deserializedData as DeserializedData<Value>).value;
+		return (deserializedData as KeyvValue<Value>).value;
 	}
 
 	/**
@@ -416,12 +416,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 					return undefined;
 				}
 
-				if (isDataExpired(deserializedRow as DeserializedData<Value>)) {
+				if (isDataExpired(deserializedRow as KeyvValue<Value>)) {
 					await this.delete(key);
 					return undefined;
 				}
 
-				return (deserializedRow as DeserializedData<Value>).value;
+				return (deserializedRow as KeyvValue<Value>).value;
 			});
 
 			const deserializedRows = await Promise.allSettled(promises);
@@ -439,13 +439,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		const rawData = await store.getMany<Value>(keys);
 
-		const deserialized: Array<DeserializedData<Value> | undefined | null> = [];
+		const deserialized: Array<KeyvValue<Value> | undefined | null> = [];
 		for (const row of rawData) {
 			if (typeof row === "string") {
 				// eslint-disable-next-line no-await-in-loop
 				deserialized.push(await this.deserializeData<Value>(row));
 			} else {
-				deserialized.push(row as DeserializedData<Value> | undefined | null);
+				deserialized.push(row as KeyvValue<Value> | undefined | null);
 			}
 		}
 
@@ -495,7 +495,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		if (
 			deserializedData !== undefined &&
-			isDataExpired(deserializedData as DeserializedData<Value>)
+			isDataExpired(deserializedData as KeyvValue<Value>)
 		) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
@@ -703,16 +703,16 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Set a raw value to the store without wrapping or serialization. This is the write-side counterpart to getRaw().
-	 * The value should be a DeserializedData object with { value, expires? }. If you need TTL-based expiration,
+	 * The value should be a KeyvValue object with { value, expires? }. If you need TTL-based expiration,
 	 * set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`).
 	 * The store-level TTL is derived automatically from `value.expires`.
 	 * @param {string} key the key to set
-	 * @param {DeserializedData<Value>} value the raw value envelope to store
+	 * @param {KeyvValue<Value>} value the raw value envelope to store
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
 	public async setRaw<Value = GenericValue>(
 		key: string,
-		value: DeserializedData<Value>,
+		value: KeyvValue<Value>,
 	): Promise<boolean> {
 		key = sanitizeKey(key, this._sanitizePattern);
 		const data = { key, value };
@@ -747,15 +747,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Set many raw values to the store without wrapping or serialization. This is the write-side counterpart to getManyRaw().
-	 * Each entry's value should be a DeserializedData object with { value, expires? }. If you need TTL-based expiration,
+	 * Each entry's value should be a KeyvValue object with { value, expires? }. If you need TTL-based expiration,
 	 * set `expires` on each value directly. The store-level TTL is derived automatically from `value.expires`.
-	 * @param {Array<{key: string, value: DeserializedData<Value>}>} entries the raw entries to set
+	 * @param {Array<{key: string, value: KeyvValue<Value>}>} entries the raw entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
 	public async setManyRaw<Value = GenericValue>(
 		entries: Array<{
 			key: string;
-			value: DeserializedData<Value>;
+			value: KeyvValue<Value>;
 		}>,
 	): Promise<boolean[]> {
 		entries = entries.map((e) => ({
@@ -1006,8 +1006,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	public async serializeData<T>(
-		data: DeserializedData<T>,
-	): Promise<string | DeserializedData<T>> {
+		data: KeyvValue<T>,
+	): Promise<string | KeyvValue<T>> {
 		// Pipeline: serialize (optional) -> compress (optional)
 		if (!this._serialization && !this._compression) {
 			return data;
@@ -1032,8 +1032,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	public async deserializeData<T>(
-		data: string | DeserializedData<T>,
-	): Promise<DeserializedData<T> | undefined> {
+		data: string | KeyvValue<T>,
+	): Promise<KeyvValue<T> | undefined> {
 		if (data === undefined || data === null) {
 			return undefined;
 		}
@@ -1044,7 +1044,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				return undefined;
 			}
 
-			return data as DeserializedData<T>;
+			return data as KeyvValue<T>;
 		}
 
 		// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -1055,19 +1055,19 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		if (this._serialization && typeof result === "string") {
-			return await this._serialization.parse<DeserializedData<T>>(result);
+			return await this._serialization.parse<KeyvValue<T>>(result);
 		}
 
 		// If compression was used without serialization, JSON was used as fallback
 		if (typeof result === "string") {
 			try {
-				return JSON.parse(result) as DeserializedData<T>;
+				return JSON.parse(result) as KeyvValue<T>;
 			} catch {
 				return undefined;
 			}
 		}
 
-		return result as DeserializedData<T>;
+		return result as KeyvValue<T>;
 	}
 
 	/**
