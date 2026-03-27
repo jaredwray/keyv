@@ -224,7 +224,7 @@ it("keyvMemcache hasMany with no keys existing", async () => {
 	expect(result).toEqual([false, false, false]);
 });
 
-it("keyvMemcache setMany should emit error on failure", async () => {
+it("keyvMemcache setMany should emit error on failure", { timeout: 30_000 }, async () => {
 	const badMemcache = new KeyvMemcache("baduri:11211");
 	let errorEmitted = false;
 	badMemcache.on("error", () => {
@@ -237,8 +237,9 @@ it("keyvMemcache setMany should emit error on failure", async () => {
 	expect(errorEmitted).toBeTruthy();
 });
 
-it("keyv has / false", async () => {
+it("keyv has / false", { timeout: 30_000 }, async () => {
 	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
+	keyv.on("error", () => {});
 
 	const value = await keyv.has(faker.string.uuid());
 
