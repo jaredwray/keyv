@@ -1,13 +1,19 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
-import { Keyv } from "./keyv.js";
-import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type KeyvValue, type StoredData } from "./types.js";
-import { isDataExpired } from "./utils.js";
+import { Keyv } from "../keyv.js";
+import {
+	type KeyvEntry,
+	KeyvEvents,
+	type KeyvStorageAdapter,
+	type KeyvValue,
+	type StoredData,
+} from "../types.js";
+import { isDataExpired } from "../utils.js";
 
 /**
- * Configuration options for KeyvGenericStore.
+ * Configuration options for KeyvMemoryAdapter.
  */
-export type KeyvGenericStoreOptions = {
+export type KeyvMemoryAdapterOptions = {
 	/**
 	 * The namespace to use for keys. Can be a static string or a function that returns a string.
 	 * When set, all keys will be prefixed with the namespace followed by the key separator.
@@ -20,7 +26,7 @@ export type KeyvGenericStoreOptions = {
 };
 
 /**
- * Interface for a Map-like store that can be used with KeyvGenericStore.
+ * Interface for a Map-like store that can be used with KeyvMemoryAdapter.
  * This allows any object implementing these methods to be used as the underlying storage.
  * Compatible with Map, QuickLRU, lru.min, and other LRU cache implementations.
  */
@@ -48,7 +54,7 @@ export type KeyPrefixData = {
 };
 
 /**
- * A generic in-memory store adapter for Keyv that wraps any Map-like object.
+ * An in-memory storage adapter for Keyv that wraps any Map-like object.
  *
  * This class provides a unified interface for using various Map-like stores
  * with Keyv, handling namespace prefixing, TTL-based expiration, and batch operations.
@@ -56,27 +62,27 @@ export type KeyPrefixData = {
  * @example
  * ```typescript
  * // Using with a standard Map
- * const store = new KeyvGenericStore(new Map(), { namespace: 'cache' });
+ * const store = new KeyvMemoryAdapter(new Map(), { namespace: 'cache' });
  *
  * // Using with a custom store
- * const customStore = new KeyvGenericStore(myCustomMapLikeStore, {
+ * const customStore = new KeyvMemoryAdapter(myCustomMapLikeStore, {
  *   namespace: () => `tenant-${getTenantId()}`,
  *   keySeparator: ':'
  * });
  * ```
  */
-export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
+export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvMapType;
 	private _namespace?: string | (() => string);
 	private _keySeparator = ":";
 
 	/**
-	 * Creates a new KeyvGenericStore instance.
+	 * Creates a new KeyvMemoryAdapter instance.
 	 * @param store - The underlying Map or Map-like object to use for storage
 	 * @param options - Configuration options for the store
 	 */
-	constructor(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
-		super();
+	constructor(store: KeyvMapType, options?: KeyvMemoryAdapterOptions) {
+		super({ throwOnHookError: false });
 		this._store = store;
 
 		if (options?.keySeparator) {
@@ -334,14 +340,14 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 }
 
 /**
- * Creates a Keyv instance with a generic store optimized for in-memory storage.
+ * Creates a Keyv instance with a memory adapter optimized for in-memory storage.
  *
  * This factory function configures Keyv to bypass serialization/deserialization
  * and key prefixing, resulting in faster performance for in-memory use cases
  * where data doesn't need to be persisted or transmitted.
  *
  * @param store - The underlying Map or Map-like object to use for storage
- * @param options - Configuration options for the generic store
+ * @param options - Configuration options for the memory adapter
  * @returns A configured Keyv instance with optimized settings for in-memory storage
  *
  * @example
@@ -357,10 +363,10 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
  * });
  * ```
  */
-export function createKeyv(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
-	const genericStore = new KeyvGenericStore(store, options);
+export function createKeyv(store: KeyvMapType, options?: KeyvMemoryAdapterOptions) {
+	const memoryAdapter = new KeyvMemoryAdapter(store, options);
 	const keyv = new Keyv({
-		store: genericStore,
+		store: memoryAdapter,
 		serialization: false,
 	});
 	return keyv;

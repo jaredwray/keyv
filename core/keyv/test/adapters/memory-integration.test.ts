@@ -1,22 +1,22 @@
 import { createLRU } from "lru.min";
 import QuickLRU from "quick-lru";
 import { describe, expect, test } from "vitest";
-import { createKeyv, KeyvGenericStore } from "../src/generic-store.js";
+import { createKeyv, KeyvMemoryAdapter } from "../../src/adapters/memory.js";
 
 // eslint-disable-next-line no-promise-executor-return
 const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("KeyvGenericStore with QuickLRU - Store Options", () => {
+describe("KeyvMemoryAdapter with QuickLRU - Store Options", () => {
 	test("should accept QuickLRU as the store", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		expect(keyv.store).toBe(lru);
 	});
 
 	test("should allow replacing the store", () => {
 		const lru1 = new QuickLRU<string, unknown>({ maxSize: 100 });
 		const lru2 = new QuickLRU<string, unknown>({ maxSize: 200 });
-		const keyv = new KeyvGenericStore(lru1);
+		const keyv = new KeyvMemoryAdapter(lru1);
 		expect(keyv.store).toBe(lru1);
 		keyv.store = lru2;
 		expect(keyv.store).toBe(lru2);
@@ -24,13 +24,13 @@ describe("KeyvGenericStore with QuickLRU - Store Options", () => {
 
 	test("should set the namespace option with QuickLRU", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "test" });
 		expect(keyv.namespace).toBe("test");
 	});
 
 	test("should be able to set and get the keySeparator with QuickLRU", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { keySeparator: ":" });
+		const keyv = new KeyvMemoryAdapter(lru, { keySeparator: ":" });
 		expect(keyv.keySeparator).toBe(":");
 		keyv.keySeparator = "||";
 		expect(keyv.keySeparator).toBe("||");
@@ -38,7 +38,7 @@ describe("KeyvGenericStore with QuickLRU - Store Options", () => {
 
 	test("should be able to get the options", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, {
+		const keyv = new KeyvMemoryAdapter(lru, {
 			namespace: "test",
 			keySeparator: ":",
 		});
@@ -47,7 +47,7 @@ describe("KeyvGenericStore with QuickLRU - Store Options", () => {
 	});
 });
 
-describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
+describe("KeyvMemoryAdapter with QuickLRU - LRU Eviction Behavior", () => {
 	/**
 	 * Note: QuickLRU uses a double-buffer (hashlru) algorithm for performance.
 	 * When the cache exceeds maxSize, it doesn't immediately evict the oldest item.
@@ -58,7 +58,7 @@ describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
 
 	test("should evict entries when cache exceeds capacity and entries are accessed", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -99,7 +99,7 @@ describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
 
 	test("should track size correctly", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 10 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		expect(lru.size).toBe(0);
 
@@ -118,7 +118,7 @@ describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
 
 	test("should evict all old buffer entries when new buffer fills up", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		// Fill the cache
 		await keyv.set("key1", "value1");
@@ -152,7 +152,7 @@ describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
 
 	test("should update LRU order - accessed items get promoted", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -195,7 +195,7 @@ describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
 
 	test("should handle updating existing keys without eviction", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -221,7 +221,7 @@ describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
 
 	test("should respect maxSize limit", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 2 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -239,10 +239,10 @@ describe("KeyvGenericStore with QuickLRU - LRU Eviction Behavior", () => {
 	});
 });
 
-describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
+describe("KeyvMemoryAdapter with QuickLRU - Basic CRUD Operations", () => {
 	test("should set and get a value", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		expect(await keyv.get("key1")).toStrictEqual({
 			value: "value1",
@@ -252,7 +252,7 @@ describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
 
 	test("should set many keys", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		const result = await keyv.setMany([
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
@@ -270,13 +270,13 @@ describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
 
 	test("should get undefined for non-existent key", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		expect(await keyv.get("nonexistent")).toBe(undefined);
 	});
 
 	test("should handle get with TTL and expiration", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", { val: "value1" }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -284,7 +284,7 @@ describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
 
 	test("should handle has", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		expect(await keyv.has("key1")).toBe(true);
 		expect(await keyv.has("key2")).toBe(false);
@@ -292,7 +292,7 @@ describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
 
 	test("should be able to get many keys", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -305,7 +305,7 @@ describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
 
 	test("should store complex objects", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		const complexValue = {
 			name: "test",
 			nested: { a: 1, b: [1, 2, 3] },
@@ -320,10 +320,10 @@ describe("KeyvGenericStore with QuickLRU - Basic CRUD Operations", () => {
 	});
 });
 
-describe("KeyvGenericStore with QuickLRU - Delete / Clear Operations", () => {
+describe("KeyvMemoryAdapter with QuickLRU - Delete / Clear Operations", () => {
 	test("should delete a key", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.delete("key1");
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -331,7 +331,7 @@ describe("KeyvGenericStore with QuickLRU - Delete / Clear Operations", () => {
 
 	test("should clear all keys", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.clear();
@@ -342,7 +342,7 @@ describe("KeyvGenericStore with QuickLRU - Delete / Clear Operations", () => {
 
 	test("should delete many keys", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -362,7 +362,7 @@ describe("KeyvGenericStore with QuickLRU - Delete / Clear Operations", () => {
 			throw new Error("delete error");
 		};
 
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		let errorEmitted = false;
 		keyv.on("error", (error) => {
 			expect(error.message).toBe("delete error");
@@ -373,29 +373,29 @@ describe("KeyvGenericStore with QuickLRU - Delete / Clear Operations", () => {
 	});
 });
 
-describe("KeyvGenericStore with QuickLRU - Namespace", () => {
+describe("KeyvMemoryAdapter with QuickLRU - Namespace", () => {
 	test("should return the namespace if it is a string", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "test" });
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
 	test("should return the namespace if it is a function", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: () => "test" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: () => "test" });
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
 	test("should set the namespace", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		keyv.namespace = "test";
 		expect(keyv.namespace).toBe("test");
 	});
 
 	test("should set the namespace as a function", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		expect(keyv.namespace).toBe(undefined);
 		keyv.setNamespace(() => "test");
 		expect(keyv.namespace).toBe("test");
@@ -403,15 +403,15 @@ describe("KeyvGenericStore with QuickLRU - Namespace", () => {
 
 	test("should set the key prefix", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
-		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1::key1");
+		const keyv = new KeyvMemoryAdapter(lru);
+		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1:key1");
 		expect(keyv.getKeyPrefix("key1")).toBe("key1");
 	});
 
 	test("should get the key prefix data", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
-		expect(keyv.getKeyPrefixData("ns1::key1")).toEqual({
+		const keyv = new KeyvMemoryAdapter(lru);
+		expect(keyv.getKeyPrefixData("ns1:key1")).toEqual({
 			key: "key1",
 			namespace: "ns1",
 		});
@@ -423,15 +423,15 @@ describe("KeyvGenericStore with QuickLRU - Namespace", () => {
 
 	test("should store and retrieve with namespace", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "myns" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "myns" });
 
 		await keyv.set("key1", "value1");
 
 		// Verify the key is stored with namespace prefix
-		expect(lru.has("myns::key1")).toBe(true);
+		expect(lru.has("myns:key1")).toBe(true);
 		expect(lru.has("key1")).toBe(false);
 
-		// Should still be retrievable via KeyvGenericStore
+		// Should still be retrievable via KeyvMemoryAdapter
 		expect(await keyv.get("key1")).toStrictEqual({
 			value: "value1",
 			expires: undefined,
@@ -439,10 +439,10 @@ describe("KeyvGenericStore with QuickLRU - Namespace", () => {
 	});
 });
 
-describe("KeyvGenericStore with QuickLRU - Iterator", () => {
+describe("KeyvMemoryAdapter with QuickLRU - Iterator", () => {
 	test("should iterate over all entries", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -458,12 +458,12 @@ describe("KeyvGenericStore with QuickLRU - Iterator", () => {
 
 	test("should filter by namespace", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "ns1" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "ns1" });
 
 		// Set entries with different namespaces manually
-		lru.set("ns1::key1", { value: "value1", expires: undefined });
-		lru.set("ns1::key2", { value: "value2", expires: undefined });
-		lru.set("ns2::key3", { value: "value3", expires: undefined });
+		lru.set("ns1:key1", { value: "value1", expires: undefined });
+		lru.set("ns1:key2", { value: "value2", expires: undefined });
+		lru.set("ns2:key3", { value: "value3", expires: undefined });
 
 		const entries: Array<[string, unknown]> = [];
 		for await (const entry of keyv.iterator()) {
@@ -476,7 +476,7 @@ describe("KeyvGenericStore with QuickLRU - Iterator", () => {
 
 	test("should skip expired entries and delete them", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		// Set a valid entry
 		await keyv.set("key1", "value1");
@@ -498,7 +498,7 @@ describe("KeyvGenericStore with QuickLRU - Iterator", () => {
 
 	test("should strip namespace prefix from keys when iterating with namespace", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "myns" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "myns" });
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -515,7 +515,7 @@ describe("KeyvGenericStore with QuickLRU - Iterator", () => {
 
 	test("should work with custom key separator", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, {
+		const keyv = new KeyvMemoryAdapter(lru, {
 			namespace: "ns1",
 			keySeparator: ":",
 		});
@@ -535,7 +535,7 @@ describe("KeyvGenericStore with QuickLRU - Iterator", () => {
 	});
 });
 
-describe("KeyvGenericStore with QuickLRU - createKeyv() Integration", () => {
+describe("KeyvMemoryAdapter with QuickLRU - createKeyv() Integration", () => {
 	test("should work with createKeyv helper", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
 		const keyv = createKeyv(lru);
@@ -594,9 +594,9 @@ describe("KeyvGenericStore with QuickLRU - createKeyv() Integration", () => {
 		expect(await keyv.has("key3")).toBe(true);
 	});
 
-	test("should work with namespace option via KeyvGenericStore directly", async () => {
+	test("should work with namespace option via KeyvMemoryAdapter directly", async () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "tenant1" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "tenant1" });
 
 		await keyv.set("user", "john");
 		expect(await keyv.get("user")).toStrictEqual({
@@ -605,7 +605,7 @@ describe("KeyvGenericStore with QuickLRU - createKeyv() Integration", () => {
 		});
 
 		// Verify it's stored with namespace prefix in the underlying LRU
-		expect(lru.has("tenant1::user")).toBe(true);
+		expect(lru.has("tenant1:user")).toBe(true);
 	});
 
 	test("should respect LRU eviction with createKeyv", async () => {
@@ -655,17 +655,17 @@ describe("KeyvGenericStore with QuickLRU - createKeyv() Integration", () => {
 // lru.min Tests
 // ============================================================================
 
-describe("KeyvGenericStore with lru.min - Store Options", () => {
+describe("KeyvMemoryAdapter with lru.min - Store Options", () => {
 	test("should accept lru.min as the store", () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		expect(keyv.store).toBe(lru);
 	});
 
 	test("should allow replacing the store", () => {
 		const lru1 = createLRU<string, unknown>({ max: 100 });
 		const lru2 = createLRU<string, unknown>({ max: 200 });
-		const keyv = new KeyvGenericStore(lru1);
+		const keyv = new KeyvMemoryAdapter(lru1);
 		expect(keyv.store).toBe(lru1);
 		keyv.store = lru2;
 		expect(keyv.store).toBe(lru2);
@@ -673,13 +673,13 @@ describe("KeyvGenericStore with lru.min - Store Options", () => {
 
 	test("should set the namespace option with lru.min", () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "test" });
 		expect(keyv.namespace).toBe("test");
 	});
 
 	test("should be able to set and get the keySeparator with lru.min", () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru, { keySeparator: ":" });
+		const keyv = new KeyvMemoryAdapter(lru, { keySeparator: ":" });
 		expect(keyv.keySeparator).toBe(":");
 		keyv.keySeparator = "||";
 		expect(keyv.keySeparator).toBe("||");
@@ -687,7 +687,7 @@ describe("KeyvGenericStore with lru.min - Store Options", () => {
 
 	test("should be able to get the options", () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru, {
+		const keyv = new KeyvMemoryAdapter(lru, {
 			namespace: "test",
 			keySeparator: ":",
 		});
@@ -696,10 +696,10 @@ describe("KeyvGenericStore with lru.min - Store Options", () => {
 	});
 });
 
-describe("KeyvGenericStore with lru.min - LRU Eviction Behavior", () => {
+describe("KeyvMemoryAdapter with lru.min - LRU Eviction Behavior", () => {
 	test("should evict oldest entry when max is exceeded", async () => {
 		const lru = createLRU<string, unknown>({ max: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -728,7 +728,7 @@ describe("KeyvGenericStore with lru.min - LRU Eviction Behavior", () => {
 
 	test("should track size correctly", async () => {
 		const lru = createLRU<string, unknown>({ max: 10 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		expect(lru.size).toBe(0);
 
@@ -747,7 +747,7 @@ describe("KeyvGenericStore with lru.min - LRU Eviction Behavior", () => {
 
 	test("should evict multiple entries when adding items exceeding capacity", async () => {
 		const lru = createLRU<string, unknown>({ max: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -778,7 +778,7 @@ describe("KeyvGenericStore with lru.min - LRU Eviction Behavior", () => {
 
 	test("should update LRU order on get (most recently accessed stays)", async () => {
 		const lru = createLRU<string, unknown>({ max: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -810,7 +810,7 @@ describe("KeyvGenericStore with lru.min - LRU Eviction Behavior", () => {
 
 	test("should handle updating existing keys without eviction", async () => {
 		const lru = createLRU<string, unknown>({ max: 3 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -842,7 +842,7 @@ describe("KeyvGenericStore with lru.min - LRU Eviction Behavior", () => {
 				evictedItems.push({ key, value });
 			},
 		});
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -853,10 +853,10 @@ describe("KeyvGenericStore with lru.min - LRU Eviction Behavior", () => {
 	});
 });
 
-describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
+describe("KeyvMemoryAdapter with lru.min - Basic CRUD Operations", () => {
 	test("should set and get a value", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		expect(await keyv.get("key1")).toStrictEqual({
 			value: "value1",
@@ -866,7 +866,7 @@ describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
 
 	test("should set many keys", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		const result = await keyv.setMany([
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
@@ -884,13 +884,13 @@ describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
 
 	test("should get undefined for non-existent key", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		expect(await keyv.get("nonexistent")).toBe(undefined);
 	});
 
 	test("should handle get with TTL and expiration", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", { val: "value1" }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -898,7 +898,7 @@ describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
 
 	test("should handle has", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		expect(await keyv.has("key1")).toBe(true);
 		expect(await keyv.has("key2")).toBe(false);
@@ -906,7 +906,7 @@ describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
 
 	test("should be able to get many keys", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -919,7 +919,7 @@ describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
 
 	test("should store complex objects", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		const complexValue = {
 			name: "test",
 			nested: { a: 1, b: [1, 2, 3] },
@@ -934,10 +934,10 @@ describe("KeyvGenericStore with lru.min - Basic CRUD Operations", () => {
 	});
 });
 
-describe("KeyvGenericStore with lru.min - Delete / Clear Operations", () => {
+describe("KeyvMemoryAdapter with lru.min - Delete / Clear Operations", () => {
 	test("should delete a key", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.delete("key1");
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -945,7 +945,7 @@ describe("KeyvGenericStore with lru.min - Delete / Clear Operations", () => {
 
 	test("should clear all keys", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.clear();
@@ -956,7 +956,7 @@ describe("KeyvGenericStore with lru.min - Delete / Clear Operations", () => {
 
 	test("should delete many keys", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -970,18 +970,18 @@ describe("KeyvGenericStore with lru.min - Delete / Clear Operations", () => {
 	});
 });
 
-describe("KeyvGenericStore with lru.min - Namespace", () => {
+describe("KeyvMemoryAdapter with lru.min - Namespace", () => {
 	test("should store and retrieve with namespace", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "myns" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "myns" });
 
 		await keyv.set("key1", "value1");
 
 		// Verify the key is stored with namespace prefix
-		expect(lru.has("myns::key1")).toBe(true);
+		expect(lru.has("myns:key1")).toBe(true);
 		expect(lru.has("key1")).toBe(false);
 
-		// Should still be retrievable via KeyvGenericStore
+		// Should still be retrievable via KeyvMemoryAdapter
 		expect(await keyv.get("key1")).toStrictEqual({
 			value: "value1",
 			expires: undefined,
@@ -990,16 +990,16 @@ describe("KeyvGenericStore with lru.min - Namespace", () => {
 
 	test("should set the key prefix", () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
-		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1::key1");
+		const keyv = new KeyvMemoryAdapter(lru);
+		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1:key1");
 		expect(keyv.getKeyPrefix("key1")).toBe("key1");
 	});
 });
 
-describe("KeyvGenericStore with lru.min - Iterator", () => {
+describe("KeyvMemoryAdapter with lru.min - Iterator", () => {
 	test("should iterate over all entries", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -1015,12 +1015,12 @@ describe("KeyvGenericStore with lru.min - Iterator", () => {
 
 	test("should filter by namespace", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru, { namespace: "ns1" });
+		const keyv = new KeyvMemoryAdapter(lru, { namespace: "ns1" });
 
 		// Set entries with different namespaces manually
-		lru.set("ns1::key1", { value: "value1", expires: undefined });
-		lru.set("ns1::key2", { value: "value2", expires: undefined });
-		lru.set("ns2::key3", { value: "value3", expires: undefined });
+		lru.set("ns1:key1", { value: "value1", expires: undefined });
+		lru.set("ns1:key2", { value: "value2", expires: undefined });
+		lru.set("ns2:key3", { value: "value3", expires: undefined });
 
 		const entries: Array<[string, unknown]> = [];
 		for await (const entry of keyv.iterator()) {
@@ -1033,7 +1033,7 @@ describe("KeyvGenericStore with lru.min - Iterator", () => {
 
 	test("should handle entries without expiration", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
-		const keyv = new KeyvGenericStore(lru);
+		const keyv = new KeyvMemoryAdapter(lru);
 
 		// Set valid entries only (no expiration)
 		await keyv.set("key1", "value1");
@@ -1049,7 +1049,7 @@ describe("KeyvGenericStore with lru.min - Iterator", () => {
 	});
 });
 
-describe("KeyvGenericStore with lru.min - createKeyv() Integration", () => {
+describe("KeyvMemoryAdapter with lru.min - createKeyv() Integration", () => {
 	test("should work with createKeyv helper", async () => {
 		const lru = createLRU<string, unknown>({ max: 100 });
 		const keyv = createKeyv(lru);
@@ -1093,17 +1093,17 @@ describe("KeyvGenericStore with lru.min - createKeyv() Integration", () => {
 // Standard Map Tests
 // ============================================================================
 
-describe("KeyvGenericStore with Map - Store Options", () => {
+describe("KeyvMemoryAdapter with Map - Store Options", () => {
 	test("should accept Map as the store", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		expect(keyv.store).toBe(map);
 	});
 
 	test("should allow replacing the store", () => {
 		const map1 = new Map<string, unknown>();
 		const map2 = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map1);
+		const keyv = new KeyvMemoryAdapter(map1);
 		expect(keyv.store).toBe(map1);
 		keyv.store = map2;
 		expect(keyv.store).toBe(map2);
@@ -1111,13 +1111,13 @@ describe("KeyvGenericStore with Map - Store Options", () => {
 
 	test("should set the namespace option with Map", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(map, { namespace: "test" });
 		expect(keyv.namespace).toBe("test");
 	});
 
 	test("should be able to set and get the keySeparator with Map", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, { keySeparator: ":" });
+		const keyv = new KeyvMemoryAdapter(map, { keySeparator: ":" });
 		expect(keyv.keySeparator).toBe(":");
 		keyv.keySeparator = "||";
 		expect(keyv.keySeparator).toBe("||");
@@ -1125,7 +1125,7 @@ describe("KeyvGenericStore with Map - Store Options", () => {
 
 	test("should be able to get the options", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, {
+		const keyv = new KeyvMemoryAdapter(map, {
 			namespace: "test",
 			keySeparator: ":",
 		});
@@ -1134,10 +1134,10 @@ describe("KeyvGenericStore with Map - Store Options", () => {
 	});
 });
 
-describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
+describe("KeyvMemoryAdapter with Map - Basic CRUD Operations", () => {
 	test("should set and get a value", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
 		expect(await keyv.get("key1")).toStrictEqual({
 			value: "value1",
@@ -1147,7 +1147,7 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 
 	test("should set many keys", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		const result = await keyv.setMany([
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
@@ -1165,13 +1165,13 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 
 	test("should get undefined for non-existent key", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		expect(await keyv.get("nonexistent")).toBe(undefined);
 	});
 
 	test("should handle get with TTL and expiration", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", { val: "value1" }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -1179,7 +1179,7 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 
 	test("should handle has", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
 		expect(await keyv.has("key1")).toBe(true);
 		expect(await keyv.has("key2")).toBe(false);
@@ -1187,7 +1187,7 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 
 	test("should be able to get many keys", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -1200,7 +1200,7 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 
 	test("should store complex objects", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		const complexValue = {
 			name: "test",
 			nested: { a: 1, b: [1, 2, 3] },
@@ -1216,7 +1216,7 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 
 	test("should track size correctly", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 
 		expect(map.size).toBe(0);
 
@@ -1235,7 +1235,7 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 
 	test("should not have size limits (unlike LRU)", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 
 		// Add many entries - Map has no size limit
 		for (let i = 0; i < 100; i++) {
@@ -1256,10 +1256,10 @@ describe("KeyvGenericStore with Map - Basic CRUD Operations", () => {
 	});
 });
 
-describe("KeyvGenericStore with Map - Delete / Clear Operations", () => {
+describe("KeyvMemoryAdapter with Map - Delete / Clear Operations", () => {
 	test("should delete a key", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
 		await keyv.delete("key1");
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -1267,7 +1267,7 @@ describe("KeyvGenericStore with Map - Delete / Clear Operations", () => {
 
 	test("should clear all keys", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.clear();
@@ -1278,7 +1278,7 @@ describe("KeyvGenericStore with Map - Delete / Clear Operations", () => {
 
 	test("should delete many keys", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -1298,7 +1298,7 @@ describe("KeyvGenericStore with Map - Delete / Clear Operations", () => {
 			throw new Error("delete error");
 		};
 
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		let errorEmitted = false;
 		keyv.on("error", (error) => {
 			expect(error.message).toBe("delete error");
@@ -1309,18 +1309,18 @@ describe("KeyvGenericStore with Map - Delete / Clear Operations", () => {
 	});
 });
 
-describe("KeyvGenericStore with Map - Namespace", () => {
+describe("KeyvMemoryAdapter with Map - Namespace", () => {
 	test("should store and retrieve with namespace", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, { namespace: "myns" });
+		const keyv = new KeyvMemoryAdapter(map, { namespace: "myns" });
 
 		await keyv.set("key1", "value1");
 
 		// Verify the key is stored with namespace prefix
-		expect(map.has("myns::key1")).toBe(true);
+		expect(map.has("myns:key1")).toBe(true);
 		expect(map.has("key1")).toBe(false);
 
-		// Should still be retrievable via KeyvGenericStore
+		// Should still be retrievable via KeyvMemoryAdapter
 		expect(await keyv.get("key1")).toStrictEqual({
 			value: "value1",
 			expires: undefined,
@@ -1329,27 +1329,27 @@ describe("KeyvGenericStore with Map - Namespace", () => {
 
 	test("should return the namespace if it is a string", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(map, { namespace: "test" });
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
 	test("should return the namespace if it is a function", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, { namespace: () => "test" });
+		const keyv = new KeyvMemoryAdapter(map, { namespace: () => "test" });
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
 	test("should set the key prefix", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
-		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1::key1");
+		const keyv = new KeyvMemoryAdapter(map);
+		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1:key1");
 		expect(keyv.getKeyPrefix("key1")).toBe("key1");
 	});
 
 	test("should get the key prefix data", () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
-		expect(keyv.getKeyPrefixData("ns1::key1")).toEqual({
+		const keyv = new KeyvMemoryAdapter(map);
+		expect(keyv.getKeyPrefixData("ns1:key1")).toEqual({
 			key: "key1",
 			namespace: "ns1",
 		});
@@ -1360,10 +1360,10 @@ describe("KeyvGenericStore with Map - Namespace", () => {
 	});
 });
 
-describe("KeyvGenericStore with Map - Iterator", () => {
+describe("KeyvMemoryAdapter with Map - Iterator", () => {
 	test("should iterate over all entries", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -1379,12 +1379,12 @@ describe("KeyvGenericStore with Map - Iterator", () => {
 
 	test("should filter by namespace", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, { namespace: "ns1" });
+		const keyv = new KeyvMemoryAdapter(map, { namespace: "ns1" });
 
 		// Set entries with different namespaces manually
-		map.set("ns1::key1", { value: "value1", expires: undefined });
-		map.set("ns1::key2", { value: "value2", expires: undefined });
-		map.set("ns2::key3", { value: "value3", expires: undefined });
+		map.set("ns1:key1", { value: "value1", expires: undefined });
+		map.set("ns1:key2", { value: "value2", expires: undefined });
+		map.set("ns2:key3", { value: "value3", expires: undefined });
 
 		const entries: Array<[string, unknown]> = [];
 		for await (const entry of keyv.iterator()) {
@@ -1397,7 +1397,7 @@ describe("KeyvGenericStore with Map - Iterator", () => {
 
 	test("should skip expired entries and delete them", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map);
+		const keyv = new KeyvMemoryAdapter(map);
 
 		// Set a valid entry
 		await keyv.set("key1", "value1");
@@ -1419,7 +1419,7 @@ describe("KeyvGenericStore with Map - Iterator", () => {
 
 	test("should strip namespace prefix from keys when iterating with namespace", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, { namespace: "myns" });
+		const keyv = new KeyvMemoryAdapter(map, { namespace: "myns" });
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -1436,7 +1436,7 @@ describe("KeyvGenericStore with Map - Iterator", () => {
 
 	test("should work with custom key separator", async () => {
 		const map = new Map<string, unknown>();
-		const keyv = new KeyvGenericStore(map, {
+		const keyv = new KeyvMemoryAdapter(map, {
 			namespace: "ns1",
 			keySeparator: ":",
 		});
@@ -1456,7 +1456,7 @@ describe("KeyvGenericStore with Map - Iterator", () => {
 	});
 });
 
-describe("KeyvGenericStore with Map - createKeyv() Integration", () => {
+describe("KeyvMemoryAdapter with Map - createKeyv() Integration", () => {
 	test("should work with createKeyv helper", async () => {
 		const map = new Map<string, unknown>();
 		const keyv = createKeyv(map);

@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, test } from "vitest";
-import { createKeyv, KeyvGenericStore } from "../src/generic-store.js";
+import { createKeyv, KeyvMemoryAdapter } from "../../src/adapters/memory.js";
 
 // eslint-disable-next-line no-promise-executor-return
 const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -8,7 +8,7 @@ const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve,
 describe("Keyv Generic Store Options", () => {
 	test("should accept a store as the first argument", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		expect(keyv.store).toBe(store);
 		const newStore = new Map();
 		keyv.store = newStore;
@@ -17,13 +17,13 @@ describe("Keyv Generic Store Options", () => {
 
 	test("should set the namespace option", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(store, { namespace: "test" });
 		expect(keyv.namespace).toBe("test");
 	});
 
 	test("should be able to set get the keySeparator", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { keySeparator: "test" });
+		const keyv = new KeyvMemoryAdapter(store, { keySeparator: "test" });
 		expect(keyv.keySeparator).toBe("test");
 		keyv.keySeparator = "new";
 		expect(keyv.keySeparator).toBe("new");
@@ -31,7 +31,7 @@ describe("Keyv Generic Store Options", () => {
 
 	test("should be able to get the namespace from options", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(store, { namespace: "test" });
 		expect(keyv.namespace).toBe("test");
 	});
 });
@@ -39,26 +39,26 @@ describe("Keyv Generic Store Options", () => {
 describe("Keyv Generic Store Namespace", () => {
 	test("should return the namespace if it is a string", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { namespace: "test" });
+		const keyv = new KeyvMemoryAdapter(store, { namespace: "test" });
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
 	test("should return the namespace if it is a function", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { namespace: () => "test" });
+		const keyv = new KeyvMemoryAdapter(store, { namespace: () => "test" });
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
 	test("should set the namespace", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		keyv.namespace = "test";
 		expect(keyv.namespace).toBe("test");
 	});
 
 	test("should set the namespace as a function", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		expect(keyv.namespace).toBe(undefined);
 		keyv.setNamespace(() => "test");
 		expect(keyv.namespace).toBe("test");
@@ -66,15 +66,15 @@ describe("Keyv Generic Store Namespace", () => {
 
 	test("should set the key prefix", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
-		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1::key1");
+		const keyv = new KeyvMemoryAdapter(store);
+		expect(keyv.getKeyPrefix("key1", "ns1")).toBe("ns1:key1");
 		expect(keyv.getKeyPrefix("key1")).toBe("key1");
 	});
 
 	test("should get the key prefix data", () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
-		expect(keyv.getKeyPrefixData("ns1::key1")).toEqual({
+		const keyv = new KeyvMemoryAdapter(store);
+		expect(keyv.getKeyPrefixData("ns1:key1")).toEqual({
 			key: "key1",
 			namespace: "ns1",
 		});
@@ -88,7 +88,7 @@ describe("Keyv Generic Store Namespace", () => {
 describe("Keyv Generic set / get / has Operations", () => {
 	test("should set a value", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
 		expect(await keyv.get("key1")).toStrictEqual({
 			value: "value1",
@@ -98,7 +98,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 
 	test("should set many keys", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		const result = await keyv.setMany([
 			{ key: "key1", value: "value1" },
 			{ key: "key2", value: "value2" },
@@ -116,13 +116,13 @@ describe("Keyv Generic set / get / has Operations", () => {
 
 	test("should get undefined for a non-existent key", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		expect(await keyv.get("key1")).toBe(undefined);
 	});
 
 	test("should handle get with a ttl and expiration", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", { val: "value1" }, 10);
 		await sleep(20);
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -130,7 +130,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 
 	test("should handle has", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
 		expect(await keyv.has("key1")).toBe(true);
 		expect(await keyv.has("key2")).toBe(false);
@@ -138,7 +138,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 
 	test("should be able to get many keys", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -153,7 +153,7 @@ describe("Keyv Generic set / get / has Operations", () => {
 describe("Keyv Generic Delete / Clear Operations", () => {
 	test("should delete a key", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
 		await keyv.delete("key1");
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -161,7 +161,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 
 	test("should clear all keys", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
 		await keyv.clear();
 		expect(await keyv.get("key1")).toBe(undefined);
@@ -169,7 +169,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 
 	test("should delete many keys", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -188,7 +188,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 			throw new Error("delete error");
 		};
 
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		let errorEmitted = false;
 		keyv.on("error", (error) => {
 			expect(error.message).toBe("delete error");
@@ -359,7 +359,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 describe("Keyv Generic Store Iterator", () => {
 	test("should iterate over all entries", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
 		await keyv.set("key3", "value3");
@@ -375,12 +375,12 @@ describe("Keyv Generic Store Iterator", () => {
 
 	test("should filter by namespace", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { namespace: "ns1" });
+		const keyv = new KeyvMemoryAdapter(store, { namespace: "ns1" });
 
 		// Set entries with different namespaces manually
-		store.set("ns1::key1", { value: "value1", expires: undefined });
-		store.set("ns1::key2", { value: "value2", expires: undefined });
-		store.set("ns2::key3", { value: "value3", expires: undefined });
+		store.set("ns1:key1", { value: "value1", expires: undefined });
+		store.set("ns1:key2", { value: "value2", expires: undefined });
+		store.set("ns2:key3", { value: "value3", expires: undefined });
 
 		const entries: Array<[string, unknown]> = [];
 		for await (const entry of keyv.iterator()) {
@@ -393,7 +393,7 @@ describe("Keyv Generic Store Iterator", () => {
 
 	test("should skip expired entries and delete them", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store);
+		const keyv = new KeyvMemoryAdapter(store);
 
 		// Set a valid entry
 		await keyv.set("key1", "value1");
@@ -422,7 +422,7 @@ describe("Keyv Generic Store Iterator", () => {
 			has: (_key: string) => false,
 		};
 
-		const keyv = new KeyvGenericStore(customStore);
+		const keyv = new KeyvMemoryAdapter(customStore);
 
 		const entries: Array<[string, unknown]> = [];
 		for await (const entry of keyv.iterator()) {
@@ -434,7 +434,7 @@ describe("Keyv Generic Store Iterator", () => {
 
 	test("should strip namespace prefix from keys when iterating with namespace", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, { namespace: "myns" });
+		const keyv = new KeyvMemoryAdapter(store, { namespace: "myns" });
 
 		await keyv.set("key1", "value1");
 		await keyv.set("key2", "value2");
@@ -451,7 +451,7 @@ describe("Keyv Generic Store Iterator", () => {
 
 	test("should work with custom key separator", async () => {
 		const store = new Map();
-		const keyv = new KeyvGenericStore(store, {
+		const keyv = new KeyvMemoryAdapter(store, {
 			namespace: "ns1",
 			keySeparator: ":",
 		});
