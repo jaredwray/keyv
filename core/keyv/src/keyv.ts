@@ -482,9 +482,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			});
 
 			const deserializedRows = await Promise.allSettled(promises);
-			const result = deserializedRows.map(
-				// biome-ignore lint/suspicious/noExplicitAny: type format
-				(row) => (row as PromiseFulfilledResult<any>).value,
+			const result = deserializedRows.map((row) =>
+				row.status === "fulfilled" ? row.value : undefined,
 			);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 			if (result.length > 0) {
@@ -496,29 +495,28 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		const rawData = await store.getMany<Value>(keys);
 
-		const result = [];
-		const expiredKeys = [];
-		// eslint-disable-next-line guard-for-in, @typescript-eslint/no-for-in-array
-		for (const index in rawData) {
-			let row = rawData[index];
+		const result: Array<Value | undefined> = [];
+		const expiredKeys: string[] = [];
+		for (const [index, row] of rawData.entries()) {
+			let deserialized = row;
 
-			if (typeof row === "string") {
+			if (typeof deserialized === "string") {
 				// eslint-disable-next-line no-await-in-loop
-				row = await this.deserializeData<Value>(row);
+				deserialized = await this.deserializeData<Value>(deserialized);
 			}
 
-			if (row === undefined || row === null) {
+			if (deserialized === undefined || deserialized === null) {
 				result.push(undefined);
 				continue;
 			}
 
-			if (isDataExpired(row as DeserializedData<Value>)) {
+			if (isDataExpired(deserialized as DeserializedData<Value>)) {
 				expiredKeys.push(keys[index]);
 				result.push(undefined);
 				continue;
 			}
 
-			result.push((row as DeserializedData<Value>).value);
+			result.push((deserialized as DeserializedData<Value>).value);
 		}
 
 		if (expiredKeys.length > 0) {
@@ -629,9 +627,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const deserializedRows = await Promise.allSettled(promises);
 			result = deserializedRows.map(
 				(row: PromiseSettledResult<StoredDataRaw<Value> | undefined>) =>
-					// biome-ignore lint/suspicious/noExplicitAny: type format
-					(row as PromiseFulfilledResult<any>).value,
-			);
+					row.status === "fulfilled" ? row.value : undefined,
+			) as Array<StoredDataRaw<Value>>;
 		} else {
 			const rawData = await store.getMany(keys);
 
@@ -1046,13 +1043,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return store.hasMany(keys);
 		}
 
-		const results: boolean[] = [];
-		for (const key of keys) {
-			// eslint-disable-next-line no-await-in-loop
-			results.push(await this.has(key));
-		}
-
-		return results;
+		return Promise.all(keys.map(async (key) => this.has(key)));
 	}
 
 	/**
