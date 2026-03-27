@@ -40,21 +40,13 @@ describe("Keyv Generic Store Namespace", () => {
 	test("should return the namespace if it is a string", () => {
 		const store = new Map();
 		const keyv = new KeyvMemoryAdapter(store, { namespace: "test" });
-		expect(keyv.getNamespace()).toBe("test");
+		expect(keyv.namespace).toBe("test");
 	});
 
 	test("should set the namespace", () => {
 		const store = new Map();
 		const keyv = new KeyvMemoryAdapter(store);
 		keyv.namespace = "test";
-		expect(keyv.namespace).toBe("test");
-	});
-
-	test("should set the namespace via setNamespace", () => {
-		const store = new Map();
-		const keyv = new KeyvMemoryAdapter(store);
-		expect(keyv.namespace).toBe(undefined);
-		keyv.setNamespace("test");
 		expect(keyv.namespace).toBe("test");
 	});
 

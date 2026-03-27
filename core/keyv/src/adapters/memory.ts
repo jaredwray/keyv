@@ -137,22 +137,6 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the current namespace.
-	 * @returns The namespace string, or undefined if not set
-	 */
-	public getNamespace() {
-		return this._namespace;
-	}
-
-	/**
-	 * Sets the namespace.
-	 * @param namespace - The namespace string, or undefined to clear
-	 */
-	public setNamespace(namespace: string | undefined) {
-		this._namespace = namespace;
-	}
-
-	/**
 	 * Creates a prefixed key by combining the namespace and key with the separator.
 	 * @param key - The base key
 	 * @param namespace - Optional namespace to prefix the key with
@@ -187,7 +171,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns The stored data, or undefined if not found or expired
 	 */
 	public async get<T>(key: string): Promise<StoredData<T> | undefined> {
-		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		const data = this._store.get(keyPrefix) as KeyvValue<T>;
 		if (!data) {
 			return undefined;
@@ -210,7 +194,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns Always returns true indicating success
 	 */
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
-		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		const data = { value, expires: ttl ? Date.now() + ttl : undefined };
 		this._store.set(keyPrefix, data, ttl);
 		return true;
@@ -236,7 +220,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns True if the key was deleted, false otherwise
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		return this._store.delete(keyPrefix);
 	}
 
@@ -282,7 +266,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const results: boolean[] = [];
 		for (const key of keys) {
 			try {
-				const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+				const keyPrefix = this.getKeyPrefix(key, this._namespace);
 				const existed = this._store.has(keyPrefix);
 				this._store.delete(keyPrefix);
 				results.push(existed);
@@ -298,7 +282,6 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Creates an async iterator for iterating over store entries.
 	 * If the underlying store does not support iteration, returns an empty generator.
-	 * @param namespace - Optional namespace to filter entries by
 	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding [key, value] pairs
 	 */
 	public async *iterator<Value>(): AsyncGenerator<
@@ -310,7 +293,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			return;
 		}
 
-		const namespace = this.getNamespace();
+		const namespace = this._namespace;
 		const iterator = (this._store as Map<any, any>).entries();
 
 		for (const [key, data] of iterator) {
