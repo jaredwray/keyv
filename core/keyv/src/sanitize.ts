@@ -50,8 +50,7 @@ export class KeyvSanitize {
 	private _namespace: KeyvSanitizePatterns = { ...allOff };
 	private _keyPatterns: RegExp[] | undefined;
 	private _namespacePatterns: RegExp[] | undefined;
-	private _keysEnabled = false;
-	private _namespaceEnabled = false;
+	private _enabled = false;
 	private _cacheKeys = new Map<string, string>();
 	private _cacheNamespaces = new Map<string, string>();
 	private _cacheMax = 10_000;
@@ -70,10 +69,10 @@ export class KeyvSanitize {
 	}
 
 	/**
-	 * Whether any key sanitization pattern is enabled.
+	 * Whether any sanitization pattern (keys or namespace) is enabled.
 	 */
-	public get keysEnabled(): boolean {
-		return this._keysEnabled;
+	public get enabled(): boolean {
+		return this._enabled;
 	}
 
 	/**
@@ -84,20 +83,13 @@ export class KeyvSanitize {
 	}
 
 	/**
-	 * Whether any namespace sanitization pattern is enabled.
-	 */
-	public get namespaceEnabled(): boolean {
-		return this._namespaceEnabled;
-	}
-
-	/**
 	 * Update the sanitization configuration. Recompiles patterns and clears the cache.
 	 */
 	public updateOptions(options: KeyvSanitizeOptions): void {
 		this._keys = this.resolvePatterns(options.keys);
 		this._namespace = this.resolvePatterns(options.namespace);
-		this._keysEnabled = Object.values(this._keys).some(Boolean);
-		this._namespaceEnabled = Object.values(this._namespace).some(Boolean);
+		this._enabled =
+			Object.values(this._keys).some(Boolean) || Object.values(this._namespace).some(Boolean);
 		this._keyPatterns = buildPatterns(this._keys);
 		this._namespacePatterns = buildPatterns(this._namespace);
 		this._cacheKeys.clear();

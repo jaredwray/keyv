@@ -319,4 +319,19 @@ describe("unsubscribe", () => {
 
 		expect(keyv.stats.sets).toBe(1);
 	});
+
+	it("should re-subscribe when enabled is set back to true", async () => {
+		const keyv = new Keyv({ stats: true });
+
+		await keyv.set("key1", "value1");
+		expect(keyv.stats.sets).toBe(1);
+
+		keyv.stats.enabled = false;
+		await keyv.set("key2", "value2");
+		expect(keyv.stats.sets).toBe(1);
+
+		keyv.stats.enabled = true;
+		await keyv.set("key3", "value3");
+		expect(keyv.stats.sets).toBe(2);
+	});
 });

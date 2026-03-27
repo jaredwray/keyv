@@ -168,14 +168,9 @@ describe("KeyvSanitize", () => {
 			expect(s.cleanNamespace("ns;evil")).toBe("ns;evil");
 		});
 
-		test("keysEnabled is false", () => {
+		test("enabled is false", () => {
 			const s = new KeyvSanitize();
-			expect(s.keysEnabled).toBe(false);
-		});
-
-		test("namespaceEnabled is false", () => {
-			const s = new KeyvSanitize();
-			expect(s.namespaceEnabled).toBe(false);
+			expect(s.enabled).toBe(false);
 		});
 	});
 
@@ -184,7 +179,7 @@ describe("KeyvSanitize", () => {
 			const s = new KeyvSanitize();
 			expect(s.cleanKey("key;evil")).toBe("key;evil");
 			s.updateOptions({ keys: true, namespace: true });
-			expect(s.keysEnabled).toBe(true);
+			expect(s.enabled).toBe(true);
 			expect(s.cleanKey("key;evil")).toBe("keyevil");
 		});
 
@@ -192,7 +187,7 @@ describe("KeyvSanitize", () => {
 			const s = new KeyvSanitize({ keys: true, namespace: true });
 			expect(s.cleanKey("key;evil")).toBe("keyevil");
 			s.updateOptions({});
-			expect(s.keysEnabled).toBe(false);
+			expect(s.enabled).toBe(false);
 			expect(s.cleanKey("key;evil")).toBe("key;evil");
 		});
 

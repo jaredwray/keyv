@@ -360,17 +360,17 @@ describe("Keyv", async () => {
 		test("getter and setter should work", () => {
 			const keyv = new Keyv();
 			expect(keyv.sanitize).toBeInstanceOf(KeyvSanitize);
-			expect(keyv.sanitize.keysEnabled).toBe(false);
+			expect(keyv.sanitize.enabled).toBe(false);
 
 			keyv.sanitize.updateOptions({ keys: true, namespace: true });
-			expect(keyv.sanitize.keysEnabled).toBe(true);
+			expect(keyv.sanitize.enabled).toBe(true);
 
 			keyv.sanitize.updateOptions({ keys: { sql: true, mongo: false } });
 			expect(keyv.sanitize.keys.sql).toBe(true);
 			expect(keyv.sanitize.keys.mongo).toBe(false);
 
 			keyv.sanitize = new KeyvSanitize();
-			expect(keyv.sanitize.keysEnabled).toBe(false);
+			expect(keyv.sanitize.enabled).toBe(false);
 		});
 
 		test("setter with updateOptions should enable all sanitization categories", async () => {
