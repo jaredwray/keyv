@@ -27,10 +27,11 @@ export type {
 	KeyvSerializationAdapter,
 	KeyvStorageAdapter,
 	KeyvStoreAdapter,
+	KeyvTelemetryEvent,
 	KeyvValue,
 	StoredData,
 	StoredDataNoRaw,
 	StoredDataRaw,
 } from "./types.js";
-export { KeyvHooks } from "./types.js";
+export { KeyvEvents, KeyvHooks } from "./types.js";
 export { buildSanitizePattern, sanitizeKey, sanitizeKeys } from "./utils.js";

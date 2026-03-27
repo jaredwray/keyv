@@ -47,6 +47,26 @@ test.it("will reset stats", () => {
 	test.expect(stats.deletes).toBe(0);
 });
 
+test.it("will increment errors", () => {
+	const stats = new KeyvStatsManager();
+	stats.error();
+	test.expect(stats.errors).toBe(1);
+});
+
+test.it("will not increment errors if disabled", () => {
+	const stats = new KeyvStatsManager(false);
+	stats.error();
+	test.expect(stats.errors).toBe(0);
+});
+
+test.it("will reset errors", () => {
+	const stats = new KeyvStatsManager();
+	stats.error();
+	test.expect(stats.errors).toBe(1);
+	stats.reset();
+	test.expect(stats.errors).toBe(0);
+});
+
 test.it("will not increment hits if disabled", () => {
 	const stats = new KeyvStatsManager(false);
 	stats.hit();

@@ -23,6 +23,24 @@ export type KeyvValue<Value> = {
 /** @deprecated Use `KeyvValue` instead. */
 export type DeserializedData<Value> = KeyvValue<Value>;
 
+export enum KeyvEvents {
+	ERROR = "error",
+	INFO = "info",
+	WARN = "warn",
+	STAT_HIT = "stat:hit",
+	STAT_MISS = "stat:miss",
+	STAT_SET = "stat:set",
+	STAT_DELETE = "stat:delete",
+	STAT_ERROR = "stat:error",
+}
+
+export type KeyvTelemetryEvent = {
+	event: string;
+	key?: string;
+	namespace?: string;
+	timestamp: number;
+};
+
 export enum KeyvHooks {
 	/** @deprecated Use BEFORE_SET instead */
 	PRE_SET = "preSet",

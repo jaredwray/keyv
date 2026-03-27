@@ -1,6 +1,6 @@
-import { Eventified } from "hookified";
+import type { IEventEmitter } from "hookified";
 
-class StatsManager extends Eventified {
+class StatsManager {
 	public enabled = true;
 
 	public hits = 0;
@@ -10,7 +10,6 @@ class StatsManager extends Eventified {
 	public errors = 0;
 
 	constructor(enabled?: boolean) {
-		super();
 		if (enabled !== undefined) {
 			this.enabled = enabled;
 		}
@@ -40,6 +39,35 @@ class StatsManager extends Eventified {
 		if (this.enabled) {
 			this.deletes++;
 		}
+	}
+
+	error() {
+		if (this.enabled) {
+			this.errors++;
+		}
+	}
+
+	/**
+	 * Subscribe to telemetry events from an emitter (e.g. a Keyv instance).
+	 * Automatically increments the corresponding stat counters on each event.
+	 * @param {IEventEmitter} emitter the event emitter to subscribe to
+	 */
+	subscribe(emitter: IEventEmitter): void {
+		emitter.on("stat:hit", () => {
+			this.hit();
+		});
+		emitter.on("stat:miss", () => {
+			this.miss();
+		});
+		emitter.on("stat:set", () => {
+			this.set();
+		});
+		emitter.on("stat:delete", () => {
+			this.delete();
+		});
+		emitter.on("stat:error", () => {
+			this.error();
+		});
 	}
 
 	public hitsOrMisses<T>(array: Array<T | undefined>): void {

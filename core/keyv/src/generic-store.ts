@@ -1,7 +1,12 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
 import { Keyv } from "./keyv.js";
-import type { KeyvEntry, KeyvStorageAdapter, StoredData } from "./types.js";
+import {
+	type KeyvEntry,
+	KeyvEvents,
+	type KeyvStorageAdapter,
+	type StoredData,
+} from "./types.js";
 import { isDataExpired } from "./utils.js";
 
 /**
@@ -312,7 +317,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 				this._store.delete(keyPrefix);
 				results.push(existed);
 			} catch (error) {
-				this.emit("error", error);
+				this.emit(KeyvEvents.ERROR, error);
 				results.push(false);
 			}
 		}

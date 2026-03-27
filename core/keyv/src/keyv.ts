@@ -5,11 +5,13 @@ import StatsManager from "./stats-manager.js";
 import {
 	type KeyvCompressionAdapter,
 	type KeyvEntry,
+	KeyvEvents,
 	KeyvHooks,
 	type KeyvOptions,
 	type KeyvSanitizeOptions,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
+	type KeyvTelemetryEvent,
 	type KeyvValue,
 	type StoredDataRaw,
 } from "./types.js";
@@ -142,7 +144,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 			if (typeof this._store.on === "function") {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
-				this._store.on("error", (error: any) => this.emit("error", error));
+				this._store.on(KeyvEvents.ERROR, (error: any) =>
+					this.emit(KeyvEvents.ERROR, error),
+				);
 			}
 
 			this._store.namespace = this._namespace;
@@ -151,6 +155,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		if (mergedOptions.stats) {
 			this._stats.enabled = mergedOptions.stats;
 		}
+
+		this._stats.subscribe(this);
 
 		if (mergedOptions.ttl) {
 			this._ttl = mergedOptions.ttl;
@@ -195,7 +201,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 			if (typeof store.on === "function") {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
-				store.on("error", (error: any) => this.emit("error", error));
+				store.on(KeyvEvents.ERROR, (error: any) =>
+					this.emit(KeyvEvents.ERROR, error),
+				);
 			}
 			/* v8 ignore next -- @preserve */
 			if (this._namespace) {
@@ -325,6 +333,24 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public set stats(stats: StatsManager) {
 		this._stats = stats;
+		this._stats.subscribe(this);
+	}
+
+	/**
+	 * Emit a telemetry event for cache operations.
+	 * @param {KeyvEvents} event the telemetry event type
+	 * @param {string | string[]} [key] the cache key or keys (emits one event per key)
+	 */
+	public emitTelemetry(event: KeyvEvents, key?: string | string[]): void {
+		const keys = Array.isArray(key) ? key : [key];
+		for (const k of keys) {
+			this.emit(event, {
+				event: event.replace("stat:", ""),
+				key: k,
+				namespace: this._namespace,
+				timestamp: Date.now(),
+			} as KeyvTelemetryEvent);
+		}
 	}
 
 	/**
@@ -358,7 +384,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		try {
 			rawData = await store.get<Value>(key as string);
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 		}
 
 		const deserializedData =
@@ -371,7 +398,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key as string);
 			return undefined;
 		}
 
@@ -381,7 +408,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key as string);
 			return undefined;
 		}
 
@@ -389,7 +416,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			key,
 			value: deserializedData,
 		});
-		this._stats.hit();
+		this.emitTelemetry(KeyvEvents.STAT_HIT, key as string);
 		return (deserializedData as KeyvValue<Value>).value;
 	}
 
@@ -430,8 +457,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 				row.status === "fulfilled" ? row.value : undefined,
 			);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
-			if (result.length > 0) {
-				this._stats.hit();
+			for (let i = 0; i < result.length; i++) {
+				if (result[i] === undefined) {
+					this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+				} else {
+					this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+				}
 			}
 
 			return result;
@@ -456,9 +487,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 		);
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
-		/* v8 ignore next -- @preserve */
-		if (result.length > 0) {
-			this._stats.hit();
+		for (let i = 0; i < result.length; i++) {
+			if (result[i] === undefined) {
+				this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+			} else {
+				this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+			}
 		}
 
 		return result as Array<Value | undefined>;
@@ -486,7 +520,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key);
 			return undefined;
 		}
 
@@ -505,13 +539,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key);
 			await this.delete(key);
 			return undefined;
 		}
 
 		// Add a hit
-		this._stats.hit();
+		this.emitTelemetry(KeyvEvents.STAT_HIT, key);
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 			key,
@@ -537,7 +571,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 				undefined,
 			) as Array<StoredDataRaw<Value>>;
 			// Add in misses
-			this._stats.misses += keys.length;
+			for (const key of keys) {
+				this.emitTelemetry(KeyvEvents.STAT_MISS, key);
+			}
+
 			// Trigger the after get many raw hook
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
@@ -583,7 +620,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 		await deleteExpiredKeys(keys, result, this);
 
 		// Add in hits and misses
-		this._stats.hitsOrMisses(result);
+		for (let i = 0; i < result.length; i++) {
+			if (result[i] === undefined) {
+				this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+			} else {
+				this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+			}
+		}
+
 		// Trigger the after get many raw hook
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 			keys,
@@ -620,7 +664,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			typeof data.ttl === "number" ? Date.now() + data.ttl : undefined;
 
 		if (typeof data.value === "symbol") {
-			this.emit("error", "symbol cannot be serialized");
+			this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 			throw new Error("symbol cannot be serialized");
 		}
 
@@ -637,7 +682,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			result = false;
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_SET, {
@@ -645,7 +691,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: serializedValue,
 			ttl,
 		});
-		this._stats.set();
+		this.emitTelemetry(KeyvEvents.STAT_SET, key);
 
 		return result;
 	}
@@ -685,7 +731,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 						/* v8 ignore next -- @preserve */
 						if (typeof value === "symbol") {
-							this.emit("error", "symbol cannot be serialized");
+							this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
+							this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 							throw new Error("symbol cannot be serialized");
 						}
 
@@ -699,9 +746,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 				results = Array.isArray(storeResult)
 					? (storeResult as boolean[])
 					: entries.map(() => true);
+				this.emitTelemetry(
+					KeyvEvents.STAT_SET,
+					entries.map((e) => e.key),
+				);
 			}
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(
+				KeyvEvents.STAT_ERROR,
+				entries.map((e) => e.key),
+			);
 
 			results = entries.map(() => false);
 		}
@@ -744,7 +799,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			result = false;
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_RAW, {
@@ -752,7 +808,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: data.value,
 			ttl,
 		});
-		this._stats.set();
+		this.emitTelemetry(KeyvEvents.STAT_SET, key);
 
 		return result;
 	}
@@ -795,9 +851,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 				results = Array.isArray(storeResult)
 					? (storeResult as boolean[])
 					: entries.map(() => true);
+				this.emitTelemetry(
+					KeyvEvents.STAT_SET,
+					entries.map((e) => e.key),
+				);
 			}
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(
+				KeyvEvents.STAT_ERROR,
+				entries.map((e) => e.key),
+			);
 
 			results = entries.map(() => false);
 		}
@@ -846,14 +910,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			result = false;
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 			key,
 			value: result,
 		});
-		this._stats.delete();
+		this.emitTelemetry(KeyvEvents.STAT_DELETE, key as string);
 
 		return result;
 	}
@@ -874,6 +939,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				const results = Array.isArray(storeResult)
 					? storeResult
 					: keys.map(() => storeResult);
+				this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
 				await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 					key: keys,
 					value: results,
@@ -884,13 +950,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const promises = keys.map(async (key: string) => store.delete(key));
 
 			const results = await Promise.all(promises);
+			this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 				key: keys,
 				value: results,
 			});
 			return results;
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
 
 			return keys.map(() => false);
 		}
@@ -924,7 +992,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		try {
 			rawData = await store.get(key);
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 
 			return false;
 		}
@@ -967,7 +1036,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		try {
 			await store.clear();
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR);
 		}
 	}
 
@@ -1016,9 +1086,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} else {
 			this.emit(
-				"error",
+				KeyvEvents.ERROR,
 				new Error("Iterator not supported by this storage adapter"),
 			);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR);
 		}
 	}
 
