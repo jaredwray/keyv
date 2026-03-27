@@ -749,14 +749,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Set many raw values to the store without wrapping or serialization. This is the write-side counterpart to getManyRaw().
 	 * Each entry's value should be a KeyvValue object with { value, expires? }. If you need TTL-based expiration,
 	 * set `expires` on each value directly. The store-level TTL is derived automatically from `value.expires`.
-	 * @param {Array<{key: string, value: KeyvValue<Value>}>} entries the raw entries to set
+	 * @param {KeyvEntry<KeyvValue<Value>>[]} entries the raw entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
 	public async setManyRaw<Value = GenericValue>(
-		entries: Array<{
-			key: string;
-			value: KeyvValue<Value>;
-		}>,
+		entries: KeyvEntry<KeyvValue<Value>>[],
 	): Promise<boolean[]> {
 		entries = entries.map((e) => ({
 			...e,
