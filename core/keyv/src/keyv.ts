@@ -286,6 +286,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public set sanitize(value: KeyvSanitize) {
 		this._sanitize = value;
+		/* v8 ignore next -- @preserve */
 		this._namespace =
 			this._namespace && this._sanitize.enabled
 				? this._sanitize.cleanNamespace(this._namespace)
