@@ -115,6 +115,29 @@ export type KeyvStorageAdapter = {
 	>;
 } & IEventEmitter;
 
+export type KeyvSanitizeOptions = {
+	/**
+	 * Strip SQL injection characters: ' " ` ;
+	 * @default true
+	 */
+	sql?: boolean;
+	/**
+	 * Strip MongoDB operator characters: $ { }
+	 * @default true
+	 */
+	mongo?: boolean;
+	/**
+	 * Strip escape and control characters: \ \0 \n \r
+	 * @default true
+	 */
+	escape?: boolean;
+	/**
+	 * Strip path traversal characters: /
+	 * @default true
+	 */
+	path?: boolean;
+};
+
 export type KeyvOptions = {
 	/**
 	 * Namespace for the current instance.
@@ -154,6 +177,14 @@ export type KeyvOptions = {
 	 * @default false
 	 */
 	throwOnErrors?: boolean;
+	/**
+	 * Sanitize keys to remove characters that could be dangerous for SQL,
+	 * MongoDB, Redis, or filesystem-based storage backends. Pass `true` to
+	 * enable all categories, `false` to disable, or a `KeyvSanitizeOptions`
+	 * object to toggle individual categories.
+	 * @default true
+	 */
+	sanitizeKey?: boolean | KeyvSanitizeOptions;
 };
 
 /**

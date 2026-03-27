@@ -304,4 +304,69 @@ describe("Keyv", async () => {
 			expect(keyv.stats.deletes).toBe(1);
 		});
 	});
+
+	describe("sanitizeKey", () => {
+		test("should sanitize keys by default", async () => {
+			const keyv = new Keyv();
+			await keyv.set("test'; DROP TABLE", "value");
+			expect(await keyv.get("test DROP TABLE")).toBe("value");
+			expect(await keyv.get("test'; DROP TABLE")).toBe("value");
+		});
+
+		test("should not sanitize keys when disabled", async () => {
+			const keyv = new Keyv({ sanitizeKey: false });
+			await keyv.set("test'; DROP TABLE", "value");
+			expect(await keyv.get("test'; DROP TABLE")).toBe("value");
+		});
+
+		test("should support granular category control", async () => {
+			const keyv = new Keyv({ sanitizeKey: { sql: true, mongo: false } });
+			await keyv.set("test'$key", "value");
+			// SQL chars stripped, mongo chars preserved
+			expect(await keyv.get("test$key")).toBe("value");
+		});
+
+		test("should sanitize keys in getMany", async () => {
+			const keyv = new Keyv();
+			await keyv.set("clean-key", "value1");
+			const result = await keyv.getMany(["clean-key", "miss'key"]);
+			expect(result[0]).toBe("value1");
+			expect(result[1]).toBeUndefined();
+		});
+
+		test("should sanitize keys in has", async () => {
+			const keyv = new Keyv();
+			await keyv.set("test-key", "value");
+			expect(await keyv.has("test-key")).toBe(true);
+			expect(await keyv.has("test'-key")).toBe(true);
+		});
+
+		test("should sanitize keys in delete", async () => {
+			const keyv = new Keyv();
+			await keyv.set("test-key", "value");
+			await keyv.delete("test'-key");
+			expect(await keyv.has("test-key")).toBe(false);
+		});
+
+		test("should sanitize keys in setMany", async () => {
+			const keyv = new Keyv();
+			await keyv.setMany([
+				{ key: "key'1", value: "value1" },
+				{ key: "key;2", value: "value2" },
+			]);
+			expect(await keyv.get("key1")).toBe("value1");
+			expect(await keyv.get("key2")).toBe("value2");
+		});
+
+		test("getter and setter should work", () => {
+			const keyv = new Keyv();
+			expect(keyv.sanitizeKey).toBe(true);
+
+			keyv.sanitizeKey = false;
+			expect(keyv.sanitizeKey).toBe(false);
+
+			keyv.sanitizeKey = { sql: true, mongo: false };
+			expect(keyv.sanitizeKey).toEqual({ sql: true, mongo: false });
+		});
+	});
 });

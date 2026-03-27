@@ -7,10 +7,12 @@ import {
 	type KeyvEntry,
 	KeyvHooks,
 	type KeyvOptions,
+	type KeyvSanitizeOptions,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
 	type StoredDataRaw,
 } from "./types.js";
+import { buildSanitizePattern, sanitizeKey } from "./utils.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 type IteratorFunction = (argument?: any) => AsyncGenerator<any, void>;
@@ -61,6 +63,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	private _serialization: KeyvSerializationAdapter | undefined;
 
 	private _compression: KeyvCompressionAdapter | undefined;
+
+	private _sanitizeKeyOption: boolean | KeyvSanitizeOptions = true;
+
+	private _sanitizePattern: RegExp | undefined = buildSanitizePattern();
 
 	/**
 	 * Keyv Constructor
@@ -196,6 +202,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 		if (mergedOptions.ttl) {
 			this._ttl = mergedOptions.ttl;
 		}
+
+		if (mergedOptions.sanitizeKey !== undefined) {
+			this._sanitizeKeyOption = mergedOptions.sanitizeKey;
+			this._sanitizePattern =
+				mergedOptions.sanitizeKey === false
+					? undefined
+					: buildSanitizePattern(
+							mergedOptions.sanitizeKey === true
+								? {}
+								: mergedOptions.sanitizeKey,
+						);
+		}
 	}
 
 	/**
@@ -326,6 +344,27 @@ export class Keyv<GenericValue = any> extends Hookified {
 		this.throwOnEmitError = value;
 	}
 
+	/**
+	 * Get the current sanitizeKey setting.
+	 * @returns {boolean | KeyvSanitizeOptions} The current sanitizeKey setting.
+	 */
+	public get sanitizeKey(): boolean | KeyvSanitizeOptions {
+		return this._sanitizeKeyOption;
+	}
+
+	/**
+	 * Set the sanitizeKey option. Accepts `true` (all categories), `false` (disabled),
+	 * or a `KeyvSanitizeOptions` object to toggle individual categories.
+	 * @param {boolean | KeyvSanitizeOptions} value The sanitizeKey setting.
+	 */
+	public set sanitizeKey(value: boolean | KeyvSanitizeOptions) {
+		this._sanitizeKeyOption = value;
+		this._sanitizePattern =
+			value === false
+				? undefined
+				: buildSanitizePattern(value === true ? {} : value);
+	}
+
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		const function_: IteratorFunction = async function* (this: any) {
@@ -405,9 +444,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 			typeof data.expires === "number" && Date.now() > data.expires;
 
 		if (isArray) {
-			return this.getMany<Value>(key);
+			return this.getMany<Value>(key as string[]);
 		}
 
+		key = sanitizeKey(key as string, this._sanitizePattern);
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET, { key });
 		// biome-ignore lint/suspicious/noImplicitAnyLet: need to fix
 		let rawData;
@@ -456,6 +496,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getMany<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<Value | undefined>> {
+		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
 		const store = this._store;
 
 		const isDataExpired = (data: DeserializedData<Value>): boolean =>
@@ -542,6 +583,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getRaw<Value = GenericValue>(
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
+		key = sanitizeKey(key, this._sanitizePattern);
 		const store = this._store;
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
 		const rawData = await store.get(key);
@@ -597,6 +639,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
+		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
 		const store = this._store;
 
 		if (keys.length === 0) {
@@ -684,6 +727,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		value: Value,
 		ttl?: number,
 	): Promise<boolean> {
+		key = sanitizeKey(key, this._sanitizePattern);
 		const data = { key, value, ttl };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET, data);
 
@@ -742,6 +786,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		key: string,
 		value: DeserializedData<Value>,
 	): Promise<boolean> {
+		key = sanitizeKey(key, this._sanitizePattern);
 		const data = { key, value };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
@@ -785,6 +830,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	async setMany<Value = GenericValue>(
 		entries: KeyvEntry<Value>[],
 	): Promise<boolean[]> {
+		entries = entries.map((e) => ({
+			...e,
+			key: sanitizeKey(e.key, this._sanitizePattern),
+		}));
 		let results: boolean[] = [];
 
 		try {
@@ -850,6 +899,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: DeserializedData<Value>;
 		}>,
 	): Promise<boolean[]> {
+		entries = entries.map((e) => ({
+			...e,
+			key: sanitizeKey(e.key, this._sanitizePattern),
+		}));
 		let results: boolean[] = [];
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY_RAW, { entries });
@@ -914,6 +967,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.deleteMany(key);
 		}
 
+		key = sanitizeKey(key, this._sanitizePattern);
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key });
 
 		let result = true;
@@ -945,6 +999,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} array of booleans indicating success for each key
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
 		try {
 			const store = this._store;
 			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
@@ -1003,6 +1058,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.hasMany(key);
 		}
 
+		key = sanitizeKey(key, this._sanitizePattern);
 		const store = this._store;
 		if (store.has !== undefined && !(store instanceof Map)) {
 			return store.has(key);
@@ -1041,6 +1097,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} will return an array of booleans if the keys exist
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
+		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
 		const store = this._store;
 		if (store.hasMany !== undefined) {
 			return store.hasMany(keys);

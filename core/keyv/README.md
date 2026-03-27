@@ -50,6 +50,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.emitErrors](#emiterrors)
   - [.throwOnErrors](#throwonerrors)
   - [.stats](#stats)
+  - [.sanitizeKey](#sanitizekey)
   - [Keyv Instance](#keyv-instance)
 	- [.set(key, value, [ttl])](#setkey-value-ttl)
 	- [.setMany(entries)](#setmanyentries)
@@ -1030,6 +1031,55 @@ keyv.stats.enabled = true; // Enable stats tracking
 // ... perform operations ...
 keyv.stats.enabled = false; // Disable stats tracking
 ```
+
+## .sanitizeKey
+Type: `boolean | KeyvSanitizeOptions`<br />
+Default: `true`
+
+Sanitizes keys to strip characters that could be dangerous for SQL, MongoDB, Redis, or filesystem-based storage backends. This is enabled by default to protect against injection attacks.
+
+### Categories
+
+| Category | Characters | Purpose |
+|----------|-----------|---------|
+| `sql` | `'` `"` `` ` `` `;` | Prevents SQL injection |
+| `mongo` | `$` `{` `}` | Prevents MongoDB operator injection |
+| `escape` | `\` `\0` `\n` `\r` | Strips escape sequences, null bytes, CRLF injection |
+| `path` | `/` | Prevents path traversal |
+
+### Usage
+
+Enable all sanitization (default):
+```js
+const keyv = new Keyv(); // sanitizeKey defaults to true
+await keyv.set("test'; DROP TABLE", "value");
+// Key is stored as "test DROP TABLE"
+```
+
+Disable all sanitization:
+```js
+const keyv = new Keyv({ sanitizeKey: false });
+```
+
+Granular control per category:
+```js
+const keyv = new Keyv({
+  sanitizeKey: {
+    sql: true,    // strip SQL chars (default: true)
+    mongo: false, // keep MongoDB chars
+    escape: true, // strip escape chars (default: true)
+    path: false,  // keep path chars
+  }
+});
+```
+
+You can also change the setting at runtime:
+```js
+keyv.sanitizeKey = false; // disable
+keyv.sanitizeKey = { sql: true, mongo: false }; // granular
+```
+
+Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`.
 
 # Bun Support
 

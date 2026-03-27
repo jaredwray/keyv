@@ -23,6 +23,7 @@ export type {
 	KeyvCompressionAdapter,
 	KeyvEntry,
 	KeyvOptions,
+	KeyvSanitizeOptions,
 	KeyvSerializationAdapter,
 	KeyvStorageAdapter,
 	KeyvStoreAdapter,
@@ -31,3 +32,4 @@ export type {
 	StoredDataRaw,
 } from "./types.js";
 export { KeyvHooks } from "./types.js";
+export { buildSanitizePattern, sanitizeKey } from "./utils.js";
