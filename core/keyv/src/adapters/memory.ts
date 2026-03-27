@@ -374,6 +374,7 @@ export function createKeyv(store: KeyvMapType, options?: KeyvMemoryAdapterOption
 	const keyv = new Keyv({
 		store: memoryAdapter,
 		serialization: false,
+		namespace: options?.namespace,
 	});
 	return keyv;
 }

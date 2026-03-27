@@ -388,6 +388,30 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 	});
 });
 
+describe("createKeyv namespace forwarding", () => {
+	test("should prefix keys with namespace when using createKeyv", async () => {
+		const store = new Map();
+		const keyv = createKeyv(store, { namespace: "tenant1" });
+		await keyv.set("user", "alice");
+		expect(store.has("tenant1:user")).toBe(true);
+		expect(store.has("user")).toBe(false);
+		const result = await keyv.get<{ value: string; expires: number | undefined }>("user");
+		expect(result?.value).toBe("alice");
+	});
+
+	test("should isolate namespaces when using createKeyv", async () => {
+		const store = new Map();
+		const kv1 = createKeyv(store, { namespace: "ns1" });
+		const kv2 = createKeyv(store, { namespace: "ns2" });
+		await kv1.set("key", "value1");
+		await kv2.set("key", "value2");
+		const r1 = await kv1.get<{ value: string; expires: number | undefined }>("key");
+		const r2 = await kv2.get<{ value: string; expires: number | undefined }>("key");
+		expect(r1?.value).toBe("value1");
+		expect(r2?.value).toBe("value2");
+	});
+});
+
 describe("Keyv Generic Store Iterator", () => {
 	test("should iterate over all entries", async () => {
 		const store = new Map();
