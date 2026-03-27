@@ -359,45 +359,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Iterate over all key-value pairs in the store. Automatically deserializes values,
-	 * filters out expired entries, and deletes them from the store.
-	 * @returns {AsyncGenerator<Array<string | unknown>, void>} An async generator yielding `[key, value]` pairs.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: iterator yields vary by store
-	public async *iterator(): AsyncGenerator<[string, any], void> {
-		const store = this._store;
-
-		if (store instanceof Map) {
-			for (const [key, raw] of store) {
-				const data = await this.deserializeData(raw as string);
-
-				if (data && isDataExpired(data)) {
-					await this.delete(key as string);
-					continue;
-				}
-
-				yield [key as string, data?.value];
-			}
-		} else if (typeof store.iterator === "function") {
-			for await (const [key, raw] of store.iterator()) {
-				const data = await this.deserializeData(raw as string);
-
-				if (data && isDataExpired(data)) {
-					await this.delete(key as string);
-					continue;
-				}
-
-				yield [key as string, data?.value];
-			}
-		} else {
-			this.emit(
-				"error",
-				new Error("Iterator not supported by this storage adapter"),
-			);
-		}
-	}
-
-	/**
 	 * Get the Value of a Key
 	 * @param {string | string[]} key passing in a single key or multiple as an array
 	 */
@@ -739,55 +700,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Set a raw value to the store without wrapping or serialization. This is the write-side counterpart to getRaw().
-	 * The value should be a DeserializedData object with { value, expires? }. If you need TTL-based expiration,
-	 * set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`).
-	 * The store-level TTL is derived automatically from `value.expires`.
-	 * @param {string} key the key to set
-	 * @param {DeserializedData<Value>} value the raw value envelope to store
-	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
-	 */
-	public async setRaw<Value = GenericValue>(
-		key: string,
-		value: DeserializedData<Value>,
-	): Promise<boolean> {
-		key = sanitizeKey(key, this._sanitizePattern);
-		const data = { key, value };
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
-
-		const derivedTtl =
-			typeof data.value.expires === "number"
-				? data.value.expires - Date.now()
-				: undefined;
-		const ttl =
-			typeof derivedTtl === "number" && derivedTtl > 0 ? derivedTtl : undefined;
-
-		const store = this._store;
-		let result = true;
-
-		try {
-			const serializedValue = await this.serializeData(data.value);
-			const storeResult = await store.set(data.key, serializedValue, ttl);
-
-			if (typeof storeResult === "boolean") {
-				result = storeResult;
-			}
-		} catch (error) {
-			result = false;
-			this.emit("error", error);
-		}
-
-		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_RAW, {
-			key,
-			value: data.value,
-			ttl,
-		});
-		this._stats.set();
-
-		return result;
-	}
-
-	/**
 	 * Set many items to the store
 	 * @param {Array<KeyvEntry<Value>>} entries the entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
@@ -849,6 +761,55 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		return results;
+	}
+
+	/**
+	 * Set a raw value to the store without wrapping or serialization. This is the write-side counterpart to getRaw().
+	 * The value should be a DeserializedData object with { value, expires? }. If you need TTL-based expiration,
+	 * set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`).
+	 * The store-level TTL is derived automatically from `value.expires`.
+	 * @param {string} key the key to set
+	 * @param {DeserializedData<Value>} value the raw value envelope to store
+	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
+	 */
+	public async setRaw<Value = GenericValue>(
+		key: string,
+		value: DeserializedData<Value>,
+	): Promise<boolean> {
+		key = sanitizeKey(key, this._sanitizePattern);
+		const data = { key, value };
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
+
+		const derivedTtl =
+			typeof data.value.expires === "number"
+				? data.value.expires - Date.now()
+				: undefined;
+		const ttl =
+			typeof derivedTtl === "number" && derivedTtl > 0 ? derivedTtl : undefined;
+
+		const store = this._store;
+		let result = true;
+
+		try {
+			const serializedValue = await this.serializeData(data.value);
+			const storeResult = await store.set(data.key, serializedValue, ttl);
+
+			if (typeof storeResult === "boolean") {
+				result = storeResult;
+			}
+		} catch (error) {
+			result = false;
+			this.emit("error", error);
+		}
+
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_RAW, {
+			key,
+			value: data.value,
+			ttl,
+		});
+		this._stats.set();
+
+		return result;
 	}
 
 	/**
@@ -997,21 +958,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Clear the store
-	 * @returns {void}
-	 */
-	public async clear(): Promise<void> {
-		this.emit("clear");
-		const store = this._store;
-
-		try {
-			await store.clear();
-		} catch (error) {
-			this.emit("error", error);
-		}
-	}
-
-	/**
 	 * Has a key
 	 * @param {string} key the key to check
 	 * @returns {boolean} will return true if the key exists
@@ -1072,6 +1018,21 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
+	 * Clear the store
+	 * @returns {void}
+	 */
+	public async clear(): Promise<void> {
+		this.emit("clear");
+		const store = this._store;
+
+		try {
+			await store.clear();
+		} catch (error) {
+			this.emit("error", error);
+		}
+	}
+
+	/**
 	 * Will disconnect the store. This is only available if the store has a disconnect method
 	 * @returns {Promise<void>}
 	 */
@@ -1080,6 +1041,45 @@ export class Keyv<GenericValue = any> extends Hookified {
 		this.emit("disconnect");
 		if (typeof store.disconnect === "function") {
 			return store.disconnect();
+		}
+	}
+
+	/**
+	 * Iterate over all key-value pairs in the store. Automatically deserializes values,
+	 * filters out expired entries, and deletes them from the store.
+	 * @returns {AsyncGenerator<Array<string | unknown>, void>} An async generator yielding `[key, value]` pairs.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: iterator yields vary by store
+	public async *iterator(): AsyncGenerator<[string, any], void> {
+		const store = this._store;
+
+		if (store instanceof Map) {
+			for (const [key, raw] of store) {
+				const data = await this.deserializeData(raw as string);
+
+				if (data && isDataExpired(data)) {
+					await this.delete(key as string);
+					continue;
+				}
+
+				yield [key as string, data?.value];
+			}
+		} else if (typeof store.iterator === "function") {
+			for await (const [key, raw] of store.iterator()) {
+				const data = await this.deserializeData(raw as string);
+
+				if (data && isDataExpired(data)) {
+					await this.delete(key as string);
+					continue;
+				}
+
+				yield [key as string, data?.value];
+			}
+		} else {
+			this.emit(
+				"error",
+				new Error("Iterator not supported by this storage adapter"),
+			);
 		}
 	}
 
