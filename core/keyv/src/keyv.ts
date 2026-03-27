@@ -398,22 +398,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Fires a hook under its new name and also under the deprecated alias (if any),
-	 * so that integrations still subscribing to the old PRE_/POST_ names keep working.
-	 */
-	private async hookWithDeprecated(
-		event: string,
-		// biome-ignore lint/suspicious/noExplicitAny: hook data varies
-		...args: any[]
-	): Promise<void> {
-		await this.hook(event, ...args);
-		const deprecated = deprecatedHookAliases.get(event);
-		if (deprecated && this.getHooks(deprecated)?.length) {
-			await this.hook(deprecated, ...args);
-		}
-	}
-
-	/**
 	 * Get the Value of a Key
 	 * @param {string | string[]} key passing in a single key or multiple as an array
 	 */
@@ -1162,6 +1146,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		return result as DeserializedData<T>;
+	}
+
+	/**
+	 * Fires a hook under its new name and also under the deprecated alias (if any),
+	 * so that integrations still subscribing to the old PRE_/POST_ names keep working.
+	 */
+	private async hookWithDeprecated(
+		event: string,
+		// biome-ignore lint/suspicious/noExplicitAny: hook data varies
+		...args: any[]
+	): Promise<void> {
+		await this.hook(event, ...args);
+		const deprecated = deprecatedHookAliases.get(event);
+		if (deprecated && this.getHooks(deprecated)?.length) {
+			await this.hook(deprecated, ...args);
+		}
 	}
 }
 
