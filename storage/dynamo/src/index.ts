@@ -18,12 +18,7 @@ import {
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { Hookified } from "hookified";
-import {
-	Keyv,
-	type KeyvEntry,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "keyv";
+import { Keyv, type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
 
 export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	private _sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
@@ -51,11 +46,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 		this._client = DynamoDBDocument.from(new DynamoDB(this._opts));
 
-		this._tableReady = this.ensureTable(this._opts.tableName).catch(
-			(error: unknown) => {
-				this.emit("error", error);
-			},
-		);
+		this._tableReady = this.ensureTable(this._opts.tableName).catch((error: unknown) => {
+			this.emit("error", error);
+		});
 	}
 
 	/**
@@ -182,17 +175,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @param value - The value to store
 	 * @param ttl - Optional TTL in milliseconds
 	 */
-	public async set(
-		key: string,
-		value: unknown,
-		ttl?: number,
-	): Promise<boolean> {
+	public async set(key: string, value: unknown, ttl?: number): Promise<boolean> {
 		try {
 			await this._tableReady;
 
-			const sixHoursFromNowEpoch = Math.floor(
-				(Date.now() + this._sixHoursInMilliseconds) / 1000,
-			);
+			const sixHoursFromNowEpoch = Math.floor((Date.now() + this._sixHoursInMilliseconds) / 1000);
 
 			const expiresAt =
 				typeof ttl === "number"
@@ -222,9 +209,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple values in DynamoDB.
 	 * @param entries - An array of objects containing key, value, and optional ttl
 	 */
-	public async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
 			await this._tableReady;
 
@@ -232,9 +217,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return entries.map(() => true);
 			}
 
-			const sixHoursFromNowEpoch = Math.floor(
-				(Date.now() + this._sixHoursInMilliseconds) / 1000,
-			);
+			const sixHoursFromNowEpoch = Math.floor((Date.now() + this._sixHoursInMilliseconds) / 1000);
 
 			const putRequests = entries.map(({ key, value, ttl }) => {
 				const expiresAt =
@@ -324,9 +307,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - An array of keys to retrieve
 	 * @returns An array of stored data corresponding to each key.
 	 */
-	public async getMany<Value>(
-		keys: string[],
-	): Promise<Array<StoredData<Value | undefined>>> {
+	public async getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>> {
 		try {
 			await this._tableReady;
 
@@ -337,12 +318,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			const chunkSize = 100;
 			for (let i = 0; i < formattedKeys.length; i += chunkSize) {
 				const chunk = formattedKeys.slice(i, i + chunkSize);
-				let unprocessedKeys: BatchGetCommandInput["RequestItems"] | undefined =
-					{
-						[this._opts.tableName]: {
-							Keys: chunk.map((key) => ({ id: key })),
-						},
-					};
+				let unprocessedKeys: BatchGetCommandInput["RequestItems"] | undefined = {
+					[this._opts.tableName]: {
+						Keys: chunk.map((key) => ({ id: key })),
+					},
+				};
 
 				while (unprocessedKeys && Object.keys(unprocessedKeys).length > 0) {
 					const batchGetInput: BatchGetCommandInput = {
@@ -352,16 +332,14 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					const items = result.Responses?.[this._opts.tableName] ?? [];
 					allItems.push(...items);
 					unprocessedKeys =
-						result.UnprocessedKeys &&
-						Object.keys(result.UnprocessedKeys).length > 0
+						result.UnprocessedKeys && Object.keys(result.UnprocessedKeys).length > 0
 							? result.UnprocessedKeys
 							: undefined;
 				}
 			}
 
 			return formattedKeys.map(
-				(key) =>
-					allItems.find((item) => item?.id === key)?.value as StoredData<Value>,
+				(key) => allItems.find((item) => item?.id === key)?.value as StoredData<Value>,
 			);
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
@@ -411,9 +389,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return [];
 			}
 
-			const results = await Promise.all(
-				keys.map(async (key) => this.delete(key)),
-			);
+			const results = await Promise.all(keys.map(async (key) => this.delete(key)));
 
 			return results;
 			/* v8 ignore start -- @preserve */
@@ -467,10 +443,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			}
 
 			const nowInSeconds = Math.floor(Date.now() / 1000);
-			if (
-				typeof Item.expiresAt === "number" &&
-				Item.expiresAt <= nowInSeconds
-			) {
+			if (typeof Item.expiresAt === "number" && Item.expiresAt <= nowInSeconds) {
 				return false;
 			}
 
@@ -498,12 +471,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			const chunkSize = 100;
 			for (let i = 0; i < formattedKeys.length; i += chunkSize) {
 				const chunk = formattedKeys.slice(i, i + chunkSize);
-				let unprocessedKeys: BatchGetCommandInput["RequestItems"] | undefined =
-					{
-						[this._opts.tableName]: {
-							Keys: chunk.map((key) => ({ id: key })),
-						},
-					};
+				let unprocessedKeys: BatchGetCommandInput["RequestItems"] | undefined = {
+					[this._opts.tableName]: {
+						Keys: chunk.map((key) => ({ id: key })),
+					},
+				};
 
 				while (unprocessedKeys && Object.keys(unprocessedKeys).length > 0) {
 					const batchGetInput: BatchGetCommandInput = {
@@ -513,8 +485,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					const items = result.Responses?.[this._opts.tableName] ?? [];
 					allItems.push(...items);
 					unprocessedKeys =
-						result.UnprocessedKeys &&
-						Object.keys(result.UnprocessedKeys).length > 0
+						result.UnprocessedKeys && Object.keys(result.UnprocessedKeys).length > 0
 							? result.UnprocessedKeys
 							: undefined;
 				}
@@ -527,10 +498,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					return false;
 				}
 
-				if (
-					typeof item.expiresAt === "number" &&
-					item.expiresAt <= nowInSeconds
-				) {
+				if (typeof item.expiresAt === "number" && item.expiresAt <= nowInSeconds) {
 					return false;
 				}
 
@@ -550,9 +518,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @returns An array of matching keys.
 	 */
 	public extractKey(output: ScanCommandOutput, keyProperty = "id"): string[] {
-		const prefix = this._namespace
-			? `${this._namespace}${this._keyPrefixSeparator}`
-			: "";
+		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
 		return (output.Items ?? [])
 			.map((item) => item[keyProperty])
 			.filter((key) => key.startsWith(prefix));
@@ -564,9 +530,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async ensureTable(tableName: string): Promise<void> {
 		try {
-			const response = await this._client.send(
-				new DescribeTableCommand({ TableName: tableName }),
-			);
+			const response = await this._client.send(new DescribeTableCommand({ TableName: tableName }));
 			// Table exists but may be in CREATING status - wait if needed
 			if (response.Table?.TableStatus !== "ACTIVE") {
 				await waitUntilTableExists(
@@ -590,9 +554,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	public async createTable(tableName: string): Promise<void> {
 		try {
 			// Check if the table already exists before attempting to create it
-			const response = await this._client.send(
-				new DescribeTableCommand({ TableName: tableName }),
-			);
+			const response = await this._client.send(new DescribeTableCommand({ TableName: tableName }));
 
 			/* v8 ignore start -- @preserve */
 			// Table already exists - wait for it to become active if needed

@@ -1,9 +1,5 @@
 import { Hookified } from "hookified";
-import Keyv, {
-	type KeyvEntry,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
 import { resolveDriver } from "./drivers/index.js";
 import type { SqliteDriver, SqliteDriverName } from "./drivers/types.js";
 import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
@@ -159,9 +155,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 		const keySize = Number(this._keySize);
 		if (!Number.isFinite(keySize) || keySize <= 0 || keySize > 65535) {
-			throw new Error(
-				"Invalid keySize: must be a positive number between 1 and 65535",
-			);
+			throw new Error("Invalid keySize: must be a positive number between 1 and 65535");
 		}
 
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.getCleanTableName()}(key VARCHAR(${keySize}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT DEFAULT NULL, UNIQUE(key, namespace))`;
@@ -170,27 +164,21 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		const connected: Promise<Db> = this.createConnection()
 			.then(async (database) => {
 				// Check if table exists and needs migration
-				const tableInfo = await database.query(
-					`PRAGMA table_info(${this.getCleanTableName()})`,
-				);
+				const tableInfo = await database.query(`PRAGMA table_info(${this.getCleanTableName()})`);
 
 				if (tableInfo.length === 0) {
 					// Table doesn't exist — create with new schema
 					await database.query(createTable);
 				} else {
 					// Table exists — check if migration is needed
-					const columnNames = (tableInfo as Array<{ name: string }>).map(
-						(c) => c.name,
-					);
+					const columnNames = (tableInfo as Array<{ name: string }>).map((c) => c.name);
 					if (!columnNames.includes("namespace")) {
 						// Old schema detected — migrate by recreating table
 						// Old keys are stored as "namespace:actualKey" (e.g. "keyv:foo").
 						// Split them so the new schema stores key and namespace separately.
 						const oldTable = escapeIdentifier(`${this._table}_migration_old`);
 						const newTable = this.getCleanTableName();
-						await database.query(
-							`ALTER TABLE ${newTable} RENAME TO ${oldTable}`,
-						);
+						await database.query(`ALTER TABLE ${newTable} RENAME TO ${oldTable}`);
 						await database.query(createTable);
 						await database.query(
 							`INSERT OR IGNORE INTO ${newTable} (key, value, namespace) SELECT CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, INSTR(key, ':') + 1) ELSE key END, value, CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, 1, INSTR(key, ':') - 1) ELSE '' END FROM ${oldTable}`,
@@ -221,9 +209,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		connected.catch(() => {});
 
 		this.query = async (sqlString, ...parameter) =>
-			connected.then(async (database) =>
-				database.query(sqlString, ...parameter),
-			);
+			connected.then(async (database) => database.query(sqlString, ...parameter));
 
 		this.close = async () => connected.then((database) => database.close());
 
@@ -461,9 +447,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * More efficient than calling {@link set} in a loop for bulk operations.
 	 * @param entries - An array of `{ key, value }` entry objects to store.
 	 */
-	async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}
@@ -628,9 +612,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			} catch (error) {
 				this.emit(
 					"error",
-					new Error(
-						`Iterator failed at cursor ${lastKey ?? "start"}: ${(error as Error).message}`,
-					),
+					new Error(`Iterator failed at cursor ${lastKey ?? "start"}: ${(error as Error).message}`),
 				);
 				return;
 			}

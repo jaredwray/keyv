@@ -154,9 +154,9 @@ describe("Keyv Set Raw", async () => {
 			throw new Error("store error");
 		};
 		const keyv = new Keyv({ store, throwOnErrors: true });
-		await expect(
-			keyv.setRaw(faker.string.alphanumeric(10), { value: "test" }),
-		).rejects.toThrow("store error");
+		await expect(keyv.setRaw(faker.string.alphanumeric(10), { value: "test" })).rejects.toThrow(
+			"store error",
+		);
 	});
 
 	test("should use store boolean return value", async () => {
@@ -330,9 +330,9 @@ describe("Keyv Set Many Raw", async () => {
 			throw new Error("batch error");
 		};
 		const keyv = new Keyv({ store, throwOnErrors: true });
-		await expect(
-			keyv.setManyRaw([{ key: "a", value: { value: "test" } }]),
-		).rejects.toThrow("batch error");
+		await expect(keyv.setManyRaw([{ key: "a", value: { value: "test" } }])).rejects.toThrow(
+			"batch error",
+		);
 	});
 
 	test("should emit error on failure", async () => {
@@ -345,9 +345,7 @@ describe("Keyv Set Many Raw", async () => {
 		keyv.on("error", () => {
 			errorEmitted = true;
 		});
-		const results = await keyv.setManyRaw([
-			{ key: "a", value: { value: "test" } },
-		]);
+		const results = await keyv.setManyRaw([{ key: "a", value: { value: "test" } }]);
 		expect(errorEmitted).toBe(true);
 		expect(results).toEqual([false]);
 	});
@@ -362,9 +360,7 @@ describe("Keyv Set Many Raw", async () => {
 		keyv.addHook(KeyvHooks.AFTER_SET_MANY_RAW, () => {
 			postHookTriggered = true;
 		});
-		await keyv.setManyRaw([
-			{ key: faker.string.alphanumeric(10), value: { value: "test" } },
-		]);
+		await keyv.setManyRaw([{ key: faker.string.alphanumeric(10), value: { value: "test" } }]);
 		expect(preHookTriggered).toBe(true);
 		expect(postHookTriggered).toBe(true);
 	});

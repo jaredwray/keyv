@@ -1,7 +1,4 @@
-import type {
-	KeyvCompressionAdapter,
-	KeyvStorageAdapter,
-} from "../src/index.js";
+import type { KeyvCompressionAdapter, KeyvStorageAdapter } from "../src/index.js";
 
 export const delay = async (ms: number) =>
 	new Promise<void>((resolve) => {

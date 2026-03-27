@@ -7,8 +7,7 @@ const postgresUri = "postgresql://postgres:postgres@localhost:5433/keyv_test";
 
 const options = { ssl: { rejectUnauthorized: false } };
 
-const store = () =>
-	new KeyvPostgres({ uri: postgresUri, iterationLimit: 2, ...options });
+const store = () => new KeyvPostgres({ uri: postgresUri, iterationLimit: 2, ...options });
 
 test.beforeEach(async () => {
 	const keyv = new KeyvPostgres({ uri: postgresUri, ...options });

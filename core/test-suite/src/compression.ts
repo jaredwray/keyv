@@ -1,14 +1,8 @@
 import { faker } from "@faker-js/faker";
-import Keyv, {
-	type KeyvCompressionAdapter,
-	type KeyvStorageAdapter,
-} from "keyv";
+import Keyv, { type KeyvCompressionAdapter, type KeyvStorageAdapter } from "keyv";
 import type * as Vitest from "vitest";
 
-const keyvCompressionTests = (
-	test: typeof Vitest,
-	compression: KeyvCompressionAdapter,
-) => {
+const keyvCompressionTests = (test: typeof Vitest, compression: KeyvCompressionAdapter) => {
 	// biome-ignore lint/suspicious/noImplicitAnyLet: test file
 	let keyv;
 	test.beforeEach(async () => {

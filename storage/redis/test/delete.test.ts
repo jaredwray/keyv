@@ -50,9 +50,7 @@ describe("delete", () => {
 			await keyvRedis.delete(data.key);
 		} catch (error) {
 			didError = true;
-			expect((error as Error).message).toBe(
-				RedisErrorMessages.RedisClientNotConnectedThrown,
-			);
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
 		}
 
 		expect(didError).toBe(true);
@@ -118,9 +116,7 @@ describe("delete", () => {
 			await keyvRedis.deleteMany(data.keys);
 		} catch (error) {
 			didError = true;
-			expect((error as Error).message).toBe(
-				RedisErrorMessages.RedisClientNotConnectedThrown,
-			);
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
 		}
 
 		expect(didError).toBe(true);

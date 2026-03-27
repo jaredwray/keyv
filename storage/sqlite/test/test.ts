@@ -4,8 +4,7 @@ import Keyv from "keyv";
 import * as test from "vitest";
 import KeyvSqlite, { createKeyv } from "../src/index.js";
 
-const store = () =>
-	new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite", busyTimeout: 3000 });
+const store = () => new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite", busyTimeout: 3000 });
 
 keyvTestSuite(test, Keyv, store);
 
@@ -353,27 +352,24 @@ test.it("WAL mode is not enabled by default", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it(
-	"WAL mode does not work with in-memory database (remains as memory mode)",
-	async (t) => {
-		const keyv = new KeyvSqlite({
-			uri: "sqlite://:memory:",
-			wal: true,
-		});
-		const result = (await keyv.query("PRAGMA journal_mode")) as Array<{
-			journal_mode: string;
-		}>;
-		// In-memory databases cannot use WAL mode, they remain in "memory" journal mode
-		t.expect(result[0].journal_mode).toBe("memory");
-		// But basic operations should still work
-		const testKey = faker.string.uuid();
-		const testVal = faker.lorem.word();
-		await keyv.set(testKey, testVal);
-		const value = await keyv.get(testKey);
-		t.expect(value).toBe(testVal);
-		await keyv.disconnect();
-	},
-);
+test.it("WAL mode does not work with in-memory database (remains as memory mode)", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://:memory:",
+		wal: true,
+	});
+	const result = (await keyv.query("PRAGMA journal_mode")) as Array<{
+		journal_mode: string;
+	}>;
+	// In-memory databases cannot use WAL mode, they remain in "memory" journal mode
+	t.expect(result[0].journal_mode).toBe("memory");
+	// But basic operations should still work
+	const testKey = faker.string.uuid();
+	const testVal = faker.lorem.word();
+	await keyv.set(testKey, testVal);
+	const value = await keyv.get(testKey);
+	t.expect(value).toBe(testVal);
+	await keyv.disconnect();
+});
 
 test.it("WAL mode with in-memory database logs a warning", async (t) => {
 	const warnSpy = test.vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -604,10 +600,7 @@ test.it("deleteMany returns false when no keys exist", async (t) => {
 		busyTimeout: 3000,
 	});
 	await keyv.clear();
-	const result = await keyv.deleteMany([
-		faker.string.uuid(),
-		faker.string.uuid(),
-	]);
+	const result = await keyv.deleteMany([faker.string.uuid(), faker.string.uuid()]);
 	t.expect(result).toEqual([false, false]);
 });
 
@@ -632,10 +625,7 @@ test.it("migrates old schema that lacks namespace column", async (t) => {
 	const Database = (await import("better-sqlite3")).default;
 	const db = new Database(dbPath);
 	db.exec("CREATE TABLE keyv(key VARCHAR(255) PRIMARY KEY, value TEXT)");
-	db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run(
-		"oldkey",
-		"oldval",
-	);
+	db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run("oldkey", "oldval");
 	db.close();
 
 	// Open with the new adapter — should trigger migration
@@ -652,49 +642,42 @@ test.it("migrates old schema that lacks namespace column", async (t) => {
 	} catch {}
 });
 
-test.it(
-	"migrates schema that has namespace but lacks expires column",
-	async (t) => {
-		const dbPath = "test/testdb-migration2.sqlite";
-		const fs = await import("node:fs");
-		try {
-			fs.unlinkSync(dbPath);
-		} catch {}
+test.it("migrates schema that has namespace but lacks expires column", async (t) => {
+	const dbPath = "test/testdb-migration2.sqlite";
+	const fs = await import("node:fs");
+	try {
+		fs.unlinkSync(dbPath);
+	} catch {}
 
-		// Create a database with namespace but no expires column
-		const Database = (await import("better-sqlite3")).default;
-		const db = new Database(dbPath);
-		db.exec(
-			"CREATE TABLE keyv(key VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE(key, namespace))",
-		);
-		db.prepare("INSERT INTO keyv (key, value, namespace) VALUES (?, ?, ?)").run(
-			"k1",
-			"v1",
-			"",
-		);
-		db.close();
+	// Create a database with namespace but no expires column
+	const Database = (await import("better-sqlite3")).default;
+	const db = new Database(dbPath);
+	db.exec(
+		"CREATE TABLE keyv(key VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE(key, namespace))",
+	);
+	db.prepare("INSERT INTO keyv (key, value, namespace) VALUES (?, ?, ?)").run("k1", "v1", "");
+	db.close();
 
-		// Open with the new adapter — should add expires column
-		const keyv = new KeyvSqlite({
-			uri: `sqlite://${dbPath}`,
-			busyTimeout: 3000,
-		});
-		t.expect(await keyv.get("k1")).toBe("v1");
-		// Expires-related features should work
-		const expiredValue = JSON.stringify({
-			value: "temp",
-			expires: Date.now() - 1000,
-		});
-		await keyv.set("expiring", expiredValue);
-		await keyv.clearExpired();
-		t.expect(await keyv.has("expiring")).toBe(false);
-		await keyv.disconnect();
+	// Open with the new adapter — should add expires column
+	const keyv = new KeyvSqlite({
+		uri: `sqlite://${dbPath}`,
+		busyTimeout: 3000,
+	});
+	t.expect(await keyv.get("k1")).toBe("v1");
+	// Expires-related features should work
+	const expiredValue = JSON.stringify({
+		value: "temp",
+		expires: Date.now() - 1000,
+	});
+	await keyv.set("expiring", expiredValue);
+	await keyv.clearExpired();
+	t.expect(await keyv.has("expiring")).toBe(false);
+	await keyv.disconnect();
 
-		try {
-			fs.unlinkSync(dbPath);
-		} catch {}
-	},
-);
+	try {
+		fs.unlinkSync(dbPath);
+	} catch {}
+});
 
 test.it("iterationLimit can be updated after construction", (t) => {
 	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
@@ -717,55 +700,46 @@ test.it("getExpiresFromValue handles non-string object values", async (t) => {
 
 // --- SQL injection prevention tests ---
 
-test.it(
-	"table name with SQL injection characters is sanitized at construction",
-	async (t) => {
-		// Attempt to inject via table name — toTableString strips all non-alphanumeric chars
-		const keyv = new KeyvSqlite({
-			uri: "sqlite://test/testdb.sqlite",
-			table: "keyv'; DROP TABLE keyv; --",
-			busyTimeout: 3000,
-		});
-		// Sanitized to "keyvDROPTABLEkeyv" (only alphanumeric chars kept)
-		t.expect(keyv.table).toBe("keyvDROPTABLEkeyv");
-		// Operations should work on the sanitized table name
-		const testKey = faker.string.uuid();
-		const testVal = faker.lorem.word();
-		await keyv.set(testKey, testVal);
-		t.expect(await keyv.get(testKey)).toBe(testVal);
-		await keyv.clear();
-		await keyv.disconnect();
-	},
-);
+test.it("table name with SQL injection characters is sanitized at construction", async (t) => {
+	// Attempt to inject via table name — toTableString strips all non-alphanumeric chars
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		table: "keyv'; DROP TABLE keyv; --",
+		busyTimeout: 3000,
+	});
+	// Sanitized to "keyvDROPTABLEkeyv" (only alphanumeric chars kept)
+	t.expect(keyv.table).toBe("keyvDROPTABLEkeyv");
+	// Operations should work on the sanitized table name
+	const testKey = faker.string.uuid();
+	const testVal = faker.lorem.word();
+	await keyv.set(testKey, testVal);
+	t.expect(await keyv.get(testKey)).toBe(testVal);
+	await keyv.clear();
+	await keyv.disconnect();
+});
 
-test.it(
-	"table setter sanitizes table name (prevents post-construction injection)",
-	(t) => {
-		const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
-		keyv.table = "evil'; DROP TABLE keyv;--";
-		// Should be sanitized, not the raw malicious string
-		t.expect(keyv.table).toBe("evilDROPTABLEkeyv");
-	},
-);
+test.it("table setter sanitizes table name (prevents post-construction injection)", (t) => {
+	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
+	keyv.table = "evil'; DROP TABLE keyv;--";
+	// Should be sanitized, not the raw malicious string
+	t.expect(keyv.table).toBe("evilDROPTABLEkeyv");
+});
 
-test.it(
-	"table name that is a SQLite reserved keyword works correctly",
-	async (t) => {
-		const keyv = new KeyvSqlite({
-			uri: "sqlite://test/testdb.sqlite",
-			table: "select",
-			busyTimeout: 3000,
-		});
-		// escapeIdentifier wraps in double quotes, so "select" is safe as a table name
-		t.expect(keyv.table).toBe("select");
-		const testKey = faker.string.uuid();
-		const testVal = faker.lorem.word();
-		await keyv.set(testKey, testVal);
-		t.expect(await keyv.get(testKey)).toBe(testVal);
-		await keyv.clear();
-		await keyv.disconnect();
-	},
-);
+test.it("table name that is a SQLite reserved keyword works correctly", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		table: "select",
+		busyTimeout: 3000,
+	});
+	// escapeIdentifier wraps in double quotes, so "select" is safe as a table name
+	t.expect(keyv.table).toBe("select");
+	const testKey = faker.string.uuid();
+	const testVal = faker.lorem.word();
+	await keyv.set(testKey, testVal);
+	t.expect(await keyv.get(testKey)).toBe(testVal);
+	await keyv.clear();
+	await keyv.disconnect();
+});
 
 test.it("table name with double quotes is escaped correctly", async (t) => {
 	// Double quotes in the name would break identifier escaping without proper handling

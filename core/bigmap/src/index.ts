@@ -124,9 +124,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	public getStoreMap(index: number): Map<K, V> {
 		if (index < 0 || index >= this._storeSize) {
-			throw new Error(
-				`Index out of bounds: ${index}. Valid range is 0 to ${this._storeSize - 1}.`,
-			);
+			throw new Error(`Index out of bounds: ${index}. Valid range is 0 to ${this._storeSize - 1}.`);
 		}
 
 		return this._store[index];
@@ -137,10 +135,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * This method is called when the BigMap instance is created.
 	 */
 	public initStore(): void {
-		this._store = Array.from(
-			{ length: this._storeSize },
-			() => new Map<K, V>(),
-		);
+		this._store = Array.from({ length: this._storeSize }, () => new Map<K, V>());
 		this._size = 0;
 	}
 
@@ -299,9 +294,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
  * @param {BigMapOptions} options - Options for the BigMap adapter such as storeSize and storeHashFunction.
  * @returns {Keyv} - Keyv instance with the BigMap adapter
  */
-export function createKeyv<K = string, V = unknown>(
-	options?: BigMapOptions,
-): Keyv {
+export function createKeyv<K = string, V = unknown>(options?: BigMapOptions): Keyv {
 	const adapter = new BigMap<K, V>(options);
 	const keyv = new Keyv({ store: adapter });
 

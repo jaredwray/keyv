@@ -7,8 +7,7 @@ import KeyvMemcache, { createKeyv } from "../src/index.js";
 
 const { beforeEach, expect, it } = test;
 
-const snooze = async (ms: number) =>
-	new Promise((resolve) => setTimeout(resolve, ms));
+const snooze = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Handle all the tests with listeners.
 EventEmitter.setMaxListeners(200);
@@ -224,22 +223,16 @@ it("keyvMemcache hasMany with no keys existing", async () => {
 	expect(result).toEqual([false, false, false]);
 });
 
-it(
-	"keyvMemcache setMany should emit error on failure",
-	{ timeout: 30_000 },
-	async () => {
-		const badMemcache = new KeyvMemcache("baduri:11211");
-		let errorEmitted = false;
-		badMemcache.on("error", () => {
-			errorEmitted = true;
-		});
+it("keyvMemcache setMany should emit error on failure", { timeout: 30_000 }, async () => {
+	const badMemcache = new KeyvMemcache("baduri:11211");
+	let errorEmitted = false;
+	badMemcache.on("error", () => {
+		errorEmitted = true;
+	});
 
-		await badMemcache.setMany([
-			{ key: faker.string.uuid(), value: faker.lorem.word() },
-		]);
-		expect(errorEmitted).toBeTruthy();
-	},
-);
+	await badMemcache.setMany([{ key: faker.string.uuid(), value: faker.lorem.word() }]);
+	expect(errorEmitted).toBeTruthy();
+});
 
 it("keyv has / false", { timeout: 30_000 }, async () => {
 	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });

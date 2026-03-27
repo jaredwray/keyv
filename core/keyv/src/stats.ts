@@ -18,10 +18,7 @@ export class KeyvStats {
 	private readonly errorKeysMap = new Map<string, number>();
 
 	private _emitter?: IEventEmitter;
-	private readonly _listeners = new Map<
-		string,
-		(event: KeyvTelemetryEvent) => void
-	>();
+	private readonly _listeners = new Map<string, (event: KeyvTelemetryEvent) => void>();
 
 	constructor(options?: KeyvStatsOptions) {
 		if (options?.maxEntries !== undefined) {

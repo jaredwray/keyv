@@ -143,9 +143,7 @@ describe("iterators", () => {
 	test("should be able to pass undefined on connect to get localhost", async () => {
 		const keyv = createKeyv();
 		const keyvRedis = keyv.store as KeyvRedis<string>;
-		expect((keyvRedis.client as RedisClientType).options?.url).toBe(
-			"redis://localhost:6379",
-		);
+		expect((keyvRedis.client as RedisClientType).options?.url).toBe("redis://localhost:6379");
 	});
 
 	test("should go to the RedisClientOptions if passed in", async () => {
@@ -159,8 +157,8 @@ describe("iterators", () => {
 			},
 		});
 
-		expect(
-			(keyvRedis.client as RedisClientType).options?.socket?.reconnectStrategy,
-		).toBe(reconnectStrategy);
+		expect((keyvRedis.client as RedisClientType).options?.socket?.reconnectStrategy).toBe(
+			reconnectStrategy,
+		);
 	});
 });

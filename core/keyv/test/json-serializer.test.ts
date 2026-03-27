@@ -41,9 +41,7 @@ describe("KeyvJsonSerializer", () => {
 
 	it("stringify and parse of only string value with colon", () => {
 		const serialized = jsonSerializer.stringify(":base64:aGVsbG8gd29ybGQ=");
-		expect(jsonSerializer.parse<string>(serialized)).toBe(
-			":base64:aGVsbG8gd29ybGQ=",
-		);
+		expect(jsonSerializer.parse<string>(serialized)).toBe(":base64:aGVsbG8gd29ybGQ=");
 	});
 
 	it("stringify and parse of object value", () => {
@@ -75,9 +73,7 @@ describe("KeyvJsonSerializer", () => {
 
 	it("stringify converts Buffer to base64 JSON string", () => {
 		const buffer = Buffer.from("hello world", "utf8");
-		const expectedResult = JSON.stringify(
-			`:base64:${buffer.toString("base64")}`,
-		);
+		const expectedResult = JSON.stringify(`:base64:${buffer.toString("base64")}`);
 		const result = jsonSerializer.stringify(buffer);
 		expect(result).toBe(expectedResult);
 	});
@@ -110,9 +106,7 @@ describe("KeyvJsonSerializer", () => {
 				[3, 4],
 			],
 		});
-		const deserialized = jsonSerializer.parse<{ value: number[][] }>(
-			serialized,
-		);
+		const deserialized = jsonSerializer.parse<{ value: number[][] }>(serialized);
 		expect(deserialized.value).toEqual([
 			[1, 2],
 			[3, 4],

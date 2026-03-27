@@ -988,10 +988,10 @@ const keyv = new Keyv({ store: keyvRedis, throwOnErrors: true });
 What this does is it only throw on connection errors with the Redis client.
 
 ## .stats
-Type: `StatsManager`<br />
-Default: `StatsManager` instance with `enabled: false`
+Type: `KeyvStats`<br />
+Default: `KeyvStats` instance with `enabled: false`
 
-The stats property provides access to statistics tracking for cache operations. When enabled via the `stats` option during initialization, it tracks hits, misses, sets, deletes, and errors.
+The stats property provides access to statistics tracking for cache operations. When enabled via the `stats` option during initialization, it tracks hits, misses, sets, deletes, and errors. It also maintains LRU-bounded per-key frequency maps for each event type, allowing you to see which keys are accessed most.
 
 ### Enabling Stats:
 ```js
@@ -1000,11 +1000,20 @@ console.log(keyv.stats.enabled); // true
 ```
 
 ### Available Statistics:
+
+**Aggregate counters:**
 - `hits`: Number of successful cache retrievals
 - `misses`: Number of failed cache retrievals
 - `sets`: Number of set operations
 - `deletes`: Number of delete operations
 - `errors`: Number of errors encountered
+
+**Per-key LRU frequency maps** (each capped at `maxEntries`, default 1000):
+- `hitKeys`: `Map<string, number>` — key to hit count
+- `missKeys`: `Map<string, number>` — key to miss count
+- `setKeys`: `Map<string, number>` — key to set count
+- `deleteKeys`: `Map<string, number>` — key to delete count
+- `errorKeys`: `Map<string, number>` — key to error count
 
 ### Accessing Stats:
 ```js
@@ -1019,21 +1028,34 @@ console.log(keyv.stats.hits);    // 1
 console.log(keyv.stats.misses);  // 1
 console.log(keyv.stats.sets);    // 1
 console.log(keyv.stats.deletes); // 1
+
+// Per-key frequency maps
+console.log(keyv.stats.hitKeys.get('foo'));          // 1
+console.log(keyv.stats.missKeys.get('nonexistent')); // 1
 ```
 
 ### Resetting Stats:
 ```js
 keyv.stats.reset();
 console.log(keyv.stats.hits); // 0
+console.log(keyv.stats.hitKeys.size); // 0
 ```
 
 ### Manual Control:
-You can also manually enable/disable stats tracking at runtime:
+You can also manually enable/disable stats tracking at runtime. Disabling stats will automatically unsubscribe from events:
 ```js
 const keyv = new Keyv({ stats: false });
 keyv.stats.enabled = true; // Enable stats tracking
 // ... perform operations ...
-keyv.stats.enabled = false; // Disable stats tracking
+keyv.stats.enabled = false; // Disable stats tracking and unsubscribe
+```
+
+### Standalone Usage:
+You can create a `KeyvStats` instance independently and subscribe it to a Keyv instance:
+```js
+import { KeyvStats } from 'keyv';
+
+const stats = new KeyvStats({ enabled: true, maxEntries: 500, emitter: keyv });
 ```
 
 ## .sanitizeKey

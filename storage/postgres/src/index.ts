@@ -339,10 +339,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	public async get<Value>(key: string): Promise<Value | undefined> {
 		const strippedKey = this.removeKeyPrefix(key);
 		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [
-			strippedKey,
-			this.getNamespaceValue(),
-		]);
+		const rows = await this.query(select, [strippedKey, this.getNamespaceValue()]);
 		const row = rows[0];
 		return row === undefined ? undefined : row.value;
 	}
@@ -352,15 +349,10 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - An array of keys to retrieve.
 	 * @returns An array of values in the same order as the keys, with `undefined` for missing keys.
 	 */
-	public async getMany<Value>(
-		keys: string[],
-	): Promise<Array<Value | undefined>> {
+	public async getMany<Value>(keys: string[]): Promise<Array<Value | undefined>> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(getMany, [
-			strippedKeys,
-			this.getNamespaceValue(),
-		]);
+		const rows = await this.query(getMany, [strippedKeys, this.getNamespaceValue()]);
 		const rowsMap = new Map(rows.map((row) => [row.key, row]));
 
 		return strippedKeys.map((key) => rowsMap.get(key)?.value);
@@ -380,12 +372,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
       VALUES($1, $2, $3, $4)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, [
-				strippedKey,
-				value,
-				this.getNamespaceValue(),
-				expires,
-			]);
+			await this.query(upsert, [strippedKey, value, this.getNamespaceValue(), expires]);
 			return true;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
@@ -399,9 +386,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * Sets multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
 	 * @param entries - An array of key-value entry objects.
 	 */
-	public async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
 			const keys = [];
 			const values = [];
@@ -415,12 +400,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
       SELECT k, v, $3, e FROM UNNEST($1::text[], $2::text[], $4::bigint[]) AS t(k, v, e)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, [
-				keys,
-				values,
-				this.getNamespaceValue(),
-				expiresArray,
-			]);
+			await this.query(upsert, [keys, values, this.getNamespaceValue(), expiresArray]);
 			return entries.map(() => true);
 		} catch (error) {
 			this.emit("error", error);
@@ -447,9 +427,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		const results = await Promise.all(
-			keys.map(async (key) => this.delete(key)),
-		);
+		const results = await Promise.all(keys.map(async (key) => this.delete(key)));
 		return results;
 	}
 
@@ -515,9 +493,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 				// Emit error with context for debugging
 				this.emit(
 					"error",
-					new Error(
-						`Iterator failed at cursor ${lastKey ?? "start"}: ${(error as Error).message}`,
-					),
+					new Error(`Iterator failed at cursor ${lastKey ?? "start"}: ${(error as Error).message}`),
 				);
 				return;
 			}
@@ -554,10 +530,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	public async has(key: string): Promise<boolean> {
 		const strippedKey = this.removeKeyPrefix(key);
 		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') )`;
-		const rows = await this.query(exists, [
-			strippedKey,
-			this.getNamespaceValue(),
-		]);
+		const rows = await this.query(exists, [strippedKey, this.getNamespaceValue()]);
 		return rows[0].exists;
 	}
 
@@ -569,10 +542,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [
-			strippedKeys,
-			this.getNamespaceValue(),
-		]);
+		const rows = await this.query(select, [strippedKeys, this.getNamespaceValue()]);
 		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
 		return strippedKeys.map((key) => existingKeys.has(key));
 	}

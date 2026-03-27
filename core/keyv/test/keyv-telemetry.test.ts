@@ -91,9 +91,7 @@ describe("Keyv Telemetry Events", () => {
 		expect(hitListener).toHaveBeenCalledTimes(2);
 		expect(missListener).toHaveBeenCalledTimes(1);
 
-		const hitKeys = hitListener.mock.calls.map(
-			(call: KeyvTelemetryEvent[]) => call[0].key,
-		);
+		const hitKeys = hitListener.mock.calls.map((call: KeyvTelemetryEvent[]) => call[0].key);
 		expect(hitKeys).toContain("key1");
 		expect(hitKeys).toContain("key2");
 
@@ -140,12 +138,8 @@ describe("Keyv Telemetry Events", () => {
 
 		expect(hitListener).toHaveBeenCalledOnce();
 		expect(missListener).toHaveBeenCalledOnce();
-		expect((hitListener.mock.calls[0][0] as KeyvTelemetryEvent).key).toBe(
-			"key1",
-		);
-		expect((missListener.mock.calls[0][0] as KeyvTelemetryEvent).key).toBe(
-			"missing",
-		);
+		expect((hitListener.mock.calls[0][0] as KeyvTelemetryEvent).key).toBe("key1");
+		expect((missListener.mock.calls[0][0] as KeyvTelemetryEvent).key).toBe("missing");
 	});
 
 	it("should emit stat:set on setRaw()", async () => {
@@ -266,9 +260,7 @@ describe("Keyv Telemetry Events", () => {
 		]);
 
 		expect(listener).toHaveBeenCalledTimes(3);
-		const keys = listener.mock.calls.map(
-			(call: KeyvTelemetryEvent[]) => call[0].key,
-		);
+		const keys = listener.mock.calls.map((call: KeyvTelemetryEvent[]) => call[0].key);
 		expect(keys).toContain("a");
 		expect(keys).toContain("b");
 		expect(keys).toContain("c");
@@ -311,9 +303,7 @@ describe("Keyv Telemetry Events", () => {
 		await keyv.delete(["a", "b", "c"]);
 
 		expect(listener).toHaveBeenCalledTimes(3);
-		const keys = listener.mock.calls.map(
-			(call: KeyvTelemetryEvent[]) => call[0].key,
-		);
+		const keys = listener.mock.calls.map((call: KeyvTelemetryEvent[]) => call[0].key);
 		expect(keys).toContain("a");
 		expect(keys).toContain("b");
 		expect(keys).toContain("c");

@@ -1,9 +1,6 @@
 import type { SqliteDriver, SqliteDriverName } from "./drivers/types.js";
 
-export type DbQuery = (
-	sqlString: string,
-	...parameter: unknown[]
-) => Promise<unknown[]>;
+export type DbQuery = (sqlString: string, ...parameter: unknown[]) => Promise<unknown[]>;
 export type DbClose = () => Promise<void>;
 
 export type KeyvSqliteOptions = {

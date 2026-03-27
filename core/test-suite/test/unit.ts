@@ -1,10 +1,7 @@
 import Keyv from "keyv";
 import * as test from "vitest";
 import { KeyvLz4TestAdapter } from "../src/compression-adapter.js";
-import keyvTestSuite, {
-	keyvCompressionTests,
-	keyvIteratorTests,
-} from "../src/index.js";
+import keyvTestSuite, { keyvCompressionTests, keyvIteratorTests } from "../src/index.js";
 
 const storeExtended = () => {
 	class MapExtend extends Map {}

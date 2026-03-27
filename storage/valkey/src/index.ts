@@ -1,11 +1,7 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
-import Keyv, {
-	type KeyvEntry,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 /**
@@ -51,10 +47,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @param {KeyvValkeyOptions} [options] - Additional adapter options such as `useSets`. Merged with
 	 *   options derived from `uri` when `uri` is a string or plain options object.
 	 */
-	constructor(
-		uri: KeyvValkeyOptions | KeyvUriOptions,
-		options?: KeyvValkeyOptions,
-	) {
+	constructor(uri: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions) {
 		super({ throwOnEmptyListeners: false });
 
 		if (
@@ -179,9 +172,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<Array<StoredData<Value | undefined>>>} An array of stored data in the same order as the input keys.
 	 *   Each element is the stored value or `undefined` if the corresponding key does not exist.
 	 */
-	public async getMany<Value>(
-		keys: string[],
-	): Promise<Array<StoredData<Value | undefined>>> {
+	public async getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>> {
 		const resolvedKeys = keys.map((key) => this.getKeyName(key));
 
 		if (this.isCluster()) {
@@ -197,9 +188,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				}),
 			);
 
-			return resolvedKeys.map(
-				(k) => resultMap.get(k) as StoredData<Value | undefined>,
-			);
+			return resolvedKeys.map((k) => resultMap.get(k) as StoredData<Value | undefined>);
 		}
 
 		return this._client.mget(resolvedKeys);
@@ -262,9 +251,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 *   containing `key`, `value`, and an optional `ttl` in milliseconds for each entry.
 	 * @returns {Promise<void>}
 	 */
-	public async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}
@@ -439,10 +426,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			const setKey = this.getSetKey();
 			const keys: string[] = await this._client.smembers(setKey);
 			if (keys.length > 0) {
-				await Promise.all([
-					this._client.unlink([...keys]),
-					this._client.srem(setKey, [...keys]),
-				]);
+				await Promise.all([this._client.unlink([...keys]), this._client.srem(setKey, [...keys])]);
 			}
 
 			// Legacy cleanup: clear old "namespace:<ns>" SET key from pre-v6 format
@@ -450,8 +434,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				const legacySetKey = `namespace:${this.namespace}`;
 				const legacyKeyType: string = await this._client.type(legacySetKey);
 				if (legacyKeyType === "set") {
-					const legacyKeys: string[] =
-						await this._client.smembers(legacySetKey);
+					const legacyKeys: string[] = await this._client.smembers(legacySetKey);
 					if (legacyKeys.length > 0) {
 						await Promise.all([
 							this._client.unlink([...legacyKeys]),

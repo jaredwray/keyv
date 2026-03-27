@@ -42,27 +42,24 @@ test.it("decompression with decompression options", async (t) => {
 	t.expect(decompressed).toBe("whatever");
 });
 
-test.it(
-	"compression/decompression with compression/decompression options",
-	async (t) => {
-		const options = {
-			compressOptions: {
-				chunkSize: 1024,
-				parameters: {
-					[BROTLI_PARAM_MODE]: 2,
-				},
+test.it("compression/decompression with compression/decompression options", async (t) => {
+	const options = {
+		compressOptions: {
+			chunkSize: 1024,
+			parameters: {
+				[BROTLI_PARAM_MODE]: 2,
 			},
-			decompressOptions: {
-				chunkSize: 1024,
-				parameters: {
-					[BROTLI_PARAM_MODE]: 2,
-				},
+		},
+		decompressOptions: {
+			chunkSize: 1024,
+			parameters: {
+				[BROTLI_PARAM_MODE]: 2,
 			},
-		};
+		},
+	};
 
-		const keyv = new KeyvBrotli(options);
-		const compressed = await keyv.compress("whatever");
-		const decompressed = await keyv.decompress(compressed);
-		t.expect(decompressed).toBe("whatever");
-	},
-);
+	const keyv = new KeyvBrotli(options);
+	const compressed = await keyv.compress("whatever");
+	const decompressed = await keyv.decompress(compressed);
+	t.expect(decompressed).toBe("whatever");
+});

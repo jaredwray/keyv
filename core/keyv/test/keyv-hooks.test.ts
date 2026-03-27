@@ -206,36 +206,30 @@ test.it("AFTER_GET_RAW hook on expired key", async () => {
 	test.expect(value).toBeUndefined();
 });
 
-test.it(
-	"deprecated PRE_SET hook still fires when using BEFORE_SET internally",
-	async (t) => {
-		const keyv = new Keyv();
-		let hookTriggered = false;
-		keyv.on("warn", () => {}); // Silence deprecation warnings
-		keyv.addHook(KeyvHooks.PRE_SET, (data) => {
-			hookTriggered = true;
-			t.expect(data.key).toBe("foo");
-			t.expect(data.value).toBe("bar");
-		});
-		await keyv.set("foo", "bar");
-		t.expect(hookTriggered).toBe(true);
-	},
-);
+test.it("deprecated PRE_SET hook still fires when using BEFORE_SET internally", async (t) => {
+	const keyv = new Keyv();
+	let hookTriggered = false;
+	keyv.on("warn", () => {}); // Silence deprecation warnings
+	keyv.addHook(KeyvHooks.PRE_SET, (data) => {
+		hookTriggered = true;
+		t.expect(data.key).toBe("foo");
+		t.expect(data.value).toBe("bar");
+	});
+	await keyv.set("foo", "bar");
+	t.expect(hookTriggered).toBe(true);
+});
 
-test.it(
-	"deprecated POST_SET hook still fires when using AFTER_SET internally",
-	async (t) => {
-		const keyv = new Keyv();
-		let hookTriggered = false;
-		keyv.on("warn", () => {}); // Silence deprecation warnings
-		keyv.addHook(KeyvHooks.POST_SET, (data) => {
-			hookTriggered = true;
-			t.expect(data.key).toBe("foo");
-		});
-		await keyv.set("foo", "bar");
-		t.expect(hookTriggered).toBe(true);
-	},
-);
+test.it("deprecated POST_SET hook still fires when using AFTER_SET internally", async (t) => {
+	const keyv = new Keyv();
+	let hookTriggered = false;
+	keyv.on("warn", () => {}); // Silence deprecation warnings
+	keyv.addHook(KeyvHooks.POST_SET, (data) => {
+		hookTriggered = true;
+		t.expect(data.key).toBe("foo");
+	});
+	await keyv.set("foo", "bar");
+	t.expect(hookTriggered).toBe(true);
+});
 
 test.it("deprecated PRE_GET hook still fires", async (t) => {
 	const keyv = new Keyv();

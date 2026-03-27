@@ -9,15 +9,11 @@ import {
 
 describe("isDataExpired", () => {
 	test("should return true when expires is in the past", () => {
-		expect(isDataExpired({ value: "x", expires: Date.now() - 1000 })).toBe(
-			true,
-		);
+		expect(isDataExpired({ value: "x", expires: Date.now() - 1000 })).toBe(true);
 	});
 
 	test("should return false when expires is in the future", () => {
-		expect(isDataExpired({ value: "x", expires: Date.now() + 10_000 })).toBe(
-			false,
-		);
+		expect(isDataExpired({ value: "x", expires: Date.now() + 10_000 })).toBe(false);
 	});
 
 	test("should return false when expires is undefined", () => {
@@ -116,83 +112,132 @@ describe("ttlFromExpires", () => {
 });
 
 describe("sanitizeKey", () => {
-	describe("with all categories enabled (default)", () => {
+	describe("pass-through (harmless characters stay unchanged)", () => {
 		const pattern = buildSanitizePattern();
 
-		test("should strip SQL injection characters", () => {
-			expect(sanitizeKey("key'with\"quotes`and;semi", pattern)).toBe(
-				"keywithquotesandsemi",
-			);
+		test("single quote passes through", () => {
+			expect(sanitizeKey("'", pattern)).toBe("'");
 		});
 
-		test("should strip MongoDB operator characters", () => {
-			expect(sanitizeKey("key$with{curly}braces", pattern)).toBe(
-				"keywithcurlybraces",
-			);
+		test("quote in key passes through", () => {
+			expect(sanitizeKey("user's-data", pattern)).toBe("user's-data");
 		});
 
-		test("should strip escape and control characters", () => {
-			expect(sanitizeKey("key\\with\0null\nand\rcontrol", pattern)).toBe(
-				"keywithnullandcontrol",
-			);
+		test("single slash passes through", () => {
+			expect(sanitizeKey("key/subkey", pattern)).toBe("key/subkey");
 		});
 
-		test("should strip path traversal characters", () => {
-			expect(sanitizeKey("key/with/slashes", pattern)).toBe("keywithslashes");
+		test("dollar sign not at start passes through", () => {
+			expect(sanitizeKey("price$5", pattern)).toBe("price$5");
 		});
 
-		test("should leave clean keys unchanged", () => {
+		test("curly braces without dollar pass through", () => {
+			expect(sanitizeKey("curly{brace}", pattern)).toBe("curly{brace}");
+		});
+
+		test("double quotes pass through", () => {
+			expect(sanitizeKey('key"value', pattern)).toBe('key"value');
+		});
+
+		test("backticks pass through", () => {
+			expect(sanitizeKey("key`value", pattern)).toBe("key`value");
+		});
+
+		test("backslash passes through", () => {
+			expect(sanitizeKey("key\\value", pattern)).toBe("key\\value");
+		});
+
+		test("clean keys unchanged", () => {
 			expect(sanitizeKey("my-clean-key_123", pattern)).toBe("my-clean-key_123");
 		});
 
-		test("should return empty string for all-dangerous input", () => {
-			// biome-ignore lint/suspicious/noTemplateCurlyInString: testing literal $ and {} chars
-			expect(sanitizeKey("'\"`${};\\/\0\n\r", pattern)).toBe("");
-		});
-
-		test("should handle empty string", () => {
+		test("empty string unchanged", () => {
 			expect(sanitizeKey("", pattern)).toBe("");
 		});
 	});
 
+	describe("dangerous patterns are stripped", () => {
+		const pattern = buildSanitizePattern();
+
+		test("strips semicolons (SQL)", () => {
+			expect(sanitizeKey("; DROP TABLE users", pattern)).toBe(" DROP TABLE users");
+		});
+
+		test("strips SQL comments (--)", () => {
+			expect(sanitizeKey("key--comment", pattern)).toBe("keycomment");
+		});
+
+		test("strips SQL block comment open (/*)", () => {
+			expect(sanitizeKey("key/*comment", pattern)).toBe("keycomment");
+		});
+
+		test("strips leading $ (MongoDB)", () => {
+			expect(sanitizeKey("$where", pattern)).toBe("where");
+		});
+
+		test("strips {$ sequence (MongoDB)", () => {
+			expect(sanitizeKey("key{$gt}", pattern)).toBe("keygt}");
+		});
+
+		test("strips path traversal ../", () => {
+			expect(sanitizeKey("../../etc/passwd", pattern)).toBe("etc/passwd");
+		});
+
+		test("strips path traversal ..\\", () => {
+			expect(sanitizeKey("..\\..\\etc\\passwd", pattern)).toBe("etc\\passwd");
+		});
+
+		test("strips null bytes", () => {
+			expect(sanitizeKey("key\0value", pattern)).toBe("keyvalue");
+		});
+
+		test("strips newlines", () => {
+			expect(sanitizeKey("key\nvalue", pattern)).toBe("keyvalue");
+		});
+
+		test("strips carriage returns", () => {
+			expect(sanitizeKey("key\rvalue", pattern)).toBe("keyvalue");
+		});
+
+		test("strips all dangerous patterns from combined input", () => {
+			expect(sanitizeKey(";--\0\n\r", pattern)).toBe("");
+		});
+	});
+
 	describe("with individual categories disabled", () => {
-		test("should preserve SQL characters when sql is disabled", () => {
+		test("preserves SQL patterns when sql is disabled", () => {
 			const pattern = buildSanitizePattern({ sql: false });
-			expect(sanitizeKey("key'with;semi", pattern)).toBe("key'with;semi");
+			expect(sanitizeKey("key;--comment", pattern)).toBe("key;--comment");
 		});
 
-		test("should preserve MongoDB characters when mongo is disabled", () => {
+		test("preserves MongoDB patterns when mongo is disabled", () => {
 			const pattern = buildSanitizePattern({ mongo: false });
-			expect(sanitizeKey("key$with{braces}", pattern)).toBe("key$with{braces}");
+			expect(sanitizeKey("$where", pattern)).toBe("$where");
 		});
 
-		test("should preserve escape characters when escape is disabled", () => {
+		test("preserves control chars when escape is disabled", () => {
 			const pattern = buildSanitizePattern({ escape: false });
-			expect(sanitizeKey("key\\with\nnewline", pattern)).toBe(
-				"key\\with\nnewline",
-			);
+			expect(sanitizeKey("key\nvalue", pattern)).toBe("key\nvalue");
 		});
 
-		test("should preserve path characters when path is disabled", () => {
+		test("preserves path traversal when path is disabled", () => {
 			const pattern = buildSanitizePattern({ path: false });
-			expect(sanitizeKey("key/with/slashes", pattern)).toBe("key/with/slashes");
+			expect(sanitizeKey("../../etc", pattern)).toBe("../../etc");
 		});
 
-		test("should only strip enabled categories", () => {
+		test("only strips enabled categories", () => {
 			const pattern = buildSanitizePattern({
 				sql: true,
 				mongo: false,
 				escape: false,
 				path: false,
 			});
-			expect(sanitizeKey("key'$with/stuff\\here", pattern)).toBe(
-				"key$with/stuff\\here",
-			);
+			expect(sanitizeKey("$key;--../\n", pattern)).toBe("$key../\n");
 		});
 	});
 
 	describe("buildSanitizePattern", () => {
-		test("should return undefined when all categories are disabled", () => {
+		test("returns undefined when all categories are disabled", () => {
 			const pattern = buildSanitizePattern({
 				sql: false,
 				mongo: false,
@@ -202,18 +247,18 @@ describe("sanitizeKey", () => {
 			expect(pattern).toBeUndefined();
 		});
 
-		test("should return a RegExp when at least one category is enabled", () => {
+		test("returns an array when at least one category is enabled", () => {
 			const pattern = buildSanitizePattern({
 				sql: false,
 				mongo: false,
 				escape: false,
 				path: true,
 			});
-			expect(pattern).toBeInstanceOf(RegExp);
+			expect(Array.isArray(pattern)).toBe(true);
 		});
 
 		test("sanitizeKey with undefined pattern returns key unchanged", () => {
-			expect(sanitizeKey("any'key$here", undefined)).toBe("any'key$here");
+			expect(sanitizeKey("any'key$here;--", undefined)).toBe("any'key$here;--");
 		});
 	});
 });

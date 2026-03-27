@@ -70,9 +70,7 @@ describe("Keyv", async () => {
 
 		test("does not call get when getMany is available", async () => {
 			const map = new Map();
-			const getManyMock = vi.fn((keys: string[]) =>
-				keys.map((key) => map.get(key)),
-			);
+			const getManyMock = vi.fn((keys: string[]) => keys.map((key) => map.get(key)));
 			const store = Object.assign(new Map(map), { getMany: getManyMock });
 			const getSpy = vi.spyOn(store, "get");
 			const keyv = new Keyv({ store });
@@ -192,10 +190,7 @@ describe("Keyv", async () => {
 			const keyv = new Keyv(throwingStore);
 			keyv.throwOnErrors = false;
 			keyv.on("error", () => {});
-			const result = await keyv.set(
-				faker.string.alphanumeric(10),
-				faker.string.alphanumeric(10),
-			);
+			const result = await keyv.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
 			expect(result).toBe(false);
 		});
 
@@ -306,16 +301,17 @@ describe("Keyv", async () => {
 	});
 
 	describe("sanitizeKey", () => {
-		test("should sanitize keys by default", async () => {
+		test("should not sanitize keys by default", async () => {
 			const keyv = new Keyv();
 			await keyv.set("test'; DROP TABLE", "value");
-			expect(await keyv.get("test DROP TABLE")).toBe("value");
+			// Sanitization is off by default, so the key is stored as-is
 			expect(await keyv.get("test'; DROP TABLE")).toBe("value");
 		});
 
 		test("should sanitize keys when explicitly enabled", async () => {
 			const keyv = new Keyv({ sanitizeKey: true });
-			await keyv.set("test'; DROP TABLE", "value");
+			// Semicolon is a dangerous SQL pattern, gets stripped
+			await keyv.set("test; DROP TABLE", "value");
 			expect(await keyv.get("test DROP TABLE")).toBe("value");
 		});
 
@@ -327,49 +323,52 @@ describe("Keyv", async () => {
 
 		test("should support granular category control", async () => {
 			const keyv = new Keyv({ sanitizeKey: { sql: true, mongo: false } });
-			await keyv.set("test'$key", "value");
-			// SQL chars stripped, mongo chars preserved
-			expect(await keyv.get("test$key")).toBe("value");
+			await keyv.set("$key;test", "value");
+			// SQL semicolon stripped, mongo leading $ preserved (since mongo disabled)
+			expect(await keyv.get("$keytest")).toBe("value");
 		});
 
 		test("should sanitize keys in getMany", async () => {
-			const keyv = new Keyv();
+			const keyv = new Keyv({ sanitizeKey: true });
 			await keyv.set("clean-key", "value1");
-			const result = await keyv.getMany(["clean-key", "miss'key"]);
+			const result = await keyv.getMany(["clean-key", "miss;key"]);
 			expect(result[0]).toBe("value1");
 			expect(result[1]).toBeUndefined();
 		});
 
 		test("should sanitize keys in has", async () => {
-			const keyv = new Keyv();
+			const keyv = new Keyv({ sanitizeKey: true });
 			await keyv.set("test-key", "value");
 			expect(await keyv.has("test-key")).toBe(true);
-			expect(await keyv.has("test'-key")).toBe(true);
+			// Quote is harmless, key stays "test'-key" which doesn't match "test-key"
+			expect(await keyv.has("test'-key")).toBe(false);
 		});
 
 		test("should sanitize keys in delete", async () => {
-			const keyv = new Keyv();
-			await keyv.set("test-key", "value");
-			await keyv.delete("test'-key");
-			expect(await keyv.has("test-key")).toBe(false);
+			const keyv = new Keyv({ sanitizeKey: true });
+			await keyv.set("testkey", "value");
+			// Semicolon stripped, so "test;key" becomes "testkey"
+			await keyv.delete("test;key");
+			expect(await keyv.has("testkey")).toBe(false);
 		});
 
 		test("should sanitize keys in setMany", async () => {
-			const keyv = new Keyv();
+			const keyv = new Keyv({ sanitizeKey: true });
 			await keyv.setMany([
-				{ key: "key'1", value: "value1" },
-				{ key: "key;2", value: "value2" },
+				{ key: "key;1", value: "value1" },
+				{ key: "key--2", value: "value2" },
 			]);
+			// Semicolon and -- are dangerous SQL patterns, stripped
 			expect(await keyv.get("key1")).toBe("value1");
 			expect(await keyv.get("key2")).toBe("value2");
 		});
 
 		test("getter and setter should work", () => {
 			const keyv = new Keyv();
-			expect(keyv.sanitizeKey).toBe(true);
-
-			keyv.sanitizeKey = false;
 			expect(keyv.sanitizeKey).toBe(false);
+
+			keyv.sanitizeKey = true;
+			expect(keyv.sanitizeKey).toBe(true);
 
 			keyv.sanitizeKey = { sql: true, mongo: false };
 			expect(keyv.sanitizeKey).toEqual({ sql: true, mongo: false });
@@ -378,17 +377,24 @@ describe("Keyv", async () => {
 		test("setter with true should enable all sanitization categories", async () => {
 			const keyv = new Keyv({ sanitizeKey: false });
 			keyv.sanitizeKey = true;
-			await keyv.set("test'$key/path", "value");
-			// All categories stripped
-			expect(await keyv.get("testkeypath")).toBe("value");
+			await keyv.set("test;../key\0val", "value");
+			// SQL semicolon, path traversal, null byte all stripped
+			expect(await keyv.get("testkeyval")).toBe("value");
 		});
 
 		test("setter with options object should apply granular sanitization", async () => {
 			const keyv = new Keyv();
 			keyv.sanitizeKey = { sql: true, mongo: false, path: false };
-			await keyv.set("test'$key/path", "value");
-			// SQL chars stripped, mongo and path chars preserved
-			expect(await keyv.get("test$key/path")).toBe("value");
+			await keyv.set("test;$key/../path", "value");
+			// SQL semicolon stripped, mongo $ and path traversal preserved
+			expect(await keyv.get("test$key/../path")).toBe("value");
+		});
+
+		test("harmless characters pass through when sanitization is enabled", async () => {
+			const keyv = new Keyv({ sanitizeKey: true });
+			await keyv.set("user's-data", "value");
+			// Quotes are not dangerous patterns, pass through unchanged
+			expect(await keyv.get("user's-data")).toBe("value");
 		});
 	});
 });

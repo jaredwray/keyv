@@ -38,10 +38,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 * @param uri - The memcache server URI (e.g., `'localhost:11211'`) or an options object. Defaults to `'localhost:11211'`.
 	 * @param options - Additional configuration options, merged with the first argument if it is an object.
 	 */
-	constructor(
-		uri?: string | KeyvMemcacheOptions,
-		options?: KeyvMemcacheOptions,
-	) {
+	constructor(uri?: string | KeyvMemcacheOptions, options?: KeyvMemcacheOptions) {
 		super({ throwOnEmptyListeners: false });
 
 		const allOptions: KeyvMemcacheOptions = {
@@ -163,15 +160,11 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple values in the memcache server.
 	 * @param entries - An array of objects containing key, value, and optional ttl
 	 */
-	async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		const settled = await Promise.allSettled(
 			entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
 		);
-		return settled.map((result) =>
-			result.status === "fulfilled" ? result.value : false,
-		);
+		return settled.map((result) => (result.status === "fulfilled" ? result.value : false));
 	}
 
 	/**
@@ -222,9 +215,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	async hasMany(keys: string[]): Promise<boolean[]> {
 		const promises = keys.map(async (key) => this.has(key));
 		const results = await Promise.allSettled(promises);
-		return results.map((result) =>
-			result.status === "fulfilled" ? result.value : false,
-		);
+		return results.map((result) => (result.status === "fulfilled" ? result.value : false));
 	}
 
 	/**
@@ -275,9 +266,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
  * await keyv.set('foo', 'bar');
  * ```
  */
-export const createKeyv = (
-	uri?: string | KeyvMemcacheOptions,
-	options?: KeyvMemcacheOptions,
-) => new Keyv({ store: new KeyvMemcache(uri, options) });
+export const createKeyv = (uri?: string | KeyvMemcacheOptions, options?: KeyvMemcacheOptions) =>
+	new Keyv({ store: new KeyvMemcache(uri, options) });
 
 export default KeyvMemcache;

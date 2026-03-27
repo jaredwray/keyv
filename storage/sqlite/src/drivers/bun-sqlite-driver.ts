@@ -3,9 +3,7 @@ import type { Db } from "../types.js";
 import { createQueryFn, shouldApplyWal } from "./driver-utils.js";
 import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 
-async function createBunSqliteConnection(
-	options: SqliteDriverConnectOptions,
-): Promise<Db> {
+async function createBunSqliteConnection(options: SqliteDriverConnectOptions): Promise<Db> {
 	// Dynamic import — only available in Bun runtime
 	// @ts-expect-error: bun:sqlite types may not be available
 	// biome-ignore lint/suspicious/noExplicitAny: bun:sqlite types may not be available

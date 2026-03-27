@@ -143,35 +143,30 @@ export type KeyvStorageAdapter = {
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
 	hasMany?(keys: string[]): Promise<boolean[]>;
-	getMany?<Value>(
-		keys: string[],
-	): Promise<Array<StoredData<Value | undefined>>>;
+	getMany?<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean[]>;
-	iterator?<Value>(): AsyncGenerator<
-		Array<string | Awaited<Value> | undefined>,
-		void
-	>;
+	iterator?<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
 export type KeyvSanitizeOptions = {
 	/**
-	 * Strip SQL injection characters: ' " ` ;
+	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
 	 * @default true
 	 */
 	sql?: boolean;
 	/**
-	 * Strip MongoDB operator characters: $ { }
+	 * Detect and strip MongoDB operator patterns: leading `$`, `{$` sequences.
 	 * @default true
 	 */
 	mongo?: boolean;
 	/**
-	 * Strip escape and control characters: \ \0 \n \r
+	 * Detect and strip dangerous control sequences: null bytes (`\0`), carriage returns (`\r`), newlines (`\n`).
 	 * @default true
 	 */
 	escape?: boolean;
 	/**
-	 * Strip path traversal characters: /
+	 * Detect and strip path traversal patterns: `../` and `..\\` sequences.
 	 * @default true
 	 */
 	path?: boolean;
@@ -217,11 +212,11 @@ export type KeyvOptions = {
 	 */
 	throwOnErrors?: boolean;
 	/**
-	 * Sanitize keys to remove characters that could be dangerous for SQL,
-	 * MongoDB, Redis, or filesystem-based storage backends. Pass `true` to
+	 * Validate and sanitize keys by detecting dangerous patterns for SQL,
+	 * MongoDB, or filesystem-based storage backends. Pass `true` to
 	 * enable all categories, `false` to disable, or a `KeyvSanitizeOptions`
 	 * object to toggle individual categories.
-	 * @default true
+	 * @default false
 	 */
 	sanitizeKey?: boolean | KeyvSanitizeOptions;
 };

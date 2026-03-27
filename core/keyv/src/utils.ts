@@ -1,8 +1,4 @@
-import {
-	KeyvHooks,
-	type KeyvSanitizeOptions,
-	type KeyvValue,
-} from "./types.js";
+import { KeyvHooks, type KeyvSanitizeOptions, type KeyvValue } from "./types.js";
 
 /**
  * Check whether a deserialized entry has expired based on its `expires` timestamp.
@@ -39,9 +35,7 @@ export function resolveTtl(
  * @param expires - Absolute expiry timestamp in milliseconds since epoch, or `undefined`
  * @returns The remaining TTL in milliseconds, or `undefined`
  */
-export function ttlFromExpires(
-	expires: number | undefined,
-): number | undefined {
+export function ttlFromExpires(expires: number | undefined): number | undefined {
 	if (typeof expires !== "number" || !Number.isFinite(expires)) {
 		return undefined;
 	}
@@ -107,86 +101,73 @@ export function buildDeprecatedHooks(): Map<string, string> {
 		["postGetMany", "Use KeyvHooks.AFTER_GET_MANY ('after:getMany') instead"],
 		["preGetRaw", "Use KeyvHooks.BEFORE_GET_RAW ('before:getRaw') instead"],
 		["postGetRaw", "Use KeyvHooks.AFTER_GET_RAW ('after:getRaw') instead"],
-		[
-			"preGetManyRaw",
-			"Use KeyvHooks.BEFORE_GET_MANY_RAW ('before:getManyRaw') instead",
-		],
-		[
-			"postGetManyRaw",
-			"Use KeyvHooks.AFTER_GET_MANY_RAW ('after:getManyRaw') instead",
-		],
+		["preGetManyRaw", "Use KeyvHooks.BEFORE_GET_MANY_RAW ('before:getManyRaw') instead"],
+		["postGetManyRaw", "Use KeyvHooks.AFTER_GET_MANY_RAW ('after:getManyRaw') instead"],
 		["preSetRaw", "Use KeyvHooks.BEFORE_SET_RAW ('before:setRaw') instead"],
 		["postSetRaw", "Use KeyvHooks.AFTER_SET_RAW ('after:setRaw') instead"],
-		[
-			"preSetManyRaw",
-			"Use KeyvHooks.BEFORE_SET_MANY_RAW ('before:setManyRaw') instead",
-		],
-		[
-			"postSetManyRaw",
-			"Use KeyvHooks.AFTER_SET_MANY_RAW ('after:setManyRaw') instead",
-		],
+		["preSetManyRaw", "Use KeyvHooks.BEFORE_SET_MANY_RAW ('before:setManyRaw') instead"],
+		["postSetManyRaw", "Use KeyvHooks.AFTER_SET_MANY_RAW ('after:setManyRaw') instead"],
 		["preDelete", "Use KeyvHooks.BEFORE_DELETE ('before:delete') instead"],
 		["postDelete", "Use KeyvHooks.AFTER_DELETE ('after:delete') instead"],
 	]);
 }
 
-const categoryChars: Record<keyof KeyvSanitizeOptions, string> = {
-	sql: "'\"`;",
-	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal chars not a template
-	mongo: "${}",
-	escape: "\\\\\0\n\r",
-	path: "/",
+const categoryPatterns: Record<keyof KeyvSanitizeOptions, RegExp[]> = {
+	sql: [/;/g, /--/g, /\/\*/g],
+	mongo: [/^\$/g, /\{\s*\$/g],
+	escape: [/\0/g, /\r/g, /\n/g],
+	path: [/\.\.\//g, /\.\.\\/g],
 };
 
 /**
- * Build a single RegExp from the enabled sanitization categories.
+ * Build an array of RegExp patterns from the enabled sanitization categories.
  * Called once at construction time (or when the option changes) so that
- * per-key sanitization is a single `String.prototype.replace()` call.
+ * per-key sanitization uses precompiled patterns.
  * @param options - Categories to enable (all default to `true`)
- * @returns A global RegExp, or `undefined` if every category is disabled
+ * @returns An array of RegExp patterns, or `undefined` if every category is disabled
  */
-export function buildSanitizePattern(
-	options: KeyvSanitizeOptions = {},
-): RegExp | undefined {
-	let chars = "";
-	for (const [category, categoryCharSet] of Object.entries(categoryChars)) {
+export function buildSanitizePattern(options: KeyvSanitizeOptions = {}): RegExp[] | undefined {
+	const patterns: RegExp[] = [];
+	for (const [category, regexes] of Object.entries(categoryPatterns)) {
 		if (options[category as keyof KeyvSanitizeOptions] !== false) {
-			chars += categoryCharSet;
+			patterns.push(...regexes);
 		}
 	}
 
-	return chars.length > 0 ? new RegExp(`[${chars}]`, "g") : undefined;
+	return patterns.length > 0 ? patterns : undefined;
 }
 
 /**
- * Strip unsafe characters from a key using a precompiled pattern
+ * Detect and strip dangerous patterns from a key using precompiled patterns.
+ * Keys without dangerous patterns pass through unchanged.
  * @param key - The key to sanitize
- * @param pattern - A precompiled RegExp from `buildSanitizePattern`, or `undefined` to skip
+ * @param patterns - Precompiled RegExp array from `buildSanitizePattern`, or `undefined` to skip
  * @returns The sanitized key string
  */
-export function sanitizeKey(key: string, pattern: RegExp | undefined): string {
-	if (!pattern) {
+export function sanitizeKey(key: string, patterns: RegExp[] | undefined): string {
+	if (!patterns) {
 		return key;
 	}
 
-	pattern.lastIndex = 0;
-	return key.replace(pattern, "");
+	for (const pattern of patterns) {
+		pattern.lastIndex = 0;
+		key = key.replace(pattern, "");
+	}
+
+	return key;
 }
 
 /**
- * Strip unsafe characters from an array of keys using a precompiled pattern
+ * Detect and strip dangerous patterns from an array of keys using precompiled patterns.
  * @param keys - The keys to sanitize
- * @param pattern - A precompiled RegExp from `buildSanitizePattern`, or `undefined` to skip
+ * @param patterns - Precompiled RegExp array from `buildSanitizePattern`, or `undefined` to skip
  * @returns The sanitized key strings
  */
-export function sanitizeKeys(
-	keys: string[],
-	pattern: RegExp | undefined,
-): string[] {
+export function sanitizeKeys(keys: string[], patterns: RegExp[] | undefined): string[] {
 	/* v8 ignore next -- @preserve */
-	if (!pattern) {
+	if (!patterns) {
 		return keys;
 	}
 
-	return keys.map((k) => sanitizeKey(k, pattern));
+	return keys.map((k) => sanitizeKey(k, patterns));
 }

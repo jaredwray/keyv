@@ -5,11 +5,7 @@ import keyvNamespaceTest from "./namespace.js";
 import type { KeyvStoreFn } from "./types.js";
 import keyvValueTests from "./values.js";
 
-const keyvTestSuite = (
-	test: typeof Vitest,
-	Keyv: typeof KeyvModule,
-	store: KeyvStoreFn,
-) => {
+const keyvTestSuite = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	keyvApiTests(test, Keyv, store);
 	keyvValueTests(test, Keyv, store);
 	keyvNamespaceTest(test, Keyv, store);

@@ -4,11 +4,7 @@ import tk from "timekeeper";
 import type * as Vitest from "vitest";
 import type { KeyvStoreFn } from "./types";
 
-const keyvApiTests = (
-	test: typeof Vitest,
-	Keyv: typeof KeyvModule,
-	store: KeyvStoreFn,
-) => {
+const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({ store: store() });
 		await keyv.clear();
@@ -87,67 +83,56 @@ const keyvApiTests = (
 		t.expect(values[2]).toBe(value3);
 	});
 
-	test.it(
-		".get([keys]) should return array value undefined when expires",
-		async (t) => {
-			const keyv = new Keyv();
-			const key1 = faker.string.alphanumeric(10);
-			const value1 = faker.lorem.sentence();
-			const key2 = faker.string.alphanumeric(10);
-			const value2 = faker.lorem.sentence();
-			const key3 = faker.string.alphanumeric(10);
-			const value3 = faker.lorem.sentence();
-			await keyv.set(key1, value1);
-			await keyv.set(key2, value2, 1);
-			await keyv.set(key3, value3);
-			await new Promise<void>((resolve) => {
-				setTimeout(() => {
-					// Simulate database latency
-					resolve();
-				}, 30);
-			});
-			const values = await keyv.get([key1, key2, key3]);
-			t.expect(Array.isArray(values)).toBeTruthy();
-			t.expect(values[0]).toBe(value1);
-			t.expect(values[1]).toBeUndefined();
-			t.expect(values[2]).toBe(value3);
-		},
-	);
+	test.it(".get([keys]) should return array value undefined when expires", async (t) => {
+		const keyv = new Keyv();
+		const key1 = faker.string.alphanumeric(10);
+		const value1 = faker.lorem.sentence();
+		const key2 = faker.string.alphanumeric(10);
+		const value2 = faker.lorem.sentence();
+		const key3 = faker.string.alphanumeric(10);
+		const value3 = faker.lorem.sentence();
+		await keyv.set(key1, value1);
+		await keyv.set(key2, value2, 1);
+		await keyv.set(key3, value3);
+		await new Promise<void>((resolve) => {
+			setTimeout(() => {
+				// Simulate database latency
+				resolve();
+			}, 30);
+		});
+		const values = await keyv.get([key1, key2, key3]);
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values[0]).toBe(value1);
+		t.expect(values[1]).toBeUndefined();
+		t.expect(values[2]).toBe(value3);
+	});
 
-	test.it(
-		".get([keys]) should return array values with undefined",
-		async (t) => {
-			const keyv = new Keyv({ store: store() });
-			const ttl = 3000;
-			const key1 = faker.string.alphanumeric(10);
-			const value1 = faker.lorem.sentence();
-			const key2 = faker.string.alphanumeric(10);
-			const key3 = faker.string.alphanumeric(10);
-			const value3 = faker.lorem.sentence();
-			await keyv.set(key1, value1, ttl);
-			await keyv.set(key3, value3, ttl);
-			const values = (await keyv.get([key1, key2, key3])) as
-				| string[]
-				| undefined[];
-			t.expect(Array.isArray(values)).toBeTruthy();
-			t.expect(values[0]).toBe(value1);
-			t.expect(values[1]).toBeUndefined();
-			t.expect(values[2]).toBe(value3);
-		},
-	);
+	test.it(".get([keys]) should return array values with undefined", async (t) => {
+		const keyv = new Keyv({ store: store() });
+		const ttl = 3000;
+		const key1 = faker.string.alphanumeric(10);
+		const value1 = faker.lorem.sentence();
+		const key2 = faker.string.alphanumeric(10);
+		const key3 = faker.string.alphanumeric(10);
+		const value3 = faker.lorem.sentence();
+		await keyv.set(key1, value1, ttl);
+		await keyv.set(key3, value3, ttl);
+		const values = (await keyv.get([key1, key2, key3])) as string[] | undefined[];
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values[0]).toBe(value1);
+		t.expect(values[1]).toBeUndefined();
+		t.expect(values[2]).toBe(value3);
+	});
 
-	test.it(
-		".get([keys]) should return undefined array for all no existent keys",
-		async (t) => {
-			const keyv = new Keyv({ store: store() });
-			const key1 = faker.string.alphanumeric(10);
-			const key2 = faker.string.alphanumeric(10);
-			const key3 = faker.string.alphanumeric(10);
-			const values = await keyv.get([key1, key2, key3]);
-			t.expect(Array.isArray(values)).toBeTruthy();
-			t.expect(values).toEqual([undefined, undefined, undefined]);
-		},
-	);
+	test.it(".get([keys]) should return undefined array for all no existent keys", async (t) => {
+		const keyv = new Keyv({ store: store() });
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		const key3 = faker.string.alphanumeric(10);
+		const values = await keyv.get([key1, key2, key3]);
+		t.expect(Array.isArray(values)).toBeTruthy();
+		t.expect(values).toEqual([undefined, undefined, undefined]);
+	});
 
 	test.it(".delete(key) returns a Promise", (t) => {
 		const keyv = new Keyv({ store: store() });
@@ -202,18 +187,15 @@ const keyvApiTests = (
 		t.expect(await keyv.get(key3)).toBeUndefined();
 	});
 
-	test.it(
-		".deleteMany([keys]) with nonexistent keys resolves to array of false",
-		async (t) => {
-			const keyv = new Keyv({ store: store() });
-			const key1 = faker.string.alphanumeric(10);
-			const key2 = faker.string.alphanumeric(10);
-			const key3 = faker.string.alphanumeric(10);
-			const result = await keyv.delete([key1, key2, key3]);
-			t.expect(Array.isArray(result)).toBe(true);
-			t.expect((result as boolean[]).every((v) => v === false)).toBe(true);
-		},
-	);
+	test.it(".deleteMany([keys]) with nonexistent keys resolves to array of false", async (t) => {
+		const keyv = new Keyv({ store: store() });
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		const key3 = faker.string.alphanumeric(10);
+		const result = await keyv.delete([key1, key2, key3]);
+		t.expect(Array.isArray(result)).toBe(true);
+		t.expect((result as boolean[]).every((v) => v === false)).toBe(true);
+	});
 
 	test.it(".clear() returns a Promise", async (t) => {
 		const keyv = new Keyv({ store: store() });

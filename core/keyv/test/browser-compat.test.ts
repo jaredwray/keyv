@@ -26,9 +26,7 @@ const NODE_BUILTIN_MODULES = [
 ];
 
 // Derive bare specifiers from the node: prefixed list
-const BARE_NODE_MODULES = NODE_BUILTIN_MODULES.map((mod) =>
-	mod.replace("node:", ""),
-);
+const BARE_NODE_MODULES = NODE_BUILTIN_MODULES.map((mod) => mod.replace("node:", ""));
 
 // Patterns that catch all import forms:
 //   import ... from "mod"
@@ -58,10 +56,9 @@ describe("browser compatibility - static analysis", () => {
 		test(`${file.name} has no Node.js built-in imports`, () => {
 			for (const mod of [...NODE_BUILTIN_MODULES, ...BARE_NODE_MODULES]) {
 				for (const pattern of buildPatterns(mod)) {
-					expect(
-						file.content,
-						`found "${mod}" (${pattern.source}) in ${file.name}`,
-					).not.toMatch(pattern);
+					expect(file.content, `found "${mod}" (${pattern.source}) in ${file.name}`).not.toMatch(
+						pattern,
+					);
 				}
 			}
 		});

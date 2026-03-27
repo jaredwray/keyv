@@ -42,10 +42,7 @@ export {
 	type RedisClientConnectionType,
 };
 
-export default class KeyvRedis<T>
-	extends Hookified
-	implements KeyvStorageAdapter
-{
+export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapter {
 	private _client!: RedisClientConnectionType;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = "::";
@@ -93,13 +90,9 @@ export default class KeyvRedis<T>
 				}
 			} else if (connect instanceof Object) {
 				if ((connect as any).sentinelRootNodes !== undefined) {
-					this._client = createSentinel(
-						connect as RedisSentinelOptions,
-					) as RedisSentinelType;
+					this._client = createSentinel(connect as RedisSentinelOptions) as RedisSentinelType;
 				} else if ((connect as any).rootNodes === undefined) {
-					this._client = createClient(
-						connect as RedisClientOptions,
-					) as RedisClientType;
+					this._client = createClient(connect as RedisClientOptions) as RedisClientType;
 				} else {
 					this._client = createCluster(connect as RedisClusterOptions);
 				}
@@ -333,9 +326,7 @@ export default class KeyvRedis<T>
 	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
 	 */
-	public async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
 			const results = new Array<boolean>(entries.length).fill(false);
 
@@ -344,10 +335,7 @@ export default class KeyvRedis<T>
 				await this.getClient();
 
 				// Group entries by slot to avoid CROSSSLOT errors, tracking original indices
-				const slotMap = new Map<
-					number,
-					Array<{ entry: KeyvEntry<Value>; index: number }>
-				>();
+				const slotMap = new Map<number, Array<{ entry: KeyvEntry<Value>; index: number }>>();
 				for (let i = 0; i < entries.length; i++) {
 					const entry = entries[i];
 					const prefixedKey = this.createKeyPrefix(entry.key, this._namespace);
@@ -403,8 +391,7 @@ export default class KeyvRedis<T>
 			/* v8 ignore next -- @preserve */
 			if (
 				this._throwOnConnectError &&
-				(error as Error).message ===
-					RedisErrorMessages.RedisClientNotConnectedThrown
+				(error as Error).message === RedisErrorMessages.RedisClientNotConnectedThrown
 			) {
 				throw error;
 			}
@@ -446,9 +433,7 @@ export default class KeyvRedis<T>
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		try {
-			const prefixedKeys = keys.map((key) =>
-				this.createKeyPrefix(key, this._namespace),
-			);
+			const prefixedKeys = keys.map((key) => this.createKeyPrefix(key, this._namespace));
 
 			if (this.isCluster()) {
 				// Group keys by slot to avoid CROSSSLOT errors
@@ -464,10 +449,7 @@ export default class KeyvRedis<T>
 						}
 						const results = await multi.exec();
 						for (const [index, result] of results.entries()) {
-							resultMap.set(
-								slotKeys[index],
-								typeof result === "number" && result === 1,
-							);
+							resultMap.set(slotKeys[index], typeof result === "number" && result === 1);
 						}
 					}),
 				);
@@ -483,9 +465,7 @@ export default class KeyvRedis<T>
 				}
 
 				const results = await multi.exec();
-				return results.map(
-					(result) => typeof result === "number" && result === 1,
-				);
+				return results.map((result) => typeof result === "number" && result === 1);
 			}
 		} catch (error) {
 			this.emit("error", error);
@@ -493,8 +473,7 @@ export default class KeyvRedis<T>
 			/* v8 ignore next -- @preserve */
 			if (
 				this._throwOnConnectError &&
-				(error as Error).message ===
-					RedisErrorMessages.RedisClientNotConnectedThrown
+				(error as Error).message === RedisErrorMessages.RedisClientNotConnectedThrown
 			) {
 				throw error;
 			}
@@ -555,9 +534,7 @@ export default class KeyvRedis<T>
 				throw error;
 			}
 
-			return Array.from({ length: keys.length }).fill(undefined) as Array<
-				U | undefined
-			>;
+			return Array.from({ length: keys.length }).fill(undefined) as Array<U | undefined>;
 		}
 	}
 
@@ -592,9 +569,7 @@ export default class KeyvRedis<T>
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const resultMap = new Map<string, boolean>();
-		const prefixedKeys = keys.map((key) =>
-			this.createKeyPrefix(key, this._namespace),
-		);
+		const prefixedKeys = keys.map((key) => this.createKeyPrefix(key, this._namespace));
 
 		try {
 			if (this.isCluster()) {
@@ -615,10 +590,7 @@ export default class KeyvRedis<T>
 						const results = await multi.exec();
 						for (const [index, deleted] of results.entries()) {
 							/* v8 ignore next -- @preserve */
-							resultMap.set(
-								slotKeys[index],
-								typeof deleted === "number" && deleted > 0,
-							);
+							resultMap.set(slotKeys[index], typeof deleted === "number" && deleted > 0);
 						}
 					}),
 				);
@@ -636,10 +608,7 @@ export default class KeyvRedis<T>
 
 				const results = await multi.exec();
 				for (const [index, deleted] of results.entries()) {
-					resultMap.set(
-						prefixedKeys[index],
-						typeof deleted === "number" && deleted > 0,
-					);
+					resultMap.set(prefixedKeys[index], typeof deleted === "number" && deleted > 0);
 				}
 			}
 
@@ -650,8 +619,7 @@ export default class KeyvRedis<T>
 			// Re-throw connection errors if throwOnConnectError is true
 			if (
 				this._throwOnConnectError &&
-				(error as Error).message ===
-					RedisErrorMessages.RedisClientNotConnectedThrown
+				(error as Error).message === RedisErrorMessages.RedisClientNotConnectedThrown
 			) {
 				throw error;
 			}
@@ -733,9 +701,7 @@ export default class KeyvRedis<T>
 				RespVersions,
 				TypeMapping
 			>;
-			const nodes = cluster.masters.map(async (main) =>
-				cluster.nodeClient(main),
-			);
+			const nodes = cluster.masters.map(async (main) => cluster.nodeClient(main));
 			return Promise.all(nodes) as Promise<RedisClientType[]>;
 		}
 
@@ -746,18 +712,12 @@ export default class KeyvRedis<T>
 	 * Get an async iterator for the keys and values in the store. It will only iterate over keys with the current namespace.
 	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
 	 */
-	public async *iterator<U = T>(): AsyncGenerator<
-		[string, U | undefined],
-		void,
-		unknown
-	> {
+	public async *iterator<U = T>(): AsyncGenerator<[string, U | undefined], void, unknown> {
 		// When instance is not a cluster, it will only have one client
 		const clients = await this.getMasterNodes();
 
 		for (const client of clients) {
-			const match = this._namespace
-				? `${this._namespace}${this._keyPrefixSeparator}*`
-				: "*";
+			const match = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}*` : "*";
 			let cursor = "0";
 			do {
 				const result = await client.scan(cursor, {
@@ -804,9 +764,7 @@ export default class KeyvRedis<T>
 
 					let cursor = "0";
 					const batchSize = this._clearBatchSize;
-					const match = this._namespace
-						? `${this._namespace}${this._keyPrefixSeparator}*`
-						: "*";
+					const match = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}*` : "*";
 					const deletePromises = [];
 
 					do {
@@ -824,9 +782,7 @@ export default class KeyvRedis<T>
 						}
 
 						if (!this._namespace) {
-							keys = keys.filter(
-								(key) => !key.includes(this._keyPrefixSeparator),
-							);
+							keys = keys.filter((key) => !key.includes(this._keyPrefixSeparator));
 						}
 
 						deletePromises.push(this.clearWithClusterSupport(keys));

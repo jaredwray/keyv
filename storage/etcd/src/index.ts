@@ -1,12 +1,7 @@
 import { Etcd3, type Lease } from "etcd3";
 import { Hookified } from "hookified";
 import { Keyv, type KeyvEntry, type StoredData } from "keyv";
-import type {
-	ClearOutput,
-	DeleteOutput,
-	GetOutput,
-	HasOutput,
-} from "./types.js";
+import type { ClearOutput, DeleteOutput, GetOutput, HasOutput } from "./types.js";
 
 /**
  * Configuration options for the KeyvEtcd adapter.
@@ -246,9 +241,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 */
 	public async get(key: string): GetOutput<GenericValue> {
 		try {
-			return (await this._client.get(
-				this.formatKey(key),
-			)) as unknown as GetOutput<GenericValue>;
+			return (await this._client.get(this.formatKey(key))) as unknown as GetOutput<GenericValue>;
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -259,9 +252,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * @param keys - An array of keys to retrieve
 	 * @returns An array of stored data corresponding to each key.
 	 */
-	public async getMany(
-		keys: string[],
-	): Promise<Array<StoredData<GenericValue>>> {
+	public async getMany(keys: string[]): Promise<Array<StoredData<GenericValue>>> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
@@ -312,12 +303,8 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * Stores multiple values in the etcd server.
 	 * @param entries - An array of objects containing key and value
 	 */
-	public async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
-		const promises = entries.map(async ({ key, value, ttl }) =>
-			this.set(key, value, ttl),
-		);
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+		const promises = entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl));
 		const results = await Promise.allSettled(promises);
 		const boolResults: boolean[] = [];
 		for (const result of results) {
@@ -377,9 +364,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	public async clear(): ClearOutput {
 		try {
 			const promise = this._namespace
-				? this._client
-						.delete()
-						.prefix(`${this._namespace}${this._keyPrefixSeparator}`)
+				? this._client.delete().prefix(`${this._namespace}${this._keyPrefixSeparator}`)
 				: this._client.delete().all();
 			return await promise.then(() => undefined);
 		} catch (error) {
@@ -392,9 +377,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * only keys matching the namespace prefix are yielded.
 	 */
 	public async *iterator() {
-		const prefix = this._namespace
-			? `${this._namespace}${this._keyPrefixSeparator}`
-			: "";
+		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
 		const iterator = await this._client.getAll().prefix(prefix).keys();
 
 		for await (const key of iterator) {
@@ -431,9 +414,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const promises = keys.map(async (key) => this.has(key));
 		const results = await Promise.allSettled(promises);
-		return results.map((result) =>
-			result.status === "fulfilled" ? result.value : false,
-		);
+		return results.map((result) => (result.status === "fulfilled" ? result.value : false));
 	}
 
 	/**
@@ -462,10 +443,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
  * await keyv.set('foo', 'bar');
  * ```
  */
-export function createKeyv(
-	url?: string | KeyvEtcdOptions,
-	options?: KeyvEtcdOptions,
-): Keyv {
+export function createKeyv(url?: string | KeyvEtcdOptions, options?: KeyvEtcdOptions): Keyv {
 	return new Keyv({ store: new KeyvEtcd(url, options) });
 }
 

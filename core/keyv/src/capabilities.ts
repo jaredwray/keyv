@@ -64,9 +64,7 @@ export type CapabilitySpec = {
 };
 
 function isMethod(obj: object, name: string): boolean {
-	return (
-		name in obj && typeof (obj as Record<string, unknown>)[name] === "function"
-	);
+	return name in obj && typeof (obj as Record<string, unknown>)[name] === "function";
 }
 
 function isProperty(obj: object, name: string): boolean {
@@ -228,16 +226,7 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 		"disconnect",
 		"iterator",
 	];
-	const requiredKeys = [
-		"get",
-		"has",
-		"hasMany",
-		"set",
-		"setMany",
-		"delete",
-		"deleteMany",
-		"clear",
-	];
+	const requiredKeys = ["get", "has", "hasMany", "set", "setMany", "delete", "deleteMany", "clear"];
 
 	if (obj === null || obj === undefined || typeof obj !== "object") {
 		const methodTypes: Record<string, MethodType> = {};
@@ -334,9 +323,7 @@ export function detectKeyvCompression(obj: unknown): KeyvCompressionCapability {
  * // { keyvSerialization: false, stringify: true, parse: false }
  * ```
  */
-export function detectKeyvSerialization(
-	obj: unknown,
-): KeyvSerializationCapability {
+export function detectKeyvSerialization(obj: unknown): KeyvSerializationCapability {
 	const methods = ["stringify", "parse"];
 	return detectCapabilities<KeyvSerializationCapability>(obj, {
 		methods,
