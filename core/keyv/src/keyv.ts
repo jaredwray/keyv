@@ -1,4 +1,5 @@
 import { Hookified } from "hookified";
+import { detectKeyvStorage } from "./capabilities.js";
 import { KeyvJsonSerializer } from "./json-serializer.js";
 import StatsManager from "./stats-manager.js";
 import {
@@ -146,7 +147,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		/* v8 ignore next -- @preserve */
 		if (this._store) {
-			if (!this._isValidStorageAdapter(this._store)) {
+			const storeCap = detectKeyvStorage(this._store);
+			if (
+				!(
+					storeCap.mapLike ||
+					(storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)
+				)
+			) {
 				throw new Error("Invalid storage adapter");
 			}
 
@@ -211,7 +218,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public set store(store: KeyvStorageAdapter | Map<any, any> | any) {
-		if (this._isValidStorageAdapter(store)) {
+		const storeCap = detectKeyvStorage(store);
+		if (
+			storeCap.mapLike ||
+			(storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)
+		) {
 			this._store = store;
 
 			if (typeof store.on === "function") {
@@ -394,17 +405,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 		if (deprecated && this.getHooks(deprecated)?.length) {
 			await this.hook(deprecated, ...args);
 		}
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	_isValidStorageAdapter(store: KeyvStorageAdapter | any): boolean {
-		return (
-			store instanceof Map ||
-			(typeof store.get === "function" &&
-				typeof store.set === "function" &&
-				typeof store.delete === "function" &&
-				typeof store.clear === "function")
-		);
 	}
 
 	/**
