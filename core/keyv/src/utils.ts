@@ -12,6 +12,28 @@ export function isDataExpired<Value>(data: DeserializedData<Value>): boolean {
 }
 
 /**
+ * Scan parallel `keys` and `data` arrays, nullify any expired entries in
+ * `data`, and batch-delete the corresponding keys via `keyv.deleteMany()`.
+ */
+export async function deleteExpiredKeys<Value>(
+	keys: string[],
+	data: Array<DeserializedData<Value> | undefined | null>,
+	keyv: { deleteMany(keys: string[]): Promise<boolean[]> },
+): Promise<void> {
+	const expiredKeys: string[] = [];
+	for (const [index, row] of data.entries()) {
+		if (row !== undefined && row !== null && isDataExpired(row)) {
+			expiredKeys.push(keys[index]);
+			data[index] = undefined;
+		}
+	}
+
+	if (expiredKeys.length > 0) {
+		await keyv.deleteMany(expiredKeys);
+	}
+}
+
+/**
  * Maps new hook names to their deprecated equivalents so both fire during migration.
  */
 export const deprecatedHookAliases = new Map<string, string>([

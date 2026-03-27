@@ -16,6 +16,7 @@ import {
 import {
 	buildDeprecatedHooks,
 	buildSanitizePattern,
+	deleteExpiredKeys,
 	deprecatedHookAliases,
 	isDataExpired,
 	sanitizeKey,
@@ -436,33 +437,21 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		const rawData = await store.getMany<Value>(keys);
 
-		const result: Array<Value | undefined> = [];
-		const expiredKeys: string[] = [];
-		for (const [index, row] of rawData.entries()) {
-			let deserialized = row;
-
-			if (typeof deserialized === "string") {
+		const deserialized: Array<DeserializedData<Value> | undefined | null> = [];
+		for (const row of rawData) {
+			if (typeof row === "string") {
 				// eslint-disable-next-line no-await-in-loop
-				deserialized = await this.deserializeData<Value>(deserialized);
+				deserialized.push(await this.deserializeData<Value>(row));
+			} else {
+				deserialized.push(row as DeserializedData<Value> | undefined | null);
 			}
-
-			if (deserialized === undefined || deserialized === null) {
-				result.push(undefined);
-				continue;
-			}
-
-			if (isDataExpired(deserialized as DeserializedData<Value>)) {
-				expiredKeys.push(keys[index]);
-				result.push(undefined);
-				continue;
-			}
-
-			result.push((deserialized as DeserializedData<Value>).value);
 		}
 
-		if (expiredKeys.length > 0) {
-			await this.deleteMany(expiredKeys);
-		}
+		await deleteExpiredKeys(keys, deserialized, this);
+
+		const result: Array<Value | undefined> = deserialized.map((row) =>
+			row !== undefined && row !== null ? row.value : undefined,
+		);
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 		/* v8 ignore next -- @preserve */
@@ -585,18 +574,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		// Filter out any expired keys and delete them
-		const expiredKeys = [];
-
-		for (const [index, row] of result.entries()) {
-			if (row !== undefined && isDataExpired(row)) {
-				expiredKeys.push(keys[index]);
-				result[index] = undefined;
-			}
-		}
-
-		if (expiredKeys.length > 0) {
-			await this.deleteMany(expiredKeys);
-		}
+		await deleteExpiredKeys(keys, result, this);
 
 		// Add in hits and misses
 		this._stats.hitsOrMisses(result);
