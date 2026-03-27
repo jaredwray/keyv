@@ -118,6 +118,7 @@ export class KeyvStats {
 	 * Set the maximum number of entries per event-type LRU map.
 	 * @param {number} value the new maximum entries
 	 */
+	/* v8 ignore next 3 -- @preserve */
 	public set maxEntries(value: number) {
 		this._maxEntries = value;
 	}

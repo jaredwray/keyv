@@ -532,7 +532,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const result = Array.from({ length: keys.length }).fill(undefined) as Array<
 				StoredDataRaw<Value>
 			>;
-			// Add in misses
+			/* v8 ignore next 3 -- @preserve */
 			for (const key of keys) {
 				this.emitTelemetry(KeyvEvents.STAT_MISS, key);
 			}

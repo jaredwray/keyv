@@ -206,13 +206,13 @@ export type KeyvSanitizeOptions = {
 	/**
 	 * Sanitize keys. Pass `true` for all pattern categories, `false` to skip,
 	 * or a `KeyvSanitizePatternOptions` object for granular control.
-	 * @default true (when sanitize is enabled)
+	 * @default false
 	 */
 	keys?: boolean | KeyvSanitizePatternsOptions;
 	/**
 	 * Sanitize namespace strings. Pass `true` for all pattern categories, `false` to skip,
 	 * or a `KeyvSanitizePatternOptions` object for granular control.
-	 * @default true (when sanitize is enabled)
+	 * @default false
 	 */
 	namespace?: boolean | KeyvSanitizePatternsOptions;
 };
@@ -241,7 +241,7 @@ export type KeyvOptions = {
 	ttl?: number;
 	/**
 	 * Enable compression option
-	 * @default false
+	 * @default undefined
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	compression?: KeyvCompressionAdapter | any;

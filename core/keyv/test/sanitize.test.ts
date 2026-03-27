@@ -228,5 +228,46 @@ describe("KeyvSanitize", () => {
 			// After update, semicolons are no longer stripped
 			expect(s.cleanKey("key;evil")).toBe("key;evil");
 		});
+
+		test("returns cached result for namespace on repeated calls", () => {
+			const s = new KeyvSanitize({ keys: true, namespace: true });
+			const first = s.cleanNamespace("ns;evil");
+			const second = s.cleanNamespace("ns;evil");
+			expect(first).toBe("nsevil");
+			expect(second).toBe("nsevil");
+		});
+
+		test("evicts oldest key entry when cache exceeds max", () => {
+			const s = new KeyvSanitize({ keys: true, namespace: true });
+			// biome-ignore lint/suspicious/noExplicitAny: accessing private for test
+			const instance = s as any;
+			instance._cacheMax = 2;
+			s.cleanKey("a;");
+			s.cleanKey("b;");
+			s.cleanKey("c;"); // should evict "a;"
+			expect(instance._cacheKeys.has("a;")).toBe(false);
+			expect(instance._cacheKeys.has("b;")).toBe(true);
+			expect(instance._cacheKeys.has("c;")).toBe(true);
+		});
+
+		test("evicts oldest namespace entry when cache exceeds max", () => {
+			const s = new KeyvSanitize({ keys: true, namespace: true });
+			// biome-ignore lint/suspicious/noExplicitAny: accessing private for test
+			const instance = s as any;
+			instance._cacheMax = 2;
+			s.cleanNamespace("a;");
+			s.cleanNamespace("b;");
+			s.cleanNamespace("c;"); // should evict "a;"
+			expect(instance._cacheNamespaces.has("a;")).toBe(false);
+			expect(instance._cacheNamespaces.has("b;")).toBe(true);
+			expect(instance._cacheNamespaces.has("c;")).toBe(true);
+		});
+	});
+
+	describe("getters", () => {
+		test("namespace getter returns pattern configuration", () => {
+			const s = new KeyvSanitize({ keys: true, namespace: { sql: true, mongo: false } });
+			expect(s.namespace).toEqual({ sql: true, mongo: false, escape: true, path: true });
+		});
 	});
 });
