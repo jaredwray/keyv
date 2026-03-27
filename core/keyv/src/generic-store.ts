@@ -1,11 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
-import {
-	Keyv,
-	type KeyvEntry,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "./index.js";
+import { Keyv } from "./keyv.js";
+import type { KeyvEntry, KeyvStorageAdapter, StoredData } from "./types.js";
 
 /**
  * Configuration options for KeyvGenericStore.
