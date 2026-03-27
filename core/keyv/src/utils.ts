@@ -1,4 +1,4 @@
-import { KeyvHooks, type KeyvSanitizeOptions, type KeyvValue } from "./types.js";
+import { KeyvHooks, type KeyvValue } from "./types.js";
 
 /**
  * Check whether a deserialized entry has expired based on its `expires` timestamp.
@@ -110,64 +110,4 @@ export function buildDeprecatedHooks(): Map<string, string> {
 		["preDelete", "Use KeyvHooks.BEFORE_DELETE ('before:delete') instead"],
 		["postDelete", "Use KeyvHooks.AFTER_DELETE ('after:delete') instead"],
 	]);
-}
-
-const categoryPatterns: Record<keyof KeyvSanitizeOptions, RegExp[]> = {
-	sql: [/;/g, /--/g, /\/\*/g],
-	mongo: [/^\$/g, /\{\s*\$/g],
-	escape: [/\0/g, /\r/g, /\n/g],
-	path: [/\.\.\//g, /\.\.\\/g],
-};
-
-/**
- * Build an array of RegExp patterns from the enabled sanitization categories.
- * Called once at construction time (or when the option changes) so that
- * per-key sanitization uses precompiled patterns.
- * @param options - Categories to enable (all default to `true`)
- * @returns An array of RegExp patterns, or `undefined` if every category is disabled
- */
-export function buildSanitizePattern(options: KeyvSanitizeOptions = {}): RegExp[] | undefined {
-	const patterns: RegExp[] = [];
-	for (const [category, regexes] of Object.entries(categoryPatterns)) {
-		if (options[category as keyof KeyvSanitizeOptions] !== false) {
-			patterns.push(...regexes);
-		}
-	}
-
-	return patterns.length > 0 ? patterns : undefined;
-}
-
-/**
- * Detect and strip dangerous patterns from a key using precompiled patterns.
- * Keys without dangerous patterns pass through unchanged.
- * @param key - The key to sanitize
- * @param patterns - Precompiled RegExp array from `buildSanitizePattern`, or `undefined` to skip
- * @returns The sanitized key string
- */
-export function sanitizeKey(key: string, patterns: RegExp[] | undefined): string {
-	if (!patterns) {
-		return key;
-	}
-
-	for (const pattern of patterns) {
-		pattern.lastIndex = 0;
-		key = key.replace(pattern, "");
-	}
-
-	return key;
-}
-
-/**
- * Detect and strip dangerous patterns from an array of keys using precompiled patterns.
- * @param keys - The keys to sanitize
- * @param patterns - Precompiled RegExp array from `buildSanitizePattern`, or `undefined` to skip
- * @returns The sanitized key strings
- */
-export function sanitizeKeys(keys: string[], patterns: RegExp[] | undefined): string[] {
-	/* v8 ignore next -- @preserve */
-	if (!patterns) {
-		return keys;
-	}
-
-	return keys.map((k) => sanitizeKey(k, patterns));
 }

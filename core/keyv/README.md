@@ -50,7 +50,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.emitErrors](#emiterrors)
   - [.throwOnErrors](#throwonerrors)
   - [.stats](#stats)
-  - [.sanitizeKey](#sanitizekey)
+  - [.sanitize](#sanitize)
   - [Keyv Instance](#keyv-instance)
 	- [.set(key, value, [ttl])](#setkey-value-ttl)
 	- [.setMany(entries)](#setmanyentries)
@@ -1058,54 +1058,73 @@ import { KeyvStats } from 'keyv';
 const stats = new KeyvStats({ enabled: true, maxEntries: 500, emitter: keyv });
 ```
 
-## .sanitizeKey
+## .sanitize
 Type: `boolean | KeyvSanitizeOptions`<br />
-Default: `true`
+Default: `false`
 
-Sanitizes keys to strip characters that could be dangerous for SQL, MongoDB, Redis, or filesystem-based storage backends. This is enabled by default to protect against injection attacks.
+Detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped.
 
-### Categories
+Results are cached in an LRU cache (10,000 entries) for fast repeated lookups.
 
-| Category | Characters | Purpose |
-|----------|-----------|---------|
-| `sql` | `'` `"` `` ` `` `;` | Prevents SQL injection |
-| `mongo` | `$` `{` `}` | Prevents MongoDB operator injection |
-| `escape` | `\` `\0` `\n` `\r` | Strips escape sequences, null bytes, CRLF injection |
-| `path` | `/` | Prevents path traversal |
+### Pattern Categories
+
+| Category | Patterns Stripped | Purpose |
+|----------|------------------|---------|
+| `sql` | `;` `--` `/*` | Prevents SQL injection |
+| `mongo` | leading `$`, `{$` sequences | Prevents MongoDB operator injection |
+| `escape` | `\0` `\r` `\n` | Strips null bytes, CRLF injection |
+| `path` | `../` `..\` | Prevents path traversal |
+
+### Targets
+
+| Target | Default | Description |
+|--------|---------|-------------|
+| `keys` | `true` (when enabled) | Sanitize keys on all operations |
+| `namespace` | `true` (when enabled) | Sanitize namespace on construction and setter |
 
 ### Usage
 
-Enable all sanitization (default):
+Enable all sanitization:
 ```js
-const keyv = new Keyv(); // sanitizeKey defaults to true
-await keyv.set("test'; DROP TABLE", "value");
+const keyv = new Keyv({ sanitize: true });
+await keyv.set("test; DROP TABLE", "value");
 // Key is stored as "test DROP TABLE"
+
+// Harmless characters pass through
+await keyv.set("user's-data", "value");
+// Key is stored as "user's-data" (unchanged)
 ```
 
-Disable all sanitization:
+Disable all sanitization (default):
 ```js
-const keyv = new Keyv({ sanitizeKey: false });
+const keyv = new Keyv({ sanitize: false });
 ```
 
-Granular control per category:
+Granular control per target and category:
 ```js
 const keyv = new Keyv({
-  sanitizeKey: {
-    sql: true,    // strip SQL chars (default: true)
-    mongo: false, // keep MongoDB chars
-    escape: true, // strip escape chars (default: true)
-    path: false,  // keep path chars
+  sanitize: {
+    keys: { sql: true, mongo: false },     // only SQL patterns on keys
+    namespace: { path: true, sql: false },  // only path patterns on namespace
   }
 });
 ```
 
-You can also change the setting at runtime:
+Disable namespace sanitization only:
 ```js
-keyv.sanitizeKey = false; // disable
-keyv.sanitizeKey = { sql: true, mongo: false }; // granular
+const keyv = new Keyv({
+  sanitize: { keys: true, namespace: false }
+});
 ```
 
-Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`.
+Change at runtime:
+```js
+keyv.sanitize = false; // disable
+keyv.sanitize = true;  // enable all
+keyv.sanitize = { keys: { sql: true, mongo: false } }; // granular
+```
+
+Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`. Namespace sanitization is applied at construction and when the `namespace` setter is used.
 
 # Bun Support
 

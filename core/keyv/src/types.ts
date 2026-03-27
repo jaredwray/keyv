@@ -149,7 +149,34 @@ export type KeyvStorageAdapter = {
 	iterator?<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
-export type KeyvSanitizeOptions = {
+/**
+ * Which dangerous-pattern categories to detect and strip.
+ * Each defaults to `true` when the parent scope is enabled.
+ */
+export type KeyvSanitizePatterns = {
+	/**
+	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
+	 * @default false
+	 */
+	sql: boolean;
+	/**
+	 * Detect and strip MongoDB operator patterns: leading `$`, `{$` sequences.
+	 * @default false
+	 */
+	mongo: boolean;
+	/**
+	 * Detect and strip dangerous control sequences: null bytes (`\0`), carriage returns (`\r`), newlines (`\n`).
+	 * @default false
+	 */
+	escape: boolean;
+	/**
+	 * Detect and strip path traversal patterns: `../` and `..\\` sequences.
+	 * @default false
+	 */
+	path: boolean;
+};
+
+export type KeyvSanitizePatternsOptions = {
 	/**
 	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
 	 * @default true
@@ -170,6 +197,24 @@ export type KeyvSanitizeOptions = {
 	 * @default true
 	 */
 	path?: boolean;
+};
+
+/**
+ * Controls what gets sanitized and with which patterns.
+ */
+export type KeyvSanitizeOptions = {
+	/**
+	 * Sanitize keys. Pass `true` for all pattern categories, `false` to skip,
+	 * or a `KeyvSanitizePatternOptions` object for granular control.
+	 * @default true (when sanitize is enabled)
+	 */
+	keys?: boolean | KeyvSanitizePatternsOptions;
+	/**
+	 * Sanitize namespace strings. Pass `true` for all pattern categories, `false` to skip,
+	 * or a `KeyvSanitizePatternOptions` object for granular control.
+	 * @default true (when sanitize is enabled)
+	 */
+	namespace?: boolean | KeyvSanitizePatternsOptions;
 };
 
 export type KeyvOptions = {
@@ -212,13 +257,12 @@ export type KeyvOptions = {
 	 */
 	throwOnErrors?: boolean;
 	/**
-	 * Validate and sanitize keys by detecting dangerous patterns for SQL,
-	 * MongoDB, or filesystem-based storage backends. Pass `true` to
-	 * enable all categories, `false` to disable, or a `KeyvSanitizeOptions`
-	 * object to toggle individual categories.
-	 * @default false
+	 * Enable sanitization of keys and namespaces by detecting dangerous patterns
+	 * for SQL, MongoDB, or filesystem-based storage backends. Pass a `KeyvSanitizeOptions`
+	 * object for granular control over targets and patterns.
+	 * @default undefined
 	 */
-	sanitizeKey?: boolean | KeyvSanitizeOptions;
+	sanitize?: KeyvSanitizeOptions;
 };
 
 /**

@@ -1,11 +1,6 @@
 import { describe, expect, test } from "vitest";
-import {
-	buildSanitizePattern,
-	isDataExpired,
-	resolveTtl,
-	sanitizeKey,
-	ttlFromExpires,
-} from "../src/utils.js";
+import { KeyvSanitize } from "../src/sanitize.js";
+import { isDataExpired, resolveTtl, ttlFromExpires } from "../src/utils.js";
 
 describe("isDataExpired", () => {
 	test("should return true when expires is in the past", () => {
@@ -111,154 +106,227 @@ describe("ttlFromExpires", () => {
 	});
 });
 
-describe("sanitizeKey", () => {
+describe("KeyvSanitize", () => {
 	describe("pass-through (harmless characters stay unchanged)", () => {
-		const pattern = buildSanitizePattern();
+		const s = new KeyvSanitize(true);
 
 		test("single quote passes through", () => {
-			expect(sanitizeKey("'", pattern)).toBe("'");
+			expect(s.key("'")).toBe("'");
 		});
 
 		test("quote in key passes through", () => {
-			expect(sanitizeKey("user's-data", pattern)).toBe("user's-data");
+			expect(s.key("user's-data")).toBe("user's-data");
 		});
 
 		test("single slash passes through", () => {
-			expect(sanitizeKey("key/subkey", pattern)).toBe("key/subkey");
+			expect(s.key("key/subkey")).toBe("key/subkey");
 		});
 
 		test("dollar sign not at start passes through", () => {
-			expect(sanitizeKey("price$5", pattern)).toBe("price$5");
+			expect(s.key("price$5")).toBe("price$5");
 		});
 
 		test("curly braces without dollar pass through", () => {
-			expect(sanitizeKey("curly{brace}", pattern)).toBe("curly{brace}");
+			expect(s.key("curly{brace}")).toBe("curly{brace}");
 		});
 
 		test("double quotes pass through", () => {
-			expect(sanitizeKey('key"value', pattern)).toBe('key"value');
+			expect(s.key('key"value')).toBe('key"value');
 		});
 
 		test("backticks pass through", () => {
-			expect(sanitizeKey("key`value", pattern)).toBe("key`value");
+			expect(s.key("key`value")).toBe("key`value");
 		});
 
 		test("backslash passes through", () => {
-			expect(sanitizeKey("key\\value", pattern)).toBe("key\\value");
+			expect(s.key("key\\value")).toBe("key\\value");
 		});
 
 		test("clean keys unchanged", () => {
-			expect(sanitizeKey("my-clean-key_123", pattern)).toBe("my-clean-key_123");
+			expect(s.key("my-clean-key_123")).toBe("my-clean-key_123");
 		});
 
 		test("empty string unchanged", () => {
-			expect(sanitizeKey("", pattern)).toBe("");
+			expect(s.key("")).toBe("");
 		});
 	});
 
 	describe("dangerous patterns are stripped", () => {
-		const pattern = buildSanitizePattern();
+		const s = new KeyvSanitize(true);
 
 		test("strips semicolons (SQL)", () => {
-			expect(sanitizeKey("; DROP TABLE users", pattern)).toBe(" DROP TABLE users");
+			expect(s.key("; DROP TABLE users")).toBe(" DROP TABLE users");
 		});
 
 		test("strips SQL comments (--)", () => {
-			expect(sanitizeKey("key--comment", pattern)).toBe("keycomment");
+			expect(s.key("key--comment")).toBe("keycomment");
 		});
 
 		test("strips SQL block comment open (/*)", () => {
-			expect(sanitizeKey("key/*comment", pattern)).toBe("keycomment");
+			expect(s.key("key/*comment")).toBe("keycomment");
 		});
 
 		test("strips leading $ (MongoDB)", () => {
-			expect(sanitizeKey("$where", pattern)).toBe("where");
+			expect(s.key("$where")).toBe("where");
 		});
 
 		test("strips {$ sequence (MongoDB)", () => {
-			expect(sanitizeKey("key{$gt}", pattern)).toBe("keygt}");
+			expect(s.key("key{$gt}")).toBe("keygt}");
 		});
 
 		test("strips path traversal ../", () => {
-			expect(sanitizeKey("../../etc/passwd", pattern)).toBe("etc/passwd");
+			expect(s.key("../../etc/passwd")).toBe("etc/passwd");
 		});
 
 		test("strips path traversal ..\\", () => {
-			expect(sanitizeKey("..\\..\\etc\\passwd", pattern)).toBe("etc\\passwd");
+			expect(s.key("..\\..\\etc\\passwd")).toBe("etc\\passwd");
 		});
 
 		test("strips null bytes", () => {
-			expect(sanitizeKey("key\0value", pattern)).toBe("keyvalue");
+			expect(s.key("key\0value")).toBe("keyvalue");
 		});
 
 		test("strips newlines", () => {
-			expect(sanitizeKey("key\nvalue", pattern)).toBe("keyvalue");
+			expect(s.key("key\nvalue")).toBe("keyvalue");
 		});
 
 		test("strips carriage returns", () => {
-			expect(sanitizeKey("key\rvalue", pattern)).toBe("keyvalue");
+			expect(s.key("key\rvalue")).toBe("keyvalue");
 		});
 
 		test("strips all dangerous patterns from combined input", () => {
-			expect(sanitizeKey(";--\0\n\r", pattern)).toBe("");
+			expect(s.key(";--\0\n\r")).toBe("");
 		});
 	});
 
-	describe("with individual categories disabled", () => {
-		test("preserves SQL patterns when sql is disabled", () => {
-			const pattern = buildSanitizePattern({ sql: false });
-			expect(sanitizeKey("key;--comment", pattern)).toBe("key;--comment");
+	describe("keys() method", () => {
+		const s = new KeyvSanitize(true);
+
+		test("sanitizes an array of keys", () => {
+			expect(s.keys(["clean", "key;evil", "$bad"])).toEqual(["clean", "keyevil", "bad"]);
 		});
 
-		test("preserves MongoDB patterns when mongo is disabled", () => {
-			const pattern = buildSanitizePattern({ mongo: false });
-			expect(sanitizeKey("$where", pattern)).toBe("$where");
-		});
-
-		test("preserves control chars when escape is disabled", () => {
-			const pattern = buildSanitizePattern({ escape: false });
-			expect(sanitizeKey("key\nvalue", pattern)).toBe("key\nvalue");
-		});
-
-		test("preserves path traversal when path is disabled", () => {
-			const pattern = buildSanitizePattern({ path: false });
-			expect(sanitizeKey("../../etc", pattern)).toBe("../../etc");
-		});
-
-		test("only strips enabled categories", () => {
-			const pattern = buildSanitizePattern({
-				sql: true,
-				mongo: false,
-				escape: false,
-				path: false,
-			});
-			expect(sanitizeKey("$key;--../\n", pattern)).toBe("$key../\n");
+		test("returns array unchanged when disabled", () => {
+			const disabled = new KeyvSanitize(false);
+			expect(disabled.keys(["key;evil"])).toEqual(["key;evil"]);
 		});
 	});
 
-	describe("buildSanitizePattern", () => {
-		test("returns undefined when all categories are disabled", () => {
-			const pattern = buildSanitizePattern({
-				sql: false,
-				mongo: false,
-				escape: false,
-				path: false,
-			});
-			expect(pattern).toBeUndefined();
+	describe("per-target category control", () => {
+		test("preserves SQL patterns when keys.sql is disabled", () => {
+			const s = new KeyvSanitize({ keys: { sql: false } });
+			expect(s.key("key;--comment")).toBe("key;--comment");
 		});
 
-		test("returns an array when at least one category is enabled", () => {
-			const pattern = buildSanitizePattern({
-				sql: false,
-				mongo: false,
-				escape: false,
-				path: true,
-			});
-			expect(Array.isArray(pattern)).toBe(true);
+		test("preserves MongoDB patterns when keys.mongo is disabled", () => {
+			const s = new KeyvSanitize({ keys: { mongo: false } });
+			expect(s.key("$where")).toBe("$where");
 		});
 
-		test("sanitizeKey with undefined pattern returns key unchanged", () => {
-			expect(sanitizeKey("any'key$here;--", undefined)).toBe("any'key$here;--");
+		test("preserves control chars when keys.escape is disabled", () => {
+			const s = new KeyvSanitize({ keys: { escape: false } });
+			expect(s.key("key\nvalue")).toBe("key\nvalue");
+		});
+
+		test("preserves path traversal when keys.path is disabled", () => {
+			const s = new KeyvSanitize({ keys: { path: false } });
+			expect(s.key("../../etc")).toBe("../../etc");
+		});
+
+		test("only strips enabled categories for keys", () => {
+			const s = new KeyvSanitize({
+				keys: { sql: true, mongo: false, escape: false, path: false },
+			});
+			expect(s.key("$key;--../\n")).toBe("$key../\n");
+		});
+	});
+
+	describe("namespace sanitization", () => {
+		test("sanitizes namespace when enabled", () => {
+			const s = new KeyvSanitize(true);
+			expect(s.namespace("ns;evil")).toBe("nsevil");
+		});
+
+		test("skips namespace when namespace is false", () => {
+			const s = new KeyvSanitize({ namespace: false });
+			expect(s.namespace("ns;evil")).toBe("ns;evil");
+		});
+
+		test("supports independent patterns for namespace", () => {
+			const s = new KeyvSanitize({
+				keys: { sql: true, path: false },
+				namespace: { sql: false, path: true },
+			});
+			expect(s.key("key;../")).toBe("key../");
+			expect(s.namespace("ns;../")).toBe("ns;");
+		});
+	});
+
+	describe("disabled", () => {
+		test("key() returns unchanged when disabled", () => {
+			const s = new KeyvSanitize(false);
+			expect(s.key("any'key$here;--")).toBe("any'key$here;--");
+		});
+
+		test("namespace() returns unchanged when disabled", () => {
+			const s = new KeyvSanitize(false);
+			expect(s.namespace("ns;evil")).toBe("ns;evil");
+		});
+
+		test("enabled is false", () => {
+			const s = new KeyvSanitize(false);
+			expect(s.enabled).toBe(false);
+		});
+	});
+
+	describe("update()", () => {
+		test("can switch from disabled to enabled", () => {
+			const s = new KeyvSanitize(false);
+			expect(s.key("key;evil")).toBe("key;evil");
+			s.update(true);
+			expect(s.enabled).toBe(true);
+			expect(s.key("key;evil")).toBe("keyevil");
+		});
+
+		test("can switch from enabled to disabled", () => {
+			const s = new KeyvSanitize(true);
+			expect(s.key("key;evil")).toBe("keyevil");
+			s.update(false);
+			expect(s.enabled).toBe(false);
+			expect(s.key("key;evil")).toBe("key;evil");
+		});
+
+		test("updates options getter", () => {
+			const s = new KeyvSanitize(true);
+			expect(s.options).toBe(true);
+			s.update({ keys: { sql: true } });
+			expect(s.options).toEqual({ keys: { sql: true } });
+		});
+	});
+
+	describe("LRU cache", () => {
+		test("returns cached result on repeated calls", () => {
+			const s = new KeyvSanitize(true);
+			const first = s.key("key;evil");
+			const second = s.key("key;evil");
+			expect(first).toBe("keyevil");
+			expect(second).toBe("keyevil");
+		});
+
+		test("clearCache() empties the cache", () => {
+			const s = new KeyvSanitize(true);
+			s.key("key;evil");
+			s.clearCache();
+			// Still works after clearing
+			expect(s.key("key;evil")).toBe("keyevil");
+		});
+
+		test("update() clears the cache", () => {
+			const s = new KeyvSanitize(true);
+			s.key("key;evil");
+			s.update({ keys: { sql: false } });
+			// After update, semicolons are no longer stripped
+			expect(s.key("key;evil")).toBe("key;evil");
 		});
 	});
 });
