@@ -134,6 +134,24 @@ describe("Keyv Generic set / get / has Operations", () => {
 		expect(values[2]).toStrictEqual({ value: "value3", expires: undefined });
 		expect(values[3]).toBe(undefined);
 	});
+
+	test("getMany should return undefined for expired keys and remove them from the store", async () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store);
+		await keyv.set("key1", "value1", 1);
+		await keyv.set("key2", "value2");
+
+		// Wait for key1 to expire
+		await new Promise((resolve) => {
+			setTimeout(resolve, 10);
+		});
+
+		const values = await keyv.getMany(["key1", "key2"]);
+		expect(values[0]).toBe(undefined);
+		expect(values[1]).toStrictEqual({ value: "value2", expires: undefined });
+		// Expired key should be deleted from the store
+		expect(store.has("key1")).toBe(false);
+	});
 });
 
 describe("Keyv Generic Delete / Clear Operations", () => {
