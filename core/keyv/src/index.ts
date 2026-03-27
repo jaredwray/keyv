@@ -17,6 +17,7 @@ export {
 } from "./capabilities.js";
 export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export { Keyv, Keyv as default } from "./keyv.js";
+export { KeyvStats } from "./stats.js";
 export type {
 	DeserializedData,
 	KeyvCompression,
@@ -25,11 +26,11 @@ export type {
 	KeyvOptions,
 	KeyvSanitizeOptions,
 	KeyvSerializationAdapter,
+	KeyvStatsOptions,
 	KeyvStorageAdapter,
 	KeyvStoreAdapter,
 	KeyvTelemetryEvent,
 	KeyvValue,
-	StatsManagerOptions,
 	StoredData,
 	StoredDataNoRaw,
 	StoredDataRaw,

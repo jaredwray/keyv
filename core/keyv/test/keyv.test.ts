@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import tk from "timekeeper";
 import * as test from "vitest";
 import Keyv, { type KeyvStorageAdapter } from "../src/index.js";
-import StatsManager from "../src/stats-manager.js";
+import { KeyvStats } from "../src/stats.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
 const snooze = delay;
@@ -737,7 +737,7 @@ test.it("Keyv opts.stats should set the stats manager", (t) => {
 
 test.it("Keyv stats setter should replace the stats manager", (t) => {
 	const keyv = new Keyv({ stats: true });
-	const newStats = new StatsManager(true);
+	const newStats = new KeyvStats({ enabled: true });
 	keyv.stats = newStats;
 	t.expect(keyv.stats).toBe(newStats);
 });

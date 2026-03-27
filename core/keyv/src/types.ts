@@ -41,7 +41,7 @@ export type KeyvTelemetryEvent = {
 	timestamp: number;
 };
 
-export type StatsManagerOptions = {
+export type KeyvStatsOptions = {
 	/**
 	 * Enable or disable stats tracking.
 	 * @default false
@@ -54,7 +54,7 @@ export type StatsManagerOptions = {
 	maxEntries?: number;
 	/**
 	 * The event emitter (e.g. a Keyv instance) to subscribe to for telemetry events.
-	 * If provided, the StatsManager will automatically subscribe on construction.
+	 * If provided, KeyvStats will automatically subscribe on construction.
 	 */
 	emitter?: IEventEmitter;
 };

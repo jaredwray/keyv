@@ -1,98 +1,109 @@
 import { describe, expect, it } from "vitest";
 import { Keyv } from "../src/index.js";
-import KeyvStatsManager from "../src/stats-manager.js";
+import { KeyvStats } from "../src/stats.js";
 
 it("will initialize with correct stats at zero", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	expect(stats.hits).toBe(0);
-});
-
-it("will increment hits", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	stats.hit();
-	expect(stats.hits).toBe(1);
-});
-
-it("will increment misses", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	stats.miss();
-	expect(stats.misses).toBe(1);
-});
-
-it("will increment sets", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	stats.set();
-	expect(stats.sets).toBe(1);
-});
-
-it("will increment deletes", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	stats.delete();
-	expect(stats.deletes).toBe(1);
-});
-
-it("will reset stats", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	stats.hit();
-	stats.miss();
-	stats.set();
-	stats.delete();
-	expect(stats.hits).toBe(1);
-	expect(stats.misses).toBe(1);
-	expect(stats.sets).toBe(1);
-	expect(stats.deletes).toBe(1);
-	stats.reset();
+	const stats = new KeyvStats({ enabled: true });
 	expect(stats.hits).toBe(0);
 	expect(stats.misses).toBe(0);
 	expect(stats.sets).toBe(0);
 	expect(stats.deletes).toBe(0);
-});
-
-it("will increment errors", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	stats.error();
-	expect(stats.errors).toBe(1);
-});
-
-it("will not increment errors if disabled", () => {
-	const stats = new KeyvStatsManager();
-	stats.error();
 	expect(stats.errors).toBe(0);
 });
 
-it("will reset errors", () => {
-	const stats = new KeyvStatsManager({ enabled: true });
-	stats.error();
-	expect(stats.errors).toBe(1);
-	stats.reset();
-	expect(stats.errors).toBe(0);
+it("will increment counters via Keyv events", async () => {
+	const keyv = new Keyv({ stats: true });
+
+	await keyv.set("key1", "value1");
+	expect(keyv.stats.sets).toBe(1);
+
+	await keyv.get("key1");
+	expect(keyv.stats.hits).toBe(1);
+
+	await keyv.get("missing");
+	expect(keyv.stats.misses).toBe(1);
+
+	await keyv.delete("key1");
+	expect(keyv.stats.deletes).toBe(1);
 });
 
-it("will not increment hits if disabled", () => {
-	const stats = new KeyvStatsManager();
-	stats.hit();
-	expect(stats.hits).toBe(0);
+it("will increment error counter on store error", async () => {
+	// biome-ignore lint/suspicious/noExplicitAny: testing with Map as store
+	const errorStore = new Map() as any;
+	const keyv = new Keyv({ store: errorStore, stats: true });
+	keyv.on("error", () => {}); // suppress unhandled error
+
+	errorStore.get = () => {
+		throw new Error("store error");
+	};
+
+	await keyv.get("badkey");
+	expect(keyv.stats.errors).toBe(1);
+});
+
+it("will not increment counters when disabled", async () => {
+	const keyv = new Keyv({ stats: false });
+
+	await keyv.set("key1", "value1");
+	await keyv.get("key1");
+
+	expect(keyv.stats.sets).toBe(0);
+	expect(keyv.stats.hits).toBe(0);
+});
+
+it("will reset stats", async () => {
+	const keyv = new Keyv({ stats: true });
+
+	await keyv.set("key1", "value1");
+	await keyv.get("key1");
+	await keyv.get("missing");
+	await keyv.delete("key1");
+
+	expect(keyv.stats.sets).toBe(1);
+	expect(keyv.stats.hits).toBe(1);
+	expect(keyv.stats.misses).toBe(1);
+	expect(keyv.stats.deletes).toBe(1);
+
+	keyv.stats.reset();
+
+	expect(keyv.stats.sets).toBe(0);
+	expect(keyv.stats.hits).toBe(0);
+	expect(keyv.stats.misses).toBe(0);
+	expect(keyv.stats.deletes).toBe(0);
+	expect(keyv.stats.errors).toBe(0);
 });
 
 it("will default enabled to false", () => {
-	const stats = new KeyvStatsManager();
+	const stats = new KeyvStats();
 	expect(stats.enabled).toBe(false);
 });
 
 it("will default maxEntries to 1000", () => {
-	const stats = new KeyvStatsManager();
+	const stats = new KeyvStats();
 	expect(stats.maxEntries).toBe(1000);
 });
 
+it("will unsubscribe when enabled is set to false", async () => {
+	const keyv = new Keyv({ stats: true });
+
+	await keyv.set("key1", "value1");
+	expect(keyv.stats.sets).toBe(1);
+
+	keyv.stats.enabled = false;
+
+	await keyv.set("key2", "value2");
+	expect(keyv.stats.sets).toBe(1);
+});
+
 describe("LRU key frequency maps", () => {
-	it("should accept StatsManagerOptions object", () => {
-		const stats = new KeyvStatsManager({ enabled: true, maxEntries: 500 });
+	it("should accept KeyvStatsOptions object", () => {
+		const stats = new KeyvStats({ enabled: true, maxEntries: 500 });
 		expect(stats.enabled).toBe(true);
 		expect(stats.maxEntries).toBe(500);
 	});
 
 	it("should default maxEntries to 1000", () => {
-		const stats = new KeyvStatsManager({ enabled: true });
+		const stats = new KeyvStats({ enabled: true });
 		// Fill past default and verify eviction happens at 1000
 		for (let i = 0; i < 1001; i++) {
 			stats.incrementKeys(stats.hitKeys, `key${i}`);
@@ -102,7 +113,7 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should track hit keys via incrementKeys", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 		stats.incrementKeys(stats.hitKeys, "user:123");
 		stats.incrementKeys(stats.hitKeys, "user:123");
 		stats.incrementKeys(stats.hitKeys, "user:456");
@@ -112,7 +123,7 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should evict least recently used key when map exceeds maxEntries", () => {
-		const stats = new KeyvStatsManager({ maxEntries: 3 });
+		const stats = new KeyvStats({ maxEntries: 3 });
 
 		stats.incrementKeys(stats.hitKeys, "a");
 		stats.incrementKeys(stats.hitKeys, "b");
@@ -129,7 +140,7 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should preserve recently accessed keys during eviction", () => {
-		const stats = new KeyvStatsManager({ maxEntries: 3 });
+		const stats = new KeyvStats({ maxEntries: 3 });
 
 		stats.incrementKeys(stats.hitKeys, "a");
 		stats.incrementKeys(stats.hitKeys, "b");
@@ -148,7 +159,7 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should track each event type independently", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 
 		stats.incrementKeys(stats.hitKeys, "key1");
 		stats.incrementKeys(stats.missKeys, "key1");
@@ -165,7 +176,7 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should build composite key with namespace", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 		const compositeKey = stats.buildKeyEventName({
 			event: "hit",
 			key: "user:123",
@@ -176,7 +187,7 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should build key without namespace", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 		const compositeKey = stats.buildKeyEventName({
 			event: "hit",
 			key: "user:123",
@@ -186,7 +197,7 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should return empty string when no key", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 		const compositeKey = stats.buildKeyEventName({
 			event: "error",
 			timestamp: Date.now(),
@@ -195,19 +206,19 @@ describe("LRU key frequency maps", () => {
 	});
 
 	it("should not track keys when compositeKey is empty", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 		stats.incrementKeys(stats.errorKeys, "");
 		expect(stats.errorKeys.size).toBe(0);
 	});
 
 	it("should not track keys when maxEntries is 0", () => {
-		const stats = new KeyvStatsManager({ maxEntries: 0 });
+		const stats = new KeyvStats({ maxEntries: 0 });
 		stats.incrementKeys(stats.hitKeys, "key1");
 		expect(stats.hitKeys.size).toBe(0);
 	});
 
 	it("should clear all LRU maps on reset", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 		stats.incrementKeys(stats.hitKeys, "a");
 		stats.incrementKeys(stats.missKeys, "b");
 		stats.incrementKeys(stats.setKeys, "c");
@@ -264,7 +275,7 @@ describe("LRU key frequency maps", () => {
 		expect(keyv.stats.errorKeys.get("badkey")).toBe(1);
 	});
 
-	it("legacy counters still work alongside LRU maps", async () => {
+	it("counters and LRU maps work together", async () => {
 		const keyv = new Keyv({ stats: true });
 
 		await keyv.set("a", 1);
@@ -295,7 +306,7 @@ describe("unsubscribe", () => {
 	});
 
 	it("should be safe to call unsubscribe without subscribe", () => {
-		const stats = new KeyvStatsManager();
+		const stats = new KeyvStats();
 		expect(() => stats.unsubscribe()).not.toThrow();
 	});
 

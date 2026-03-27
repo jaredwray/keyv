@@ -1,7 +1,7 @@
 import { Hookified } from "hookified";
 import { detectKeyvStorage } from "./capabilities.js";
 import { KeyvJsonSerializer } from "./json-serializer.js";
-import StatsManager from "./stats-manager.js";
+import { KeyvStats } from "./stats.js";
 import {
 	type KeyvCompressionAdapter,
 	type KeyvEntry,
@@ -32,7 +32,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Stats manager for tracking cache operation metrics (hits, misses, sets, deletes, errors).
 	 */
-	private _stats: StatsManager;
+	private _stats: KeyvStats;
 
 	/**
 	 * Default time to live in milliseconds. Can be overridden per-key via {@link set}.
@@ -152,7 +152,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this._store.namespace = this._namespace;
 		}
 
-		this._stats = new StatsManager({
+		this._stats = new KeyvStats({
 			emitter: this,
 			enabled: mergedOptions.stats ?? false,
 		});
@@ -320,17 +320,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Get the stats manager.
-	 * @returns {StatsManager} The current stats manager.
+	 * @returns {KeyvStats} The current stats manager.
 	 */
-	public get stats(): StatsManager {
+	public get stats(): KeyvStats {
 		return this._stats;
 	}
 
 	/**
 	 * Set the stats manager.
-	 * @param {StatsManager} stats The stats manager to set.
+	 * @param {KeyvStats} stats The stats manager to set.
 	 */
-	public set stats(stats: StatsManager) {
+	public set stats(stats: KeyvStats) {
 		this._stats = stats;
 		this._stats.subscribe(this);
 	}

@@ -1,7 +1,7 @@
 import type { IEventEmitter } from "hookified";
-import type { KeyvTelemetryEvent, StatsManagerOptions } from "./types.js";
+import type { KeyvStatsOptions, KeyvTelemetryEvent } from "./types.js";
 
-class StatsManager {
+export class KeyvStats {
 	private _hits = 0;
 	private _misses = 0;
 	private _sets = 0;
@@ -23,7 +23,7 @@ class StatsManager {
 		(event: KeyvTelemetryEvent) => void
 	>();
 
-	constructor(options?: StatsManagerOptions) {
+	constructor(options?: KeyvStatsOptions) {
 		if (options?.maxEntries !== undefined) {
 			this._maxEntries = options.maxEntries;
 		}
@@ -146,51 +146,6 @@ class StatsManager {
 	}
 
 	/**
-	 * Increment the hit counter.
-	 */
-	public hit() {
-		if (this._enabled) {
-			this._hits++;
-		}
-	}
-
-	/**
-	 * Increment the miss counter.
-	 */
-	public miss() {
-		if (this._enabled) {
-			this._misses++;
-		}
-	}
-
-	/**
-	 * Increment the set counter.
-	 */
-	public set() {
-		if (this._enabled) {
-			this._sets++;
-		}
-	}
-
-	/**
-	 * Increment the delete counter.
-	 */
-	public delete() {
-		if (this._enabled) {
-			this._deletes++;
-		}
-	}
-
-	/**
-	 * Increment the error counter.
-	 */
-	public error() {
-		if (this._enabled) {
-			this._errors++;
-		}
-	}
-
-	/**
 	 * Build a composite key from a telemetry event.
 	 * Format: "namespace:key" if namespace is present, otherwise just "key".
 	 */
@@ -233,27 +188,27 @@ class StatsManager {
 		this._emitter = emitter;
 
 		const hitListener = (event: KeyvTelemetryEvent) => {
-			this.hit();
+			this._hits++;
 			this.incrementKeys(this.hitKeysMap, this.buildKeyEventName(event));
 		};
 
 		const missListener = (event: KeyvTelemetryEvent) => {
-			this.miss();
+			this._misses++;
 			this.incrementKeys(this.missKeysMap, this.buildKeyEventName(event));
 		};
 
 		const setListener = (event: KeyvTelemetryEvent) => {
-			this.set();
+			this._sets++;
 			this.incrementKeys(this.setKeysMap, this.buildKeyEventName(event));
 		};
 
 		const deleteListener = (event: KeyvTelemetryEvent) => {
-			this.delete();
+			this._deletes++;
 			this.incrementKeys(this.deleteKeysMap, this.buildKeyEventName(event));
 		};
 
 		const errorListener = (event: KeyvTelemetryEvent) => {
-			this.error();
+			this._errors++;
 			this.incrementKeys(this.errorKeysMap, this.buildKeyEventName(event));
 		};
 
@@ -302,5 +257,3 @@ class StatsManager {
 		this.errorKeysMap.clear();
 	}
 }
-
-export default StatsManager;
