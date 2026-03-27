@@ -1,4 +1,15 @@
-import { KeyvHooks, type KeyvSanitizeOptions } from "./types.js";
+import {
+	type DeserializedData,
+	KeyvHooks,
+	type KeyvSanitizeOptions,
+} from "./types.js";
+
+/**
+ * Check whether a deserialized entry has expired based on its `expires` timestamp.
+ */
+export function isDataExpired<Value>(data: DeserializedData<Value>): boolean {
+	return typeof data.expires === "number" && Date.now() > data.expires;
+}
 
 /**
  * Maps new hook names to their deprecated equivalents so both fire during migration.

@@ -16,6 +16,7 @@ import {
 import {
 	buildSanitizePattern,
 	deprecatedHookAliases,
+	isDataExpired,
 	sanitizeKey,
 } from "./utils.js";
 
@@ -420,9 +421,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const store = this._store;
 		const isArray = Array.isArray(key);
 
-		const isDataExpired = (data: DeserializedData<Value>): boolean =>
-			typeof data.expires === "number" && Date.now() > data.expires;
-
 		if (isArray) {
 			return this.getMany<Value>(key as string[]);
 		}
@@ -478,9 +476,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	): Promise<Array<Value | undefined>> {
 		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
 		const store = this._store;
-
-		const isDataExpired = (data: DeserializedData<Value>): boolean =>
-			typeof data.expires === "number" && Date.now() > data.expires;
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
 		if (store.getMany === undefined) {
@@ -671,8 +666,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		// Filter out any expired keys and delete them
 		const expiredKeys = [];
-		const isDataExpired = (data: DeserializedData<Value>): boolean =>
-			typeof data.expires === "number" && Date.now() > data.expires;
 
 		for (const [index, row] of result.entries()) {
 			if (row !== undefined && isDataExpired(row)) {
