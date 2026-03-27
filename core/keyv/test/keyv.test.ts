@@ -914,6 +914,26 @@ test.it(
 	},
 );
 
+test.it("serialization setter with false clears the adapter", async (t) => {
+	const keyv = new Keyv();
+	t.expect(keyv.serialization).toBeDefined();
+	keyv.serialization = false;
+	t.expect(keyv.serialization).toBeUndefined();
+});
+
+test.it(
+	"serializeData uses JSON.stringify when compression is set without serialization",
+	async (t) => {
+		const keyv = new Keyv({
+			serialization: false,
+			compression: createMockCompression(),
+		});
+		const data = { value: "hello", expires: undefined };
+		const result = await keyv.serializeData(data);
+		t.expect(result).toBe(JSON.stringify(data));
+	},
+);
+
 test.it("should emit error if set fails", async (t) => {
 	const store = new Map();
 	store.set = test.vi.fn().mockRejectedValue(new Error("store set error"));

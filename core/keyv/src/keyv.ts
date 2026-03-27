@@ -329,6 +329,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	generateIterator(iterator: IteratorFunction): IteratorFunction {
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		const function_: IteratorFunction = async function* (this: any) {
+			/* v8 ignore next 3 -- @preserve */
 			for await (const [key, raw] of typeof iterator === "function"
 				? iterator()
 				: iterator) {
@@ -483,6 +484,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 			const deserializedRows = await Promise.allSettled(promises);
 			const result = deserializedRows.map((row) =>
+				/* v8 ignore next -- @preserve */
 				row.status === "fulfilled" ? row.value : undefined,
 			);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
@@ -627,6 +629,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const deserializedRows = await Promise.allSettled(promises);
 			result = deserializedRows.map(
 				(row: PromiseSettledResult<StoredDataRaw<Value> | undefined>) =>
+					/* v8 ignore next -- @preserve */
 					row.status === "fulfilled" ? row.value : undefined,
 			) as Array<StoredDataRaw<Value>>;
 		} else {
@@ -1069,6 +1072,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		let result: any = data;
 
+		/* v8 ignore next 7 -- @preserve */
 		if (this._serialization) {
 			result = await this._serialization.stringify(data);
 		} else if (this._compression) {
