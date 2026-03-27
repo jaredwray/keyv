@@ -33,6 +33,42 @@ export const deprecatedHookAliases = new Map<string, string>([
 	[KeyvHooks.AFTER_DELETE, KeyvHooks.POST_DELETE],
 ]);
 
+/**
+ * Build the deprecated-hooks map used by Hookified to warn when old PRE_/POST_ hook names are registered.
+ */
+export function buildDeprecatedHooks(): Map<string, string> {
+	return new Map([
+		["preSet", "Use KeyvHooks.BEFORE_SET ('before:set') instead"],
+		["postSet", "Use KeyvHooks.AFTER_SET ('after:set') instead"],
+		["preGet", "Use KeyvHooks.BEFORE_GET ('before:get') instead"],
+		["postGet", "Use KeyvHooks.AFTER_GET ('after:get') instead"],
+		["preGetMany", "Use KeyvHooks.BEFORE_GET_MANY ('before:getMany') instead"],
+		["postGetMany", "Use KeyvHooks.AFTER_GET_MANY ('after:getMany') instead"],
+		["preGetRaw", "Use KeyvHooks.BEFORE_GET_RAW ('before:getRaw') instead"],
+		["postGetRaw", "Use KeyvHooks.AFTER_GET_RAW ('after:getRaw') instead"],
+		[
+			"preGetManyRaw",
+			"Use KeyvHooks.BEFORE_GET_MANY_RAW ('before:getManyRaw') instead",
+		],
+		[
+			"postGetManyRaw",
+			"Use KeyvHooks.AFTER_GET_MANY_RAW ('after:getManyRaw') instead",
+		],
+		["preSetRaw", "Use KeyvHooks.BEFORE_SET_RAW ('before:setRaw') instead"],
+		["postSetRaw", "Use KeyvHooks.AFTER_SET_RAW ('after:setRaw') instead"],
+		[
+			"preSetManyRaw",
+			"Use KeyvHooks.BEFORE_SET_MANY_RAW ('before:setManyRaw') instead",
+		],
+		[
+			"postSetManyRaw",
+			"Use KeyvHooks.AFTER_SET_MANY_RAW ('after:setManyRaw') instead",
+		],
+		["preDelete", "Use KeyvHooks.BEFORE_DELETE ('before:delete') instead"],
+		["postDelete", "Use KeyvHooks.AFTER_DELETE ('after:delete') instead"],
+	]);
+}
+
 const categoryChars: Record<keyof KeyvSanitizeOptions, string> = {
 	sql: "'\"`;",
 	// biome-ignore lint/suspicious/noTemplateCurlyInString: literal chars not a template

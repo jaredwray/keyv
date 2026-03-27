@@ -14,6 +14,7 @@ import {
 	type StoredDataRaw,
 } from "./types.js";
 import {
+	buildDeprecatedHooks,
 	buildSanitizePattern,
 	deprecatedHookAliases,
 	isDataExpired,
@@ -109,39 +110,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
 		});
 
-		this.deprecatedHooks = new Map([
-			["preSet", "Use KeyvHooks.BEFORE_SET ('before:set') instead"],
-			["postSet", "Use KeyvHooks.AFTER_SET ('after:set') instead"],
-			["preGet", "Use KeyvHooks.BEFORE_GET ('before:get') instead"],
-			["postGet", "Use KeyvHooks.AFTER_GET ('after:get') instead"],
-			[
-				"preGetMany",
-				"Use KeyvHooks.BEFORE_GET_MANY ('before:getMany') instead",
-			],
-			["postGetMany", "Use KeyvHooks.AFTER_GET_MANY ('after:getMany') instead"],
-			["preGetRaw", "Use KeyvHooks.BEFORE_GET_RAW ('before:getRaw') instead"],
-			["postGetRaw", "Use KeyvHooks.AFTER_GET_RAW ('after:getRaw') instead"],
-			[
-				"preGetManyRaw",
-				"Use KeyvHooks.BEFORE_GET_MANY_RAW ('before:getManyRaw') instead",
-			],
-			[
-				"postGetManyRaw",
-				"Use KeyvHooks.AFTER_GET_MANY_RAW ('after:getManyRaw') instead",
-			],
-			["preSetRaw", "Use KeyvHooks.BEFORE_SET_RAW ('before:setRaw') instead"],
-			["postSetRaw", "Use KeyvHooks.AFTER_SET_RAW ('after:setRaw') instead"],
-			[
-				"preSetManyRaw",
-				"Use KeyvHooks.BEFORE_SET_MANY_RAW ('before:setManyRaw') instead",
-			],
-			[
-				"postSetManyRaw",
-				"Use KeyvHooks.AFTER_SET_MANY_RAW ('after:setManyRaw') instead",
-			],
-			["preDelete", "Use KeyvHooks.BEFORE_DELETE ('before:delete') instead"],
-			["postDelete", "Use KeyvHooks.AFTER_DELETE ('after:delete') instead"],
-		]);
+		this.deprecatedHooks = buildDeprecatedHooks();
 
 		this._store = mergedOptions.store ?? new Map();
 
