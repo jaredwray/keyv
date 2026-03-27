@@ -13,29 +13,11 @@ import {
 	type KeyvStorageAdapter,
 	type StoredDataRaw,
 } from "./types.js";
-import { buildSanitizePattern, sanitizeKey } from "./utils.js";
-
-/**
- * Maps new hook names to their deprecated equivalents so both fire during migration.
- */
-const deprecatedHookAliases = new Map<string, string>([
-	[KeyvHooks.BEFORE_SET, KeyvHooks.PRE_SET],
-	[KeyvHooks.AFTER_SET, KeyvHooks.POST_SET],
-	[KeyvHooks.BEFORE_GET, KeyvHooks.PRE_GET],
-	[KeyvHooks.AFTER_GET, KeyvHooks.POST_GET],
-	[KeyvHooks.BEFORE_GET_MANY, KeyvHooks.PRE_GET_MANY],
-	[KeyvHooks.AFTER_GET_MANY, KeyvHooks.POST_GET_MANY],
-	[KeyvHooks.BEFORE_GET_RAW, KeyvHooks.PRE_GET_RAW],
-	[KeyvHooks.AFTER_GET_RAW, KeyvHooks.POST_GET_RAW],
-	[KeyvHooks.BEFORE_GET_MANY_RAW, KeyvHooks.PRE_GET_MANY_RAW],
-	[KeyvHooks.AFTER_GET_MANY_RAW, KeyvHooks.POST_GET_MANY_RAW],
-	[KeyvHooks.BEFORE_SET_RAW, KeyvHooks.PRE_SET_RAW],
-	[KeyvHooks.AFTER_SET_RAW, KeyvHooks.POST_SET_RAW],
-	[KeyvHooks.BEFORE_SET_MANY_RAW, KeyvHooks.PRE_SET_MANY_RAW],
-	[KeyvHooks.AFTER_SET_MANY_RAW, KeyvHooks.POST_SET_MANY_RAW],
-	[KeyvHooks.BEFORE_DELETE, KeyvHooks.PRE_DELETE],
-	[KeyvHooks.AFTER_DELETE, KeyvHooks.POST_DELETE],
-]);
+import {
+	buildSanitizePattern,
+	deprecatedHookAliases,
+	sanitizeKey,
+} from "./utils.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends Hookified {

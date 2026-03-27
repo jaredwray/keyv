@@ -1,4 +1,26 @@
-import type { KeyvSanitizeOptions } from "./types.js";
+import { KeyvHooks, type KeyvSanitizeOptions } from "./types.js";
+
+/**
+ * Maps new hook names to their deprecated equivalents so both fire during migration.
+ */
+export const deprecatedHookAliases = new Map<string, string>([
+	[KeyvHooks.BEFORE_SET, KeyvHooks.PRE_SET],
+	[KeyvHooks.AFTER_SET, KeyvHooks.POST_SET],
+	[KeyvHooks.BEFORE_GET, KeyvHooks.PRE_GET],
+	[KeyvHooks.AFTER_GET, KeyvHooks.POST_GET],
+	[KeyvHooks.BEFORE_GET_MANY, KeyvHooks.PRE_GET_MANY],
+	[KeyvHooks.AFTER_GET_MANY, KeyvHooks.POST_GET_MANY],
+	[KeyvHooks.BEFORE_GET_RAW, KeyvHooks.PRE_GET_RAW],
+	[KeyvHooks.AFTER_GET_RAW, KeyvHooks.POST_GET_RAW],
+	[KeyvHooks.BEFORE_GET_MANY_RAW, KeyvHooks.PRE_GET_MANY_RAW],
+	[KeyvHooks.AFTER_GET_MANY_RAW, KeyvHooks.POST_GET_MANY_RAW],
+	[KeyvHooks.BEFORE_SET_RAW, KeyvHooks.PRE_SET_RAW],
+	[KeyvHooks.AFTER_SET_RAW, KeyvHooks.POST_SET_RAW],
+	[KeyvHooks.BEFORE_SET_MANY_RAW, KeyvHooks.PRE_SET_MANY_RAW],
+	[KeyvHooks.AFTER_SET_MANY_RAW, KeyvHooks.POST_SET_MANY_RAW],
+	[KeyvHooks.BEFORE_DELETE, KeyvHooks.PRE_DELETE],
+	[KeyvHooks.AFTER_DELETE, KeyvHooks.POST_DELETE],
+]);
 
 const categoryChars: Record<keyof KeyvSanitizeOptions, string> = {
 	sql: "'\"`;",
