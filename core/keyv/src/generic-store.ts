@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
 import { Keyv } from "./keyv.js";
-import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "./types.js";
+import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type KeyvValue, type StoredData } from "./types.js";
 import { isDataExpired } from "./utils.js";
 
 /**
@@ -14,7 +14,7 @@ export type KeyvGenericStoreOptions = {
 	 */
 	namespace?: string | (() => string);
 	/**
-	 * The separator used between namespace and key. Defaults to "::".
+	 * The separator used between namespace and key. Defaults to ":".
 	 */
 	keySeparator?: string;
 };
@@ -35,30 +35,6 @@ export type KeyvMapType = {
 	clear: () => void;
 	/** Checks if a key exists in the store */
 	has: (key: string) => boolean;
-};
-
-/**
- * Represents a cache item with its key, value, and optional TTL.
- */
-export type CacheItem = {
-	/** The cache key */
-	key: string;
-	/** The cached value */
-	value: any;
-	/** Time-to-live in milliseconds */
-	ttl?: number;
-};
-
-/**
- * Represents how an item is stored internally in the cache.
- */
-export type CacheItemStore = {
-	/** The cache key */
-	key: string;
-	/** The cached value */
-	value: any;
-	/** Unix timestamp (in milliseconds) when the item expires */
-	expires?: number;
 };
 
 /**
@@ -92,7 +68,7 @@ export type KeyPrefixData = {
 export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvMapType;
 	private _namespace?: string | (() => string);
-	private _keySeparator = "::";
+	private _keySeparator = ":";
 
 	/**
 	 * Creates a new KeyvGenericStore instance.
@@ -211,7 +187,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 */
 	async get<T>(key: string): Promise<StoredData<T> | undefined> {
 		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
-		const data = this._store.get(keyPrefix) as CacheItemStore;
+		const data = this._store.get(keyPrefix) as KeyvValue<T>;
 		if (!data) {
 			return undefined;
 		}
