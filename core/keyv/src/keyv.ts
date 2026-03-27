@@ -23,31 +23,51 @@ import {
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends Hookified {
-	public iterator?: IteratorFunction;
-	public stats = new StatsManager(false);
+	/**
+	 * Async iterator function for iterating over stored key-value pairs.
+	 */
+	private _iterator?: IteratorFunction;
 
 	/**
-	 * Time to live in milliseconds
+	 * Stats manager for tracking cache operation metrics (hits, misses, sets, deletes, errors).
+	 */
+	private _stats = new StatsManager(false);
+
+	/**
+	 * Default time to live in milliseconds. Can be overridden per-key via {@link set}.
 	 */
 	private _ttl?: number;
 
 	/**
-	 * Namespace
+	 * Key prefix namespace used to isolate keys across different Keyv instances sharing the same store.
 	 */
 	private _namespace?: string;
 
 	/**
-	 * Store
+	 * The underlying storage adapter. Defaults to an in-memory {@link Map}.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	private _store: KeyvStorageAdapter = new Map() as any;
 
+	/**
+	 * Pluggable serialization adapter with `stringify` and `parse` methods. When `undefined`, the built-in {@link KeyvJsonSerializer} is used.
+	 */
 	private _serialization: KeyvSerializationAdapter | undefined;
 
+	/**
+	 * Pluggable compression adapter with `compress` and `decompress` methods.
+	 */
 	private _compression: KeyvCompressionAdapter | undefined;
 
-	private _sanitizeKeyOption: boolean | KeyvSanitizeOptions = true;
+	/**
+	 * Current sanitizeKey setting. `true` enables all categories, `false` disables sanitization,
+	 * or a {@link KeyvSanitizeOptions} object toggles individual categories.
+	 */
+	private _sanitizeKey: boolean | KeyvSanitizeOptions = true;
 
+	/**
+	 * Precompiled regex pattern built from {@link _sanitizeKey} for stripping unsafe key characters.
+	 */
 	private _sanitizePattern: RegExp | undefined = buildSanitizePattern();
 
 	/**
@@ -170,21 +190,21 @@ export class Keyv<GenericValue = any> extends Hookified {
 				typeof (this._store as any)[Symbol.iterator] === "function" &&
 				this._store instanceof Map
 			) {
-				this.iterator = this.generateIterator(
+				this._iterator = this.generateIterator(
 					this._store as unknown as IteratorFunction,
 				);
 			} else if ("iterator" in this._store) {
-				this.iterator = this.generateIterator(
+				this._iterator = this.generateIterator(
 					// biome-ignore lint/style/noNonNullAssertion: need to fix
 					this._store.iterator!.bind(this._store),
 				);
 			} else {
-				this.iterator = this.generateFallbackIterator();
+				this._iterator = this.generateFallbackIterator();
 			}
 		}
 
 		if (mergedOptions.stats) {
-			this.stats.enabled = mergedOptions.stats;
+			this._stats.enabled = mergedOptions.stats;
 		}
 
 		if (mergedOptions.ttl) {
@@ -192,7 +212,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		if (mergedOptions.sanitizeKey !== undefined) {
-			this._sanitizeKeyOption = mergedOptions.sanitizeKey;
+			this._sanitizeKey = mergedOptions.sanitizeKey;
 			this._sanitizePattern =
 				mergedOptions.sanitizeKey === false
 					? undefined
@@ -205,7 +225,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current store
+	 * Get the current storage adapter.
+	 * @returns {KeyvStorageAdapter | Map<any, any>} The current storage adapter.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public get store(): KeyvStorageAdapter | Map<any, any> | any {
@@ -213,8 +234,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Set the current store. This will also set the namespace, event error handler, and generate the iterator. If the store is not valid it will throw an error.
-	 * @param {KeyvStorageAdapter | Map<any, any> | any} store the store to set
+	 * Set the storage adapter. Also configures the namespace, error forwarding, and iterator
+	 * for the new store. Throws if the store does not implement the required methods.
+	 * @param {KeyvStorageAdapter | Map<any, any>} store The storage adapter to set.
+	 * @throws {Error} If the store is not a valid storage adapter.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public set store(store: KeyvStorageAdapter | Map<any, any> | any) {
@@ -238,14 +261,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 				typeof store[Symbol.iterator] === "function" &&
 				store instanceof Map
 			) {
-				this.iterator = this.generateIterator(
+				this._iterator = this.generateIterator(
 					store as unknown as IteratorFunction,
 				);
 				/* v8 ignore next -- @preserve */
 			} else if ("iterator" in store) {
-				this.iterator = this.generateIterator(store.iterator?.bind(store));
+				this._iterator = this.generateIterator(store.iterator?.bind(store));
 			} else {
-				this.iterator = this.generateFallbackIterator();
+				this._iterator = this.generateFallbackIterator();
 			}
 		} else {
 			throw new Error("Invalid storage adapter");
@@ -253,16 +276,16 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current compression function
-	 * @returns {KeyvCompressionAdapter} The current compression function
+	 * Get the current compression adapter.
+	 * @returns {KeyvCompressionAdapter | undefined} The current compression adapter.
 	 */
 	public get compression(): KeyvCompressionAdapter | undefined {
 		return this._compression;
 	}
 
 	/**
-	 * Set the current compression function
-	 * @param {KeyvCompressionAdapter} compress The compression function to set
+	 * Set the compression adapter.
+	 * @param {KeyvCompressionAdapter | undefined} compress The compression adapter to set.
 	 */
 	public set compression(compress: KeyvCompressionAdapter | undefined) {
 		this._compression = compress;
@@ -341,7 +364,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean | KeyvSanitizeOptions} The current sanitizeKey setting.
 	 */
 	public get sanitizeKey(): boolean | KeyvSanitizeOptions {
-		return this._sanitizeKeyOption;
+		return this._sanitizeKey;
 	}
 
 	/**
@@ -350,11 +373,43 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {boolean | KeyvSanitizeOptions} value The sanitizeKey setting.
 	 */
 	public set sanitizeKey(value: boolean | KeyvSanitizeOptions) {
-		this._sanitizeKeyOption = value;
+		this._sanitizeKey = value;
 		this._sanitizePattern =
 			value === false
 				? undefined
 				: buildSanitizePattern(value === true ? {} : value);
+	}
+
+	/**
+	 * Get the current iterator function.
+	 * @returns {IteratorFunction | undefined} The current iterator function.
+	 */
+	public get iterator(): IteratorFunction | undefined {
+		return this._iterator;
+	}
+
+	/**
+	 * Set the iterator function.
+	 * @param {IteratorFunction | undefined} iterator The iterator function to set.
+	 */
+	public set iterator(iterator: IteratorFunction | undefined) {
+		this._iterator = iterator;
+	}
+
+	/**
+	 * Get the stats manager.
+	 * @returns {StatsManager} The current stats manager.
+	 */
+	public get stats(): StatsManager {
+		return this._stats;
+	}
+
+	/**
+	 * Set the stats manager.
+	 * @param {StatsManager} stats The stats manager to set.
+	 */
+	public set stats(stats: StatsManager) {
+		this._stats = stats;
 	}
 
 	public generateIterator(iterator: IteratorFunction): IteratorFunction {
@@ -447,7 +502,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this.stats.miss();
+			this._stats.miss();
 			return undefined;
 		}
 
@@ -457,7 +512,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this.stats.miss();
+			this._stats.miss();
 			return undefined;
 		}
 
@@ -465,7 +520,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			key,
 			value: deserializedData,
 		});
-		this.stats.hit();
+		this._stats.hit();
 		return (deserializedData as DeserializedData<Value>).value;
 	}
 
@@ -507,7 +562,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 			if (result.length > 0) {
-				this.stats.hit();
+				this._stats.hit();
 			}
 
 			return result;
@@ -546,7 +601,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
 		/* v8 ignore next -- @preserve */
 		if (result.length > 0) {
-			this.stats.hit();
+			this._stats.hit();
 		}
 
 		return result as Array<Value | undefined>;
@@ -570,7 +625,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this.stats.miss();
+			this._stats.miss();
 			return undefined;
 		}
 
@@ -592,13 +647,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this.stats.miss();
+			this._stats.miss();
 			await this.delete(key);
 			return undefined;
 		}
 
 		// Add a hit
-		this.stats.hit();
+		this._stats.hit();
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 			key,
@@ -624,7 +679,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				undefined,
 			) as Array<StoredDataRaw<Value>>;
 			// Add in misses
-			this.stats.misses += keys.length;
+			this._stats.misses += keys.length;
 			// Trigger the after get many raw hook
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
@@ -681,7 +736,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		// Add in hits and misses
-		this.stats.hitsOrMisses(result);
+		this._stats.hitsOrMisses(result);
 		// Trigger the after get many raw hook
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 			keys,
@@ -743,7 +798,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: serializedValue,
 			ttl,
 		});
-		this.stats.set();
+		this._stats.set();
 
 		return result;
 	}
@@ -792,7 +847,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: data.value,
 			ttl,
 		});
-		this.stats.set();
+		this._stats.set();
 
 		return result;
 	}
@@ -963,7 +1018,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			key,
 			value: result,
 		});
-		this.stats.delete();
+		this._stats.delete();
 
 		return result;
 	}
