@@ -144,10 +144,6 @@ describe("capabilities", () => {
 
 		test("should detect iterator capability when present", () => {
 			const keyv = new Keyv();
-			// Map stores have iterator support
-			keyv.iterator = async function* () {
-				yield ["key", "value"];
-			};
 			const result = detectKeyv(keyv);
 			expect(result.iterator).toBe(true);
 		});

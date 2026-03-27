@@ -287,7 +287,7 @@ describe("Keyv", async () => {
 
 			let iterationCount = 0;
 			// Get all items using iterator
-			for await (const _ of keyv.iterator?.(keyv) ?? []) {
+			for await (const _ of keyv.iterator() ?? []) {
 				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}
@@ -296,7 +296,7 @@ describe("Keyv", async () => {
 
 			iterationCount = 0;
 			// Get all items using iterator
-			for await (const _ of keyv.iterator?.(keyv) ?? []) {
+			for await (const _ of keyv.iterator() ?? []) {
 				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}

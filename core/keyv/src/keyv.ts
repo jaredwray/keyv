@@ -4,7 +4,6 @@ import { KeyvJsonSerializer } from "./json-serializer.js";
 import StatsManager from "./stats-manager.js";
 import {
 	type DeserializedData,
-	type IteratorFunction,
 	type KeyvCompressionAdapter,
 	type KeyvEntry,
 	KeyvHooks,
@@ -23,11 +22,6 @@ import {
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends Hookified {
-	/**
-	 * Async iterator function for iterating over stored key-value pairs.
-	 */
-	private _iterator?: IteratorFunction;
-
 	/**
 	 * Stats manager for tracking cache operation metrics (hits, misses, sets, deletes, errors).
 	 */
@@ -183,24 +177,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 
 			this._store.namespace = this._namespace;
-
-			// Attach iterators
-			if (
-				// biome-ignore lint/suspicious/noExplicitAny: need to check Map iterator
-				typeof (this._store as any)[Symbol.iterator] === "function" &&
-				this._store instanceof Map
-			) {
-				this._iterator = this.generateIterator(
-					this._store as unknown as IteratorFunction,
-				);
-			} else if ("iterator" in this._store) {
-				this._iterator = this.generateIterator(
-					// biome-ignore lint/style/noNonNullAssertion: need to fix
-					this._store.iterator!.bind(this._store),
-				);
-			} else {
-				this._iterator = this.generateFallbackIterator();
-			}
 		}
 
 		if (mergedOptions.stats) {
@@ -255,20 +231,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 			/* v8 ignore next -- @preserve */
 			if (this._namespace) {
 				this._store.namespace = this._namespace;
-			}
-
-			if (
-				typeof store[Symbol.iterator] === "function" &&
-				store instanceof Map
-			) {
-				this._iterator = this.generateIterator(
-					store as unknown as IteratorFunction,
-				);
-				/* v8 ignore next -- @preserve */
-			} else if ("iterator" in store) {
-				this._iterator = this.generateIterator(store.iterator?.bind(store));
-			} else {
-				this._iterator = this.generateFallbackIterator();
 			}
 		} else {
 			throw new Error("Invalid storage adapter");
@@ -381,22 +343,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current iterator function.
-	 * @returns {IteratorFunction | undefined} The current iterator function.
-	 */
-	public get iterator(): IteratorFunction | undefined {
-		return this._iterator;
-	}
-
-	/**
-	 * Set the iterator function.
-	 * @param {IteratorFunction | undefined} iterator The iterator function to set.
-	 */
-	public set iterator(iterator: IteratorFunction | undefined) {
-		this._iterator = iterator;
-	}
-
-	/**
 	 * Get the stats manager.
 	 * @returns {StatsManager} The current stats manager.
 	 */
@@ -412,38 +358,43 @@ export class Keyv<GenericValue = any> extends Hookified {
 		this._stats = stats;
 	}
 
-	public generateIterator(iterator: IteratorFunction): IteratorFunction {
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		const function_: IteratorFunction = async function* (this: any) {
-			/* v8 ignore next 3 -- @preserve */
-			for await (const [key, raw] of typeof iterator === "function"
-				? iterator()
-				: iterator) {
-				const data = await this.deserializeData(raw);
+	/**
+	 * Iterate over all key-value pairs in the store. Automatically deserializes values,
+	 * filters out expired entries, and deletes them from the store.
+	 * @returns {AsyncGenerator<Array<string | unknown>, void>} An async generator yielding `[key, value]` pairs.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: iterator yields vary by store
+	public async *iterator(): AsyncGenerator<[string, any], void> {
+		const store = this._store;
 
-				if (typeof data.expires === "number" && Date.now() > data.expires) {
-					await this.delete(key);
+		if (store instanceof Map) {
+			for (const [key, raw] of store) {
+				const data = await this.deserializeData(raw as string);
+
+				if (data && isDataExpired(data)) {
+					await this.delete(key as string);
 					continue;
 				}
 
-				yield [key, data.value];
+				yield [key as string, data?.value];
 			}
-		};
+		} else if (typeof store.iterator === "function") {
+			for await (const [key, raw] of store.iterator()) {
+				const data = await this.deserializeData(raw as string);
 
-		return function_.bind(this);
-	}
+				if (data && isDataExpired(data)) {
+					await this.delete(key as string);
+					continue;
+				}
 
-	public generateFallbackIterator(): IteratorFunction {
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		// biome-ignore lint/correctness/useYield: fallback iterator intentionally yields nothing
-		const function_: IteratorFunction = async function* (this: any) {
+				yield [key as string, data?.value];
+			}
+		} else {
 			this.emit(
 				"error",
 				new Error("Iterator not supported by this storage adapter"),
 			);
-		};
-
-		return function_.bind(this);
+		}
 	}
 
 	/**

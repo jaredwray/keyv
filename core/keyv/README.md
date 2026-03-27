@@ -819,16 +819,20 @@ await keyv.disconnect();
 
 ## .iterator()
 
-Iterate over all entries of the current namespace.
+Iterate over all key-value pairs in the store. Automatically deserializes values, filters out expired entries, and deletes them.
 
-Returns a iterable that can be iterated by for-of loops. For example:
+Returns an async generator that yields `[key, value]` pairs. Use with `for await...of`:
 
 ```js
-// please note that the "await" keyword should be used here
-for await (const [key, value] of this.keyv.iterator()) {
+for await (const [key, value] of keyv.iterator()) {
   console.log(key, value);
-};
+}
 ```
+
+The iterator works with any storage backend:
+- **Map stores**: iterates using the built-in `Symbol.iterator`
+- **Storage adapters**: delegates to the adapter's `iterator()` method (e.g., Redis SCAN, SQL cursor)
+- **Unsupported stores**: emits an `error` event if the store does not support iteration
 
 # API - Properties
 
