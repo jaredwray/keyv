@@ -144,7 +144,7 @@ export type KeyvSanitizeOptions = {
 export type KeyvOptions = {
 	/**
 	 * Namespace for the current instance.
-	 * @default 'keyv'
+	 * @default undefined
 	 */
 	namespace?: string;
 	/**

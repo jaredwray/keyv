@@ -98,7 +98,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 		store ??= {} as KeyvOptions;
 
 		const mergedOptions: KeyvOptions = {
-			namespace: "keyv",
 			...options,
 		};
 
@@ -127,10 +126,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				mergedOptions.serialization ?? new KeyvJsonSerializer();
 		}
 
-		/* v8 ignore next -- @preserve */
-		if (mergedOptions.namespace) {
-			this._namespace = mergedOptions.namespace;
-		}
+		this._namespace = mergedOptions.namespace;
 
 		/* v8 ignore next -- @preserve */
 		if (this._store) {
@@ -352,6 +348,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		key = sanitizeKey(key as string, this._sanitizePattern);
+		if (key === "") {
+			return undefined;
+		}
+
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET, { key });
 		// biome-ignore lint/suspicious/noImplicitAnyLet: need to fix
 		let rawData;
@@ -473,6 +473,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
 		key = sanitizeKey(key, this._sanitizePattern);
+		if (key === "") {
+			return undefined;
+		}
+
 		const store = this._store;
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
 		const rawData = await store.get(key);
@@ -601,6 +605,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 		ttl?: number,
 	): Promise<boolean> {
 		key = sanitizeKey(key, this._sanitizePattern);
+		if (key === "") {
+			return false;
+		}
+
 		const data = { key, value, ttl };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET, data);
 
@@ -715,6 +723,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 		value: KeyvValue<Value>,
 	): Promise<boolean> {
 		key = sanitizeKey(key, this._sanitizePattern);
+		if (key === "") {
+			return false;
+		}
+
 		const data = { key, value };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
@@ -817,6 +829,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		key = sanitizeKey(key, this._sanitizePattern);
+		if (key === "") {
+			return false;
+		}
+
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key });
 
 		let result = true;
@@ -893,6 +909,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		key = sanitizeKey(key, this._sanitizePattern);
+		if (key === "") {
+			return false;
+		}
+
 		const store = this._store;
 		if (store.has !== undefined && !(store instanceof Map)) {
 			return store.has(key);

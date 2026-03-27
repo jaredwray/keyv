@@ -654,7 +654,7 @@ The storage adapter instance to be used by Keyv.
 ## .namespace
 
 Type: `String`
-Default: `'keyv'`
+Default: `undefined`
 
 This is the namespace for the current instance. When you set it it will set it also on the storage adapter.
 
@@ -667,7 +667,7 @@ The options object is also passed through to the storage adapter. Check your sto
 ## options.namespace
 
 Type: `String`<br />
-Default: `'keyv'`
+Default: `undefined`
 
 Namespace for the current instance.
 
@@ -851,7 +851,7 @@ here is an example of setting the namespace to `undefined`:
 
 ```js
 const keyv = new Keyv();
-console.log(keyv.namespace); // 'keyv' which is default
+console.log(keyv.namespace); // undefined which is default
 keyv.namespace = undefined;
 console.log(keyv.namespace); // undefined
 ```

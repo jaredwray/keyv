@@ -757,8 +757,8 @@ test.it("Keyv stats enabled should create counts", async (t) => {
 test.it("should be able to set the namespace via property", async (t) => {
 	const store = createStore();
 	const keyv = new Keyv({ store });
-	t.expect(keyv.namespace).toBe("keyv");
-	t.expect(store.namespace).toBe("keyv");
+	t.expect(keyv.namespace).toBeUndefined();
+	t.expect(store.namespace).toBeUndefined();
 	keyv.namespace = "test";
 	t.expect(keyv.namespace).toBe("test");
 	t.expect(store.namespace).toBe("test");
@@ -836,8 +836,7 @@ test.it("Keyv can get and set the compress property", async (t) => {
 
 test.it("Keyv will not prefix if there is no namespace", async (t) => {
 	const keyv = new Keyv();
-	t.expect(keyv.namespace).toBe("keyv");
-	keyv.namespace = undefined;
+	t.expect(keyv.namespace).toBeUndefined();
 	await keyv.set("foo", "bar");
 	await keyv.set("foo1", "bar1");
 	await keyv.set("foo2", "bar2");

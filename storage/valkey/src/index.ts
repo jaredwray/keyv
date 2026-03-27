@@ -484,8 +484,9 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	public async *iterator() {
 		const scan = this._client.scan.bind(this._client);
 		const get = this._client.mget.bind(this._client);
-		const prefix = `${this.getKeyPrefix()}:`;
-		const match = `${prefix}*`;
+		const keyPrefix = this.getKeyPrefix();
+		const prefix = keyPrefix ? `${keyPrefix}:` : "";
+		const match = prefix ? `${prefix}*` : "*";
 		let cursor = "0";
 		do {
 			const [curs, keys] = await scan(cursor, "MATCH", match);
@@ -493,7 +494,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			if (keys.length > 0) {
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
-					const key = keys[i].slice(prefix.length);
+					const key = prefix ? keys[i].slice(prefix.length) : keys[i];
 					const value = values[i];
 					yield [key, value];
 				}

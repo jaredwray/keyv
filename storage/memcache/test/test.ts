@@ -68,7 +68,7 @@ it("format key for namespace", () => {
 	const key = faker.string.uuid();
 	const localMemcache = new KeyvMemcache(uri);
 	new Keyv({ store: localMemcache });
-	expect(localMemcache.formatKey(key)).toBe(`keyv:${key}`);
+	expect(localMemcache.formatKey(key)).toBe(key);
 });
 
 it("keyv get with namespace", async () => {
