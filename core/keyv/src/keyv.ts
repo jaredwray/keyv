@@ -23,8 +23,8 @@ import {
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends Hookified {
-	iterator?: IteratorFunction;
-	stats = new StatsManager(false);
+	public iterator?: IteratorFunction;
+	public stats = new StatsManager(false);
 
 	/**
 	 * Time to live in milliseconds
@@ -357,7 +357,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				: buildSanitizePattern(value === true ? {} : value);
 	}
 
-	generateIterator(iterator: IteratorFunction): IteratorFunction {
+	public generateIterator(iterator: IteratorFunction): IteratorFunction {
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		const function_: IteratorFunction = async function* (this: any) {
 			/* v8 ignore next 3 -- @preserve */
@@ -378,7 +378,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		return function_.bind(this);
 	}
 
-	generateFallbackIterator(): IteratorFunction {
+	public generateFallbackIterator(): IteratorFunction {
 		// biome-ignore lint/suspicious/noExplicitAny: type format
 		// biome-ignore lint/correctness/useYield: fallback iterator intentionally yields nothing
 		const function_: IteratorFunction = async function* (this: any) {
@@ -411,11 +411,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Get the Value of a Key
 	 * @param {string | string[]} key passing in a single key or multiple as an array
 	 */
-	async get<Value = GenericValue>(key: string): Promise<Value | undefined>;
-	async get<Value = GenericValue>(
+	public async get<Value = GenericValue>(
+		key: string,
+	): Promise<Value | undefined>;
+	public async get<Value = GenericValue>(
 		key: string[],
 	): Promise<Array<Value | undefined>>;
-	async get<Value = GenericValue>(
+	public async get<Value = GenericValue>(
 		key: string | string[],
 	): Promise<Value | undefined | Array<Value | undefined>> {
 		const store = this._store;
@@ -695,7 +697,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {number} [ttl] time to live in milliseconds
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
-	async set<Value = GenericValue>(
+	public async set<Value = GenericValue>(
 		key: string,
 		value: Value,
 		ttl?: number,
@@ -755,7 +757,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {DeserializedData<Value>} value the raw value envelope to store
 	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
 	 */
-	async setRaw<Value = GenericValue>(
+	public async setRaw<Value = GenericValue>(
 		key: string,
 		value: DeserializedData<Value>,
 	): Promise<boolean> {
@@ -800,7 +802,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {Array<KeyvEntry<Value>>} entries the entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
-	async setMany<Value = GenericValue>(
+	public async setMany<Value = GenericValue>(
 		entries: KeyvEntry<Value>[],
 	): Promise<boolean[]> {
 		entries = entries.map((e) => ({
@@ -866,7 +868,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {Array<{key: string, value: DeserializedData<Value>}>} entries the raw entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
-	async setManyRaw<Value = GenericValue>(
+	public async setManyRaw<Value = GenericValue>(
 		entries: Array<{
 			key: string;
 			value: DeserializedData<Value>;
@@ -1008,7 +1010,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Clear the store
 	 * @returns {void}
 	 */
-	async clear(): Promise<void> {
+	public async clear(): Promise<void> {
 		this.emit("clear");
 		const store = this._store;
 
@@ -1083,7 +1085,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Will disconnect the store. This is only available if the store has a disconnect method
 	 * @returns {Promise<void>}
 	 */
-	async disconnect(): Promise<void> {
+	public async disconnect(): Promise<void> {
 		const store = this._store;
 		this.emit("disconnect");
 		if (typeof store.disconnect === "function") {
