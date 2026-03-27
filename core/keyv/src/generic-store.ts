@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
 import { Keyv } from "./keyv.js";
-import type { KeyvEntry, KeyvStorageAdapter, StoredData } from "./types.js";
+import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "./types.js";
 import { isDataExpired } from "./utils.js";
 
 /**
@@ -243,9 +243,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple entries in the store at once.
 	 * @param entries - Array of entries containing key, value, and optional TTL
 	 */
-	async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			const result = await this.set(entry.key, entry.value, entry.ttl);
@@ -312,7 +310,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 				this._store.delete(keyPrefix);
 				results.push(existed);
 			} catch (error) {
-				this.emit("error", error);
+				this.emit(KeyvEvents.ERROR, error);
 				results.push(false);
 			}
 		}
@@ -326,10 +324,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param namespace - Optional namespace to filter entries by
 	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding [key, value] pairs
 	 */
-	async *iterator<Value>(): AsyncGenerator<
-		Array<string | Awaited<Value> | undefined>,
-		void
-	> {
+	async *iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
 		// Check if store supports iteration
 		if (typeof (this._store as Map<any, any>).entries !== "function") {
 			return;
@@ -386,10 +381,7 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
  * });
  * ```
  */
-export function createKeyv(
-	store: KeyvMapType,
-	options?: KeyvGenericStoreOptions,
-) {
+export function createKeyv(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
 	const genericStore = new KeyvGenericStore(store, options);
 	const keyv = new Keyv({
 		store: genericStore,

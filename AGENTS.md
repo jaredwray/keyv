@@ -48,7 +48,7 @@ Individual package tests:
 **Core Keyv Class** (`core/keyv/src/index.ts`):
 - Extends EventManager for event emission
 - Uses HooksManager for pre/post operation hooks
-- Includes StatsManager for usage statistics
+- Includes KeyvStats for usage statistics
 - Supports pluggable storage adapters, serialization, and compression
 - Handles namespacing, TTL, and key prefixing
 

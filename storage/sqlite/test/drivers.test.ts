@@ -46,9 +46,7 @@ describe("driver selection", () => {
 			// @ts-expect-error testing invalid driver
 			driver: "nonexistent-driver",
 		});
-		await expect(store.get("key1")).rejects.toThrow(
-			/Failed to load SQLite driver/,
-		);
+		await expect(store.get("key1")).rejects.toThrow(/Failed to load SQLite driver/);
 	});
 
 	it("bun:sqlite driver fails to load outside Bun runtime", async () => {

@@ -37,9 +37,7 @@ describe("getClient", () => {
 			await keyvRedis.getClient();
 		} catch (error) {
 			didError = true;
-			expect((error as Error).message).toBe(
-				RedisErrorMessages.RedisClientNotConnectedThrown,
-			);
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
 		}
 
 		expect(didError).toBe(true);

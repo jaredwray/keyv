@@ -3,8 +3,7 @@ import { describe, expect, test } from "vitest";
 import { createKeyv, KeyvGenericStore } from "../src/generic-store.js";
 
 // eslint-disable-next-line no-promise-executor-return
-const sleep = async (ms: number) =>
-	new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("Keyv Generic Store Options", () => {
 	test("should accept a store as the first argument", () => {
@@ -371,11 +370,7 @@ describe("Keyv Generic Store Iterator", () => {
 		}
 
 		expect(entries.length).toBe(3);
-		expect(entries.map(([key]) => key).sort()).toEqual([
-			"key1",
-			"key2",
-			"key3",
-		]);
+		expect(entries.map(([key]) => key).sort()).toEqual(["key1", "key2", "key3"]);
 	});
 
 	test("should filter by namespace", async () => {

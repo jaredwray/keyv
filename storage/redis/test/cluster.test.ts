@@ -83,9 +83,7 @@ describe("KeyvRedis Cluster", () => {
 		const cluster = createCluster(defaultClusterOptions);
 		await cluster.connect();
 
-		const spies = cluster.masters.map((master) =>
-			vitest.spyOn(master.client, "mGet"),
-		);
+		const spies = cluster.masters.map((master) => vitest.spyOn(master.client, "mGet"));
 
 		const keyvRedis = new KeyvRedis(cluster);
 		const keys = Array.from({ length: 4 }, () => faker.string.uuid());
@@ -268,9 +266,7 @@ describe("KeyvRedis Cluster", () => {
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator(
-					iteratorNamespace,
-				)) {
+				for await (const [key, value] of keyvRedis.iterator(iteratorNamespace)) {
 					keys.push(key);
 					values.push(value);
 				}
@@ -430,9 +426,7 @@ describe("KeyvRedis Cluster", () => {
 			}));
 
 			// Should not throw CROSSSLOT error
-			await expect(keyvRedis.setMany(entries)).resolves.toEqual(
-				entries.map(() => true),
-			);
+			await expect(keyvRedis.setMany(entries)).resolves.toEqual(entries.map(() => true));
 
 			// Verify all keys were set
 			const values = await keyvRedis.getMany(entries.map((e) => e.key));
@@ -500,9 +494,7 @@ describe("KeyvRedis Cluster", () => {
 			}));
 
 			// Should not throw CROSSSLOT error
-			await expect(keyvRedis.setMany(entries)).resolves.toEqual(
-				entries.map(() => true),
-			);
+			await expect(keyvRedis.setMany(entries)).resolves.toEqual(entries.map(() => true));
 
 			// Verify all keys were set
 			const values = await keyvRedis.getMany(entries.map((e) => e.key));

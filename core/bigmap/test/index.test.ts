@@ -7,10 +7,7 @@ enum FakeDataType {
 	NUMBER = "number",
 }
 
-function getFake<T>(
-	type: FakeDataType,
-	amount = 1,
-): Array<{ key: string; value: T }> {
+function getFake<T>(type: FakeDataType, amount = 1): Array<{ key: string; value: T }> {
 	if (type === FakeDataType.STRING) {
 		return Array.from({ length: amount }, () => ({
 			key: faker.string.alpha(5),
@@ -62,8 +59,7 @@ describe("BigMap Instance", () => {
 	});
 
 	it("should allow setting a custom hash function", () => {
-		const customHashFunction = (key: string, storeSize: number) =>
-			key.length % storeSize;
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
 
 		const bigMap = new BigMap<string, number>({
 			storeHashFunction: customHashFunction,
@@ -132,11 +128,7 @@ describe("BigMap Iterators", () => {
 
 		expect(entries.length).toBe(3);
 		for (const entry of entries) {
-			expect(
-				dataSet.some(
-					(data) => data.key === entry[0] && data.value === entry[1],
-				),
-			).toBe(true);
+			expect(dataSet.some((data) => data.key === entry[0] && data.value === entry[1])).toBe(true);
 		}
 	});
 
@@ -174,11 +166,7 @@ describe("BigMap Iterators", () => {
 		}
 
 		for (const entry of entries) {
-			expect(
-				dataSet.some(
-					(data) => data.key === entry[0] && data.value === entry[1],
-				),
-			).toBe(true);
+			expect(dataSet.some((data) => data.key === entry[0] && data.value === entry[1])).toBe(true);
 		}
 
 		expect(entries.length).toBe(2);
@@ -251,8 +239,7 @@ describe("BigMap Hash", () => {
 	});
 
 	it("should use a custom hash function", () => {
-		const customHashFunction = (key: string, storeSize: number) =>
-			key.length % storeSize;
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
 		const bigMap = new BigMap<string, number>({
 			storeHashFunction: customHashFunction,
 		});
@@ -309,8 +296,7 @@ describe("BigMap Store", () => {
 	});
 
 	it("should get the store from a custom hash function", () => {
-		const customHashFunction = (key: string, storeSize: number) =>
-			key.length % storeSize;
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
 		const bigMap = new BigMap<string, number>({
 			storeHashFunction: customHashFunction,
 		});
@@ -428,8 +414,7 @@ describe("createKeyv", () => {
 	});
 
 	it("should work with custom hash function", async () => {
-		const customHashFunction = (key: string, storeSize: number) =>
-			key.length % storeSize;
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
 		const keyv = createKeyv({
 			storeSize: 4,
 			storeHashFunction: customHashFunction,

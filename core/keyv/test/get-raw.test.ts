@@ -70,40 +70,25 @@ describe("Keyv Get Many Raw", async () => {
 		const keyv = new Keyv();
 		const keys = Array.from({ length: 5 }, () => faker.string.alphanumeric(10));
 		const values = keys.map(() => faker.string.alphanumeric(10));
-		await Promise.all(
-			keys.map(async (key, index) => keyv.set(key, values[index])),
-		);
+		await Promise.all(keys.map(async (key, index) => keyv.set(key, values[index])));
 		const results = await keyv.getManyRaw(keys);
-		expect(results).toEqual(
-			keys.map((_key, index) => ({ value: values[index] })),
-		);
+		expect(results).toEqual(keys.map((_key, index) => ({ value: values[index] })));
 	});
 
 	test("should return undefined for non-existing keys", async () => {
 		const keyv = new Keyv();
 		const keys = Array.from({ length: 5 }, () => faker.string.alphanumeric(10));
 		const results = await keyv.getManyRaw(keys);
-		expect(results).toEqual(
-			Array.from({ length: keys.length }).fill(undefined),
-		);
+		expect(results).toEqual(Array.from({ length: keys.length }).fill(undefined));
 	});
 
 	test("should return mixed results for existing and non-existing keys", async () => {
 		const keyv = new Keyv();
-		const existingKeys = Array.from({ length: 3 }, () =>
-			faker.string.alphanumeric(10),
-		);
-		const nonExistingKeys = Array.from({ length: 2 }, () =>
-			faker.string.alphanumeric(10),
-		);
+		const existingKeys = Array.from({ length: 3 }, () => faker.string.alphanumeric(10));
+		const nonExistingKeys = Array.from({ length: 2 }, () => faker.string.alphanumeric(10));
 		const values = existingKeys.map(() => faker.string.alphanumeric(10));
-		await Promise.all(
-			existingKeys.map(async (key, index) => keyv.set(key, values[index])),
-		);
-		const results = await keyv.getManyRaw([
-			...existingKeys,
-			...nonExistingKeys,
-		]);
+		await Promise.all(existingKeys.map(async (key, index) => keyv.set(key, values[index])));
+		const results = await keyv.getManyRaw([...existingKeys, ...nonExistingKeys]);
 		expect(results).toEqual([
 			{ value: values[0] },
 			{ value: values[1] },
@@ -117,9 +102,7 @@ describe("Keyv Get Many Raw", async () => {
 		const keyv = new Keyv();
 		const keys = Array.from({ length: 3 }, () => faker.string.alphanumeric(10));
 		const values = keys.map(() => faker.string.alphanumeric(10));
-		await Promise.all(
-			keys.map(async (key, index) => keyv.set(key, values[index], 1000)),
-		); // Set with 1 second expiration
+		await Promise.all(keys.map(async (key, index) => keyv.set(key, values[index], 1000))); // Set with 1 second expiration
 		const results = await keyv.getManyRaw(keys);
 		expect(results).toEqual(
 			keys.map((_key, index) => ({
@@ -133,27 +116,19 @@ describe("Keyv Get Many Raw", async () => {
 		const keyv = new Keyv();
 		const keys = Array.from({ length: 3 }, () => faker.string.alphanumeric(10));
 		const values = keys.map(() => faker.string.alphanumeric(10));
-		await Promise.all(
-			keys.map(async (key, index) => keyv.set(key, values[index], 50)),
-		); // Set with 50ms expiration
+		await Promise.all(keys.map(async (key, index) => keyv.set(key, values[index], 50))); // Set with 50ms expiration
 		await delay(100); // Wait for expiration
 		const results = await keyv.getManyRaw(keys);
-		expect(results).toEqual(
-			Array.from({ length: keys.length }).fill(undefined),
-		);
+		expect(results).toEqual(Array.from({ length: keys.length }).fill(undefined));
 	});
 
 	test("should get many with storage that supports getMany function", async () => {
 		const keyv = new Keyv({ store: createStore() });
 		const keys = Array.from({ length: 5 }, () => faker.string.alphanumeric(10));
 		const values = keys.map(() => faker.string.alphanumeric(10));
-		await Promise.all(
-			keys.map(async (key, index) => keyv.set(key, values[index])),
-		);
+		await Promise.all(keys.map(async (key, index) => keyv.set(key, values[index])));
 		const results = await keyv.getManyRaw(keys);
-		expect(results).toEqual(
-			keys.map((_key, index) => ({ value: values[index] })),
-		);
+		expect(results).toEqual(keys.map((_key, index) => ({ value: values[index] })));
 	});
 
 	test("sending in empty array should return empty array", async () => {

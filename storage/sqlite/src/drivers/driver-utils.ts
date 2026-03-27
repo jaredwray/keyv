@@ -7,9 +7,7 @@ import type { DbQuery } from "../types.js";
  * @returns An array of primitive-safe parameters.
  */
 export function coerceParams(params: unknown[]): unknown[] {
-	return params.map((p) =>
-		p !== null && typeof p === "object" ? JSON.stringify(p) : p,
-	);
+	return params.map((p) => (p !== null && typeof p === "object" ? JSON.stringify(p) : p));
 }
 
 /**

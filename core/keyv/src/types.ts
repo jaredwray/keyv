@@ -23,6 +23,42 @@ export type KeyvValue<Value> = {
 /** @deprecated Use `KeyvValue` instead. */
 export type DeserializedData<Value> = KeyvValue<Value>;
 
+export enum KeyvEvents {
+	ERROR = "error",
+	INFO = "info",
+	WARN = "warn",
+	STAT_HIT = "stat:hit",
+	STAT_MISS = "stat:miss",
+	STAT_SET = "stat:set",
+	STAT_DELETE = "stat:delete",
+	STAT_ERROR = "stat:error",
+}
+
+export type KeyvTelemetryEvent = {
+	event: string;
+	key?: string;
+	namespace?: string;
+	timestamp: number;
+};
+
+export type KeyvStatsOptions = {
+	/**
+	 * Enable or disable stats tracking.
+	 * @default false
+	 */
+	enabled?: boolean;
+	/**
+	 * Maximum number of entries per event-type LRU map.
+	 * @default 1000
+	 */
+	maxEntries?: number;
+	/**
+	 * The event emitter (e.g. a Keyv instance) to subscribe to for telemetry events.
+	 * If provided, KeyvStats will automatically subscribe on construction.
+	 */
+	emitter?: IEventEmitter;
+};
+
 export enum KeyvHooks {
 	/** @deprecated Use BEFORE_SET instead */
 	PRE_SET = "preSet",
@@ -107,38 +143,78 @@ export type KeyvStorageAdapter = {
 	clear(): Promise<void>;
 	has?(key: string): Promise<boolean>;
 	hasMany?(keys: string[]): Promise<boolean[]>;
-	getMany?<Value>(
-		keys: string[],
-	): Promise<Array<StoredData<Value | undefined>>>;
+	getMany?<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>>;
 	disconnect?(): Promise<void>;
 	deleteMany?(key: string[]): Promise<boolean[]>;
-	iterator?<Value>(): AsyncGenerator<
-		Array<string | Awaited<Value> | undefined>,
-		void
-	>;
+	iterator?<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
-export type KeyvSanitizeOptions = {
+/**
+ * Which dangerous-pattern categories to detect and strip.
+ * Each defaults to `true` when the parent scope is enabled.
+ */
+export type KeyvSanitizePatterns = {
 	/**
-	 * Strip SQL injection characters: ' " ` ;
+	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
+	 * @default false
+	 */
+	sql: boolean;
+	/**
+	 * Detect and strip MongoDB operator patterns: leading `$`, `{$` sequences.
+	 * @default false
+	 */
+	mongo: boolean;
+	/**
+	 * Detect and strip dangerous control sequences: null bytes (`\0`), carriage returns (`\r`), newlines (`\n`).
+	 * @default false
+	 */
+	escape: boolean;
+	/**
+	 * Detect and strip path traversal patterns: `../` and `..\\` sequences.
+	 * @default false
+	 */
+	path: boolean;
+};
+
+export type KeyvSanitizePatternsOptions = {
+	/**
+	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
 	 * @default true
 	 */
 	sql?: boolean;
 	/**
-	 * Strip MongoDB operator characters: $ { }
+	 * Detect and strip MongoDB operator patterns: leading `$`, `{$` sequences.
 	 * @default true
 	 */
 	mongo?: boolean;
 	/**
-	 * Strip escape and control characters: \ \0 \n \r
+	 * Detect and strip dangerous control sequences: null bytes (`\0`), carriage returns (`\r`), newlines (`\n`).
 	 * @default true
 	 */
 	escape?: boolean;
 	/**
-	 * Strip path traversal characters: /
+	 * Detect and strip path traversal patterns: `../` and `..\\` sequences.
 	 * @default true
 	 */
 	path?: boolean;
+};
+
+/**
+ * Controls what gets sanitized and with which patterns.
+ */
+export type KeyvSanitizeOptions = {
+	/**
+	 * Sanitize keys. Pass `true` for all pattern categories, `false` to skip,
+	 * or a `KeyvSanitizePatternOptions` object for granular control.
+	 * @default false
+	 */
+	keys?: boolean | KeyvSanitizePatternsOptions;
+	/**
+	 * Sanitize namespace strings. Pass `true` for all pattern categories, `false` to skip,
+	 * or a `KeyvSanitizePatternOptions` object for granular control.
+	 * @default false
+	 */
+	namespace?: boolean | KeyvSanitizePatternsOptions;
 };
 
 export type KeyvOptions = {
@@ -165,7 +241,7 @@ export type KeyvOptions = {
 	ttl?: number;
 	/**
 	 * Enable compression option
-	 * @default false
+	 * @default undefined
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	compression?: KeyvCompressionAdapter | any;
@@ -181,13 +257,12 @@ export type KeyvOptions = {
 	 */
 	throwOnErrors?: boolean;
 	/**
-	 * Sanitize keys to remove characters that could be dangerous for SQL,
-	 * MongoDB, Redis, or filesystem-based storage backends. Pass `true` to
-	 * enable all categories, `false` to disable, or a `KeyvSanitizeOptions`
-	 * object to toggle individual categories.
-	 * @default true
+	 * Enable sanitization of keys and namespaces by detecting dangerous patterns
+	 * for SQL, MongoDB, or filesystem-based storage backends. Pass a `KeyvSanitizeOptions`
+	 * object for granular control over targets and patterns.
+	 * @default undefined
 	 */
-	sanitizeKey?: boolean | KeyvSanitizeOptions;
+	sanitize?: KeyvSanitizeOptions;
 };
 
 /**

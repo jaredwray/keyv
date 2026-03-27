@@ -1,10 +1,6 @@
 import type { Db } from "../types.js";
 
-export type SqliteDriverName =
-	| "better-sqlite3"
-	| "node:sqlite"
-	| "bun:sqlite"
-	| "custom";
+export type SqliteDriverName = "better-sqlite3" | "node:sqlite" | "bun:sqlite" | "custom";
 
 export type SqliteDriverConnectOptions = {
 	filename: string;

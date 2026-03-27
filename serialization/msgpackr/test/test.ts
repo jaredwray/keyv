@@ -14,25 +14,19 @@ describe("KeyvMsgpackrSerializer", () => {
 
 	it("stringify and parse of string value", () => {
 		const serialized = msgpackrSerializer.stringify({ value: "foo" });
-		const deserialized = msgpackrSerializer.parse<{ value: string }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: string }>(serialized);
 		expect(deserialized.value).toBe("foo");
 	});
 
 	it("stringify and parse of number value", () => {
 		const serialized = msgpackrSerializer.stringify({ value: 5 });
-		const deserialized = msgpackrSerializer.parse<{ value: number }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: number }>(serialized);
 		expect(deserialized.value).toBe(5);
 	});
 
 	it("stringify and parse of boolean value", () => {
 		const serialized = msgpackrSerializer.stringify({ value: true });
-		const deserialized = msgpackrSerializer.parse<{ value: boolean }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: boolean }>(serialized);
 		expect(deserialized.value).toBe(true);
 	});
 
@@ -44,18 +38,14 @@ describe("KeyvMsgpackrSerializer", () => {
 
 	it("stringify and parse of undefined value", () => {
 		const serialized = msgpackrSerializer.stringify({ value: undefined });
-		const deserialized = msgpackrSerializer.parse<{ value: undefined }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: undefined }>(serialized);
 		expect(deserialized.value).toBeUndefined();
 	});
 
 	it("stringify and parse of object value", () => {
 		const original = { foo: "bar", bar: 5, baz: true };
 		const serialized = msgpackrSerializer.stringify({ value: original });
-		const deserialized = msgpackrSerializer.parse<{ value: typeof original }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: typeof original }>(serialized);
 		expect(deserialized.value).toEqual(original);
 	});
 
@@ -72,9 +62,7 @@ describe("KeyvMsgpackrSerializer", () => {
 				[3, 4],
 			],
 		});
-		const deserialized = msgpackrSerializer.parse<{ value: number[][] }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: number[][] }>(serialized);
 		expect(deserialized.value).toEqual([
 			[1, 2],
 			[3, 4],
@@ -94,9 +82,7 @@ describe("msgpackr extended type support", () => {
 	it("stringify and parse of RegExp", () => {
 		const regex = /hello\s+world/gi;
 		const serialized = msgpackrSerializer.stringify({ value: regex });
-		const deserialized = msgpackrSerializer.parse<{ value: RegExp }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: RegExp }>(serialized);
 		expect(deserialized.value).toBeInstanceOf(RegExp);
 		expect(deserialized.value.source).toBe(regex.source);
 		expect(deserialized.value.flags).toBe(regex.flags);
@@ -120,9 +106,7 @@ describe("msgpackr extended type support", () => {
 	it("stringify and parse of Set", () => {
 		const set = new Set([1, 2, 3]);
 		const serialized = msgpackrSerializer.stringify({ value: set });
-		const deserialized = msgpackrSerializer.parse<{ value: Set<number> }>(
-			serialized,
-		);
+		const deserialized = msgpackrSerializer.parse<{ value: Set<number> }>(serialized);
 		expect(deserialized.value).toBeInstanceOf(Set);
 		expect(deserialized.value.has(1)).toBe(true);
 		expect(deserialized.value.has(2)).toBe(true);

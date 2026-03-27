@@ -243,9 +243,7 @@ describe("KeyvRedis Sentinel", () => {
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator(
-					iteratorNamespace,
-				)) {
+				for await (const [key, value] of keyvRedis.iterator(iteratorNamespace)) {
 					keys.push(key);
 					values.push(value);
 				}

@@ -87,32 +87,28 @@ test.it("close connection successfully", async (t) => {
 	}
 });
 
-test.it(
-	"create two instances and make sure they do not conflict",
-	async (t) => {
-		const postgresUri =
-			"postgresql://postgres:postgres@localhost:5432/keyv_test";
-		const postgresA = new KeyvPostgres({ uri: postgresUri });
-		const postgresB = new KeyvPostgres({ uri: postgresUri });
-		const keyvA = new Keyv({
-			store: postgresA,
-			namespace: "namespace-a",
-		});
-		const keyvB = new Keyv({
-			store: postgresB,
-			namespace: "namespace-b",
-		});
+test.it("create two instances and make sure they do not conflict", async (t) => {
+	const postgresUri = "postgresql://postgres:postgres@localhost:5432/keyv_test";
+	const postgresA = new KeyvPostgres({ uri: postgresUri });
+	const postgresB = new KeyvPostgres({ uri: postgresUri });
+	const keyvA = new Keyv({
+		store: postgresA,
+		namespace: "namespace-a",
+	});
+	const keyvB = new Keyv({
+		store: postgresB,
+		namespace: "namespace-b",
+	});
 
-		const key = faker.string.alphanumeric(10);
-		const valueA = faker.lorem.sentence();
-		const valueB = faker.lorem.sentence();
+	const key = faker.string.alphanumeric(10);
+	const valueA = faker.lorem.sentence();
+	const valueB = faker.lorem.sentence();
 
-		t.expect(await keyvA.set(key, valueA)).toBe(true);
-		t.expect(await keyvA.get(key)).toBe(valueA);
-		t.expect(await keyvB.set(key, valueB)).toBe(true);
-		t.expect(await keyvB.get(key)).toBe(valueB);
-	},
-);
+	t.expect(await keyvA.set(key, valueA)).toBe(true);
+	t.expect(await keyvA.get(key)).toBe(valueA);
+	t.expect(await keyvB.set(key, valueB)).toBe(true);
+	t.expect(await keyvB.get(key)).toBe(valueB);
+});
 
 test.it("helper to create Keyv instance with postgres", async (t) => {
 	const keyv = createKeyv({ uri: postgresUri });
@@ -144,41 +140,27 @@ test.it(".setMany support", async (t) => {
 		{ key: key2, value: value2 },
 		{ key: key3, value: value3 },
 	]);
-	t.expect(await keyv.getMany([key1, key2, key3])).toStrictEqual([
-		value1,
-		value2,
-		value3,
-	]);
+	t.expect(await keyv.getMany([key1, key2, key3])).toStrictEqual([value1, value2, value3]);
 });
 
-test.it(
-	".hasMany() returns correct booleans for existing and non-existing keys",
-	async (t) => {
-		const keyv = new KeyvPostgres(postgresUri);
-		const key1 = faker.string.alphanumeric(10);
-		const value1 = faker.lorem.sentence();
-		const key2 = faker.string.alphanumeric(10);
-		const value2 = faker.lorem.sentence();
-		const key3 = faker.string.alphanumeric(10);
-		await keyv.set(key1, value1);
-		await keyv.set(key2, value2);
-		const result = await keyv.hasMany([key1, key2, key3]);
-		t.expect(result).toStrictEqual([true, true, false]);
-	},
-);
+test.it(".hasMany() returns correct booleans for existing and non-existing keys", async (t) => {
+	const keyv = new KeyvPostgres(postgresUri);
+	const key1 = faker.string.alphanumeric(10);
+	const value1 = faker.lorem.sentence();
+	const key2 = faker.string.alphanumeric(10);
+	const value2 = faker.lorem.sentence();
+	const key3 = faker.string.alphanumeric(10);
+	await keyv.set(key1, value1);
+	await keyv.set(key2, value2);
+	const result = await keyv.hasMany([key1, key2, key3]);
+	t.expect(result).toStrictEqual([true, true, false]);
+});
 
-test.it(
-	".hasMany() with all non-existent keys returns all false",
-	async (t) => {
-		const keyv = new KeyvPostgres(postgresUri);
-		const result = await keyv.hasMany([
-			"nonexistent1",
-			"nonexistent2",
-			"nonexistent3",
-		]);
-		t.expect(result).toStrictEqual([false, false, false]);
-	},
-);
+test.it(".hasMany() with all non-existent keys returns all false", async (t) => {
+	const keyv = new KeyvPostgres(postgresUri);
+	const result = await keyv.hasMany(["nonexistent1", "nonexistent2", "nonexistent3"]);
+	t.expect(result).toStrictEqual([false, false, false]);
+});
 
 test.it("should have correct default property values", (t) => {
 	const keyv = new KeyvPostgres();
@@ -282,48 +264,39 @@ test.it("emits error when connection fails", async (t) => {
 	t.expect(error).toBeInstanceOf(Error);
 });
 
-test.it(
-	"native namespace: same key in different namespaces stored independently",
-	async (t) => {
-		const postgres1 = new KeyvPostgres({ uri: postgresUri });
-		postgres1.namespace = "ns1";
-		const postgres2 = new KeyvPostgres({ uri: postgresUri });
-		postgres2.namespace = "ns2";
+test.it("native namespace: same key in different namespaces stored independently", async (t) => {
+	const postgres1 = new KeyvPostgres({ uri: postgresUri });
+	postgres1.namespace = "ns1";
+	const postgres2 = new KeyvPostgres({ uri: postgresUri });
+	postgres2.namespace = "ns2";
 
-		await postgres1.set("ns1:testkey", "value1");
-		await postgres2.set("ns2:testkey", "value2");
+	await postgres1.set("ns1:testkey", "value1");
+	await postgres2.set("ns2:testkey", "value2");
 
-		t.expect(await postgres1.get("ns1:testkey")).toBe("value1");
-		t.expect(await postgres2.get("ns2:testkey")).toBe("value2");
-	},
-);
+	t.expect(await postgres1.get("ns1:testkey")).toBe("value1");
+	t.expect(await postgres2.get("ns2:testkey")).toBe("value2");
+});
 
-test.it(
-	"native namespace: null namespace stores and retrieves correctly",
-	async (t) => {
-		const postgres = new KeyvPostgres({ uri: postgresUri });
-		await postgres.set("testkey", "testvalue");
-		t.expect(await postgres.get("testkey")).toBe("testvalue");
-	},
-);
+test.it("native namespace: null namespace stores and retrieves correctly", async (t) => {
+	const postgres = new KeyvPostgres({ uri: postgresUri });
+	await postgres.set("testkey", "testvalue");
+	t.expect(await postgres.get("testkey")).toBe("testvalue");
+});
 
-test.it(
-	"native namespace: clear only clears the specified namespace",
-	async (t) => {
-		const postgres1 = new KeyvPostgres({ uri: postgresUri });
-		postgres1.namespace = "ns1";
-		const postgres2 = new KeyvPostgres({ uri: postgresUri });
-		postgres2.namespace = "ns2";
+test.it("native namespace: clear only clears the specified namespace", async (t) => {
+	const postgres1 = new KeyvPostgres({ uri: postgresUri });
+	postgres1.namespace = "ns1";
+	const postgres2 = new KeyvPostgres({ uri: postgresUri });
+	postgres2.namespace = "ns2";
 
-		await postgres1.set("ns1:key1", "value1");
-		await postgres2.set("ns2:key1", "value2");
+	await postgres1.set("ns1:key1", "value1");
+	await postgres2.set("ns2:key1", "value2");
 
-		await postgres1.clear();
+	await postgres1.clear();
 
-		t.expect(await postgres1.get("ns1:key1")).toBeUndefined();
-		t.expect(await postgres2.get("ns2:key1")).toBe("value2");
-	},
-);
+	t.expect(await postgres1.get("ns1:key1")).toBeUndefined();
+	t.expect(await postgres2.get("ns2:key1")).toBe("value2");
+});
 
 test.it(
 	"native namespace: iterator falls back to default limit when iterationLimit is 0",
@@ -342,73 +315,61 @@ test.it(
 	},
 );
 
-test.it(
-	"native namespace: iterator with null namespace paginates correctly",
-	async (t) => {
-		const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
+test.it("native namespace: iterator with null namespace paginates correctly", async (t) => {
+	const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
 
-		await postgres.set("a", "v1");
-		await postgres.set("b", "v2");
-		await postgres.set("c", "v3");
+	await postgres.set("a", "v1");
+	await postgres.set("b", "v2");
+	await postgres.set("c", "v3");
 
-		const keys: string[] = [];
-		for await (const [key] of postgres.iterator()) {
-			keys.push(key);
-		}
+	const keys: string[] = [];
+	for await (const [key] of postgres.iterator()) {
+		keys.push(key);
+	}
 
-		t.expect(keys.length).toBe(3);
-		t.expect(keys).toContain("a");
-		t.expect(keys).toContain("b");
-		t.expect(keys).toContain("c");
-	},
-);
+	t.expect(keys.length).toBe(3);
+	t.expect(keys).toContain("a");
+	t.expect(keys).toContain("b");
+	t.expect(keys).toContain("c");
+});
 
-test.it(
-	"native namespace: iterator only returns keys from correct namespace",
-	async (t) => {
-		const postgres1 = new KeyvPostgres({ uri: postgresUri });
-		postgres1.namespace = "ns1";
-		const postgres2 = new KeyvPostgres({ uri: postgresUri });
-		postgres2.namespace = "ns2";
+test.it("native namespace: iterator only returns keys from correct namespace", async (t) => {
+	const postgres1 = new KeyvPostgres({ uri: postgresUri });
+	postgres1.namespace = "ns1";
+	const postgres2 = new KeyvPostgres({ uri: postgresUri });
+	postgres2.namespace = "ns2";
 
-		await postgres1.set("key1", "val1");
-		await postgres1.set("key2", "val2");
-		await postgres2.set("key3", "val3");
+	await postgres1.set("key1", "val1");
+	await postgres1.set("key2", "val2");
+	await postgres2.set("key3", "val3");
 
-		const keys: string[] = [];
-		for await (const [key] of postgres1.iterator("ns1")) {
-			keys.push(key);
-		}
+	const keys: string[] = [];
+	for await (const [key] of postgres1.iterator("ns1")) {
+		keys.push(key);
+	}
 
-		t.expect(keys.length).toBe(2);
-		t.expect(keys).toContain("key1");
-		t.expect(keys).toContain("key2");
-	},
-);
+	t.expect(keys.length).toBe(2);
+	t.expect(keys).toContain("key1");
+	t.expect(keys).toContain("key2");
+});
 
-test.it(
-	"set() extracts and stores expires in the expires column",
-	async (t) => {
-		const keyv = new KeyvPostgres({ uri: postgresUri });
-		const expiresTimestamp = Date.now() + 60_000;
-		const serializedValue = JSON.stringify({
-			value: "test-value",
-			expires: expiresTimestamp,
-		});
-		await keyv.set("expires-test-key", serializedValue);
-		t.expect(await keyv.get("expires-test-key")).toBe(serializedValue);
-	},
-);
+test.it("set() extracts and stores expires in the expires column", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const expiresTimestamp = Date.now() + 60_000;
+	const serializedValue = JSON.stringify({
+		value: "test-value",
+		expires: expiresTimestamp,
+	});
+	await keyv.set("expires-test-key", serializedValue);
+	t.expect(await keyv.get("expires-test-key")).toBe(serializedValue);
+});
 
-test.it(
-	"set() stores null expires when value has no expires field",
-	async (t) => {
-		const keyv = new KeyvPostgres({ uri: postgresUri });
-		const serializedValue = JSON.stringify({ value: "no-ttl-value" });
-		await keyv.set("no-expires-key", serializedValue);
-		t.expect(await keyv.get("no-expires-key")).toBe(serializedValue);
-	},
-);
+test.it("set() stores null expires when value has no expires field", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const serializedValue = JSON.stringify({ value: "no-ttl-value" });
+	await keyv.set("no-expires-key", serializedValue);
+	t.expect(await keyv.get("no-expires-key")).toBe(serializedValue);
+});
 
 test.it("set() gracefully handles non-JSON string values", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
@@ -420,14 +381,8 @@ test.it("set() updates expires column on upsert", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const expires1 = Date.now() + 60_000;
 	const expires2 = Date.now() + 120_000;
-	await keyv.set(
-		"upsert-exp-key",
-		JSON.stringify({ value: "v1", expires: expires1 }),
-	);
-	await keyv.set(
-		"upsert-exp-key",
-		JSON.stringify({ value: "v2", expires: expires2 }),
-	);
+	await keyv.set("upsert-exp-key", JSON.stringify({ value: "v1", expires: expires1 }));
+	await keyv.set("upsert-exp-key", JSON.stringify({ value: "v2", expires: expires2 }));
 	t.expect(await keyv.get("upsert-exp-key")).toBe(
 		JSON.stringify({ value: "v2", expires: expires2 }),
 	);
@@ -448,40 +403,30 @@ test.it("setMany() extracts and stores expires for each entry", async (t) => {
 		},
 		{ key: "many-exp-3", value: JSON.stringify({ value: "v3" }) },
 	]);
-	t.expect(await keyv.get("many-exp-1")).toBe(
-		JSON.stringify({ value: "v1", expires: expires1 }),
-	);
-	t.expect(await keyv.get("many-exp-2")).toBe(
-		JSON.stringify({ value: "v2", expires: expires2 }),
-	);
+	t.expect(await keyv.get("many-exp-1")).toBe(JSON.stringify({ value: "v1", expires: expires1 }));
+	t.expect(await keyv.get("many-exp-2")).toBe(JSON.stringify({ value: "v2", expires: expires2 }));
 	t.expect(await keyv.get("many-exp-3")).toBe(JSON.stringify({ value: "v3" }));
 });
 
-test.it(
-	"expires column is populated when using Keyv core with TTL",
-	async (t) => {
-		const keyv = new Keyv({
-			store: new KeyvPostgres({ uri: postgresUri }),
-			ttl: 60_000,
-		});
-		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, "ttl-value");
-		t.expect(await keyv.get(key)).toBe("ttl-value");
-	},
-);
+test.it("expires column is populated when using Keyv core with TTL", async (t) => {
+	const keyv = new Keyv({
+		store: new KeyvPostgres({ uri: postgresUri }),
+		ttl: 60_000,
+	});
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "ttl-value");
+	t.expect(await keyv.get(key)).toBe("ttl-value");
+});
 
-test.it(
-	"set() handles object value with expires (serialization disabled)",
-	async (t) => {
-		const keyv = new KeyvPostgres({ uri: postgresUri });
-		const expiresTimestamp = Date.now() + 60_000;
-		const objectValue = { value: "obj-test", expires: expiresTimestamp };
-		// biome-ignore lint/suspicious/noExplicitAny: testing non-string value path
-		await keyv.set("obj-expires-key", objectValue as any);
-		const result = await keyv.get("obj-expires-key");
-		t.expect(result).toBeDefined();
-	},
-);
+test.it("set() handles object value with expires (serialization disabled)", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const expiresTimestamp = Date.now() + 60_000;
+	const objectValue = { value: "obj-test", expires: expiresTimestamp };
+	// biome-ignore lint/suspicious/noExplicitAny: testing non-string value path
+	await keyv.set("obj-expires-key", objectValue as any);
+	const result = await keyv.get("obj-expires-key");
+	t.expect(result).toBeDefined();
+});
 
 test.it("set() handles object value without expires", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
@@ -508,41 +453,27 @@ test.it("set() handles numeric value for expires extraction", async (t) => {
 	t.expect(result).toBe("12345");
 });
 
-test.it(
-	"clearExpired() removes expired entries and keeps valid ones",
-	async (t) => {
-		const keyv = new KeyvPostgres({ uri: postgresUri });
-		const pastExpires = Date.now() - 60_000;
-		const futureExpires = Date.now() + 60_000;
-		await keyv.set(
-			"expired-key",
-			JSON.stringify({ value: "old", expires: pastExpires }),
-		);
-		await keyv.set(
-			"valid-key",
-			JSON.stringify({ value: "fresh", expires: futureExpires }),
-		);
-		await keyv.set("no-ttl-key", JSON.stringify({ value: "forever" }));
+test.it("clearExpired() removes expired entries and keeps valid ones", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const pastExpires = Date.now() - 60_000;
+	const futureExpires = Date.now() + 60_000;
+	await keyv.set("expired-key", JSON.stringify({ value: "old", expires: pastExpires }));
+	await keyv.set("valid-key", JSON.stringify({ value: "fresh", expires: futureExpires }));
+	await keyv.set("no-ttl-key", JSON.stringify({ value: "forever" }));
 
-		await keyv.clearExpired();
+	await keyv.clearExpired();
 
-		t.expect(await keyv.get("expired-key")).toBeUndefined();
-		t.expect(await keyv.get("valid-key")).toBe(
-			JSON.stringify({ value: "fresh", expires: futureExpires }),
-		);
-		t.expect(await keyv.get("no-ttl-key")).toBe(
-			JSON.stringify({ value: "forever" }),
-		);
-	},
-);
+	t.expect(await keyv.get("expired-key")).toBeUndefined();
+	t.expect(await keyv.get("valid-key")).toBe(
+		JSON.stringify({ value: "fresh", expires: futureExpires }),
+	);
+	t.expect(await keyv.get("no-ttl-key")).toBe(JSON.stringify({ value: "forever" }));
+});
 
 test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const futureExpires = Date.now() + 60_000;
-	await keyv.set(
-		"still-valid",
-		JSON.stringify({ value: "ok", expires: futureExpires }),
-	);
+	await keyv.set("still-valid", JSON.stringify({ value: "ok", expires: futureExpires }));
 
 	await keyv.clearExpired();
 
@@ -582,36 +513,27 @@ test.it("clearExpiredInterval is accessible via property getter", (t) => {
 	keyv.clearExpiredInterval = 0;
 });
 
-test.it(
-	"clearExpiredInterval automatically clears expired entries",
-	async (t) => {
-		const keyv = new KeyvPostgres({
-			uri: postgresUri,
-			clearExpiredInterval: 100,
-		});
-		const pastExpires = Date.now() - 60_000;
-		const futureExpires = Date.now() + 60_000;
-		await keyv.set(
-			"interval-expired",
-			JSON.stringify({ value: "old", expires: pastExpires }),
-		);
-		await keyv.set(
-			"interval-valid",
-			JSON.stringify({ value: "fresh", expires: futureExpires }),
-		);
+test.it("clearExpiredInterval automatically clears expired entries", async (t) => {
+	const keyv = new KeyvPostgres({
+		uri: postgresUri,
+		clearExpiredInterval: 100,
+	});
+	const pastExpires = Date.now() - 60_000;
+	const futureExpires = Date.now() + 60_000;
+	await keyv.set("interval-expired", JSON.stringify({ value: "old", expires: pastExpires }));
+	await keyv.set("interval-valid", JSON.stringify({ value: "fresh", expires: futureExpires }));
 
-		// Wait for the interval to fire
-		await new Promise((resolve) => {
-			setTimeout(resolve, 300);
-		});
+	// Wait for the interval to fire
+	await new Promise((resolve) => {
+		setTimeout(resolve, 300);
+	});
 
-		t.expect(await keyv.get("interval-expired")).toBeUndefined();
-		t.expect(await keyv.get("interval-valid")).toBe(
-			JSON.stringify({ value: "fresh", expires: futureExpires }),
-		);
-		keyv.clearExpiredInterval = 0;
-	},
-);
+	t.expect(await keyv.get("interval-expired")).toBeUndefined();
+	t.expect(await keyv.get("interval-valid")).toBe(
+		JSON.stringify({ value: "fresh", expires: futureExpires }),
+	);
+	keyv.clearExpiredInterval = 0;
+});
 
 test.it("disconnect stops the clearExpiredInterval timer", async (t) => {
 	const keyv = new KeyvPostgres({

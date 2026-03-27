@@ -1,9 +1,5 @@
 import { Hookified } from "hookified";
-import Keyv, {
-	type KeyvEntry,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
 import mysql, { type ConnectionOptions } from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
@@ -272,9 +268,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 			// Migration: create composite unique index
 			try {
-				await query(
-					`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (id, namespace)`,
-				);
+				await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (id, namespace)`);
 			} catch (error) {
 				// Error 1061 = Duplicate key name - index already exists, safe to ignore
 				if ((error as { errno?: number }).errno !== 1061) {
@@ -284,9 +278,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 			// Migration: add expires column
 			try {
-				await query(
-					`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`,
-				);
+				await query(`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`);
 			} catch (error) {
 				if ((error as { errno?: number }).errno !== 1060) {
 					throw error;
@@ -295,19 +287,14 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 			// Migration: create expires index
 			try {
-				await query(
-					`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`,
-				);
+				await query(`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`);
 			} catch (error) {
 				if ((error as { errno?: number }).errno !== 1061) {
 					throw error;
 				}
 			}
 
-			if (
-				this._intervalExpiration !== undefined &&
-				this._intervalExpiration > 0
-			) {
+			if (this._intervalExpiration !== undefined && this._intervalExpiration > 0) {
 				await query("SET GLOBAL event_scheduler = ON;");
 				await query("DROP EVENT IF EXISTS keyv_delete_expired_keys;");
 				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this._intervalExpiration} SECOND
@@ -356,11 +343,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 		for (const key of strippedKeys) {
 			const rowIndex = rows.findIndex((row: { id: string }) => row.id === key);
-			results.push(
-				rowIndex === -1
-					? undefined
-					: (rows[rowIndex].value as StoredData<Value>),
-			);
+			results.push(rowIndex === -1 ? undefined : (rows[rowIndex].value as StoredData<Value>));
 		}
 
 		return results;
@@ -399,9 +382,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @param entries - Array of key-value entry objects
 	 * @returns Promise that resolves when the operation completes
 	 */
-	public async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}

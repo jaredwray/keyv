@@ -3,9 +3,7 @@ import type { SqliteDriver, SqliteDriverName } from "./types.js";
 async function loadDriver(name: SqliteDriverName): Promise<SqliteDriver> {
 	switch (name) {
 		case "better-sqlite3": {
-			const { betterSqlite3Driver } = await import(
-				"./better-sqlite3-driver.js"
-			);
+			const { betterSqlite3Driver } = await import("./better-sqlite3-driver.js");
 			return betterSqlite3Driver;
 		}
 
@@ -47,11 +45,7 @@ export async function resolveDriver(
 	preferred?: SqliteDriverName | SqliteDriver,
 ): Promise<SqliteDriver> {
 	// Custom driver object — return directly
-	if (
-		preferred !== undefined &&
-		typeof preferred === "object" &&
-		"connect" in preferred
-	) {
+	if (preferred !== undefined && typeof preferred === "object" && "connect" in preferred) {
 		return preferred;
 	}
 
@@ -60,9 +54,7 @@ export async function resolveDriver(
 		try {
 			return await loadDriver(preferred);
 		} catch (error) {
-			throw new Error(
-				`Failed to load SQLite driver "${preferred}": ${(error as Error).message}`,
-			);
+			throw new Error(`Failed to load SQLite driver "${preferred}": ${(error as Error).message}`);
 		}
 	}
 
@@ -82,7 +74,5 @@ export async function resolveDriver(
 	}
 
 	/* v8 ignore next 3 -- @preserve */
-	throw new Error(
-		"No SQLite driver found. Install better-sqlite3: npm install better-sqlite3",
-	);
+	throw new Error("No SQLite driver found. Install better-sqlite3: npm install better-sqlite3");
 }

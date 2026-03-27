@@ -50,7 +50,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.emitErrors](#emiterrors)
   - [.throwOnErrors](#throwonerrors)
   - [.stats](#stats)
-  - [.sanitizeKey](#sanitizekey)
+  - [.sanitize](#sanitize)
   - [Keyv Instance](#keyv-instance)
 	- [.set(key, value, [ttl])](#setkey-value-ttl)
 	- [.setMany(entries)](#setmanyentries)
@@ -988,10 +988,10 @@ const keyv = new Keyv({ store: keyvRedis, throwOnErrors: true });
 What this does is it only throw on connection errors with the Redis client.
 
 ## .stats
-Type: `StatsManager`<br />
-Default: `StatsManager` instance with `enabled: false`
+Type: `KeyvStats`<br />
+Default: `KeyvStats` instance with `enabled: false`
 
-The stats property provides access to statistics tracking for cache operations. When enabled via the `stats` option during initialization, it tracks hits, misses, sets, deletes, and errors.
+The stats property provides access to statistics tracking for cache operations. When enabled via the `stats` option during initialization, it tracks hits, misses, sets, deletes, and errors. It also maintains LRU-bounded per-key frequency maps for each event type, allowing you to see which keys are accessed most.
 
 ### Enabling Stats:
 ```js
@@ -1000,11 +1000,20 @@ console.log(keyv.stats.enabled); // true
 ```
 
 ### Available Statistics:
+
+**Aggregate counters:**
 - `hits`: Number of successful cache retrievals
 - `misses`: Number of failed cache retrievals
 - `sets`: Number of set operations
 - `deletes`: Number of delete operations
 - `errors`: Number of errors encountered
+
+**Per-key LRU frequency maps** (each capped at `maxEntries`, default 1000):
+- `hitKeys`: `Map<string, number>` — key to hit count
+- `missKeys`: `Map<string, number>` — key to miss count
+- `setKeys`: `Map<string, number>` — key to set count
+- `deleteKeys`: `Map<string, number>` — key to delete count
+- `errorKeys`: `Map<string, number>` — key to error count
 
 ### Accessing Stats:
 ```js
@@ -1019,71 +1028,103 @@ console.log(keyv.stats.hits);    // 1
 console.log(keyv.stats.misses);  // 1
 console.log(keyv.stats.sets);    // 1
 console.log(keyv.stats.deletes); // 1
+
+// Per-key frequency maps
+console.log(keyv.stats.hitKeys.get('foo'));          // 1
+console.log(keyv.stats.missKeys.get('nonexistent')); // 1
 ```
 
 ### Resetting Stats:
 ```js
 keyv.stats.reset();
 console.log(keyv.stats.hits); // 0
+console.log(keyv.stats.hitKeys.size); // 0
 ```
 
 ### Manual Control:
-You can also manually enable/disable stats tracking at runtime:
+You can also manually enable/disable stats tracking at runtime. Disabling stats will automatically unsubscribe from events:
 ```js
 const keyv = new Keyv({ stats: false });
 keyv.stats.enabled = true; // Enable stats tracking
 // ... perform operations ...
-keyv.stats.enabled = false; // Disable stats tracking
+keyv.stats.enabled = false; // Disable stats tracking and unsubscribe
 ```
 
-## .sanitizeKey
+### Standalone Usage:
+You can create a `KeyvStats` instance independently and subscribe it to a Keyv instance:
+```js
+import { KeyvStats } from 'keyv';
+
+const stats = new KeyvStats({ enabled: true, maxEntries: 500, emitter: keyv });
+```
+
+## .sanitize
 Type: `boolean | KeyvSanitizeOptions`<br />
-Default: `true`
+Default: `false`
 
-Sanitizes keys to strip characters that could be dangerous for SQL, MongoDB, Redis, or filesystem-based storage backends. This is enabled by default to protect against injection attacks.
+Detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped.
 
-### Categories
+Results are cached in an LRU cache (10,000 entries) for fast repeated lookups.
 
-| Category | Characters | Purpose |
-|----------|-----------|---------|
-| `sql` | `'` `"` `` ` `` `;` | Prevents SQL injection |
-| `mongo` | `$` `{` `}` | Prevents MongoDB operator injection |
-| `escape` | `\` `\0` `\n` `\r` | Strips escape sequences, null bytes, CRLF injection |
-| `path` | `/` | Prevents path traversal |
+### Pattern Categories
+
+| Category | Patterns Stripped | Purpose |
+|----------|------------------|---------|
+| `sql` | `;` `--` `/*` | Prevents SQL injection |
+| `mongo` | leading `$`, `{$` sequences | Prevents MongoDB operator injection |
+| `escape` | `\0` `\r` `\n` | Strips null bytes, CRLF injection |
+| `path` | `../` `..\` | Prevents path traversal |
+
+### Targets
+
+| Target | Default | Description |
+|--------|---------|-------------|
+| `keys` | `true` (when enabled) | Sanitize keys on all operations |
+| `namespace` | `true` (when enabled) | Sanitize namespace on construction and setter |
 
 ### Usage
 
-Enable all sanitization (default):
+Enable all sanitization:
 ```js
-const keyv = new Keyv(); // sanitizeKey defaults to true
-await keyv.set("test'; DROP TABLE", "value");
+const keyv = new Keyv({ sanitize: true });
+await keyv.set("test; DROP TABLE", "value");
 // Key is stored as "test DROP TABLE"
+
+// Harmless characters pass through
+await keyv.set("user's-data", "value");
+// Key is stored as "user's-data" (unchanged)
 ```
 
-Disable all sanitization:
+Disable all sanitization (default):
 ```js
-const keyv = new Keyv({ sanitizeKey: false });
+const keyv = new Keyv({ sanitize: false });
 ```
 
-Granular control per category:
+Granular control per target and category:
 ```js
 const keyv = new Keyv({
-  sanitizeKey: {
-    sql: true,    // strip SQL chars (default: true)
-    mongo: false, // keep MongoDB chars
-    escape: true, // strip escape chars (default: true)
-    path: false,  // keep path chars
+  sanitize: {
+    keys: { sql: true, mongo: false },     // only SQL patterns on keys
+    namespace: { path: true, sql: false },  // only path patterns on namespace
   }
 });
 ```
 
-You can also change the setting at runtime:
+Disable namespace sanitization only:
 ```js
-keyv.sanitizeKey = false; // disable
-keyv.sanitizeKey = { sql: true, mongo: false }; // granular
+const keyv = new Keyv({
+  sanitize: { keys: true, namespace: false }
+});
 ```
 
-Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`.
+Change at runtime:
+```js
+keyv.sanitize = false; // disable
+keyv.sanitize = true;  // enable all
+keyv.sanitize = { keys: { sql: true, mongo: false } }; // granular
+```
+
+Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`. Namespace sanitization is applied at construction and when the `namespace` setter is used.
 
 # Bun Support
 

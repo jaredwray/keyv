@@ -14,25 +14,19 @@ describe("KeyvSuperJsonSerializer", () => {
 
 	it("stringify and parse of string value", () => {
 		const serialized = superJsonSerializer.stringify({ value: "foo" });
-		const deserialized = superJsonSerializer.parse<{ value: string }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: string }>(serialized);
 		expect(deserialized.value).toBe("foo");
 	});
 
 	it("stringify and parse of number value", () => {
 		const serialized = superJsonSerializer.stringify({ value: 5 });
-		const deserialized = superJsonSerializer.parse<{ value: number }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: number }>(serialized);
 		expect(deserialized.value).toBe(5);
 	});
 
 	it("stringify and parse of boolean value", () => {
 		const serialized = superJsonSerializer.stringify({ value: true });
-		const deserialized = superJsonSerializer.parse<{ value: boolean }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: boolean }>(serialized);
 		expect(deserialized.value).toBe(true);
 	});
 
@@ -44,18 +38,14 @@ describe("KeyvSuperJsonSerializer", () => {
 
 	it("stringify and parse of undefined value", () => {
 		const serialized = superJsonSerializer.stringify({ value: undefined });
-		const deserialized = superJsonSerializer.parse<{ value: undefined }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: undefined }>(serialized);
 		expect(deserialized.value).toBeUndefined();
 	});
 
 	it("stringify and parse of object value", () => {
 		const original = { foo: "bar", bar: 5, baz: true };
 		const serialized = superJsonSerializer.stringify({ value: original });
-		const deserialized = superJsonSerializer.parse<{ value: typeof original }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: typeof original }>(serialized);
 		expect(deserialized.value).toEqual(original);
 	});
 
@@ -72,9 +62,7 @@ describe("KeyvSuperJsonSerializer", () => {
 				[3, 4],
 			],
 		});
-		const deserialized = superJsonSerializer.parse<{ value: number[][] }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: number[][] }>(serialized);
 		expect(deserialized.value).toEqual([
 			[1, 2],
 			[3, 4],
@@ -94,9 +82,7 @@ describe("SuperJSON extended type support", () => {
 	it("stringify and parse of RegExp", () => {
 		const regex = /hello\s+world/gi;
 		const serialized = superJsonSerializer.stringify({ value: regex });
-		const deserialized = superJsonSerializer.parse<{ value: RegExp }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: RegExp }>(serialized);
 		expect(deserialized.value).toBeInstanceOf(RegExp);
 		expect(deserialized.value.source).toBe(regex.source);
 		expect(deserialized.value.flags).toBe(regex.flags);
@@ -120,9 +106,7 @@ describe("SuperJSON extended type support", () => {
 	it("stringify and parse of Set", () => {
 		const set = new Set([1, 2, 3]);
 		const serialized = superJsonSerializer.stringify({ value: set });
-		const deserialized = superJsonSerializer.parse<{ value: Set<number> }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: Set<number> }>(serialized);
 		expect(deserialized.value).toBeInstanceOf(Set);
 		expect(deserialized.value.has(1)).toBe(true);
 		expect(deserialized.value.has(2)).toBe(true);
@@ -134,9 +118,7 @@ describe("SuperJSON extended type support", () => {
 		const serialized = superJsonSerializer.stringify({
 			value: BigInt("9223372036854775807"),
 		});
-		const deserialized = superJsonSerializer.parse<{ value: bigint }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: bigint }>(serialized);
 		expect(deserialized.value).toBe(BigInt("9223372036854775807"));
 	});
 
@@ -144,18 +126,14 @@ describe("SuperJSON extended type support", () => {
 		const serialized = superJsonSerializer.stringify({
 			value: BigInt("-123456789"),
 		});
-		const deserialized = superJsonSerializer.parse<{ value: bigint }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: bigint }>(serialized);
 		expect(deserialized.value).toBe(BigInt("-123456789"));
 	});
 
 	it("stringify and parse of Error", () => {
 		const error = new Error("something went wrong");
 		const serialized = superJsonSerializer.stringify({ value: error });
-		const deserialized = superJsonSerializer.parse<{ value: Error }>(
-			serialized,
-		);
+		const deserialized = superJsonSerializer.parse<{ value: Error }>(serialized);
 		expect(deserialized.value).toBeInstanceOf(Error);
 		expect(deserialized.value.message).toBe("something went wrong");
 	});

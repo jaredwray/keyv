@@ -62,20 +62,17 @@ test.it(".clear() an empty store should not fail", async () => {
 	await store.clear();
 });
 
-test.it(
-	"should emit error when not ResourceNotFoundException on ensureTable",
-	async (t) => {
-		const store = new KeyvDynamo({
-			endpoint: dynamoURL,
-			tableName: "invalid_table%&#@",
-		});
+test.it("should emit error when not ResourceNotFoundException on ensureTable", async (t) => {
+	const store = new KeyvDynamo({
+		endpoint: dynamoURL,
+		tableName: "invalid_table%&#@",
+	});
 
-		const expectedError = new Promise((_resolve, reject) => {
-			store.on("error", reject);
-		});
-		await t.expect(expectedError).rejects.toThrow(Error);
-	},
-);
+	const expectedError = new Promise((_resolve, reject) => {
+		store.on("error", reject);
+	});
+	await t.expect(expectedError).rejects.toThrow(Error);
+});
 
 test.it("should handle scan result with undefined Items", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
@@ -90,18 +87,15 @@ test.it("should handle scan result with undefined Items", async (t) => {
 	(store as any).client.scan = originalScan;
 });
 
-test.it(
-	"should handle namespace filtering when namespace is undefined",
-	async (t) => {
-		const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: undefined });
+test.it("should handle namespace filtering when namespace is undefined", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: undefined });
 
-		const key = faker.string.uuid();
-		const value = faker.lorem.word();
-		await store.set(key, value);
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
 
-		t.expect(await store.clear()).toBeUndefined();
-	},
-);
+	t.expect(await store.clear()).toBeUndefined();
+});
 
 test.it(
 	"should handle ResourceInUseException when table already exists (fallback to wait for table to be created)",
@@ -144,23 +138,21 @@ test.it("should wait for table when it exists but is not ACTIVE", async (t) => {
 	// Now test ensureTable directly with a mocked CREATING status
 	let describeCallCount = 0;
 	const originalSend = (store as any).client.send;
-	(store as any).client.send = test.vi
-		.fn()
-		.mockImplementation(async (command) => {
-			if (command.constructor.name === "DescribeTableCommand") {
-				describeCallCount++;
-				if (describeCallCount === 1) {
-					// First call returns CREATING status
-					return {
-						Table: {
-							TableName: tableName,
-							TableStatus: "CREATING",
-						},
-					};
-				}
+	(store as any).client.send = test.vi.fn().mockImplementation(async (command) => {
+		if (command.constructor.name === "DescribeTableCommand") {
+			describeCallCount++;
+			if (describeCallCount === 1) {
+				// First call returns CREATING status
+				return {
+					Table: {
+						TableName: tableName,
+						TableStatus: "CREATING",
+					},
+				};
 			}
-			return originalSend.call((store as any).client, command);
-		});
+		}
+		return originalSend.call((store as any).client, command);
+	});
 
 	// Call ensureTable directly - this should hit the CREATING branch
 	await store.ensureTable(tableName);
@@ -203,21 +195,16 @@ test.it(
 
 		const originalSend = (store2 as any).client.send;
 		let createTableCalled = false;
-		(store2 as any).client.send = test.vi
-			.fn()
-			.mockImplementation(async (command) => {
-				if (
-					command.constructor.name === "CreateTableCommand" &&
-					!createTableCalled
-				) {
-					createTableCalled = true;
-					throw new ResourceInUseException({
-						message: "Table already being created",
-						$metadata: {},
-					});
-				}
-				return originalSend.call((store2 as any).client, command);
-			});
+		(store2 as any).client.send = test.vi.fn().mockImplementation(async (command) => {
+			if (command.constructor.name === "CreateTableCommand" && !createTableCalled) {
+				createTableCalled = true;
+				throw new ResourceInUseException({
+					message: "Table already being created",
+					$metadata: {},
+				});
+			}
+			return originalSend.call((store2 as any).client, command);
+		});
 
 		// This should wait for the table to exist
 		const key2 = faker.string.uuid();
@@ -419,20 +406,17 @@ test.describe("createKeyv", () => {
 		t.expect((keyv.store as KeyvDynamo).tableName).toBe(tableName);
 	});
 
-	test.it(
-		"should create Keyv instance with both namespace and table name",
-		(t) => {
-			const namespace = faker.string.alphanumeric(10);
-			const tableName = faker.string.alphanumeric(10);
-			const keyv = createKeyv({ endpoint: dynamoURL, namespace, tableName });
-			t.expect(keyv).toBeDefined();
-			t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
-			t.expect(keyv.namespace).toBe(namespace);
-			t.expect((keyv.store as KeyvDynamo).namespace).toBe(namespace);
+	test.it("should create Keyv instance with both namespace and table name", (t) => {
+		const namespace = faker.string.alphanumeric(10);
+		const tableName = faker.string.alphanumeric(10);
+		const keyv = createKeyv({ endpoint: dynamoURL, namespace, tableName });
+		t.expect(keyv).toBeDefined();
+		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
+		t.expect(keyv.namespace).toBe(namespace);
+		t.expect((keyv.store as KeyvDynamo).namespace).toBe(namespace);
 
-			t.expect((keyv.store as KeyvDynamo).tableName).toBe(tableName);
-		},
-	);
+		t.expect((keyv.store as KeyvDynamo).tableName).toBe(tableName);
+	});
 
 	test.it(
 		"should create functional Keyv instance that can store and retrieve values",
@@ -627,10 +611,7 @@ test.it("getMany retries unprocessed keys", async (t) => {
 			return {
 				UnprocessedKeys: {
 					[tableName]: {
-						Keys: [
-							{ id: dynamo.formatKey(key1) },
-							{ id: dynamo.formatKey(key2) },
-						],
+						Keys: [{ id: dynamo.formatKey(key1) }, { id: dynamo.formatKey(key2) }],
 					},
 				},
 			};
@@ -660,10 +641,7 @@ test.it("hasMany retries unprocessed keys", async (t) => {
 			return {
 				UnprocessedKeys: {
 					[tableName]: {
-						Keys: [
-							{ id: dynamo.formatKey(key1) },
-							{ id: dynamo.formatKey(key2) },
-						],
+						Keys: [{ id: dynamo.formatKey(key1) }, { id: dynamo.formatKey(key2) }],
 					},
 				},
 			};

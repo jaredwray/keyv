@@ -3,9 +3,7 @@ import type { Db } from "../types.js";
 import { createQueryFn, shouldApplyWal } from "./driver-utils.js";
 import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 
-function createBetterSqlite3Connection(
-	options: SqliteDriverConnectOptions,
-): Db {
+function createBetterSqlite3Connection(options: SqliteDriverConnectOptions): Db {
 	const db = new Database(options.filename);
 
 	if (options.busyTimeout) {

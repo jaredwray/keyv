@@ -1,27 +1,26 @@
 import { Hookified } from "hookified";
 import { detectKeyvStorage } from "./capabilities.js";
 import { KeyvJsonSerializer } from "./json-serializer.js";
-import StatsManager from "./stats-manager.js";
+import { KeyvSanitize } from "./sanitize.js";
+import { KeyvStats } from "./stats.js";
 import {
 	type KeyvCompressionAdapter,
 	type KeyvEntry,
+	KeyvEvents,
 	KeyvHooks,
 	type KeyvOptions,
-	type KeyvSanitizeOptions,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
+	type KeyvTelemetryEvent,
 	type KeyvValue,
 	type StoredDataRaw,
 } from "./types.js";
 import {
 	buildDeprecatedHooks,
-	buildSanitizePattern,
 	deleteExpiredKeys,
 	deprecatedHookAliases,
 	isDataExpired,
 	resolveTtl,
-	sanitizeKey,
-	sanitizeKeys,
 	ttlFromExpires,
 } from "./utils.js";
 
@@ -29,8 +28,9 @@ import {
 export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Stats manager for tracking cache operation metrics (hits, misses, sets, deletes, errors).
+	 * @default this is disabled.
 	 */
-	private _stats = new StatsManager(false);
+	private _stats: KeyvStats;
 
 	/**
 	 * Default time to live in milliseconds. Can be overridden per-key via {@link set}.
@@ -49,7 +49,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	private _store: KeyvStorageAdapter = new Map() as any;
 
 	/**
-	 * Pluggable serialization adapter with `stringify` and `parse` methods. When `undefined`, the built-in {@link KeyvJsonSerializer} is used.
+	 * Pluggable serialization adapter with `stringify` and `parse` methods.
+	 * When `undefined`, the built-in {@link KeyvJsonSerializer} is used.
 	 */
 	private _serialization: KeyvSerializationAdapter | undefined;
 
@@ -59,15 +60,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 	private _compression: KeyvCompressionAdapter | undefined;
 
 	/**
-	 * Current sanitizeKey setting. `true` enables all categories, `false` disables sanitization,
-	 * or a {@link KeyvSanitizeOptions} object toggles individual categories.
+	 * Sanitization handler for keys and namespaces. By default it is disabled.
 	 */
-	private _sanitizeKey: boolean | KeyvSanitizeOptions = true;
-
-	/**
-	 * Precompiled regex pattern built from {@link _sanitizeKey} for stripping unsafe key characters.
-	 */
-	private _sanitizePattern: RegExp | undefined = buildSanitizePattern();
+	private _sanitize: KeyvSanitize;
 
 	/**
 	 * Keyv Constructor
@@ -89,10 +84,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {KeyvStorageAdapter | KeyvOptions} store
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
-	constructor(
-		store?: KeyvStorageAdapter | KeyvOptions,
-		options?: Omit<KeyvOptions, "store">,
-	) {
+	constructor(store?: KeyvStorageAdapter | KeyvOptions, options?: Omit<KeyvOptions, "store">) {
 		options ??= {};
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		store ??= {} as KeyvOptions;
@@ -122,50 +114,44 @@ export class Keyv<GenericValue = any> extends Hookified {
 		if (mergedOptions.serialization === false) {
 			this._serialization = undefined;
 		} else {
-			this._serialization =
-				mergedOptions.serialization ?? new KeyvJsonSerializer();
+			this._serialization = mergedOptions.serialization ?? new KeyvJsonSerializer();
+		}
+
+		this._sanitize = new KeyvSanitize();
+
+		if (mergedOptions.sanitize) {
+			this._sanitize.updateOptions(mergedOptions?.sanitize);
 		}
 
 		this._namespace = mergedOptions.namespace;
+		if (this._namespace && this._sanitize.enabled) {
+			this._namespace = this._sanitize.cleanNamespace(this._namespace);
+		}
 
 		/* v8 ignore next -- @preserve */
 		if (this._store) {
 			const storeCap = detectKeyvStorage(this._store);
 			if (
-				!(
-					storeCap.mapLike ||
-					(storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)
-				)
+				!(storeCap.mapLike || (storeCap.get && storeCap.set && storeCap.delete && storeCap.clear))
 			) {
 				throw new Error("Invalid storage adapter");
 			}
 
 			if (typeof this._store.on === "function") {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
-				this._store.on("error", (error: any) => this.emit("error", error));
+				this._store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
 			}
 
 			this._store.namespace = this._namespace;
 		}
 
-		if (mergedOptions.stats) {
-			this._stats.enabled = mergedOptions.stats;
-		}
+		this._stats = new KeyvStats({
+			emitter: this,
+			enabled: mergedOptions.stats ?? false,
+		});
 
 		if (mergedOptions.ttl) {
 			this._ttl = mergedOptions.ttl;
-		}
-
-		if (mergedOptions.sanitizeKey !== undefined) {
-			this._sanitizeKey = mergedOptions.sanitizeKey;
-			this._sanitizePattern =
-				mergedOptions.sanitizeKey === false
-					? undefined
-					: buildSanitizePattern(
-							mergedOptions.sanitizeKey === true
-								? {}
-								: mergedOptions.sanitizeKey,
-						);
 		}
 	}
 
@@ -187,15 +173,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public set store(store: KeyvStorageAdapter | Map<any, any> | any) {
 		const storeCap = detectKeyvStorage(store);
-		if (
-			storeCap.mapLike ||
-			(storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)
-		) {
+		if (storeCap.mapLike || (storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)) {
 			this._store = store;
 
 			if (typeof store.on === "function") {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
-				store.on("error", (error: any) => this.emit("error", error));
+				store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
 			}
 			/* v8 ignore next -- @preserve */
 			if (this._namespace) {
@@ -235,8 +218,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {string | undefined} namespace The namespace to set.
 	 */
 	public set namespace(namespace: string | undefined) {
-		this._namespace = namespace;
-		this._store.namespace = namespace;
+		this._namespace =
+			namespace && this._sanitize.enabled ? this._sanitize.cleanNamespace(namespace) : namespace;
+		this._store.namespace = this._namespace;
 	}
 
 	/**
@@ -256,7 +240,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current serialization adapter.
+	 * Get the current serialization adapter. If `undefined`, serialization is not enabled.
 	 * @returns {KeyvSerializationAdapter | undefined} The current serialization adapter.
 	 */
 	public get serialization(): KeyvSerializationAdapter | undefined {
@@ -264,13 +248,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Set the current serialization adapter.
+	 * Set the current serialization adapter. Pass a `KeyvSerializationAdapter` to enable
+	 * custom serialization, or `undefined` to disable serialization entirely.
 	 * @param {KeyvSerializationAdapter | undefined} serialization The serialization adapter to set.
 	 */
-	public set serialization(serialization:
-		| KeyvSerializationAdapter
-		| false
-		| undefined) {
+	public set serialization(serialization: KeyvSerializationAdapter | false | undefined) {
 		this._serialization = serialization === false ? undefined : serialization;
 	}
 
@@ -291,52 +273,67 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current sanitizeKey setting.
-	 * @returns {boolean | KeyvSanitizeOptions} The current sanitizeKey setting.
+	 * Get the current KeyvSanitize instance.
+	 * @returns {KeyvSanitize} The current KeyvSanitize instance.
 	 */
-	public get sanitizeKey(): boolean | KeyvSanitizeOptions {
-		return this._sanitizeKey;
+	public get sanitize(): KeyvSanitize {
+		return this._sanitize;
 	}
 
 	/**
-	 * Set the sanitizeKey option. Accepts `true` (all categories), `false` (disabled),
-	 * or a `KeyvSanitizeOptions` object to toggle individual categories.
-	 * @param {boolean | KeyvSanitizeOptions} value The sanitizeKey setting.
+	 * Set the sanitize instance directly.
+	 * @param {KeyvSanitize} value The KeyvSanitize instance to use.
 	 */
-	public set sanitizeKey(value: boolean | KeyvSanitizeOptions) {
-		this._sanitizeKey = value;
-		this._sanitizePattern =
-			value === false
-				? undefined
-				: buildSanitizePattern(value === true ? {} : value);
+	public set sanitize(value: KeyvSanitize) {
+		this._sanitize = value;
+		/* v8 ignore next -- @preserve */
+		this._namespace =
+			this._namespace && this._sanitize.enabled
+				? this._sanitize.cleanNamespace(this._namespace)
+				: this._namespace;
 	}
 
 	/**
 	 * Get the stats manager.
-	 * @returns {StatsManager} The current stats manager.
+	 * @returns {KeyvStats} The current stats manager.
 	 */
-	public get stats(): StatsManager {
+	public get stats(): KeyvStats {
 		return this._stats;
 	}
 
 	/**
 	 * Set the stats manager.
-	 * @param {StatsManager} stats The stats manager to set.
+	 * @param {KeyvStats} stats The stats manager to set.
 	 */
-	public set stats(stats: StatsManager) {
+	public set stats(stats: KeyvStats) {
+		this._stats.unsubscribe();
 		this._stats = stats;
+		this._stats.subscribe(this);
+	}
+
+	/**
+	 * Emit a telemetry event for cache operations.
+	 * @param {KeyvEvents} event the telemetry event type
+	 * @param {string | string[]} [key] the cache key or keys (emits one event per key)
+	 */
+	public emitTelemetry(event: KeyvEvents, key?: string | string[]): void {
+		const keys = Array.isArray(key) ? key : [key];
+		for (const k of keys) {
+			this.emit(event, {
+				event: event.replace("stat:", ""),
+				key: k,
+				namespace: this._namespace,
+				timestamp: Date.now(),
+			} as KeyvTelemetryEvent);
+		}
 	}
 
 	/**
 	 * Get the Value of a Key
 	 * @param {string | string[]} key passing in a single key or multiple as an array
 	 */
-	public async get<Value = GenericValue>(
-		key: string,
-	): Promise<Value | undefined>;
-	public async get<Value = GenericValue>(
-		key: string[],
-	): Promise<Array<Value | undefined>>;
+	public async get<Value = GenericValue>(key: string): Promise<Value | undefined>;
+	public async get<Value = GenericValue>(key: string[]): Promise<Array<Value | undefined>>;
 	public async get<Value = GenericValue>(
 		key: string | string[],
 	): Promise<Value | undefined | Array<Value | undefined>> {
@@ -347,7 +344,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.getMany<Value>(key as string[]);
 		}
 
-		key = sanitizeKey(key as string, this._sanitizePattern);
+		key = this._sanitize.enabled ? this._sanitize.cleanKey(key as string) : (key as string);
 		if (key === "") {
 			return undefined;
 		}
@@ -358,7 +355,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		try {
 			rawData = await store.get<Value>(key as string);
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 		}
 
 		const deserializedData =
@@ -371,17 +369,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key as string);
 			return undefined;
 		}
 
 		if (isDataExpired(deserializedData as KeyvValue<Value>)) {
-			await this.delete(key);
+			await this.delete(key as string);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key as string);
 			return undefined;
 		}
 
@@ -389,7 +387,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			key,
 			value: deserializedData,
 		});
-		this._stats.hit();
+		this.emitTelemetry(KeyvEvents.STAT_HIT, key as string);
 		return (deserializedData as KeyvValue<Value>).value;
 	}
 
@@ -397,10 +395,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Get many values of keys
 	 * @param {string[]} keys passing in a single key or multiple as an array
 	 */
-	public async getMany<Value = GenericValue>(
-		keys: string[],
-	): Promise<Array<Value | undefined>> {
-		keys = sanitizeKeys(keys, this._sanitizePattern);
+	public async getMany<Value = GenericValue>(keys: string[]): Promise<Array<Value | undefined>> {
+		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 		const store = this._store;
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
@@ -430,8 +426,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 				row.status === "fulfilled" ? row.value : undefined,
 			);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
-			if (result.length > 0) {
-				this._stats.hit();
+			for (let i = 0; i < result.length; i++) {
+				if (result[i] === undefined) {
+					this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+				} else {
+					this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+				}
 			}
 
 			return result;
@@ -456,9 +456,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 		);
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
-		/* v8 ignore next -- @preserve */
-		if (result.length > 0) {
-			this._stats.hit();
+		for (let i = 0; i < result.length; i++) {
+			if (result[i] === undefined) {
+				this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+			} else {
+				this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+			}
 		}
 
 		return result as Array<Value | undefined>;
@@ -472,7 +475,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getRaw<Value = GenericValue>(
 		key: string,
 	): Promise<StoredDataRaw<Value> | undefined> {
-		key = sanitizeKey(key, this._sanitizePattern);
+		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return undefined;
 		}
@@ -486,7 +489,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key);
 			return undefined;
 		}
 
@@ -497,21 +500,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 				? await this.deserializeData<Value>(rawData as string)
 				: rawData;
 
-		if (
-			deserializedData !== undefined &&
-			isDataExpired(deserializedData as KeyvValue<Value>)
-		) {
+		if (deserializedData !== undefined && isDataExpired(deserializedData as KeyvValue<Value>)) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
 				value: undefined,
 			});
-			this._stats.miss();
+			this.emitTelemetry(KeyvEvents.STAT_MISS, key);
 			await this.delete(key);
 			return undefined;
 		}
 
 		// Add a hit
-		this._stats.hit();
+		this.emitTelemetry(KeyvEvents.STAT_HIT, key);
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 			key,
@@ -529,15 +529,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
-		keys = sanitizeKeys(keys, this._sanitizePattern);
+		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 		const store = this._store;
 
 		if (keys.length === 0) {
-			const result = Array.from({ length: keys.length }).fill(
-				undefined,
-			) as Array<StoredDataRaw<Value>>;
-			// Add in misses
-			this._stats.misses += keys.length;
+			const result = Array.from({ length: keys.length }).fill(undefined) as Array<
+				StoredDataRaw<Value>
+			>;
+			/* v8 ignore next 3 -- @preserve */
+			for (const key of keys) {
+				this.emitTelemetry(KeyvEvents.STAT_MISS, key);
+			}
+
 			// Trigger the after get many raw hook
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
@@ -583,7 +586,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 		await deleteExpiredKeys(keys, result, this);
 
 		// Add in hits and misses
-		this._stats.hitsOrMisses(result);
+		for (let i = 0; i < result.length; i++) {
+			if (result[i] === undefined) {
+				this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+			} else {
+				this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+			}
+		}
+
 		// Trigger the after get many raw hook
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 			keys,
@@ -604,7 +614,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		value: Value,
 		ttl?: number,
 	): Promise<boolean> {
-		key = sanitizeKey(key, this._sanitizePattern);
+		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -616,11 +626,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		const store = this._store;
 
-		const expires =
-			typeof data.ttl === "number" ? Date.now() + data.ttl : undefined;
+		const expires = typeof data.ttl === "number" ? Date.now() + data.ttl : undefined;
 
 		if (typeof data.value === "symbol") {
-			this.emit("error", "symbol cannot be serialized");
+			this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 			throw new Error("symbol cannot be serialized");
 		}
 
@@ -637,7 +647,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			result = false;
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_SET, {
@@ -645,7 +656,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: serializedValue,
 			ttl,
 		});
-		this._stats.set();
+		this.emitTelemetry(KeyvEvents.STAT_SET, key);
 
 		return result;
 	}
@@ -655,12 +666,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {Array<KeyvEntry<Value>>} entries the entries to set
 	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
 	 */
-	public async setMany<Value = GenericValue>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[]> {
+	public async setMany<Value = GenericValue>(entries: KeyvEntry<Value>[]): Promise<boolean[]> {
 		entries = entries.map((e) => ({
 			...e,
-			key: sanitizeKey(e.key, this._sanitizePattern),
+			key: this._sanitize.enabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
 		let results: boolean[] = [];
 
@@ -680,12 +689,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 						ttl = resolveTtl(ttl, this._ttl);
 
 						/* v8 ignore next -- @preserve */
-						const expires =
-							typeof ttl === "number" ? Date.now() + ttl : undefined;
+						const expires = typeof ttl === "number" ? Date.now() + ttl : undefined;
 
 						/* v8 ignore next -- @preserve */
 						if (typeof value === "symbol") {
-							this.emit("error", "symbol cannot be serialized");
+							this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
+							this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 							throw new Error("symbol cannot be serialized");
 						}
 
@@ -696,12 +705,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 				);
 				const storeResult = await this._store.setMany(serializedEntries);
 				/* v8 ignore next -- @preserve */
-				results = Array.isArray(storeResult)
-					? (storeResult as boolean[])
-					: entries.map(() => true);
+				results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
+				this.emitTelemetry(
+					KeyvEvents.STAT_SET,
+					entries.map((e) => e.key),
+				);
 			}
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(
+				KeyvEvents.STAT_ERROR,
+				entries.map((e) => e.key),
+			);
 
 			results = entries.map(() => false);
 		}
@@ -722,7 +737,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		key: string,
 		value: KeyvValue<Value>,
 	): Promise<boolean> {
-		key = sanitizeKey(key, this._sanitizePattern);
+		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -744,7 +759,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			result = false;
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_RAW, {
@@ -752,7 +768,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: data.value,
 			ttl,
 		});
-		this._stats.set();
+		this.emitTelemetry(KeyvEvents.STAT_SET, key);
 
 		return result;
 	}
@@ -769,7 +785,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	): Promise<boolean[]> {
 		entries = entries.map((e) => ({
 			...e,
-			key: sanitizeKey(e.key, this._sanitizePattern),
+			key: this._sanitize.enabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
 		let results: boolean[] = [];
 
@@ -792,12 +808,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 					}),
 				);
 				const storeResult = await this._store.setMany(rawEntries);
-				results = Array.isArray(storeResult)
-					? (storeResult as boolean[])
-					: entries.map(() => true);
+				results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
+				this.emitTelemetry(
+					KeyvEvents.STAT_SET,
+					entries.map((e) => e.key),
+				);
 			}
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(
+				KeyvEvents.STAT_ERROR,
+				entries.map((e) => e.key),
+			);
 
 			results = entries.map(() => false);
 		}
@@ -828,7 +850,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.deleteMany(key);
 		}
 
-		key = sanitizeKey(key, this._sanitizePattern);
+		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -846,14 +868,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 		} catch (error) {
 			result = false;
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 			key,
 			value: result,
 		});
-		this._stats.delete();
+		this.emitTelemetry(KeyvEvents.STAT_DELETE, key as string);
 
 		return result;
 	}
@@ -864,16 +887,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} array of booleans indicating success for each key
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		keys = sanitizeKeys(keys, this._sanitizePattern);
+		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 		try {
 			const store = this._store;
 			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
 			if (store.deleteMany !== undefined) {
 				const storeResult = await store.deleteMany(keys);
 				// Support adapters that still return a single boolean
-				const results = Array.isArray(storeResult)
-					? storeResult
-					: keys.map(() => storeResult);
+				const results = Array.isArray(storeResult) ? storeResult : keys.map(() => storeResult);
+				this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
 				await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 					key: keys,
 					value: results,
@@ -884,13 +906,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const promises = keys.map(async (key: string) => store.delete(key));
 
 			const results = await Promise.all(promises);
+			this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 				key: keys,
 				value: results,
 			});
 			return results;
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
 
 			return keys.map(() => false);
 		}
@@ -908,7 +932,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return this.hasMany(key);
 		}
 
-		key = sanitizeKey(key, this._sanitizePattern);
+		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return false;
 		}
@@ -924,7 +948,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		try {
 			rawData = await store.get(key);
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 
 			return false;
 		}
@@ -947,7 +972,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} will return an array of booleans if the keys exist
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		keys = sanitizeKeys(keys, this._sanitizePattern);
+		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 		const store = this._store;
 		if (store.hasMany !== undefined) {
 			return store.hasMany(keys);
@@ -967,7 +992,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		try {
 			await store.clear();
 		} catch (error) {
-			this.emit("error", error);
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR);
 		}
 	}
 
@@ -1015,16 +1041,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 				yield [key as string, data?.value];
 			}
 		} else {
-			this.emit(
-				"error",
-				new Error("Iterator not supported by this storage adapter"),
-			);
+			this.emit(KeyvEvents.ERROR, new Error("Iterator not supported by this storage adapter"));
+			this.emitTelemetry(KeyvEvents.STAT_ERROR);
 		}
 	}
 
-	public async serializeData<T>(
-		data: KeyvValue<T>,
-	): Promise<string | KeyvValue<T>> {
+	public async serializeData<T>(data: KeyvValue<T>): Promise<string | KeyvValue<T>> {
 		// Pipeline: serialize (optional) -> compress (optional)
 		if (!this._serialization && !this._compression) {
 			return data;
@@ -1048,9 +1070,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		return result;
 	}
 
-	public async deserializeData<T>(
-		data: string | KeyvValue<T>,
-	): Promise<KeyvValue<T> | undefined> {
+	public async deserializeData<T>(data: string | KeyvValue<T>): Promise<KeyvValue<T> | undefined> {
 		if (data === undefined || data === null) {
 			return undefined;
 		}

@@ -167,14 +167,11 @@ test.it("clear method when useSets is false", async (t) => {
 	t.expect(value2).toBe(undefined);
 });
 
-test.it(
-	"clear method when useSets is false and empty keys should not error",
-	async (t) => {
-		const options = { useSets: false };
-		const keyv = new KeyvValkey(options);
-		t.expect(await keyv.clear()).toBeUndefined();
-	},
-);
+test.it("clear method when useSets is false and empty keys should not error", async (t) => {
+	const options = { useSets: false };
+	const keyv = new KeyvValkey(options);
+	t.expect(await keyv.clear()).toBeUndefined();
+});
 
 test.it("when passing in ioredis set the options.useSets", (t) => {
 	const options = { useSets: false };
@@ -386,17 +383,14 @@ test.it("deleteMany should batch delete keys", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it(
-	"deleteMany with nonexistent keys should return array of false",
-	async (t) => {
-		const keyv = new KeyvValkey(redisURI);
-		const key1 = faker.string.alphanumeric(10);
-		const key2 = faker.string.alphanumeric(10);
-		const result = await keyv.deleteMany([key1, key2]);
-		t.expect(result).toEqual([false, false]);
-		await keyv.disconnect();
-	},
-);
+test.it("deleteMany with nonexistent keys should return array of false", async (t) => {
+	const keyv = new KeyvValkey(redisURI);
+	const key1 = faker.string.alphanumeric(10);
+	const key2 = faker.string.alphanumeric(10);
+	const result = await keyv.deleteMany([key1, key2]);
+	t.expect(result).toEqual([false, false]);
+	await keyv.disconnect();
+});
 
 test.it("deleteMany with empty array should return empty array", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
@@ -479,77 +473,68 @@ test.it("useSets should use sets: prefix for SET tracking key", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it(
-	"useSets clear should clean up legacy namespace: SET keys",
-	async (t) => {
-		const redis = new Redis(redisURI);
-		const ns = `legacy-${faker.string.alphanumeric(8)}`;
+test.it("useSets clear should clean up legacy namespace: SET keys", async (t) => {
+	const redis = new Redis(redisURI);
+	const ns = `legacy-${faker.string.alphanumeric(8)}`;
 
-		// Simulate legacy data: a SET at namespace:<ns> with some tracked keys
-		const legacyDataKey = `namespace:${ns}:oldkey`;
-		await redis.set(legacyDataKey, "oldvalue");
-		await redis.sadd(`namespace:${ns}`, legacyDataKey);
+	// Simulate legacy data: a SET at namespace:<ns> with some tracked keys
+	const legacyDataKey = `namespace:${ns}:oldkey`;
+	await redis.set(legacyDataKey, "oldvalue");
+	await redis.sadd(`namespace:${ns}`, legacyDataKey);
 
-		// Create adapter with useSets and call clear
-		const keyv = new KeyvValkey(redis, { useSets: true });
-		keyv.namespace = ns;
-		await keyv.clear();
+	// Create adapter with useSets and call clear
+	const keyv = new KeyvValkey(redis, { useSets: true });
+	keyv.namespace = ns;
+	await keyv.clear();
 
-		// Legacy SET and data keys should be cleaned up
-		t.expect(await redis.exists(`namespace:${ns}`)).toBe(0);
-		t.expect(await redis.exists(legacyDataKey)).toBe(0);
+	// Legacy SET and data keys should be cleaned up
+	t.expect(await redis.exists(`namespace:${ns}`)).toBe(0);
+	t.expect(await redis.exists(legacyDataKey)).toBe(0);
 
-		await keyv.disconnect();
-	},
-);
+	await keyv.disconnect();
+});
 
-test.it(
-	"useSets should not collide with string keys at namespace path",
-	async (t) => {
-		const redis = new Redis(redisURI);
-		const ns = `collision-${faker.string.alphanumeric(8)}`;
+test.it("useSets should not collide with string keys at namespace path", async (t) => {
+	const redis = new Redis(redisURI);
+	const ns = `collision-${faker.string.alphanumeric(8)}`;
 
-		// Another client stores a string at namespace:<ns>
-		await redis.set(`namespace:${ns}`, "some-string-value");
+	// Another client stores a string at namespace:<ns>
+	await redis.set(`namespace:${ns}`, "some-string-value");
 
-		// useSets operations should work without WRONGTYPE errors
-		const keyv = new KeyvValkey(redis, { useSets: true });
-		keyv.namespace = ns;
+	// useSets operations should work without WRONGTYPE errors
+	const keyv = new KeyvValkey(redis, { useSets: true });
+	keyv.namespace = ns;
 
-		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, "value");
-		t.expect(await keyv.get(key)).toBe("value");
-		await keyv.clear();
-		t.expect(await keyv.get(key)).toBe(undefined);
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
+	t.expect(await keyv.get(key)).toBe("value");
+	await keyv.clear();
+	t.expect(await keyv.get(key)).toBe(undefined);
 
-		// Clean up the string key (not managed by keyv)
-		await redis.del(`namespace:${ns}`);
-		await keyv.disconnect();
-	},
-);
+	// Clean up the string key (not managed by keyv)
+	await redis.del(`namespace:${ns}`);
+	await keyv.disconnect();
+});
 
-test.it(
-	"useSets without namespace should use 'sets' as key prefix",
-	async (t) => {
-		const redis = new Redis(redisURI);
-		const keyv = new KeyvValkey(redis, { useSets: true });
+test.it("useSets without namespace should use 'sets' as key prefix", async (t) => {
+	const redis = new Redis(redisURI);
+	const keyv = new KeyvValkey(redis, { useSets: true });
 
-		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, "value");
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
 
-		// SET tracking key should be "sets" (no namespace suffix)
-		t.expect(await redis.exists("sets")).toBe(1);
-		t.expect(await redis.type("sets")).toBe("set");
+	// SET tracking key should be "sets" (no namespace suffix)
+	t.expect(await redis.exists("sets")).toBe(1);
+	t.expect(await redis.type("sets")).toBe("set");
 
-		// Data key should be "sets:<key>"
-		t.expect(await redis.exists(`sets:${key}`)).toBe(1);
+	// Data key should be "sets:<key>"
+	t.expect(await redis.exists(`sets:${key}`)).toBe(1);
 
-		t.expect(await keyv.get(key)).toBe("value");
-		await keyv.clear();
-		t.expect(await keyv.get(key)).toBe(undefined);
-		await keyv.disconnect();
-	},
-);
+	t.expect(await keyv.get(key)).toBe("value");
+	await keyv.clear();
+	t.expect(await keyv.get(key)).toBe(undefined);
+	await keyv.disconnect();
+});
 
 test.it("deleteMany with useSets should remove from set", async (t) => {
 	const keyv = new KeyvValkey(redisURI, { useSets: true });
@@ -567,45 +552,42 @@ test.it("deleteMany with useSets should remove from set", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it(
-	"iterator should iterate over multiple keys in namespace",
-	async (t) => {
-		const redis = new Redis(redisURI);
-		const keyvRedis = new KeyvValkey(redis);
-		const ns = `iterator-${faker.string.alphanumeric(8)}`;
-		const keyv = new Keyv(keyvRedis, { namespace: ns });
+test.it("iterator should iterate over multiple keys in namespace", async (t) => {
+	const redis = new Redis(redisURI);
+	const keyvRedis = new KeyvValkey(redis);
+	const ns = `iterator-${faker.string.alphanumeric(8)}`;
+	const keyv = new Keyv(keyvRedis, { namespace: ns });
 
-		// Clear any existing keys
-		await keyv.clear();
+	// Clear any existing keys
+	await keyv.clear();
 
-		// Set multiple keys
-		const testData: Record<string, string> = {};
-		for (let i = 0; i < 4; i++) {
-			const key = faker.string.alphanumeric(10);
-			const value = faker.string.alphanumeric(10);
-			testData[key] = value;
-		}
+	// Set multiple keys
+	const testData: Record<string, string> = {};
+	for (let i = 0; i < 4; i++) {
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		testData[key] = value;
+	}
 
-		for (const [key, value] of Object.entries(testData)) {
-			await keyv.set(key, value);
-		}
+	for (const [key, value] of Object.entries(testData)) {
+		await keyv.set(key, value);
+	}
 
-		// Iterate and collect all keys/values
-		const collected = new Map<string, string>();
-		for await (const [key, value] of keyvRedis.iterator(ns)) {
-			collected.set(key, value);
-		}
+	// Iterate and collect all keys/values
+	const collected = new Map<string, string>();
+	for await (const [key, value] of keyvRedis.iterator(ns)) {
+		collected.set(key, value);
+	}
 
-		// Validate all keys exist
-		t.expect(collected.size).toBe(Object.keys(testData).length);
-		for (const [key, value] of Object.entries(testData)) {
-			t.expect(collected.has(key)).toBe(true);
-			t.expect(collected.get(key)).toBe(JSON.stringify({ value }));
-		}
+	// Validate all keys exist
+	t.expect(collected.size).toBe(Object.keys(testData).length);
+	for (const [key, value] of Object.entries(testData)) {
+		t.expect(collected.has(key)).toBe(true);
+		t.expect(collected.get(key)).toBe(JSON.stringify({ value }));
+	}
 
-		await keyv.disconnect();
-	},
-);
+	await keyv.disconnect();
+});
 
 test.it("setMany returns false entries on exec error", async (t) => {
 	const store = new KeyvValkey(redisURI);

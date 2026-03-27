@@ -1,10 +1,6 @@
 import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
-import Keyv, {
-	type KeyvEntry,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
 import {
 	type Document,
 	GridFSBucket,
@@ -289,23 +285,16 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const connect = await this.connect;
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const values: Array<{ key: string; value: StoredData<Value> }> =
-			(await connect.store
-				.find({ key: { $in: strippedKeys }, namespace: { $eq: ns } })
-				.project({ _id: 0, value: 1, key: 1 })
-				.toArray()) as Array<{ key: string; value: StoredData<Value> }>;
+		const values: Array<{ key: string; value: StoredData<Value> }> = (await connect.store
+			.find({ key: { $in: strippedKeys }, namespace: { $eq: ns } })
+			.project({ _id: 0, value: 1, key: 1 })
+			.toArray()) as Array<{ key: string; value: StoredData<Value> }>;
 
 		const results: Array<StoredData<Value>> = [];
 		for (const key of strippedKeys) {
-			const rowIndex = values.findIndex(
-				(row: { key: string; value: unknown }) => row.key === key,
-			);
+			const rowIndex = values.findIndex((row: { key: string; value: unknown }) => row.key === key);
 
-			results.push(
-				rowIndex > -1
-					? values[rowIndex].value
-					: (undefined as StoredData<Value>),
-			);
+			results.push(rowIndex > -1 ? values[rowIndex].value : (undefined as StoredData<Value>));
 		}
 
 		return results;
@@ -320,8 +309,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		try {
-			const expiresAt =
-				typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
+			const expiresAt = typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
 
@@ -369,24 +357,19 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * In GridFS mode, each entry is set individually in parallel.
 	 * @param entries - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds.
 	 */
-	public async setMany<Value>(
-		entries: KeyvEntry<Value>[],
-	): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (this._useGridFS) {
 			const settled = await Promise.allSettled(
 				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
 			);
-			return settled.map((result) =>
-				result.status === "fulfilled" ? result.value : false,
-			);
+			return settled.map((result) => (result.status === "fulfilled" ? result.value : false));
 		}
 
 		const client = await this.connect;
 		const ns = this.getNamespaceValue();
 		const operations = entries.map(({ key, value, ttl }) => {
 			const strippedKey = this.removeKeyPrefix(key);
-			const expiresAt =
-				typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
+			const expiresAt = typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
 			return {
 				updateOne: {
 					filter: { key: { $eq: strippedKey }, namespace: { $eq: ns } },
@@ -405,9 +388,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			if (error instanceof MongoBulkWriteError) {
 				const results = new Array<boolean>(entries.length).fill(true);
 				/* v8 ignore next -- @preserve */
-				const errors = Array.isArray(error.writeErrors)
-					? error.writeErrors
-					: [error.writeErrors];
+				const errors = Array.isArray(error.writeErrors) ? error.writeErrors : [error.writeErrors];
 				for (const writeError of errors) {
 					results[writeError.index] = false;
 				}
@@ -475,9 +456,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @returns Array of booleans indicating whether each key was successfully deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		const results = await Promise.all(
-			keys.map(async (key) => this.delete(key)),
-		);
+		const results = await Promise.all(keys.map(async (key) => this.delete(key)));
 		return results;
 	}
 
@@ -780,14 +759,8 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 						// Index doesn't exist or already dropped - safe to ignore
 					}
 
-					await store.createIndex(
-						{ key: 1, namespace: 1 },
-						{ unique: true, background: true },
-					);
-					await store.createIndex(
-						{ expiresAt: 1 },
-						{ expireAfterSeconds: 0, background: true },
-					);
+					await store.createIndex({ key: 1, namespace: 1 }, { unique: true, background: true });
+					await store.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, background: true });
 
 					resolve({ store, mongoClient: client });
 				}
@@ -806,8 +779,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
  */
 export const createKeyv = (options?: KeyvMongoOptions) => {
 	const store = new KeyvMongo(options);
-	const namespace =
-		typeof options === "object" ? options?.namespace : undefined;
+	const namespace = typeof options === "object" ? options?.namespace : undefined;
 	return new Keyv({ store, namespace });
 };
 

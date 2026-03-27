@@ -102,35 +102,17 @@ export const defaultReconnectStrategy = (attempts: number): number | Error => {
 export type RedisConnectionClientType =
 	| RedisClientType
 	| RedisClientType<RedisModules, RedisFunctions, RedisScripts, RespVersions>
-	| RedisClientType<
-			RedisModules,
-			RedisFunctions,
-			RedisScripts,
-			RespVersions,
-			TypeMapping
-	  >;
+	| RedisClientType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
 
 export type RedisConnectionClusterType =
 	| RedisClusterType
 	| RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions>
-	| RedisClusterType<
-			RedisModules,
-			RedisFunctions,
-			RedisScripts,
-			RespVersions,
-			TypeMapping
-	  >;
+	| RedisClusterType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
 
 export type RedisConnectionSentinelType =
 	| RedisSentinelType
 	| RedisSentinelType<RedisModules, RedisFunctions, RedisScripts, RespVersions>
-	| RedisSentinelType<
-			RedisModules,
-			RedisFunctions,
-			RedisScripts,
-			RespVersions,
-			TypeMapping
-	  >;
+	| RedisSentinelType<RedisModules, RedisFunctions, RedisScripts, RespVersions, TypeMapping>;
 
 export type RedisClientConnectionType =
 	| RedisConnectionClientType

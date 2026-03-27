@@ -23,9 +23,7 @@ describe("browser runtime - import", () => {
 	});
 
 	test("can import KeyvGenericStore and createKeyv", async () => {
-		const { KeyvGenericStore, createKeyv } = await import(
-			"../src/generic-store.js"
-		);
+		const { KeyvGenericStore, createKeyv } = await import("../src/generic-store.js");
 		expect(KeyvGenericStore).toBeDefined();
 		expect(createKeyv).toBeDefined();
 	});

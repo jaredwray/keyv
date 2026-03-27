@@ -7,9 +7,7 @@ describe("KeyvRedis Types", () => {
 
 		const keyvRedis = new KeyvRedis<Value>();
 
-		expectTypeOf(keyvRedis.get("foo")).toEqualTypeOf<
-			Promise<Value | undefined>
-		>();
+		expectTypeOf(keyvRedis.get("foo")).toEqualTypeOf<Promise<Value | undefined>>();
 
 		expectTypeOf(keyvRedis.getMany(["foo", "bar"])).toEqualTypeOf<
 			Promise<Array<Value | undefined>>
@@ -27,9 +25,7 @@ describe("KeyvRedis Types", () => {
 
 		const keyvRedis = new KeyvRedis<ValueFoo>();
 
-		expectTypeOf(keyvRedis.get<ValueBar>("foo")).toEqualTypeOf<
-			Promise<ValueBar | undefined>
-		>();
+		expectTypeOf(keyvRedis.get<ValueBar>("foo")).toEqualTypeOf<Promise<ValueBar | undefined>>();
 
 		expectTypeOf(keyvRedis.getMany<ValueBar>(["foo", "bar"])).toEqualTypeOf<
 			Promise<Array<ValueBar | undefined>>

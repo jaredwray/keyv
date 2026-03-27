@@ -1,9 +1,5 @@
 import { promisify } from "node:util";
-import {
-	type BrotliOptions,
-	brotliCompress,
-	brotliDecompress,
-} from "node:zlib";
+import { type BrotliOptions, brotliCompress, brotliDecompress } from "node:zlib";
 import type { KeyvCompressionAdapter } from "keyv";
 
 const brotliCompressAsync = promisify(brotliCompress);

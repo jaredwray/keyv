@@ -263,35 +263,29 @@ test.it(".hasMany() with empty array returns empty array", async (t) => {
 });
 
 // Expires column tests
-test.it(
-	"set() extracts and stores expires in the expires column",
-	async (t) => {
-		const keyv = new KeyvMysql(uri);
-		const key = faker.string.alphanumeric(10);
-		const valueWithExpires = JSON.stringify({
-			value: "bar",
-			expires: 9999999999999,
-		});
-		await keyv.set(key, valueWithExpires);
-		const rows = await keyv.query<mysql.RowDataPacket[]>(
-			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
-		);
-		t.expect(Number(rows[0].expires)).toBe(9999999999999);
-	},
-);
+test.it("set() extracts and stores expires in the expires column", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const key = faker.string.alphanumeric(10);
+	const valueWithExpires = JSON.stringify({
+		value: "bar",
+		expires: 9999999999999,
+	});
+	await keyv.set(key, valueWithExpires);
+	const rows = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
+	);
+	t.expect(Number(rows[0].expires)).toBe(9999999999999);
+});
 
-test.it(
-	"set() stores null expires when value has no expires field",
-	async (t) => {
-		const keyv = new KeyvMysql(uri);
-		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, "plain string value");
-		const rows = await keyv.query<mysql.RowDataPacket[]>(
-			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
-		);
-		t.expect(rows[0].expires).toBeNull();
-	},
-);
+test.it("set() stores null expires when value has no expires field", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "plain string value");
+	const rows = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
+	);
+	t.expect(rows[0].expires).toBeNull();
+});
 
 test.it("set() updates expires column on upsert", async (t) => {
 	const keyv = new KeyvMysql(uri);
@@ -327,28 +321,25 @@ test.it("setMany() extracts and stores expires for each entry", async (t) => {
 	t.expect(row2?.expires).toBeNull();
 });
 
-test.it(
-	"clearExpired() removes expired entries and keeps valid ones",
-	async (t) => {
-		const keyv = new KeyvMysql(uri);
-		const expiredKey = faker.string.alphanumeric(10);
-		const validKey = faker.string.alphanumeric(10);
-		const noExpiryKey = faker.string.alphanumeric(10);
-		// Expired entry (timestamp in the past)
-		const expired = JSON.stringify({ value: "old", expires: 1 });
-		// Valid entry (far future)
-		const valid = JSON.stringify({ value: "new", expires: 9999999999999 });
-		// No expiry
-		const noExpiry = JSON.stringify({ value: "forever" });
-		await keyv.set(expiredKey, expired);
-		await keyv.set(validKey, valid);
-		await keyv.set(noExpiryKey, noExpiry);
-		await keyv.clearExpired();
-		t.expect(await keyv.get(expiredKey)).toBeUndefined();
-		t.expect(await keyv.get(validKey)).toBe(valid);
-		t.expect(await keyv.get(noExpiryKey)).toBe(noExpiry);
-	},
-);
+test.it("clearExpired() removes expired entries and keeps valid ones", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const expiredKey = faker.string.alphanumeric(10);
+	const validKey = faker.string.alphanumeric(10);
+	const noExpiryKey = faker.string.alphanumeric(10);
+	// Expired entry (timestamp in the past)
+	const expired = JSON.stringify({ value: "old", expires: 1 });
+	// Valid entry (far future)
+	const valid = JSON.stringify({ value: "new", expires: 9999999999999 });
+	// No expiry
+	const noExpiry = JSON.stringify({ value: "forever" });
+	await keyv.set(expiredKey, expired);
+	await keyv.set(validKey, valid);
+	await keyv.set(noExpiryKey, noExpiry);
+	await keyv.clearExpired();
+	t.expect(await keyv.get(expiredKey)).toBeUndefined();
+	t.expect(await keyv.get(validKey)).toBe(valid);
+	t.expect(await keyv.get(noExpiryKey)).toBe(noExpiry);
+});
 
 test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
 	const keyv = new KeyvMysql(uri);
@@ -359,81 +350,69 @@ test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
 	t.expect(await keyv.get(key)).toBe(valid);
 });
 
-test.it(
-	"expires column is populated when using Keyv core with TTL",
-	async (t) => {
-		const keyvMysql = new KeyvMysql(uri);
-		const keyv = new Keyv({ store: keyvMysql });
-		const key = faker.string.alphanumeric(10);
-		const value = faker.string.alphanumeric(10);
-		await keyv.set(key, value, 60_000);
-		const rows = await keyvMysql.query<mysql.RowDataPacket[]>(
-			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
-		);
-		t.expect(rows[0].expires).not.toBeNull();
-		// expires should be roughly Date.now() + 60000
-		const expires = Number(rows[0].expires);
-		const now = Date.now();
-		t.expect(expires).toBeGreaterThan(now);
-		t.expect(expires).toBeLessThanOrEqual(now + 60_000 + 1000);
-	},
-);
+test.it("expires column is populated when using Keyv core with TTL", async (t) => {
+	const keyvMysql = new KeyvMysql(uri);
+	const keyv = new Keyv({ store: keyvMysql });
+	const key = faker.string.alphanumeric(10);
+	const value = faker.string.alphanumeric(10);
+	await keyv.set(key, value, 60_000);
+	const rows = await keyvMysql.query<mysql.RowDataPacket[]>(
+		`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
+	);
+	t.expect(rows[0].expires).not.toBeNull();
+	// expires should be roughly Date.now() + 60000
+	const expires = Number(rows[0].expires);
+	const now = Date.now();
+	t.expect(expires).toBeGreaterThan(now);
+	t.expect(expires).toBeLessThanOrEqual(now + 60_000 + 1000);
+});
 
 // Native namespace tests
-test.it(
-	"native namespace: same key in different namespaces stored independently",
-	async (t) => {
-		const ns1 = faker.string.alphanumeric(8);
-		const ns2 = faker.string.alphanumeric(8);
-		const mysql1 = new KeyvMysql({ uri });
-		mysql1.namespace = ns1;
-		const mysql2 = new KeyvMysql({ uri });
-		mysql2.namespace = ns2;
+test.it("native namespace: same key in different namespaces stored independently", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = ns1;
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = ns2;
 
-		const key = faker.string.alphanumeric(10);
-		const val1 = faker.string.alphanumeric(10);
-		const val2 = faker.string.alphanumeric(10);
-		await mysql1.set(`${ns1}:${key}`, val1);
-		await mysql2.set(`${ns2}:${key}`, val2);
+	const key = faker.string.alphanumeric(10);
+	const val1 = faker.string.alphanumeric(10);
+	const val2 = faker.string.alphanumeric(10);
+	await mysql1.set(`${ns1}:${key}`, val1);
+	await mysql2.set(`${ns2}:${key}`, val2);
 
-		t.expect(await mysql1.get(`${ns1}:${key}`)).toBe(val1);
-		t.expect(await mysql2.get(`${ns2}:${key}`)).toBe(val2);
-	},
-);
+	t.expect(await mysql1.get(`${ns1}:${key}`)).toBe(val1);
+	t.expect(await mysql2.get(`${ns2}:${key}`)).toBe(val2);
+});
 
-test.it(
-	"native namespace: null namespace stores and retrieves correctly",
-	async (t) => {
-		const keyv = new KeyvMysql({ uri });
-		const key = faker.string.alphanumeric(10);
-		const value = faker.string.alphanumeric(10);
-		await keyv.set(key, value);
-		t.expect(await keyv.get(key)).toBe(value);
-	},
-);
+test.it("native namespace: null namespace stores and retrieves correctly", async (t) => {
+	const keyv = new KeyvMysql({ uri });
+	const key = faker.string.alphanumeric(10);
+	const value = faker.string.alphanumeric(10);
+	await keyv.set(key, value);
+	t.expect(await keyv.get(key)).toBe(value);
+});
 
-test.it(
-	"native namespace: clear only clears the specified namespace",
-	async (t) => {
-		const ns1 = faker.string.alphanumeric(8);
-		const ns2 = faker.string.alphanumeric(8);
-		const mysql1 = new KeyvMysql({ uri });
-		mysql1.namespace = ns1;
-		const mysql2 = new KeyvMysql({ uri });
-		mysql2.namespace = ns2;
+test.it("native namespace: clear only clears the specified namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = ns1;
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = ns2;
 
-		const key = faker.string.alphanumeric(10);
-		const val1 = faker.string.alphanumeric(10);
-		const val2 = faker.string.alphanumeric(10);
-		await mysql1.set(`${ns1}:${key}`, val1);
-		await mysql2.set(`${ns2}:${key}`, val2);
+	const key = faker.string.alphanumeric(10);
+	const val1 = faker.string.alphanumeric(10);
+	const val2 = faker.string.alphanumeric(10);
+	await mysql1.set(`${ns1}:${key}`, val1);
+	await mysql2.set(`${ns2}:${key}`, val2);
 
-		await mysql1.clear();
+	await mysql1.clear();
 
-		t.expect(await mysql1.get(`${ns1}:${key}`)).toBeUndefined();
-		t.expect(await mysql2.get(`${ns2}:${key}`)).toBe(val2);
-	},
-);
+	t.expect(await mysql1.get(`${ns1}:${key}`)).toBeUndefined();
+	t.expect(await mysql2.get(`${ns2}:${key}`)).toBe(val2);
+});
 
 test.it("native namespace: delete scoped to namespace", async (t) => {
 	const ns1 = faker.string.alphanumeric(8);
@@ -513,33 +492,30 @@ test.it("native namespace: hasMany scoped to namespace", async (t) => {
 	t.expect(result2).toEqual([false]);
 });
 
-test.it(
-	"native namespace: iterator only returns keys from correct namespace",
-	async (t) => {
-		const ns1 = faker.string.alphanumeric(8);
-		const ns2 = faker.string.alphanumeric(8);
-		const mysql1 = new KeyvMysql({ uri });
-		mysql1.namespace = ns1;
-		const mysql2 = new KeyvMysql({ uri });
-		mysql2.namespace = ns2;
+test.it("native namespace: iterator only returns keys from correct namespace", async (t) => {
+	const ns1 = faker.string.alphanumeric(8);
+	const ns2 = faker.string.alphanumeric(8);
+	const mysql1 = new KeyvMysql({ uri });
+	mysql1.namespace = ns1;
+	const mysql2 = new KeyvMysql({ uri });
+	mysql2.namespace = ns2;
 
-		const key1 = faker.string.alphanumeric(10);
-		const key2 = faker.string.alphanumeric(10);
-		const key3 = faker.string.alphanumeric(10);
-		await mysql1.set(key1, "val1");
-		await mysql1.set(key2, "val2");
-		await mysql2.set(key3, "val3");
+	const key1 = faker.string.alphanumeric(10);
+	const key2 = faker.string.alphanumeric(10);
+	const key3 = faker.string.alphanumeric(10);
+	await mysql1.set(key1, "val1");
+	await mysql1.set(key2, "val2");
+	await mysql2.set(key3, "val3");
 
-		const keys: string[] = [];
-		for await (const [key] of mysql1.iterator(ns1)) {
-			keys.push(key);
-		}
+	const keys: string[] = [];
+	for await (const [key] of mysql1.iterator(ns1)) {
+		keys.push(key);
+	}
 
-		t.expect(keys.length).toBe(2);
-		t.expect(keys).toContain(key1);
-		t.expect(keys).toContain(key2);
-	},
-);
+	t.expect(keys.length).toBe(2);
+	t.expect(keys).toContain(key1);
+	t.expect(keys).toContain(key2);
+});
 
 test.it(
 	"native namespace: two Keyv instances with different namespaces do not conflict",
@@ -673,31 +649,25 @@ test.it("iterator on empty store returns nothing", async (t) => {
 });
 
 // Non-string value tests (covers getExpiresFromValue else branch)
-test.it(
-	"set() stores null expires when value is a number (non-string)",
-	async (t) => {
-		const keyv = new KeyvMysql(uri);
-		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, 42);
-		const rows = await keyv.query<mysql.RowDataPacket[]>(
-			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
-		);
-		t.expect(rows[0].expires).toBeNull();
-	},
-);
+test.it("set() stores null expires when value is a number (non-string)", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, 42);
+	const rows = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
+	);
+	t.expect(rows[0].expires).toBeNull();
+});
 
-test.it(
-	"set() stores null expires when value is null (non-string)",
-	async (t) => {
-		const keyv = new KeyvMysql(uri);
-		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, null);
-		const rows = await keyv.query<mysql.RowDataPacket[]>(
-			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
-		);
-		t.expect(rows[0].expires).toBeNull();
-	},
-);
+test.it("set() stores null expires when value is null (non-string)", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, null);
+	const rows = await keyv.query<mysql.RowDataPacket[]>(
+		`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
+	);
+	t.expect(rows[0].expires).toBeNull();
+});
 
 // createKeyv helper tests
 

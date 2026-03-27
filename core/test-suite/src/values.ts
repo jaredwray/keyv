@@ -6,11 +6,7 @@ import type KeyvModule from "keyv";
 import type * as Vitest from "vitest";
 import type { KeyvStoreFn } from "./types";
 
-const keyvValueTests = (
-	test: typeof Vitest,
-	Keyv: typeof KeyvModule,
-	store: KeyvStoreFn,
-) => {
+const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
 		const keyv = new Keyv({ store: store() });
 		await keyv.clear();
@@ -105,30 +101,23 @@ const keyvValueTests = (
 			t.expect((error as Error).message).toBe("symbol cannot be serialized");
 		}
 
-		t.expect((errorObject as Error).message).toBe(
-			"symbol cannot be serialized",
-		);
+		t.expect((errorObject as Error).message).toBe("symbol cannot be serialized");
 	});
 
-	test.it(
-		"value can be BigInt using other serializer/deserializer",
-		async (t) => {
-			const keyv = new Keyv({
-				store: store(),
-				serialization: {
-					stringify: (data: unknown) => JSONbig.stringify(data),
-					parse: <T>(data: string) => JSONbig.parse(data) as T,
-				},
-			});
-			const key = faker.string.alphanumeric(10);
-			const value = BigInt("9223372036854775807") as unknown as BigNumber.Value;
-			await keyv.set(key, value);
-			const storedValue = await keyv.get(key);
-			t.expect(JSONbig.stringify(storedValue)).toBe(
-				BigNumber(value).toString(),
-			);
-		},
-	);
+	test.it("value can be BigInt using other serializer/deserializer", async (t) => {
+		const keyv = new Keyv({
+			store: store(),
+			serialization: {
+				stringify: (data: unknown) => JSONbig.stringify(data),
+				parse: <T>(data: string) => JSONbig.parse(data) as T,
+			},
+		});
+		const key = faker.string.alphanumeric(10);
+		const value = BigInt("9223372036854775807") as unknown as BigNumber.Value;
+		await keyv.set(key, value);
+		const storedValue = await keyv.get(key);
+		t.expect(JSONbig.stringify(storedValue)).toBe(BigNumber(value).toString());
+	});
 
 	test.it("single quotes value should be saved", async (t) => {
 		const keyv = new Keyv({ store: store() });
@@ -148,19 +137,16 @@ const keyvValueTests = (
 		t.expect(await keyv.get(key3)).toBe(value);
 	});
 
-	test.it(
-		"single quotes key is rejected when sanitized to empty",
-		async (t) => {
-			const keyv = new Keyv({ store: store() });
+	test.it("single quotes key should be saved", async (t) => {
+		const keyv = new Keyv({ store: store() });
 
-			const value = "'";
+		const value = "'";
 
-			const key = "'";
-			const result = await keyv.set(key, value);
-			t.expect(result).toBe(false);
-			t.expect(await keyv.get(key)).toBeUndefined();
-		},
-	);
+		const key = "'";
+		const result = await keyv.set(key, value);
+		t.expect(result).toBe(true);
+		t.expect(await keyv.get(key)).toBe(value);
+	});
 };
 
 export default keyvValueTests;
