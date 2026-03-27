@@ -19,6 +19,7 @@ import {
 	deprecatedHookAliases,
 	isDataExpired,
 	sanitizeKey,
+	sanitizeKeys,
 } from "./utils.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
@@ -396,7 +397,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getMany<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<Value | undefined>> {
-		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
+		keys = sanitizeKeys(keys, this._sanitizePattern);
 		const store = this._store;
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
@@ -536,7 +537,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
-		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
+		keys = sanitizeKeys(keys, this._sanitizePattern);
 		const store = this._store;
 
 		if (keys.length === 0) {
@@ -894,7 +895,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} array of booleans indicating success for each key
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
+		keys = sanitizeKeys(keys, this._sanitizePattern);
 		try {
 			const store = this._store;
 			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
@@ -977,7 +978,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} will return an array of booleans if the keys exist
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		keys = keys.map((k) => sanitizeKey(k, this._sanitizePattern));
+		keys = sanitizeKeys(keys, this._sanitizePattern);
 		const store = this._store;
 		if (store.hasMany !== undefined) {
 			return store.hasMany(keys);

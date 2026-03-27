@@ -32,4 +32,4 @@ export type {
 	StoredDataRaw,
 } from "./types.js";
 export { KeyvHooks } from "./types.js";
-export { buildSanitizePattern, sanitizeKey } from "./utils.js";
+export { buildSanitizePattern, sanitizeKey, sanitizeKeys } from "./utils.js";

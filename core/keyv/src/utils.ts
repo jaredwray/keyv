@@ -111,3 +111,21 @@ export function sanitizeKey(key: string, pattern: RegExp | undefined): string {
 	pattern.lastIndex = 0;
 	return key.replace(pattern, "");
 }
+
+/**
+ * Strip unsafe characters from an array of keys using a precompiled pattern
+ * @param keys - The keys to sanitize
+ * @param pattern - A precompiled RegExp from `buildSanitizePattern`, or `undefined` to skip
+ * @returns The sanitized key strings
+ */
+export function sanitizeKeys(
+	keys: string[],
+	pattern: RegExp | undefined,
+): string[] {
+	/* v8 ignore next -- @preserve */
+	if (!pattern) {
+		return keys;
+	}
+
+	return keys.map((k) => sanitizeKey(k, pattern));
+}
