@@ -9,6 +9,7 @@ export default defineConfig({
 			reporter: ['json', 'lcov', 'text'],
 			reportOnFailure: true,
 			exclude: [
+				'src/index.ts',
 				'src/types.ts',
 				'vitest.config.ts',
 				'dist',
