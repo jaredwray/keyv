@@ -8,7 +8,7 @@ import {
 	type KeyvValue,
 	type StoredData,
 } from "../types.js";
-import { isDataExpired } from "../utils.js";
+import { calculateExpires, isDataExpired } from "../utils.js";
 
 /**
  * Configuration options for KeyvMemoryAdapter.
@@ -195,7 +195,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const data = { value, expires: ttl ? Date.now() + ttl : undefined };
+		const data = { value, expires: calculateExpires(ttl) };
 		this._store.set(keyPrefix, data, ttl);
 		return true;
 	}
@@ -207,8 +207,10 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
-			const result = await this.set(entry.key, entry.value, entry.ttl);
-			results.push(result);
+			const keyPrefix = this.getKeyPrefix(entry.key, this._namespace);
+			const data = { value: entry.value, expires: calculateExpires(entry.ttl) };
+			this._store.set(keyPrefix, data, entry.ttl);
+			results.push(true);
 		}
 
 		return results;
@@ -227,6 +229,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Clears entries from the store. If a namespace is set, only entries
 	 * within that namespace are removed. Otherwise, the entire store is cleared.
+	 * NOTE: if there is no `keys()` then we just do a full clear.
 	 */
 	public async clear(): Promise<void> {
 		if (!this._namespace || typeof (this._store as Map<any, any>).keys !== "function") {
@@ -258,13 +261,25 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns Array of stored data in the same order as the input keys
 	 */
 	public async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
-		const values = [];
+		const values: Array<StoredData<T | undefined>> = [];
 		for (const key of keys) {
-			const value = await this.get(key);
-			values.push(value);
+			const keyPrefix = this.getKeyPrefix(key, this._namespace);
+			const data = this._store.get(keyPrefix) as KeyvValue<T>;
+			if (!data) {
+				values.push(undefined as StoredData<T | undefined>);
+				continue;
+			}
+
+			if (isDataExpired(data)) {
+				this._store.delete(keyPrefix);
+				values.push(undefined as StoredData<T | undefined>);
+				continue;
+			}
+
+			values.push(data as StoredData<T | undefined>);
 		}
 
-		return values as Array<StoredData<T | undefined>>;
+		return values;
 	}
 
 	/**

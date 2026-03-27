@@ -8,6 +8,22 @@ export function isDataExpired<Value>(data: KeyvValue<Value>): boolean {
 }
 
 /**
+ * Calculate an absolute expiry timestamp from a TTL value.
+ * Returns `undefined` when `ttl` is absent, zero, negative, or non-finite
+ * (meaning "no expiry").
+ *
+ * @param ttl - Time-to-live in milliseconds, or `undefined`
+ * @returns Absolute expiry timestamp (ms since epoch), or `undefined`
+ */
+export function calculateExpires(ttl: number | undefined): number | undefined {
+	if (typeof ttl !== "number" || ttl <= 0 || !Number.isFinite(ttl)) {
+		return undefined;
+	}
+
+	return Date.now() + ttl;
+}
+
+/**
  * Resolve a TTL value by falling back to a default when none is given,
  * then normalising zero, negative, or non-finite values to `undefined` (meaning "no expiry").
  *

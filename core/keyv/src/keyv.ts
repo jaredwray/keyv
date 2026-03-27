@@ -17,6 +17,7 @@ import {
 } from "./types.js";
 import {
 	buildDeprecatedHooks,
+	calculateExpires,
 	deleteExpiredKeys,
 	deprecatedHookAliases,
 	isDataExpired,
@@ -689,7 +690,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 						ttl = resolveTtl(ttl, this._ttl);
 
 						/* v8 ignore next -- @preserve */
-						const expires = typeof ttl === "number" ? Date.now() + ttl : undefined;
+						const expires = calculateExpires(ttl);
 
 						/* v8 ignore next -- @preserve */
 						if (typeof value === "symbol") {
