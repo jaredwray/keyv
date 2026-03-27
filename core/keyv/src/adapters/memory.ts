@@ -15,10 +15,10 @@ import { isDataExpired } from "../utils.js";
  */
 export type KeyvMemoryAdapterOptions = {
 	/**
-	 * The namespace to use for keys. Can be a static string or a function that returns a string.
+	 * The namespace to use for keys.
 	 * When set, all keys will be prefixed with the namespace followed by the key separator.
 	 */
-	namespace?: string | (() => string);
+	namespace?: string;
 	/**
 	 * The separator used between namespace and key. Defaults to ":".
 	 */
@@ -66,14 +66,14 @@ export type KeyPrefixData = {
  *
  * // Using with a custom store
  * const customStore = new KeyvMemoryAdapter(myCustomMapLikeStore, {
- *   namespace: () => `tenant-${getTenantId()}`,
+ *   namespace: 'tenant-123',
  *   keySeparator: ':'
  * });
  * ```
  */
 export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvMapType;
-	private _namespace?: string | (() => string);
+	private _namespace?: string;
 	private _keySeparator = ":";
 
 	/**
@@ -123,37 +123,32 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the current namespace value (resolved if it's a function).
+	 * Gets the current namespace.
 	 */
 	public get namespace(): string | undefined {
-		return this.getNamespace();
+		return this._namespace;
 	}
 
 	/**
-	 * Sets the namespace to a static string value.
+	 * Sets the namespace.
 	 */
 	public set namespace(namespace: string | undefined) {
 		this._namespace = namespace;
 	}
 
 	/**
-	 * Gets the current namespace, resolving it if it's a function.
-	 * @returns The resolved namespace string, or undefined if not set
+	 * Gets the current namespace.
+	 * @returns The namespace string, or undefined if not set
 	 */
 	public getNamespace() {
-		if (typeof this._namespace === "function") {
-			return this._namespace();
-		}
-
 		return this._namespace;
 	}
 
 	/**
-	 * Sets the namespace to a static string or a function that returns a string.
-	 * Using a function allows for dynamic namespaces (e.g., per-tenant).
-	 * @param namespace - The namespace string, function, or undefined to clear
+	 * Sets the namespace.
+	 * @param namespace - The namespace string, or undefined to clear
 	 */
-	public setNamespace(namespace: string | (() => string) | undefined) {
+	public setNamespace(namespace: string | undefined) {
 		this._namespace = namespace;
 	}
 
@@ -191,7 +186,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to retrieve
 	 * @returns The stored data, or undefined if not found or expired
 	 */
-	async get<T>(key: string): Promise<StoredData<T> | undefined> {
+	public async get<T>(key: string): Promise<StoredData<T> | undefined> {
 		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
 		const data = this._store.get(keyPrefix) as KeyvValue<T>;
 		if (!data) {
@@ -214,7 +209,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param ttl - Optional time-to-live in milliseconds
 	 * @returns Always returns true indicating success
 	 */
-	async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
 		const data = { value, expires: ttl ? Date.now() + ttl : undefined };
 		this._store.set(keyPrefix, data, ttl);
@@ -225,7 +220,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple entries in the store at once.
 	 * @param entries - Array of entries containing key, value, and optional TTL
 	 */
-	async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			const result = await this.set(entry.key, entry.value, entry.ttl);
@@ -240,7 +235,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to delete
 	 * @returns True if the key was deleted, false otherwise
 	 */
-	async delete(key: string): Promise<boolean> {
+	public async delete(key: string): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
 		return this._store.delete(keyPrefix);
 	}
@@ -249,7 +244,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * Clears all entries from the store.
 	 * Note: This clears the entire underlying store, not just the current namespace.
 	 */
-	async clear(): Promise<void> {
+	public async clear(): Promise<void> {
 		this._store.clear();
 	}
 
@@ -258,7 +253,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to check
 	 * @returns True if the key exists and is not expired, false otherwise
 	 */
-	async has(key: string): Promise<boolean> {
+	public async has(key: string): Promise<boolean> {
 		const value = await this.get(key);
 		return Boolean(value);
 	}
@@ -268,7 +263,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - Array of keys to retrieve
 	 * @returns Array of stored data in the same order as the input keys
 	 */
-	async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
+	public async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
 		const values = [];
 		for (const key of keys) {
 			const value = await this.get(key);
@@ -283,7 +278,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - Array of keys to delete
 	 * @returns Array of booleans indicating success for each key
 	 */
-	async deleteMany(keys: string[]): Promise<boolean[]> {
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const results: boolean[] = [];
 		for (const key of keys) {
 			try {
@@ -306,7 +301,10 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param namespace - Optional namespace to filter entries by
 	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding [key, value] pairs
 	 */
-	async *iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
+	public async *iterator<Value>(): AsyncGenerator<
+		Array<string | Awaited<Value> | undefined>,
+		void
+	> {
 		// Check if store supports iteration
 		if (typeof (this._store as Map<any, any>).entries !== "function") {
 			return;

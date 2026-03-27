@@ -380,12 +380,6 @@ describe("KeyvMemoryAdapter with QuickLRU - Namespace", () => {
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
-	test("should return the namespace if it is a function", () => {
-		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
-		const keyv = new KeyvMemoryAdapter(lru, { namespace: () => "test" });
-		expect(keyv.getNamespace()).toBe("test");
-	});
-
 	test("should set the namespace", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
 		const keyv = new KeyvMemoryAdapter(lru);
@@ -393,11 +387,11 @@ describe("KeyvMemoryAdapter with QuickLRU - Namespace", () => {
 		expect(keyv.namespace).toBe("test");
 	});
 
-	test("should set the namespace as a function", () => {
+	test("should set the namespace via setNamespace", () => {
 		const lru = new QuickLRU<string, unknown>({ maxSize: 100 });
 		const keyv = new KeyvMemoryAdapter(lru);
 		expect(keyv.namespace).toBe(undefined);
-		keyv.setNamespace(() => "test");
+		keyv.setNamespace("test");
 		expect(keyv.namespace).toBe("test");
 	});
 
@@ -1330,12 +1324,6 @@ describe("KeyvMemoryAdapter with Map - Namespace", () => {
 	test("should return the namespace if it is a string", () => {
 		const map = new Map<string, unknown>();
 		const keyv = new KeyvMemoryAdapter(map, { namespace: "test" });
-		expect(keyv.getNamespace()).toBe("test");
-	});
-
-	test("should return the namespace if it is a function", () => {
-		const map = new Map<string, unknown>();
-		const keyv = new KeyvMemoryAdapter(map, { namespace: () => "test" });
 		expect(keyv.getNamespace()).toBe("test");
 	});
 
