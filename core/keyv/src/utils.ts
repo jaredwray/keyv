@@ -12,6 +12,45 @@ export function isDataExpired<Value>(data: DeserializedData<Value>): boolean {
 }
 
 /**
+ * Resolve a TTL value by falling back to a default when none is given,
+ * then normalising zero, negative, or non-finite values to `undefined` (meaning "no expiry").
+ *
+ * @param ttl - Explicit TTL in milliseconds, or `undefined`
+ * @param defaultTtl - Fallback TTL (typically `Keyv._ttl`), or `undefined`
+ * @returns The resolved TTL in milliseconds, or `undefined` for no expiry
+ */
+export function resolveTtl(
+	ttl: number | undefined,
+	defaultTtl: number | undefined,
+): number | undefined {
+	const resolved = ttl ?? defaultTtl;
+	if (resolved === undefined || resolved <= 0 || !Number.isFinite(resolved)) {
+		return undefined;
+	}
+
+	return resolved;
+}
+
+/**
+ * Derive a store-level TTL from an absolute `expires` timestamp.
+ * Returns `undefined` when `expires` is absent, non-finite, or when the derived
+ * TTL is zero or negative (i.e. the entry has already expired).
+ *
+ * @param expires - Absolute expiry timestamp in milliseconds since epoch, or `undefined`
+ * @returns The remaining TTL in milliseconds, or `undefined`
+ */
+export function ttlFromExpires(
+	expires: number | undefined,
+): number | undefined {
+	if (typeof expires !== "number" || !Number.isFinite(expires)) {
+		return undefined;
+	}
+
+	const remaining = expires - Date.now();
+	return remaining > 0 ? remaining : undefined;
+}
+
+/**
  * Scan parallel `keys` and `data` arrays, nullify any expired entries in
  * `data`, and batch-delete the corresponding keys via `keyv.deleteMany()`.
  */

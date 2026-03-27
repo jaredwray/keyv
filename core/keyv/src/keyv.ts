@@ -19,8 +19,10 @@ import {
 	deleteExpiredKeys,
 	deprecatedHookAliases,
 	isDataExpired,
+	resolveTtl,
 	sanitizeKey,
 	sanitizeKeys,
+	ttlFromExpires,
 } from "./utils.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
@@ -602,11 +604,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const data = { key, value, ttl };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET, data);
 
-		data.ttl ??= this._ttl;
-
-		if (data.ttl === 0) {
-			data.ttl = undefined;
-		}
+		data.ttl = resolveTtl(data.ttl, this._ttl);
 
 		const store = this._store;
 
@@ -671,12 +669,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			} else {
 				const serializedEntries = await Promise.all(
 					entries.map(async ({ key, value, ttl }) => {
-						ttl ??= this._ttl;
-
-						/* v8 ignore next -- @preserve */
-						if (ttl === 0) {
-							ttl = undefined;
-						}
+						ttl = resolveTtl(ttl, this._ttl);
 
 						/* v8 ignore next -- @preserve */
 						const expires =
@@ -725,12 +718,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const data = { key, value };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
-		const derivedTtl =
-			typeof data.value.expires === "number"
-				? data.value.expires - Date.now()
-				: undefined;
-		const ttl =
-			typeof derivedTtl === "number" && derivedTtl > 0 ? derivedTtl : undefined;
+		const ttl = ttlFromExpires(data.value.expires);
 
 		const store = this._store;
 		let result = true;
@@ -789,14 +777,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			} else {
 				const rawEntries = await Promise.all(
 					entries.map(async ({ key, value }) => {
-						const derivedTtl =
-							typeof value.expires === "number"
-								? value.expires - Date.now()
-								: undefined;
-						const ttl =
-							typeof derivedTtl === "number" && derivedTtl > 0
-								? derivedTtl
-								: undefined;
+						const ttl = ttlFromExpires(value.expires);
 						const serializedValue = await this.serializeData(value);
 						return { key, value: serializedValue, ttl };
 					}),
