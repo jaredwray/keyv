@@ -41,6 +41,24 @@ export type KeyvTelemetryEvent = {
 	timestamp: number;
 };
 
+export type StatsManagerOptions = {
+	/**
+	 * Enable or disable stats tracking.
+	 * @default false
+	 */
+	enabled?: boolean;
+	/**
+	 * Maximum number of entries per event-type LRU map.
+	 * @default 1000
+	 */
+	maxEntries?: number;
+	/**
+	 * The event emitter (e.g. a Keyv instance) to subscribe to for telemetry events.
+	 * If provided, the StatsManager will automatically subscribe on construction.
+	 */
+	emitter?: IEventEmitter;
+};
+
 export enum KeyvHooks {
 	/** @deprecated Use BEFORE_SET instead */
 	PRE_SET = "preSet",

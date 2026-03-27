@@ -29,6 +29,7 @@ export type {
 	KeyvStoreAdapter,
 	KeyvTelemetryEvent,
 	KeyvValue,
+	StatsManagerOptions,
 	StoredData,
 	StoredDataNoRaw,
 	StoredDataRaw,

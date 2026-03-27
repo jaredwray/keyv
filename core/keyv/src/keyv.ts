@@ -32,7 +32,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Stats manager for tracking cache operation metrics (hits, misses, sets, deletes, errors).
 	 */
-	private _stats = new StatsManager(false);
+	private _stats: StatsManager;
 
 	/**
 	 * Default time to live in milliseconds. Can be overridden per-key via {@link set}.
@@ -152,11 +152,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this._store.namespace = this._namespace;
 		}
 
-		if (mergedOptions.stats) {
-			this._stats.enabled = mergedOptions.stats;
-		}
-
-		this._stats.subscribe(this);
+		this._stats = new StatsManager({
+			emitter: this,
+			enabled: mergedOptions.stats ?? false,
+		});
 
 		if (mergedOptions.ttl) {
 			this._ttl = mergedOptions.ttl;
