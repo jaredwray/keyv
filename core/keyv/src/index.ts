@@ -19,6 +19,7 @@ export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export { Keyv, Keyv as default } from "./keyv.js";
 export type {
 	DeserializedData,
+	IteratorFunction,
 	KeyvCompression,
 	KeyvCompressionAdapter,
 	KeyvEntry,

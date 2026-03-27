@@ -3,6 +3,7 @@ import { KeyvJsonSerializer } from "./json-serializer.js";
 import StatsManager from "./stats-manager.js";
 import {
 	type DeserializedData,
+	type IteratorFunction,
 	type KeyvCompressionAdapter,
 	type KeyvEntry,
 	KeyvHooks,
@@ -13,9 +14,6 @@ import {
 	type StoredDataRaw,
 } from "./types.js";
 import { buildSanitizePattern, sanitizeKey } from "./utils.js";
-
-// biome-ignore lint/suspicious/noExplicitAny: type format
-type IteratorFunction = (argument?: any) => AsyncGenerator<any, void>;
 
 /**
  * Maps new hook names to their deprecated equivalents so both fire during migration.

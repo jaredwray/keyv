@@ -196,3 +196,6 @@ export type KeyvStoreAdapter = KeyvStorageAdapter;
  * @deprecated Use `KeyvCompressionAdapter` instead.
  */
 export type KeyvCompression = KeyvCompressionAdapter;
+
+// biome-ignore lint/suspicious/noExplicitAny: type format
+export type IteratorFunction = (argument?: any) => AsyncGenerator<any, void>;
