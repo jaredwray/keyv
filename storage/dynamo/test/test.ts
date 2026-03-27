@@ -582,3 +582,97 @@ test.it("setMany marks unprocessed items as false", async (t) => {
 	t.expect(result?.[0]).toBe(true);
 	t.expect(result?.[1]).toBe(false);
 });
+
+test.it("setMany with per-entry ttl", async (t) => {
+	const dynamo = new KeyvDynamo({ endpoint: dynamoURL });
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	const result = await dynamo.setMany([
+		{ key: key1, value: "val1", ttl: 5000 },
+		{ key: key2, value: "val2" },
+	]);
+	t.expect(result).toEqual([true, true]);
+	t.expect(await dynamo.get(key1)).toBe("val1");
+	t.expect(await dynamo.get(key2)).toBe("val2");
+});
+
+test.it("setMany handles unprocessed items with missing id", async (t) => {
+	const dynamo = store();
+	await dynamo.set("_warmup", "ok");
+	dynamo._client.batchWrite = async (input: any) => {
+		const tableName = Object.keys(input.RequestItems)[0];
+		return {
+			UnprocessedItems: {
+				[tableName]: [{ PutRequest: { Item: {} } }],
+			},
+		};
+	};
+	const result = await dynamo.setMany([{ key: "key1", value: "val1" }]);
+	t.expect(result).toEqual([true]);
+});
+
+test.it("getMany retries unprocessed keys", async (t) => {
+	const dynamo = store();
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	await dynamo.set(key1, "val1");
+	await dynamo.set(key2, "val2");
+
+	const originalBatchGet = dynamo._client.batchGet.bind(dynamo._client);
+	let callCount = 0;
+	dynamo._client.batchGet = async (input: any) => {
+		callCount++;
+		if (callCount === 1) {
+			const tableName = Object.keys(input.RequestItems)[0];
+			return {
+				UnprocessedKeys: {
+					[tableName]: {
+						Keys: [
+							{ id: dynamo.formatKey(key1) },
+							{ id: dynamo.formatKey(key2) },
+						],
+					},
+				},
+			};
+		}
+		return originalBatchGet(input);
+	};
+
+	const result = await dynamo.getMany([key1, key2]);
+	t.expect(result).toEqual(["val1", "val2"]);
+	t.expect(callCount).toBe(2);
+	dynamo._client.batchGet = originalBatchGet;
+});
+
+test.it("hasMany retries unprocessed keys", async (t) => {
+	const dynamo = store();
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	await dynamo.set(key1, "val1");
+	await dynamo.set(key2, "val2");
+
+	const originalBatchGet = dynamo._client.batchGet.bind(dynamo._client);
+	let callCount = 0;
+	dynamo._client.batchGet = async (input: any) => {
+		callCount++;
+		if (callCount === 1) {
+			const tableName = Object.keys(input.RequestItems)[0];
+			return {
+				UnprocessedKeys: {
+					[tableName]: {
+						Keys: [
+							{ id: dynamo.formatKey(key1) },
+							{ id: dynamo.formatKey(key2) },
+						],
+					},
+				},
+			};
+		}
+		return originalBatchGet(input);
+	};
+
+	const result = await dynamo.hasMany([key1, key2]);
+	t.expect(result).toEqual([true, true]);
+	t.expect(callCount).toBe(2);
+	dynamo._client.batchGet = originalBatchGet;
+});

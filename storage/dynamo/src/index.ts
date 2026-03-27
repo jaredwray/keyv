@@ -589,6 +589,30 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async createTable(tableName: string): Promise<void> {
 		try {
+			// Check if the table already exists before attempting to create it
+			const response = await this._client.send(
+				new DescribeTableCommand({ TableName: tableName }),
+			);
+
+			/* v8 ignore start -- @preserve */
+			// Table already exists - wait for it to become active if needed
+			if (response.Table?.TableStatus !== "ACTIVE") {
+				await waitUntilTableExists(
+					{ client: this._client, maxWaitTime: 60 },
+					{ TableName: tableName },
+				);
+			}
+
+			return;
+		} catch (error) {
+			// Table does not exist, proceed to create it
+			if (!(error instanceof ResourceNotFoundException)) {
+				throw error;
+			}
+			/* v8 ignore stop */
+		}
+
+		try {
 			await this._client.send(
 				new CreateTableCommand({
 					TableName: tableName,
