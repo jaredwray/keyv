@@ -374,5 +374,21 @@ describe("Keyv", async () => {
 			keyv.sanitizeKey = { sql: true, mongo: false };
 			expect(keyv.sanitizeKey).toEqual({ sql: true, mongo: false });
 		});
+
+		test("setter with true should enable all sanitization categories", async () => {
+			const keyv = new Keyv({ sanitizeKey: false });
+			keyv.sanitizeKey = true;
+			await keyv.set("test'$key/path", "value");
+			// All categories stripped
+			expect(await keyv.get("testkeypath")).toBe("value");
+		});
+
+		test("setter with options object should apply granular sanitization", async () => {
+			const keyv = new Keyv();
+			keyv.sanitizeKey = { sql: true, mongo: false, path: false };
+			await keyv.set("test'$key/path", "value");
+			// SQL chars stripped, mongo and path chars preserved
+			expect(await keyv.get("test$key/path")).toBe("value");
+		});
 	});
 });
