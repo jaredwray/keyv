@@ -1,5 +1,31 @@
 import { describe, expect, test } from "vitest";
-import { buildSanitizePattern, sanitizeKey } from "../src/utils.js";
+import {
+	buildSanitizePattern,
+	isDataExpired,
+	sanitizeKey,
+} from "../src/utils.js";
+
+describe("isDataExpired", () => {
+	test("should return true when expires is in the past", () => {
+		expect(isDataExpired({ value: "x", expires: Date.now() - 1000 })).toBe(
+			true,
+		);
+	});
+
+	test("should return false when expires is in the future", () => {
+		expect(isDataExpired({ value: "x", expires: Date.now() + 10_000 })).toBe(
+			false,
+		);
+	});
+
+	test("should return false when expires is undefined", () => {
+		expect(isDataExpired({ value: "x", expires: undefined })).toBe(false);
+	});
+
+	test("should return false when expires is not set", () => {
+		expect(isDataExpired({ value: "x" })).toBe(false);
+	});
+});
 
 describe("sanitizeKey", () => {
 	describe("with all categories enabled (default)", () => {

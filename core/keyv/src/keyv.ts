@@ -504,10 +504,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		if (
 			deserializedData !== undefined &&
-			(deserializedData as DeserializedData<Value>).expires !== undefined &&
-			(deserializedData as DeserializedData<Value>).expires !== null &&
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			(deserializedData as DeserializedData<Value>).expires! < Date.now()
+			isDataExpired(deserializedData as DeserializedData<Value>)
 		) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
@@ -961,11 +958,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const data = (await this.deserializeData(rawData)) as any;
 			/* v8 ignore next -- @preserve */
 			if (data) {
-				if (data.expires === undefined || data.expires === null) {
-					return true;
-				}
-
-				return data.expires > Date.now();
+				return !isDataExpired(data);
 			}
 		}
 
