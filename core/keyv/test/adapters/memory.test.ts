@@ -153,6 +153,34 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		expect(await keyv.get("key1")).toBe(undefined);
 	});
 
+	test("should only clear keys in the current namespace", async () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store, { namespace: "ns1" });
+		await keyv.set("key1", "value1");
+		await keyv.set("key2", "value2");
+		// Manually add a key in a different namespace
+		store.set("ns2:other", { value: "other", expires: undefined });
+
+		await keyv.clear();
+
+		// ns1 keys should be gone
+		expect(await keyv.get("key1")).toBe(undefined);
+		expect(await keyv.get("key2")).toBe(undefined);
+		// ns2 key should remain
+		expect(store.has("ns2:other")).toBe(true);
+	});
+
+	test("should clear entire store when no namespace is set", async () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store);
+		await keyv.set("key1", "value1");
+		store.set("ns2:other", { value: "other", expires: undefined });
+
+		await keyv.clear();
+
+		expect(store.size).toBe(0);
+	});
+
 	test("should delete many keys", async () => {
 		const store = new Map();
 		const keyv = new KeyvMemoryAdapter(store);

@@ -225,11 +225,21 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Clears all entries from the store.
-	 * Note: This clears the entire underlying store, not just the current namespace.
+	 * Clears entries from the store. If a namespace is set, only entries
+	 * within that namespace are removed. Otherwise, the entire store is cleared.
 	 */
 	public async clear(): Promise<void> {
-		this._store.clear();
+		if (!this._namespace || typeof (this._store as Map<any, any>).keys !== "function") {
+			this._store.clear();
+			return;
+		}
+
+		const prefix = `${this._namespace}${this._keySeparator}`;
+		for (const key of [...(this._store as Map<any, any>).keys()]) {
+			if (key.startsWith(prefix)) {
+				this._store.delete(key);
+			}
+		}
 	}
 
 	/**
