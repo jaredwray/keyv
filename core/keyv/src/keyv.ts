@@ -1,4 +1,5 @@
 import { Hookified } from "hookified";
+import { type KeyvMapType, KeyvMemoryAdapter } from "./adapters/memory.js";
 import { detectKeyvStorage } from "./capabilities.js";
 import { KeyvJsonSerializer } from "./json-serializer.js";
 import { KeyvSanitize } from "./sanitize.js";
@@ -46,8 +47,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * The underlying storage adapter. Defaults to an in-memory {@link Map}.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private _store: KeyvStorageAdapter = new Map() as any;
+	private _store: KeyvStorageAdapter = new KeyvMemoryAdapter(new Map());
 
 	/**
 	 * Pluggable serialization adapter with `stringify` and `parse` methods.
@@ -108,7 +108,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		this.deprecatedHooks = buildDeprecatedHooks();
 
-		this._store = mergedOptions.store ?? new Map();
+		if (mergedOptions.store) {
+			const storeCap = detectKeyvStorage(mergedOptions.store);
+			if (storeCap.mapLike) {
+				this._store = new KeyvMemoryAdapter(mergedOptions.store as KeyvMapType);
+			} else {
+				this._store = mergedOptions.store;
+			}
+		}
 
 		this._compression = mergedOptions.compression;
 
@@ -175,7 +182,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public set store(store: KeyvStorageAdapter | Map<any, any> | any) {
 		const storeCap = detectKeyvStorage(store);
 		if (storeCap.mapLike || (storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)) {
-			this._store = store;
+			this._store = storeCap.mapLike ? new KeyvMemoryAdapter(store as KeyvMapType) : store;
 
 			if (typeof store.on === "function") {
 				// biome-ignore lint/suspicious/noExplicitAny: type format
@@ -939,7 +946,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		const store = this._store;
-		if (store.has !== undefined && !(store instanceof Map)) {
+		if (store.has !== undefined && !(store instanceof KeyvMemoryAdapter)) {
 			return store.has(key);
 		}
 
@@ -1020,18 +1027,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async *iterator(): AsyncGenerator<[string, any], void> {
 		const store = this._store;
 
-		if (store instanceof Map) {
-			for (const [key, raw] of store) {
-				const data = await this.deserializeData(raw as string);
-
-				if (data && isDataExpired(data)) {
-					await this.delete(key as string);
-					continue;
-				}
-
-				yield [key as string, data?.value];
-			}
-		} else if (typeof store.iterator === "function") {
+		if (typeof store.iterator === "function") {
 			for await (const [key, raw] of store.iterator()) {
 				const data = await this.deserializeData(raw as string);
 

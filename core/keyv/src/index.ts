@@ -1,3 +1,5 @@
+export type { KeyvMapType, KeyvMemoryAdapterOptions } from "./adapters/memory.js";
+export { createKeyv, KeyvMemoryAdapter } from "./adapters/memory.js";
 export type {
 	CapabilitySpec,
 	KeyvCapability,

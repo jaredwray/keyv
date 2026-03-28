@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { Keyv, KeyvSanitize } from "../src/index.js";
+import { Keyv, KeyvMemoryAdapter, KeyvSanitize } from "../src/index.js";
 
 describe("Keyv", async () => {
 	type TestData = {
@@ -41,10 +41,10 @@ describe("Keyv", async () => {
 			expect(keyv).toBeDefined();
 		});
 
-		test("when setting store property with undefined it should default to Map", async () => {
+		test("when setting store property with undefined it should default to KeyvMemoryAdapter", async () => {
 			const store = undefined;
 			const keyv = new Keyv({ store });
-			expect(keyv.store).toBeInstanceOf(Map);
+			expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
 		});
 	});
 
@@ -69,11 +69,11 @@ describe("Keyv", async () => {
 		});
 
 		test("does not call get when getMany is available", async () => {
-			const map = new Map();
-			const getManyMock = vi.fn((keys: string[]) => keys.map((key) => map.get(key)));
-			const store = Object.assign(new Map(map), { getMany: getManyMock });
-			const getSpy = vi.spyOn(store, "get");
-			const keyv = new Keyv({ store });
+			const adapter = new KeyvMemoryAdapter(new Map());
+			const getManyMock = vi.fn((keys: string[]) => keys.map((key) => adapter.store.get(key)));
+			adapter.getMany = getManyMock;
+			const getSpy = vi.spyOn(adapter, "get");
+			const keyv = new Keyv({ store: adapter });
 
 			await keyv.getMany(testKeys);
 			expect(getManyMock).toHaveBeenCalled();
@@ -82,15 +82,10 @@ describe("Keyv", async () => {
 
 		test("handles expired values correctly", async () => {
 			const deleteManyMock = vi.fn();
-			const store = Object.assign(new Map(), {
-				// biome-ignore lint/suspicious/noExplicitAny: test file
-				getMany(this: Map<string, any>, keys: string[]) {
-					return keys.map((key) => this.get(key));
-				},
-				deleteMany: deleteManyMock,
-			});
-			const deleteSpy = vi.spyOn(store, "delete");
-			const keyv = new Keyv({ store });
+			const adapter = new KeyvMemoryAdapter(new Map());
+			adapter.deleteMany = deleteManyMock;
+			const deleteSpy = vi.spyOn(adapter, "delete");
+			const keyv = new Keyv({ store: adapter });
 			await keyv.setMany(
 				testData.map((data) => ({
 					key: data.key,
@@ -132,9 +127,10 @@ describe("Keyv", async () => {
 
 		test("does not call set when setMany is available", async () => {
 			const setManyMock = vi.fn((data: TestData[]) => data.map(() => true));
-			const store = Object.assign(new Map(), { setMany: setManyMock });
-			const setSpy = vi.spyOn(store, "set");
-			const keyv = new Keyv(store);
+			const adapter = new KeyvMemoryAdapter(new Map());
+			adapter.setMany = setManyMock;
+			const setSpy = vi.spyOn(adapter, "set");
+			const keyv = new Keyv({ store: adapter });
 
 			await keyv.setMany(testData);
 			expect(setManyMock).toHaveBeenCalled();

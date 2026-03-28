@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import tk from "timekeeper";
 import * as test from "vitest";
-import Keyv, { type KeyvStorageAdapter } from "../src/index.js";
+import Keyv, { KeyvMemoryAdapter, type KeyvStorageAdapter } from "../src/index.js";
 import { KeyvStats } from "../src/stats.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
@@ -48,7 +48,7 @@ test.it("Keyv allows get and set the store via property", async (t) => {
 	await keyv.set("foo", "bar");
 	t.expect(await keyv.get("foo")).toBe("bar");
 	t.expect(store.size).toBe(1);
-	t.expect(keyv.store).toBe(store);
+	t.expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
 });
 
 test.it("Keyv should throw if invalid storage or Map on store property", async (t) => {
@@ -59,7 +59,7 @@ test.it("Keyv should throw if invalid storage or Map on store property", async (
 	await keyv.set("foo", "bar");
 	t.expect(await keyv.get("foo")).toBe("bar");
 	t.expect(store.size).toBe(1);
-	t.expect(keyv.store).toBe(store);
+	t.expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
 
 	t.expect(() => {
 		// eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -903,9 +903,9 @@ test.it(
 );
 
 test.it("should emit error if set fails", async (t) => {
-	const store = new Map();
-	store.set = test.vi.fn().mockRejectedValue(new Error("store set error"));
-	const keyv = new Keyv(store);
+	const adapter = new KeyvMemoryAdapter(new Map());
+	adapter.set = test.vi.fn().mockRejectedValue(new Error("store set error"));
+	const keyv = new Keyv({ store: adapter });
 	const errorHandler = test.vi.fn();
 	keyv.on("error", errorHandler);
 	const result = await keyv.set("foo", "bar");
@@ -943,9 +943,9 @@ test.it("should handle error on store delete", async (t) => {
 });
 
 test.it("should handle error on store clear", async (t) => {
-	const store = new Map();
-	store.clear = test.vi.fn().mockRejectedValue(new Error("store clear error"));
-	const keyv = new Keyv(store);
+	const adapter = new KeyvMemoryAdapter(new Map());
+	adapter.clear = test.vi.fn().mockRejectedValue(new Error("store clear error"));
+	const keyv = new Keyv({ store: adapter });
 	const errorHandler = test.vi.fn();
 	keyv.on("error", errorHandler);
 	await keyv.clear();
