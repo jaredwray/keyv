@@ -530,7 +530,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		const formattedValue = { value: data.value, expires };
-		const serializedValue = await this.serializeData(formattedValue);
+		const serializedValue = await this.encode(formattedValue);
 
 		let result = true;
 
@@ -580,7 +580,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 					}
 
 					const formattedValue = { value, expires };
-					const serializedValue = await this.serializeData(formattedValue);
+					const serializedValue = await this.encode(formattedValue);
 					return { key, value: serializedValue, ttl };
 				}),
 			);
@@ -630,7 +630,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		let result = true;
 
 		try {
-			const serializedValue = await this.serializeData(data.value);
+			const serializedValue = await this.encode(data.value);
 			const storeResult = await this._store.set(data.key, serializedValue, ttl);
 
 			if (typeof storeResult === "boolean") {
@@ -675,7 +675,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const rawEntries = await Promise.all(
 				entries.map(async ({ key, value }) => {
 					const ttl = ttlFromExpires(value.expires);
-					const serializedValue = await this.serializeData(value);
+					const serializedValue = await this.encode(value);
 					return { key, value: serializedValue, ttl };
 				}),
 			);
@@ -863,7 +863,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	// biome-ignore lint/suspicious/noExplicitAny: iterator yields vary by store
 	public async *iterator(): AsyncGenerator<[string, any], void> {
 		for await (const [key, raw] of this._store.iterator()) {
-			const data = await this.deserializeData(raw as string);
+			const data = await this.decode(raw as string);
 
 			if (data && isDataExpired(data)) {
 				await this.delete(key as string);
@@ -874,7 +874,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 	}
 
-	public async serializeData<T>(data: KeyvValue<T>): Promise<string | KeyvValue<T>> {
+	public async encode<T>(data: KeyvValue<T>): Promise<string | KeyvValue<T>> {
 		// Pipeline: serialize (optional) -> compress (optional)
 		if (!this._serialization && !this._compression) {
 			return data;
@@ -898,7 +898,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		return result;
 	}
 
-	public async deserializeData<T>(data: string | KeyvValue<T>): Promise<KeyvValue<T> | undefined> {
+	public async decode<T>(data: string | KeyvValue<T>): Promise<KeyvValue<T> | undefined> {
 		if (data === undefined || data === null) {
 			return undefined;
 		}
@@ -960,7 +960,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 			const deserialized =
 				typeof row === "string" || this._compression
-					? await this.deserializeData<Value>(row as string)
+					? await this.decode<Value>(row as string)
 					: (row as KeyvValue<Value>);
 
 			if (deserialized === undefined || deserialized === null) {

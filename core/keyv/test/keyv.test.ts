@@ -214,45 +214,45 @@ describe("serialization", () => {
 		expect(await keyv.get("foo-complex")).toStrictEqual(complexObject);
 	});
 
-	test("serializeData uses JSON.stringify when compression is set without serialization", async () => {
+	test("encode uses JSON.stringify when compression is set without serialization", async () => {
 		const keyv = new Keyv({
 			serialization: false,
 			compression: createMockCompression(),
 		});
 		const data = { value: "hello", expires: undefined };
-		const result = await keyv.serializeData(data);
+		const result = await keyv.encode(data);
 		expect(result).toBe(JSON.stringify(data));
 	});
 
-	test("deserializeData will return the data object if not string", async () => {
+	test("decode will return the data object if not string", async () => {
 		const keyv = new Keyv();
 		const complexObject = { foo: "bar", fizz: "buzz" };
-		const result = await keyv.deserializeData({ value: complexObject });
+		const result = await keyv.decode({ value: complexObject });
 		expect(result).toStrictEqual({ value: complexObject });
 	});
 
-	test("deserializeData returns undefined for null/undefined input", async () => {
+	test("decode returns undefined for null/undefined input", async () => {
 		const keyv = new Keyv();
 		// biome-ignore lint/suspicious/noExplicitAny: test
-		expect(await keyv.deserializeData(undefined as any)).toBeUndefined();
+		expect(await keyv.decode(undefined as any)).toBeUndefined();
 		// biome-ignore lint/suspicious/noExplicitAny: test
-		expect(await keyv.deserializeData(null as any)).toBeUndefined();
+		expect(await keyv.decode(null as any)).toBeUndefined();
 	});
 
-	test("deserializeData with no serialization and no compression returns raw object", async () => {
+	test("decode with no serialization and no compression returns raw object", async () => {
 		const keyv = new Keyv({ serialization: false });
 		const data = { value: "hello", expires: undefined };
-		const result = await keyv.deserializeData(data);
+		const result = await keyv.decode(data);
 		expect(result).toStrictEqual(data);
 	});
 
-	test("deserializeData with no serialization and no compression returns undefined for string", async () => {
+	test("decode with no serialization and no compression returns undefined for string", async () => {
 		const keyv = new Keyv({ serialization: false });
-		const result = await keyv.deserializeData("some-string");
+		const result = await keyv.decode("some-string");
 		expect(result).toBeUndefined();
 	});
 
-	test("deserializeData returns undefined when decompressed string is invalid JSON", async () => {
+	test("decode returns undefined when decompressed string is invalid JSON", async () => {
 		const keyv = new Keyv({
 			serialization: false,
 			compression: {
@@ -264,7 +264,7 @@ describe("serialization", () => {
 				},
 			},
 		});
-		const result = await keyv.deserializeData("anything");
+		const result = await keyv.decode("anything");
 		expect(result).toBeUndefined();
 	});
 });
