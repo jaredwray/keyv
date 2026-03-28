@@ -150,9 +150,11 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns An object containing the namespace (if present) and the original key
 	 */
 	public getKeyPrefixData(key: string) {
-		if (key.includes(this._keySeparator)) {
-			const [namespace, ...rest] = key.split(this._keySeparator);
-			return { namespace, key: rest.join(this._keySeparator) };
+		if (this._namespace && key.startsWith(`${this._namespace}${this._keySeparator}`)) {
+			return {
+				namespace: this._namespace,
+				key: key.slice(this._namespace.length + this._keySeparator.length),
+			};
 		}
 
 		return { key };
@@ -243,8 +245,32 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns True if the key exists and is not expired, false otherwise
 	 */
 	public async has(key: string): Promise<boolean> {
-		const value = await this.get(key);
-		return Boolean(value);
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
+		if (!this._store.has(keyPrefix)) {
+			return false;
+		}
+
+		const data = this._store.get(keyPrefix);
+		if (data !== undefined && data !== null && isDataExpired(data)) {
+			this._store.delete(keyPrefix);
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks if multiple keys exist in the store and are not expired.
+	 * @param keys - Array of keys to check
+	 * @returns Array of booleans indicating existence for each key
+	 */
+	public async hasMany(keys: string[]): Promise<boolean[]> {
+		const results: boolean[] = [];
+		for (const key of keys) {
+			results.push(await this.has(key));
+		}
+
+		return results;
 	}
 
 	/**
@@ -311,9 +337,9 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const namespace = this._namespace;
-		const iterator = (this._store as Map<any, any>).entries();
+		const entries = [...(this._store as Map<any, any>).entries()];
 
-		for (const [key, data] of iterator) {
+		for (const [key, data] of entries) {
 			// Filter by namespace if set
 			if (namespace) {
 				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {

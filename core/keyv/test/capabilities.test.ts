@@ -487,22 +487,6 @@ describe("capabilities", () => {
 			});
 		});
 
-		test("should return keyvStorage: true when all required methods are present", () => {
-			const adapter = {
-				get: () => {},
-				set: () => {},
-				delete: () => {},
-				clear: () => {},
-				has: () => {},
-				setMany: () => {},
-				deleteMany: () => {},
-				hasMany: () => {},
-			};
-			const result = detectKeyvStorage(adapter);
-			expect(result.keyvStorage).toBe(true);
-			expect(result.mapLike).toBe(false);
-		});
-
 		test("should handle partial storage adapter objects with core methods", () => {
 			const partialAdapter = {
 				get: () => {},

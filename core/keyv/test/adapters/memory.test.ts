@@ -67,16 +67,24 @@ describe("Keyv Generic Store Namespace", () => {
 
 	test("should get the key prefix data", () => {
 		const store = new Map();
-		const keyv = new KeyvMemoryAdapter(store);
 		const ns = faker.string.alphanumeric(8);
 		const key = faker.string.uuid();
+		const keyv = new KeyvMemoryAdapter(store, { namespace: ns });
 		expect(keyv.getKeyPrefixData(`${ns}:${key}`)).toEqual({
 			key,
 			namespace: ns,
 		});
 		expect(keyv.getKeyPrefixData(key)).toEqual({
 			key,
-			namespace: undefined,
+		});
+	});
+
+	test("should return full key when no namespace is configured", () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store);
+		const keyWithColon = "user:123";
+		expect(keyv.getKeyPrefixData(keyWithColon)).toEqual({
+			key: keyWithColon,
 		});
 	});
 });
@@ -133,6 +141,44 @@ describe("Keyv Generic set / get / has Operations", () => {
 		await keyv.set(key1, value);
 		expect(await keyv.has(key1)).toBe(true);
 		expect(await keyv.has(key2)).toBe(false);
+	});
+
+	test("should return true for has with falsy stored values", async () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store);
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const key3 = faker.string.uuid();
+		const key4 = faker.string.uuid();
+		await keyv.set(key1, 0);
+		await keyv.set(key2, "");
+		await keyv.set(key3, false);
+		await keyv.set(key4, null);
+		expect(await keyv.has(key1)).toBe(true);
+		expect(await keyv.has(key2)).toBe(true);
+		expect(await keyv.has(key3)).toBe(true);
+		expect(await keyv.has(key4)).toBe(true);
+	});
+
+	test("should return false for has with expired data", async () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store);
+		const key = faker.string.uuid();
+		await keyv.set(key, { value: "test", expires: Date.now() - 1000 });
+		expect(await keyv.has(key)).toBe(false);
+		expect(store.has(key)).toBe(false);
+	});
+
+	test("should handle hasMany", async () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store);
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const key3 = faker.string.uuid();
+		await keyv.set(key1, "value1");
+		await keyv.set(key2, "value2");
+		const results = await keyv.hasMany([key1, key2, key3]);
+		expect(results).toEqual([true, true, false]);
 	});
 
 	test("should be able to get many keys", async () => {

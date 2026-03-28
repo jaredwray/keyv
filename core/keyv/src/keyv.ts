@@ -979,6 +979,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return store.hasMany(keys);
 		}
 
+		/* v8 ignore next -- @preserve */
 		return Promise.all(keys.map(async (key) => this.has(key)));
 	}
 

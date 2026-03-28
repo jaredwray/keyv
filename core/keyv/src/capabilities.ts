@@ -260,7 +260,7 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 	}
 
 	const keyvStorage = requiredKeys.every((k) => result[k]);
-	const mapLikeMethods = ["get", "set", "delete", "has", "entries", "keys"];
+	const mapLikeMethods = ["get", "set", "delete", "has"];
 	const mapLike = mapLikeMethods.every(
 		(m) => isMethod(obj, m) && resolveMethodType(obj, m) === "sync",
 	);
