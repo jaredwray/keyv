@@ -874,56 +874,41 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 	}
 
-	public async encode<T>(data: KeyvValue<T>): Promise<string | KeyvValue<T>> {
-		// Pipeline: serialize (optional) -> compress (optional)
+	public async encode<T>(data: KeyvValue<T>): Promise<unknown> {
 		if (!this._serialization && !this._compression) {
 			return data;
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		let result: any = data;
-
-		/* v8 ignore next 7 -- @preserve */
-		if (this._serialization) {
-			result = await this._serialization.stringify(data);
-		} else if (this._compression) {
-			// Compression needs string input; use JSON as minimum serialization
-			result = JSON.stringify(data);
-		}
+		let result: unknown = this._serialization
+			? await this._serialization.stringify(data)
+			: JSON.stringify(data);
 
 		if (this._compression?.compress) {
-			result = await this._compression.compress(result);
+			result = await this._compression.compress(result as string);
 		}
 
 		return result;
 	}
 
-	public async decode<T>(data: string | KeyvValue<T>): Promise<KeyvValue<T> | undefined> {
+	public async decode<T>(data: unknown): Promise<KeyvValue<T> | undefined> {
 		if (data === undefined || data === null) {
 			return undefined;
 		}
 
-		// Pipeline: decompress (optional) -> parse (optional)
 		if (!this._serialization && !this._compression) {
-			if (typeof data === "string") {
-				return undefined;
-			}
-
-			return data as KeyvValue<T>;
+			return typeof data === "string" ? undefined : (data as KeyvValue<T>);
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		let result: any = data;
+		let result: unknown = data;
 
 		if (this._compression?.decompress) {
-			result = await this._compression.decompress(result);
+			result = await this._compression.decompress(result as string);
 		}
 
 		if (this._serialization && typeof result === "string") {
-			return await this._serialization.parse<KeyvValue<T>>(result);
+			return this._serialization.parse<KeyvValue<T>>(result);
 		}
 
-		// If compression was used without serialization, JSON was used as fallback
 		if (typeof result === "string") {
 			try {
 				return JSON.parse(result) as KeyvValue<T>;
