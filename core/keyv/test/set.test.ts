@@ -187,13 +187,31 @@ testRunner.it("should return store set value equals non boolean", async (t) => {
 	t.expect(result).toBe(true);
 });
 
-testRunner.it("should emit error and throw when setting a Symbol value", async (t) => {
-	const keyv = new Keyv({ store: new Map() });
-	const errorHandler = testRunner.vi.fn();
-	keyv.on("error", errorHandler);
-	await t.expect(keyv.set("key", Symbol("test"))).rejects.toThrow("symbol cannot be serialized");
-	t.expect(errorHandler).toHaveBeenCalledWith("symbol cannot be serialized");
-});
+testRunner.it(
+	"should emit error and return false when setting a Symbol value with serialization",
+	async (t) => {
+		const keyv = new Keyv({ store: new Map() });
+		const errorHandler = testRunner.vi.fn();
+		keyv.on("error", errorHandler);
+		const result = await keyv.set("key", Symbol("test"));
+		t.expect(result).toBe(false);
+		t.expect(errorHandler).toHaveBeenCalledWith(
+			"symbol cannot be stored with the current configuration",
+		);
+	},
+);
+
+testRunner.it(
+	"should allow setting a Symbol value on mapLike store without serialization",
+	async (t) => {
+		const keyv = new Keyv({ store: new Map(), serialization: false });
+		const sym = Symbol("test");
+		const result = await keyv.set("key", sym);
+		t.expect(result).toBe(true);
+		const value = await keyv.get("key");
+		t.expect(value).toBe(sym);
+	},
+);
 
 testRunner.it(
 	"setMany returns array of true when store.setMany returns void (backward compat)",

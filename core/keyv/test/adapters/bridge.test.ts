@@ -103,25 +103,25 @@ describe("KeyvBridgeAdapter - Constructor and Options", () => {
 	test("should detect capabilities for a minimal store", () => {
 		const store = createMinimalStore();
 		const bridge = new KeyvBridgeAdapter(store);
-		expect(bridge.capabilities.get).toBe(true);
-		expect(bridge.capabilities.set).toBe(true);
-		expect(bridge.capabilities.delete).toBe(true);
-		expect(bridge.capabilities.clear).toBe(true);
-		expect(bridge.capabilities.has).toBe(false);
-		expect(bridge.capabilities.iterator).toBe(false);
-		expect(bridge.capabilities.disconnect).toBe(false);
+		expect(bridge.capabilities.methods.get.exists).toBe(true);
+		expect(bridge.capabilities.methods.set.exists).toBe(true);
+		expect(bridge.capabilities.methods.delete.exists).toBe(true);
+		expect(bridge.capabilities.methods.clear.exists).toBe(true);
+		expect(bridge.capabilities.methods.has.exists).toBe(false);
+		expect(bridge.capabilities.methods.iterator.exists).toBe(false);
+		expect(bridge.capabilities.methods.disconnect.exists).toBe(false);
 	});
 
 	test("should detect capabilities for a full store", () => {
 		const store = createFullStore();
 		const bridge = new KeyvBridgeAdapter(store);
-		expect(bridge.capabilities.has).toBe(true);
-		expect(bridge.capabilities.hasMany).toBe(true);
-		expect(bridge.capabilities.getMany).toBe(true);
-		expect(bridge.capabilities.setMany).toBe(true);
-		expect(bridge.capabilities.deleteMany).toBe(true);
-		expect(bridge.capabilities.iterator).toBe(true);
-		expect(bridge.capabilities.disconnect).toBe(true);
+		expect(bridge.capabilities.methods.has.exists).toBe(true);
+		expect(bridge.capabilities.methods.hasMany.exists).toBe(true);
+		expect(bridge.capabilities.methods.getMany.exists).toBe(true);
+		expect(bridge.capabilities.methods.setMany.exists).toBe(true);
+		expect(bridge.capabilities.methods.deleteMany.exists).toBe(true);
+		expect(bridge.capabilities.methods.iterator.exists).toBe(true);
+		expect(bridge.capabilities.methods.disconnect.exists).toBe(true);
 	});
 
 	test("should set keySeparator from options", () => {

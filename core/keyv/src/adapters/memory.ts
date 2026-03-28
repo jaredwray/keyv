@@ -1,5 +1,6 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
+import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import { Keyv } from "../keyv.js";
 import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "../types.js";
 import { isDataExpired } from "../utils.js";
@@ -69,6 +70,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvMapType;
 	private _namespace?: string;
 	private _keySeparator = ":";
+	private readonly _capabilities: KeyvStorageCapability;
 
 	/**
 	 * Creates a new KeyvMemoryAdapter instance.
@@ -78,6 +80,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	constructor(store: KeyvMapType, options?: KeyvMemoryAdapterOptions) {
 		super({ throwOnHookError: false });
 		this._store = store;
+		this._capabilities = detectKeyvStorage(store);
 
 		if (options?.keySeparator) {
 			this._keySeparator = options.keySeparator;
@@ -86,6 +89,13 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		if (options?.namespace) {
 			this._namespace = options?.namespace;
 		}
+	}
+
+	/**
+	 * Gets the detected capabilities of the underlying store.
+	 */
+	public get capabilities(): KeyvStorageCapability {
+		return this._capabilities;
 	}
 
 	/**
@@ -250,7 +260,16 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			return false;
 		}
 
-		const data = this._store.get(keyPrefix);
+		let data = this._store.get(keyPrefix);
+		// Handle serialized data (stored as JSON string by Keyv's serialization layer)
+		if (typeof data === "string") {
+			try {
+				data = JSON.parse(data);
+			} catch {
+				// Not valid JSON, treat as raw value
+			}
+		}
+
 		if (data !== undefined && data !== null && isDataExpired(data)) {
 			this._store.delete(keyPrefix);
 			return false;
@@ -361,6 +380,11 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			yield [keyWithoutPrefix, data];
 		}
 	}
+
+	/**
+	 * No-op disconnect for in-memory stores.
+	 */
+	public async disconnect(): Promise<void> {}
 }
 
 /**

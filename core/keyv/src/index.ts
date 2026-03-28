@@ -9,6 +9,8 @@ export type {
 	KeyvEncryptionCapability,
 	KeyvSerializationCapability,
 	KeyvStorageCapability,
+	KeyvStorageMethod,
+	KeyvStorageMethods,
 	MethodType,
 } from "./capabilities.js";
 export {
@@ -30,6 +32,7 @@ export type {
 	KeyvEntry,
 	KeyvMapAny,
 	KeyvOptions,
+	KeyvSanitizeAdapter,
 	KeyvSanitizeOptions,
 	KeyvSanitizePatterns,
 	KeyvSerializationAdapter,

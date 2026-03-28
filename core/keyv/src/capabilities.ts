@@ -21,21 +21,28 @@ export type KeyvCapability = {
 
 export type MethodType = "sync" | "async" | "none";
 
+export type KeyvStorageMethod = {
+	exists: boolean;
+	methodType: MethodType;
+};
+
+export type KeyvStorageMethods = {
+	get: KeyvStorageMethod;
+	set: KeyvStorageMethod;
+	delete: KeyvStorageMethod;
+	clear: KeyvStorageMethod;
+	has: KeyvStorageMethod;
+	getMany: KeyvStorageMethod;
+	setMany: KeyvStorageMethod;
+	deleteMany: KeyvStorageMethod;
+	hasMany: KeyvStorageMethod;
+	disconnect: KeyvStorageMethod;
+	iterator: KeyvStorageMethod;
+};
+
 export type KeyvStorageCapability = {
-	keyvStorage: boolean;
-	mapLike: boolean;
-	get: boolean;
-	set: boolean;
-	delete: boolean;
-	clear: boolean;
-	has: boolean;
-	getMany: boolean;
-	setMany: boolean;
-	deleteMany: boolean;
-	hasMany: boolean;
-	disconnect: boolean;
-	iterator: boolean;
-	methodTypes: Record<string, MethodType>;
+	store: "mapLike" | "keyvStorage" | "asyncMap" | "none";
+	methods: KeyvStorageMethods;
 };
 
 export type KeyvCompressionCapability = {
@@ -194,22 +201,20 @@ export function detectKeyv(obj: unknown): KeyvCapability {
  * Detect whether an object implements the Keyv storage adapter interface
  * @param obj - The object to check
  * @returns A {@link KeyvStorageCapability} where:
- * - `keyvStorage` is `true` when get, set, delete, clear, has, setMany, deleteMany, and hasMany are present
- * - `mapLike` is `true` when the object has synchronous get, set, delete, has, entries, and keys methods
- * - `methodTypes` maps each method name to `"sync"`, `"async"`, or `"none"`
+ * - `store` indicates the detected store type: `"keyvStorage"`, `"mapLike"`, `"asyncMap"`, or `"none"`
+ * - `methods` maps each method name to `{ exists, methodType }`
  * @example
  * ```typescript
  * import { detectKeyvStorage } from 'keyv';
  *
  * const map = detectKeyvStorage(new Map());
- * map.keyvStorage;        // false — missing setMany, deleteMany, hasMany
- * map.mapLike;            // true — synchronous get/set/delete/has/entries/keys
- * map.methodTypes.get;    // "sync"
+ * map.store;                    // "mapLike"
+ * map.methods.get.exists;       // true
+ * map.methods.get.methodType;   // "sync"
  *
  * const adapter = detectKeyvStorage(asyncAdapter);
- * adapter.keyvStorage;    // true
- * adapter.mapLike;        // false — methods are async
- * adapter.methodTypes.get; // "async"
+ * adapter.store;                    // "keyvStorage"
+ * adapter.methods.get.methodType;   // "async"
  * ```
  */
 export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
@@ -225,62 +230,65 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 		"hasMany",
 		"disconnect",
 		"iterator",
-	];
-	const requiredKeys = ["get", "has", "hasMany", "set", "setMany", "delete", "deleteMany", "clear"];
+	] as const;
+
+	const none: KeyvStorageMethod = { exists: false, methodType: "none" };
 
 	if (obj === null || obj === undefined || typeof obj !== "object") {
-		const methodTypes: Record<string, MethodType> = {};
+		const methods = {} as KeyvStorageMethods;
 		for (const name of methodNames) {
-			methodTypes[name] = "none";
+			methods[name] = { ...none };
 		}
 
-		return {
-			keyvStorage: false,
-			mapLike: false,
-			get: false,
-			set: false,
-			delete: false,
-			clear: false,
-			has: false,
-			getMany: false,
-			setMany: false,
-			deleteMany: false,
-			hasMany: false,
-			disconnect: false,
-			iterator: false,
-			methodTypes,
+		return { store: "none", methods };
+	}
+
+	const methods = {} as KeyvStorageMethods;
+	for (const name of methodNames) {
+		methods[name] = {
+			exists: isMethod(obj, name),
+			methodType: resolveMethodType(obj, name),
 		};
 	}
 
-	const result: Record<string, boolean> = {};
-	const methodTypes: Record<string, MethodType> = {};
-	for (const name of methodNames) {
-		result[name] = isMethod(obj, name);
-		methodTypes[name] = resolveMethodType(obj, name);
-	}
-
-	const keyvStorage = requiredKeys.every((k) => result[k]);
-	const mapLikeMethods = ["get", "set", "delete", "has"];
-	const mapLike = mapLikeMethods.every(
-		(m) => isMethod(obj, m) && resolveMethodType(obj, m) === "sync",
+	// keyvStorage: all required methods present and async
+	const requiredKeys: Array<keyof KeyvStorageMethods> = [
+		"get",
+		"has",
+		"hasMany",
+		"set",
+		"setMany",
+		"delete",
+		"deleteMany",
+		"clear",
+	];
+	const isKeyvStorage = requiredKeys.every(
+		(k) => methods[k].exists && methods[k].methodType === "async",
 	);
 
-	return {
-		keyvStorage,
-		mapLike,
-		get: result.get,
-		set: result.set,
-		delete: result.delete,
-		clear: result.clear,
-		has: result.has,
-		getMany: result.getMany,
-		setMany: result.setMany,
-		deleteMany: result.deleteMany,
-		hasMany: result.hasMany,
-		disconnect: result.disconnect,
-		iterator: result.iterator,
-		methodTypes,
-	};
+	if (isKeyvStorage) {
+		return { store: "keyvStorage", methods };
+	}
+
+	// mapLike: get, set, delete, has all synchronous
+	const mapLikeMethods: Array<keyof KeyvStorageMethods> = ["get", "set", "delete", "has"];
+	const isMapLike = mapLikeMethods.every(
+		(m) => methods[m].exists && methods[m].methodType === "sync",
+	);
+
+	if (isMapLike) {
+		return { store: "mapLike", methods };
+	}
+
+	// asyncMap: get, set, delete, clear all present (not all sync — that would be mapLike)
+	const asyncMapMethods: Array<keyof KeyvStorageMethods> = ["get", "set", "delete", "clear"];
+	const isAsyncMap = asyncMapMethods.every((m) => methods[m].exists);
+
+	if (isAsyncMap) {
+		return { store: "asyncMap", methods };
+	}
+
+	return { store: "none", methods };
 }
 
 /**

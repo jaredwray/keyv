@@ -1,4 +1,5 @@
 import type { IEventEmitter } from "hookified";
+import type { KeyvStorageCapability } from "./capabilities.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export type KeyvMapAny = Map<any, any> | any;
@@ -112,6 +113,10 @@ export enum KeyvHooks {
 	AFTER_SET_MANY_RAW = "after:setManyRaw",
 	BEFORE_DELETE = "before:delete",
 	AFTER_DELETE = "after:delete",
+	BEFORE_HAS = "before:has",
+	AFTER_HAS = "after:has",
+	BEFORE_HAS_MANY = "before:hasMany",
+	AFTER_HAS_MANY = "after:hasMany",
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: type format
@@ -138,18 +143,19 @@ export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
 export type KeyvStorageAdapter = {
 	namespace?: string | undefined;
+	capabilities?: KeyvStorageCapability;
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	set(key: string, value: any, ttl?: number): Promise<boolean>;
-	setMany?<Value>(values: KeyvEntry<Value>[]): Promise<boolean[] | undefined>;
+	setMany<Value>(values: KeyvEntry<Value>[]): Promise<boolean[] | undefined>;
 	delete(key: string): Promise<boolean>;
 	clear(): Promise<void>;
-	has?(key: string): Promise<boolean>;
-	hasMany?(keys: string[]): Promise<boolean[]>;
-	getMany?<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>>;
-	disconnect?(): Promise<void>;
-	deleteMany?(key: string[]): Promise<boolean[]>;
-	iterator?<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
+	has(key: string): Promise<boolean>;
+	hasMany(keys: string[]): Promise<boolean[]>;
+	getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>>;
+	disconnect(): Promise<void>;
+	deleteMany(key: string[]): Promise<boolean[]>;
+	iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
 /**
@@ -220,6 +226,25 @@ export type KeyvSanitizeOptions = {
 	namespace?: boolean | KeyvSanitizePatternsOptions;
 };
 
+/**
+ * Adapter interface for key and namespace sanitization.
+ * Implement this to provide custom sanitization logic to Keyv.
+ */
+export type KeyvSanitizeAdapter = {
+	/** Whether any sanitization is currently enabled. */
+	readonly enabled: boolean;
+	/** The key sanitization pattern configuration. */
+	readonly keys: KeyvSanitizePatterns;
+	/** The namespace sanitization pattern configuration. */
+	readonly namespace: KeyvSanitizePatterns;
+	/** Sanitize a single key. */
+	cleanKey(key: string): string;
+	/** Sanitize an array of keys. */
+	cleanKeys(keys: string[]): string[];
+	/** Sanitize a namespace string. */
+	cleanNamespace(ns: string): string;
+};
+
 export type KeyvOptions = {
 	/**
 	 * Namespace for the current instance.
@@ -254,7 +279,8 @@ export type KeyvOptions = {
 	 */
 	stats?: boolean;
 	/**
-	 * Will enable throwing errors when there are no error listeners registered.
+	 * Will throw on all errors if this is enabled to true. By default, errors
+	 * will only throw if there are no listeners to the error event.
 	 * This maps to hookified's `throwOnEmitError` under the hood.
 	 * @default false
 	 */

@@ -221,7 +221,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns Array of stored data in the same order as the input keys
 	 */
 	public async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
-		if (this._capabilities.getMany) {
+		if (this._capabilities.methods.getMany.exists) {
 			const prefixedKeys = keys.map((key) => this.getKeyPrefix(key, this._namespace));
 			/* v8 ignore next -- @preserve */
 			const results = (await this._store.getMany?.(prefixedKeys)) ?? [];
@@ -272,7 +272,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param entries - Array of entries containing key, value, and optional TTL
 	 */
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
-		if (this._capabilities.setMany) {
+		if (this._capabilities.methods.setMany.exists) {
 			const prefixedEntries = entries.map((entry) => ({
 				...entry,
 				key: this.getKeyPrefix(entry.key, this._namespace),
@@ -297,7 +297,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns True if the key exists and is not expired, false otherwise
 	 */
 	public async has(key: string): Promise<boolean> {
-		if (this._capabilities.has) {
+		if (this._capabilities.methods.has.exists) {
 			const keyPrefix = this.getKeyPrefix(key, this._namespace);
 			/* v8 ignore next -- @preserve */
 			return this._store.has?.(keyPrefix) ?? false;
@@ -314,7 +314,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns Array of booleans indicating existence for each key
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		if (this._capabilities.hasMany) {
+		if (this._capabilities.methods.hasMany.exists) {
 			const prefixedKeys = keys.map((key) => this.getKeyPrefix(key, this._namespace));
 			/* v8 ignore next -- @preserve */
 			return this._store.hasMany?.(prefixedKeys) ?? [];
@@ -345,7 +345,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns Array of booleans indicating success for each key
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		if (this._capabilities.deleteMany) {
+		if (this._capabilities.methods.deleteMany.exists) {
 			const prefixedKeys = keys.map((key) => this.getKeyPrefix(key, this._namespace));
 			/* v8 ignore next -- @preserve */
 			const result = (await this._store.deleteMany?.(prefixedKeys)) ?? [];
@@ -374,7 +374,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * entire store is cleared.
 	 */
 	public async clear(): Promise<void> {
-		if (!this._namespace || !this._capabilities.iterator) {
+		if (!this._namespace || !this._capabilities.methods.iterator.exists) {
 			await this._store.clear();
 			return;
 		}
@@ -403,7 +403,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		Array<string | Awaited<Value> | undefined>,
 		void
 	> {
-		if (!this._capabilities.iterator) {
+		if (!this._capabilities.methods.iterator.exists) {
 			return;
 		}
 
@@ -437,7 +437,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * No-op if the store does not support disconnect.
 	 */
 	public async disconnect(): Promise<void> {
-		if (this._capabilities.disconnect) {
+		if (this._capabilities.methods.disconnect.exists) {
 			await this._store.disconnect?.();
 		}
 	}
