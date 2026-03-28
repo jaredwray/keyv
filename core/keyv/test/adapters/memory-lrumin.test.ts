@@ -2,9 +2,7 @@ import { faker } from "@faker-js/faker";
 import { createLRU } from "lru.min";
 import { describe, expect, test } from "vitest";
 import { createKeyv, KeyvMemoryAdapter } from "../../src/adapters/memory.js";
-
-// eslint-disable-next-line no-promise-executor-return
-const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+import { delay as sleep } from "../test-utils.js";
 
 describe("KeyvMemoryAdapter with lru.min - Store Options", () => {
 	test("should accept lru.min as the store", () => {

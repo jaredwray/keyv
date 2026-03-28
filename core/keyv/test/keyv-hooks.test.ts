@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import * as test from "vitest";
 import Keyv, { KeyvHooks } from "../src/index.js";
-import { createStore } from "./test-utils.js";
+import { createStore, delay } from "./test-utils.js";
 
 test.it("BEFORE_SET hook", async (t) => {
 	const keyv = new Keyv();
@@ -160,7 +160,7 @@ test.it("AFTER_GET hook on cache miss", async () => {
 test.it("AFTER_GET hook on expired key", async () => {
 	const keyv = new Keyv();
 	await keyv.set("foo", "bar", 1); // expires in 1ms
-	await new Promise((resolve) => setTimeout(resolve, 10)); // wait 10ms
+	await delay(10); // wait 10ms
 	keyv.addHook(KeyvHooks.AFTER_GET, (data) => {
 		test.expect(data.key).toBe("foo");
 		test.expect(data.value).toBeUndefined();
@@ -196,7 +196,7 @@ test.it("AFTER_GET_RAW hook on cache miss", async () => {
 test.it("AFTER_GET_RAW hook on expired key", async () => {
 	const keyv = new Keyv();
 	await keyv.set("foo", "bar", 1); // expires in 1ms
-	await new Promise((resolve) => setTimeout(resolve, 10)); // wait 10ms
+	await delay(10); // wait 10ms
 	keyv.addHook(KeyvHooks.AFTER_GET_RAW, (data) => {
 		test.expect(data.key).toBe("foo");
 		test.expect(data.value).toBeUndefined();

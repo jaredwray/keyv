@@ -1,8 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { createKeyv } from "../../src/adapters/memory.js";
-
-// eslint-disable-next-line no-promise-executor-return
-const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+import { delay as sleep } from "../test-utils.js";
 
 describe("KeyvMemoryAdapter with Map - createKeyv() Integration", () => {
 	test("should work with createKeyv helper", async () => {
