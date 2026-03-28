@@ -1217,3 +1217,56 @@ test.it("setMany returns false entries when store.setMany throws", async (t) => 
 	]);
 	t.expect(result).toEqual([false, false]);
 });
+
+// --- Coverage tests for fallback paths ---
+
+test.it("getMany should fallback to individual get when store has no getMany", async (t) => {
+	const store = createStore();
+	store.getMany = undefined as unknown as typeof store.getMany;
+	const keyv = new Keyv({ store });
+	await keyv.set("key1", "val1");
+	await keyv.set("key2", "val2");
+	const result = await keyv.getMany(["key1", "key2", "nonexistent"]);
+	t.expect(result).toEqual(["val1", "val2", undefined]);
+});
+
+test.it("getMany fallback should handle expired keys", async (t) => {
+	const store = createStore();
+	store.getMany = undefined as unknown as typeof store.getMany;
+	const keyv = new Keyv({ store });
+	await keyv.set("key1", "val1", 1);
+	await snooze(100);
+	const result = await keyv.getMany(["key1"]);
+	t.expect(result).toEqual([undefined]);
+});
+
+test.it("getManyRaw should fallback to individual get when store has no getMany", async (t) => {
+	const store = createStore();
+	store.getMany = undefined as unknown as typeof store.getMany;
+	const keyv = new Keyv({ store });
+	await keyv.set("key1", "val1");
+	const result = await keyv.getManyRaw(["key1", "nonexistent"]);
+	t.expect(result[0]).toBeDefined();
+	t.expect(result[0]?.value).toBe("val1");
+	t.expect(result[1]).toBeUndefined();
+});
+
+test.it("setMany should fallback to individual set when store has no setMany", async (t) => {
+	const store = createStore();
+	const keyv = new Keyv({ store });
+	const result = await keyv.setMany([
+		{ key: "k1", value: "v1" },
+		{ key: "k2", value: "v2" },
+	]);
+	t.expect(result).toEqual([true, true]);
+	t.expect(await keyv.get("k1")).toBe("v1");
+	t.expect(await keyv.get("k2")).toBe("v2");
+});
+
+test.it("has should delegate to store.has when store is not KeyvMemoryAdapter", async (t) => {
+	const store = createStore();
+	const keyv = new Keyv({ store });
+	await keyv.set("foo", "bar");
+	t.expect(await keyv.has("foo")).toBe(true);
+	t.expect(await keyv.has("nonexistent")).toBe(false);
+});
