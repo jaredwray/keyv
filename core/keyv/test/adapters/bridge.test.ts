@@ -62,7 +62,7 @@ function createFullStore() {
 		async deleteMany(keys: string[]) {
 			return keys.map((key) => map.delete(key));
 		},
-		async *iterator() {
+		async *iterator(_namespace?: string) {
 			for (const [key, value] of map) {
 				yield [key, value];
 			}
@@ -707,5 +707,115 @@ describe("KeyvBridgeAdapter - Namespace Isolation", () => {
 		await bridge1.delete("key");
 		expect(await bridge1.get("key")).toBeUndefined();
 		expect(await bridge2.get("key")).toBe("value2");
+	});
+});
+
+describe("KeyvBridgeAdapter - Error Event Forwarding", () => {
+	test("should forward error events from store to bridge", () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const listeners = new Map<string, Array<(...args: any[]) => void>>();
+		const store: KeyvBridgeStore = {
+			get: vi.fn(),
+			set: vi.fn(),
+			delete: vi.fn(),
+			clear: vi.fn(),
+			// biome-ignore lint/suspicious/noExplicitAny: test mock
+			on(event: string, listener: (...args: any[]) => void) {
+				if (!listeners.has(event)) {
+					listeners.set(event, []);
+				}
+
+				listeners.get(event)?.push(listener);
+				return store;
+			},
+		};
+		const bridge = new KeyvBridgeAdapter(store);
+		const errors: unknown[] = [];
+		bridge.on(KeyvEvents.ERROR, (error: unknown) => {
+			errors.push(error);
+		});
+
+		// Simulate the store emitting an error
+		const storeErrorListeners = listeners.get(KeyvEvents.ERROR) ?? [];
+		expect(storeErrorListeners).toHaveLength(1);
+		storeErrorListeners[0](new Error("store error"));
+
+		expect(errors).toHaveLength(1);
+		expect((errors[0] as Error).message).toBe("store error");
+	});
+
+	test("should not fail when store has no on method", () => {
+		const store = createMinimalStore();
+		// Minimal store has no `on` method - should not throw
+		expect(() => new KeyvBridgeAdapter(store)).not.toThrow();
+	});
+});
+
+describe("KeyvBridgeAdapter - v5 Adapter Compatibility", () => {
+	test("should accept store with opts property", () => {
+		const store: KeyvBridgeStore = {
+			opts: { dialect: "redis", url: "redis://localhost:6379" },
+			get: vi.fn().mockResolvedValue(undefined),
+			set: vi.fn().mockResolvedValue(undefined),
+			delete: vi.fn().mockResolvedValue(true),
+			clear: vi.fn().mockResolvedValue(undefined),
+		};
+		const bridge = new KeyvBridgeAdapter(store);
+		expect(bridge.store.opts).toEqual({ dialect: "redis", url: "redis://localhost:6379" });
+	});
+
+	test("should pass namespace to store iterator in iterator()", async () => {
+		const iteratorSpy = vi.fn().mockImplementation(function* () {
+			yield ["ns1:key1", "value1"];
+		});
+		const store: KeyvBridgeStore = {
+			get: vi.fn(),
+			set: vi.fn(),
+			delete: vi.fn(),
+			clear: vi.fn(),
+			iterator: iteratorSpy,
+		};
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "ns1" });
+		const entries: unknown[] = [];
+		for await (const entry of bridge.iterator()) {
+			entries.push(entry);
+		}
+
+		expect(iteratorSpy).toHaveBeenCalledWith("ns1");
+	});
+
+	test("should pass namespace to store iterator in clear()", async () => {
+		const iteratorSpy = vi.fn().mockImplementation(function* () {
+			yield ["ns1:key1", "value1"];
+		});
+		const store: KeyvBridgeStore = {
+			get: vi.fn(),
+			set: vi.fn(),
+			delete: vi.fn().mockResolvedValue(true),
+			clear: vi.fn(),
+			iterator: iteratorSpy,
+		};
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "ns1" });
+		await bridge.clear();
+		expect(iteratorSpy).toHaveBeenCalledWith("ns1");
+	});
+
+	test("should pass undefined namespace to store iterator when no namespace", async () => {
+		const iteratorSpy = vi.fn().mockImplementation(function* () {
+			yield ["key1", "value1"];
+		});
+		const store: KeyvBridgeStore = {
+			get: vi.fn(),
+			set: vi.fn(),
+			delete: vi.fn(),
+			clear: vi.fn(),
+			iterator: iteratorSpy,
+		};
+		const bridge = new KeyvBridgeAdapter(store);
+		for await (const _entry of bridge.iterator()) {
+			// consume
+		}
+
+		expect(iteratorSpy).toHaveBeenCalledWith(undefined);
 	});
 });

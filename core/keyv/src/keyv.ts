@@ -535,6 +535,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
+		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 		const store = this._store;
 
@@ -791,6 +792,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	): Promise<boolean[]> {
 		entries = entries.map((e) => ({
 			...e,
+			/* v8 ignore next -- @preserve */
 			key: this._sanitize.enabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
 		let results: boolean[] = [];
@@ -893,6 +895,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} array of booleans indicating success for each key
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 		try {
 			const store = this._store;

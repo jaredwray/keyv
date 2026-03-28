@@ -26,6 +26,8 @@ export type KeyvBridgeAdapterOptions = {
  * will be delegated to the store if present, otherwise fallback implementations are used.
  */
 export type KeyvBridgeStore = {
+	/** Store configuration/options (e.g. dialect, url) */
+	opts?: any;
 	/** Retrieves a value by key */
 	get(key: string): Promise<any>;
 	/** Sets a value with a key and optional TTL */
@@ -43,11 +45,13 @@ export type KeyvBridgeStore = {
 	/** Sets multiple entries at once */
 	setMany?(entries: any[]): Promise<any>;
 	/** Deletes multiple keys at once */
-	deleteMany?(keys: string[]): Promise<boolean[]>;
-	/** Iterates over all entries */
-	iterator?(): AsyncGenerator<any>;
+	deleteMany?(keys: string[]): Promise<boolean | boolean[]>;
+	/** Iterates over all entries, optionally filtered by namespace */
+	iterator?(namespace?: string): AsyncGenerator<any>;
 	/** Disconnects from the store */
 	disconnect?(): Promise<void>;
+	/** Subscribe to events (e.g. error events from v5 adapters) */
+	on?(event: string, listener: (...args: any[]) => void): any;
 };
 
 /**
@@ -102,6 +106,11 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 
 		// Detect optional methods at construction time
 		this._capabilities = detectKeyvStorage(store);
+
+		// Forward error events from the underlying store
+		if (typeof store.on === "function") {
+			store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
+		}
 	}
 
 	/**
@@ -339,7 +348,9 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		if (this._capabilities.deleteMany) {
 			const prefixedKeys = keys.map((key) => this.getKeyPrefix(key, this._namespace));
 			/* v8 ignore next -- @preserve */
-			return this._store.deleteMany?.(prefixedKeys) ?? [];
+			const result = (await this._store.deleteMany?.(prefixedKeys)) ?? [];
+			// Normalize: some stores return a single boolean instead of an array
+			return Array.isArray(result) ? result : keys.map(() => result);
 		}
 
 		const results: boolean[] = [];
@@ -371,7 +382,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		const prefix = `${this._namespace}${this._keySeparator}`;
 		const keysToDelete: string[] = [];
 		/* v8 ignore next -- @preserve */
-		for await (const entry of this._store.iterator?.() ?? []) {
+		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {
 			const key = Array.isArray(entry) ? entry[0] : entry;
 			if (typeof key === "string" && key.startsWith(prefix)) {
 				keysToDelete.push(key);
@@ -400,7 +411,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		const prefix = namespace ? `${namespace}${this._keySeparator}` : undefined;
 
 		/* v8 ignore next -- @preserve */
-		for await (const entry of this._store.iterator?.() ?? []) {
+		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {
 			const [key, data] = Array.isArray(entry) ? entry : [entry];
 
 			// Filter by namespace if set
