@@ -1,5 +1,8 @@
 import type { IEventEmitter } from "hookified";
 
+// biome-ignore lint/suspicious/noExplicitAny: type format
+export type KeyvMapAny = Map<any, any> | any;
+
 export type KeyvSerializationAdapter = {
 	stringify: (object: unknown) => string | Promise<string>;
 	parse: <T>(data: string) => T | Promise<T>;

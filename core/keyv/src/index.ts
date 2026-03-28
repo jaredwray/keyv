@@ -26,6 +26,7 @@ export type {
 	KeyvCompression,
 	KeyvCompressionAdapter,
 	KeyvEntry,
+	KeyvMapAny,
 	KeyvOptions,
 	KeyvSanitizeOptions,
 	KeyvSanitizePatterns,

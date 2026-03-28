@@ -9,6 +9,7 @@ import {
 	type KeyvEntry,
 	KeyvEvents,
 	KeyvHooks,
+	type KeyvMapAny,
 	type KeyvOptions,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
@@ -67,12 +68,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Keyv Constructor
-	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
+	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any> | any} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
 	constructor(
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		store?: KeyvStorageAdapter | KeyvOptions | Map<any, any>,
+		store?: KeyvStorageAdapter | KeyvOptions | KeyvMapAny,
 		options?: Omit<KeyvOptions, "store">,
 	);
 	/**
@@ -165,21 +165,19 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Get the current storage adapter.
-	 * @returns {KeyvStorageAdapter | Map<any, any>} The current storage adapter.
+	 * @returns {KeyvStorageAdapter | Map<any, any> | any} The current storage adapter.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get store(): KeyvStorageAdapter | Map<any, any> | any {
+	public get store(): KeyvStorageAdapter | KeyvMapAny {
 		return this._store;
 	}
 
 	/**
 	 * Set the storage adapter. Also configures the namespace, error forwarding, and iterator
 	 * for the new store. Throws if the store does not implement the required methods.
-	 * @param {KeyvStorageAdapter | Map<any, any>} store The storage adapter to set.
+	 * @param {KeyvStorageAdapter | Map<any, any> | any} store The storage adapter to set.
 	 * @throws {Error} If the store is not a valid storage adapter.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public set store(store: KeyvStorageAdapter | Map<any, any> | any) {
+	public set store(store: KeyvStorageAdapter | KeyvMapAny) {
 		const storeCap = detectKeyvStorage(store);
 		if (storeCap.mapLike || (storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)) {
 			this._store = storeCap.mapLike ? new KeyvMemoryAdapter(store as KeyvMapType) : store;
