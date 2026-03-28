@@ -95,6 +95,17 @@ describe("constructor", () => {
 				}),
 		).toThrow();
 	});
+
+	test("should treat negative ttl as undefined", () => {
+		const keyv = new Keyv();
+		keyv.setTtl(-100);
+		expect(keyv.ttl).toBeUndefined();
+	});
+
+	test("should treat negative ttl in constructor as undefined", () => {
+		const keyv = new Keyv({ ttl: -500 });
+		expect(keyv.ttl).toBeUndefined();
+	});
 });
 
 describe("store", () => {
@@ -365,6 +376,16 @@ describe("has", () => {
 		const result = await keyv.has("foo");
 		expect(result).toBe(false);
 	});
+
+	test("should handle error on store hasMany", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		keyv.store.hasMany = vi.fn().mockRejectedValue(new Error("store hasMany error"));
+		const errorHandler = vi.fn();
+		keyv.on("error", errorHandler);
+		const result = await keyv.hasMany(["foo", "bar"]);
+		expect(result).toEqual([false, false]);
+		expect(errorHandler).toHaveBeenCalledWith(new Error("store hasMany error"));
+	});
 });
 
 describe("clear", () => {
@@ -408,6 +429,15 @@ describe("disconnect", () => {
 			expect(true).toBeTruthy();
 		});
 		await keyv.disconnect();
+	});
+
+	test("should handle error on store disconnect", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		keyv.store.disconnect = vi.fn().mockRejectedValue(new Error("disconnect error"));
+		const errorHandler = vi.fn();
+		keyv.on("error", errorHandler);
+		await keyv.disconnect();
+		expect(errorHandler).toHaveBeenCalledWith(new Error("disconnect error"));
 	});
 });
 
@@ -1117,5 +1147,24 @@ describe("sanitize", () => {
 		expect(await keyv.setRaw(";", { value: "value", expires: undefined })).toBe(false);
 		expect(await keyv.delete(";")).toBe(false);
 		expect(await keyv.has(";")).toBe(false);
+	});
+});
+
+describe("getDecodeValue", () => {
+	test("should return undefined for string data when serialization is disabled", async () => {
+		const keyv = new Keyv({ serialization: false });
+		const result = await keyv.getDecodeValue("key", "some-string-value");
+		expect(result).toEqual([undefined]);
+	});
+
+	test("should handle mixed valid and undeserializable data", async () => {
+		const keyv = new Keyv({ serialization: false });
+		const validData = { value: "bar", expires: undefined };
+		const result = await keyv.getDecodeValue(
+			["key1", "key2"],
+			[validData, "undeserializable-string"],
+		);
+		expect(result[0]?.value).toBe("bar");
+		expect(result[1]).toBeUndefined();
 	});
 });
