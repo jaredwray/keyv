@@ -21,17 +21,28 @@ export type MapInterfacee<K, V> = {
 
 export type StoreHashFunction = (key: string, storeSize: number) => number;
 
+/**
+ * O(1) hash function that samples characters from start, middle, and end of key.
+ * Uses multiplicative hashing (Fibonacci) for good bit distribution across shards.
+ */
 export function defaultHashFunction(key: string, storeSize: number): number {
-	let hash = 5381;
-	for (let i = 0; i < key.length; i++) {
-		hash = (hash * 33) ^ key.charCodeAt(i);
+	const len = key.length;
+	// Sample up to 4 positions: start, quarter, middle, end + mix in length
+	let h =
+		len ^
+		key.charCodeAt(0) ^
+		key.charCodeAt(len - 1) ^
+		key.charCodeAt(len >> 1) ^
+		key.charCodeAt(len >> 2);
+	// Fibonacci hashing: multiply by golden ratio constant to spread bits
+	h = Math.imul(h, 0x9e3779b9);
+
+	// Power-of-2 fast path: bitwise AND instead of modulo
+	if ((storeSize & (storeSize - 1)) === 0) {
+		return (h >>> 0) & (storeSize - 1);
 	}
 
-	if (storeSize === 2) {
-		return (hash >>> 0) & 1;
-	}
-
-	return (hash >>> 0) % storeSize;
+	return (h >>> 0) % storeSize;
 }
 
 export type BigMapOptions = {
@@ -50,8 +61,9 @@ export type BigMapOptions = {
 export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private _storeSize!: number;
 	private _store!: Array<Map<K, V>>;
-	private _storeHashFunction?: StoreHashFunction;
-	private _size = 0;
+	private _storeHashFunction!: StoreHashFunction;
+	private _isDefaultHash = true;
+	private _isPowerOf2 = true;
 
 	/**
 	 * Creates an instance of BigMap.
@@ -65,9 +77,39 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		}
 
 		this._storeSize = size;
+		this._isPowerOf2 = (size & (size - 1)) === 0;
 		this.initStore();
 
-		this._storeHashFunction = options?.storeHashFunction ?? defaultHashFunction;
+		if (options?.storeHashFunction) {
+			this._storeHashFunction = options.storeHashFunction;
+			this._isDefaultHash = false;
+		} else {
+			this._storeHashFunction = defaultHashFunction;
+			this._isDefaultHash = true;
+		}
+	}
+
+	/**
+	 * Resolves the shard Map for a string key. Inlines the default hash
+	 * to avoid function call overhead on the hot path.
+	 */
+	private _resolve(k: string): Map<K, V> {
+		if (this._isDefaultHash) {
+			const len = k.length;
+			let h =
+				len ^
+				k.charCodeAt(0) ^
+				k.charCodeAt(len - 1) ^
+				k.charCodeAt(len >> 1) ^
+				k.charCodeAt(len >> 2);
+			h = Math.imul(h, 0x9e3779b9);
+			return this._isPowerOf2
+				? this._store[(h >>> 0) & (this._storeSize - 1)]
+				: this._store[(h >>> 0) % this._storeSize];
+		}
+
+		const raw = this._storeHashFunction(k, this._storeSize);
+		return this._store[Math.abs(Math.floor(raw)) % this._storeSize];
 	}
 
 	/**
@@ -90,6 +132,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		}
 
 		this._storeSize = size;
+		this._isPowerOf2 = (size & (size - 1)) === 0;
 		this.initStore();
 	}
 
@@ -106,7 +149,13 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {StoreHashFunction} hashFunction - The hash function to use for storing keys.
 	 */
 	public set storeHashFunction(hashFunction: StoreHashFunction | undefined) {
-		this._storeHashFunction = hashFunction ?? defaultHashFunction;
+		if (hashFunction) {
+			this._storeHashFunction = hashFunction;
+			this._isDefaultHash = false;
+		} else {
+			this._storeHashFunction = defaultHashFunction;
+			this._isDefaultHash = true;
+		}
 	}
 
 	/**
@@ -136,7 +185,6 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	public initStore(): void {
 		this._store = Array.from({ length: this._storeSize }, () => new Map<K, V>());
-		this._size = 0;
 	}
 
 	/**
@@ -148,17 +196,10 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 */
 	public getStore(key: K): Map<K, V> {
 		if (this._storeSize === 1) {
-			return this.getStoreMap(0);
+			return this._store[0];
 		}
 
-		const raw = this._storeHashFunction
-			? this._storeHashFunction(String(key), this._storeSize)
-			: defaultHashFunction(String(key), this._storeSize);
-
-		// Normalize to a valid bucket index [0, storeSize - 1]
-		const index = Math.abs(Math.floor(raw)) % this._storeSize;
-
-		return this.getStoreMap(index);
+		return this._resolve(typeof key === "string" ? key : String(key));
 	}
 
 	/**
@@ -207,8 +248,6 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		for (const store of this._store) {
 			store.clear();
 		}
-
-		this._size = 0;
 	}
 
 	/**
@@ -217,13 +256,11 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {boolean} Returns true if the entry was deleted, false if the key was not found.
 	 */
 	public delete(key: K): boolean {
-		const store = this.getStore(key);
-		const deleted = store.delete(key);
-		if (deleted) {
-			this._size--;
+		if (this._storeSize === 1) {
+			return this._store[0].delete(key);
 		}
 
-		return deleted;
+		return this._resolve(typeof key === "string" ? key : String(key)).delete(key);
 	}
 
 	/**
@@ -250,8 +287,11 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {V | undefined} The value associated with the key, or undefined if the key does not exist.
 	 */
 	public get(key: K): V | undefined {
-		const store = this.getStore(key);
-		return store.get(key);
+		if (this._storeSize === 1) {
+			return this._store[0].get(key);
+		}
+
+		return this._resolve(typeof key === "string" ? key : String(key)).get(key);
 	}
 
 	/**
@@ -260,8 +300,11 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {boolean} Returns true if the key exists, false otherwise.
 	 */
 	public has(key: K): boolean {
-		const store = this.getStore(key);
-		return store.has(key);
+		if (this._storeSize === 1) {
+			return this._store[0].has(key);
+		}
+
+		return this._resolve(typeof key === "string" ? key : String(key)).has(key);
 	}
 
 	/**
@@ -271,9 +314,11 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @returns {Map<K, V>} The map instance.
 	 */
 	public set(key: K, value: V): Map<K, V> {
-		const store = this.getStore(key);
-		if (!store.has(key)) {
-			this._size++;
+		let store: Map<K, V>;
+		if (this._storeSize === 1) {
+			store = this._store[0];
+		} else {
+			store = this._resolve(typeof key === "string" ? key : String(key));
 		}
 
 		store.set(key, value);
@@ -281,11 +326,16 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	}
 
 	/**
-	 * Gets the number of entries in the map.
+	 * Gets the number of entries in the map. Computed from underlying stores.
 	 * @returns {number} The number of entries in the map.
 	 */
 	public get size(): number {
-		return this._size;
+		let total = 0;
+		for (let i = 0; i < this._storeSize; i++) {
+			total += this._store[i].size;
+		}
+
+		return total;
 	}
 }
 
