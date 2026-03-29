@@ -393,6 +393,51 @@ describe("BigMap Clear", () => {
 	});
 });
 
+describe("storeSize === 1 fast paths", () => {
+	it("should get, set, has, and delete with a single-bucket BigMap", () => {
+		const bigMap = new BigMap<string, number>({ storeSize: 1 });
+		bigMap.set("a", 1);
+		expect(bigMap.get("a")).toBe(1);
+		expect(bigMap.has("a")).toBe(true);
+		expect(bigMap.delete("a")).toBe(true);
+		expect(bigMap.get("a")).toBeUndefined();
+		expect(bigMap.has("a")).toBe(false);
+		expect(bigMap.delete("a")).toBe(false);
+	});
+});
+
+describe("storeHashFunction setter", () => {
+	it("should update hash function via the setter", () => {
+		const bigMap = new BigMap<string, number>();
+		const customHash = (key: string, storeSize: number) => key.length % storeSize;
+		bigMap.storeHashFunction = customHash;
+		expect(bigMap.storeHashFunction).toBe(customHash);
+
+		bigMap.set("ab", 42);
+		expect(bigMap.get("ab")).toBe(42);
+	});
+});
+
+describe("non-power-of-2 default hash", () => {
+	it("should use modulo fallback for non-power-of-2 store sizes", () => {
+		const bigMap = new BigMap<string, string>({ storeSize: 3 });
+		for (let i = 0; i < 100; i++) {
+			bigMap.set(`key-${i}`, `val-${i}`);
+		}
+
+		expect(bigMap.size).toBe(100);
+		for (let i = 0; i < 100; i++) {
+			expect(bigMap.get(`key-${i}`)).toBe(`val-${i}`);
+		}
+	});
+
+	it("should return a valid index from defaultHashFunction with non-power-of-2 size", () => {
+		const result = defaultHashFunction("testkey", 3);
+		expect(result).toBeGreaterThanOrEqual(0);
+		expect(result).toBeLessThan(3);
+	});
+});
+
 describe("createKeyv", () => {
 	it("should create a Keyv instance with BigMap adapter", () => {
 		const keyv = createKeyv();
