@@ -626,6 +626,64 @@ test.it("getMany retries unprocessed keys", async (t) => {
 	dynamo._client.batchGet = originalBatchGet;
 });
 
+test.it("disconnect should resolve without error", async () => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	await store.disconnect();
+});
+
+test.it("iterator with default namespace", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	await store.set(key1, "val1");
+	await store.set(key2, "val2");
+
+	const entries: Array<[string, string]> = [];
+	for await (const entry of store.iterator()) {
+		entries.push(entry as [string, string]);
+	}
+
+	t.expect(entries.length).toBe(2);
+	const keys = entries.map(([key]) => key);
+	t.expect(keys).toContain(key1);
+	t.expect(keys).toContain(key2);
+});
+
+test.it("iterator with namespace", async (t) => {
+	const tableName = faker.string.uuid();
+	const namespace = faker.string.alphanumeric(10);
+	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName, namespace });
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	await store.set(key1, "val1");
+	await store.set(key2, "val2");
+
+	// Also set a key without the namespace directly
+	const storeNoNs = new KeyvDynamo({ endpoint: dynamoURL, tableName });
+	await storeNoNs.set("no-ns-key", "val3");
+
+	const entries: Array<[string, string]> = [];
+	for await (const entry of store.iterator()) {
+		entries.push(entry as [string, string]);
+	}
+
+	// Should only return the 2 namespaced keys
+	t.expect(entries.length).toBe(2);
+	const keys = entries.map(([key]) => key);
+	t.expect(keys).toContain(`${namespace}:${key1}`);
+	t.expect(keys).toContain(`${namespace}:${key2}`);
+});
+
+test.it("iterator returns empty when no keys exist", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
+	const entries: unknown[] = [];
+	for await (const entry of store.iterator()) {
+		entries.push(entry);
+	}
+
+	t.expect(entries.length).toBe(0);
+});
+
 test.it("hasMany retries unprocessed keys", async (t) => {
 	const dynamo = store();
 	const key1 = faker.string.uuid();

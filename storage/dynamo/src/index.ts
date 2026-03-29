@@ -512,6 +512,43 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
+	 * Disconnects from the DynamoDB client. This is a no-op for DynamoDB
+	 * since it uses HTTP requests and does not maintain a persistent connection.
+	 */
+	public async disconnect(): Promise<void> {
+		// DynamoDB uses HTTP requests, no persistent connection to close.
+	}
+
+	/**
+	 * Iterates over all key-value pairs in the store matching the configured namespace.
+	 * @yields `[key, value]` pairs as an async generator.
+	 */
+	public async *iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
+		await this._tableReady;
+
+		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
+		let lastEvaluatedKey: Record<string, unknown> | undefined;
+
+		do {
+			const scanResult = await this._client.scan({
+				TableName: this._opts.tableName,
+				ExclusiveStartKey: lastEvaluatedKey,
+			});
+
+			lastEvaluatedKey = scanResult.LastEvaluatedKey as Record<string, unknown> | undefined;
+
+			for (const item of scanResult.Items ?? []) {
+				const key = item.id as string;
+				if (prefix && !key.startsWith(prefix)) {
+					continue;
+				}
+
+				yield [key, item.value as Awaited<Value>];
+			}
+		} while (lastEvaluatedKey);
+	}
+
+	/**
 	 * Extracts keys from a DynamoDB scan result, filtering by namespace.
 	 * @param output - The scan command output
 	 * @param keyProperty - The property name for the key field (default: 'id')
