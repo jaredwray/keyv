@@ -14,8 +14,9 @@ process.env.AWS_REGION = "local";
 const dynamoURL = "http://localhost:8000";
 const keyvDynamodb = new KeyvDynamo({
 	endpoint: dynamoURL,
+	tableName: faker.string.uuid(),
 });
-const store = () => new KeyvDynamo(dynamoURL);
+const store = () => new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
 
 keyvTestSuite(test, Keyv, store);
 

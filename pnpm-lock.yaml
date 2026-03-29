@@ -181,6 +181,12 @@ importers:
       happy-dom:
         specifier: ^20.8.7
         version: 20.8.7
+      keyv-anyredis:
+        specifier: ^3.3.0
+        version: 3.3.0
+      keyv-file:
+        specifier: ^5.3.3
+        version: 5.3.3
       lru.min:
         specifier: ^1.1.1
         version: 1.1.1
@@ -3335,6 +3341,12 @@ packages:
     resolution: {integrity: sha512-LRuk0rPdXrecAFwQucYjMiIs0JFefk6N1q/04mlw14aVIVgxq1FO0MA9RiIIGVaKOB5GIP5GH4aBBNraZERmaQ==}
     hasBin: true
 
+  keyv-anyredis@3.3.0:
+    resolution: {integrity: sha512-cNfhLZs0ADo/0G8Ke1G3bcw6rhwuTaiU6Za86fyFK8PQtii45MH0VrZ+k09iIQO8AFeEdb2hPA8uiKOQUHVmCA==}
+
+  keyv-file@5.3.3:
+    resolution: {integrity: sha512-uCFUhiVYf+BcA6DP4smhnRLOR4yzUUA15yJSk4/rP5oAPnF3MpfajejwvSV8l+okm+EGiW4IHP3gn+xahpvZcQ==}
+
   keyv@5.5.4:
     resolution: {integrity: sha512-eohl3hKTiVyD1ilYdw9T0OiB4hnjef89e3dMYKz+mVKDzj+5IteTseASUsOB+EU9Tf6VNTCjDePcP6wkDGmLKQ==}
 
@@ -4611,6 +4623,9 @@ packages:
     resolution: {integrity: sha512-/PQtykJFVw90QICG7zyPDMIyueOXKL7jOJVoX5pILnb3Ux+7QqynOxfVvarE+K+yi7BZyOSY4r+OZNWSWRiEwQ==}
     engines: {node: '>=14.16'}
     hasBin: true
+
+  tslib@1.14.1:
+    resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
@@ -7890,6 +7905,13 @@ snapshots:
     dependencies:
       commander: 8.3.0
 
+  keyv-anyredis@3.3.0: {}
+
+  keyv-file@5.3.3:
+    dependencies:
+      '@keyv/serialize': 1.1.1
+      tslib: 1.14.1
+
   keyv@5.5.4:
     dependencies:
       '@keyv/serialize': 1.1.1
@@ -9679,6 +9701,8 @@ snapshots:
       meow: 9.0.0
       path-exists: 4.0.0
       read-pkg-up: 7.0.1
+
+  tslib@1.14.1: {}
 
   tslib@2.8.1: {}
 

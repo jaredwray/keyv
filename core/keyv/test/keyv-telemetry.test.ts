@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { KeyvTelemetryEvent } from "../src/index.js";
-import { Keyv, KeyvEvents } from "../src/index.js";
+import { Keyv, KeyvEvents, KeyvMemoryAdapter } from "../src/index.js";
 
 describe("Keyv Telemetry Events", () => {
 	it("should emit stat:set on set()", async () => {
@@ -267,8 +267,7 @@ describe("Keyv Telemetry Events", () => {
 	});
 
 	it("should emit per-key stat:error on setMany() failure", async () => {
-		// biome-ignore lint/suspicious/noExplicitAny: testing with Map as store
-		const errorStore = new Map() as any;
+		const errorStore = new KeyvMemoryAdapter(new Map());
 		errorStore.setMany = () => {
 			throw new Error("store error");
 		};
@@ -310,8 +309,7 @@ describe("Keyv Telemetry Events", () => {
 	});
 
 	it("should emit per-key stat:error on deleteMany() failure", async () => {
-		// biome-ignore lint/suspicious/noExplicitAny: testing with Map as store
-		const errorStore = new Map() as any;
+		const errorStore = new KeyvMemoryAdapter(new Map());
 		errorStore.deleteMany = () => {
 			throw new Error("store error");
 		};

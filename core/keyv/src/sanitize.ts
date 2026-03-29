@@ -1,4 +1,5 @@
 import type {
+	KeyvSanitizeAdapter,
 	KeyvSanitizeOptions,
 	KeyvSanitizePatterns,
 	KeyvSanitizePatternsOptions,
@@ -45,7 +46,7 @@ const allOff: KeyvSanitizePatterns = { escape: false, mongo: false, path: false,
 /**
  * Encapsulates key and namespace sanitization with an LRU result cache.
  */
-export class KeyvSanitize {
+export class KeyvSanitize implements KeyvSanitizeAdapter {
 	private _keys: KeyvSanitizePatterns = { ...allOff };
 	private _namespace: KeyvSanitizePatterns = { ...allOff };
 	private _keyPatterns: RegExp[] | undefined;

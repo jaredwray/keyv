@@ -612,3 +612,28 @@ test.it("setMany returns false entries on exec error", async (t) => {
 	client.multi = originalMulti;
 	await store.disconnect();
 });
+
+test.it("has() returns true for an existing key", async (t) => {
+	const store = new KeyvValkey(redisURI);
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "value");
+	t.expect(await store.has(key)).toBe(true);
+	await store.delete(key);
+	await store.disconnect();
+});
+
+test.it("has() returns false for a non-existing key", async (t) => {
+	const store = new KeyvValkey(redisURI);
+	t.expect(await store.has("nonexistent-key")).toBe(false);
+	await store.disconnect();
+});
+
+test.it("has() returns false after delete", async (t) => {
+	const store = new KeyvValkey(redisURI);
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "value");
+	t.expect(await store.has(key)).toBe(true);
+	await store.delete(key);
+	t.expect(await store.has(key)).toBe(false);
+	await store.disconnect();
+});

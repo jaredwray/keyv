@@ -89,19 +89,12 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 
 	test.it("value can not be symbol", async (t) => {
 		const keyv = new Keyv({ store: store() });
+		keyv.on("error", () => {});
 		const key = faker.string.alphanumeric(10);
 		const value = Symbol("value");
 
-		// biome-ignore lint/suspicious/noImplicitAnyLet: test file
-		let errorObject;
-		try {
-			await keyv.set(key, value);
-		} catch (error) {
-			errorObject = error;
-			t.expect((error as Error).message).toBe("symbol cannot be serialized");
-		}
-
-		t.expect((errorObject as Error).message).toBe("symbol cannot be serialized");
+		const result = await keyv.set(key, value);
+		t.expect(result).toBe(false);
 	});
 
 	test.it("value can be BigInt using other serializer/deserializer", async (t) => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isDataExpired, resolveTtl, ttlFromExpires } from "../src/utils.js";
+import { calculateExpires, isDataExpired, resolveTtl, ttlFromExpires } from "../src/utils.js";
 
 describe("isDataExpired", () => {
 	test("should return true when expires is in the past", () => {
@@ -16,6 +16,35 @@ describe("isDataExpired", () => {
 
 	test("should return false when expires is not set", () => {
 		expect(isDataExpired({ value: "x" })).toBe(false);
+	});
+});
+
+describe("calculateExpires", () => {
+	test("should return a future timestamp for a positive ttl", () => {
+		const before = Date.now();
+		const result = calculateExpires(5000);
+		expect(result).toBeGreaterThanOrEqual(before + 5000);
+		expect(result).toBeLessThanOrEqual(Date.now() + 5000);
+	});
+
+	test("should return undefined for undefined", () => {
+		expect(calculateExpires(undefined)).toBeUndefined();
+	});
+
+	test("should return undefined for zero", () => {
+		expect(calculateExpires(0)).toBeUndefined();
+	});
+
+	test("should return undefined for negative values", () => {
+		expect(calculateExpires(-100)).toBeUndefined();
+	});
+
+	test("should return undefined for NaN", () => {
+		expect(calculateExpires(Number.NaN)).toBeUndefined();
+	});
+
+	test("should return undefined for Infinity", () => {
+		expect(calculateExpires(Number.POSITIVE_INFINITY)).toBeUndefined();
 	});
 });
 

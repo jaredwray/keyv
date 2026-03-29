@@ -22,9 +22,9 @@ describe("browser runtime - import", () => {
 		expect(Keyv).toBeDefined();
 	});
 
-	test("can import KeyvGenericStore and createKeyv", async () => {
-		const { KeyvGenericStore, createKeyv } = await import("../src/generic-store.js");
-		expect(KeyvGenericStore).toBeDefined();
+	test("can import KeyvMemoryAdapter and createKeyv", async () => {
+		const { KeyvMemoryAdapter, createKeyv } = await import("../src/adapters/memory.js");
+		expect(KeyvMemoryAdapter).toBeDefined();
 		expect(createKeyv).toBeDefined();
 	});
 });

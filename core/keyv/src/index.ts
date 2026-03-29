@@ -1,3 +1,7 @@
+export type { KeyvBridgeAdapterOptions, KeyvBridgeStore } from "./adapters/bridge.js";
+export { KeyvBridgeAdapter } from "./adapters/bridge.js";
+export type { KeyvMapType, KeyvMemoryAdapterOptions } from "./adapters/memory.js";
+export { createKeyv, KeyvMemoryAdapter } from "./adapters/memory.js";
 export type {
 	CapabilitySpec,
 	KeyvCapability,
@@ -5,6 +9,8 @@ export type {
 	KeyvEncryptionCapability,
 	KeyvSerializationCapability,
 	KeyvStorageCapability,
+	KeyvStorageMethod,
+	KeyvStorageMethods,
 	MethodType,
 } from "./capabilities.js";
 export {
@@ -24,7 +30,9 @@ export type {
 	KeyvCompression,
 	KeyvCompressionAdapter,
 	KeyvEntry,
+	KeyvMapAny,
 	KeyvOptions,
+	KeyvSanitizeAdapter,
 	KeyvSanitizeOptions,
 	KeyvSanitizePatterns,
 	KeyvSerializationAdapter,

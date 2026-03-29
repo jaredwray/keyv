@@ -307,7 +307,7 @@ test.it(
 		await postgres.set("a", "v1");
 
 		const keys: string[] = [];
-		for await (const [key] of postgres.iterator("nslimit")) {
+		for await (const [key] of postgres.iterator()) {
 			keys.push(key);
 		}
 
@@ -344,7 +344,7 @@ test.it("native namespace: iterator only returns keys from correct namespace", a
 	await postgres2.set("key3", "val3");
 
 	const keys: string[] = [];
-	for await (const [key] of postgres1.iterator("ns1")) {
+	for await (const [key] of postgres1.iterator()) {
 		keys.push(key);
 	}
 
@@ -560,6 +560,49 @@ test.it("setMany returns false entries on query error", async (t) => {
 	]);
 	t.expect(result).toEqual([false, false]);
 	t.expect(emittedError).toBe(true);
+});
+
+test.it("has() returns true for an existing key", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
+	t.expect(await keyv.has(key)).toBe(true);
+});
+
+test.it("has() returns false for a non-existing key", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	t.expect(await keyv.has("nonexistent-key")).toBe(false);
+});
+
+test.it("has() returns correct result with namespace", async (t) => {
+	const keyv1 = new KeyvPostgres({ uri: postgresUri });
+	keyv1.namespace = "has-ns1";
+	const keyv2 = new KeyvPostgres({ uri: postgresUri });
+	keyv2.namespace = "has-ns2";
+
+	const key = faker.string.alphanumeric(10);
+	await keyv1.set(key, "value1");
+
+	t.expect(await keyv1.has(key)).toBe(true);
+	t.expect(await keyv2.has(key)).toBe(false);
+});
+
+test.it("has() returns true after set and false after delete", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
+	t.expect(await keyv.has(key)).toBe(true);
+	await keyv.delete(key);
+	t.expect(await keyv.has(key)).toBe(false);
+});
+
+test.it("has() returns false after clear", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const key = faker.string.alphanumeric(10);
+	await keyv.set(key, "value");
+	t.expect(await keyv.has(key)).toBe(true);
+	await keyv.clear();
+	t.expect(await keyv.has(key)).toBe(false);
 });
 
 test.it("setting clearExpiredInterval to 0 stops an active timer", (t) => {
