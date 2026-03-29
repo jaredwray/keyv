@@ -532,11 +532,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		const formattedValue = { value: data.value, expires };
-		const encodedValue = await this.encode(formattedValue);
 
 		let result = true;
+		let encodedValue: unknown = formattedValue;
 
 		try {
+			encodedValue = await this.encode(formattedValue);
 			result = await this._store.set(data.key, encodedValue, data.ttl);
 		} catch (error) {
 			result = false;
@@ -915,22 +916,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return data;
 		}
 
-		try {
-			let result: unknown = await this._serialization.stringify(data);
+		let result: string = await this._serialization.stringify(data);
 
-			if (this._compression?.compress) {
-				result = await this._compression.compress(result as string);
-			}
-
-			if (this._encryption?.encrypt) {
-				result = await this._encryption.encrypt(result as string);
-			}
-
-			return result;
-		} catch (error) {
-			this.emit(KeyvEvents.ERROR, error);
-			return data;
+		if (this._compression?.compress) {
+			result = await this._compression.compress(result);
 		}
+
+		if (this._encryption?.encrypt) {
+			result = await this._encryption.encrypt(result);
+		}
+
+		return result;
 	}
 
 	/**
