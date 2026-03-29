@@ -27,15 +27,22 @@ export type StoreHashFunction = (key: string, storeSize: number) => number;
  */
 export function defaultHashFunction(key: string, storeSize: number): number {
 	const len = key.length;
-	// Sample up to 4 positions: start, quarter, middle, end + mix in length
-	let h =
-		len ^
-		key.charCodeAt(0) ^
-		key.charCodeAt(len - 1) ^
-		key.charCodeAt(len >> 1) ^
-		key.charCodeAt(len >> 2);
-	// Fibonacci hashing: multiply by golden ratio constant to spread bits
-	h = Math.imul(h, 0x9e3779b9);
+	// Sample up to 4 character positions and mix with length.
+	// Each charCode is multiplied by a distinct prime so that repeated
+	// indices (short keys where positions overlap) don't cancel out.
+	const c0 = key.charCodeAt(0);
+	const c1 = key.charCodeAt(len - 1);
+	const c2 = key.charCodeAt(len >> 1);
+	const c3 = key.charCodeAt(len >> 2);
+	let h = Math.imul(len, 0x9e3779b9)
+		+ Math.imul(c0, 0x85ebca6b)
+		+ Math.imul(c1, 0xc2b2ae35)
+		+ Math.imul(c2, 0x27d4eb2f)
+		+ Math.imul(c3, 0x165667b1);
+	// Final avalanche mix (murmur3 finalizer)
+	h ^= h >>> 16;
+	h = Math.imul(h, 0x85ebca6b);
+	h ^= h >>> 13;
 
 	// Power-of-2 fast path: bitwise AND instead of modulo
 	if ((storeSize & (storeSize - 1)) === 0) {
@@ -96,13 +103,18 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	private _resolve(k: string): Map<K, V> {
 		if (this._isDefaultHash) {
 			const len = k.length;
-			let h =
-				len ^
-				k.charCodeAt(0) ^
-				k.charCodeAt(len - 1) ^
-				k.charCodeAt(len >> 1) ^
-				k.charCodeAt(len >> 2);
-			h = Math.imul(h, 0x9e3779b9);
+			const c0 = k.charCodeAt(0);
+			const c1 = k.charCodeAt(len - 1);
+			const c2 = k.charCodeAt(len >> 1);
+			const c3 = k.charCodeAt(len >> 2);
+			let h = Math.imul(len, 0x9e3779b9)
+				+ Math.imul(c0, 0x85ebca6b)
+				+ Math.imul(c1, 0xc2b2ae35)
+				+ Math.imul(c2, 0x27d4eb2f)
+				+ Math.imul(c3, 0x165667b1);
+			h ^= h >>> 16;
+			h = Math.imul(h, 0x85ebca6b);
+			h ^= h >>> 13;
 			return this._isPowerOf2
 				? this._store[(h >>> 0) & (this._storeSize - 1)]
 				: this._store[(h >>> 0) % this._storeSize];

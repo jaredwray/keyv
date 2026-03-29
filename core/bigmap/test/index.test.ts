@@ -486,6 +486,32 @@ describe("bucket distribution", () => {
 		}
 	});
 
+	it("should distribute single-character keys across multiple buckets", () => {
+		const storeSize = 4;
+		const bigMap = new BigMap<string, string>({ storeSize });
+		const chars = "abcdefghijklmnopqrstuvwxyz";
+		for (const c of chars) {
+			bigMap.set(c, c);
+		}
+
+		// With 26 single-char keys and 4 buckets, at least 2 buckets should be used.
+		// Before the fix, all length-1 keys hashed to the same value.
+		const usedBuckets = Array.from({ length: storeSize }, (_, i) => bigMap.getStoreMap(i).size).filter(s => s > 0).length;
+		expect(usedBuckets).toBeGreaterThanOrEqual(2);
+	});
+
+	it("should distribute two-character keys across multiple buckets", () => {
+		const storeSize = 4;
+		const bigMap = new BigMap<string, string>({ storeSize });
+		const pairs = ["ab", "cd", "ef", "gh", "ij", "kl", "mn", "op", "qr", "st", "uv", "wx"];
+		for (const p of pairs) {
+			bigMap.set(p, p);
+		}
+
+		const usedBuckets = Array.from({ length: storeSize }, (_, i) => bigMap.getStoreMap(i).size).filter(s => s > 0).length;
+		expect(usedBuckets).toBeGreaterThanOrEqual(2);
+	});
+
 	it("should normalize out-of-range hash values to valid bucket indices", () => {
 		const storeSize = 4;
 		// Custom hash that returns values outside [0, storeSize - 1]
