@@ -203,6 +203,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 			const value = await this.client.get(this.formatKey(key));
 			return value !== undefined;
 		} catch {
+			/* v8 ignore next -- @preserve */
 			return false;
 		}
 	}

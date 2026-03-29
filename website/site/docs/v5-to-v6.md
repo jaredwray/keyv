@@ -33,7 +33,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Serialization Adapters](#serialization-adapters)
   - [Encryption Adapters](#encryption-adapters)
   - [New Identification Functions](#new-identification-functions)
-  - [Generic Storage Adapter](#generic-storage-adapter)
+  - [Memory Adapter](#memory-adapter)
 
 ---
 
@@ -58,7 +58,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 | Update `@keyv/valkey`  | COMPLETE |
 | Finalize namespace handling in storage adapters | COMPLETE |
 | Add `getRaw` and `getManyRaw` methods | COMPLETE |
-| Implement `KeyvGenericStore` | COMPLETE |
+| Implement `KeyvMemoryAdapter` | COMPLETE |
 | Add serialization adapters | COMPLETE |
 | Migrate `@keyv/memcache` from `memjs` to `memcache` | COMPLETE |
 | Update `@keyv/bigmap`  | COMPLETE |
@@ -124,7 +124,7 @@ const keyv = new Keyv({ namespace: 'myapp' });
 // Namespace is handled directly by the storage adapter
 ```
 
-For legacy storage adapters or `Map`-compatible stores, we have added `KeyvGenericStore` which handles advanced features without overloading the main Keyv codebase. See [Generic Storage Adapter](#generic-storage-adapter) for more details.
+For legacy storage adapters or `Map`-compatible stores, we have added `KeyvMemoryAdapter` which handles advanced features without overloading the main Keyv codebase. See [Memory Adapter](#memory-adapter) for more details.
 
 ---
 
@@ -407,7 +407,7 @@ for await (const [key, value] of keyv.iterator()) {
 
 ### Removed `.ttlSupport` from Storage Adapters
 
-The `ttlSupport` property has been removed from storage adapters. Keyv now automatically detects the storage adapter type and uses `KeyvGenericStore` for adapters that don't natively support TTL.
+The `ttlSupport` property has been removed from storage adapters. Keyv now automatically detects the storage adapter type and uses `KeyvMemoryAdapter` for adapters that don't natively support TTL.
 
 **v5 (before):**
 ```javascript
@@ -420,7 +420,7 @@ class MyAdapter {
 **v6 (after):**
 ```javascript
 // No need to specify ttlSupport
-// Keyv automatically handles TTL through KeyvGenericStore if needed
+// Keyv automatically handles TTL through KeyvMemoryAdapter if needed
 class MyAdapter {
   // ...
 }
@@ -735,9 +735,9 @@ isKeyvEncryption(aesAdapter);
 
 ---
 
-### Generic Storage Adapter
+### Memory Adapter
 
-Keyv v6 includes `KeyvGenericStore`, a wrapper class for storage types that don't conform to v6 storage adapter requirements (such as `Map`-compatible or legacy adapters).
+Keyv v6 includes `KeyvMemoryAdapter`, a wrapper class for storage types that don't conform to v6 storage adapter requirements (such as `Map`-compatible or legacy adapters).
 
 **Features:**
 - Handles namespacing using key prefixing
@@ -751,10 +751,10 @@ import Keyv from 'keyv';
 // Map-compatible stores are automatically wrapped
 const keyv = new Keyv({ store: new Map() });
 
-// Check if your adapter will use KeyvGenericStore
+// Check if your adapter will use KeyvMemoryAdapter
 const capabilities = keyv.getStoreCapabilities(yourStore);
 if (capabilities.mapCompatible && !capabilities.adapter) {
-  console.log('This store will use KeyvGenericStore');
+  console.log('This store will use KeyvMemoryAdapter');
 }
 ```
 

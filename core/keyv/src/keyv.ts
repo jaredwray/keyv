@@ -1,14 +1,19 @@
 import { Hookified } from "hookified";
+import { KeyvBridgeAdapter, type KeyvBridgeStore } from "./adapters/bridge.js";
+import { type KeyvMapType, KeyvMemoryAdapter } from "./adapters/memory.js";
 import { detectKeyvStorage } from "./capabilities.js";
 import { KeyvJsonSerializer } from "./json-serializer.js";
 import { KeyvSanitize } from "./sanitize.js";
 import { KeyvStats } from "./stats.js";
 import {
 	type KeyvCompressionAdapter,
+	type KeyvEncryptionAdapter,
 	type KeyvEntry,
 	KeyvEvents,
 	KeyvHooks,
+	type KeyvMapAny,
 	type KeyvOptions,
+	type KeyvSanitizeAdapter,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
 	type KeyvTelemetryEvent,
@@ -17,6 +22,7 @@ import {
 } from "./types.js";
 import {
 	buildDeprecatedHooks,
+	calculateExpires,
 	deleteExpiredKeys,
 	deprecatedHookAliases,
 	isDataExpired,
@@ -30,7 +36,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Stats manager for tracking cache operation metrics (hits, misses, sets, deletes, errors).
 	 * @default this is disabled.
 	 */
-	private _stats: KeyvStats;
+	private _stats!: KeyvStats;
 
 	/**
 	 * Default time to live in milliseconds. Can be overridden per-key via {@link set}.
@@ -45,8 +51,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * The underlying storage adapter. Defaults to an in-memory {@link Map}.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private _store: KeyvStorageAdapter = new Map() as any;
+	private _store: KeyvStorageAdapter = new KeyvMemoryAdapter(new Map());
 
 	/**
 	 * Pluggable serialization adapter with `stringify` and `parse` methods.
@@ -60,18 +65,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 	private _compression: KeyvCompressionAdapter | undefined;
 
 	/**
+	 * Pluggable encryption adapter with `encrypt` and `decrypt` methods.
+	 */
+	private _encryption: KeyvEncryptionAdapter | undefined;
+
+	/**
 	 * Sanitization handler for keys and namespaces. By default it is disabled.
 	 */
-	private _sanitize: KeyvSanitize;
+	private _sanitize!: KeyvSanitizeAdapter;
 
 	/**
 	 * Keyv Constructor
-	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any>} store  to be provided or just the options
+	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any> | any} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
 	constructor(
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		store?: KeyvStorageAdapter | KeyvOptions | Map<any, any>,
+		store?: KeyvStorageAdapter | KeyvOptions | KeyvMapAny,
 		options?: Omit<KeyvOptions, "store">,
 	);
 	/**
@@ -85,19 +94,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
 	 */
 	constructor(store?: KeyvStorageAdapter | KeyvOptions, options?: Omit<KeyvOptions, "store">) {
-		options ??= {};
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-		store ??= {} as KeyvOptions;
-
-		const mergedOptions: KeyvOptions = {
-			...options,
-		};
-
-		if (store && (store as KeyvStorageAdapter).get) {
-			mergedOptions.store = store as KeyvStorageAdapter;
-		} else {
-			Object.assign(mergedOptions, store);
-		}
+		const mergedOptions = Keyv.resolveOptions(store, options);
 
 		super({
 			throwOnHookError: false,
@@ -106,87 +103,34 @@ export class Keyv<GenericValue = any> extends Hookified {
 		});
 
 		this.deprecatedHooks = buildDeprecatedHooks();
-
-		this._store = mergedOptions.store ?? new Map();
-
 		this._compression = mergedOptions.compression;
+		this._encryption = mergedOptions.encryption;
+		this.initSerialization(mergedOptions);
+		this.initSanitize(mergedOptions);
+		this.initNamespace(mergedOptions.namespace);
+		this.initStats(mergedOptions);
 
-		if (mergedOptions.serialization === false) {
-			this._serialization = undefined;
-		} else {
-			this._serialization = mergedOptions.serialization ?? new KeyvJsonSerializer();
+		if (mergedOptions.store) {
+			this.setStore(mergedOptions.store);
 		}
 
-		this._sanitize = new KeyvSanitize();
-
-		if (mergedOptions.sanitize) {
-			this._sanitize.updateOptions(mergedOptions?.sanitize);
-		}
-
-		this._namespace = mergedOptions.namespace;
-		if (this._namespace && this._sanitize.enabled) {
-			this._namespace = this._sanitize.cleanNamespace(this._namespace);
-		}
-
-		/* v8 ignore next -- @preserve */
-		if (this._store) {
-			const storeCap = detectKeyvStorage(this._store);
-			if (
-				!(storeCap.mapLike || (storeCap.get && storeCap.set && storeCap.delete && storeCap.clear))
-			) {
-				throw new Error("Invalid storage adapter");
-			}
-
-			if (typeof this._store.on === "function") {
-				// biome-ignore lint/suspicious/noExplicitAny: type format
-				this._store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
-			}
-
-			this._store.namespace = this._namespace;
-		}
-
-		this._stats = new KeyvStats({
-			emitter: this,
-			enabled: mergedOptions.stats ?? false,
-		});
-
-		if (mergedOptions.ttl) {
-			this._ttl = mergedOptions.ttl;
-		}
+		this.setTtl(mergedOptions.ttl);
 	}
 
 	/**
 	 * Get the current storage adapter.
-	 * @returns {KeyvStorageAdapter | Map<any, any>} The current storage adapter.
+	 * @returns {KeyvStorageAdapter} The current storage adapter.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public get store(): KeyvStorageAdapter | Map<any, any> | any {
+	public get store(): KeyvStorageAdapter {
 		return this._store;
 	}
 
 	/**
-	 * Set the storage adapter. Also configures the namespace, error forwarding, and iterator
-	 * for the new store. Throws if the store does not implement the required methods.
-	 * @param {KeyvStorageAdapter | Map<any, any>} store The storage adapter to set.
-	 * @throws {Error} If the store is not a valid storage adapter.
+	 * Set the storage adapter.
+	 * @param {KeyvStorageAdapter | Map<any, any> | any} store The storage adapter to set.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public set store(store: KeyvStorageAdapter | Map<any, any> | any) {
-		const storeCap = detectKeyvStorage(store);
-		if (storeCap.mapLike || (storeCap.get && storeCap.set && storeCap.delete && storeCap.clear)) {
-			this._store = store;
-
-			if (typeof store.on === "function") {
-				// biome-ignore lint/suspicious/noExplicitAny: type format
-				store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
-			}
-			/* v8 ignore next -- @preserve */
-			if (this._namespace) {
-				this._store.namespace = this._namespace;
-			}
-		} else {
-			throw new Error("Invalid storage adapter");
-		}
+	public set store(store: KeyvStorageAdapter | KeyvMapAny) {
+		this.setStore(store);
 	}
 
 	/**
@@ -203,6 +147,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public set compression(compress: KeyvCompressionAdapter | undefined) {
 		this._compression = compress;
+	}
+
+	/**
+	 * Get the current encryption adapter.
+	 * @returns {KeyvEncryptionAdapter | undefined} The current encryption adapter.
+	 */
+	public get encryption(): KeyvEncryptionAdapter | undefined {
+		return this._encryption;
+	}
+
+	/**
+	 * Set the encryption adapter.
+	 * @param {KeyvEncryptionAdapter | undefined} encryption The encryption adapter to set.
+	 */
+	public set encryption(encryption: KeyvEncryptionAdapter | undefined) {
+		this._encryption = encryption;
 	}
 
 	/**
@@ -236,7 +196,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {number} ttl The TTL to set in milliseconds.
 	 */
 	public set ttl(ttl: number | undefined) {
-		this._ttl = ttl;
+		this.setTtl(ttl);
 	}
 
 	/**
@@ -257,7 +217,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current throwOnErrors value. When enabled, errors will throw if there are no error listeners registered.
+	 * Get the current throwOnErrors value. When enabled, all errors with throw. By default, errors
+	 * will only throw if there are no listeners to the error event.
 	 * @return {boolean} The current throwOnErrors value.
 	 */
 	public get throwOnErrors(): boolean {
@@ -265,7 +226,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Set the current throwOnErrors value. When enabled, errors will throw if there are no error listeners registered.
+	 * Set the current throwOnErrors value. When enabled, all errors will throw. By default, errors
+	 * will only throw if there are no listeners to the error event.
 	 * @param {boolean} value The throwOnErrors value to set.
 	 */
 	public set throwOnErrors(value: boolean) {
@@ -273,18 +235,20 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the current KeyvSanitize instance.
-	 * @returns {KeyvSanitize} The current KeyvSanitize instance.
+	 * Get the current sanitize adapter. Sanitization is disabled by default. To
+	 * enable it `sanitize.keys` or `sanitize.namespace` to true or set KeyvSanitizePatterns
+	 * to each.
+	 * @returns {KeyvSanitizeAdapter} The current sanitize adapter.
 	 */
-	public get sanitize(): KeyvSanitize {
+	public get sanitize(): KeyvSanitizeAdapter {
 		return this._sanitize;
 	}
 
 	/**
-	 * Set the sanitize instance directly.
-	 * @param {KeyvSanitize} value The KeyvSanitize instance to use.
+	 * Set the sanitize adapter directly and will run sanitization on namespace.
+	 * @param {KeyvSanitizeAdapter} value The sanitize adapter to use.
 	 */
-	public set sanitize(value: KeyvSanitize) {
+	public set sanitize(value: KeyvSanitizeAdapter) {
 		this._sanitize = value;
 		/* v8 ignore next -- @preserve */
 		this._namespace =
@@ -294,16 +258,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the stats manager.
-	 * @returns {KeyvStats} The current stats manager.
+	 * Get the stats. This is just for this instance
+	 * @returns {KeyvStats} The current stats.
 	 */
 	public get stats(): KeyvStats {
 		return this._stats;
 	}
 
 	/**
-	 * Set the stats manager.
-	 * @param {KeyvStats} stats The stats manager to set.
+	 * Set the stats. When setting a new instance it will unsubscribe the old listeners
+	 * and subscribe the new instance.
+	 * @param {KeyvStats} stats The stats instance to set.
 	 */
 	public set stats(stats: KeyvStats) {
 		this._stats.unsubscribe();
@@ -312,20 +277,67 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Emit a telemetry event for cache operations.
-	 * @param {KeyvEvents} event the telemetry event type
-	 * @param {string | string[]} [key] the cache key or keys (emits one event per key)
+	 * Resolves a store to a fully-compliant KeyvStorageAdapter using a 3-tier detection chain:
+	 * 1. If the store already implements the full KeyvStorageAdapter interface, use it directly.
+	 * 2. If the store is map-like (synchronous get/set/delete/has), wrap it in KeyvMemoryAdapter.
+	 * 3. If the store has async get/set/delete/clear, wrap it in KeyvBridgeAdapter.
+	 * 4. Otherwise, emit an error and fall back to a default in-memory KeyvMemoryAdapter.
+	 *
+	 * NOTE: this is used for internal but provided public for custom adapter testing
+	 * @param {unknown} store The store to resolve.
+	 * @returns {KeyvStorageAdapter} A fully-compliant storage adapter.
 	 */
-	public emitTelemetry(event: KeyvEvents, key?: string | string[]): void {
-		const keys = Array.isArray(key) ? key : [key];
-		for (const k of keys) {
-			this.emit(event, {
-				event: event.replace("stat:", ""),
-				key: k,
-				namespace: this._namespace,
-				timestamp: Date.now(),
-			} as KeyvTelemetryEvent);
+	// biome-ignore lint/suspicious/noExplicitAny: accepts any store type
+	public resolveStore(store: any): KeyvStorageAdapter {
+		const cap = detectKeyvStorage(store);
+
+		if (cap.store === "keyvStorage") {
+			return store as KeyvStorageAdapter;
 		}
+
+		if (cap.store === "mapLike") {
+			return new KeyvMemoryAdapter(store as KeyvMapType);
+		}
+
+		if (cap.store === "asyncMap") {
+			return new KeyvBridgeAdapter(store as KeyvBridgeStore);
+		}
+
+		this.emit(
+			KeyvEvents.ERROR,
+			new Error(
+				"Could not use the provided storage adapter, falling back to KeyvMemoryAdapter with Map",
+			),
+		);
+		return new KeyvMemoryAdapter(new Map());
+	}
+
+	/**
+	 * Sets the storage adapter by resolving it via {@link resolveStore}, then wires up
+	 * error forwarding and namespace propagation.
+	 * @param {KeyvStorageAdapter | Map<any, any> | any} store The storage adapter to set.
+	 */
+	public setStore(store: KeyvStorageAdapter | KeyvMapAny): void {
+		this._store = this.resolveStore(store);
+		if (typeof this._store.on === "function") {
+			// biome-ignore lint/suspicious/noExplicitAny: type format
+			this._store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
+		}
+
+		this._store.namespace = this._namespace;
+	}
+
+	/**
+	 * Sets the TTL, treating negative values as undefined (no TTL).
+	 * @param {number | undefined} ttl The TTL to set in milliseconds.
+	 */
+	public setTtl(ttl?: number): void {
+		if (typeof ttl === "number" && ttl < 0) {
+			this._ttl = undefined;
+			return;
+		}
+
+		this._ttl = ttl;
 	}
 
 	/**
@@ -337,7 +349,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async get<Value = GenericValue>(
 		key: string | string[],
 	): Promise<Value | undefined | Array<Value | undefined>> {
-		const store = this._store;
 		const isArray = Array.isArray(key);
 
 		if (isArray) {
@@ -353,28 +364,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 		// biome-ignore lint/suspicious/noImplicitAnyLet: need to fix
 		let rawData;
 		try {
-			rawData = await store.get<Value>(key as string);
+			rawData = await this._store.get<Value>(key as string);
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 		}
 
-		const deserializedData =
-			typeof rawData === "string" || this._compression
-				? await this.deserializeData<Value>(rawData as string)
-				: rawData;
+		const [data] = await this.decodeWithExpire<Value>(key as string, rawData);
 
-		if (deserializedData === undefined || deserializedData === null) {
-			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
-				key,
-				value: undefined,
-			});
-			this.emitTelemetry(KeyvEvents.STAT_MISS, key as string);
-			return undefined;
-		}
-
-		if (isDataExpired(deserializedData as KeyvValue<Value>)) {
-			await this.delete(key as string);
+		if (data === undefined) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 				key,
 				value: undefined,
@@ -385,10 +383,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
 			key,
-			value: deserializedData,
+			value: data,
 		});
 		this.emitTelemetry(KeyvEvents.STAT_HIT, key as string);
-		return (deserializedData as KeyvValue<Value>).value;
+		return data.value;
 	}
 
 	/**
@@ -397,62 +395,16 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public async getMany<Value = GenericValue>(keys: string[]): Promise<Array<Value | undefined>> {
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
-		const store = this._store;
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
-		if (store.getMany === undefined) {
-			const promises = keys.map(async (key: string) => {
-				const rawData = await store.get<Value>(key);
-				const deserializedRow =
-					typeof rawData === "string" || this._compression
-						? await this.deserializeData<Value>(rawData as string)
-						: rawData;
 
-				if (deserializedRow === undefined || deserializedRow === null) {
-					return undefined;
-				}
-
-				if (isDataExpired(deserializedRow as KeyvValue<Value>)) {
-					await this.delete(key);
-					return undefined;
-				}
-
-				return (deserializedRow as KeyvValue<Value>).value;
-			});
-
-			const deserializedRows = await Promise.allSettled(promises);
-			const result = deserializedRows.map((row) =>
-				/* v8 ignore next -- @preserve */
-				row.status === "fulfilled" ? row.value : undefined,
-			);
-			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
-			for (let i = 0; i < result.length; i++) {
-				if (result[i] === undefined) {
-					this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
-				} else {
-					this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
-				}
-			}
-
-			return result;
-		}
-
-		const rawData = await store.getMany<Value>(keys);
-
-		const deserialized: Array<KeyvValue<Value> | undefined | null> = [];
-		for (const row of rawData) {
-			if (typeof row === "string") {
-				// eslint-disable-next-line no-await-in-loop
-				deserialized.push(await this.deserializeData<Value>(row));
-			} else {
-				deserialized.push(row as KeyvValue<Value> | undefined | null);
-			}
-		}
-
-		await deleteExpiredKeys(keys, deserialized, this);
+		const rawData =
+			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
+			this._store.getMany!<Value>(keys);
+		const deserialized = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
 
 		const result: Array<Value | undefined> = deserialized.map((row) =>
-			row !== undefined && row !== null ? row.value : undefined,
+			row !== undefined ? row.value : undefined,
 		);
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
@@ -470,7 +422,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Get the raw value of a key. This is the replacement for setting raw to true in the get() method.
 	 * @param {string} key the key to get
-	 * @returns {Promise<StoredDataRaw<Value> | undefined>} will return a StoredDataRaw<Value> or undefined if the key does not exist or is expired.
+	 * @returns {Promise<StoredDataRaw<Value> | undefined>} will return a StoredDataRaw<Value> or undefined
+	 * if the key does not exist or is expired.
 	 */
 	public async getRaw<Value = GenericValue>(
 		key: string,
@@ -480,11 +433,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return undefined;
 		}
 
-		const store = this._store;
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
-		const rawData = await store.get(key);
+		const rawData = await this._store.get(key);
 
-		if (rawData === undefined || rawData === null) {
+		const [data] = await this.decodeWithExpire<Value>(key, rawData);
+
+		if (data === undefined) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 				key,
 				value: undefined,
@@ -493,32 +447,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return undefined;
 		}
 
-		// Check if the data is expired
-		/* v8 ignore next -- @preserve */
-		const deserializedData =
-			typeof rawData === "string" || this._compression
-				? await this.deserializeData<Value>(rawData as string)
-				: rawData;
-
-		if (deserializedData !== undefined && isDataExpired(deserializedData as KeyvValue<Value>)) {
-			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
-				key,
-				value: undefined,
-			});
-			this.emitTelemetry(KeyvEvents.STAT_MISS, key);
-			await this.delete(key);
-			return undefined;
-		}
-
-		// Add a hit
 		this.emitTelemetry(KeyvEvents.STAT_HIT, key);
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
 			key,
-			value: deserializedData,
+			value: data,
 		});
 
-		return deserializedData;
+		return data;
 	}
 
 	/**
@@ -529,8 +465,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
 	): Promise<Array<StoredDataRaw<Value>>> {
+		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
-		const store = this._store;
 
 		if (keys.length === 0) {
 			const result = Array.from({ length: keys.length }).fill(undefined) as Array<
@@ -549,41 +485,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return result;
 		}
 
-		let result: Array<StoredDataRaw<Value>> = [];
-		// Check to see if the store has a getMany method
-		if (store.getMany === undefined) {
-			// If not then we will get each key individually
-			const promises = keys.map(async (key: string) => {
-				const rawData = await store.get<Value>(key);
-				if (rawData !== undefined && rawData !== null) {
-					return this.deserializeData<Value>(rawData as string);
-				}
-
-				return undefined;
-			});
-
-			const deserializedRows = await Promise.allSettled(promises);
-			result = deserializedRows.map(
-				(row: PromiseSettledResult<StoredDataRaw<Value> | undefined>) =>
-					/* v8 ignore next -- @preserve */
-					row.status === "fulfilled" ? row.value : undefined,
-			) as Array<StoredDataRaw<Value>>;
-		} else {
-			const rawData = await store.getMany(keys);
-
-			for (const row of rawData) {
-				/* v8 ignore next -- @preserve */
-				if (row !== undefined && row !== null) {
-					result.push(await this.deserializeData<Value>(row));
-				} else {
-					/* v8 ignore next -- @preserve */
-					result.push(undefined);
-				}
-			}
-		}
-
-		// Filter out any expired keys and delete them
-		await deleteExpiredKeys(keys, result, this);
+		const rawData =
+			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
+			this._store.getMany!<Value>(keys);
+		const result = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
 
 		// Add in hits and misses
 		for (let i = 0; i < result.length; i++) {
@@ -599,7 +504,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			keys,
 			values: result,
 		});
-		return result;
+		return result as Array<StoredDataRaw<Value>>;
 	}
 
 	/**
@@ -624,27 +529,21 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		data.ttl = resolveTtl(data.ttl, this._ttl);
 
-		const store = this._store;
-
-		const expires = typeof data.ttl === "number" ? Date.now() + data.ttl : undefined;
+		const expires = calculateExpires(data.ttl);
 
 		if (typeof data.value === "symbol") {
 			this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
-			throw new Error("symbol cannot be serialized");
+			return false;
 		}
 
 		const formattedValue = { value: data.value, expires };
-		const serializedValue = await this.serializeData(formattedValue);
+		const encodedValue = await this.encode(formattedValue);
 
 		let result = true;
 
 		try {
-			const value = await store.set(data.key, serializedValue, data.ttl);
-
-			if (typeof value === "boolean") {
-				result = value;
-			}
+			result = await this._store.set(data.key, encodedValue, data.ttl);
 		} catch (error) {
 			result = false;
 			this.emit(KeyvEvents.ERROR, error);
@@ -653,7 +552,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_SET, {
 			key,
-			value: serializedValue,
+			value: encodedValue,
 			ttl,
 		});
 		this.emitTelemetry(KeyvEvents.STAT_SET, key);
@@ -674,43 +573,33 @@ export class Keyv<GenericValue = any> extends Hookified {
 		let results: boolean[] = [];
 
 		try {
-			// If the store doesn't have a setMany method then fall back to setting each entry individually
-			if (this._store.setMany === undefined) {
-				const promises: Array<Promise<boolean>> = [];
-				for (const entry of entries) {
-					promises.push(this.set(entry.key, entry.value, entry.ttl));
-				}
+			const serializedEntries = await Promise.all(
+				entries.map(async ({ key, value, ttl }) => {
+					ttl = resolveTtl(ttl, this._ttl);
 
-				const promiseResults = await Promise.all(promises);
-				results = promiseResults;
-			} else {
-				const serializedEntries = await Promise.all(
-					entries.map(async ({ key, value, ttl }) => {
-						ttl = resolveTtl(ttl, this._ttl);
+					/* v8 ignore next -- @preserve */
+					const expires = calculateExpires(ttl);
 
-						/* v8 ignore next -- @preserve */
-						const expires = typeof ttl === "number" ? Date.now() + ttl : undefined;
+					/* v8 ignore next -- @preserve */
+					if (typeof value === "symbol") {
+						this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
+						this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
+						throw new Error("symbol cannot be serialized");
+					}
 
-						/* v8 ignore next -- @preserve */
-						if (typeof value === "symbol") {
-							this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
-							this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
-							throw new Error("symbol cannot be serialized");
-						}
-
-						const formattedValue = { value, expires };
-						const serializedValue = await this.serializeData(formattedValue);
-						return { key, value: serializedValue, ttl };
-					}),
-				);
-				const storeResult = await this._store.setMany(serializedEntries);
-				/* v8 ignore next -- @preserve */
-				results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
-				this.emitTelemetry(
-					KeyvEvents.STAT_SET,
-					entries.map((e) => e.key),
-				);
-			}
+					const formattedValue = { value, expires };
+					const encodedValue = await this.encode(formattedValue);
+					return { key, value: encodedValue, ttl };
+				}),
+			);
+			// biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
+			const storeResult = await this._store.setMany!(serializedEntries);
+			/* v8 ignore next -- @preserve */
+			results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
+			this.emitTelemetry(
+				KeyvEvents.STAT_SET,
+				entries.map((e) => e.key),
+			);
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(
@@ -747,12 +636,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		const ttl = ttlFromExpires(data.value.expires);
 
-		const store = this._store;
 		let result = true;
 
 		try {
-			const serializedValue = await this.serializeData(data.value);
-			const storeResult = await store.set(data.key, serializedValue, ttl);
+			const encodedValue = await this.encode(data.value);
+			const storeResult = await this._store.set(data.key, encodedValue, ttl);
 
 			if (typeof storeResult === "boolean") {
 				result = storeResult;
@@ -785,6 +673,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	): Promise<boolean[]> {
 		entries = entries.map((e) => ({
 			...e,
+			/* v8 ignore next -- @preserve */
 			key: this._sanitize.enabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
 		let results: boolean[] = [];
@@ -792,28 +681,19 @@ export class Keyv<GenericValue = any> extends Hookified {
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY_RAW, { entries });
 
 		try {
-			if (this._store.setMany === undefined) {
-				const promises: Array<Promise<boolean>> = [];
-				for (const entry of entries) {
-					promises.push(this.setRaw(entry.key, entry.value));
-				}
-
-				results = await Promise.all(promises);
-			} else {
-				const rawEntries = await Promise.all(
-					entries.map(async ({ key, value }) => {
-						const ttl = ttlFromExpires(value.expires);
-						const serializedValue = await this.serializeData(value);
-						return { key, value: serializedValue, ttl };
-					}),
-				);
-				const storeResult = await this._store.setMany(rawEntries);
-				results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
-				this.emitTelemetry(
-					KeyvEvents.STAT_SET,
-					entries.map((e) => e.key),
-				);
-			}
+			const rawEntries = await Promise.all(
+				entries.map(async ({ key, value }) => {
+					const ttl = ttlFromExpires(value.expires);
+					const encodedValue = await this.encode(value);
+					return { key, value: encodedValue, ttl };
+				}),
+			);
+			const storeResult = await this._store.setMany(rawEntries);
+			results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
+			this.emitTelemetry(
+				KeyvEvents.STAT_SET,
+				entries.map((e) => e.key),
+			);
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(
@@ -845,7 +725,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public async delete(keys: string[]): Promise<boolean[]>;
 	public async delete(key: string | string[]): Promise<boolean | boolean[]> {
-		const store = this._store;
 		if (Array.isArray(key)) {
 			return this.deleteMany(key);
 		}
@@ -860,12 +739,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		let result = true;
 
 		try {
-			const value = await store.delete(key);
-
-			/* v8 ignore next -- @preserve */
-			if (typeof value === "boolean") {
-				result = value;
-			}
+			result = await this._store.delete(key);
 		} catch (error) {
 			result = false;
 			this.emit(KeyvEvents.ERROR, error);
@@ -887,25 +761,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {boolean[]} array of booleans indicating success for each key
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
+		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
+
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
+
 		try {
-			const store = this._store;
-			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
-			if (store.deleteMany !== undefined) {
-				const storeResult = await store.deleteMany(keys);
-				// Support adapters that still return a single boolean
-				const results = Array.isArray(storeResult) ? storeResult : keys.map(() => storeResult);
-				this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
-				await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
-					key: keys,
-					value: results,
-				});
-				return results;
-			}
-
-			const promises = keys.map(async (key: string) => store.delete(key));
-
-			const results = await Promise.all(promises);
+			const results = await this._store.deleteMany(keys);
 			this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
 			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
 				key: keys,
@@ -937,33 +799,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return false;
 		}
 
-		const store = this._store;
-		if (store.has !== undefined && !(store instanceof Map)) {
-			return store.has(key);
-		}
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_HAS, { key });
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		let rawData: any;
-
+		let result = false;
 		try {
-			rawData = await store.get(key);
+			const rawData = await this._store.get(key);
+			if (rawData !== undefined && rawData !== null) {
+				const [data] = await this.decodeWithExpire(key, rawData);
+				result = data !== undefined;
+			}
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
-
-			return false;
 		}
 
-		if (rawData) {
-			// biome-ignore lint/suspicious/noExplicitAny: type format
-			const data = (await this.deserializeData(rawData)) as any;
-			/* v8 ignore next -- @preserve */
-			if (data) {
-				return !isDataExpired(data);
-			}
-		}
-
-		return false;
+		await this.hookWithDeprecated(KeyvHooks.AFTER_HAS, { key, value: result });
+		return result;
 	}
 
 	/**
@@ -973,12 +824,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
-		const store = this._store;
-		if (store.hasMany !== undefined) {
-			return store.hasMany(keys);
+
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_HAS_MANY, { keys });
+
+		let results: boolean[] = [];
+		try {
+			const rawData = await this._store.getMany(keys);
+			const decoded = await this.decodeWithExpire(keys, rawData as unknown[]);
+			results = decoded.map((data) => data !== undefined);
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+			results = keys.map(() => false);
 		}
 
-		return Promise.all(keys.map(async (key) => this.has(key)));
+		await this.hookWithDeprecated(KeyvHooks.AFTER_HAS_MANY, { keys, values: results });
+		return results;
 	}
 
 	/**
@@ -987,10 +848,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public async clear(): Promise<void> {
 		this.emit("clear");
-		const store = this._store;
 
 		try {
-			await store.clear();
+			await this._store.clear();
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR);
@@ -1002,10 +862,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {Promise<void>}
 	 */
 	public async disconnect(): Promise<void> {
-		const store = this._store;
 		this.emit("disconnect");
-		if (typeof store.disconnect === "function") {
-			return store.disconnect();
+		try {
+			if (this._store.disconnect) {
+				await this._store.disconnect();
+			}
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
 		}
 	}
 
@@ -1016,95 +879,128 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: iterator yields vary by store
 	public async *iterator(): AsyncGenerator<[string, any], void> {
-		const store = this._store;
+		/* v8 ignore next 3 -- @preserve */
+		if (this._store.iterator === undefined) {
+			return;
+		}
 
-		if (store instanceof Map) {
-			for (const [key, raw] of store) {
-				const data = await this.deserializeData(raw as string);
+		for await (const [key, raw] of this._store.iterator()) {
+			const data = await this.decode(raw as string);
 
-				if (data && isDataExpired(data)) {
-					await this.delete(key as string);
-					continue;
-				}
-
-				yield [key as string, data?.value];
+			if (data && isDataExpired(data)) {
+				await this.delete(key as string);
+				continue;
 			}
-		} else if (typeof store.iterator === "function") {
-			for await (const [key, raw] of store.iterator()) {
-				const data = await this.deserializeData(raw as string);
 
-				if (data && isDataExpired(data)) {
-					await this.delete(key as string);
-					continue;
-				}
-
-				yield [key as string, data?.value];
-			}
-		} else {
-			this.emit(KeyvEvents.ERROR, new Error("Iterator not supported by this storage adapter"));
-			this.emitTelemetry(KeyvEvents.STAT_ERROR);
+			yield [key as string, data?.value];
 		}
 	}
 
-	public async serializeData<T>(data: KeyvValue<T>): Promise<string | KeyvValue<T>> {
-		// Pipeline: serialize (optional) -> compress (optional)
-		if (!this._serialization && !this._compression) {
+	/**
+	 * Encodes a value for storage. Pipeline: serialize → compress → encrypt.
+	 * If serialization is not configured, returns the data as-is.
+	 * @param {KeyvValue<T>} data The value envelope to encode.
+	 * @returns {Promise<unknown>} The encoded value, or the original data on failure.
+	 */
+	public async encode<T>(data: KeyvValue<T>): Promise<unknown> {
+		if (!this._serialization) {
 			return data;
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		let result: any = data;
+		try {
+			let result: unknown = await this._serialization.stringify(data);
 
-		/* v8 ignore next 7 -- @preserve */
-		if (this._serialization) {
-			result = await this._serialization.stringify(data);
-		} else if (this._compression) {
-			// Compression needs string input; use JSON as minimum serialization
-			result = JSON.stringify(data);
+			if (this._compression?.compress) {
+				result = await this._compression.compress(result as string);
+			}
+
+			if (this._encryption?.encrypt) {
+				result = await this._encryption.encrypt(result as string);
+			}
+
+			return result;
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			return data;
 		}
-
-		if (this._compression?.compress) {
-			result = await this._compression.compress(result);
-		}
-
-		return result;
 	}
 
-	public async deserializeData<T>(data: string | KeyvValue<T>): Promise<KeyvValue<T> | undefined> {
+	/**
+	 * Decodes a stored value. Pipeline: decrypt → decompress → deserialize (reverse of encode).
+	 * If serialization is not configured, returns the data as a KeyvValue or undefined for strings.
+	 * @param {unknown} data The raw data from the store.
+	 * @returns {Promise<KeyvValue<T> | undefined>} The decoded value envelope, or undefined on failure.
+	 */
+	public async decode<T>(data: unknown): Promise<KeyvValue<T> | undefined> {
 		if (data === undefined || data === null) {
 			return undefined;
 		}
 
-		// Pipeline: decompress (optional) -> parse (optional)
-		if (!this._serialization && !this._compression) {
-			if (typeof data === "string") {
-				return undefined;
+		if (!this._serialization) {
+			return typeof data === "string" ? undefined : (data as KeyvValue<T>);
+		}
+
+		try {
+			let result: unknown = data;
+
+			if (this._encryption?.decrypt) {
+				result = await this._encryption.decrypt(result as string);
 			}
 
-			return data as KeyvValue<T>;
-		}
-
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		let result: any = data;
-
-		if (this._compression?.decompress) {
-			result = await this._compression.decompress(result);
-		}
-
-		if (this._serialization && typeof result === "string") {
-			return await this._serialization.parse<KeyvValue<T>>(result);
-		}
-
-		// If compression was used without serialization, JSON was used as fallback
-		if (typeof result === "string") {
-			try {
-				return JSON.parse(result) as KeyvValue<T>;
-			} catch {
-				return undefined;
+			if (this._compression?.decompress) {
+				result = await this._compression.decompress(result as string);
 			}
+
+			if (typeof result === "string") {
+				return await this._serialization.parse<KeyvValue<T>>(result);
+			}
+
+			return result as KeyvValue<T>;
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			return undefined;
+		}
+	}
+
+	/**
+	 * Deserializes raw data from the store, checks for expiry, and deletes expired keys.
+	 * Accepts a single key/value or arrays. Returns an array of decoded KeyvValue objects
+	 * (undefined for missing or expired entries).
+	 * @param {string | string[]} keys the key(s) to process
+	 * @param {unknown | unknown[]} rawData the raw data from the store
+	 * @returns {Promise<Array<KeyvValue<Value> | undefined>>} decoded values with expired entries removed
+	 */
+	public async decodeWithExpire<Value>(
+		keys: string | string[],
+		rawData: unknown | unknown[],
+	): Promise<Array<KeyvValue<Value> | undefined>> {
+		const keyArray = Array.isArray(keys) ? keys : [keys];
+		const dataArray = Array.isArray(rawData) ? (rawData as unknown[]) : [rawData];
+
+		const results: Array<KeyvValue<Value> | undefined> = [];
+
+		for (const row of dataArray) {
+			if (row === undefined || row === null) {
+				results.push(undefined);
+				continue;
+			}
+
+			const deserialized =
+				typeof row === "string" || this._compression
+					? await this.decode<Value>(row as string)
+					: (row as KeyvValue<Value>);
+
+			if (deserialized === undefined || deserialized === null) {
+				results.push(undefined);
+				continue;
+			}
+
+			results.push(deserialized);
 		}
 
-		return result as KeyvValue<T>;
+		await deleteExpiredKeys(keyArray, results, this);
+
+		return results;
 	}
 
 	/**
@@ -1120,6 +1016,86 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const deprecated = deprecatedHookAliases.get(event);
 		if (deprecated && this.getHooks(deprecated)?.length) {
 			await this.hook(deprecated, ...args);
+		}
+	}
+
+	/**
+	 * Emit a telemetry event for cache operations.
+	 * @param {KeyvEvents} event the telemetry event type
+	 * @param {string | string[]} [key] the cache key or keys (emits one event per key)
+	 */
+	private emitTelemetry(event: KeyvEvents, key?: string | string[]): void {
+		const keys = Array.isArray(key) ? key : [key];
+		for (const k of keys) {
+			this.emit(event, {
+				event: event.replace("stat:", ""),
+				key: k,
+				namespace: this._namespace,
+				timestamp: Date.now(),
+			} as KeyvTelemetryEvent);
+		}
+	}
+
+	/**
+	 * Merges the overloaded constructor arguments into a single KeyvOptions object.
+	 */
+	private static resolveOptions(
+		store?: KeyvStorageAdapter | KeyvOptions,
+		options?: Omit<KeyvOptions, "store">,
+	): KeyvOptions {
+		options ??= {};
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+		store ??= {} as KeyvOptions;
+		const merged: KeyvOptions = { ...options };
+		if (store && (store as KeyvStorageAdapter).get) {
+			merged.store = store as KeyvStorageAdapter;
+		} else {
+			Object.assign(merged, store);
+		}
+
+		return merged;
+	}
+
+	/**
+	 * Initializes the serialization adapter from options.
+	 */
+	private initSerialization(options: KeyvOptions): void {
+		if (options.serialization === false) {
+			this._serialization = undefined;
+		} else {
+			this._serialization = options.serialization ?? new KeyvJsonSerializer();
+		}
+	}
+
+	/**
+	 * Initializes the sanitization handler from options.
+	 */
+	private initSanitize(options: KeyvOptions): void {
+		const sanitize = new KeyvSanitize();
+		if (options.sanitize) {
+			sanitize.updateOptions(options.sanitize);
+		}
+
+		this._sanitize = sanitize;
+	}
+
+	/**
+	 * Initializes the stats manager from options.
+	 */
+	private initStats(options: KeyvOptions): void {
+		this._stats = new KeyvStats({
+			emitter: this,
+			enabled: options.stats ?? false,
+		});
+	}
+
+	/**
+	 * Initializes the namespace, applying sanitization if enabled.
+	 */
+	private initNamespace(namespace?: string): void {
+		this._namespace = namespace;
+		if (this._namespace && this._sanitize.enabled) {
+			this._namespace = this._sanitize.cleanNamespace(this._namespace);
 		}
 	}
 }

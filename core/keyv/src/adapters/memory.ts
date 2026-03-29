@@ -1,26 +1,27 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
-import { Keyv } from "./keyv.js";
-import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "./types.js";
-import { isDataExpired } from "./utils.js";
+import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
+import { Keyv } from "../keyv.js";
+import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "../types.js";
+import { isDataExpired } from "../utils.js";
 
 /**
- * Configuration options for KeyvGenericStore.
+ * Configuration options for KeyvMemoryAdapter.
  */
-export type KeyvGenericStoreOptions = {
+export type KeyvMemoryAdapterOptions = {
 	/**
-	 * The namespace to use for keys. Can be a static string or a function that returns a string.
+	 * The namespace to use for keys.
 	 * When set, all keys will be prefixed with the namespace followed by the key separator.
 	 */
-	namespace?: string | (() => string);
+	namespace?: string;
 	/**
-	 * The separator used between namespace and key. Defaults to "::".
+	 * The separator used between namespace and key. Defaults to ":".
 	 */
 	keySeparator?: string;
 };
 
 /**
- * Interface for a Map-like store that can be used with KeyvGenericStore.
+ * Interface for a Map-like store that can be used with KeyvMemoryAdapter.
  * This allows any object implementing these methods to be used as the underlying storage.
  * Compatible with Map, QuickLRU, lru.min, and other LRU cache implementations.
  */
@@ -38,30 +39,6 @@ export type KeyvMapType = {
 };
 
 /**
- * Represents a cache item with its key, value, and optional TTL.
- */
-export type CacheItem = {
-	/** The cache key */
-	key: string;
-	/** The cached value */
-	value: any;
-	/** Time-to-live in milliseconds */
-	ttl?: number;
-};
-
-/**
- * Represents how an item is stored internally in the cache.
- */
-export type CacheItemStore = {
-	/** The cache key */
-	key: string;
-	/** The cached value */
-	value: any;
-	/** Unix timestamp (in milliseconds) when the item expires */
-	expires?: number;
-};
-
-/**
  * Data structure returned when parsing a prefixed key.
  */
 export type KeyPrefixData = {
@@ -72,7 +49,7 @@ export type KeyPrefixData = {
 };
 
 /**
- * A generic in-memory store adapter for Keyv that wraps any Map-like object.
+ * An in-memory storage adapter for Keyv that wraps any Map-like object.
  *
  * This class provides a unified interface for using various Map-like stores
  * with Keyv, handling namespace prefixing, TTL-based expiration, and batch operations.
@@ -80,28 +57,30 @@ export type KeyPrefixData = {
  * @example
  * ```typescript
  * // Using with a standard Map
- * const store = new KeyvGenericStore(new Map(), { namespace: 'cache' });
+ * const store = new KeyvMemoryAdapter(new Map(), { namespace: 'cache' });
  *
  * // Using with a custom store
- * const customStore = new KeyvGenericStore(myCustomMapLikeStore, {
- *   namespace: () => `tenant-${getTenantId()}`,
+ * const customStore = new KeyvMemoryAdapter(myCustomMapLikeStore, {
+ *   namespace: 'tenant-123',
  *   keySeparator: ':'
  * });
  * ```
  */
-export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
+export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvMapType;
-	private _namespace?: string | (() => string);
-	private _keySeparator = "::";
+	private _namespace?: string;
+	private _keySeparator = ":";
+	private readonly _capabilities: KeyvStorageCapability;
 
 	/**
-	 * Creates a new KeyvGenericStore instance.
+	 * Creates a new KeyvMemoryAdapter instance.
 	 * @param store - The underlying Map or Map-like object to use for storage
 	 * @param options - Configuration options for the store
 	 */
-	constructor(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
-		super();
+	constructor(store: KeyvMapType, options?: KeyvMemoryAdapterOptions) {
+		super({ throwOnHookError: false });
 		this._store = store;
+		this._capabilities = detectKeyvStorage(store);
 
 		if (options?.keySeparator) {
 			this._keySeparator = options.keySeparator;
@@ -110,6 +89,13 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 		if (options?.namespace) {
 			this._namespace = options?.namespace;
 		}
+	}
+
+	/**
+	 * Gets the detected capabilities of the underlying store.
+	 */
+	public get capabilities(): KeyvStorageCapability {
+		return this._capabilities;
 	}
 
 	/**
@@ -141,37 +127,16 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the current namespace value (resolved if it's a function).
+	 * Gets the current namespace.
 	 */
 	public get namespace(): string | undefined {
-		return this.getNamespace();
-	}
-
-	/**
-	 * Sets the namespace to a static string value.
-	 */
-	public set namespace(namespace: string | undefined) {
-		this._namespace = namespace;
-	}
-
-	/**
-	 * Gets the current namespace, resolving it if it's a function.
-	 * @returns The resolved namespace string, or undefined if not set
-	 */
-	public getNamespace() {
-		if (typeof this._namespace === "function") {
-			return this._namespace();
-		}
-
 		return this._namespace;
 	}
 
 	/**
-	 * Sets the namespace to a static string or a function that returns a string.
-	 * Using a function allows for dynamic namespaces (e.g., per-tenant).
-	 * @param namespace - The namespace string, function, or undefined to clear
+	 * Sets the namespace.
 	 */
-	public setNamespace(namespace: string | (() => string) | undefined) {
+	public set namespace(namespace: string | undefined) {
 		this._namespace = namespace;
 	}
 
@@ -195,9 +160,11 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @returns An object containing the namespace (if present) and the original key
 	 */
 	public getKeyPrefixData(key: string) {
-		if (key.includes(this._keySeparator)) {
-			const [namespace, ...rest] = key.split(this._keySeparator);
-			return { namespace, key: rest.join(this._keySeparator) };
+		if (this._namespace && key.startsWith(`${this._namespace}${this._keySeparator}`)) {
+			return {
+				namespace: this._namespace,
+				key: key.slice(this._namespace.length + this._keySeparator.length),
+			};
 		}
 
 		return { key };
@@ -209,10 +176,10 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to retrieve
 	 * @returns The stored data, or undefined if not found or expired
 	 */
-	async get<T>(key: string): Promise<StoredData<T> | undefined> {
-		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
-		const data = this._store.get(keyPrefix) as CacheItemStore;
-		if (!data) {
+	public async get<T>(key: string): Promise<StoredData<T> | undefined> {
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
+		const data = this._store.get(keyPrefix);
+		if (data === undefined || data === null) {
 			return undefined;
 		}
 
@@ -232,10 +199,9 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param ttl - Optional time-to-live in milliseconds
 	 * @returns Always returns true indicating success
 	 */
-	async set(key: string, value: any, ttl?: number): Promise<boolean> {
-		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
-		const data = { value, expires: ttl ? Date.now() + ttl : undefined };
-		this._store.set(keyPrefix, data, ttl);
+	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
+		this._store.set(keyPrefix, value, ttl);
 		return true;
 	}
 
@@ -243,11 +209,12 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple entries in the store at once.
 	 * @param entries - Array of entries containing key, value, and optional TTL
 	 */
-	async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
-			const result = await this.set(entry.key, entry.value, entry.ttl);
-			results.push(result);
+			const keyPrefix = this.getKeyPrefix(entry.key, this._namespace);
+			this._store.set(keyPrefix, entry.value, entry.ttl);
+			results.push(true);
 		}
 
 		return results;
@@ -258,17 +225,33 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to delete
 	 * @returns True if the key was deleted, false otherwise
 	 */
-	async delete(key: string): Promise<boolean> {
-		const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+	public async delete(key: string): Promise<boolean> {
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		return this._store.delete(keyPrefix);
 	}
 
 	/**
-	 * Clears all entries from the store.
-	 * Note: This clears the entire underlying store, not just the current namespace.
+	 * Clears entries from the store. If a namespace is set, only entries
+	 * within that namespace are removed. Otherwise, the entire store is cleared.
+	 * NOTE: if there is no `keys()` then we just do a full clear.
 	 */
-	async clear(): Promise<void> {
-		this._store.clear();
+	public async clear(): Promise<void> {
+		if (!this._namespace || typeof (this._store as Map<any, any>).keys !== "function") {
+			this._store.clear();
+			return;
+		}
+
+		const prefix = `${this._namespace}${this._keySeparator}`;
+		const keysToDelete: string[] = [];
+		for (const key of (this._store as Map<any, any>).keys()) {
+			if (key.startsWith(prefix)) {
+				keysToDelete.push(key);
+			}
+		}
+
+		for (const key of keysToDelete) {
+			this._store.delete(key);
+		}
 	}
 
 	/**
@@ -276,9 +259,42 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to check
 	 * @returns True if the key exists and is not expired, false otherwise
 	 */
-	async has(key: string): Promise<boolean> {
-		const value = await this.get(key);
-		return Boolean(value);
+	public async has(key: string): Promise<boolean> {
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
+		if (!this._store.has(keyPrefix)) {
+			return false;
+		}
+
+		let data = this._store.get(keyPrefix);
+		// Handle serialized data (stored as JSON string by Keyv's serialization layer)
+		if (typeof data === "string") {
+			try {
+				data = JSON.parse(data);
+			} catch {
+				// Not valid JSON, treat as raw value
+			}
+		}
+
+		if (data !== undefined && data !== null && isDataExpired(data)) {
+			this._store.delete(keyPrefix);
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks if multiple keys exist in the store and are not expired.
+	 * @param keys - Array of keys to check
+	 * @returns Array of booleans indicating existence for each key
+	 */
+	public async hasMany(keys: string[]): Promise<boolean[]> {
+		const results: boolean[] = [];
+		for (const key of keys) {
+			results.push(await this.has(key));
+		}
+
+		return results;
 	}
 
 	/**
@@ -286,14 +302,26 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - Array of keys to retrieve
 	 * @returns Array of stored data in the same order as the input keys
 	 */
-	async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
-		const values = [];
+	public async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
+		const values: Array<StoredData<T | undefined>> = [];
 		for (const key of keys) {
-			const value = await this.get(key);
-			values.push(value);
+			const keyPrefix = this.getKeyPrefix(key, this._namespace);
+			const data = this._store.get(keyPrefix);
+			if (data === undefined || data === null) {
+				values.push(undefined as StoredData<T | undefined>);
+				continue;
+			}
+
+			if (isDataExpired(data)) {
+				this._store.delete(keyPrefix);
+				values.push(undefined as StoredData<T | undefined>);
+				continue;
+			}
+
+			values.push(data as StoredData<T | undefined>);
 		}
 
-		return values as Array<StoredData<T | undefined>>;
+		return values;
 	}
 
 	/**
@@ -301,11 +329,11 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - Array of keys to delete
 	 * @returns Array of booleans indicating success for each key
 	 */
-	async deleteMany(keys: string[]): Promise<boolean[]> {
+	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const results: boolean[] = [];
 		for (const key of keys) {
 			try {
-				const keyPrefix = this.getKeyPrefix(key, this.getNamespace());
+				const keyPrefix = this.getKeyPrefix(key, this._namespace);
 				const existed = this._store.has(keyPrefix);
 				this._store.delete(keyPrefix);
 				results.push(existed);
@@ -321,19 +349,21 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Creates an async iterator for iterating over store entries.
 	 * If the underlying store does not support iteration, returns an empty generator.
-	 * @param namespace - Optional namespace to filter entries by
 	 * @returns {AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>} An async generator yielding [key, value] pairs
 	 */
-	async *iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
+	public async *iterator<Value>(): AsyncGenerator<
+		Array<string | Awaited<Value> | undefined>,
+		void
+	> {
 		// Check if store supports iteration
 		if (typeof (this._store as Map<any, any>).entries !== "function") {
 			return;
 		}
 
-		const namespace = this.getNamespace();
-		const iterator = (this._store as Map<any, any>).entries();
+		const namespace = this._namespace;
+		const entries = [...(this._store as Map<any, any>).entries()];
 
-		for (const [key, data] of iterator) {
+		for (const [key, data] of entries) {
 			// Filter by namespace if set
 			if (namespace) {
 				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {
@@ -352,20 +382,25 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
 				? key.slice(namespace.length + this._keySeparator.length)
 				: key;
 
-			yield [keyWithoutPrefix, data?.value];
+			yield [keyWithoutPrefix, data];
 		}
 	}
+
+	/**
+	 * No-op disconnect for in-memory stores.
+	 */
+	public async disconnect(): Promise<void> {}
 }
 
 /**
- * Creates a Keyv instance with a generic store optimized for in-memory storage.
+ * Creates a Keyv instance with a memory adapter optimized for in-memory storage.
  *
  * This factory function configures Keyv to bypass serialization/deserialization
  * and key prefixing, resulting in faster performance for in-memory use cases
  * where data doesn't need to be persisted or transmitted.
  *
  * @param store - The underlying Map or Map-like object to use for storage
- * @param options - Configuration options for the generic store
+ * @param options - Configuration options for the memory adapter
  * @returns A configured Keyv instance with optimized settings for in-memory storage
  *
  * @example
@@ -381,11 +416,12 @@ export class KeyvGenericStore extends Hookified implements KeyvStorageAdapter {
  * });
  * ```
  */
-export function createKeyv(store: KeyvMapType, options?: KeyvGenericStoreOptions) {
-	const genericStore = new KeyvGenericStore(store, options);
+export function createKeyv(store: KeyvMapType, options?: KeyvMemoryAdapterOptions) {
+	const memoryAdapter = new KeyvMemoryAdapter(store, options);
 	const keyv = new Keyv({
-		store: genericStore,
+		store: memoryAdapter,
 		serialization: false,
+		namespace: options?.namespace,
 	});
 	return keyv;
 }

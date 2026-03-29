@@ -539,7 +539,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				);
 			}
 		} catch (error) {
-			if (error instanceof ResourceNotFoundException) {
+			if (
+				error instanceof ResourceNotFoundException ||
+				(error as Error).name === "ResourceNotFoundException"
+			) {
 				await this.createTable(tableName);
 			} else {
 				throw error;
@@ -568,7 +571,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			return;
 		} catch (error) {
 			// Table does not exist, proceed to create it
-			if (!(error instanceof ResourceNotFoundException)) {
+			if (
+				!(error instanceof ResourceNotFoundException) &&
+				(error as Error).name !== "ResourceNotFoundException"
+			) {
 				throw error;
 			}
 			/* v8 ignore stop */
@@ -600,7 +606,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			);
 		} catch (error) {
 			/* v8 ignore next -- @preserve */
-			if (error instanceof ResourceInUseException) {
+			if (
+				error instanceof ResourceInUseException ||
+				(error as Error).name === "ResourceInUseException"
+			) {
 				await waitUntilTableExists(
 					{ client: this._client, maxWaitTime: 60 },
 					{ TableName: tableName },

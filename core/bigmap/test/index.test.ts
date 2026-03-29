@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import type { KeyvMemoryAdapter } from "keyv";
 import { describe, expect, it } from "vitest";
 import { BigMap, createKeyv, defaultHashFunction } from "../src/index.js";
 
@@ -396,14 +397,14 @@ describe("createKeyv", () => {
 	it("should create a Keyv instance with BigMap adapter", () => {
 		const keyv = createKeyv();
 		expect(keyv).toBeDefined();
-		expect(keyv.store).toBeInstanceOf(BigMap);
+		expect((keyv.store as KeyvMemoryAdapter).store).toBeInstanceOf(BigMap);
 	});
 
 	it("should create a Keyv instance with custom options", () => {
 		const keyv = createKeyv({ storeSize: 8 });
 		expect(keyv).toBeDefined();
-		expect(keyv.store).toBeInstanceOf(BigMap);
-		expect((keyv.store as BigMap<string, unknown>).storeSize).toBe(8);
+		expect((keyv.store as KeyvMemoryAdapter).store).toBeInstanceOf(BigMap);
+		expect(((keyv.store as KeyvMemoryAdapter).store as BigMap<string, unknown>).storeSize).toBe(8);
 	});
 
 	it("should work with set and get operations", async () => {
