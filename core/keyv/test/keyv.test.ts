@@ -321,7 +321,7 @@ describe("encryption", () => {
 		expect(await keyv.get("foo")).toBe("bar");
 	});
 
-	test("encode emits error and returns data on failure", async () => {
+	test("encode throws on failure instead of returning raw data", async () => {
 		const keyv = new Keyv({
 			encryption: {
 				encrypt() {
@@ -332,12 +332,8 @@ describe("encryption", () => {
 				},
 			},
 		});
-		const errorHandler = vi.fn();
-		keyv.on("error", errorHandler);
 		const data = { value: "hello", expires: undefined };
-		const result = await keyv.encode(data);
-		expect(result).toStrictEqual(data);
-		expect(errorHandler).toHaveBeenCalled();
+		await expect(keyv.encode(data)).rejects.toThrow("encrypt failed");
 	});
 
 	test("decode emits error and returns undefined on failure", async () => {
