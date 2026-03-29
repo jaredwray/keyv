@@ -450,12 +450,12 @@ describe("has", () => {
 
 	test("should handle error on store hasMany", async () => {
 		const keyv = new Keyv({ store: new Map() });
-		keyv.store.hasMany = vi.fn().mockRejectedValue(new Error("store hasMany error"));
+		keyv.store.getMany = vi.fn().mockRejectedValue(new Error("store getMany error"));
 		const errorHandler = vi.fn();
 		keyv.on("error", errorHandler);
 		const result = await keyv.hasMany(["foo", "bar"]);
 		expect(result).toEqual([false, false]);
-		expect(errorHandler).toHaveBeenCalledWith(new Error("store hasMany error"));
+		expect(errorHandler).toHaveBeenCalledWith(new Error("store getMany error"));
 	});
 });
 
