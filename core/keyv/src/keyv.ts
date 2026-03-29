@@ -588,18 +588,19 @@ export class Keyv<GenericValue = any> extends Hookified {
 		let results: boolean[] = [];
 
 		try {
-			const serializedEntries = await Promise.all(
-				entries.map(async ({ key, value, ttl }) => {
+			const failedIndices = new Set<number>();
+			const processedEntries = await Promise.all(
+				entries.map(async ({ key, value, ttl }, index) => {
 					ttl = resolveTtl(ttl, this._ttl);
 
 					/* v8 ignore next -- @preserve */
 					const expires = calculateExpires(ttl);
 
-					/* v8 ignore next -- @preserve */
 					if (!this.isValueStorable(value)) {
 						this.emit(KeyvEvents.ERROR, "symbol cannot be stored with the current configuration");
 						this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
-						return { key, value: undefined, ttl };
+						failedIndices.add(index);
+						return undefined;
 					}
 
 					const formattedValue = { value, expires };
@@ -607,9 +608,31 @@ export class Keyv<GenericValue = any> extends Hookified {
 					return { key, value: encodedValue, ttl };
 				}),
 			);
-			const storeResult = await this._store.setMany(serializedEntries);
-			/* v8 ignore next -- @preserve */
-			results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
+
+			const validEntries = processedEntries.filter(
+				(entry): entry is NonNullable<typeof entry> => entry !== undefined,
+			);
+
+			if (validEntries.length > 0) {
+				// biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
+				const storeResult = await this._store.setMany!(validEntries);
+				/* v8 ignore next -- @preserve */
+				const storeResults = Array.isArray(storeResult)
+					? (storeResult as boolean[])
+					: validEntries.map(() => true);
+
+				let storeIndex = 0;
+				for (let i = 0; i < entries.length; i++) {
+					if (failedIndices.has(i)) {
+						results.push(false);
+					} else {
+						results.push(storeResults[storeIndex++]);
+					}
+				}
+			} else {
+				results = entries.map(() => false);
+			}
+
 			this.emitTelemetry(
 				KeyvEvents.STAT_SET,
 				entries.map((e) => e.key),
