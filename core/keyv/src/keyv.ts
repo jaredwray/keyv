@@ -916,14 +916,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return data;
 		}
 
-		let result: unknown = await this._serialization.stringify(data);
+		let result: string = await this._serialization.stringify(data);
 
 		if (this._compression?.compress) {
-			result = await this._compression.compress(result as string);
+			result = await this._compression.compress(result);
 		}
 
 		if (this._encryption?.encrypt) {
-			result = await this._encryption.encrypt(result as string);
+			result = await this._encryption.encrypt(result);
 		}
 
 		return result;
