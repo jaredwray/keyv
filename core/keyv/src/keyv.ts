@@ -803,11 +803,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		let result = false;
 		try {
-			const rawData = await this._store.get(key);
-			if (rawData !== undefined && rawData !== null) {
-				const [data] = await this.decodeWithExpire(key, rawData);
-				result = data !== undefined;
-			}
+			result = await this._store.has(key);
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
@@ -829,9 +825,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		let results: boolean[] = [];
 		try {
-			const rawData = await this._store.getMany(keys);
-			const decoded = await this.decodeWithExpire(keys, rawData as unknown[]);
-			results = decoded.map((data) => data !== undefined);
+			results = await this._store.hasMany(keys);
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
@@ -986,7 +980,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			}
 
 			const deserialized =
-				typeof row === "string" || this._compression
+				typeof row === "string"
 					? await this.decode<Value>(row as string)
 					: (row as KeyvValue<Value>);
 

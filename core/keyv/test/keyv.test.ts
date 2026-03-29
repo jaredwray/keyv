@@ -450,12 +450,12 @@ describe("has", () => {
 
 	test("should handle error on store hasMany", async () => {
 		const keyv = new Keyv({ store: new Map() });
-		keyv.store.getMany = vi.fn().mockRejectedValue(new Error("store getMany error"));
+		keyv.store.hasMany = vi.fn().mockRejectedValue(new Error("store hasMany error"));
 		const errorHandler = vi.fn();
 		keyv.on("error", errorHandler);
 		const result = await keyv.hasMany(["foo", "bar"]);
 		expect(result).toEqual([false, false]);
-		expect(errorHandler).toHaveBeenCalledWith(new Error("store getMany error"));
+		expect(errorHandler).toHaveBeenCalledWith(new Error("store hasMany error"));
 	});
 });
 
@@ -1237,5 +1237,17 @@ describe("decodeWithExpire", () => {
 		);
 		expect(result[0]?.value).toBe("bar");
 		expect(result[1]).toBeUndefined();
+	});
+
+	test("should not call decompress for object data when compression is enabled but serialization is disabled", async () => {
+		const mockCompression = {
+			compress: vi.fn((data: string) => data),
+			decompress: vi.fn((data: string) => data),
+		};
+		const keyv = new Keyv({ serialization: false, compression: mockCompression });
+		const objectData = { value: "test-value", expires: undefined };
+		const result = await keyv.decodeWithExpire("key", objectData);
+		expect(result[0]?.value).toBe("test-value");
+		expect(mockCompression.decompress).not.toHaveBeenCalled();
 	});
 });
