@@ -214,14 +214,14 @@ describe("serialization", () => {
 		expect(await keyv.get("foo-complex")).toStrictEqual(complexObject);
 	});
 
-	test("encode uses JSON.stringify when compression is set without serialization", async () => {
+	test("encode returns data as-is when serialization is disabled", async () => {
 		const keyv = new Keyv({
 			serialization: false,
 			compression: createMockCompression(),
 		});
 		const data = { value: "hello", expires: undefined };
 		const result = await keyv.encode(data);
-		expect(result).toBe(JSON.stringify(data));
+		expect(result).toStrictEqual(data);
 	});
 
 	test("decode will return the data object if not string", async () => {
@@ -1150,17 +1150,17 @@ describe("sanitize", () => {
 	});
 });
 
-describe("getDecodeValue", () => {
+describe("decodeWithExpire", () => {
 	test("should return undefined for string data when serialization is disabled", async () => {
 		const keyv = new Keyv({ serialization: false });
-		const result = await keyv.getDecodeValue("key", "some-string-value");
+		const result = await keyv.decodeWithExpire("key", "some-string-value");
 		expect(result).toEqual([undefined]);
 	});
 
 	test("should handle mixed valid and undeserializable data", async () => {
 		const keyv = new Keyv({ serialization: false });
 		const validData = { value: "bar", expires: undefined };
-		const result = await keyv.getDecodeValue(
+		const result = await keyv.decodeWithExpire(
 			["key1", "key2"],
 			[validData, "undeserializable-string"],
 		);

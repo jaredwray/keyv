@@ -7,6 +7,7 @@ import { KeyvSanitize } from "./sanitize.js";
 import { KeyvStats } from "./stats.js";
 import {
 	type KeyvCompressionAdapter,
+	type KeyvEncryptionAdapter,
 	type KeyvEntry,
 	KeyvEvents,
 	KeyvHooks,
@@ -64,6 +65,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 	private _compression: KeyvCompressionAdapter | undefined;
 
 	/**
+	 * Pluggable encryption adapter with `encrypt` and `decrypt` methods.
+	 */
+	private _encryption: KeyvEncryptionAdapter | undefined;
+
+	/**
 	 * Sanitization handler for keys and namespaces. By default it is disabled.
 	 */
 	private _sanitize!: KeyvSanitizeAdapter;
@@ -98,6 +104,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		this.deprecatedHooks = buildDeprecatedHooks();
 		this._compression = mergedOptions.compression;
+		this._encryption = mergedOptions.encryption;
 		this.initSerialization(mergedOptions);
 		this.initSanitize(mergedOptions);
 		this.initNamespace(mergedOptions.namespace);
@@ -140,6 +147,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public set compression(compress: KeyvCompressionAdapter | undefined) {
 		this._compression = compress;
+	}
+
+	/**
+	 * Get the current encryption adapter.
+	 * @returns {KeyvEncryptionAdapter | undefined} The current encryption adapter.
+	 */
+	public get encryption(): KeyvEncryptionAdapter | undefined {
+		return this._encryption;
+	}
+
+	/**
+	 * Set the encryption adapter.
+	 * @param {KeyvEncryptionAdapter | undefined} encryption The encryption adapter to set.
+	 */
+	public set encryption(encryption: KeyvEncryptionAdapter | undefined) {
+		this._encryption = encryption;
 	}
 
 	/**
@@ -362,7 +385,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 		}
 
-		const [data] = await this.getDecodeValue<Value>(key as string, rawData);
+		const [data] = await this.decodeWithExpire<Value>(key as string, rawData);
 
 		if (data === undefined) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
@@ -393,7 +416,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const rawData =
 			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
 			this._store.getMany!<Value>(keys);
-		const deserialized = await this.getDecodeValue<Value>(keys, rawData as unknown[]);
+		const deserialized = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
 
 		const result: Array<Value | undefined> = deserialized.map((row) =>
 			row !== undefined ? row.value : undefined,
@@ -428,7 +451,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
 		const rawData = await this._store.get(key);
 
-		const [data] = await this.getDecodeValue<Value>(key, rawData);
+		const [data] = await this.decodeWithExpire<Value>(key, rawData);
 
 		if (data === undefined) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
@@ -480,7 +503,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const rawData =
 			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
 			this._store.getMany!<Value>(keys);
-		const result = await this.getDecodeValue<Value>(keys, rawData as unknown[]);
+		const result = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
 
 		// Add in hits and misses
 		for (let i = 0; i < result.length; i++) {
@@ -530,12 +553,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		const formattedValue = { value: data.value, expires };
-		const serializedValue = await this.encode(formattedValue);
+		const encodedValue = await this.encode(formattedValue);
 
 		let result = true;
 
 		try {
-			result = await this._store.set(data.key, serializedValue, data.ttl);
+			result = await this._store.set(data.key, encodedValue, data.ttl);
 		} catch (error) {
 			result = false;
 			this.emit(KeyvEvents.ERROR, error);
@@ -544,7 +567,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		await this.hookWithDeprecated(KeyvHooks.AFTER_SET, {
 			key,
-			value: serializedValue,
+			value: encodedValue,
 			ttl,
 		});
 		this.emitTelemetry(KeyvEvents.STAT_SET, key);
@@ -580,8 +603,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 					}
 
 					const formattedValue = { value, expires };
-					const serializedValue = await this.encode(formattedValue);
-					return { key, value: serializedValue, ttl };
+					const encodedValue = await this.encode(formattedValue);
+					return { key, value: encodedValue, ttl };
 				}),
 			);
 			const storeResult = await this._store.setMany(serializedEntries);
@@ -630,8 +653,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		let result = true;
 
 		try {
-			const serializedValue = await this.encode(data.value);
-			const storeResult = await this._store.set(data.key, serializedValue, ttl);
+			const encodedValue = await this.encode(data.value);
+			const storeResult = await this._store.set(data.key, encodedValue, ttl);
 
 			if (typeof storeResult === "boolean") {
 				result = storeResult;
@@ -675,8 +698,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 			const rawEntries = await Promise.all(
 				entries.map(async ({ key, value }) => {
 					const ttl = ttlFromExpires(value.expires);
-					const serializedValue = await this.encode(value);
-					return { key, value: serializedValue, ttl };
+					const encodedValue = await this.encode(value);
+					return { key, value: encodedValue, ttl };
 				}),
 			);
 			const storeResult = await this._store.setMany(rawEntries);
@@ -874,50 +897,70 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 	}
 
+	/**
+	 * Encodes a value for storage. Pipeline: serialize → compress → encrypt.
+	 * If serialization is not configured, returns the data as-is.
+	 * @param {KeyvValue<T>} data The value envelope to encode.
+	 * @returns {Promise<unknown>} The encoded value, or the original data on failure.
+	 */
 	public async encode<T>(data: KeyvValue<T>): Promise<unknown> {
-		if (!this._serialization && !this._compression) {
+		if (!this._serialization) {
 			return data;
 		}
 
-		let result: unknown = this._serialization
-			? await this._serialization.stringify(data)
-			: JSON.stringify(data);
+		try {
+			let result: unknown = await this._serialization.stringify(data);
 
-		if (this._compression?.compress) {
-			result = await this._compression.compress(result as string);
+			if (this._compression?.compress) {
+				result = await this._compression.compress(result as string);
+			}
+
+			if (this._encryption?.encrypt) {
+				result = await this._encryption.encrypt(result as string);
+			}
+
+			return result;
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			return data;
 		}
-
-		return result;
 	}
 
+	/**
+	 * Decodes a stored value. Pipeline: decrypt → decompress → deserialize (reverse of encode).
+	 * If serialization is not configured, returns the data as a KeyvValue or undefined for strings.
+	 * @param {unknown} data The raw data from the store.
+	 * @returns {Promise<KeyvValue<T> | undefined>} The decoded value envelope, or undefined on failure.
+	 */
 	public async decode<T>(data: unknown): Promise<KeyvValue<T> | undefined> {
 		if (data === undefined || data === null) {
 			return undefined;
 		}
 
-		if (!this._serialization && !this._compression) {
+		if (!this._serialization) {
 			return typeof data === "string" ? undefined : (data as KeyvValue<T>);
 		}
 
-		let result: unknown = data;
+		try {
+			let result: unknown = data;
 
-		if (this._compression?.decompress) {
-			result = await this._compression.decompress(result as string);
-		}
-
-		if (this._serialization && typeof result === "string") {
-			return this._serialization.parse<KeyvValue<T>>(result);
-		}
-
-		if (typeof result === "string") {
-			try {
-				return JSON.parse(result) as KeyvValue<T>;
-			} catch {
-				return undefined;
+			if (this._encryption?.decrypt) {
+				result = await this._encryption.decrypt(result as string);
 			}
-		}
 
-		return result as KeyvValue<T>;
+			if (this._compression?.decompress) {
+				result = await this._compression.decompress(result as string);
+			}
+
+			if (typeof result === "string") {
+				return await this._serialization.parse<KeyvValue<T>>(result);
+			}
+
+			return result as KeyvValue<T>;
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			return undefined;
+		}
 	}
 
 	/**
@@ -928,7 +971,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {unknown | unknown[]} rawData the raw data from the store
 	 * @returns {Promise<Array<KeyvValue<Value> | undefined>>} decoded values with expired entries removed
 	 */
-	public async getDecodeValue<Value>(
+	public async decodeWithExpire<Value>(
 		keys: string | string[],
 		rawData: unknown | unknown[],
 	): Promise<Array<KeyvValue<Value> | undefined>> {

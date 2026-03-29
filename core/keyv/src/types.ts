@@ -1,47 +1,92 @@
 import type { IEventEmitter } from "hookified";
 import type { KeyvStorageCapability } from "./capabilities.js";
 
+/**
+ * A Map or any Map-like object. Used as a flexible input type for stores.
+ */
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export type KeyvMapAny = Map<any, any> | any;
 
+/**
+ * Adapter interface for custom serialization.
+ * Implement `stringify` and `parse` to control how values are serialized to/from strings.
+ */
 export type KeyvSerializationAdapter = {
+	/** Converts a value to a string representation. */
 	stringify: (object: unknown) => string | Promise<string>;
+	/** Parses a string back into its original value. */
 	parse: <T>(data: string) => T | Promise<T>;
 };
 
+/**
+ * Adapter interface for compression.
+ * Implement `compress` and `decompress` to add compression to stored values.
+ */
 export type KeyvCompressionAdapter = {
+	/** Compresses a string value. */
 	compress(value: string): Promise<string>;
+	/** Decompresses a string value back to its original form. */
 	decompress(value: string): Promise<string>;
 };
 
+/**
+ * Adapter interface for encryption.
+ * Implement `encrypt` and `decrypt` to add encryption to stored values.
+ */
 export type KeyvEncryptionAdapter = {
+	/** Encrypts a string value. */
 	encrypt: (data: string) => string | Promise<string>;
+	/** Decrypts a string value back to its original form. */
 	decrypt: (data: string) => string | Promise<string>;
 };
 
+/**
+ * The envelope structure used to store values in Keyv.
+ * Wraps the actual value with an optional expiration timestamp.
+ */
 export type KeyvValue<Value> = {
+	/** The stored value. */
 	value?: Value;
+	/** Absolute expiration timestamp in milliseconds since epoch, or `undefined` for no expiry. */
 	expires?: number | undefined;
 };
 
 /** @deprecated Use `KeyvValue` instead. */
 export type DeserializedData<Value> = KeyvValue<Value>;
 
+/**
+ * Events emitted by Keyv for error handling and telemetry.
+ */
 export enum KeyvEvents {
+	/** Emitted when an error occurs in a store operation. */
 	ERROR = "error",
+	/** Emitted for informational messages. */
 	INFO = "info",
+	/** Emitted for warning messages. */
 	WARN = "warn",
+	/** Telemetry: cache hit. */
 	STAT_HIT = "stat:hit",
+	/** Telemetry: cache miss. */
 	STAT_MISS = "stat:miss",
+	/** Telemetry: value set. */
 	STAT_SET = "stat:set",
+	/** Telemetry: value deleted. */
 	STAT_DELETE = "stat:delete",
+	/** Telemetry: operation error. */
 	STAT_ERROR = "stat:error",
 }
 
+/**
+ * Structure of a telemetry event emitted by Keyv.
+ */
 export type KeyvTelemetryEvent = {
+	/** The event type (e.g. "hit", "miss", "set", "delete", "error"). */
 	event: string;
+	/** The cache key involved, if applicable. */
 	key?: string;
+	/** The namespace of the Keyv instance. */
 	namespace?: string;
+	/** Unix timestamp in milliseconds when the event occurred. */
 	timestamp: number;
 };
 
@@ -63,6 +108,10 @@ export type KeyvStatsOptions = {
 	emitter?: IEventEmitter;
 };
 
+/**
+ * Hook names for intercepting Keyv operations.
+ * Register hooks via `keyv.on(KeyvHooks.BEFORE_SET, callback)` to run logic before/after operations.
+ */
 export enum KeyvHooks {
 	/** @deprecated Use BEFORE_SET instead */
 	PRE_SET = "preSet",
@@ -119,6 +168,9 @@ export enum KeyvHooks {
 	AFTER_HAS_MANY = "after:hasMany",
 }
 
+/**
+ * Represents a key-value entry with an optional TTL, used for batch operations like `setMany`.
+ */
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export type KeyvEntry<Value = any> = {
 	/**
@@ -135,26 +187,45 @@ export type KeyvEntry<Value = any> = {
 	ttl?: number;
 };
 
+/** The unwrapped value returned by `get()`, or `undefined` if not found. */
 export type StoredDataNoRaw<Value> = Value | undefined;
 
+/** The raw `KeyvValue` envelope returned by `getRaw()`, or `undefined` if not found. */
 export type StoredDataRaw<Value> = KeyvValue<Value> | undefined;
 
+/** Union of raw and unwrapped stored data types. */
 export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
 
+/**
+ * Interface that all Keyv storage adapters must implement.
+ * Adapters handle the actual persistence of key-value pairs.
+ */
 export type KeyvStorageAdapter = {
+	/** Optional namespace for key isolation. */
 	namespace?: string | undefined;
+	/** Detected capabilities of the underlying store. */
 	capabilities?: KeyvStorageCapability;
+	/** Retrieves a value by key. */
 	get<Value>(key: string): Promise<StoredData<Value> | undefined>;
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	set(key: string, value: any, ttl?: number): Promise<boolean>;
+	/** Stores a value with a key and optional TTL in milliseconds. */
+	set(key: string, value: unknown, ttl?: number): Promise<boolean>;
+	/** Stores multiple entries at once. */
 	setMany<Value>(values: KeyvEntry<Value>[]): Promise<boolean[] | undefined>;
+	/** Deletes a key from the store. */
 	delete(key: string): Promise<boolean>;
+	/** Clears all entries from the store (respects namespace if set). */
 	clear(): Promise<void>;
+	/** Checks if a key exists in the store. */
 	has(key: string): Promise<boolean>;
+	/** Checks if multiple keys exist in the store. */
 	hasMany(keys: string[]): Promise<boolean[]>;
+	/** Retrieves multiple values by keys. */
 	getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>>;
+	/** Disconnects from the store and releases resources. */
 	disconnect(): Promise<void>;
+	/** Deletes multiple keys from the store. */
 	deleteMany(key: string[]): Promise<boolean[]>;
+	/** Returns an async iterator over all key-value pairs. */
 	iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
@@ -185,6 +256,10 @@ export type KeyvSanitizePatterns = {
 	path: boolean;
 };
 
+/**
+ * Options for configuring sanitization pattern categories.
+ * All categories default to `true` when the parent scope is enabled.
+ */
 export type KeyvSanitizePatternsOptions = {
 	/**
 	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
@@ -245,6 +320,9 @@ export type KeyvSanitizeAdapter = {
 	cleanNamespace(ns: string): string;
 };
 
+/**
+ * Configuration options for the Keyv constructor.
+ */
 export type KeyvOptions = {
 	/**
 	 * Namespace for the current instance.
@@ -292,6 +370,12 @@ export type KeyvOptions = {
 	 * @default undefined
 	 */
 	sanitize?: KeyvSanitizeOptions;
+	/**
+	 * Enable encryption of stored values. Pass a `KeyvEncryptionAdapter` with
+	 * `encrypt` and `decrypt` methods.
+	 * @default undefined
+	 */
+	encryption?: KeyvEncryptionAdapter;
 };
 
 /**
