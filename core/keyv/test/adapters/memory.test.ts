@@ -13,6 +13,19 @@ describe("Keyv Generic Store Options", () => {
 		expect(keyv.store).toBe(newStore);
 	});
 
+	test("should expose capabilities for the underlying store", () => {
+		const store = new Map();
+		const adapter = new KeyvMemoryAdapter(store);
+		const cap = adapter.capabilities;
+		expect(cap).toBeDefined();
+		expect(cap.store).toBe("mapLike");
+		expect(cap.methods.get.exists).toBe(true);
+		expect(cap.methods.get.methodType).toBe("sync");
+		expect(cap.methods.set.exists).toBe(true);
+		expect(cap.methods.delete.exists).toBe(true);
+		expect(cap.methods.has.exists).toBe(true);
+	});
+
 	test("should set the namespace option", () => {
 		const store = new Map();
 		const namespace = faker.string.alphanumeric(8);
