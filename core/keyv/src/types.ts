@@ -388,6 +388,12 @@ export type KeyvOptions = {
 	 * @default undefined
 	 */
 	encryption?: KeyvEncryptionAdapter;
+	/**
+	 * When true, Keyv checks expiry on get/getMany/has/hasMany at its layer.
+	 * When false (default), trusts the storage adapter to handle expiry.
+	 * @default false
+	 */
+	checkExpired?: boolean;
 };
 
 /**

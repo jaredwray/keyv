@@ -67,10 +67,7 @@ describe("Keyv", async () => {
 		});
 
 		test("handles expired values correctly", async () => {
-			const deleteManyMock = vi.fn();
 			const adapter = new KeyvMemoryAdapter(new Map());
-			adapter.deleteMany = deleteManyMock;
-			const deleteSpy = vi.spyOn(adapter, "delete");
 			const keyv = new Keyv({ store: adapter });
 			await keyv.setMany(
 				testData.map((data) => ({
@@ -82,12 +79,8 @@ describe("Keyv", async () => {
 			vi.advanceTimersByTime(1001);
 			const result = await keyv.getMany(testKeys);
 			expect(result.length).toEqual(testData.length);
-			// It should return undefined for expired keys
+			// It should return undefined for expired keys (adapter handles expiry)
 			expect(result[0]).toBeUndefined();
-			// It should call deleteMany with all the keys at once
-			expect(deleteManyMock).toHaveBeenCalledWith(testKeys);
-			// It should not call delete for each key individually
-			expect(deleteSpy).not.toHaveBeenCalled();
 		});
 	});
 });
@@ -124,7 +117,7 @@ testRunner.it("Keyv should wait for the expired get", async (t) => {
 		},
 	} as KeyvStorageAdapter;
 
-	const keyv = new Keyv({ store });
+	const keyv = new Keyv({ store, checkExpired: true });
 
 	// Round 1
 	const v1 = await keyv.get("foo");
@@ -330,7 +323,7 @@ testRunner.it("getMany should fallback to individual get when store has no getMa
 testRunner.it("getMany fallback should handle expired keys", async (t) => {
 	const store = createStore();
 	store.getMany = undefined as unknown as typeof store.getMany;
-	const keyv = new Keyv({ store });
+	const keyv = new Keyv({ store, checkExpired: true });
 	await keyv.set("key1", "val1", 1);
 	await snooze(100);
 	const result = await keyv.getMany(["key1"]);

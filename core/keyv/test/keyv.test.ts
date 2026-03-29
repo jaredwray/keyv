@@ -880,7 +880,7 @@ describe("iterator", () => {
 			},
 		};
 		// biome-ignore lint/suspicious/noExplicitAny: test mock
-		const keyv = new Keyv(store as any);
+		const keyv = new Keyv({ store: store as any, checkExpired: true });
 		await keyv.set("fresh", "value1");
 		await keyv.set("expired", "value2", 1);
 		await delay(10);
@@ -916,22 +916,21 @@ describe("iterator", () => {
 			expect(keyv.stats.deletes).toBe(0);
 
 			let iterationCount = 0;
-			// Get all items using iterator
+			// Get all items using iterator — adapter handles expiry cleanup
 			for await (const _ of keyv.iterator() ?? []) {
-				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}
 			expect(iterationCount).toBe(0);
-			expect(keyv.stats.deletes).toBe(1);
+			// Adapter cleaned up expired entry, Keyv-level deletes stay at 0
+			expect(keyv.stats.deletes).toBe(0);
 
 			iterationCount = 0;
-			// Get all items using iterator
+			// Second iteration — entry already cleaned up
 			for await (const _ of keyv.iterator() ?? []) {
-				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}
 			expect(iterationCount).toBe(0);
-			expect(keyv.stats.deletes).toBe(1);
+			expect(keyv.stats.deletes).toBe(0);
 		} finally {
 			vi.useRealTimers();
 		}

@@ -3,7 +3,16 @@ import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import { Keyv } from "../keyv.js";
 import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "../types.js";
-import { isDataExpired } from "../utils.js";
+
+/**
+ * Internal wrapper for values stored in the memory adapter.
+ * Keeps expiry metadata co-located with the value but outside
+ * the serialized/compressed/encrypted payload.
+ */
+type MemoryEntry = {
+	value: unknown;
+	expires?: number;
+};
 
 /**
  * Configuration options for KeyvMemoryAdapter.
@@ -178,18 +187,17 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async get<T>(key: string): Promise<StoredData<T> | undefined> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const data = this._store.get(keyPrefix);
-		if (data === undefined || data === null) {
+		const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
+		if (entry === undefined || entry === null) {
 			return undefined;
 		}
 
-		// Check if it is expired
-		if (isDataExpired(data)) {
+		if (entry.expires !== undefined && Date.now() > entry.expires) {
 			this._store.delete(keyPrefix);
 			return undefined;
 		}
 
-		return data as T;
+		return entry.value as T;
 	}
 
 	/**
@@ -201,7 +209,11 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		this._store.set(keyPrefix, value, ttl);
+		const entry: MemoryEntry = {
+			value,
+			expires: ttl ? Date.now() + ttl : undefined,
+		};
+		this._store.set(keyPrefix, entry, ttl);
 		return true;
 	}
 
@@ -213,7 +225,11 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			const keyPrefix = this.getKeyPrefix(entry.key, this._namespace);
-			this._store.set(keyPrefix, entry.value, entry.ttl);
+			const memEntry: MemoryEntry = {
+				value: entry.value,
+				expires: entry.ttl ? Date.now() + entry.ttl : undefined,
+			};
+			this._store.set(keyPrefix, memEntry, entry.ttl);
 			results.push(true);
 		}
 
@@ -261,21 +277,12 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async has(key: string): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		if (!this._store.has(keyPrefix)) {
+		const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
+		if (entry === undefined || entry === null) {
 			return false;
 		}
 
-		let data = this._store.get(keyPrefix);
-		// Handle serialized data (stored as JSON string by Keyv's serialization layer)
-		if (typeof data === "string") {
-			try {
-				data = JSON.parse(data);
-			} catch {
-				// Not valid JSON, treat as raw value
-			}
-		}
-
-		if (data !== undefined && data !== null && isDataExpired(data)) {
+		if (entry.expires !== undefined && Date.now() > entry.expires) {
 			this._store.delete(keyPrefix);
 			return false;
 		}
@@ -306,19 +313,19 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const values: Array<StoredData<T | undefined>> = [];
 		for (const key of keys) {
 			const keyPrefix = this.getKeyPrefix(key, this._namespace);
-			const data = this._store.get(keyPrefix);
-			if (data === undefined || data === null) {
+			const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
+			if (entry === undefined || entry === null) {
 				values.push(undefined as StoredData<T | undefined>);
 				continue;
 			}
 
-			if (isDataExpired(data)) {
+			if (entry.expires !== undefined && Date.now() > entry.expires) {
 				this._store.delete(keyPrefix);
 				values.push(undefined as StoredData<T | undefined>);
 				continue;
 			}
 
-			values.push(data as StoredData<T | undefined>);
+			values.push(entry.value as StoredData<T | undefined>);
 		}
 
 		return values;
@@ -363,7 +370,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const namespace = this._namespace;
 		const entries = [...(this._store as Map<any, any>).entries()];
 
-		for (const [key, data] of entries) {
+		for (const [key, raw] of entries) {
 			// Filter by namespace if set
 			if (namespace) {
 				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {
@@ -371,8 +378,10 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
+			const entry = raw as MemoryEntry;
+
 			// Check expiration
-			if (data && isDataExpired(data)) {
+			if (entry?.expires !== undefined && Date.now() > entry.expires) {
 				this._store.delete(key);
 				continue;
 			}
@@ -382,7 +391,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 				? key.slice(namespace.length + this._keySeparator.length)
 				: key;
 
-			yield [keyWithoutPrefix, data];
+			yield [keyWithoutPrefix, entry?.value];
 		}
 	}
 
