@@ -141,10 +141,18 @@ export enum KeyvHooks {
 	PRE_SET_MANY_RAW = "preSetManyRaw",
 	/** @deprecated Use AFTER_SET_MANY_RAW instead */
 	POST_SET_MANY_RAW = "postSetManyRaw",
+	/** @deprecated Use BEFORE_SET_MANY instead */
+	PRE_SET_MANY = "preSetMany",
+	/** @deprecated Use AFTER_SET_MANY instead */
+	POST_SET_MANY = "postSetMany",
 	/** @deprecated Use BEFORE_DELETE instead */
 	PRE_DELETE = "preDelete",
 	/** @deprecated Use AFTER_DELETE instead */
 	POST_DELETE = "postDelete",
+	/** @deprecated Use BEFORE_DELETE_MANY instead */
+	PRE_DELETE_MANY = "preDeleteMany",
+	/** @deprecated Use AFTER_DELETE_MANY instead */
+	POST_DELETE_MANY = "postDeleteMany",
 
 	BEFORE_SET = "before:set",
 	AFTER_SET = "after:set",
@@ -158,10 +166,14 @@ export enum KeyvHooks {
 	AFTER_GET_MANY_RAW = "after:getManyRaw",
 	BEFORE_SET_RAW = "before:setRaw",
 	AFTER_SET_RAW = "after:setRaw",
+	BEFORE_SET_MANY = "before:setMany",
+	AFTER_SET_MANY = "after:setMany",
 	BEFORE_SET_MANY_RAW = "before:setManyRaw",
 	AFTER_SET_MANY_RAW = "after:setManyRaw",
 	BEFORE_DELETE = "before:delete",
 	AFTER_DELETE = "after:delete",
+	BEFORE_DELETE_MANY = "before:deleteMany",
+	AFTER_DELETE_MANY = "after:deleteMany",
 	BEFORE_HAS = "before:has",
 	AFTER_HAS = "after:has",
 	BEFORE_HAS_MANY = "before:hasMany",

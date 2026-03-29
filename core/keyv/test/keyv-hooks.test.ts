@@ -255,3 +255,91 @@ test.it("deprecated POST_DELETE hook still fires", async (t) => {
 	await keyv.delete("foo");
 	t.expect(hookTriggered).toBe(true);
 });
+
+test.it("BEFORE_SET_MANY hook", async () => {
+	const keyv = new Keyv();
+	keyv.addHook(KeyvHooks.BEFORE_SET_MANY, (data) => {
+		test.expect(data.entries).toHaveLength(2);
+		test.expect(data.entries[0].key).toBe("foo");
+		test.expect(data.entries[0].value).toBe("bar");
+		test.expect(data.entries[1].key).toBe("foo1");
+		test.expect(data.entries[1].value).toBe("bar1");
+	});
+	test.expect(keyv.getHooks(KeyvHooks.BEFORE_SET_MANY)?.length).toBe(1);
+	await keyv.setMany([
+		{ key: "foo", value: "bar" },
+		{ key: "foo1", value: "bar1" },
+	]);
+});
+
+test.it("BEFORE_SET_MANY hook with manipulation", async () => {
+	const keyv = new Keyv();
+	keyv.addHook(KeyvHooks.BEFORE_SET_MANY, (data) => {
+		data.entries[0].value = "modified";
+	});
+	await keyv.setMany([
+		{ key: "foo", value: "bar" },
+		{ key: "foo1", value: "bar1" },
+	]);
+	const values = await keyv.get(["foo", "foo1"]);
+	test.expect(values[0]).toBe("modified");
+	test.expect(values[1]).toBe("bar1");
+});
+
+test.it("AFTER_SET_MANY hook", async () => {
+	const keyv = new Keyv();
+	keyv.addHook(KeyvHooks.AFTER_SET_MANY, (data) => {
+		test.expect(data.entries).toHaveLength(2);
+		test.expect(data.results).toHaveLength(2);
+		test.expect(data.results[0]).toBe(true);
+		test.expect(data.results[1]).toBe(true);
+	});
+	test.expect(keyv.getHooks(KeyvHooks.AFTER_SET_MANY)?.length).toBe(1);
+	await keyv.setMany([
+		{ key: "foo", value: "bar" },
+		{ key: "foo1", value: "bar1" },
+	]);
+});
+
+test.it("BEFORE_DELETE_MANY hook", async () => {
+	const keyv = new Keyv();
+	keyv.addHook(KeyvHooks.BEFORE_DELETE_MANY, (data) => {
+		test.expect(data.keys).toEqual(["foo", "foo1"]);
+	});
+	test.expect(keyv.getHooks(KeyvHooks.BEFORE_DELETE_MANY)?.length).toBe(1);
+	await keyv.set("foo", "bar");
+	await keyv.set("foo1", "bar1");
+	await keyv.delete(["foo", "foo1"]);
+});
+
+test.it("AFTER_DELETE_MANY hook", async () => {
+	const keyv = new Keyv();
+	keyv.addHook(KeyvHooks.AFTER_DELETE_MANY, (data) => {
+		test.expect(data.keys).toEqual(["foo", "foo1"]);
+		test.expect(data.values).toEqual([true, true]);
+	});
+	test.expect(keyv.getHooks(KeyvHooks.AFTER_DELETE_MANY)?.length).toBe(1);
+	await keyv.set("foo", "bar");
+	await keyv.set("foo1", "bar1");
+	await keyv.delete(["foo", "foo1"]);
+});
+
+test.it("deleteMany still fires legacy BEFORE_DELETE and AFTER_DELETE hooks", async (t) => {
+	const keyv = new Keyv();
+	let beforeFired = false;
+	let afterFired = false;
+	keyv.addHook(KeyvHooks.BEFORE_DELETE, (data) => {
+		beforeFired = true;
+		t.expect(data.key).toEqual(["foo", "foo1"]);
+	});
+	keyv.addHook(KeyvHooks.AFTER_DELETE, (data) => {
+		afterFired = true;
+		t.expect(data.key).toEqual(["foo", "foo1"]);
+		t.expect(data.value).toEqual([true, true]);
+	});
+	await keyv.set("foo", "bar");
+	await keyv.set("foo1", "bar1");
+	await keyv.delete(["foo", "foo1"]);
+	t.expect(beforeFired).toBe(true);
+	t.expect(afterFired).toBe(true);
+});
