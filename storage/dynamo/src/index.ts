@@ -638,15 +638,19 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				{ TableName: tableName },
 			);
 
-			await this._client.send(
-				new UpdateTimeToLiveCommand({
-					TableName: tableName,
-					TimeToLiveSpecification: {
-						AttributeName: "expiresAt",
-						Enabled: true,
-					},
-				}),
-			);
+			try {
+				await this._client.send(
+					new UpdateTimeToLiveCommand({
+						TableName: tableName,
+						TimeToLiveSpecification: {
+							AttributeName: "expiresAt",
+							Enabled: true,
+						},
+					}),
+				);
+			} catch {
+				// TTL may already be enabled by a concurrent creator - safe to ignore
+			}
 		} catch (error) {
 			/* v8 ignore next -- @preserve */
 			if (
@@ -657,6 +661,21 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					{ client: this._client, maxWaitTime: 60 },
 					{ TableName: tableName },
 				);
+
+				// Ensure TTL is enabled even when we lost the table creation race
+				try {
+					await this._client.send(
+						new UpdateTimeToLiveCommand({
+							TableName: tableName,
+							TimeToLiveSpecification: {
+								AttributeName: "expiresAt",
+								Enabled: true,
+							},
+						}),
+					);
+				} catch {
+					// TTL may already be enabled - safe to ignore
+				}
 			} else {
 				throw error;
 			}

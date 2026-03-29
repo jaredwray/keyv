@@ -783,7 +783,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Has a key
+	 * Has a key.
 	 * @param {string} key the key to check
 	 * @returns {boolean} will return true if the key exists
 	 */
