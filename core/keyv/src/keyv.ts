@@ -534,7 +534,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const formattedValue = { value: data.value, expires };
 
 		let result = true;
-		let encodedValue: unknown;
+		let encodedValue: unknown = formattedValue;
 
 		try {
 			encodedValue = await this.encode(formattedValue);
