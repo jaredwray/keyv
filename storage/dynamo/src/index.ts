@@ -294,7 +294,17 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				},
 			};
 			const { Item } = await this._client.get(getInput);
-			return Item?.value as StoredData<Value>;
+			if (!Item) {
+				return undefined as StoredData<Value>;
+			}
+
+			const nowInSeconds = Math.floor(Date.now() / 1000);
+			if (typeof Item.expiresAt === "number" && Item.expiresAt <= nowInSeconds) {
+				await this.delete(key);
+				return undefined as StoredData<Value>;
+			}
+
+			return Item.value as StoredData<Value>;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
@@ -339,9 +349,28 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			return formattedKeys.map(
-				(key) => allItems.find((item) => item?.id === key)?.value as StoredData<Value>,
-			);
+			const nowInSeconds = Math.floor(Date.now() / 1000);
+			const expiredKeys: string[] = [];
+			const results = formattedKeys.map((key) => {
+				const item = allItems.find((item) => item?.id === key);
+				if (!item) {
+					return undefined as StoredData<Value>;
+				}
+
+				if (typeof item.expiresAt === "number" && item.expiresAt <= nowInSeconds) {
+					expiredKeys.push(key);
+					return undefined as StoredData<Value>;
+				}
+
+				return item.value as StoredData<Value>;
+			});
+
+			// Delete expired entries
+			if (expiredKeys.length > 0) {
+				await this.deleteMany(expiredKeys);
+			}
+
+			return results;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);

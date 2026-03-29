@@ -338,8 +338,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async get<Value>(key: string): Promise<Value | undefined> {
 		const strippedKey = this.removeKeyPrefix(key);
-		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [strippedKey, this.getNamespaceValue()]);
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3)`;
+		const rows = await this.query(select, [strippedKey, this.getNamespaceValue(), Date.now()]);
 		const row = rows[0];
 		return row === undefined ? undefined : row.value;
 	}
@@ -351,8 +351,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async getMany<Value>(keys: string[]): Promise<Array<Value | undefined>> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(getMany, [strippedKeys, this.getNamespaceValue()]);
+		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3)`;
+		const rows = await this.query(getMany, [strippedKeys, this.getNamespaceValue(), Date.now()]);
 		const rowsMap = new Map(rows.map((row) => [row.key, row]));
 
 		return strippedKeys.map((key) => rowsMap.get(key)?.value);
@@ -529,8 +529,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async has(key: string): Promise<boolean> {
 		const strippedKey = this.removeKeyPrefix(key);
-		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') )`;
-		const rows = await this.query(exists, [strippedKey, this.getNamespaceValue()]);
+		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3) )`;
+		const rows = await this.query(exists, [strippedKey, this.getNamespaceValue(), Date.now()]);
 		return rows[0].exists;
 	}
 
@@ -541,8 +541,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [strippedKeys, this.getNamespaceValue()]);
+		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3)`;
+		const rows = await this.query(select, [strippedKeys, this.getNamespaceValue(), Date.now()]);
 		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
 		return strippedKeys.map((key) => existingKeys.has(key));
 	}

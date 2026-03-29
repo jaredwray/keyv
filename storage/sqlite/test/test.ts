@@ -490,7 +490,8 @@ test.it("clearExpired removes expired entries", async (t) => {
 	const validKey = faker.string.uuid();
 	await keyv.set(expiredKey, expiredValue);
 	await keyv.set(validKey, validValue);
-	t.expect(await keyv.has(expiredKey)).toBe(true);
+	// has() should already filter expired entries
+	t.expect(await keyv.has(expiredKey)).toBe(false);
 	t.expect(await keyv.has(validKey)).toBe(true);
 	await keyv.clearExpired();
 	t.expect(await keyv.has(expiredKey)).toBe(false);
@@ -510,8 +511,9 @@ test.it("clearExpiredInterval auto-cleans expired entries", async (t) => {
 	});
 	const autoExpiredKey = faker.string.uuid();
 	await keyv.set(autoExpiredKey, expiredValue);
-	t.expect(await keyv.has(autoExpiredKey)).toBe(true);
-	// Wait for the cleanup timer to fire
+	// has() should already filter expired entries
+	t.expect(await keyv.has(autoExpiredKey)).toBe(false);
+	// Wait for the cleanup timer to fire (which deletes the row entirely)
 	await new Promise((resolve) => {
 		setTimeout(resolve, 250);
 	});

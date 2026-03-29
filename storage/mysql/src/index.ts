@@ -318,8 +318,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async get<Value>(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
-		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKey, this.getNamespaceValue()]);
+		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? AND (expires IS NULL OR expires > ?)`;
+		const select = mysql.format(sql, [strippedKey, this.getNamespaceValue(), Date.now()]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
@@ -334,8 +334,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async getMany<Value>(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
-		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKeys, this.getNamespaceValue()]);
+		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND (expires IS NULL OR expires > ?)`;
+		const select = mysql.format(sql, [strippedKeys, this.getNamespaceValue(), Date.now()]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
 
@@ -513,8 +513,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	public async has(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const sql = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? )`;
-		const exists = mysql.format(sql, [strippedKey, ns]);
+		const sql = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? AND (expires IS NULL OR expires > ?) )`;
+		const exists = mysql.format(sql, [strippedKey, ns, Date.now()]);
 		const rows = await this.query(exists);
 		return Object.values(rows[0])[0] === 1;
 	}
@@ -531,8 +531,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const sql = `SELECT id FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKeys, ns]);
+		const sql = `SELECT id FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND (expires IS NULL OR expires > ?)`;
+		const select = mysql.format(sql, [strippedKeys, ns, Date.now()]);
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 		const existingKeys = new Set(rows.map((row) => row.id as string));
 		return strippedKeys.map((key) => existingKeys.has(key));
