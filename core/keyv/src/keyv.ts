@@ -468,16 +468,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 
-		if (keys.length === 0) {
-			const result = Array.from({ length: keys.length }).fill(undefined) as Array<
-				StoredDataRaw<Value>
-			>;
-			/* v8 ignore next 3 -- @preserve */
-			for (const key of keys) {
-				this.emitTelemetry(KeyvEvents.STAT_MISS, key);
-			}
+		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY_RAW, { keys });
 
-			// Trigger the after get many raw hook
+		if (keys.length === 0) {
+			const result: Array<StoredDataRaw<Value>> = [];
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
 				values: result,
