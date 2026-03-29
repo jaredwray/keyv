@@ -341,21 +341,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Checks if a value can be stored in the current configuration.
-	 * Symbols can only be stored in mapLike stores without serialization.
-	 * @param {unknown} value The value to check.
-	 * @returns {boolean} `true` if the value can be stored, `false` otherwise.
-	 */
-	public isValueStorable(value: unknown): boolean {
-		if (typeof value !== "symbol") {
-			return true;
-		}
-
-		const cap = this._store.capabilities;
-		return cap?.store === "mapLike" && this._serialization === undefined;
-	}
-
-	/**
 	 * Get the Value of a Key
 	 * @param {string | string[]} key passing in a single key or multiple as an array
 	 */
@@ -546,8 +531,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		const expires = calculateExpires(data.ttl);
 
-		if (!this.isValueStorable(data.value)) {
-			this.emit(KeyvEvents.ERROR, "symbol cannot be stored with the current configuration");
+		if (typeof data.value === "symbol") {
+			this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
 			return false;
 		}
@@ -588,19 +573,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 		let results: boolean[] = [];
 
 		try {
-			const failedIndices = new Set<number>();
-			const processedEntries = await Promise.all(
-				entries.map(async ({ key, value, ttl }, index) => {
+			const serializedEntries = await Promise.all(
+				entries.map(async ({ key, value, ttl }) => {
 					ttl = resolveTtl(ttl, this._ttl);
 
 					/* v8 ignore next -- @preserve */
 					const expires = calculateExpires(ttl);
 
-					if (!this.isValueStorable(value)) {
-						this.emit(KeyvEvents.ERROR, "symbol cannot be stored with the current configuration");
+					/* v8 ignore next -- @preserve */
+					if (typeof value === "symbol") {
+						this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
 						this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
-						failedIndices.add(index);
-						return undefined;
+						throw new Error("symbol cannot be serialized");
 					}
 
 					const formattedValue = { value, expires };
@@ -608,31 +592,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 					return { key, value: encodedValue, ttl };
 				}),
 			);
-
-			const validEntries = processedEntries.filter(
-				(entry): entry is NonNullable<typeof entry> => entry !== undefined,
-			);
-
-			if (validEntries.length > 0) {
-				// biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
-				const storeResult = await this._store.setMany!(validEntries);
-				/* v8 ignore next -- @preserve */
-				const storeResults = Array.isArray(storeResult)
-					? (storeResult as boolean[])
-					: validEntries.map(() => true);
-
-				let storeIndex = 0;
-				for (let i = 0; i < entries.length; i++) {
-					if (failedIndices.has(i)) {
-						results.push(false);
-					} else {
-						results.push(storeResults[storeIndex++]);
-					}
-				}
-			} else {
-				results = entries.map(() => false);
-			}
-
+			// biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
+			const storeResult = await this._store.setMany!(serializedEntries);
+			/* v8 ignore next -- @preserve */
+			results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
 			this.emitTelemetry(
 				KeyvEvents.STAT_SET,
 				entries.map((e) => e.key),
