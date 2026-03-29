@@ -222,11 +222,11 @@ export type KeyvStorageAdapter = {
 	/** Retrieves multiple values by keys. */
 	getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>>;
 	/** Disconnects from the store and releases resources. */
-	disconnect(): Promise<void>;
+	disconnect?(): Promise<void>;
 	/** Deletes multiple keys from the store. */
 	deleteMany(key: string[]): Promise<boolean[]>;
 	/** Returns an async iterator over all key-value pairs. */
-	iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
+	iterator?<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
 } & IEventEmitter;
 
 /**

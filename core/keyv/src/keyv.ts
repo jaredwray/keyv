@@ -872,7 +872,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async disconnect(): Promise<void> {
 		this.emit("disconnect");
 		try {
-			await this._store.disconnect();
+			if(this._store.disconnect) {
+				await this._store.disconnect();
+			}
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 		}
@@ -885,6 +887,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: iterator yields vary by store
 	public async *iterator(): AsyncGenerator<[string, any], void> {
+		if(this._store.iterator === undefined) {
+			return;
+		}
+
 		for await (const [key, raw] of this._store.iterator()) {
 			const data = await this.decode(raw as string);
 
