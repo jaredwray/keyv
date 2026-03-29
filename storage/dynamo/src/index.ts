@@ -15,6 +15,7 @@ import {
 	DynamoDBDocument,
 	type GetCommandInput,
 	type PutCommandInput,
+	type ScanCommandInput,
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { Hookified } from "hookified";
@@ -523,27 +524,32 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * Iterates over all key-value pairs in the store matching the configured namespace.
 	 * @yields `[key, value]` pairs as an async generator.
 	 */
-	public async *iterator<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void> {
+	public async *iterator<Value>(): AsyncGenerator<
+		Array<string | Awaited<Value> | undefined>,
+		void
+	> {
 		await this._tableReady;
 
 		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
 		let lastEvaluatedKey: Record<string, unknown> | undefined;
 
 		do {
-			const scanResult = await this._client.scan({
+			const scanParams: ScanCommandInput = {
 				TableName: this._opts.tableName,
 				ExclusiveStartKey: lastEvaluatedKey,
-			});
+			};
+
+			if (prefix) {
+				scanParams.FilterExpression = "begins_with(id, :prefix)";
+				scanParams.ExpressionAttributeValues = { ":prefix": prefix };
+			}
+
+			const scanResult = await this._client.scan(scanParams);
 
 			lastEvaluatedKey = scanResult.LastEvaluatedKey as Record<string, unknown> | undefined;
 
 			for (const item of scanResult.Items ?? []) {
-				const key = item.id as string;
-				if (prefix && !key.startsWith(prefix)) {
-					continue;
-				}
-
-				yield [key, item.value as Awaited<Value>];
+				yield [item.id as string, item.value as Awaited<Value>];
 			}
 		} while (lastEvaluatedKey);
 	}
