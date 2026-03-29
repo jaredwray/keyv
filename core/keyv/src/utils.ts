@@ -98,10 +98,14 @@ export const deprecatedHookAliases = new Map<string, string>([
 	[KeyvHooks.AFTER_GET_MANY_RAW, KeyvHooks.POST_GET_MANY_RAW],
 	[KeyvHooks.BEFORE_SET_RAW, KeyvHooks.PRE_SET_RAW],
 	[KeyvHooks.AFTER_SET_RAW, KeyvHooks.POST_SET_RAW],
+	[KeyvHooks.BEFORE_SET_MANY, KeyvHooks.PRE_SET_MANY],
+	[KeyvHooks.AFTER_SET_MANY, KeyvHooks.POST_SET_MANY],
 	[KeyvHooks.BEFORE_SET_MANY_RAW, KeyvHooks.PRE_SET_MANY_RAW],
 	[KeyvHooks.AFTER_SET_MANY_RAW, KeyvHooks.POST_SET_MANY_RAW],
 	[KeyvHooks.BEFORE_DELETE, KeyvHooks.PRE_DELETE],
 	[KeyvHooks.AFTER_DELETE, KeyvHooks.POST_DELETE],
+	[KeyvHooks.BEFORE_DELETE_MANY, KeyvHooks.PRE_DELETE_MANY],
+	[KeyvHooks.AFTER_DELETE_MANY, KeyvHooks.POST_DELETE_MANY],
 ]);
 
 /**
@@ -121,9 +125,13 @@ export function buildDeprecatedHooks(): Map<string, string> {
 		["postGetManyRaw", "Use KeyvHooks.AFTER_GET_MANY_RAW ('after:getManyRaw') instead"],
 		["preSetRaw", "Use KeyvHooks.BEFORE_SET_RAW ('before:setRaw') instead"],
 		["postSetRaw", "Use KeyvHooks.AFTER_SET_RAW ('after:setRaw') instead"],
+		["preSetMany", "Use KeyvHooks.BEFORE_SET_MANY ('before:setMany') instead"],
+		["postSetMany", "Use KeyvHooks.AFTER_SET_MANY ('after:setMany') instead"],
 		["preSetManyRaw", "Use KeyvHooks.BEFORE_SET_MANY_RAW ('before:setManyRaw') instead"],
 		["postSetManyRaw", "Use KeyvHooks.AFTER_SET_MANY_RAW ('after:setManyRaw') instead"],
 		["preDelete", "Use KeyvHooks.BEFORE_DELETE ('before:delete') instead"],
 		["postDelete", "Use KeyvHooks.AFTER_DELETE ('after:delete') instead"],
+		["preDeleteMany", "Use KeyvHooks.BEFORE_DELETE_MANY ('before:deleteMany') instead"],
+		["postDeleteMany", "Use KeyvHooks.AFTER_DELETE_MANY ('after:deleteMany') instead"],
 	]);
 }
