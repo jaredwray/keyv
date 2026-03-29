@@ -361,6 +361,25 @@ it("clear flushes the entire server", async () => {
 	expect(await keyv2.get(key)).toBeUndefined();
 });
 
+it("has() returns true for an existing key (direct adapter)", async () => {
+	const key = faker.string.uuid();
+	await keyvMemcache.set(key, "value");
+	expect(await keyvMemcache.has(key)).toBe(true);
+	await keyvMemcache.delete(key);
+});
+
+it("has() returns false for a non-existing key (direct adapter)", async () => {
+	expect(await keyvMemcache.has(faker.string.uuid())).toBe(false);
+});
+
+it("has() returns false after delete (direct adapter)", async () => {
+	const key = faker.string.uuid();
+	await keyvMemcache.set(key, "value");
+	expect(await keyvMemcache.has(key)).toBe(true);
+	await keyvMemcache.delete(key);
+	expect(await keyvMemcache.has(key)).toBe(false);
+});
+
 const store = () => keyvMemcache;
 
 keyvApiTests(test, Keyv, store);
