@@ -660,7 +660,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 			value: data.value,
 			ttl,
 		});
-		this.emitTelemetry(KeyvEvents.STAT_SET, key);
+
+		if (result) {
+			this.emitTelemetry(KeyvEvents.STAT_SET, key);
+		}
 
 		return result;
 	}
