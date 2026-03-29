@@ -34,11 +34,12 @@ export function defaultHashFunction(key: string, storeSize: number): number {
 	const c1 = key.charCodeAt(len - 1);
 	const c2 = key.charCodeAt(len >> 1);
 	const c3 = key.charCodeAt(len >> 2);
-	let h = Math.imul(len, 0x9e3779b9)
-		+ Math.imul(c0, 0x85ebca6b)
-		+ Math.imul(c1, 0xc2b2ae35)
-		+ Math.imul(c2, 0x27d4eb2f)
-		+ Math.imul(c3, 0x165667b1);
+	let h =
+		Math.imul(len, 0x9e3779b9) +
+		Math.imul(c0, 0x85ebca6b) +
+		Math.imul(c1, 0xc2b2ae35) +
+		Math.imul(c2, 0x27d4eb2f) +
+		Math.imul(c3, 0x165667b1);
 	// Final avalanche mix (murmur3 finalizer)
 	h ^= h >>> 16;
 	h = Math.imul(h, 0x85ebca6b);
@@ -107,11 +108,12 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 			const c1 = k.charCodeAt(len - 1);
 			const c2 = k.charCodeAt(len >> 1);
 			const c3 = k.charCodeAt(len >> 2);
-			let h = Math.imul(len, 0x9e3779b9)
-				+ Math.imul(c0, 0x85ebca6b)
-				+ Math.imul(c1, 0xc2b2ae35)
-				+ Math.imul(c2, 0x27d4eb2f)
-				+ Math.imul(c3, 0x165667b1);
+			let h =
+				Math.imul(len, 0x9e3779b9) +
+				Math.imul(c0, 0x85ebca6b) +
+				Math.imul(c1, 0xc2b2ae35) +
+				Math.imul(c2, 0x27d4eb2f) +
+				Math.imul(c3, 0x165667b1);
 			h ^= h >>> 16;
 			h = Math.imul(h, 0x85ebca6b);
 			h ^= h >>> 13;

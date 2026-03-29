@@ -496,7 +496,10 @@ describe("bucket distribution", () => {
 
 		// With 26 single-char keys and 4 buckets, at least 2 buckets should be used.
 		// Before the fix, all length-1 keys hashed to the same value.
-		const usedBuckets = Array.from({ length: storeSize }, (_, i) => bigMap.getStoreMap(i).size).filter(s => s > 0).length;
+		const usedBuckets = Array.from(
+			{ length: storeSize },
+			(_, i) => bigMap.getStoreMap(i).size,
+		).filter((s) => s > 0).length;
 		expect(usedBuckets).toBeGreaterThanOrEqual(2);
 	});
 
@@ -508,7 +511,10 @@ describe("bucket distribution", () => {
 			bigMap.set(p, p);
 		}
 
-		const usedBuckets = Array.from({ length: storeSize }, (_, i) => bigMap.getStoreMap(i).size).filter(s => s > 0).length;
+		const usedBuckets = Array.from(
+			{ length: storeSize },
+			(_, i) => bigMap.getStoreMap(i).size,
+		).filter((s) => s > 0).length;
 		expect(usedBuckets).toBeGreaterThanOrEqual(2);
 	});
 
