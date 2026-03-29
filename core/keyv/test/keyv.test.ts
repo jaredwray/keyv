@@ -288,6 +288,77 @@ describe("compression", () => {
 	});
 });
 
+describe("encryption", () => {
+	test("can get and set the encryption property", () => {
+		const keyv = new Keyv();
+		expect(keyv.encryption).toBeUndefined();
+		const adapter = {
+			async encrypt(data: string) {
+				return `enc:${data}`;
+			},
+			async decrypt(data: string) {
+				return data.replace("enc:", "");
+			},
+		};
+		keyv.encryption = adapter;
+		expect(keyv.encryption).toBe(adapter);
+		keyv.encryption = undefined;
+		expect(keyv.encryption).toBeUndefined();
+	});
+
+	test("encode and decode with encryption", async () => {
+		const keyv = new Keyv({
+			encryption: {
+				async encrypt(data: string) {
+					return Buffer.from(data).toString("base64");
+				},
+				async decrypt(data: string) {
+					return Buffer.from(data, "base64").toString("utf8");
+				},
+			},
+		});
+		await keyv.set("foo", "bar");
+		expect(await keyv.get("foo")).toBe("bar");
+	});
+
+	test("encode emits error and returns data on failure", async () => {
+		const keyv = new Keyv({
+			encryption: {
+				encrypt() {
+					throw new Error("encrypt failed");
+				},
+				async decrypt(data: string) {
+					return data;
+				},
+			},
+		});
+		const errorHandler = vi.fn();
+		keyv.on("error", errorHandler);
+		const data = { value: "hello", expires: undefined };
+		const result = await keyv.encode(data);
+		expect(result).toStrictEqual(data);
+		expect(errorHandler).toHaveBeenCalled();
+	});
+
+	test("decode emits error and returns undefined on failure", async () => {
+		const keyv = new Keyv({
+			encryption: {
+				async encrypt(data: string) {
+					return data;
+				},
+				decrypt() {
+					throw new Error("decrypt failed");
+				},
+			},
+		});
+		const errorHandler = vi.fn();
+		keyv.on("error", errorHandler);
+		const result = await keyv.decode("some-data");
+		expect(result).toBeUndefined();
+		expect(errorHandler).toHaveBeenCalled();
+	});
+});
+
 describe("delete", () => {
 	test("should delete multiple keys for storage adapter not supporting deleteMany", async () => {
 		const keyv = new Keyv({ store: new Map() });
