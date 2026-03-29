@@ -615,7 +615,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			results = entries.map(() => false);
 		}
 
-		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY, { entries, results });
+		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY, { entries, values: results });
 
 		return results;
 	}
@@ -775,22 +775,25 @@ export class Keyv<GenericValue = any> extends Hookified {
 		// Legacy: keep firing BEFORE_DELETE for backward compat
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
 
+		let results: boolean[];
+
 		try {
-			const results = await this._store.deleteMany(keys);
+			results = await this._store.deleteMany(keys);
 			this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
-			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE_MANY, { keys, values: results });
-			// Legacy: keep firing AFTER_DELETE for backward compat
-			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
-				key: keys,
-				value: results,
-			});
-			return results;
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
-
-			return keys.map(() => false);
+			results = keys.map(() => false);
 		}
+
+		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE_MANY, { keys, values: results });
+		// Legacy: keep firing AFTER_DELETE for backward compat
+		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
+			key: keys,
+			value: results,
+		});
+
+		return results;
 	}
 
 	/**

@@ -290,9 +290,9 @@ test.it("AFTER_SET_MANY hook", async () => {
 	const keyv = new Keyv();
 	keyv.addHook(KeyvHooks.AFTER_SET_MANY, (data) => {
 		test.expect(data.entries).toHaveLength(2);
-		test.expect(data.results).toHaveLength(2);
-		test.expect(data.results[0]).toBe(true);
-		test.expect(data.results[1]).toBe(true);
+		test.expect(data.values).toHaveLength(2);
+		test.expect(data.values[0]).toBe(true);
+		test.expect(data.values[1]).toBe(true);
 	});
 	test.expect(keyv.getHooks(KeyvHooks.AFTER_SET_MANY)?.length).toBe(1);
 	await keyv.setMany([
