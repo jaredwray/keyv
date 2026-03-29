@@ -242,10 +242,15 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const prefix = `${this._namespace}${this._keySeparator}`;
-		for (const key of [...(this._store as Map<any, any>).keys()]) {
+		const keysToDelete: string[] = [];
+		for (const key of (this._store as Map<any, any>).keys()) {
 			if (key.startsWith(prefix)) {
-				this._store.delete(key);
+				keysToDelete.push(key);
 			}
+		}
+
+		for (const key of keysToDelete) {
+			this._store.delete(key);
 		}
 	}
 
