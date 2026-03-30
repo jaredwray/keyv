@@ -1,8 +1,11 @@
 import { faker } from "@faker-js/faker";
 import type KeyvModule from "keyv";
-import tk from "timekeeper";
 import type * as Vitest from "vitest";
 import type { KeyvStoreFn } from "./types";
+
+const delay = async (ms: number) => new Promise<void>((resolve) => {
+	setTimeout(resolve, ms);
+});
 
 const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
@@ -39,9 +42,8 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		const value = faker.lorem.sentence();
 		await keyv.set(key, value, ttl);
 		t.expect(await keyv.get(key)).toBe(value);
-		tk.freeze(Date.now() + ttl + 1);
+		await delay(ttl + 100);
 		t.expect(await keyv.get(key)).toBeUndefined();
-		tk.reset();
 	});
 
 	test.it(".get(key) returns a Promise", (t) => {
@@ -84,7 +86,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 	});
 
 	test.it(".get([keys]) should return array value undefined when expires", async (t) => {
-		const keyv = new Keyv();
+		const keyv = new Keyv({ store: store() });
 		const key1 = faker.string.alphanumeric(10);
 		const value1 = faker.lorem.sentence();
 		const key2 = faker.string.alphanumeric(10);
@@ -92,14 +94,9 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		const key3 = faker.string.alphanumeric(10);
 		const value3 = faker.lorem.sentence();
 		await keyv.set(key1, value1);
-		await keyv.set(key2, value2, 1);
+		await keyv.set(key2, value2, 1000);
 		await keyv.set(key3, value3);
-		await new Promise<void>((resolve) => {
-			setTimeout(() => {
-				// Simulate database latency
-				resolve();
-			}, 30);
-		});
+		await delay(1100);
 		const values = await keyv.get([key1, key2, key3]);
 		t.expect(Array.isArray(values)).toBeTruthy();
 		t.expect(values[0]).toBe(value1);

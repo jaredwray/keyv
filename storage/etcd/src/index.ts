@@ -235,13 +235,59 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	}
 
 	/**
+	 * Wraps a value with expiry metadata for storage.
+	 */
+	private wrapValue(value: unknown, ttl?: number): string {
+		const expires = typeof ttl === "number" ? Date.now() + ttl : null;
+		return JSON.stringify({ v: value, e: expires });
+	}
+
+	/**
+	 * Unwraps a stored value, checking expiry metadata.
+	 * Handles legacy data (stored without envelope) gracefully.
+	 */
+	private unwrapValue<T>(raw: unknown): { value: T | null; expired: boolean } {
+		if (raw === null || raw === undefined) {
+			return { value: null, expired: false };
+		}
+
+		try {
+			const parsed = JSON.parse(raw as string) as { v: T; e: number | null };
+			if (parsed.v === undefined) {
+				// Not our envelope format — legacy data
+				return { value: raw as T, expired: false };
+			}
+
+			if (parsed.e !== null && Date.now() > parsed.e) {
+				return { value: null, expired: true };
+			}
+
+			return { value: parsed.v, expired: false };
+		} catch {
+			// Not valid JSON — legacy data, return as-is
+			return { value: raw as T, expired: false };
+		}
+	}
+
+	/**
 	 * Retrieves a value from the etcd server.
 	 * @param key - The key to retrieve
 	 * @returns The stored value, or `undefined` if the key does not exist.
 	 */
 	public async get(key: string): GetOutput<GenericValue> {
 		try {
-			return (await this._client.get(this.formatKey(key))) as unknown as GetOutput<GenericValue>;
+			const raw = await this._client.get(this.formatKey(key));
+			if (raw === null) {
+				return null as unknown as GetOutput<GenericValue>;
+			}
+
+			const { value, expired } = this.unwrapValue<GenericValue>(raw);
+			if (expired) {
+				await this.delete(key);
+				return null as unknown as GetOutput<GenericValue>;
+			}
+
+			return value as unknown as GetOutput<GenericValue>;
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -291,7 +337,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 						? this._lease
 						: this._client;
 
-			await target?.put(this.formatKey(key)).value(value);
+			await target?.put(this.formatKey(key)).value(this.wrapValue(value, ttl));
 			return true;
 		} catch (error) {
 			this.emit("error", error);
@@ -382,7 +428,17 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 
 		for await (const key of iterator) {
 			try {
-				const value = (await this._client.get(key)) as unknown as GenericValue;
+				const raw = await this._client.get(key);
+				if (raw === null) {
+					continue;
+				}
+
+				const { value, expired } = this.unwrapValue(raw);
+				if (expired) {
+					await this._client.delete().key(key);
+					continue;
+				}
+
 				const unprefixedKey = this.removeKeyPrefix(key, this._namespace);
 				yield [unprefixedKey, value];
 				/* v8 ignore start -- @preserve */
@@ -400,7 +456,18 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 */
 	public async has(key: string): HasOutput {
 		try {
-			return await this._client.get(this.formatKey(key)).exists();
+			const raw = await this._client.get(this.formatKey(key));
+			if (raw === null) {
+				return false;
+			}
+
+			const { expired } = this.unwrapValue(raw);
+			if (expired) {
+				await this.delete(key);
+				return false;
+			}
+
+			return true;
 		} catch {
 			return false;
 		}
