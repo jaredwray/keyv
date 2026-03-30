@@ -476,6 +476,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			// expiresAt includes a +1s buffer for DynamoDB's native TTL, so subtract 1 for accurate check
 			const nowInSeconds = Math.floor(Date.now() / 1000);
 			if (typeof Item.expiresAt === "number" && Item.expiresAt - 1 <= nowInSeconds) {
+				await this.delete(key);
 				return false;
 			}
 
@@ -524,18 +525,26 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			}
 
 			const nowInSeconds = Math.floor(Date.now() / 1000);
-			return formattedKeys.map((key) => {
+			const expiredKeys: string[] = [];
+			const results = formattedKeys.map((key) => {
 				const item = allItems.find((item) => item?.id === key);
 				if (!item || item.value === undefined) {
 					return false;
 				}
 
 				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
+					expiredKeys.push(key);
 					return false;
 				}
 
 				return true;
 			});
+
+			if (expiredKeys.length > 0) {
+				await this.deleteMany(expiredKeys);
+			}
+
+			return results;
 			/* v8 ignore start -- @preserve */
 		} catch {
 			return keys.map(() => false);
@@ -579,7 +588,13 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 			lastEvaluatedKey = scanResult.LastEvaluatedKey as Record<string, unknown> | undefined;
 
+			const nowInSeconds = Math.floor(Date.now() / 1000);
 			for (const item of scanResult.Items ?? []) {
+				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
+					await this.delete(item.id as string);
+					continue;
+				}
+
 				yield [item.id as string, item.value as Awaited<Value>];
 			}
 		} while (lastEvaluatedKey);
