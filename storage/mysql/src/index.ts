@@ -475,14 +475,14 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			if (lastKey === null) {
 				// First batch: no cursor constraint
 				sql = mysql.format(
-					`SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? ORDER BY id LIMIT ?`,
-					[namespaceValue, limit],
+					`SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
+					[namespaceValue, Date.now(), limit],
 				);
 			} else {
 				// Subsequent batches: use keyset pagination
 				sql = mysql.format(
-					`SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND id > ? ORDER BY id LIMIT ?`,
-					[namespaceValue, lastKey, limit],
+					`SELECT * FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND id > ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
+					[namespaceValue, lastKey, Date.now(), limit],
 				);
 			}
 

@@ -484,6 +484,9 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 					params.push(lastKey);
 				}
 
+				where.push(`(expires IS NULL OR expires > $${params.length + 1})`);
+				params.push(Date.now());
+
 				const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE ${where.join(" AND ")} ORDER BY key LIMIT $${params.length + 1}`;
 				params.push(limit);
 

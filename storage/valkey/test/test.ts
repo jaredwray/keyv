@@ -2,7 +2,6 @@ import { faker } from "@faker-js/faker";
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import Redis, { type Cluster } from "iovalkey";
 import Keyv from "keyv";
-import tk from "timekeeper";
 import * as test from "vitest";
 import KeyvValkey, { createKeyv } from "../src/index.js";
 
@@ -105,7 +104,9 @@ test.it("Keyv stores ttl without const", async (t) => {
 	const value = faker.string.alphanumeric(10);
 	await keyv.set(key, value, 100);
 	t.expect(await keyv.get(key)).toBe(value);
-	tk.freeze(Date.now() + 150);
+	await new Promise((resolve) => {
+		setTimeout(resolve, 200);
+	});
 	t.expect(await keyv.get(key)).toBe(undefined);
 });
 

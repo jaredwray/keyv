@@ -597,11 +597,11 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 				let params: any[];
 
 				if (lastKey !== null) {
-					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? AND key > ? ORDER BY key LIMIT ?`;
-					params = [ns, lastKey, limit];
+					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? AND key > ? AND (expires IS NULL OR expires > ?) ORDER BY key LIMIT ?`;
+					params = [ns, lastKey, Date.now(), limit];
 				} else {
-					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? ORDER BY key LIMIT ?`;
-					params = [ns, limit];
+					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? AND (expires IS NULL OR expires > ?) ORDER BY key LIMIT ?`;
+					params = [ns, Date.now(), limit];
 				}
 
 				entries = (await this.query(select, ...params)) as Array<{
