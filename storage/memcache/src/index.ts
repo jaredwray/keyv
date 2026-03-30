@@ -97,14 +97,54 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
+	 * Wraps a value with expiry metadata for storage.
+	 */
+	private wrapValue(value: unknown, ttl?: number): string {
+		const expires = typeof ttl === "number" ? Date.now() + ttl : null;
+		return JSON.stringify({ v: value, e: expires });
+	}
+
+	/**
+	 * Unwraps a stored value, checking expiry metadata.
+	 * Handles legacy data (stored without envelope) gracefully.
+	 */
+	private unwrapValue<T>(raw: unknown): { value: T | undefined; expired: boolean } {
+		/* v8 ignore next -- @preserve */
+		if (raw === null || raw === undefined) {
+			return { value: undefined, expired: false };
+		}
+
+		try {
+			const parsed = JSON.parse(raw as string) as { v: T; e: number | null };
+			if (parsed.v === undefined) {
+				return { value: raw as T, expired: false };
+			}
+
+			if (parsed.e !== null && Date.now() > parsed.e) {
+				return { value: undefined, expired: true };
+			}
+
+			return { value: parsed.v, expired: false };
+		} catch {
+			return { value: raw as T, expired: false };
+		}
+	}
+
+	/**
 	 * Retrieves a value from the memcache server.
 	 * @param key - The key to retrieve
-	 * @returns The stored data, or `{ value: undefined, expires: 0 }` if the key does not exist
+	 * @returns The stored data, or undefined if the key does not exist or is expired
 	 */
 	async get<Value>(key: string): Promise<StoredData<Value>> {
 		try {
-			const value = await this.client.get(this.formatKey(key));
-			if (value === undefined) {
+			const raw = await this.client.get(this.formatKey(key));
+			if (raw === undefined) {
+				return undefined;
+			}
+
+			const { value, expired } = this.unwrapValue<Value>(raw);
+			if (expired) {
+				await this.delete(key);
 				return undefined;
 			}
 
@@ -146,9 +186,9 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	async set(key: string, value: any, ttl?: number): Promise<boolean> {
-		const exptime = ttl !== undefined ? Math.floor(ttl / 1000) : 0;
+		const exptime = ttl !== undefined ? Math.ceil(ttl / 1000) : 0;
 		try {
-			await this.client.set(this.formatKey(key), value as string, exptime);
+			await this.client.set(this.formatKey(key), this.wrapValue(value, ttl), exptime);
 			return true;
 		} catch (error) {
 			this.emit("error", error);
@@ -200,8 +240,18 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 */
 	async has(key: string): Promise<boolean> {
 		try {
-			const value = await this.client.get(this.formatKey(key));
-			return value !== undefined;
+			const raw = await this.client.get(this.formatKey(key));
+			if (raw === undefined) {
+				return false;
+			}
+
+			const { expired } = this.unwrapValue(raw);
+			if (expired) {
+				await this.delete(key);
+				return false;
+			}
+
+			return true;
 		} catch {
 			/* v8 ignore next -- @preserve */
 			return false;
