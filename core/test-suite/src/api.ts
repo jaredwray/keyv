@@ -3,9 +3,10 @@ import type KeyvModule from "keyv";
 import type * as Vitest from "vitest";
 import type { KeyvStoreFn } from "./types";
 
-const delay = async (ms: number) => new Promise<void>((resolve) => {
-	setTimeout(resolve, ms);
-});
+const delay = async (ms: number) =>
+	new Promise<void>((resolve) => {
+		setTimeout(resolve, ms);
+	});
 
 const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test.beforeEach(async () => {
