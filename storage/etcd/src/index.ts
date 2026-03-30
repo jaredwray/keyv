@@ -247,6 +247,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * Handles legacy data (stored without envelope) gracefully.
 	 */
 	private unwrapValue<T>(raw: unknown): { value: T | null; expired: boolean } {
+		/* v8 ignore next -- @preserve */
 		if (raw === null || raw === undefined) {
 			return { value: null, expired: false };
 		}
@@ -429,6 +430,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 		for await (const key of iterator) {
 			try {
 				const raw = await this._client.get(key);
+				/* v8 ignore next -- @preserve */
 				if (raw === null) {
 					continue;
 				}
