@@ -885,3 +885,45 @@ test.it("GridFS delete returns false when bucket.delete throws", async (t) => {
 	const result = await store.delete(key);
 	t.expect(result).toBe(false);
 });
+
+const delay = async (ms: number) =>
+	new Promise<void>((resolve) => {
+		setTimeout(resolve, ms);
+	});
+
+test.it("GridFS get returns undefined for expired entry and deletes it", async (t) => {
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "expiring-value", 1);
+	await delay(50);
+	const result = await store.get(key);
+	t.expect(result).toBeUndefined();
+});
+
+test.it("GridFS iterator skips and deletes expired entries", async (t) => {
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.clear();
+	const expiredKey = faker.string.alphanumeric(10);
+	const freshKey = faker.string.alphanumeric(10);
+	await store.set(expiredKey, "expired-value", 1);
+	await store.set(freshKey, "fresh-value");
+	await delay(50);
+	const entries: Array<[string, unknown]> = [];
+	for await (const entry of store.iterator()) {
+		entries.push(entry as [string, unknown]);
+	}
+
+	t.expect(entries.length).toBe(1);
+	t.expect(entries[0][0]).toBe(freshKey);
+});
+
+test.it("GridFS clearExpired deletes expired files", async (t) => {
+	const store = new KeyvMongo({ useGridFS: true, ...options });
+	await store.clear();
+	const key = faker.string.alphanumeric(10);
+	await store.set(key, "expiring-value", 1);
+	await delay(50);
+	await store.clearExpired();
+	const result = await store.get(key);
+	t.expect(result).toBeUndefined();
+});
