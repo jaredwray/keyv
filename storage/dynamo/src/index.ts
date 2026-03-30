@@ -300,7 +300,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 			// expiresAt includes a +1s buffer for DynamoDB's native TTL, so subtract 1 for accurate check
 			const nowInSeconds = Math.floor(Date.now() / 1000);
-			if (typeof Item.expiresAt === "number" && (Item.expiresAt - 1) <= nowInSeconds) {
+			if (typeof Item.expiresAt === "number" && Item.expiresAt - 1 <= nowInSeconds) {
 				await this.delete(key);
 				return undefined as StoredData<Value>;
 			}
@@ -358,7 +358,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					return undefined as StoredData<Value>;
 				}
 
-				if (typeof item.expiresAt === "number" && (item.expiresAt - 1) <= nowInSeconds) {
+				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
 					expiredKeys.push(key);
 					return undefined as StoredData<Value>;
 				}
@@ -475,7 +475,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 			// expiresAt includes a +1s buffer for DynamoDB's native TTL, so subtract 1 for accurate check
 			const nowInSeconds = Math.floor(Date.now() / 1000);
-			if (typeof Item.expiresAt === "number" && (Item.expiresAt - 1) <= nowInSeconds) {
+			if (typeof Item.expiresAt === "number" && Item.expiresAt - 1 <= nowInSeconds) {
 				return false;
 			}
 
@@ -530,7 +530,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					return false;
 				}
 
-				if (typeof item.expiresAt === "number" && (item.expiresAt - 1) <= nowInSeconds) {
+				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
 					return false;
 				}
 
