@@ -88,7 +88,7 @@ export class KeyvEncryptWeb implements KeyvEncryptionAdapter {
 
 			this._keyPromise = crypto.subtle.importKey(
 				"raw",
-				options.key,
+				options.key.slice(),
 				{ name: config.webCryptoName },
 				false,
 				["encrypt", "decrypt"],
