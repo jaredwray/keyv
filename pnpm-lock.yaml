@@ -246,7 +246,7 @@ importers:
         specifier: ^6.1.2
         version: 6.1.2
 
-  encryption/encryption-node:
+  encryption/encrypt-node:
     dependencies:
       keyv:
         specifier: workspace:^

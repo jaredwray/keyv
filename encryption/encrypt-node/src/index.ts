@@ -21,7 +21,7 @@ const AEAD_ALGORITHMS = new Set([
 
 const AUTH_TAG_LENGTH = 16;
 
-export type KeyvEncryptionNodeOptions = {
+export type KeyvEncryptNodeOptions = {
 	/** Encryption key. Strings are hashed with SHA-256 to derive a 32-byte key. Buffers are used directly. */
 	key: string | Buffer;
 	/** Cipher algorithm to use. Default: "aes-256-gcm". */
@@ -50,14 +50,14 @@ function getKeyLength(algorithm: string): number {
 	return 32;
 }
 
-export class KeyvEncryptionNode implements KeyvEncryptionAdapter {
+export class KeyvEncryptNode implements KeyvEncryptionAdapter {
 	private readonly _key: Buffer;
 	private readonly _algorithm: string;
 	private readonly _encoding: BufferEncoding;
 	private readonly _ivLength: number;
 	private readonly _isAead: boolean;
 
-	constructor(options: KeyvEncryptionNodeOptions) {
+	constructor(options: KeyvEncryptNodeOptions) {
 		this._algorithm = options.algorithm ?? "aes-256-gcm";
 		this._encoding = options.encoding ?? "base64";
 		this._ivLength = getIvLength(this._algorithm);
@@ -117,4 +117,4 @@ export class KeyvEncryptionNode implements KeyvEncryptionAdapter {
 	}
 }
 
-export default KeyvEncryptionNode;
+export default KeyvEncryptNode;
