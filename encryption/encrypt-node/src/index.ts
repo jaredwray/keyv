@@ -63,6 +63,12 @@ export class KeyvEncryptNode implements KeyvEncryptionAdapter {
 			? ({ authTagLength: AUTH_TAG_LENGTH } as Record<string, unknown>)
 			: undefined;
 		const cipher = createCipheriv(this._algorithm, this._key, iv, cipherOptions);
+
+		if (this._isCcm) {
+			const plaintextLength = Buffer.byteLength(data, "utf8");
+			(cipher as unknown as CipherGCM).setAAD(Buffer.alloc(0), { plaintextLength });
+		}
+
 		const encrypted = Buffer.concat([cipher.update(data, "utf8"), cipher.final()]);
 
 		if (this._isAead) {
@@ -87,6 +93,13 @@ export class KeyvEncryptNode implements KeyvEncryptionAdapter {
 				: undefined;
 			const decipher = createDecipheriv(this._algorithm, this._key, iv, decipherOptions);
 			(decipher as unknown as DecipherGCM).setAuthTag(authTag);
+
+			if (this._isCcm) {
+				(decipher as unknown as DecipherGCM).setAAD(Buffer.alloc(0), {
+					plaintextLength: encrypted.length,
+				});
+			}
+
 			const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 			return decrypted.toString("utf8");
 		}
