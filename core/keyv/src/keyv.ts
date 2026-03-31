@@ -483,7 +483,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 					? undefined
 					: typeof rawData === "string"
 						? await this.decode<Value>(rawData)
-						: (rawData as KeyvValue<Value>);
+						: /* v8 ignore next -- @preserve */
+							(rawData as KeyvValue<Value>);
 		}
 
 		if (data === undefined) {
