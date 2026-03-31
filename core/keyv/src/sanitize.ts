@@ -1,9 +1,93 @@
-import type {
-	KeyvSanitizeAdapter,
-	KeyvSanitizeOptions,
-	KeyvSanitizePatterns,
-	KeyvSanitizePatternsOptions,
-} from "./types.js";
+/**
+ * Which dangerous-pattern categories to detect and strip.
+ * Each defaults to `true` when the parent scope is enabled.
+ */
+export type KeyvSanitizePatterns = {
+	/**
+	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
+	 * @default false
+	 */
+	sql: boolean;
+	/**
+	 * Detect and strip MongoDB operator patterns: leading `$`, `{$` sequences.
+	 * @default false
+	 */
+	mongo: boolean;
+	/**
+	 * Detect and strip dangerous control sequences: null bytes (`\0`), carriage returns (`\r`), newlines (`\n`).
+	 * @default false
+	 */
+	escape: boolean;
+	/**
+	 * Detect and strip path traversal patterns: `../` and `..\\` sequences.
+	 * @default false
+	 */
+	path: boolean;
+};
+
+/**
+ * Options for configuring sanitization pattern categories.
+ * All categories default to `true` when the parent scope is enabled.
+ */
+export type KeyvSanitizePatternsOptions = {
+	/**
+	 * Detect and strip SQL injection patterns: semicolons (`;`), SQL comments (`--` and `/*`).
+	 * @default true
+	 */
+	sql?: boolean;
+	/**
+	 * Detect and strip MongoDB operator patterns: leading `$`, `{$` sequences.
+	 * @default true
+	 */
+	mongo?: boolean;
+	/**
+	 * Detect and strip dangerous control sequences: null bytes (`\0`), carriage returns (`\r`), newlines (`\n`).
+	 * @default true
+	 */
+	escape?: boolean;
+	/**
+	 * Detect and strip path traversal patterns: `../` and `..\\` sequences.
+	 * @default true
+	 */
+	path?: boolean;
+};
+
+/**
+ * Controls what gets sanitized and with which patterns.
+ */
+export type KeyvSanitizeOptions = {
+	/**
+	 * Sanitize keys. Pass `true` for all pattern categories, `false` to skip,
+	 * or a `KeyvSanitizePatternOptions` object for granular control.
+	 * @default false
+	 */
+	keys?: boolean | KeyvSanitizePatternsOptions;
+	/**
+	 * Sanitize namespace strings. Pass `true` for all pattern categories, `false` to skip,
+	 * or a `KeyvSanitizePatternOptions` object for granular control.
+	 * @default false
+	 */
+	namespace?: boolean | KeyvSanitizePatternsOptions;
+};
+
+/**
+ * Adapter interface for key and namespace sanitization.
+ * Implement this to provide custom sanitization logic to Keyv.
+ */
+export type KeyvSanitizeAdapter = {
+	/** Whether any sanitization is currently enabled. */
+	readonly enabled: boolean;
+	/** The key sanitization pattern configuration. */
+	readonly keys: KeyvSanitizePatterns;
+	/** The namespace sanitization pattern configuration. */
+	readonly namespace: KeyvSanitizePatterns;
+	/** Sanitize a single key. */
+	cleanKey(key: string): string;
+	/** Sanitize an array of keys. */
+	cleanKeys(keys: string[]): string[];
+	/** Sanitize a namespace string. */
+	cleanNamespace(ns: string): string;
+};
 
 const categoryPatterns: Record<keyof KeyvSanitizePatterns, RegExp[]> = {
 	sql: [/;/g, /--/g, /\/\*/g],

@@ -1,5 +1,36 @@
 import type { IEventEmitter } from "hookified";
-import type { KeyvStatsOptions, KeyvTelemetryEvent } from "./types.js";
+
+/**
+ * Structure of a telemetry event emitted by Keyv.
+ */
+export type KeyvTelemetryEvent = {
+	/** The event type (e.g. "hit", "miss", "set", "delete", "error"). */
+	event: string;
+	/** The cache key involved, if applicable. */
+	key?: string;
+	/** The namespace of the Keyv instance. */
+	namespace?: string;
+	/** Unix timestamp in milliseconds when the event occurred. */
+	timestamp: number;
+};
+
+export type KeyvStatsOptions = {
+	/**
+	 * Enable or disable stats tracking.
+	 * @default false
+	 */
+	enabled?: boolean;
+	/**
+	 * Maximum number of entries per event-type LRU map.
+	 * @default 1000
+	 */
+	maxEntries?: number;
+	/**
+	 * The event emitter (e.g. a Keyv instance) to subscribe to for telemetry events.
+	 * If provided, KeyvStats will automatically subscribe on construction.
+	 */
+	emitter?: IEventEmitter;
+};
 
 export class KeyvStats {
 	private _hits = 0;

@@ -19,7 +19,7 @@ import {
 	type KeyvTelemetryEvent,
 	type KeyvValue,
 	type StoredDataRaw,
-} from "./types.js";
+} from "./types/keyv.js";
 import {
 	buildDeprecatedHooks,
 	calculateExpires,

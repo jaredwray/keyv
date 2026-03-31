@@ -23,26 +23,26 @@ export {
 } from "./capabilities.js";
 export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export { Keyv, Keyv as default } from "./keyv.js";
+export type { KeyvSanitizeAdapter, KeyvSanitizeOptions, KeyvSanitizePatterns } from "./sanitize.js";
 export { KeyvSanitize } from "./sanitize.js";
+export type { KeyvStatsOptions, KeyvTelemetryEvent } from "./stats.js";
 export { KeyvStats } from "./stats.js";
 export type {
-	DeserializedData,
 	KeyvCompression,
 	KeyvCompressionAdapter,
+	KeyvEncryptionAdapter,
+	KeyvSerializationAdapter,
+	KeyvStorageAdapter,
+	KeyvStoreAdapter,
+} from "./types/adapters.js";
+export type {
+	DeserializedData,
 	KeyvEntry,
 	KeyvMapAny,
 	KeyvOptions,
-	KeyvSanitizeAdapter,
-	KeyvSanitizeOptions,
-	KeyvSanitizePatterns,
-	KeyvSerializationAdapter,
-	KeyvStatsOptions,
-	KeyvStorageAdapter,
-	KeyvStoreAdapter,
-	KeyvTelemetryEvent,
 	KeyvValue,
 	StoredData,
 	StoredDataNoRaw,
 	StoredDataRaw,
-} from "./types.js";
-export { KeyvEvents, KeyvHooks } from "./types.js";
+} from "./types/keyv.js";
+export { KeyvEvents, KeyvHooks } from "./types/keyv.js";

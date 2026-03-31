@@ -1,7 +1,12 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: bridge adapter accepts any store
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
-import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "../types.js";
+import {
+	type KeyvEntry,
+	KeyvEvents,
+	type KeyvStorageAdapter,
+	type StoredData,
+} from "../types/keyv.js";
 import { isDataExpired } from "../utils.js";
 
 /**
