@@ -1,7 +1,7 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvRawResult } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvRawResult, type KeyvStorageAdapter } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 /**

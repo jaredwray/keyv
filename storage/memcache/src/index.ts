@@ -1,5 +1,5 @@
 import { Hookified } from "hookified";
-import type { KeyvEntry, KeyvStorageAdapter, KeyvRawResult } from "keyv";
+import type { KeyvEntry, KeyvRawResult, KeyvStorageAdapter } from "keyv";
 import { Keyv } from "keyv";
 import { Memcache, type MemcacheOptions } from "memcache";
 

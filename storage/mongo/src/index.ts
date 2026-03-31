@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvRawResult } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvRawResult, type KeyvStorageAdapter } from "keyv";
 import {
 	GridFSBucket,
 	MongoBulkWriteError,

@@ -1,5 +1,5 @@
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvRawResult } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvRawResult, type KeyvStorageAdapter } from "keyv";
 import mysql, { type ConnectionOptions } from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
