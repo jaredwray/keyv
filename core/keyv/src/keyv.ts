@@ -342,11 +342,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Sets the TTL, treating negative values as undefined (no TTL).
+	 * Sets the TTL, treating zero and negative values as undefined (no TTL).
 	 * @param {number | undefined} ttl The TTL to set in milliseconds.
 	 */
 	public setTtl(ttl?: number): void {
-		if (typeof ttl === "number" && ttl < 0) {
+		if (typeof ttl === "number" && ttl <= 0) {
 			this._ttl = undefined;
 			return;
 		}
@@ -1115,6 +1115,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {string | string[]} [key] the cache key or keys (emits one event per key)
 	 */
 	private emitTelemetry(event: KeyvEvents, key?: string | string[]): void {
+		if (key === undefined) {
+			this.emit(event, {
+				event: event.replace("stat:", ""),
+				namespace: this._namespace,
+				timestamp: Date.now(),
+			} as KeyvTelemetryEvent);
+			return;
+		}
+
 		const keys = Array.isArray(key) ? key : [key];
 		for (const k of keys) {
 			this.emit(event, {

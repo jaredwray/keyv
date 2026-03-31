@@ -262,7 +262,11 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		await this._store.set(keyPrefix, value, ttl);
+		const result = await this._store.set(keyPrefix, value, ttl);
+		if (typeof result === "boolean") {
+			return result;
+		}
+
 		return true;
 	}
 

@@ -106,6 +106,17 @@ describe("constructor", () => {
 		const keyv = new Keyv({ ttl: -500 });
 		expect(keyv.ttl).toBeUndefined();
 	});
+
+	test("should treat zero ttl as undefined", () => {
+		const keyv = new Keyv();
+		keyv.setTtl(0);
+		expect(keyv.ttl).toBeUndefined();
+	});
+
+	test("should treat zero ttl in constructor as undefined", () => {
+		const keyv = new Keyv({ ttl: 0 });
+		expect(keyv.ttl).toBeUndefined();
+	});
 });
 
 describe("store", () => {
