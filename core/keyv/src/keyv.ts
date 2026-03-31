@@ -935,12 +935,16 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public async clear(): Promise<void> {
 		this.emit("clear");
 
+		await this.hook(KeyvHooks.BEFORE_CLEAR);
+
 		try {
 			await this._store.clear();
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR);
 		}
+
+		await this.hook(KeyvHooks.AFTER_CLEAR);
 	}
 
 	/**
@@ -949,6 +953,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	public async disconnect(): Promise<void> {
 		this.emit("disconnect");
+
+		await this.hook(KeyvHooks.BEFORE_DISCONNECT);
+
 		try {
 			if (this._store.disconnect) {
 				await this._store.disconnect();
@@ -956,6 +963,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 		}
+
+		await this.hook(KeyvHooks.AFTER_DISCONNECT);
 	}
 
 	/**

@@ -178,6 +178,10 @@ export enum KeyvHooks {
 	AFTER_HAS = "after:has",
 	BEFORE_HAS_MANY = "before:hasMany",
 	AFTER_HAS_MANY = "after:hasMany",
+	BEFORE_CLEAR = "before:clear",
+	AFTER_CLEAR = "after:clear",
+	BEFORE_DISCONNECT = "before:disconnect",
+	AFTER_DISCONNECT = "after:disconnect",
 }
 
 /**

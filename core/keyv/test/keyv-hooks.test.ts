@@ -343,3 +343,60 @@ test.it("deleteMany still fires legacy BEFORE_DELETE and AFTER_DELETE hooks", as
 	t.expect(beforeFired).toBe(true);
 	t.expect(afterFired).toBe(true);
 });
+
+test.it("BEFORE_CLEAR hook", async (t) => {
+	const keyv = new Keyv();
+	let hookTriggered = false;
+	keyv.addHook(KeyvHooks.BEFORE_CLEAR, () => {
+		hookTriggered = true;
+	});
+	t.expect(keyv.getHooks(KeyvHooks.BEFORE_CLEAR)?.length).toBe(1);
+	await keyv.set("foo", "bar");
+	await keyv.clear();
+	t.expect(hookTriggered).toBe(true);
+});
+
+test.it("AFTER_CLEAR hook", async (t) => {
+	const keyv = new Keyv();
+	let hookTriggered = false;
+	keyv.addHook(KeyvHooks.AFTER_CLEAR, () => {
+		hookTriggered = true;
+	});
+	t.expect(keyv.getHooks(KeyvHooks.AFTER_CLEAR)?.length).toBe(1);
+	await keyv.set("foo", "bar");
+	await keyv.clear();
+	t.expect(hookTriggered).toBe(true);
+});
+
+test.it("BEFORE_CLEAR fires before store is cleared", async (t) => {
+	const keyv = new Keyv();
+	let valueBeforeClear: string | undefined;
+	keyv.addHook(KeyvHooks.BEFORE_CLEAR, async () => {
+		valueBeforeClear = await keyv.get("foo");
+	});
+	await keyv.set("foo", "bar");
+	await keyv.clear();
+	t.expect(valueBeforeClear).toBe("bar");
+});
+
+test.it("BEFORE_DISCONNECT hook", async (t) => {
+	const keyv = new Keyv();
+	let hookTriggered = false;
+	keyv.addHook(KeyvHooks.BEFORE_DISCONNECT, () => {
+		hookTriggered = true;
+	});
+	t.expect(keyv.getHooks(KeyvHooks.BEFORE_DISCONNECT)?.length).toBe(1);
+	await keyv.disconnect();
+	t.expect(hookTriggered).toBe(true);
+});
+
+test.it("AFTER_DISCONNECT hook", async (t) => {
+	const keyv = new Keyv();
+	let hookTriggered = false;
+	keyv.addHook(KeyvHooks.AFTER_DISCONNECT, () => {
+		hookTriggered = true;
+	});
+	t.expect(keyv.getHooks(KeyvHooks.AFTER_DISCONNECT)?.length).toBe(1);
+	await keyv.disconnect();
+	t.expect(hookTriggered).toBe(true);
+});
