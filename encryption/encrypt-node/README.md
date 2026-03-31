@@ -60,7 +60,7 @@ The encoding used for the encrypted output string. Common options: `'base64'`, `
 
 ## Cross-Compatibility
 
-Data encrypted with `@keyv/encrypt-node` using AES-GCM or AES-CBC can be decrypted by `@keyv/encrypt-browser` (and vice versa) when using the same key and algorithm. Both packages use the same wire format:
+Data encrypted with `@keyv/encrypt-node` using AES-GCM or AES-CBC can be decrypted by `@keyv/encrypt-web` (and vice versa) when using the same key and algorithm. Both packages use the same wire format:
 
 - **AES-GCM**: `base64([IV (12 bytes) || AuthTag (16 bytes) || Ciphertext])`
 - **AES-CBC**: `base64([IV (16 bytes) || Ciphertext])`
