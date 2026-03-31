@@ -5,8 +5,8 @@ import { Keyv } from "../keyv.js";
 import {
 	type KeyvEntry,
 	KeyvEvents,
-	type KeyvStorageAdapter,
 	type KeyvRawResult,
+	type KeyvStorageAdapter,
 } from "../types/keyv.js";
 
 /**

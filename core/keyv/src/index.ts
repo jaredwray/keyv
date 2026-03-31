@@ -40,7 +40,7 @@ export type {
 	KeyvEntry,
 	KeyvMapAny,
 	KeyvOptions,
-	KeyvValue,
 	KeyvRawResult,
+	KeyvValue,
 } from "./types/keyv.js";
 export { KeyvEvents, KeyvHooks } from "./types/keyv.js";

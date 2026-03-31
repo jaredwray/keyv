@@ -13,12 +13,12 @@ import {
 	KeyvHooks,
 	type KeyvMapAny,
 	type KeyvOptions,
+	type KeyvRawResult,
 	type KeyvSanitizeAdapter,
 	type KeyvSerializationAdapter,
 	type KeyvStorageAdapter,
 	type KeyvTelemetryEvent,
 	type KeyvValue,
-	type KeyvRawResult,
 } from "./types/keyv.js";
 import {
 	buildDeprecatedHooks,
@@ -463,9 +463,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @returns {Promise<KeyvRawResult<Value>>} will return a KeyvRawResult<Value> or undefined
 	 * if the key does not exist or is expired.
 	 */
-	public async getRaw<Value = GenericValue>(
-		key: string,
-	): Promise<KeyvRawResult<Value>> {
+	public async getRaw<Value = GenericValue>(key: string): Promise<KeyvRawResult<Value>> {
 		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return undefined;

@@ -4,8 +4,8 @@ import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.j
 import {
 	type KeyvEntry,
 	KeyvEvents,
-	type KeyvStorageAdapter,
 	type KeyvRawResult,
+	type KeyvStorageAdapter,
 } from "../types/keyv.js";
 import { isDataExpired } from "../utils.js";
 
