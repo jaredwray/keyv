@@ -605,6 +605,33 @@ test.it("has() returns false after clear", async (t) => {
 	t.expect(await keyv.has(key)).toBe(false);
 });
 
+test.it("has returns false and deletes expired key", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const key = faker.string.alphanumeric(10);
+	const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
+	await keyv.set(key, expiredValue);
+	t.expect(await keyv.has(key)).toBe(false);
+	// Verify the key was deleted
+	t.expect(await keyv.get(key)).toBeUndefined();
+});
+
+test.it("hasMany returns false for expired keys and deletes them", async (t) => {
+	const keyv = new KeyvPostgres({ uri: postgresUri });
+	const expiredKey1 = faker.string.alphanumeric(10);
+	const expiredKey2 = faker.string.alphanumeric(10);
+	const validKey = faker.string.alphanumeric(10);
+	const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
+	const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
+	await keyv.set(expiredKey1, expiredValue);
+	await keyv.set(expiredKey2, expiredValue);
+	await keyv.set(validKey, validValue);
+	const result = await keyv.hasMany([expiredKey1, expiredKey2, validKey]);
+	t.expect(result).toStrictEqual([false, false, true]);
+	// Verify expired keys were deleted
+	t.expect(await keyv.get(expiredKey1)).toBeUndefined();
+	t.expect(await keyv.get(expiredKey2)).toBeUndefined();
+});
+
 test.it("setting clearExpiredInterval to 0 stops an active timer", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,

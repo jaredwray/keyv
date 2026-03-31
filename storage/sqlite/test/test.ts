@@ -838,6 +838,66 @@ test.it("setMany returns false entries on query error", async (t) => {
 	t.expect(emittedError).toBe(true);
 });
 
+test.it("has returns false and deletes expired key", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	const key = faker.string.uuid();
+	const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
+	await keyv.set(key, expiredValue);
+	t.expect(await keyv.has(key)).toBe(false);
+	// Verify the key was deleted
+	t.expect(await keyv.get(key)).toBeUndefined();
+});
+
+test.it("getMany returns undefined for expired keys and deletes them", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	const expiredKey1 = faker.string.uuid();
+	const expiredKey2 = faker.string.uuid();
+	const validKey = faker.string.uuid();
+	const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
+	const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
+	await keyv.set(expiredKey1, expiredValue);
+	await keyv.set(expiredKey2, expiredValue);
+	await keyv.set(validKey, validValue);
+	const result = await keyv.getMany([expiredKey1, expiredKey2, validKey]);
+	t.expect(result[0]).toBeUndefined();
+	t.expect(result[1]).toBeUndefined();
+	t.expect(result[2]).toBe(validValue);
+	// Verify expired keys were deleted
+	t.expect(await keyv.get(expiredKey1)).toBeUndefined();
+	t.expect(await keyv.get(expiredKey2)).toBeUndefined();
+});
+
+test.it("hasMany returns false for expired keys and deletes them", async (t) => {
+	const keyv = new KeyvSqlite({
+		uri: "sqlite://test/testdb.sqlite",
+		busyTimeout: 3000,
+	});
+	await keyv.clear();
+	const expiredKey1 = faker.string.uuid();
+	const expiredKey2 = faker.string.uuid();
+	const validKey = faker.string.uuid();
+	const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
+	const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
+	await keyv.set(expiredKey1, expiredValue);
+	await keyv.set(expiredKey2, expiredValue);
+	await keyv.set(validKey, validValue);
+	const result = await keyv.hasMany([expiredKey1, expiredKey2, validKey]);
+	t.expect(result[0]).toBe(false);
+	t.expect(result[1]).toBe(false);
+	t.expect(result[2]).toBe(true);
+	// Verify expired keys were deleted
+	t.expect(await keyv.has(expiredKey1)).toBe(false);
+	t.expect(await keyv.has(expiredKey2)).toBe(false);
+});
+
 test.it("iterationLimit setter updates value", async (t) => {
 	const keyv = new KeyvSqlite("sqlite://:memory:");
 	t.expect(keyv.iterationLimit).toBe(10);
