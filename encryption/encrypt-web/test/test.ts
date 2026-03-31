@@ -1,14 +1,14 @@
 import { faker } from "@faker-js/faker";
 import { Keyv } from "keyv";
 import { describe, expect, it } from "vitest";
-import KeyvEncryptBrowser from "../src/index.js";
+import KeyvEncryptWeb from "../src/index.js";
 
-describe("KeyvEncryptBrowser", () => {
+describe("KeyvEncryptWeb", () => {
 	const secret = faker.string.alphanumeric(32);
 
 	describe("default aes-256-gcm", () => {
 		it("should encrypt and decrypt a string", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const data = faker.lorem.sentence();
 			const encrypted = await encryption.encrypt(data);
 			expect(encrypted).not.toBe(data);
@@ -17,7 +17,7 @@ describe("KeyvEncryptBrowser", () => {
 		});
 
 		it("should produce different ciphertext each time due to random IV", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const data = faker.lorem.word();
 			const encrypted1 = await encryption.encrypt(data);
 			const encrypted2 = await encryption.encrypt(data);
@@ -25,7 +25,7 @@ describe("KeyvEncryptBrowser", () => {
 		});
 
 		it("should throw on tampered ciphertext", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const encrypted = await encryption.encrypt(faker.lorem.sentence());
 			const binary = atob(encrypted);
 			const bytes = new Uint8Array(binary.length);
@@ -44,14 +44,14 @@ describe("KeyvEncryptBrowser", () => {
 		});
 
 		it("should fail to decrypt with a different key", async () => {
-			const encryption1 = new KeyvEncryptBrowser({ key: faker.string.alphanumeric(20) });
-			const encryption2 = new KeyvEncryptBrowser({ key: faker.string.alphanumeric(20) });
+			const encryption1 = new KeyvEncryptWeb({ key: faker.string.alphanumeric(20) });
+			const encryption2 = new KeyvEncryptWeb({ key: faker.string.alphanumeric(20) });
 			const encrypted = await encryption1.encrypt(faker.lorem.sentence());
 			await expect(encryption2.decrypt(encrypted)).rejects.toThrow();
 		});
 
 		it("should handle unicode and emoji content", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const data = `${faker.lorem.sentence()} 🌍 日本語 العربية ${faker.internet.emoji()}`;
 			const encrypted = await encryption.encrypt(data);
 			const decrypted = await encryption.decrypt(encrypted);
@@ -59,14 +59,14 @@ describe("KeyvEncryptBrowser", () => {
 		});
 
 		it("should handle empty string", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const encrypted = await encryption.encrypt("");
 			const decrypted = await encryption.decrypt(encrypted);
 			expect(decrypted).toBe("");
 		});
 
 		it("should handle large data", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const data = faker.lorem.paragraphs(50);
 			const encrypted = await encryption.encrypt(data);
 			const decrypted = await encryption.decrypt(encrypted);
@@ -76,7 +76,7 @@ describe("KeyvEncryptBrowser", () => {
 
 	describe("key handling", () => {
 		it("should accept a string key and derive via SHA-256", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: faker.string.alphanumeric(48) });
+			const encryption = new KeyvEncryptWeb({ key: faker.string.alphanumeric(48) });
 			const data = faker.lorem.word();
 			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
 			expect(decrypted).toBe(data);
@@ -84,7 +84,7 @@ describe("KeyvEncryptBrowser", () => {
 
 		it("should accept a 32-byte Uint8Array key", async () => {
 			const bufferKey = crypto.getRandomValues(new Uint8Array(32));
-			const encryption = new KeyvEncryptBrowser({ key: bufferKey });
+			const encryption = new KeyvEncryptWeb({ key: bufferKey });
 			const data = faker.lorem.sentence();
 			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
 			expect(decrypted).toBe(data);
@@ -92,14 +92,14 @@ describe("KeyvEncryptBrowser", () => {
 
 		it("should throw if Uint8Array key has wrong length for aes-256-gcm", () => {
 			const badKey = crypto.getRandomValues(new Uint8Array(16));
-			expect(() => new KeyvEncryptBrowser({ key: badKey })).toThrow("Key must be 32 bytes");
+			expect(() => new KeyvEncryptWeb({ key: badKey })).toThrow("Key must be 32 bytes");
 		});
 	});
 
 	describe("custom algorithms", () => {
 		it("should work with aes-128-gcm", async () => {
 			const bufferKey = crypto.getRandomValues(new Uint8Array(16));
-			const encryption = new KeyvEncryptBrowser({ key: bufferKey, algorithm: "aes-128-gcm" });
+			const encryption = new KeyvEncryptWeb({ key: bufferKey, algorithm: "aes-128-gcm" });
 			const data = faker.lorem.sentence();
 			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
 			expect(decrypted).toBe(data);
@@ -107,14 +107,14 @@ describe("KeyvEncryptBrowser", () => {
 
 		it("should work with aes-192-gcm", async () => {
 			const bufferKey = crypto.getRandomValues(new Uint8Array(24));
-			const encryption = new KeyvEncryptBrowser({ key: bufferKey, algorithm: "aes-192-gcm" });
+			const encryption = new KeyvEncryptWeb({ key: bufferKey, algorithm: "aes-192-gcm" });
 			const data = faker.lorem.sentence();
 			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
 			expect(decrypted).toBe(data);
 		});
 
 		it("should work with aes-128-gcm using string key", async () => {
-			const encryption = new KeyvEncryptBrowser({
+			const encryption = new KeyvEncryptWeb({
 				key: faker.string.alphanumeric(16),
 				algorithm: "aes-128-gcm",
 			});
@@ -125,7 +125,7 @@ describe("KeyvEncryptBrowser", () => {
 
 		it("should work with aes-256-cbc (non-AEAD)", async () => {
 			const bufferKey = crypto.getRandomValues(new Uint8Array(32));
-			const encryption = new KeyvEncryptBrowser({ key: bufferKey, algorithm: "aes-256-cbc" });
+			const encryption = new KeyvEncryptWeb({ key: bufferKey, algorithm: "aes-256-cbc" });
 			const data = faker.lorem.sentence();
 			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
 			expect(decrypted).toBe(data);
@@ -133,7 +133,7 @@ describe("KeyvEncryptBrowser", () => {
 
 		it("should work with aes-128-cbc", async () => {
 			const bufferKey = crypto.getRandomValues(new Uint8Array(16));
-			const encryption = new KeyvEncryptBrowser({ key: bufferKey, algorithm: "aes-128-cbc" });
+			const encryption = new KeyvEncryptWeb({ key: bufferKey, algorithm: "aes-128-cbc" });
 			const data = faker.lorem.sentence();
 			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
 			expect(decrypted).toBe(data);
@@ -145,13 +145,13 @@ describe("KeyvEncryptBrowser", () => {
 				algorithm: "invalid-algorithm",
 			};
 			// biome-ignore lint/suspicious/noExplicitAny: testing runtime validation with invalid input
-			expect(() => new KeyvEncryptBrowser(options as any)).toThrow("Unsupported cipher algorithm");
+			expect(() => new KeyvEncryptWeb(options as any)).toThrow("Unsupported cipher algorithm");
 		});
 	});
 
 	describe("Keyv integration", () => {
 		it("should work with Keyv set and get", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const keyv = new Keyv({ encryption });
 			const key = faker.string.alphanumeric(10);
 			const value = faker.lorem.word();
@@ -161,7 +161,7 @@ describe("KeyvEncryptBrowser", () => {
 		});
 
 		it("should work with Keyv for complex objects", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret });
+			const encryption = new KeyvEncryptWeb({ key: secret });
 			const keyv = new Keyv({ encryption });
 			const obj = {
 				name: faker.person.fullName(),
@@ -175,7 +175,7 @@ describe("KeyvEncryptBrowser", () => {
 		});
 
 		it("should work with Keyv and custom algorithm", async () => {
-			const encryption = new KeyvEncryptBrowser({ key: secret, algorithm: "aes-128-gcm" });
+			const encryption = new KeyvEncryptWeb({ key: secret, algorithm: "aes-128-gcm" });
 			const keyv = new Keyv({ encryption });
 			const key = faker.string.alphanumeric(10);
 			const value = faker.lorem.word();
