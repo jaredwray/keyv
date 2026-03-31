@@ -1,4 +1,4 @@
-import base from '../../tsdown.base.ts';
+import base from '../../tsdown.base.js';
 
 export default {
 	...base,
