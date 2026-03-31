@@ -425,11 +425,12 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
  * ```
  */
 export function createKeyv(store: KeyvMapType, options?: KeyvMemoryAdapterOptions) {
-	const memoryAdapter = new KeyvMemoryAdapter(store, options);
+	const { namespace, ...adapterOptions } = options ?? {};
+	const memoryAdapter = new KeyvMemoryAdapter(store, adapterOptions);
 	const keyv = new Keyv({
 		store: memoryAdapter,
 		serialization: false,
-		namespace: options?.namespace,
+		namespace,
 	});
 	return keyv;
 }
