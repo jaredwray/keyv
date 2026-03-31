@@ -1,0 +1,9 @@
+{
+	"entry": ["src/index.ts"],
+	"format": ["esm", "cjs"],
+	"clean": true,
+	"dts": true,
+	"outputOptions": {
+		"exports": "named"
+	}
+}

@@ -34,7 +34,7 @@
     "js-yaml": "^4.1.1",
     "rimraf": "^6.1.2",
     "tsd": "^0.33.0",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.21.7",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
@@ -42,7 +42,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
-      "esbuild",
       "msgpackr-extract",
       "protobufjs",
       "sqlite3",
