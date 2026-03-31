@@ -25,11 +25,11 @@ export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export { Keyv, Keyv as default } from "./keyv.js";
 export { KeyvSanitize } from "./sanitize.js";
 export { KeyvStats } from "./stats.js";
-export type { KeyvEncryptionAdapter } from "./types.js";
 export type {
 	DeserializedData,
 	KeyvCompression,
 	KeyvCompressionAdapter,
+	KeyvEncryptionAdapter,
 	KeyvEntry,
 	KeyvMapAny,
 	KeyvOptions,

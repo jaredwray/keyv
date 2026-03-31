@@ -1,15 +1,16 @@
 import { randomBytes } from "node:crypto";
+import { faker } from "@faker-js/faker";
 import { Keyv } from "keyv";
 import { describe, expect, it } from "vitest";
 import KeyvEncryptNode from "../src/index.js";
 
 describe("KeyvEncryptNode", () => {
-	const secret = "my-secret-key";
+	const secret = faker.string.alphanumeric(32);
 
 	describe("default aes-256-gcm", () => {
 		it("should encrypt and decrypt a string", () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
-			const data = "hello world";
+			const data = faker.lorem.sentence();
 			const encrypted = encryption.encrypt(data);
 			expect(encrypted).not.toBe(data);
 			const decrypted = encryption.decrypt(encrypted);
@@ -18,7 +19,7 @@ describe("KeyvEncryptNode", () => {
 
 		it("should produce different ciphertext each time due to random IV", () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
-			const data = "same input";
+			const data = faker.lorem.word();
 			const encrypted1 = encryption.encrypt(data);
 			const encrypted2 = encryption.encrypt(data);
 			expect(encrypted1).not.toBe(encrypted2);
@@ -26,7 +27,7 @@ describe("KeyvEncryptNode", () => {
 
 		it("should throw on tampered ciphertext", () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
-			const encrypted = encryption.encrypt("test data");
+			const encrypted = encryption.encrypt(faker.lorem.sentence());
 			const buffer = Buffer.from(encrypted, "base64");
 			buffer[buffer.length - 1] ^= 0xff;
 			const tampered = buffer.toString("base64");
@@ -34,15 +35,15 @@ describe("KeyvEncryptNode", () => {
 		});
 
 		it("should fail to decrypt with a different key", () => {
-			const encryption1 = new KeyvEncryptNode({ key: "key-one" });
-			const encryption2 = new KeyvEncryptNode({ key: "key-two" });
-			const encrypted = encryption1.encrypt("secret data");
+			const encryption1 = new KeyvEncryptNode({ key: faker.string.alphanumeric(20) });
+			const encryption2 = new KeyvEncryptNode({ key: faker.string.alphanumeric(20) });
+			const encrypted = encryption1.encrypt(faker.lorem.sentence());
 			expect(() => encryption2.decrypt(encrypted)).toThrow();
 		});
 
 		it("should handle unicode and emoji content", () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
-			const data = "Hello 🌍 日本語 العربية émojis";
+			const data = `${faker.lorem.sentence()} 🌍 日本語 العربية ${faker.internet.emoji()}`;
 			const encrypted = encryption.encrypt(data);
 			const decrypted = encryption.decrypt(encrypted);
 			expect(decrypted).toBe(data);
@@ -57,7 +58,7 @@ describe("KeyvEncryptNode", () => {
 
 		it("should handle large data", () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
-			const data = "x".repeat(100_000);
+			const data = faker.lorem.paragraphs(50);
 			const encrypted = encryption.encrypt(data);
 			const decrypted = encryption.decrypt(encrypted);
 			expect(decrypted).toBe(data);
@@ -66,8 +67,8 @@ describe("KeyvEncryptNode", () => {
 
 	describe("key handling", () => {
 		it("should accept a string key and derive via SHA-256", () => {
-			const encryption = new KeyvEncryptNode({ key: "any-length-string-works" });
-			const data = "test";
+			const encryption = new KeyvEncryptNode({ key: faker.string.alphanumeric(48) });
+			const data = faker.lorem.word();
 			const decrypted = encryption.decrypt(encryption.encrypt(data));
 			expect(decrypted).toBe(data);
 		});
@@ -75,7 +76,7 @@ describe("KeyvEncryptNode", () => {
 		it("should accept a 32-byte Buffer key", () => {
 			const bufferKey = randomBytes(32);
 			const encryption = new KeyvEncryptNode({ key: bufferKey });
-			const data = "test with buffer key";
+			const data = faker.lorem.sentence();
 			const decrypted = encryption.decrypt(encryption.encrypt(data));
 			expect(decrypted).toBe(data);
 		});
@@ -90,14 +91,25 @@ describe("KeyvEncryptNode", () => {
 		it("should work with aes-128-gcm", () => {
 			const bufferKey = randomBytes(16);
 			const encryption = new KeyvEncryptNode({ key: bufferKey, algorithm: "aes-128-gcm" });
-			const data = "aes-128-gcm test";
+			const data = faker.lorem.sentence();
+			const decrypted = encryption.decrypt(encryption.encrypt(data));
+			expect(decrypted).toBe(data);
+		});
+
+		it("should work with aes-192-gcm", () => {
+			const bufferKey = randomBytes(24);
+			const encryption = new KeyvEncryptNode({ key: bufferKey, algorithm: "aes-192-gcm" });
+			const data = faker.lorem.sentence();
 			const decrypted = encryption.decrypt(encryption.encrypt(data));
 			expect(decrypted).toBe(data);
 		});
 
 		it("should work with aes-128-gcm using string key", () => {
-			const encryption = new KeyvEncryptNode({ key: "my-key", algorithm: "aes-128-gcm" });
-			const data = "aes-128-gcm string key test";
+			const encryption = new KeyvEncryptNode({
+				key: faker.string.alphanumeric(16),
+				algorithm: "aes-128-gcm",
+			});
+			const data = faker.lorem.sentence();
 			const decrypted = encryption.decrypt(encryption.encrypt(data));
 			expect(decrypted).toBe(data);
 		});
@@ -105,7 +117,15 @@ describe("KeyvEncryptNode", () => {
 		it("should work with chacha20-poly1305", () => {
 			const bufferKey = randomBytes(32);
 			const encryption = new KeyvEncryptNode({ key: bufferKey, algorithm: "chacha20-poly1305" });
-			const data = "chacha20 test";
+			const data = faker.lorem.sentence();
+			const decrypted = encryption.decrypt(encryption.encrypt(data));
+			expect(decrypted).toBe(data);
+		});
+
+		it("should work with aes-256-ccm", () => {
+			const bufferKey = randomBytes(32);
+			const encryption = new KeyvEncryptNode({ key: bufferKey, algorithm: "aes-256-ccm" });
+			const data = faker.lorem.sentence();
 			const decrypted = encryption.decrypt(encryption.encrypt(data));
 			expect(decrypted).toBe(data);
 		});
@@ -113,22 +133,26 @@ describe("KeyvEncryptNode", () => {
 		it("should work with aes-256-cbc (non-AEAD)", () => {
 			const bufferKey = randomBytes(32);
 			const encryption = new KeyvEncryptNode({ key: bufferKey, algorithm: "aes-256-cbc" });
-			const data = "cbc mode test";
+			const data = faker.lorem.sentence();
 			const decrypted = encryption.decrypt(encryption.encrypt(data));
 			expect(decrypted).toBe(data);
 		});
 
 		it("should throw for unsupported algorithm", () => {
-			expect(() => new KeyvEncryptNode({ key: "test", algorithm: "invalid-algorithm" })).toThrow(
-				"Unsupported cipher algorithm",
-			);
+			expect(
+				() =>
+					new KeyvEncryptNode({
+						key: faker.string.alphanumeric(16),
+						algorithm: "invalid-algorithm",
+					}),
+			).toThrow("Unsupported cipher algorithm");
 		});
 	});
 
 	describe("encoding option", () => {
 		it("should support hex encoding", () => {
 			const encryption = new KeyvEncryptNode({ key: secret, encoding: "hex" });
-			const data = "hex encoding test";
+			const data = faker.lorem.sentence();
 			const encrypted = encryption.encrypt(data);
 			expect(/^[\da-f]+$/i.test(encrypted)).toBe(true);
 			const decrypted = encryption.decrypt(encrypted);
@@ -140,26 +164,35 @@ describe("KeyvEncryptNode", () => {
 		it("should work with Keyv set and get", async () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
 			const keyv = new Keyv({ encryption });
-			await keyv.set("foo", "bar");
-			const value = await keyv.get("foo");
-			expect(value).toBe("bar");
+			const key = faker.string.alphanumeric(10);
+			const value = faker.lorem.word();
+			await keyv.set(key, value);
+			const result = await keyv.get(key);
+			expect(result).toBe(value);
 		});
 
 		it("should work with Keyv for complex objects", async () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
 			const keyv = new Keyv({ encryption });
-			const obj = { name: "test", count: 42, nested: { a: true } };
-			await keyv.set("obj", obj);
-			const value = await keyv.get("obj");
-			expect(value).toEqual(obj);
+			const obj = {
+				name: faker.person.fullName(),
+				count: faker.number.int(100),
+				nested: { a: faker.datatype.boolean() },
+			};
+			const key = faker.string.alphanumeric(10);
+			await keyv.set(key, obj);
+			const result = await keyv.get(key);
+			expect(result).toEqual(obj);
 		});
 
 		it("should work with Keyv and custom algorithm", async () => {
 			const encryption = new KeyvEncryptNode({ key: secret, algorithm: "aes-128-gcm" });
 			const keyv = new Keyv({ encryption });
-			await keyv.set("key", "value");
-			const value = await keyv.get("key");
-			expect(value).toBe("value");
+			const key = faker.string.alphanumeric(10);
+			const value = faker.lorem.word();
+			await keyv.set(key, value);
+			const result = await keyv.get(key);
+			expect(result).toBe(value);
 		});
 	});
 });

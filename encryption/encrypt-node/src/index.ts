@@ -4,20 +4,13 @@ import {
 	createDecipheriv,
 	createHash,
 	type DecipherGCM,
-	getCiphers,
+	getCipherInfo,
 	randomBytes,
 } from "node:crypto";
 import type { KeyvEncryptionAdapter } from "keyv";
 
-const AEAD_ALGORITHMS = new Set([
-	"aes-128-gcm",
-	"aes-192-gcm",
-	"aes-256-gcm",
-	"aes-128-ccm",
-	"aes-192-ccm",
-	"aes-256-ccm",
-	"chacha20-poly1305",
-]);
+const AEAD_MODES = new Set(["gcm", "ccm", "stream"]);
+const CCM_MODES = new Set(["ccm"]);
 
 const AUTH_TAG_LENGTH = 16;
 
@@ -30,60 +23,46 @@ export type KeyvEncryptNodeOptions = {
 	encoding?: BufferEncoding;
 };
 
-function getIvLength(algorithm: string): number {
-	if (algorithm.includes("gcm") || algorithm === "chacha20-poly1305") {
-		return 12;
-	}
-
-	return 16;
-}
-
-function getKeyLength(algorithm: string): number {
-	if (algorithm.includes("128")) {
-		return 16;
-	}
-
-	if (algorithm.includes("192")) {
-		return 24;
-	}
-
-	return 32;
-}
-
 export class KeyvEncryptNode implements KeyvEncryptionAdapter {
 	private readonly _key: Buffer;
 	private readonly _algorithm: string;
 	private readonly _encoding: BufferEncoding;
 	private readonly _ivLength: number;
 	private readonly _isAead: boolean;
+	private readonly _isCcm: boolean;
 
 	constructor(options: KeyvEncryptNodeOptions) {
-		this._algorithm = options.algorithm ?? "aes-256-gcm";
+		this._algorithm = (options.algorithm ?? "aes-256-gcm").toLowerCase();
 		this._encoding = options.encoding ?? "base64";
-		this._ivLength = getIvLength(this._algorithm);
-		this._isAead = AEAD_ALGORITHMS.has(this._algorithm);
+
+		const info = getCipherInfo(this._algorithm);
+		if (!info) {
+			throw new Error(`Unsupported cipher algorithm: ${this._algorithm}`);
+		}
+
+		const mode = info.mode ?? "";
+		this._ivLength = info.ivLength ?? 12;
+		this._isAead = AEAD_MODES.has(mode);
+		this._isCcm = CCM_MODES.has(mode);
 
 		if (Buffer.isBuffer(options.key)) {
-			const expectedLength = getKeyLength(this._algorithm);
-			if (options.key.length !== expectedLength) {
-				throw new Error(`Key must be ${expectedLength} bytes for ${this._algorithm}`);
+			if (options.key.length !== info.keyLength) {
+				throw new Error(`Key must be ${info.keyLength} bytes for ${this._algorithm}`);
 			}
 
 			this._key = options.key;
 		} else {
 			const hash = createHash("sha256").update(options.key).digest();
-			const expectedLength = getKeyLength(this._algorithm);
-			this._key = hash.subarray(0, expectedLength);
-		}
-
-		if (!getCiphers().includes(this._algorithm)) {
-			throw new Error(`Unsupported cipher algorithm: ${this._algorithm}`);
+			this._key = hash.subarray(0, info.keyLength);
 		}
 	}
 
 	encrypt(data: string): string {
 		const iv = randomBytes(this._ivLength);
-		const cipher = createCipheriv(this._algorithm, this._key, iv);
+		const cipherOptions = this._isCcm
+			? ({ authTagLength: AUTH_TAG_LENGTH } as Record<string, unknown>)
+			: undefined;
+		const cipher = createCipheriv(this._algorithm, this._key, iv, cipherOptions);
 		const encrypted = Buffer.concat([cipher.update(data, "utf8"), cipher.final()]);
 
 		if (this._isAead) {
@@ -103,7 +82,10 @@ export class KeyvEncryptNode implements KeyvEncryptionAdapter {
 			const iv = packed.subarray(0, this._ivLength);
 			const authTag = packed.subarray(this._ivLength, this._ivLength + AUTH_TAG_LENGTH);
 			const encrypted = packed.subarray(this._ivLength + AUTH_TAG_LENGTH);
-			const decipher = createDecipheriv(this._algorithm, this._key, iv);
+			const decipherOptions = this._isCcm
+				? ({ authTagLength: AUTH_TAG_LENGTH } as Record<string, unknown>)
+				: undefined;
+			const decipher = createDecipheriv(this._algorithm, this._key, iv, decipherOptions);
 			(decipher as unknown as DecipherGCM).setAuthTag(authTag);
 			const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 			return decrypted.toString("utf8");
