@@ -154,14 +154,8 @@ export type KeyvEntry<Value = any> = {
 	ttl?: number;
 };
 
-/** The unwrapped value returned by `get()`, or `undefined` if not found. */
-export type StoredDataNoRaw<Value> = Value | undefined;
-
 /** The raw `KeyvValue` envelope returned by `getRaw()`, or `undefined` if not found. */
-export type StoredDataRaw<Value> = KeyvValue<Value> | undefined;
-
-/** Union of raw and unwrapped stored data types. */
-export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
+export type KeyvRawResult<Value> = KeyvValue<Value> | undefined;
 
 export type {
 	KeyvSanitizeAdapter,

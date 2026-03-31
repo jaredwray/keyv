@@ -18,7 +18,7 @@ import {
 	type KeyvStorageAdapter,
 	type KeyvTelemetryEvent,
 	type KeyvValue,
-	type StoredDataRaw,
+	type KeyvRawResult,
 } from "./types/keyv.js";
 import {
 	buildDeprecatedHooks,
@@ -460,12 +460,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Get the raw value of a key. This is the replacement for setting raw to true in the get() method.
 	 * @param {string} key the key to get
-	 * @returns {Promise<StoredDataRaw<Value> | undefined>} will return a StoredDataRaw<Value> or undefined
+	 * @returns {Promise<KeyvRawResult<Value>>} will return a KeyvRawResult<Value> or undefined
 	 * if the key does not exist or is expired.
 	 */
 	public async getRaw<Value = GenericValue>(
 		key: string,
-	): Promise<StoredDataRaw<Value> | undefined> {
+	): Promise<KeyvRawResult<Value>> {
 		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return undefined;
@@ -509,18 +509,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Get the raw values of many keys. This is the replacement for setting raw to true in the getMany() method.
 	 * @param {string[]} keys the keys to get
-	 * @returns {Promise<Array<StoredDataRaw<Value>>>} will return an array of StoredDataRaw<Value> or undefined if the key does not exist or is expired.
+	 * @returns {Promise<Array<KeyvRawResult<Value>>>} will return an array of KeyvRawResult<Value> or undefined if the key does not exist or is expired.
 	 */
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
-	): Promise<Array<StoredDataRaw<Value>>> {
+	): Promise<Array<KeyvRawResult<Value>>> {
 		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY_RAW, { keys });
 
 		if (keys.length === 0) {
-			const result: Array<StoredDataRaw<Value>> = [];
+			const result: Array<KeyvRawResult<Value>> = [];
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
 				values: result,
@@ -561,7 +561,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			keys,
 			values: result,
 		});
-		return result as Array<StoredDataRaw<Value>>;
+		return result as Array<KeyvRawResult<Value>>;
 	}
 
 	/**

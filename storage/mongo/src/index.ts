@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvRawResult } from "keyv";
 import {
 	GridFSBucket,
 	MongoBulkWriteError,
@@ -200,7 +200,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to retrieve.
 	 * @returns The stored value, or `undefined` if the key does not exist.
 	 */
-	public async get<Value>(key: string): Promise<StoredData<Value>> {
+	public async get<Value>(key: string): Promise<KeyvRawResult<Value>> {
 		const client = await this.connect;
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
@@ -243,7 +243,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 				stream.on("end", () => {
 					const data = Buffer.concat(resp).toString("utf8");
-					resolve(data as StoredData<Value>);
+					resolve(data as KeyvRawResult<Value>);
 				});
 
 				stream.on("data", (chunk) => {
@@ -267,7 +267,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
-		return document.value as StoredData<Value>;
+		return document.value as KeyvRawResult<Value>;
 	}
 
 	/**
@@ -284,10 +284,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			}
 
 			const values = await Promise.allSettled(promises);
-			const data: Array<StoredData<Value>> = [];
+			const data: Array<KeyvRawResult<Value>> = [];
 			for (const value of values) {
 				// @ts-expect-error = value is PromiseFulfilledResult<Value>
-				data.push(value.value as StoredData<Value>);
+				data.push(value.value as KeyvRawResult<Value>);
 			}
 
 			return data;
@@ -304,7 +304,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			.project({ _id: 1, value: 1, key: 1, expiresAt: 1 });
 
 		const now = new Date();
-		const validMap = new Map<string, StoredData<Value>>();
+		const validMap = new Map<string, KeyvRawResult<Value>>();
 		// biome-ignore lint/suspicious/noExplicitAny: MongoDB ObjectId type
 		const expiredIds: any[] = [];
 
@@ -312,7 +312,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			if (doc.expiresAt && new Date(doc.expiresAt as Date) <= now) {
 				expiredIds.push(doc._id);
 			} else {
-				validMap.set(doc.key as string, doc.value as StoredData<Value>);
+				validMap.set(doc.key as string, doc.value as KeyvRawResult<Value>);
 			}
 		}
 
@@ -320,7 +320,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			await connect.store.deleteMany({ _id: { $in: expiredIds } });
 		}
 
-		return strippedKeys.map((key) => validMap.get(key) as StoredData<Value>);
+		return strippedKeys.map((key) => validMap.get(key) as KeyvRawResult<Value>);
 	}
 
 	/**

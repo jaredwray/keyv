@@ -41,8 +41,6 @@ export type {
 	KeyvMapAny,
 	KeyvOptions,
 	KeyvValue,
-	StoredData,
-	StoredDataNoRaw,
-	StoredDataRaw,
+	KeyvRawResult,
 } from "./types/keyv.js";
 export { KeyvEvents, KeyvHooks } from "./types/keyv.js";
