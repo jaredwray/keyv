@@ -1,5 +1,5 @@
 import type { IEventEmitter } from "hookified";
-import type { KeyvStatsOptions, KeyvTelemetryEvent } from "./types.js";
+import type { KeyvStatsOptions, KeyvTelemetryEvent } from "./types/keyv.js";
 
 export class KeyvStats {
 	private _hits = 0;

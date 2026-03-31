@@ -1,4 +1,4 @@
-import type { KeyvSerializationAdapter } from "./types.js";
+import type { KeyvSerializationAdapter } from "./types/keyv.js";
 
 type BufferLike = Uint8Array & {
 	toString(encoding?: string): string;

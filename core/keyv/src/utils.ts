@@ -1,4 +1,4 @@
-import { KeyvHooks, type KeyvValue } from "./types.js";
+import { KeyvHooks, type KeyvValue } from "./types/keyv.js";
 
 /**
  * Check whether a deserialized entry has expired based on its `expires` timestamp.

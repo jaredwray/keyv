@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, test, vi } from "vitest";
 import { KeyvBridgeAdapter, type KeyvBridgeStore } from "../../src/adapters/bridge.js";
-import { KeyvEvents } from "../../src/types.js";
+import { KeyvEvents } from "../../src/types/keyv.js";
 
 /**
  * Creates a minimal async store backed by a Map (no optional methods).

@@ -2,7 +2,12 @@
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import { Keyv } from "../keyv.js";
-import { type KeyvEntry, KeyvEvents, type KeyvStorageAdapter, type StoredData } from "../types.js";
+import {
+	type KeyvEntry,
+	KeyvEvents,
+	type KeyvStorageAdapter,
+	type StoredData,
+} from "../types/keyv.js";
 
 /**
  * Internal wrapper for values stored in the memory adapter.
