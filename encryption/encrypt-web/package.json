@@ -1,0 +1,73 @@
+{
+	"name": "@keyv/encrypt-web",
+	"version": "6.0.0-alpha.4",
+	"description": "Web Crypto API encryption adapter for Keyv",
+	"type": "module",
+	"main": "./dist/index.mjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			},
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			}
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"prepublishOnly": "pnpm build",
+		"lint": "biome check --write --error-on-warnings",
+		"lint:ci": "biome check --error-on-warnings",
+		"test": "pnpm lint && vitest run --coverage",
+		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+		"clean": "rimraf ./node_modules ./coverage ./dist"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"encryption",
+		"web-crypto",
+		"webcrypto",
+		"browser",
+		"keyv",
+		"storage",
+		"adapter",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"aes",
+		"gcm"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {},
+	"peerDependencies": {
+		"keyv": "workspace:^"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.13",
+		"@faker-js/faker": "^9.8.0",
+		"@vitest/coverage-v8": "^4.0.18",
+		"rimraf": "^6.1.2",
+		"vitest": "^4.0.18"
+	},
+	"engines": {
+		"node": ">= 18"
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	]
+}
