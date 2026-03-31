@@ -368,9 +368,8 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const namespace = this._namespace;
-		const entries = [...(this._store as Map<any, any>).entries()];
 
-		for (const [key, raw] of entries) {
+		for (const [key, raw] of (this._store as Map<any, any>).entries()) {
 			// Filter by namespace if set
 			if (namespace) {
 				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {
