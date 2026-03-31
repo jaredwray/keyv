@@ -382,10 +382,21 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	async get<Value>(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
+		const now = Date.now();
 		const select = `SELECT * FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
 		const rows = await this.query(select, strippedKey, ns);
-		const row = rows[0] as { value: Value } | undefined;
-		return row?.value;
+		const row = rows[0] as { value: Value; expires?: number | null } | undefined;
+		if (row === undefined) {
+			return undefined;
+		}
+
+		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
+			await this.query(del, strippedKey, ns);
+			return undefined;
+		}
+
+		return row.value;
 	}
 
 	/**
@@ -397,21 +408,33 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	async getMany<Value>(keys: string[]) {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
+		const now = Date.now();
 		const batchSize = 998; // 999 max params - 1 for namespace
-		const rowMap = new Map<string, Value>();
+		const validMap = new Map<string, Value>();
 
 		for (let i = 0; i < strippedKeys.length; i += batchSize) {
 			const batch = strippedKeys.slice(i, i + batchSize);
 			const placeholders = batch.map(() => "?").join(", ");
 			const select = `SELECT * FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ?`;
 			const rows = await this.query(select, ...batch, ns);
-			for (const row of rows as Array<{ key: string; value: Value }>) {
-				rowMap.set(row.key, row.value);
+			const expiredKeys: string[] = [];
+			for (const row of rows as Array<{ key: string; value: Value; expires?: number | null }>) {
+				if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+					expiredKeys.push(row.key);
+				} else {
+					validMap.set(row.key, row.value);
+				}
+			}
+
+			if (expiredKeys.length > 0) {
+				const expiredPlaceholders = expiredKeys.map(() => "?").join(", ");
+				const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${expiredPlaceholders}) AND namespace = ?`;
+				await this.query(del, ...expiredKeys, ns);
 			}
 		}
 
 		return strippedKeys.map(
-			(key) => (rowMap.get(key) ?? undefined) as StoredData<Value | undefined>,
+			(key) => (validMap.get(key) ?? undefined) as StoredData<Value | undefined>,
 		);
 	}
 
@@ -535,11 +558,20 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	async has(key: string) {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const exists = `SELECT EXISTS ( SELECT * FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ? ) as exists_result`;
-		const result = (await this.query(exists, strippedKey, ns)) as Array<{
-			exists_result: number;
-		}>;
-		return result[0].exists_result === 1;
+		const now = Date.now();
+		const select = `SELECT expires FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
+		const rows = (await this.query(select, strippedKey, ns)) as Array<{ expires?: number | null }>;
+		if (rows.length === 0) {
+			return false;
+		}
+
+		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
+			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
+			await this.query(del, strippedKey, ns);
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -551,20 +583,32 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	async hasMany(keys: string[]): Promise<boolean[]> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
+		const now = Date.now();
 		const batchSize = 998; // 999 max params - 1 for namespace
-		const existingKeys = new Set<string>();
+		const validKeys = new Set<string>();
 
 		for (let i = 0; i < strippedKeys.length; i += batchSize) {
 			const batch = strippedKeys.slice(i, i + batchSize);
 			const placeholders = batch.map(() => "?").join(", ");
-			const select = `SELECT key FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ?`;
+			const select = `SELECT key, expires FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ?`;
 			const rows = await this.query(select, ...batch, ns);
-			for (const row of rows as Array<{ key: string }>) {
-				existingKeys.add(row.key);
+			const expiredKeys: string[] = [];
+			for (const row of rows as Array<{ key: string; expires?: number | null }>) {
+				if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+					expiredKeys.push(row.key);
+				} else {
+					validKeys.add(row.key);
+				}
+			}
+
+			if (expiredKeys.length > 0) {
+				const expiredPlaceholders = expiredKeys.map(() => "?").join(", ");
+				const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${expiredPlaceholders}) AND namespace = ?`;
+				await this.query(del, ...expiredKeys, ns);
 			}
 		}
 
-		return strippedKeys.map((key) => existingKeys.has(key));
+		return strippedKeys.map((key) => validKeys.has(key));
 	}
 
 	/**
@@ -597,11 +641,11 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 				let params: any[];
 
 				if (lastKey !== null) {
-					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? AND key > ? ORDER BY key LIMIT ?`;
-					params = [ns, lastKey, limit];
+					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? AND key > ? AND (expires IS NULL OR expires > ?) ORDER BY key LIMIT ?`;
+					params = [ns, lastKey, Date.now(), limit];
 				} else {
-					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? ORDER BY key LIMIT ?`;
-					params = [ns, limit];
+					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? AND (expires IS NULL OR expires > ?) ORDER BY key LIMIT ?`;
+					params = [ns, Date.now(), limit];
 				}
 
 				entries = (await this.query(select, ...params)) as Array<{

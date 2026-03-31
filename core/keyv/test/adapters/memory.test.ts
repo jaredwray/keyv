@@ -175,7 +175,10 @@ describe("Keyv Generic set / get / has Operations", () => {
 		const store = new Map();
 		const keyv = new KeyvMemoryAdapter(store);
 		const key = faker.string.uuid();
-		await keyv.set(key, { value: "test", expires: Date.now() - 1000 });
+		await keyv.set(key, "test", 1);
+		await new Promise((resolve) => {
+			setTimeout(resolve, 10);
+		});
 		expect(await keyv.has(key)).toBe(false);
 		expect(store.has(key)).toBe(false);
 	});

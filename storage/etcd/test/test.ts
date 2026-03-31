@@ -403,3 +403,38 @@ test.it("lease getter and setter", (t) => {
 	store.lease = undefined;
 	t.expect(store.lease).toBeUndefined();
 });
+
+test.it("has returns false for expired key", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const key = faker.string.uuid();
+	await store.set(key, "value", 1);
+	await sleep(50);
+	t.expect(await store.has(key)).toBe(false);
+});
+
+test.it("get returns null for expired key", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const key = faker.string.uuid();
+	await store.set(key, "value", 1);
+	await sleep(50);
+	t.expect(await store.get(key)).toBe(null);
+});
+
+test.it("handles legacy data without envelope in get", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const key = faker.string.uuid();
+	// Write raw value directly to etcd without envelope
+	await store.client.put(store.formatKey(key)).value("raw-legacy-value");
+	const result = await store.get(key);
+	t.expect(result).toBe("raw-legacy-value");
+});
+
+test.it("handles legacy JSON data without v field in get", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	const key = faker.string.uuid();
+	// Write JSON that is not our envelope format
+	await store.client.put(store.formatKey(key)).value(JSON.stringify({ foo: "bar" }));
+	const result = await store.get(key);
+	// Should return the raw string since parsed.v is undefined
+	t.expect(result).toBe(JSON.stringify({ foo: "bar" }));
+});

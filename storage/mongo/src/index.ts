@@ -2,13 +2,11 @@ import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
 import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
 import {
-	type Document,
 	GridFSBucket,
 	MongoBulkWriteError,
 	type MongoClientOptions,
 	MongoClient as mongoClient,
 	type ReadPreference,
-	type WithId,
 } from "mongodb";
 import type { KeyvMongoConnect, KeyvMongoOptions, Options } from "./types.js";
 
@@ -217,6 +215,13 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				return undefined;
 			}
 
+			// Delete expired GridFS entry
+			if (file.metadata?.expiresAt && new Date(file.metadata.expiresAt as Date) <= new Date()) {
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
+				await client.bucket!.delete(file._id);
+				return undefined;
+			}
+
 			await client.store.updateOne(
 				{ _id: { $eq: file._id } },
 				{
@@ -256,6 +261,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
+		// Delete expired entry
+		if (document.expiresAt && new Date(document.expiresAt as Date) <= new Date()) {
+			await client.store.deleteOne({ _id: document._id });
+			return undefined;
+		}
+
 		return document.value as StoredData<Value>;
 	}
 
@@ -285,19 +296,31 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const connect = await this.connect;
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
-		const values: Array<{ key: string; value: StoredData<Value> }> = (await connect.store
-			.find({ key: { $in: strippedKeys }, namespace: { $eq: ns } })
-			.project({ _id: 0, value: 1, key: 1 })
-			.toArray()) as Array<{ key: string; value: StoredData<Value> }>;
+		const cursor = connect.store
+			.find({
+				key: { $in: strippedKeys },
+				namespace: { $eq: ns },
+			})
+			.project({ _id: 1, value: 1, key: 1, expiresAt: 1 });
 
-		const results: Array<StoredData<Value>> = [];
-		for (const key of strippedKeys) {
-			const rowIndex = values.findIndex((row: { key: string; value: unknown }) => row.key === key);
+		const now = new Date();
+		const validMap = new Map<string, StoredData<Value>>();
+		// biome-ignore lint/suspicious/noExplicitAny: MongoDB ObjectId type
+		const expiredIds: any[] = [];
 
-			results.push(rowIndex > -1 ? values[rowIndex].value : (undefined as StoredData<Value>));
+		for await (const doc of cursor) {
+			if (doc.expiresAt && new Date(doc.expiresAt as Date) <= now) {
+				expiredIds.push(doc._id);
+			} else {
+				validMap.set(doc.key as string, doc.value as StoredData<Value>);
+			}
 		}
 
-		return results;
+		if (expiredIds.length > 0) {
+			await connect.store.deleteMany({ _id: { $in: expiredIds } });
+		}
+
+		return strippedKeys.map((key) => validMap.get(key) as StoredData<Value>);
 	}
 
 	/**
@@ -309,7 +332,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
 		try {
-			const expiresAt = typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
+			const expiresAt = typeof ttl === "number" && ttl > 0 ? new Date(Date.now() + ttl) : null;
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
 
@@ -369,7 +392,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 		const operations = entries.map(({ key, value, ttl }) => {
 			const strippedKey = this.removeKeyPrefix(key);
-			const expiresAt = typeof ttl === "number" ? new Date(Date.now() + ttl) : null;
+			const expiresAt = typeof ttl === "number" && ttl > 0 ? new Date(Date.now() + ttl) : null;
 			return {
 				updateOne: {
 					filter: { key: { $eq: strippedKey }, namespace: { $eq: ns } },
@@ -571,38 +594,48 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const namespaceValue = this.getNamespaceValue();
 
 		if (this._useGridFS) {
-			const gridIterator = client.store
-				.find({ "metadata.namespace": { $eq: namespaceValue } })
-				.map(async (x: WithId<Document>) => {
-					const prefixedKey = x.filename;
+			const now = new Date();
+			const cursor = client.store.find({ "metadata.namespace": { $eq: namespaceValue } });
+
+			for await (const file of cursor) {
+				if (file.metadata?.expiresAt && new Date(file.metadata.expiresAt as Date) <= now) {
 					// biome-ignore lint/style/noNonNullAssertion: need to fix
-					const stream = client.bucket!.openDownloadStream(x._id);
-					const data = await new Promise<string | undefined>((resolve) => {
-						const resp: Uint8Array[] = [];
-						/* v8 ignore next -- @preserve */
-						stream.on("error", () => {
-							resolve(undefined);
-						});
-						stream.on("end", () => {
-							resolve(Buffer.concat(resp).toString("utf8"));
-						});
-						stream.on("data", (chunk) => {
-							resp.push(chunk as Uint8Array);
-						});
+					await client.bucket!.delete(file._id);
+					continue;
+				}
+
+				// biome-ignore lint/style/noNonNullAssertion: need to fix
+				const stream = client.bucket!.openDownloadStream(file._id);
+				const data = await new Promise<string | undefined>((resolve) => {
+					const resp: Uint8Array[] = [];
+					/* v8 ignore next -- @preserve */
+					stream.on("error", () => {
+						resolve(undefined);
 					});
-					return [prefixedKey, data];
+					stream.on("end", () => {
+						resolve(Buffer.concat(resp).toString("utf8"));
+					});
+					stream.on("data", (chunk) => {
+						resp.push(chunk as Uint8Array);
+					});
 				});
-			yield* gridIterator;
+				yield [file.filename, data];
+			}
+
 			return;
 		}
 
-		const iterator = client.store
-			.find({ namespace: { $eq: namespaceValue } })
-			.map((x: WithId<Document>) => {
-				return [x.key, x.value];
-			});
+		const now = new Date();
+		const cursor = client.store.find({ namespace: { $eq: namespaceValue } });
 
-		yield* iterator;
+		for await (const doc of cursor) {
+			if (doc.expiresAt && new Date(doc.expiresAt as Date) <= now) {
+				await client.store.deleteOne({ _id: doc._id });
+				continue;
+			}
+
+			yield [doc.key, doc.value];
+		}
 	}
 
 	/**
@@ -619,6 +652,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			const document = await client.store.count({
 				filename: { $eq: strippedKey },
 				"metadata.namespace": { $eq: ns },
+				$or: [{ "metadata.expiresAt": null }, { "metadata.expiresAt": { $gt: new Date() } }],
 			});
 			return document !== 0;
 		}
@@ -626,6 +660,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const document = await client.store.count({
 			key: { $eq: strippedKey },
 			namespace: { $eq: ns },
+			$or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
 		});
 		return document !== 0;
 	}
@@ -645,6 +680,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				.find({
 					filename: { $in: strippedKeys },
 					"metadata.namespace": { $eq: ns },
+					$or: [{ "metadata.expiresAt": null }, { "metadata.expiresAt": { $gt: new Date() } }],
 				})
 				.project({ filename: 1 })
 				.toArray();
@@ -656,6 +692,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			.find({
 				key: { $in: strippedKeys },
 				namespace: { $eq: ns },
+				$or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
 			})
 			.project({ key: 1 })
 			.toArray();

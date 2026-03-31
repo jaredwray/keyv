@@ -380,6 +380,35 @@ it("has() returns false after delete (direct adapter)", async () => {
 	expect(await keyvMemcache.has(key)).toBe(false);
 });
 
+it("get returns undefined for expired key", async () => {
+	const key = faker.string.uuid();
+	await keyvMemcache.set(key, "value", 1);
+	await snooze(50);
+	expect(await keyvMemcache.get(key)).toBeUndefined();
+});
+
+it("has returns false for expired key", async () => {
+	const key = faker.string.uuid();
+	await keyvMemcache.set(key, "value", 1);
+	await snooze(50);
+	expect(await keyvMemcache.has(key)).toBe(false);
+});
+
+it("handles legacy non-JSON data in get", async () => {
+	const key = faker.string.uuid();
+	// Write raw string directly bypassing wrapValue
+	await keyvMemcache.client.set(keyvMemcache.formatKey(key), "raw-legacy");
+	const result = await keyvMemcache.get(key);
+	expect(result).toBe("raw-legacy");
+});
+
+it("handles legacy JSON without v field in get", async () => {
+	const key = faker.string.uuid();
+	await keyvMemcache.client.set(keyvMemcache.formatKey(key), JSON.stringify({ foo: "bar" }));
+	const result = await keyvMemcache.get(key);
+	expect(result).toBe(JSON.stringify({ foo: "bar" }));
+});
+
 const store = () => keyvMemcache;
 
 keyvApiTests(test, Keyv, store);

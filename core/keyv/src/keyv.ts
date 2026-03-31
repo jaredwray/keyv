@@ -75,6 +75,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 	private _sanitize!: KeyvSanitizeAdapter;
 
 	/**
+	 * When true, Keyv checks expiry at its layer on get/getMany/has/hasMany.
+	 */
+	private _checkExpired = false;
+
+	/**
 	 * Keyv Constructor
 	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any> | any} store  to be provided or just the options
 	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
@@ -115,6 +120,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		this.setTtl(mergedOptions.ttl);
+		this._checkExpired = mergedOptions.checkExpired ?? false;
 	}
 
 	/**
@@ -266,6 +272,14 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
+	 * When true, Keyv checks expiry at its layer on get/getMany/has/hasMany.
+	 * When false (default), trusts the storage adapter.
+	 */
+	public get checkExpired(): boolean {
+		return this._checkExpired;
+	}
+
+	/**
 	 * Set the stats. When setting a new instance it will unsubscribe the old listeners
 	 * and subscribe the new instance.
 	 * @param {KeyvStats} stats The stats instance to set.
@@ -370,7 +384,17 @@ export class Keyv<GenericValue = any> extends Hookified {
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
 		}
 
-		const [data] = await this.decodeWithExpire<Value>(key as string, rawData);
+		let data: KeyvValue<Value> | undefined;
+		if (this._checkExpired) {
+			[data] = await this.decodeWithExpire<Value>(key as string, rawData);
+		} else {
+			data =
+				rawData === undefined || rawData === null
+					? undefined
+					: typeof rawData === "string"
+						? await this.decode<Value>(rawData)
+						: (rawData as KeyvValue<Value>);
+		}
 
 		if (data === undefined) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, {
@@ -401,7 +425,21 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const rawData =
 			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
 			this._store.getMany!<Value>(keys);
-		const deserialized = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
+
+		let deserialized: Array<KeyvValue<Value> | undefined>;
+		if (this._checkExpired) {
+			deserialized = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
+		} else {
+			deserialized = await Promise.all(
+				(rawData as unknown[]).map(async (row) => {
+					if (row === undefined || row === null) {
+						return undefined;
+					}
+
+					return typeof row === "string" ? this.decode<Value>(row) : (row as KeyvValue<Value>);
+				}),
+			);
+		}
 
 		const result: Array<Value | undefined> = deserialized.map((row) =>
 			row !== undefined ? row.value : undefined,
@@ -436,7 +474,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
 		const rawData = await this._store.get(key);
 
-		const [data] = await this.decodeWithExpire<Value>(key, rawData);
+		let data: KeyvValue<Value> | undefined;
+		if (this._checkExpired) {
+			[data] = await this.decodeWithExpire<Value>(key, rawData);
+		} else {
+			data =
+				rawData === undefined || rawData === null
+					? undefined
+					: typeof rawData === "string"
+						? await this.decode<Value>(rawData)
+						: /* v8 ignore next -- @preserve */
+							(rawData as KeyvValue<Value>);
+		}
 
 		if (data === undefined) {
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, {
@@ -482,7 +531,21 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const rawData =
 			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
 			this._store.getMany!<Value>(keys);
-		const result = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
+
+		let result: Array<KeyvValue<Value> | undefined>;
+		if (this._checkExpired) {
+			result = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
+		} else {
+			result = await Promise.all(
+				(rawData as unknown[]).map(async (row) => {
+					if (row === undefined || row === null) {
+						return undefined;
+					}
+
+					return typeof row === "string" ? this.decode<Value>(row) : (row as KeyvValue<Value>);
+				}),
+			);
+		}
 
 		// Add in hits and misses
 		for (let i = 0; i < result.length; i++) {
@@ -818,7 +881,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		let result = false;
 		try {
-			result = await this._store.has(key);
+			if (this._checkExpired) {
+				const rawData = await this._store.get(key);
+				if (rawData !== undefined && rawData !== null) {
+					const [data] = await this.decodeWithExpire(key, rawData);
+					result = data !== undefined;
+				}
+			} else {
+				result = await this._store.has(key);
+			}
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
@@ -840,7 +911,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		let results: boolean[] = [];
 		try {
-			results = await this._store.hasMany(keys);
+			if (this._checkExpired) {
+				const rawData = await this._store.getMany(keys);
+				const deserialized = await this.decodeWithExpire(keys, rawData as unknown[]);
+				results = deserialized.map((row) => row !== undefined);
+			} else {
+				results = await this._store.hasMany(keys);
+			}
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
@@ -896,7 +973,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		for await (const [key, raw] of this._store.iterator()) {
 			const data = await this.decode(raw as string);
 
-			if (data && isDataExpired(data)) {
+			if (this._checkExpired && data && isDataExpired(data)) {
 				await this.delete(key as string);
 				continue;
 			}

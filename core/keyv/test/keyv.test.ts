@@ -880,7 +880,7 @@ describe("iterator", () => {
 			},
 		};
 		// biome-ignore lint/suspicious/noExplicitAny: test mock
-		const keyv = new Keyv(store as any);
+		const keyv = new Keyv({ store: store as any, checkExpired: true });
 		await keyv.set("fresh", "value1");
 		await keyv.set("expired", "value2", 1);
 		await delay(10);
@@ -916,25 +916,96 @@ describe("iterator", () => {
 			expect(keyv.stats.deletes).toBe(0);
 
 			let iterationCount = 0;
-			// Get all items using iterator
+			// Get all items using iterator — adapter handles expiry cleanup
 			for await (const _ of keyv.iterator() ?? []) {
-				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}
 			expect(iterationCount).toBe(0);
-			expect(keyv.stats.deletes).toBe(1);
+			// Adapter cleaned up expired entry, Keyv-level deletes stay at 0
+			expect(keyv.stats.deletes).toBe(0);
 
 			iterationCount = 0;
-			// Get all items using iterator
+			// Second iteration — entry already cleaned up
 			for await (const _ of keyv.iterator() ?? []) {
-				// All items are expired, it doesn't enter the loop
 				iterationCount++;
 			}
 			expect(iterationCount).toBe(0);
-			expect(keyv.stats.deletes).toBe(1);
+			expect(keyv.stats.deletes).toBe(0);
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe("checkExpired", () => {
+	test("checkExpired getter returns false by default", () => {
+		const keyv = new Keyv();
+		expect(keyv.checkExpired).toBe(false);
+	});
+
+	test("checkExpired getter returns true when set", () => {
+		const keyv = new Keyv({ checkExpired: true });
+		expect(keyv.checkExpired).toBe(true);
+	});
+
+	test("get returns undefined for expired key when checkExpired is true", async () => {
+		const keyv = new Keyv({ checkExpired: true });
+		await keyv.set("foo", "bar", 1);
+		await delay(10);
+		const value = await keyv.get("foo");
+		expect(value).toBeUndefined();
+	});
+
+	test("getMany returns undefined for expired keys when checkExpired is true", async () => {
+		const keyv = new Keyv({ checkExpired: true });
+		await keyv.set("foo", "bar", 1);
+		await keyv.set("baz", "qux");
+		await delay(10);
+		const values = await keyv.get(["foo", "baz"]);
+		expect(values[0]).toBeUndefined();
+		expect(values[1]).toBe("qux");
+	});
+
+	test("getRaw returns undefined for expired key when checkExpired is true", async () => {
+		const keyv = new Keyv({ checkExpired: true });
+		await keyv.set("foo", "bar", 1);
+		await delay(10);
+		const value = await keyv.getRaw("foo");
+		expect(value).toBeUndefined();
+	});
+
+	test("getManyRaw returns undefined for expired keys when checkExpired is true", async () => {
+		const keyv = new Keyv({ checkExpired: true });
+		await keyv.set("foo", "bar", 1);
+		await keyv.set("baz", "qux");
+		await delay(10);
+		const values = await keyv.getManyRaw(["foo", "baz"]);
+		expect(values[0]).toBeUndefined();
+		expect(values[1]).toEqual({ value: "qux" });
+	});
+
+	test("has returns true for existing key when checkExpired is true", async () => {
+		const keyv = new Keyv({ checkExpired: true });
+		await keyv.set("foo", "bar");
+		const result = await keyv.has("foo");
+		expect(result).toBe(true);
+	});
+
+	test("has returns false for expired key when checkExpired is true", async () => {
+		const keyv = new Keyv({ checkExpired: true });
+		await keyv.set("foo", "bar", 1);
+		await delay(10);
+		const result = await keyv.has("foo");
+		expect(result).toBe(false);
+	});
+
+	test("hasMany returns false for expired keys when checkExpired is true", async () => {
+		const keyv = new Keyv({ checkExpired: true });
+		await keyv.set("foo", "bar", 1);
+		await keyv.set("baz", "qux");
+		await delay(10);
+		const results = await keyv.has(["foo", "baz"]);
+		expect(results).toEqual([false, true]);
 	});
 });
 
