@@ -347,8 +347,9 @@ test.it("deleteMany still fires legacy BEFORE_DELETE and AFTER_DELETE hooks", as
 test.it("BEFORE_CLEAR hook", async (t) => {
 	const keyv = new Keyv();
 	let hookTriggered = false;
-	keyv.addHook(KeyvHooks.BEFORE_CLEAR, () => {
+	keyv.addHook(KeyvHooks.BEFORE_CLEAR, (data) => {
 		hookTriggered = true;
+		t.expect(data.namespace).toBeUndefined();
 	});
 	t.expect(keyv.getHooks(KeyvHooks.BEFORE_CLEAR)?.length).toBe(1);
 	await keyv.set("foo", "bar");
@@ -359,8 +360,9 @@ test.it("BEFORE_CLEAR hook", async (t) => {
 test.it("AFTER_CLEAR hook", async (t) => {
 	const keyv = new Keyv();
 	let hookTriggered = false;
-	keyv.addHook(KeyvHooks.AFTER_CLEAR, () => {
+	keyv.addHook(KeyvHooks.AFTER_CLEAR, (data) => {
 		hookTriggered = true;
+		t.expect(data.namespace).toBeUndefined();
 	});
 	t.expect(keyv.getHooks(KeyvHooks.AFTER_CLEAR)?.length).toBe(1);
 	await keyv.set("foo", "bar");
@@ -379,11 +381,28 @@ test.it("BEFORE_CLEAR fires before store is cleared", async (t) => {
 	t.expect(valueBeforeClear).toBe("bar");
 });
 
+test.it("BEFORE_CLEAR hook receives namespace", async (t) => {
+	const keyv = new Keyv({ namespace: "test-ns" });
+	keyv.addHook(KeyvHooks.BEFORE_CLEAR, (data) => {
+		t.expect(data.namespace).toBe("test-ns");
+	});
+	await keyv.clear();
+});
+
+test.it("AFTER_CLEAR hook receives namespace", async (t) => {
+	const keyv = new Keyv({ namespace: "test-ns" });
+	keyv.addHook(KeyvHooks.AFTER_CLEAR, (data) => {
+		t.expect(data.namespace).toBe("test-ns");
+	});
+	await keyv.clear();
+});
+
 test.it("BEFORE_DISCONNECT hook", async (t) => {
 	const keyv = new Keyv();
 	let hookTriggered = false;
-	keyv.addHook(KeyvHooks.BEFORE_DISCONNECT, () => {
+	keyv.addHook(KeyvHooks.BEFORE_DISCONNECT, (data) => {
 		hookTriggered = true;
+		t.expect(data.namespace).toBeUndefined();
 	});
 	t.expect(keyv.getHooks(KeyvHooks.BEFORE_DISCONNECT)?.length).toBe(1);
 	await keyv.disconnect();
@@ -393,10 +412,27 @@ test.it("BEFORE_DISCONNECT hook", async (t) => {
 test.it("AFTER_DISCONNECT hook", async (t) => {
 	const keyv = new Keyv();
 	let hookTriggered = false;
-	keyv.addHook(KeyvHooks.AFTER_DISCONNECT, () => {
+	keyv.addHook(KeyvHooks.AFTER_DISCONNECT, (data) => {
 		hookTriggered = true;
+		t.expect(data.namespace).toBeUndefined();
 	});
 	t.expect(keyv.getHooks(KeyvHooks.AFTER_DISCONNECT)?.length).toBe(1);
 	await keyv.disconnect();
 	t.expect(hookTriggered).toBe(true);
+});
+
+test.it("BEFORE_DISCONNECT hook receives namespace", async (t) => {
+	const keyv = new Keyv({ namespace: "test-ns" });
+	keyv.addHook(KeyvHooks.BEFORE_DISCONNECT, (data) => {
+		t.expect(data.namespace).toBe("test-ns");
+	});
+	await keyv.disconnect();
+});
+
+test.it("AFTER_DISCONNECT hook receives namespace", async (t) => {
+	const keyv = new Keyv({ namespace: "test-ns" });
+	keyv.addHook(KeyvHooks.AFTER_DISCONNECT, (data) => {
+		t.expect(data.namespace).toBe("test-ns");
+	});
+	await keyv.disconnect();
 });
