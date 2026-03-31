@@ -29,6 +29,7 @@ export type {
 	DeserializedData,
 	KeyvCompression,
 	KeyvCompressionAdapter,
+	KeyvEncryptionAdapter,
 	KeyvEntry,
 	KeyvMapAny,
 	KeyvOptions,

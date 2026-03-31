@@ -2,6 +2,7 @@ packages:
   - 'core/*'
   - 'serialization/*'
   - 'compression/*'
+  - 'encryption/*'
   - 'storage/*'
   - 'website'
 minimumReleaseAge: 2880
