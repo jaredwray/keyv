@@ -351,9 +351,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			}
 
 			const nowInSeconds = Math.floor(Date.now() / 1000);
+			const itemMap = new Map(allItems.map((item) => [item?.id, item]));
 			const expiredKeys: string[] = [];
 			const results = formattedKeys.map((key) => {
-				const item = allItems.find((item) => item?.id === key);
+				const item = itemMap.get(key);
 				if (!item) {
 					return undefined as StoredData<Value>;
 				}
@@ -525,9 +526,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			}
 
 			const nowInSeconds = Math.floor(Date.now() / 1000);
+			const itemMap = new Map(allItems.map((item) => [item?.id, item]));
 			const expiredKeys: string[] = [];
 			const results = formattedKeys.map((key) => {
-				const item = allItems.find((item) => item?.id === key);
+				const item = itemMap.get(key);
 				if (!item || item.value === undefined) {
 					return false;
 				}
@@ -590,6 +592,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 			const nowInSeconds = Math.floor(Date.now() / 1000);
 			for (const item of scanResult.Items ?? []) {
+				/* v8 ignore next 3 -- @preserve */
 				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
 					await this.delete(item.id as string);
 					continue;

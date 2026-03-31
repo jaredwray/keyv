@@ -320,17 +320,22 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? AND (expires IS NULL OR expires > ?)`;
-		const select = mysql.format(sql, [strippedKey, ns, now]);
+		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
+		const select = mysql.format(sql, [strippedKey, ns]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
 		if (row === undefined) {
-			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? AND expires IS NOT NULL AND expires <= ?`;
-			await this.query(mysql.format(delSql, [strippedKey, ns, now]));
+			return undefined as StoredData<Value>;
 		}
 
-		return row?.value as StoredData<Value>;
+		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
+			await this.query(mysql.format(delSql, [strippedKey, ns]));
+			return undefined as StoredData<Value>;
+		}
+
+		return row.value as StoredData<Value>;
 	}
 
 	/**
@@ -342,23 +347,27 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND (expires IS NULL OR expires > ?)`;
-		const select = mysql.format(sql, [strippedKeys, ns, now]);
+		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
+		const select = mysql.format(sql, [strippedKeys, ns]);
 
-		const rows: mysql.RowDataPacket = await this.query(select);
+		const rows: mysql.RowDataPacket[] = await this.query(select);
 
-		// Delete expired entries for queried keys
-		const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND expires IS NOT NULL AND expires <= ?`;
-		await this.query(mysql.format(delSql, [strippedKeys, ns, now]));
-
-		const results: Array<StoredData<Value>> = [];
-
-		for (const key of strippedKeys) {
-			const rowIndex = rows.findIndex((row: { id: string }) => row.id === key);
-			results.push(rowIndex === -1 ? undefined : (rows[rowIndex].value as StoredData<Value>));
+		const validMap = new Map<string, StoredData<Value>>();
+		const expiredKeys: string[] = [];
+		for (const row of rows) {
+			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+				expiredKeys.push(row.id as string);
+			} else {
+				validMap.set(row.id as string, row.value as StoredData<Value>);
+			}
 		}
 
-		return results;
+		if (expiredKeys.length > 0) {
+			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
+			await this.query(mysql.format(delSql, [expiredKeys, ns]));
+		}
+
+		return strippedKeys.map((key) => validMap.get(key) as StoredData<Value | undefined>);
 	}
 
 	/**
@@ -526,16 +535,20 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const sql = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? AND (expires IS NULL OR expires > ?) )`;
-		const exists = mysql.format(sql, [strippedKey, ns, now]);
-		const rows = await this.query(exists);
-		const result = Object.values(rows[0])[0] === 1;
-		if (!result) {
-			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? AND expires IS NOT NULL AND expires <= ?`;
-			await this.query(mysql.format(delSql, [strippedKey, ns, now]));
+		const sql = `SELECT expires FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
+		const select = mysql.format(sql, [strippedKey, ns]);
+		const rows: mysql.RowDataPacket = await this.query(select);
+		if (rows.length === 0) {
+			return false;
 		}
 
-		return result;
+		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
+			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
+			await this.query(mysql.format(delSql, [strippedKey, ns]));
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -551,16 +564,26 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const sql = `SELECT id FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND (expires IS NULL OR expires > ?)`;
-		const select = mysql.format(sql, [strippedKeys, ns, now]);
+		const sql = `SELECT id, expires FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
+		const select = mysql.format(sql, [strippedKeys, ns]);
 		const rows: mysql.RowDataPacket[] = await this.query(select);
-		const existingKeys = new Set(rows.map((row) => row.id as string));
 
-		// Delete expired entries for queried keys
-		const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND expires IS NOT NULL AND expires <= ?`;
-		await this.query(mysql.format(delSql, [strippedKeys, ns, now]));
+		const validKeys = new Set<string>();
+		const expiredKeys: string[] = [];
+		for (const row of rows) {
+			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+				expiredKeys.push(row.id as string);
+			} else {
+				validKeys.add(row.id as string);
+			}
+		}
 
-		return strippedKeys.map((key) => existingKeys.has(key));
+		if (expiredKeys.length > 0) {
+			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
+			await this.query(mysql.format(delSql, [expiredKeys, ns]));
+		}
+
+		return strippedKeys.map((key) => validKeys.has(key));
 	}
 
 	/**

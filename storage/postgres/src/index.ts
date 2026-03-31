@@ -340,16 +340,20 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3)`;
-		const rows = await this.query(select, [strippedKey, ns, now]);
+		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
+		const rows = await this.query(select, [strippedKey, ns]);
 		const row = rows[0];
 		if (row === undefined) {
-			// Delete expired entry if it exists
-			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') AND expires IS NOT NULL AND expires <= $3`;
-			await this.query(del, [strippedKey, ns, now]);
+			return undefined;
 		}
 
-		return row === undefined ? undefined : row.value;
+		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
+			await this.query(del, [strippedKey, ns]);
+			return undefined;
+		}
+
+		return row.value;
 	}
 
 	/**
@@ -361,15 +365,25 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3)`;
-		const rows = await this.query(getMany, [strippedKeys, ns, now]);
-		const rowsMap = new Map(rows.map((row) => [row.key, row]));
+		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
+		const rows = await this.query(getMany, [strippedKeys, ns]);
 
-		// Delete expired entries for queried keys
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') AND expires IS NOT NULL AND expires <= $3`;
-		await this.query(del, [strippedKeys, ns, now]);
+		const validMap = new Map<string, Value>();
+		const expiredKeys: string[] = [];
+		for (const row of rows) {
+			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+				expiredKeys.push(row.key as string);
+			} else {
+				validMap.set(row.key as string, row.value as Value);
+			}
+		}
 
-		return strippedKeys.map((key) => rowsMap.get(key)?.value);
+		if (expiredKeys.length > 0) {
+			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
+			await this.query(del, [expiredKeys, ns]);
+		}
+
+		return strippedKeys.map((key) => validMap.get(key));
 	}
 
 	/**
@@ -548,14 +562,19 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const exists = `SELECT EXISTS ( SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3) )`;
-		const rows = await this.query(exists, [strippedKey, ns, now]);
-		if (!rows[0].exists) {
-			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') AND expires IS NOT NULL AND expires <= $3`;
-			await this.query(del, [strippedKey, ns, now]);
+		const select = `SELECT expires FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
+		const rows = await this.query(select, [strippedKey, ns]);
+		if (rows.length === 0) {
+			return false;
 		}
 
-		return rows[0].exists;
+		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
+			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
+			await this.query(del, [strippedKey, ns]);
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -567,15 +586,25 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
-		const select = `SELECT key FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') AND (expires IS NULL OR expires > $3)`;
-		const rows = await this.query(select, [strippedKeys, ns, now]);
-		const existingKeys = new Set(rows.map((row: { key: string }) => row.key));
+		const select = `SELECT key, expires FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
+		const rows = await this.query(select, [strippedKeys, ns]);
 
-		// Delete expired entries for queried keys
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') AND expires IS NOT NULL AND expires <= $3`;
-		await this.query(del, [strippedKeys, ns, now]);
+		const validKeys = new Set<string>();
+		const expiredKeys: string[] = [];
+		for (const row of rows) {
+			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+				expiredKeys.push(row.key as string);
+			} else {
+				validKeys.add(row.key as string);
+			}
+		}
 
-		return strippedKeys.map((key) => existingKeys.has(key));
+		if (expiredKeys.length > 0) {
+			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
+			await this.query(del, [expiredKeys, ns]);
+		}
+
+		return strippedKeys.map((key) => validKeys.has(key));
 	}
 
 	/**
