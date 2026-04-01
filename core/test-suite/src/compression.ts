@@ -17,10 +17,11 @@ const compressionTestSuite = (test: TestFunction, compression: KeyvCompressionAd
 	});
 
 	test("compression/decompression using default options", async (t) => {
-		const compressed = await compression.compress("whatever");
-		t.expect(compressed).not.toBe("whatever");
+		const value = faker.lorem.word();
+		const compressed = await compression.compress(value);
+		t.expect(compressed).not.toBe(value);
 		const decompressed = await compression.decompress(compressed);
-		t.expect(decompressed).toBe("whatever");
+		t.expect(decompressed).toBe(value);
 	});
 
 	test("compression/decompression with number", async (t) => {

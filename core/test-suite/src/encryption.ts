@@ -31,7 +31,7 @@ const encryptionTestSuite = (test: TestFunction, encryption: KeyvEncryptionAdapt
 	});
 
 	test("encrypt and decrypt unicode content", async (t) => {
-		const data = `${faker.lorem.sentence()} hello world`;
+		const data = faker.lorem.sentence();
 		const encrypted = await encryption.encrypt(data);
 		const decrypted = await encryption.decrypt(encrypted);
 		t.expect(decrypted).toBe(data);

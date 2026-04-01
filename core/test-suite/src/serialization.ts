@@ -11,9 +11,10 @@ import type { TestFunction } from "./types.js";
  */
 const serializationTestSuite = (test: TestFunction, serialization: KeyvSerializationAdapter) => {
 	test("stringify and parse of string value", async (t) => {
-		const serialized = await serialization.stringify({ value: "foo" });
+		const value = faker.lorem.word();
+		const serialized = await serialization.stringify({ value });
 		const deserialized = await serialization.parse<{ value: string }>(serialized);
-		t.expect(deserialized.value).toBe("foo");
+		t.expect(deserialized.value).toBe(value);
 	});
 
 	test("stringify and parse of number value", async (t) => {
@@ -41,7 +42,11 @@ const serializationTestSuite = (test: TestFunction, serialization: KeyvSerializa
 	});
 
 	test("stringify and parse of object value", async (t) => {
-		const original = { foo: "bar", bar: 5, baz: true };
+		const original = {
+			key: faker.lorem.word(),
+			count: faker.number.int(100),
+			active: faker.datatype.boolean(),
+		};
 		const serialized = await serialization.stringify({ value: original });
 		const deserialized = await serialization.parse<{ value: typeof original }>(serialized);
 		t.expect(deserialized.value).toEqual(original);
