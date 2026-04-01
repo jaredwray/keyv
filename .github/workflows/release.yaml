@@ -100,4 +100,4 @@ jobs:
         run: pnpm --filter keyv publish --tag alpha --no-git-checks
 
       - name: Publish remaining packages
-        run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag alpha --no-git-checks --access public
+        run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag beta --no-git-checks --access public

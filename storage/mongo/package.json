@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/mongo",
-	"version": "6.0.0-alpha.4",
+	"version": "6.0.0-beta.1",
 	"description": "MongoDB storage adapter for Keyv",
 	"type": "module",
 	"main": "./dist/index.mjs",
