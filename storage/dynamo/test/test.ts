@@ -2,7 +2,7 @@
 import process from "node:process";
 import { ResourceInUseException } from "@aws-sdk/client-dynamodb";
 import { faker } from "@faker-js/faker";
-import { keyvTestSuite } from "@keyv/test-suite";
+import { keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { beforeEach, describe, it, vi } from "vitest";
 import KeyvDynamo, { createKeyv } from "../src/index.js";
@@ -19,6 +19,7 @@ const keyvDynamodb = new KeyvDynamo({
 const store = () => new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
 
 keyvTestSuite(it, Keyv, store);
+storageTestSuite(it, store, { iterator: false, ttl: false });
 
 beforeEach(async () => {
 	const keyv = store();
@@ -232,15 +233,6 @@ it("removeKeyPrefix strips prefix when namespace is set", (t) => {
 	t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 });
 
-it("namespace getter and setter", (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	t.expect(store.namespace).toBeUndefined();
-	store.namespace = "test-ns";
-	t.expect(store.namespace).toBe("test-ns");
-	store.namespace = undefined;
-	t.expect(store.namespace).toBeUndefined();
-});
-
 it("keyPrefixSeparator getter and setter", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(store.keyPrefixSeparator).toBe(":");
@@ -283,44 +275,6 @@ it("delete with namespace", async (t) => {
 	await store.set(key, faker.lorem.word());
 	t.expect(await store.delete(key)).toBe(true);
 	t.expect(await store.get(key)).toBeUndefined();
-});
-
-it("setMany sets multiple keys", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	const key1 = faker.string.uuid();
-	const value1 = faker.lorem.word();
-	const key2 = faker.string.uuid();
-	const value2 = faker.lorem.word();
-	await store.setMany([
-		{ key: key1, value: value1 },
-		{ key: key2, value: value2 },
-	]);
-	t.expect(await store.get(key1)).toBe(value1);
-	t.expect(await store.get(key2)).toBe(value2);
-});
-
-it("has returns true for existing key", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	const key = faker.string.uuid();
-	await store.set(key, faker.lorem.word());
-	t.expect(await store.has(key)).toBe(true);
-	t.expect(await store.has("nonExistingKey")).toBe(false);
-});
-
-it("hasMany checks multiple keys", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	await store.set(key1, faker.lorem.word());
-	await store.set(key2, faker.lorem.word());
-	const results = await store.hasMany([key1, key2, key3]);
-	t.expect(results).toEqual([true, true, false]);
-});
-
-it("setMany with empty entries should not fail", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	await t.expect(store.setMany([])).resolves.toEqual([]);
 });
 
 it("has returns false for expired key", async (t) => {
@@ -613,11 +567,6 @@ it("getMany retries unprocessed keys", async (t) => {
 	dynamo._client.batchGet = originalBatchGet;
 });
 
-it("disconnect should resolve without error", async () => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	await store.disconnect();
-});
-
 it("iterator with default namespace", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
 	const key1 = faker.string.uuid();
@@ -659,16 +608,6 @@ it("iterator with namespace", async (t) => {
 	const keys = entries.map(([key]) => key);
 	t.expect(keys).toContain(`${namespace}:${key1}`);
 	t.expect(keys).toContain(`${namespace}:${key2}`);
-});
-
-it("iterator returns empty when no keys exist", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
-	const entries: unknown[] = [];
-	for await (const entry of store.iterator()) {
-		entries.push(entry);
-	}
-
-	t.expect(entries.length).toBe(0);
 });
 
 it("hasMany retries unprocessed keys", async (t) => {

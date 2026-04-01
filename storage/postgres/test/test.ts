@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { beforeEach, it } from "vitest";
 import KeyvPostgres, { createKeyv } from "../src/index.js";
@@ -9,6 +9,7 @@ const postgresUri = "postgresql://postgres:postgres@localhost:5432/keyv_test";
 const store = () => new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
+storageTestSuite(it, store, { ttl: false });
 
 beforeEach(async () => {
 	const keyv = store();

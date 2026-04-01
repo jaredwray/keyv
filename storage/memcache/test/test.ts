@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { faker } from "@faker-js/faker";
-import { keyvApiTests, keyvValueTests } from "@keyv/test-suite";
+import { keyvApiTests, keyvValueTests, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { beforeEach, expect, it } from "vitest";
 import KeyvMemcache, { createKeyv } from "../src/index.js";
@@ -201,26 +201,6 @@ it("keyvMemcache setMany with ttl", async () => {
 	expect(await keyv.get(key1)).toBeUndefined();
 });
 
-it("keyvMemcache hasMany", async () => {
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	await keyvMemcache.set(key1, faker.lorem.word());
-	await keyvMemcache.set(key2, faker.lorem.word());
-
-	const result = await keyvMemcache.hasMany([key1, key2, key3]);
-
-	expect(result).toEqual([true, true, false]);
-});
-
-it("keyvMemcache hasMany with no keys existing", async () => {
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	const result = await keyvMemcache.hasMany([key1, key2, key3]);
-	expect(result).toEqual([false, false, false]);
-});
-
 it("keyvMemcache setMany should emit error on failure", { timeout: 30_000 }, async () => {
 	const badMemcache = new KeyvMemcache("baduri:11211");
 	let errorEmitted = false;
@@ -359,25 +339,6 @@ it("clear flushes the entire server", async () => {
 	expect(await keyv2.get(key)).toBeUndefined();
 });
 
-it("has() returns true for an existing key (direct adapter)", async () => {
-	const key = faker.string.uuid();
-	await keyvMemcache.set(key, "value");
-	expect(await keyvMemcache.has(key)).toBe(true);
-	await keyvMemcache.delete(key);
-});
-
-it("has() returns false for a non-existing key (direct adapter)", async () => {
-	expect(await keyvMemcache.has(faker.string.uuid())).toBe(false);
-});
-
-it("has() returns false after delete (direct adapter)", async () => {
-	const key = faker.string.uuid();
-	await keyvMemcache.set(key, "value");
-	expect(await keyvMemcache.has(key)).toBe(true);
-	await keyvMemcache.delete(key);
-	expect(await keyvMemcache.has(key)).toBe(false);
-});
-
 it("get returns undefined for expired key", async () => {
 	const key = faker.string.uuid();
 	await keyvMemcache.set(key, "value", 1);
@@ -411,3 +372,4 @@ const store = () => keyvMemcache;
 
 keyvApiTests(it, Keyv, store);
 keyvValueTests(it, Keyv, store);
+storageTestSuite(it, store, { iterator: false });

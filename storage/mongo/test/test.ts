@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test file
 import { faker } from "@faker-js/faker";
-import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { afterAll, it } from "vitest";
 import KeyvMongo, { createKeyv } from "../src/index.js";
@@ -11,6 +11,7 @@ const store = () => new KeyvMongo(mongoURL, options);
 
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
+storageTestSuite(it, store);
 
 afterAll(async () => {
 	let keyv = new KeyvMongo({ ...options });
@@ -656,24 +657,6 @@ it("native namespace GridFS: two Keyv instances with different namespaces do not
 	t.expect(await keyvA.get(key)).toBe("valueA");
 });
 
-// setMany tests - Standard mode
-it("setMany sets multiple keys in standard mode", async (t) => {
-	const store = new KeyvMongo({ ...options });
-	const keys = [
-		faker.string.alphanumeric(10),
-		faker.string.alphanumeric(10),
-		faker.string.alphanumeric(10),
-	];
-	await store.setMany([
-		{ key: keys[0], value: "val1" },
-		{ key: keys[1], value: "val2" },
-		{ key: keys[2], value: "val3" },
-	]);
-	t.expect(await store.get(keys[0])).toBe("val1");
-	t.expect(await store.get(keys[1])).toBe("val2");
-	t.expect(await store.get(keys[2])).toBe("val3");
-});
-
 it("setMany with TTL in standard mode", async (t) => {
 	const store = new KeyvMongo({ ...options });
 	const keys = [faker.string.alphanumeric(10), faker.string.alphanumeric(10)];
@@ -716,20 +699,6 @@ it("setMany sets multiple keys in GridFS mode", async (t) => {
 	]);
 	t.expect(await store.get(keys[0])).toBe("val1");
 	t.expect(await store.get(keys[1])).toBe("val2");
-});
-
-// hasMany tests - Standard mode
-it("hasMany checks multiple keys in standard mode", async (t) => {
-	const store = new KeyvMongo({ ...options });
-	const keys = [
-		faker.string.alphanumeric(10),
-		faker.string.alphanumeric(10),
-		faker.string.alphanumeric(10),
-	];
-	await store.set(keys[0], "val1");
-	await store.set(keys[1], "val2");
-	const results = await store.hasMany(keys);
-	t.expect(results).toEqual([true, true, false]);
 });
 
 it("hasMany with namespace in standard mode", async (t) => {

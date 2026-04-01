@@ -1,4 +1,4 @@
-import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { afterAll, it } from "vitest";
 import KeyvRedis, { type RedisClientType } from "../src/index.js";
@@ -14,3 +14,4 @@ afterAll(async () => {
 
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
+storageTestSuite(it, store);

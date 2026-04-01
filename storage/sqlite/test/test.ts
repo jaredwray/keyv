@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { keyvTestSuite } from "@keyv/test-suite";
+import { keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { beforeEach, it, vi } from "vitest";
 import KeyvSqlite, { createKeyv } from "../src/index.js";
@@ -7,6 +7,7 @@ import KeyvSqlite, { createKeyv } from "../src/index.js";
 const store = () => new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite", busyTimeout: 3000 });
 
 keyvTestSuite(it, Keyv, store);
+storageTestSuite(it, store, { ttl: false });
 
 beforeEach(async () => {
 	const keyv = new KeyvSqlite({
@@ -392,39 +393,6 @@ it("WAL mode with in-memory database logs a warning", async (t) => {
 
 // --- New feature tests ---
 
-it("setMany will set multiple records at once", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	const val1 = faker.lorem.word();
-	const val2 = faker.lorem.word();
-	const val3 = faker.lorem.word();
-	await keyv.setMany([
-		{ key: key1, value: val1 },
-		{ key: key2, value: val2 },
-		{ key: key3, value: val3 },
-	]);
-	const values = await keyv.getMany([key1, key2, key3]);
-	t.expect(values).toStrictEqual([val1, val2, val3]);
-});
-
-it("setMany with empty array does nothing", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	await keyv.setMany([]);
-	const iterator = keyv.iterator();
-	const result = await iterator.next();
-	t.expect(result.done).toBe(true);
-});
-
 it("setMany upserts existing keys", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
@@ -443,35 +411,6 @@ it("setMany upserts existing keys", async (t) => {
 	]);
 	t.expect(await keyv.get(key1)).toBe(newVal);
 	t.expect(await keyv.get(key2)).toBe(val2);
-});
-
-it("hasMany checks multiple keys", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	await keyv.set(key1, faker.lorem.word());
-	await keyv.set(key3, faker.lorem.word());
-	const results = await keyv.hasMany([key1, key2, key3]);
-	t.expect(results).toStrictEqual([true, false, true]);
-});
-
-it("hasMany with no existing keys returns all false", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const results = await keyv.hasMany([
-		faker.string.uuid(),
-		faker.string.uuid(),
-		faker.string.uuid(),
-	]);
-	t.expect(results).toStrictEqual([false, false, false]);
 });
 
 it("clearExpired removes expired entries", async (t) => {
@@ -594,25 +533,6 @@ it("property getters return all configured values", (t) => {
 	t.expect(keyv.iterationLimit).toBe(50);
 	t.expect(keyv.wal).toBe(false);
 	t.expect(keyv.clearExpiredInterval).toBe(1000);
-});
-
-it("deleteMany returns false when no keys exist", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const result = await keyv.deleteMany([faker.string.uuid(), faker.string.uuid()]);
-	t.expect(result).toEqual([false, false]);
-});
-
-it("has returns false for non-existent key", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	t.expect(await keyv.has(faker.string.uuid())).toBe(false);
 });
 
 it("migrates old schema that lacks namespace column", async (t) => {

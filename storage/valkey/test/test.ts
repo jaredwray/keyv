@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Redis, { type Cluster } from "iovalkey";
 import Keyv from "keyv";
 import { it } from "vitest";
@@ -12,6 +12,7 @@ const store = () => new KeyvValkey(redisURI);
 
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
+storageTestSuite(it, store, { batch: false });
 
 it("reuse a redis instance", async (t) => {
 	const redis = new Redis(redisURI);

@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { it } from "vitest";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
@@ -10,6 +10,7 @@ const store = () => new KeyvEtcd({ uri: etcdUrl, busyTimeout: 3000 });
 
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
+storageTestSuite(it, store, { missingValue: null, batch: false });
 
 it("default options", (t) => {
 	const store = new KeyvEtcd();
@@ -240,46 +241,12 @@ it("removeKeyPrefix strips prefix when namespace is set", (t) => {
 	t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 });
 
-it("namespace getter and setter", (t) => {
-	const store = new KeyvEtcd();
-	t.expect(store.namespace).toBeUndefined();
-	store.namespace = "test-ns";
-	t.expect(store.namespace).toBe("test-ns");
-	store.namespace = undefined;
-	t.expect(store.namespace).toBeUndefined();
-});
-
 it("keyPrefixSeparator getter and setter", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.keyPrefixSeparator).toBe(":");
 	store.keyPrefixSeparator = "::";
 	t.expect(store.keyPrefixSeparator).toBe("::");
 	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
-});
-
-it("setMany sets multiple keys", async (t) => {
-	const store = new KeyvEtcd(etcdUrl);
-	const key1 = faker.string.uuid();
-	const value1 = faker.lorem.word();
-	const key2 = faker.string.uuid();
-	const value2 = faker.lorem.word();
-	await store.setMany([
-		{ key: key1, value: value1 },
-		{ key: key2, value: value2 },
-	]);
-	t.expect(await store.get(key1)).toBe(value1);
-	t.expect(await store.get(key2)).toBe(value2);
-});
-
-it("setMany emits error on failure", async (t) => {
-	const store = new KeyvEtcd(etcdUrl);
-	await store.disconnect();
-	const errors: unknown[] = [];
-	store.on("error", (error: unknown) => {
-		errors.push(error);
-	});
-	await store.setMany([{ key: "key", value: "value" }]);
-	t.expect(errors.length).toBeGreaterThan(0);
 });
 
 it("hasMany checks multiple keys", async (t) => {
@@ -291,6 +258,17 @@ it("hasMany checks multiple keys", async (t) => {
 	await store.set(key2, faker.lorem.word());
 	const results = await store.hasMany([key1, key2, key3]);
 	t.expect(results).toEqual([true, true, false]);
+});
+
+it("setMany emits error on failure", async (t) => {
+	const store = new KeyvEtcd(etcdUrl);
+	await store.disconnect();
+	const errors: unknown[] = [];
+	store.on("error", (error: unknown) => {
+		errors.push(error);
+	});
+	await store.setMany([{ key: "key", value: "value" }]);
+	t.expect(errors.length).toBeGreaterThan(0);
 });
 
 it("url getter and setter", (t) => {
