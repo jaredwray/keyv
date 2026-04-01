@@ -3,20 +3,22 @@ import { KeyvBridgeAdapter, type KeyvBridgeStore } from "./adapters/bridge.js";
 import { type KeyvMapType, KeyvMemoryAdapter } from "./adapters/memory.js";
 import { detectKeyvStorage } from "./capabilities.js";
 import { KeyvJsonSerializer } from "./json-serializer.js";
+import type { KeyvSanitizeAdapter } from "./sanitize.js";
 import { KeyvSanitize } from "./sanitize.js";
 import { KeyvStats } from "./stats.js";
+import type {
+	KeyvCompressionAdapter,
+	KeyvEncryptionAdapter,
+	KeyvSerializationAdapter,
+	KeyvStorageAdapter,
+	KeyvStorageGetResult,
+} from "./types/adapters.js";
 import {
-	type KeyvCompressionAdapter,
-	type KeyvEncryptionAdapter,
 	type KeyvEntry,
 	KeyvEvents,
 	KeyvHooks,
 	type KeyvMapAny,
 	type KeyvOptions,
-	type KeyvRawResult,
-	type KeyvSanitizeAdapter,
-	type KeyvSerializationAdapter,
-	type KeyvStorageAdapter,
 	type KeyvTelemetryEvent,
 	type KeyvValue,
 } from "./types/keyv.js";
@@ -460,10 +462,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Get the raw value of a key. This is the replacement for setting raw to true in the get() method.
 	 * @param {string} key the key to get
-	 * @returns {Promise<KeyvRawResult<Value>>} will return a KeyvRawResult<Value> or undefined
+	 * @returns {Promise<KeyvStorageGetResult<Value>>} will return a KeyvStorageGetResult<Value> or undefined
 	 * if the key does not exist or is expired.
 	 */
-	public async getRaw<Value = GenericValue>(key: string): Promise<KeyvRawResult<Value>> {
+	public async getRaw<Value = GenericValue>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		key = this._sanitize.enabled ? this._sanitize.cleanKey(key) : key;
 		if (key === "") {
 			return undefined;
@@ -507,18 +509,18 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Get the raw values of many keys. This is the replacement for setting raw to true in the getMany() method.
 	 * @param {string[]} keys the keys to get
-	 * @returns {Promise<Array<KeyvRawResult<Value>>>} will return an array of KeyvRawResult<Value> or undefined if the key does not exist or is expired.
+	 * @returns {Promise<Array<KeyvStorageGetResult<Value>>>} will return an array of KeyvStorageGetResult<Value> or undefined if the key does not exist or is expired.
 	 */
 	public async getManyRaw<Value = GenericValue>(
 		keys: string[],
-	): Promise<Array<KeyvRawResult<Value>>> {
+	): Promise<Array<KeyvStorageGetResult<Value>>> {
 		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY_RAW, { keys });
 
 		if (keys.length === 0) {
-			const result: Array<KeyvRawResult<Value>> = [];
+			const result: Array<KeyvStorageGetResult<Value>> = [];
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
 				values: result,
@@ -559,7 +561,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			keys,
 			values: result,
 		});
-		return result as Array<KeyvRawResult<Value>>;
+		return result as Array<KeyvStorageGetResult<Value>>;
 	}
 
 	/**

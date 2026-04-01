@@ -1,5 +1,5 @@
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvRawResult, type KeyvStorageAdapter } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
 import { resolveDriver } from "./drivers/index.js";
 import type { SqliteDriver, SqliteDriverName } from "./drivers/types.js";
 import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
@@ -434,7 +434,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return strippedKeys.map(
-			(key) => (validMap.get(key) ?? undefined) as KeyvRawResult<Value | undefined>,
+			(key) => (validMap.get(key) ?? undefined) as KeyvStorageGetResult<Value | undefined>,
 		);
 	}
 

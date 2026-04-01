@@ -1,12 +1,8 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: bridge adapter accepts any store
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
-import {
-	type KeyvEntry,
-	KeyvEvents,
-	type KeyvRawResult,
-	type KeyvStorageAdapter,
-} from "../types/keyv.js";
+import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
+import { type KeyvEntry, KeyvEvents } from "../types/keyv.js";
 import { isDataExpired } from "../utils.js";
 
 /**
@@ -203,7 +199,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to retrieve
 	 * @returns The stored data, or undefined if not found or expired
 	 */
-	public async get<T>(key: string): Promise<KeyvRawResult<T>> {
+	public async get<T>(key: string): Promise<KeyvStorageGetResult<T>> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		const data = await this._store.get(keyPrefix);
 		if (data === undefined || data === null) {
@@ -216,7 +212,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
-		return data as T;
+		return data as KeyvStorageGetResult<T>;
 	}
 
 	/**
@@ -225,34 +221,34 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - Array of keys to retrieve
 	 * @returns Array of stored data in the same order as the input keys
 	 */
-	public async getMany<T>(keys: string[]): Promise<Array<KeyvRawResult<T | undefined>>> {
+	public async getMany<T>(keys: string[]): Promise<Array<KeyvStorageGetResult<T | undefined>>> {
 		if (this._capabilities.methods.getMany.exists) {
 			const prefixedKeys = keys.map((key) => this.getKeyPrefix(key, this._namespace));
 			/* v8 ignore next -- @preserve */
 			const results = (await this._store.getMany?.(prefixedKeys)) ?? [];
-			const values: Array<KeyvRawResult<T | undefined>> = [];
+			const values: Array<KeyvStorageGetResult<T | undefined>> = [];
 			for (const [index, data] of results.entries()) {
 				if (data === undefined || data === null) {
-					values.push(undefined as KeyvRawResult<T | undefined>);
+					values.push(undefined as KeyvStorageGetResult<T | undefined>);
 					continue;
 				}
 
 				if (isDataExpired(data)) {
 					await this._store.delete(prefixedKeys[index]);
-					values.push(undefined as KeyvRawResult<T | undefined>);
+					values.push(undefined as KeyvStorageGetResult<T | undefined>);
 					continue;
 				}
 
-				values.push(data as KeyvRawResult<T | undefined>);
+				values.push(data as KeyvStorageGetResult<T | undefined>);
 			}
 
 			return values;
 		}
 
-		const values: Array<KeyvRawResult<T | undefined>> = [];
+		const values: Array<KeyvStorageGetResult<T | undefined>> = [];
 		for (const key of keys) {
 			const data = await this.get<T>(key);
-			values.push(data as KeyvRawResult<T | undefined>);
+			values.push(data as KeyvStorageGetResult<T | undefined>);
 		}
 
 		return values;

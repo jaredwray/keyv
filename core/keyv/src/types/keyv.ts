@@ -145,9 +145,6 @@ export type KeyvEntry<Value = any> = {
 	ttl?: number;
 };
 
-/** The raw `KeyvValue` envelope returned by `getRaw()`, or `undefined` if not found. */
-export type KeyvRawResult<Value> = KeyvValue<Value> | undefined;
-
 /**
  * Configuration options for the Keyv constructor.
  */

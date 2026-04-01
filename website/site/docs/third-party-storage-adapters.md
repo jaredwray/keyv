@@ -63,7 +63,7 @@ We review pull requests regularly and appreciate your contributions to the Keyv 
 To build a storage adapter for Keyv, you need to implement the `KeyvStoreAdapter` interface. Here's the complete type definition:
 
 ```typescript
-type KeyvRawResult<Value> = { value?: Value; expires?: number } | undefined;
+type KeyvStorageGetResult<Value> = { value?: Value; expires?: number } | undefined;
 
 type IEventEmitter = {
   on(event: string, listener: (...args: any[]) => void): IEventEmitter;
@@ -73,7 +73,7 @@ type KeyvStoreAdapter = {
   namespace?: string | undefined;
 
   // Required methods
-  get<Value>(key: string): Promise<KeyvRawResult<Value> | undefined>;
+  get<Value>(key: string): Promise<KeyvStorageGetResult<Value> | undefined>;
   set(key: string, value: any, ttl?: number): any;
   delete(key: string): Promise<boolean>;
   clear(): Promise<void>;
@@ -82,7 +82,7 @@ type KeyvStoreAdapter = {
   setMany?(values: Array<{ key: string; value: any; ttl?: number }>): Promise<boolean[] | undefined>;
   has?(key: string): Promise<boolean>;
   hasMany?(keys: string[]): Promise<boolean[]>;
-  getMany?<Value>(keys: string[]): Promise<Array<KeyvRawResult<Value | undefined>>>;
+  getMany?<Value>(keys: string[]): Promise<Array<KeyvStorageGetResult<Value | undefined>>>;
   disconnect?(): Promise<void>;
   deleteMany?(key: string[]): Promise<boolean[]>;
   iterator?<Value>(namespace?: string): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;
@@ -116,7 +116,7 @@ Here's a minimal example of a custom storage adapter using an in-memory Map:
 
 ```typescript
 import { EventEmitter } from 'events';
-import type { KeyvStoreAdapter, KeyvRawResult } from 'keyv';
+import type { KeyvStoreAdapter, KeyvStorageGetResult } from 'keyv';
 
 interface CacheItem {
   value: any;
@@ -133,7 +133,7 @@ class MyCustomStore extends EventEmitter implements KeyvStoreAdapter {
     this.namespace = options.namespace;
   }
 
-  async get<Value>(key: string): Promise<KeyvRawResult<Value> | undefined> {
+  async get<Value>(key: string): Promise<KeyvStorageGetResult<Value> | undefined> {
     const data = this.store.get(key);
 
     if (!data) {
@@ -146,7 +146,7 @@ class MyCustomStore extends EventEmitter implements KeyvStoreAdapter {
       return undefined;
     }
 
-    return data as KeyvRawResult<Value>;
+    return data as KeyvStorageGetResult<Value>;
   }
 
   async set(key: string, value: any, ttl?: number): Promise<boolean> {
@@ -167,8 +167,8 @@ class MyCustomStore extends EventEmitter implements KeyvStoreAdapter {
   }
 
   // Optional: Implement batch operations for better performance
-  async getMany<Value>(keys: string[]): Promise<Array<KeyvRawResult<Value | undefined>>> {
-    const values: Array<KeyvRawResult<Value | undefined>> = [];
+  async getMany<Value>(keys: string[]): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
+    const values: Array<KeyvStorageGetResult<Value | undefined>> = [];
     for (const key of keys) {
       values.push(await this.get<Value>(key));
     }

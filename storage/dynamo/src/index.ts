@@ -19,7 +19,7 @@ import {
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { Hookified } from "hookified";
-import { Keyv, type KeyvEntry, type KeyvRawResult, type KeyvStorageAdapter } from "keyv";
+import { Keyv, type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
 
 export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	private _sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
@@ -283,7 +283,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to retrieve
 	 * @returns The stored value, or `undefined` if the key does not exist.
 	 */
-	public async get<Value>(key: string): Promise<KeyvRawResult<Value>> {
+	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		try {
 			await this._tableReady;
 
@@ -295,21 +295,21 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			};
 			const { Item } = await this._client.get(getInput);
 			if (!Item) {
-				return undefined as KeyvRawResult<Value>;
+				return undefined as KeyvStorageGetResult<Value>;
 			}
 
 			// expiresAt includes a +1s buffer for DynamoDB's native TTL, so subtract 1 for accurate check
 			const nowInSeconds = Math.floor(Date.now() / 1000);
 			if (typeof Item.expiresAt === "number" && Item.expiresAt - 1 <= nowInSeconds) {
 				await this.delete(key);
-				return undefined as KeyvRawResult<Value>;
+				return undefined as KeyvStorageGetResult<Value>;
 			}
 
-			return Item.value as KeyvRawResult<Value>;
+			return Item.value as KeyvStorageGetResult<Value>;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
-			return undefined as KeyvRawResult<Value>;
+			return undefined as KeyvStorageGetResult<Value>;
 		}
 		/* v8 ignore stop -- @preserve */
 	}
@@ -319,7 +319,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - An array of keys to retrieve
 	 * @returns An array of stored data corresponding to each key.
 	 */
-	public async getMany<Value>(keys: string[]): Promise<Array<KeyvRawResult<Value | undefined>>> {
+	public async getMany<Value>(
+		keys: string[],
+	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
 		try {
 			await this._tableReady;
 
@@ -356,15 +358,15 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			const results = formattedKeys.map((key) => {
 				const item = itemMap.get(key);
 				if (!item) {
-					return undefined as KeyvRawResult<Value>;
+					return undefined as KeyvStorageGetResult<Value>;
 				}
 
 				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
 					expiredKeys.push(key);
-					return undefined as KeyvRawResult<Value>;
+					return undefined as KeyvStorageGetResult<Value>;
 				}
 
-				return item.value as KeyvRawResult<Value>;
+				return item.value as KeyvStorageGetResult<Value>;
 			});
 
 			// Delete expired entries
@@ -376,7 +378,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
-			return keys.map(() => undefined as KeyvRawResult<Value>);
+			return keys.map(() => undefined as KeyvStorageGetResult<Value>);
 		}
 		/* v8 ignore stop -- @preserve */
 	}

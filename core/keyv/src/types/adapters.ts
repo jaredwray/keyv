@@ -1,6 +1,6 @@
 import type { IEventEmitter } from "hookified";
 import type { KeyvStorageCapability } from "../capabilities.js";
-import type { KeyvEntry, KeyvRawResult } from "./keyv.js";
+import type { KeyvEntry, KeyvValue } from "./keyv.js";
 
 /**
  * Adapter interface for custom serialization.
@@ -35,6 +35,8 @@ export type KeyvEncryptionAdapter = {
 	decrypt: (data: string) => string | Promise<string>;
 };
 
+export type KeyvStorageGetResult<Value> = KeyvValue<Value> | string | undefined;
+
 /**
  * Interface that all Keyv storage adapters must implement.
  * Adapters handle the actual persistence of key-value pairs.
@@ -45,7 +47,7 @@ export type KeyvStorageAdapter = {
 	/** Detected capabilities of the underlying store. */
 	capabilities?: KeyvStorageCapability;
 	/** Retrieves a value by key. */
-	get<Value>(key: string): Promise<KeyvRawResult<Value>>;
+	get<Value>(key: string): Promise<KeyvStorageGetResult<Value>>;
 	/** Stores a value with a key and optional TTL in milliseconds. */
 	set(key: string, value: unknown, ttl?: number): Promise<boolean>;
 	/** Stores multiple entries at once. */
@@ -59,7 +61,7 @@ export type KeyvStorageAdapter = {
 	/** Checks if multiple keys exist in the store. */
 	hasMany(keys: string[]): Promise<boolean[]>;
 	/** Retrieves multiple values by keys. */
-	getMany<Value>(keys: string[]): Promise<Array<KeyvRawResult<Value | undefined>>>;
+	getMany<Value>(keys: string[]): Promise<Array<KeyvStorageGetResult<Value | undefined>>>;
 	/** Disconnects from the store and releases resources. */
 	disconnect?(): Promise<void>;
 	/** Deletes multiple keys from the store. */

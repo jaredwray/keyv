@@ -1,6 +1,6 @@
 import { Etcd3, type Lease } from "etcd3";
 import { Hookified } from "hookified";
-import { Keyv, type KeyvEntry, type KeyvRawResult } from "keyv";
+import { Keyv, type KeyvEntry, type KeyvStorageGetResult } from "keyv";
 import type { ClearOutput, DeleteOutput, GetOutput, HasOutput } from "./types.js";
 
 /**
@@ -299,21 +299,21 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * @param keys - An array of keys to retrieve
 	 * @returns An array of stored data corresponding to each key.
 	 */
-	public async getMany(keys: string[]): Promise<Array<KeyvRawResult<GenericValue>>> {
+	public async getMany(keys: string[]): Promise<Array<KeyvStorageGetResult<GenericValue>>> {
 		const promises = [];
 		for (const key of keys) {
 			promises.push(this.get(key));
 		}
 
 		return Promise.allSettled(promises).then((values) => {
-			const data: Array<KeyvRawResult<GenericValue>> = [];
+			const data: Array<KeyvStorageGetResult<GenericValue>> = [];
 			for (const value of values) {
 				// @ts-expect-error - value is an object
 				if (value.value === null) {
 					data.push(undefined);
 				} else {
 					// @ts-expect-error - value is an object
-					data.push(value.value as KeyvRawResult<GenericValue>);
+					data.push(value.value as KeyvStorageGetResult<GenericValue>);
 				}
 			}
 
