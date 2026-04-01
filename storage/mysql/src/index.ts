@@ -1,5 +1,5 @@
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
 import mysql, { type ConnectionOptions } from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
@@ -326,16 +326,16 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
 		if (row === undefined) {
-			return undefined as StoredData<Value>;
+			return undefined as KeyvStorageGetResult<Value>;
 		}
 
 		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
 			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
 			await this.query(mysql.format(delSql, [strippedKey, ns]));
-			return undefined as StoredData<Value>;
+			return undefined as KeyvStorageGetResult<Value>;
 		}
 
-		return row.value as StoredData<Value>;
+		return row.value as KeyvStorageGetResult<Value>;
 	}
 
 	/**
@@ -352,13 +352,13 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 
-		const validMap = new Map<string, StoredData<Value>>();
+		const validMap = new Map<string, KeyvStorageGetResult<Value>>();
 		const expiredKeys: string[] = [];
 		for (const row of rows) {
 			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
 				expiredKeys.push(row.id as string);
 			} else {
-				validMap.set(row.id as string, row.value as StoredData<Value>);
+				validMap.set(row.id as string, row.value as KeyvStorageGetResult<Value>);
 			}
 		}
 
@@ -367,7 +367,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			await this.query(mysql.format(delSql, [expiredKeys, ns]));
 		}
 
-		return strippedKeys.map((key) => validMap.get(key) as StoredData<Value | undefined>);
+		return strippedKeys.map((key) => validMap.get(key) as KeyvStorageGetResult<Value | undefined>);
 	}
 
 	/**

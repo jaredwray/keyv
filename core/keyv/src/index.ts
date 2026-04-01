@@ -33,6 +33,7 @@ export type {
 	KeyvEncryptionAdapter,
 	KeyvSerializationAdapter,
 	KeyvStorageAdapter,
+	KeyvStorageGetResult,
 	KeyvStoreAdapter,
 } from "./types/adapters.js";
 export type {
@@ -41,8 +42,5 @@ export type {
 	KeyvMapAny,
 	KeyvOptions,
 	KeyvValue,
-	StoredData,
-	StoredDataNoRaw,
-	StoredDataRaw,
 } from "./types/keyv.js";
 export { KeyvEvents, KeyvHooks } from "./types/keyv.js";

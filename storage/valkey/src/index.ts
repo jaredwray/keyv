@@ -1,7 +1,7 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type StoredData } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 /**
@@ -150,9 +150,9 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * The key is resolved through the namespace prefix before querying.
 	 * @template Value - The type of the stored value.
 	 * @param {string} key - The key to look up.
-	 * @returns {Promise<StoredData<Value> | undefined>} The stored data if found, or `undefined` if the key does not exist.
+	 * @returns {Promise<KeyvStorageGetResult<Value>>} The stored data if found, or `undefined` if the key does not exist.
 	 */
-	public async get<Value>(key: string): Promise<StoredData<Value> | undefined> {
+	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		key = this.getKeyName(key);
 
 		const value = await this._client.get(key);
@@ -169,15 +169,17 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * is fetched with a separate `MGET` command. In standalone mode, a single `MGET` is used.
 	 * @template Value - The type of the stored values.
 	 * @param {string[]} keys - An array of keys to look up.
-	 * @returns {Promise<Array<StoredData<Value | undefined>>>} An array of stored data in the same order as the input keys.
+	 * @returns {Promise<Array<KeyvStorageGetResult<Value | undefined>>>} An array of stored data in the same order as the input keys.
 	 *   Each element is the stored value or `undefined` if the corresponding key does not exist.
 	 */
-	public async getMany<Value>(keys: string[]): Promise<Array<StoredData<Value | undefined>>> {
+	public async getMany<Value>(
+		keys: string[],
+	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
 		const resolvedKeys = keys.map((key) => this.getKeyName(key));
 
 		if (this.isCluster()) {
 			const slotMap = this.getSlotMap(resolvedKeys);
-			const resultMap = new Map<string, StoredData<Value | undefined>>();
+			const resultMap = new Map<string, KeyvStorageGetResult<Value | undefined>>();
 
 			await Promise.all(
 				Array.from(slotMap.values(), async (slotKeys) => {
@@ -188,7 +190,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				}),
 			);
 
-			return resolvedKeys.map((k) => resultMap.get(k) as StoredData<Value | undefined>);
+			return resolvedKeys.map((k) => resultMap.get(k) as KeyvStorageGetResult<Value | undefined>);
 		}
 
 		return this._client.mget(resolvedKeys);

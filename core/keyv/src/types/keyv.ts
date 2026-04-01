@@ -6,15 +6,6 @@ import type {
 	KeyvStorageAdapter,
 } from "./adapters.js";
 
-export type {
-	KeyvCompression,
-	KeyvCompressionAdapter,
-	KeyvEncryptionAdapter,
-	KeyvSerializationAdapter,
-	KeyvStorageAdapter,
-	KeyvStoreAdapter,
-} from "./adapters.js";
-
 /**
  * A Map or any Map-like object. Used as a flexible input type for stores.
  */
@@ -153,21 +144,6 @@ export type KeyvEntry<Value = any> = {
 	 */
 	ttl?: number;
 };
-
-/** The unwrapped value returned by `get()`, or `undefined` if not found. */
-export type StoredDataNoRaw<Value> = Value | undefined;
-
-/** The raw `KeyvValue` envelope returned by `getRaw()`, or `undefined` if not found. */
-export type StoredDataRaw<Value> = KeyvValue<Value> | undefined;
-
-/** Union of raw and unwrapped stored data types. */
-export type StoredData<Value> = StoredDataNoRaw<Value> | StoredDataRaw<Value>;
-
-export type {
-	KeyvSanitizeAdapter,
-	KeyvSanitizeOptions,
-	KeyvSanitizePatterns,
-} from "../sanitize.js";
 
 /**
  * Configuration options for the Keyv constructor.

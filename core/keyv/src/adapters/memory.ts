@@ -2,12 +2,8 @@
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import { Keyv } from "../keyv.js";
-import {
-	type KeyvEntry,
-	KeyvEvents,
-	type KeyvStorageAdapter,
-	type StoredData,
-} from "../types/keyv.js";
+import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
+import { type KeyvEntry, KeyvEvents } from "../types/keyv.js";
 
 /**
  * Internal wrapper for values stored in the memory adapter.
@@ -190,7 +186,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to retrieve
 	 * @returns The stored data, or undefined if not found or expired
 	 */
-	public async get<T>(key: string): Promise<StoredData<T> | undefined> {
+	public async get<T>(key: string): Promise<KeyvStorageGetResult<T>> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
 		if (entry === undefined || entry === null) {
@@ -202,7 +198,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
-		return entry.value as T;
+		return entry.value as KeyvStorageGetResult<T>;
 	}
 
 	/**
@@ -314,23 +310,23 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param keys - Array of keys to retrieve
 	 * @returns Array of stored data in the same order as the input keys
 	 */
-	public async getMany<T>(keys: string[]): Promise<Array<StoredData<T | undefined>>> {
-		const values: Array<StoredData<T | undefined>> = [];
+	public async getMany<T>(keys: string[]): Promise<Array<KeyvStorageGetResult<T | undefined>>> {
+		const values: Array<KeyvStorageGetResult<T | undefined>> = [];
 		for (const key of keys) {
 			const keyPrefix = this.getKeyPrefix(key, this._namespace);
 			const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
 			if (entry === undefined || entry === null) {
-				values.push(undefined as StoredData<T | undefined>);
+				values.push(undefined as KeyvStorageGetResult<T | undefined>);
 				continue;
 			}
 
 			if (entry.expires !== undefined && Date.now() > entry.expires) {
 				this._store.delete(keyPrefix);
-				values.push(undefined as StoredData<T | undefined>);
+				values.push(undefined as KeyvStorageGetResult<T | undefined>);
 				continue;
 			}
 
-			values.push(entry.value as StoredData<T | undefined>);
+			values.push(entry.value as KeyvStorageGetResult<T | undefined>);
 		}
 
 		return values;

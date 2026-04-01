@@ -1,5 +1,5 @@
 import { Hookified } from "hookified";
-import type { KeyvEntry, KeyvStorageAdapter, StoredData } from "keyv";
+import type { KeyvEntry, KeyvStorageAdapter, KeyvStorageGetResult } from "keyv";
 import { Keyv } from "keyv";
 import { Memcache, type MemcacheOptions } from "memcache";
 
@@ -135,7 +135,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to retrieve
 	 * @returns The stored data, or undefined if the key does not exist or is expired
 	 */
-	async get<Value>(key: string): Promise<StoredData<Value>> {
+	async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		try {
 			const raw = await this.client.get(this.formatKey(key));
 			if (raw === undefined) {
@@ -148,7 +148,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 				return undefined;
 			}
 
-			return value as StoredData<Value>;
+			return value as KeyvStorageGetResult<Value>;
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -168,10 +168,10 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return Promise.allSettled(promises).then((values) => {
-			const data: Array<StoredData<Value>> = [];
+			const data: Array<KeyvStorageGetResult<Value>> = [];
 			for (const value of values) {
 				// @ts-expect-error - value is an object
-				data.push(value.value as StoredData<Value>);
+				data.push(value.value as KeyvStorageGetResult<Value>);
 			}
 
 			return data;

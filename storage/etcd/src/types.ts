@@ -1,10 +1,10 @@
-import type { StoredData } from "keyv";
+import type { KeyvStorageGetResult } from "keyv";
 
 /** Resolves to the stored value, or `undefined` if the key does not exist. */
 export type GetOutput<Value> = Promise<Value | undefined>;
 
 /** Resolves to an array of stored data corresponding to each requested key. */
-export type GetManyOutput<Value> = Promise<Array<StoredData<Value | undefined> | undefined>>;
+export type GetManyOutput<Value> = Promise<Array<KeyvStorageGetResult<Value | undefined>>>;
 
 /** Resolves to `true` if the value was stored, `false` otherwise. */
 export type SetOutput = Promise<boolean>;
