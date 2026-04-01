@@ -7,28 +7,29 @@ export type KeyvStorageMethod = {
 
 // --- Keyv (full interface) ---
 
-export type KeyvMethods = {
-	get: KeyvStorageMethod;
-	set: KeyvStorageMethod;
-	delete: KeyvStorageMethod;
-	clear: KeyvStorageMethod;
-	has: KeyvStorageMethod;
-	getMany: KeyvStorageMethod;
-	setMany: KeyvStorageMethod;
-	deleteMany: KeyvStorageMethod;
-	hasMany: KeyvStorageMethod;
-	disconnect: KeyvStorageMethod;
-	getRaw: KeyvStorageMethod;
-	getManyRaw: KeyvStorageMethod;
-	setRaw: KeyvStorageMethod;
-	setManyRaw: KeyvStorageMethod;
-	iterator: KeyvStorageMethod;
-};
+const keyvMethodNames = [
+	"get",
+	"set",
+	"delete",
+	"clear",
+	"has",
+	"getMany",
+	"setMany",
+	"deleteMany",
+	"hasMany",
+	"disconnect",
+	"getRaw",
+	"getManyRaw",
+	"setRaw",
+	"setManyRaw",
+	"iterator",
+] as const;
 
-export type KeyvProperties = {
-	hooks: boolean;
-	stats: boolean;
-};
+const keyvPropertyNames = ["hooks", "stats"] as const;
+
+export type KeyvMethods = Record<(typeof keyvMethodNames)[number], KeyvStorageMethod>;
+
+export type KeyvProperties = Record<(typeof keyvPropertyNames)[number], boolean>;
 
 export type KeyvCapability = {
 	compatible: boolean;
@@ -38,19 +39,21 @@ export type KeyvCapability = {
 
 // --- Storage adapter ---
 
-export type KeyvStorageMethods = {
-	get: KeyvStorageMethod;
-	getMany: KeyvStorageMethod;
-	has: KeyvStorageMethod;
-	hasMany: KeyvStorageMethod;
-	set: KeyvStorageMethod;
-	setMany: KeyvStorageMethod;
-	delete: KeyvStorageMethod;
-	deleteMany: KeyvStorageMethod;
-	clear: KeyvStorageMethod;
-	disconnect: KeyvStorageMethod;
-	iterator: KeyvStorageMethod;
-};
+const keyvStorageMethodNames = [
+	"get",
+	"getMany",
+	"has",
+	"hasMany",
+	"set",
+	"setMany",
+	"delete",
+	"deleteMany",
+	"clear",
+	"disconnect",
+	"iterator",
+] as const;
+
+export type KeyvStorageMethods = Record<(typeof keyvStorageMethodNames)[number], KeyvStorageMethod>;
 
 export type KeyvStorageCapability = {
 	compatible: boolean;
@@ -60,10 +63,12 @@ export type KeyvStorageCapability = {
 
 // --- Compression adapter ---
 
-export type KeyvCompressionMethods = {
-	compress: KeyvStorageMethod;
-	decompress: KeyvStorageMethod;
-};
+const keyvCompressionMethodNames = ["compress", "decompress"] as const;
+
+export type KeyvCompressionMethods = Record<
+	(typeof keyvCompressionMethodNames)[number],
+	KeyvStorageMethod
+>;
 
 export type KeyvCompressionCapability = {
 	compatible: boolean;
@@ -72,10 +77,12 @@ export type KeyvCompressionCapability = {
 
 // --- Serialization adapter ---
 
-export type KeyvSerializationMethods = {
-	stringify: KeyvStorageMethod;
-	parse: KeyvStorageMethod;
-};
+const keyvSerializationMethodNames = ["stringify", "parse"] as const;
+
+export type KeyvSerializationMethods = Record<
+	(typeof keyvSerializationMethodNames)[number],
+	KeyvStorageMethod
+>;
 
 export type KeyvSerializationCapability = {
 	compatible: boolean;
@@ -84,10 +91,12 @@ export type KeyvSerializationCapability = {
 
 // --- Encryption adapter ---
 
-export type KeyvEncryptionMethods = {
-	encrypt: KeyvStorageMethod;
-	decrypt: KeyvStorageMethod;
-};
+const keyvEncryptionMethodNames = ["encrypt", "decrypt"] as const;
+
+export type KeyvEncryptionMethods = Record<
+	(typeof keyvEncryptionMethodNames)[number],
+	KeyvStorageMethod
+>;
 
 export type KeyvEncryptionCapability = {
 	compatible: boolean;
@@ -128,7 +137,7 @@ const noneMethod: KeyvStorageMethod = { exists: false, methodType: "none" };
 
 function buildMethods<T extends Record<string, KeyvStorageMethod>>(
 	obj: object | null,
-	names: readonly string[],
+	names: readonly (keyof T & string)[],
 ): T {
 	const methods = {} as Record<string, KeyvStorageMethod>;
 	for (const name of names) {
@@ -159,39 +168,19 @@ function buildMethods<T extends Record<string, KeyvStorageMethod>>(
  * ```
  */
 export function detectKeyv(obj: unknown): KeyvCapability {
-	const methodNames = [
-		"get",
-		"set",
-		"delete",
-		"clear",
-		"has",
-		"getMany",
-		"setMany",
-		"deleteMany",
-		"hasMany",
-		"disconnect",
-		"getRaw",
-		"getManyRaw",
-		"setRaw",
-		"setManyRaw",
-		"iterator",
-	] as const;
-
-	const propertyNames = ["hooks", "stats"] as const;
-
 	if (obj === null || obj === undefined || typeof obj !== "object") {
-		const methods = buildMethods<KeyvMethods>(null, methodNames);
+		const methods = buildMethods<KeyvMethods>(null, keyvMethodNames);
 		const properties: KeyvProperties = { hooks: false, stats: false };
 		return { compatible: false, methods, properties };
 	}
 
-	const methods = buildMethods<KeyvMethods>(obj, methodNames);
+	const methods = buildMethods<KeyvMethods>(obj, keyvMethodNames);
 	const properties: KeyvProperties = {
 		hooks: isProperty(obj, "hooks"),
 		stats: isProperty(obj, "stats"),
 	};
 
-	const allRequired = [...methodNames, ...propertyNames] as const;
+	const allRequired = [...keyvMethodNames, ...keyvPropertyNames] as const;
 	const compatible = allRequired.every((k) => {
 		if (k === "hooks" || k === "stats") {
 			return properties[k];
@@ -227,29 +216,15 @@ export function detectKeyv(obj: unknown): KeyvCapability {
  * ```
  */
 export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
-	const methodNames = [
-		"get",
-		"set",
-		"delete",
-		"clear",
-		"has",
-		"getMany",
-		"setMany",
-		"deleteMany",
-		"hasMany",
-		"disconnect",
-		"iterator",
-	] as const;
-
 	if (obj === null || obj === undefined || typeof obj !== "object") {
 		return {
 			compatible: false,
 			store: "none",
-			methods: buildMethods<KeyvStorageMethods>(null, methodNames),
+			methods: buildMethods<KeyvStorageMethods>(null, keyvStorageMethodNames),
 		};
 	}
 
-	const methods = buildMethods<KeyvStorageMethods>(obj, methodNames);
+	const methods = buildMethods<KeyvStorageMethods>(obj, keyvStorageMethodNames);
 
 	// keyvStorage: all required methods present and async
 	const requiredKeys: Array<keyof KeyvStorageMethods> = [
@@ -304,14 +279,15 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
  * ```
  */
 export function detectKeyvCompression(obj: unknown): KeyvCompressionCapability {
-	const methodNames = ["compress", "decompress"] as const;
-
 	if (obj === null || obj === undefined || typeof obj !== "object") {
-		return { compatible: false, methods: buildMethods<KeyvCompressionMethods>(null, methodNames) };
+		return {
+			compatible: false,
+			methods: buildMethods<KeyvCompressionMethods>(null, keyvCompressionMethodNames),
+		};
 	}
 
-	const methods = buildMethods<KeyvCompressionMethods>(obj, methodNames);
-	const compatible = methodNames.every((k) => methods[k].exists);
+	const methods = buildMethods<KeyvCompressionMethods>(obj, keyvCompressionMethodNames);
+	const compatible = keyvCompressionMethodNames.every((k) => methods[k].exists);
 	return { compatible, methods };
 }
 
@@ -328,17 +304,15 @@ export function detectKeyvCompression(obj: unknown): KeyvCompressionCapability {
  * ```
  */
 export function detectKeyvSerialization(obj: unknown): KeyvSerializationCapability {
-	const methodNames = ["stringify", "parse"] as const;
-
 	if (obj === null || obj === undefined || typeof obj !== "object") {
 		return {
 			compatible: false,
-			methods: buildMethods<KeyvSerializationMethods>(null, methodNames),
+			methods: buildMethods<KeyvSerializationMethods>(null, keyvSerializationMethodNames),
 		};
 	}
 
-	const methods = buildMethods<KeyvSerializationMethods>(obj, methodNames);
-	const compatible = methodNames.every((k) => methods[k].exists);
+	const methods = buildMethods<KeyvSerializationMethods>(obj, keyvSerializationMethodNames);
+	const compatible = keyvSerializationMethodNames.every((k) => methods[k].exists);
 	return { compatible, methods };
 }
 
@@ -355,13 +329,14 @@ export function detectKeyvSerialization(obj: unknown): KeyvSerializationCapabili
  * ```
  */
 export function detectKeyvEncryption(obj: unknown): KeyvEncryptionCapability {
-	const methodNames = ["encrypt", "decrypt"] as const;
-
 	if (obj === null || obj === undefined || typeof obj !== "object") {
-		return { compatible: false, methods: buildMethods<KeyvEncryptionMethods>(null, methodNames) };
+		return {
+			compatible: false,
+			methods: buildMethods<KeyvEncryptionMethods>(null, keyvEncryptionMethodNames),
+		};
 	}
 
-	const methods = buildMethods<KeyvEncryptionMethods>(obj, methodNames);
-	const compatible = methodNames.every((k) => methods[k].exists);
+	const methods = buildMethods<KeyvEncryptionMethods>(obj, keyvEncryptionMethodNames);
+	const compatible = keyvEncryptionMethodNames.every((k) => methods[k].exists);
 	return { compatible, methods };
 }
