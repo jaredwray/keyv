@@ -667,6 +667,30 @@ it("hasMany returns false for expired keys and deletes them", async (t) => {
 	t.expect(await keyv.get(expiredKey2)).toBeUndefined();
 });
 
+it("setMany with empty array returns empty array", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const result = await keyv.setMany([]);
+	t.expect(result).toEqual([]);
+});
+
+it("hasMany with empty array returns empty array", async (t) => {
+	const keyv = new KeyvMysql(uri);
+	const result = await keyv.hasMany([]);
+	t.expect(result).toEqual([]);
+});
+
+it("iterator on empty namespace yields nothing", async (t) => {
+	const ns = faker.string.alphanumeric(8);
+	const keyv = new KeyvMysql({ uri });
+	keyv.namespace = ns;
+	const collected: Array<[string, string]> = [];
+	for await (const entry of keyv.iterator()) {
+		collected.push(entry as [string, string]);
+	}
+
+	t.expect(collected.length).toBe(0);
+});
+
 it("createKeyv with options object returns a Keyv instance", async (t) => {
 	const keyv = createKeyv({ uri, table: "keyv" });
 	t.expect(keyv).toBeInstanceOf(Keyv);
