@@ -1,21 +1,22 @@
 import { faker } from "@faker-js/faker";
-import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import * as test from "vitest";
+import { beforeEach, it } from "vitest";
 import KeyvPostgres, { createKeyv } from "../src/index.js";
 
 const postgresUri = "postgresql://postgres:postgres@localhost:5432/keyv_test";
 
 const store = () => new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
+keyvTestSuite(it, Keyv, store);
+keyvIteratorTests(it, Keyv, store);
+storageTestSuite(it, store, { ttl: false });
 
-test.beforeEach(async () => {
+beforeEach(async () => {
 	const keyv = store();
 	await keyv.clear();
 });
 
-test.it("should be able to pass in just uri as string", async (t) => {
+it("should be able to pass in just uri as string", async (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
 	const key = faker.string.alphanumeric(10);
 	const value = faker.lorem.sentence();
@@ -23,7 +24,7 @@ test.it("should be able to pass in just uri as string", async (t) => {
 	t.expect(await keyv.get(key)).toBe(value);
 });
 
-test.it("test schema as non public", async (t) => {
+it("test schema as non public", async (t) => {
 	const keyv1 = new KeyvPostgres({
 		uri: "postgresql://postgres:postgres@localhost:5432/keyv_test",
 		schema: "keyvtest1",
@@ -42,7 +43,7 @@ test.it("test schema as non public", async (t) => {
 	t.expect(await keyv2.get(key2)).toBe(value2);
 });
 
-test.it("iterator with default namespace", async (t) => {
+it("iterator with default namespace", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const key1 = faker.string.alphanumeric(10);
 	const value1 = faker.lorem.sentence();
@@ -69,12 +70,12 @@ test.it("iterator with default namespace", async (t) => {
 	t.expect(values).toContain(value3);
 });
 
-test.it(".clear() with undefined namespace", async (t) => {
+it(".clear() with undefined namespace", async (t) => {
 	const keyv = store();
 	t.expect(await keyv.clear()).toBeUndefined();
 });
 
-test.it("close connection successfully", async (t) => {
+it("close connection successfully", async (t) => {
 	const keyv = store();
 	const key = faker.string.alphanumeric(10);
 	t.expect(await keyv.get(key)).toBeUndefined();
@@ -87,7 +88,7 @@ test.it("close connection successfully", async (t) => {
 	}
 });
 
-test.it("create two instances and make sure they do not conflict", async (t) => {
+it("create two instances and make sure they do not conflict", async (t) => {
 	const postgresUri = "postgresql://postgres:postgres@localhost:5432/keyv_test";
 	const postgresA = new KeyvPostgres({ uri: postgresUri });
 	const postgresB = new KeyvPostgres({ uri: postgresUri });
@@ -110,7 +111,7 @@ test.it("create two instances and make sure they do not conflict", async (t) => 
 	t.expect(await keyvB.get(key)).toBe(valueB);
 });
 
-test.it("helper to create Keyv instance with postgres", async (t) => {
+it("helper to create Keyv instance with postgres", async (t) => {
 	const keyv = createKeyv({ uri: postgresUri });
 	const key = faker.string.alphanumeric(10);
 	const value = faker.lorem.sentence();
@@ -118,7 +119,7 @@ test.it("helper to create Keyv instance with postgres", async (t) => {
 	t.expect(await keyv.get(key)).toBe(value);
 });
 
-test.it("test unlogged table", async (t) => {
+it("test unlogged table", async (t) => {
 	const keyv = createKeyv({ uri: postgresUri, useUnloggedTable: true });
 	const key = faker.string.alphanumeric(10);
 	const value = faker.lorem.sentence();
@@ -126,7 +127,7 @@ test.it("test unlogged table", async (t) => {
 	t.expect(await keyv.get(key)).toBe(value);
 });
 
-test.it(".setMany support", async (t) => {
+it(".setMany support", async (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
 	const key1 = faker.string.alphanumeric(10);
 	const value1 = faker.lorem.sentence();
@@ -143,7 +144,7 @@ test.it(".setMany support", async (t) => {
 	t.expect(await keyv.getMany([key1, key2, key3])).toStrictEqual([value1, value2, value3]);
 });
 
-test.it(".hasMany() returns correct booleans for existing and non-existing keys", async (t) => {
+it(".hasMany() returns correct booleans for existing and non-existing keys", async (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
 	const key1 = faker.string.alphanumeric(10);
 	const value1 = faker.lorem.sentence();
@@ -156,13 +157,13 @@ test.it(".hasMany() returns correct booleans for existing and non-existing keys"
 	t.expect(result).toStrictEqual([true, true, false]);
 });
 
-test.it(".hasMany() with all non-existent keys returns all false", async (t) => {
+it(".hasMany() with all non-existent keys returns all false", async (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
 	const result = await keyv.hasMany(["nonexistent1", "nonexistent2", "nonexistent3"]);
 	t.expect(result).toStrictEqual([false, false, false]);
 });
 
-test.it("should have correct default property values", (t) => {
+it("should have correct default property values", (t) => {
 	const keyv = new KeyvPostgres();
 	t.expect(keyv.uri).toBe("postgresql://localhost:5432");
 	t.expect(keyv.table).toBe("keyv");
@@ -175,7 +176,7 @@ test.it("should have correct default property values", (t) => {
 	t.expect(keyv.namespace).toBeUndefined();
 });
 
-test.it("should set properties from constructor options", (t) => {
+it("should set properties from constructor options", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		table: "custom_table",
@@ -196,14 +197,14 @@ test.it("should set properties from constructor options", (t) => {
 	t.expect(keyv.ssl).toEqual({ rejectUnauthorized: false });
 });
 
-test.it("should set uri when string is passed to constructor", (t) => {
+it("should set uri when string is passed to constructor", (t) => {
 	const keyv = new KeyvPostgres(postgresUri);
 	t.expect(keyv.uri).toBe(postgresUri);
 	t.expect(keyv.table).toBe("keyv");
 	t.expect(keyv.schema).toBe("public");
 });
 
-test.it("should be able to get and set individual properties", (t) => {
+it("should be able to get and set individual properties", (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	keyv.table = "new_table";
 	t.expect(keyv.table).toBe("new_table");
@@ -227,7 +228,7 @@ test.it("should be able to get and set individual properties", (t) => {
 	t.expect(keyv.namespace).toBeUndefined();
 });
 
-test.it("property getters should return correct values", (t) => {
+it("property getters should return correct values", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		table: "opts_table",
@@ -241,7 +242,7 @@ test.it("property getters should return correct values", (t) => {
 	t.expect(keyv.useUnloggedTable).toBe(false);
 });
 
-test.it("property setters should update individual properties", (t) => {
+it("property setters should update individual properties", (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	keyv.table = "updated_table";
 	keyv.schema = "updated_schema";
@@ -252,7 +253,7 @@ test.it("property setters should update individual properties", (t) => {
 	t.expect(keyv.uri).toBe(postgresUri);
 });
 
-test.it("emits error when connection fails", async (t) => {
+it("emits error when connection fails", async (t) => {
 	const keyv = new KeyvPostgres({
 		uri: "postgresql://invalid:invalid@localhost:9999/nonexistent",
 	});
@@ -264,7 +265,7 @@ test.it("emits error when connection fails", async (t) => {
 	t.expect(error).toBeInstanceOf(Error);
 });
 
-test.it("native namespace: same key in different namespaces stored independently", async (t) => {
+it("native namespace: same key in different namespaces stored independently", async (t) => {
 	const postgres1 = new KeyvPostgres({ uri: postgresUri });
 	postgres1.namespace = "ns1";
 	const postgres2 = new KeyvPostgres({ uri: postgresUri });
@@ -277,13 +278,13 @@ test.it("native namespace: same key in different namespaces stored independently
 	t.expect(await postgres2.get("ns2:testkey")).toBe("value2");
 });
 
-test.it("native namespace: null namespace stores and retrieves correctly", async (t) => {
+it("native namespace: null namespace stores and retrieves correctly", async (t) => {
 	const postgres = new KeyvPostgres({ uri: postgresUri });
 	await postgres.set("testkey", "testvalue");
 	t.expect(await postgres.get("testkey")).toBe("testvalue");
 });
 
-test.it("native namespace: clear only clears the specified namespace", async (t) => {
+it("native namespace: clear only clears the specified namespace", async (t) => {
 	const postgres1 = new KeyvPostgres({ uri: postgresUri });
 	postgres1.namespace = "ns1";
 	const postgres2 = new KeyvPostgres({ uri: postgresUri });
@@ -298,24 +299,21 @@ test.it("native namespace: clear only clears the specified namespace", async (t)
 	t.expect(await postgres2.get("ns2:key1")).toBe("value2");
 });
 
-test.it(
-	"native namespace: iterator falls back to default limit when iterationLimit is 0",
-	async (t) => {
-		const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 0 });
-		postgres.namespace = "nslimit";
+it("native namespace: iterator falls back to default limit when iterationLimit is 0", async (t) => {
+	const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 0 });
+	postgres.namespace = "nslimit";
 
-		await postgres.set("a", "v1");
+	await postgres.set("a", "v1");
 
-		const keys: string[] = [];
-		for await (const [key] of postgres.iterator()) {
-			keys.push(key);
-		}
+	const keys: string[] = [];
+	for await (const [key] of postgres.iterator()) {
+		keys.push(key);
+	}
 
-		t.expect(keys).toContain("a");
-	},
-);
+	t.expect(keys).toContain("a");
+});
 
-test.it("native namespace: iterator with null namespace paginates correctly", async (t) => {
+it("native namespace: iterator with null namespace paginates correctly", async (t) => {
 	const postgres = new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
 
 	await postgres.set("a", "v1");
@@ -333,7 +331,7 @@ test.it("native namespace: iterator with null namespace paginates correctly", as
 	t.expect(keys).toContain("c");
 });
 
-test.it("native namespace: iterator only returns keys from correct namespace", async (t) => {
+it("native namespace: iterator only returns keys from correct namespace", async (t) => {
 	const postgres1 = new KeyvPostgres({ uri: postgresUri });
 	postgres1.namespace = "ns1";
 	const postgres2 = new KeyvPostgres({ uri: postgresUri });
@@ -353,7 +351,7 @@ test.it("native namespace: iterator only returns keys from correct namespace", a
 	t.expect(keys).toContain("key2");
 });
 
-test.it("set() extracts and stores expires in the expires column", async (t) => {
+it("set() extracts and stores expires in the expires column", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const expiresTimestamp = Date.now() + 60_000;
 	const serializedValue = JSON.stringify({
@@ -364,20 +362,20 @@ test.it("set() extracts and stores expires in the expires column", async (t) => 
 	t.expect(await keyv.get("expires-test-key")).toBe(serializedValue);
 });
 
-test.it("set() stores null expires when value has no expires field", async (t) => {
+it("set() stores null expires when value has no expires field", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const serializedValue = JSON.stringify({ value: "no-ttl-value" });
 	await keyv.set("no-expires-key", serializedValue);
 	t.expect(await keyv.get("no-expires-key")).toBe(serializedValue);
 });
 
-test.it("set() gracefully handles non-JSON string values", async (t) => {
+it("set() gracefully handles non-JSON string values", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	await keyv.set("plain-text-key", "not-json-at-all");
 	t.expect(await keyv.get("plain-text-key")).toBe("not-json-at-all");
 });
 
-test.it("set() updates expires column on upsert", async (t) => {
+it("set() updates expires column on upsert", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const expires1 = Date.now() + 60_000;
 	const expires2 = Date.now() + 120_000;
@@ -388,7 +386,7 @@ test.it("set() updates expires column on upsert", async (t) => {
 	);
 });
 
-test.it("setMany() extracts and stores expires for each entry", async (t) => {
+it("setMany() extracts and stores expires for each entry", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const expires1 = Date.now() + 60_000;
 	const expires2 = Date.now() + 120_000;
@@ -408,7 +406,7 @@ test.it("setMany() extracts and stores expires for each entry", async (t) => {
 	t.expect(await keyv.get("many-exp-3")).toBe(JSON.stringify({ value: "v3" }));
 });
 
-test.it("expires column is populated when using Keyv core with TTL", async (t) => {
+it("expires column is populated when using Keyv core with TTL", async (t) => {
 	const keyv = new Keyv({
 		store: new KeyvPostgres({ uri: postgresUri }),
 		ttl: 60_000,
@@ -418,7 +416,7 @@ test.it("expires column is populated when using Keyv core with TTL", async (t) =
 	t.expect(await keyv.get(key)).toBe("ttl-value");
 });
 
-test.it("set() handles object value with expires (serialization disabled)", async (t) => {
+it("set() handles object value with expires (serialization disabled)", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const expiresTimestamp = Date.now() + 60_000;
 	const objectValue = { value: "obj-test", expires: expiresTimestamp };
@@ -428,7 +426,7 @@ test.it("set() handles object value with expires (serialization disabled)", asyn
 	t.expect(result).toBeDefined();
 });
 
-test.it("set() handles object value without expires", async (t) => {
+it("set() handles object value without expires", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const objectValue = { value: "no-exp-obj" };
 	// biome-ignore lint/suspicious/noExplicitAny: testing non-string value path
@@ -437,7 +435,7 @@ test.it("set() handles object value without expires", async (t) => {
 	t.expect(result).toBeDefined();
 });
 
-test.it("set() handles null value for expires extraction", async (t) => {
+it("set() handles null value for expires extraction", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	// biome-ignore lint/suspicious/noExplicitAny: testing null value path
 	await keyv.set("null-val-key", null as any);
@@ -445,7 +443,7 @@ test.it("set() handles null value for expires extraction", async (t) => {
 	t.expect(result).toBeNull();
 });
 
-test.it("set() handles numeric value for expires extraction", async (t) => {
+it("set() handles numeric value for expires extraction", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	// biome-ignore lint/suspicious/noExplicitAny: testing numeric value path
 	await keyv.set("num-val-key", 12345 as any);
@@ -453,7 +451,7 @@ test.it("set() handles numeric value for expires extraction", async (t) => {
 	t.expect(result).toBe("12345");
 });
 
-test.it("clearExpired() removes expired entries and keeps valid ones", async (t) => {
+it("clearExpired() removes expired entries and keeps valid ones", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const pastExpires = Date.now() - 60_000;
 	const futureExpires = Date.now() + 60_000;
@@ -470,7 +468,7 @@ test.it("clearExpired() removes expired entries and keeps valid ones", async (t)
 	t.expect(await keyv.get("no-ttl-key")).toBe(JSON.stringify({ value: "forever" }));
 });
 
-test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
+it("clearExpired() is a no-op when no entries are expired", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const futureExpires = Date.now() + 60_000;
 	await keyv.set("still-valid", JSON.stringify({ value: "ok", expires: futureExpires }));
@@ -482,12 +480,12 @@ test.it("clearExpired() is a no-op when no entries are expired", async (t) => {
 	);
 });
 
-test.it("clearExpiredInterval defaults to 0 (disabled)", (t) => {
+it("clearExpiredInterval defaults to 0 (disabled)", (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	t.expect(keyv.clearExpiredInterval).toBe(0);
 });
 
-test.it("clearExpiredInterval can be set via constructor options", (t) => {
+it("clearExpiredInterval can be set via constructor options", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		clearExpiredInterval: 5000,
@@ -496,7 +494,7 @@ test.it("clearExpiredInterval can be set via constructor options", (t) => {
 	keyv.clearExpiredInterval = 0;
 });
 
-test.it("clearExpiredInterval getter and setter work", (t) => {
+it("clearExpiredInterval getter and setter work", (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	t.expect(keyv.clearExpiredInterval).toBe(0);
 	keyv.clearExpiredInterval = 3000;
@@ -504,7 +502,7 @@ test.it("clearExpiredInterval getter and setter work", (t) => {
 	keyv.clearExpiredInterval = 0;
 });
 
-test.it("clearExpiredInterval is accessible via property getter", (t) => {
+it("clearExpiredInterval is accessible via property getter", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		clearExpiredInterval: 10_000,
@@ -513,7 +511,7 @@ test.it("clearExpiredInterval is accessible via property getter", (t) => {
 	keyv.clearExpiredInterval = 0;
 });
 
-test.it("clearExpiredInterval automatically clears expired entries", async (t) => {
+it("clearExpiredInterval automatically clears expired entries", async (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		clearExpiredInterval: 100,
@@ -535,7 +533,7 @@ test.it("clearExpiredInterval automatically clears expired entries", async (t) =
 	keyv.clearExpiredInterval = 0;
 });
 
-test.it("disconnect stops the clearExpiredInterval timer", async (t) => {
+it("disconnect stops the clearExpiredInterval timer", async (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		clearExpiredInterval: 100,
@@ -546,7 +544,7 @@ test.it("disconnect stops the clearExpiredInterval timer", async (t) => {
 	t.expect(keyv.clearExpiredInterval).toBe(100);
 });
 
-test.it("setMany returns false entries on query error", async (t) => {
+it("setMany returns false entries on query error", async (t) => {
 	const store = new KeyvPostgres({ uri: postgresUri });
 	let emittedError = false;
 	store.on("error", () => {
@@ -562,19 +560,19 @@ test.it("setMany returns false entries on query error", async (t) => {
 	t.expect(emittedError).toBe(true);
 });
 
-test.it("has() returns true for an existing key", async (t) => {
+it("has() returns true for an existing key", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const key = faker.string.alphanumeric(10);
 	await keyv.set(key, "value");
 	t.expect(await keyv.has(key)).toBe(true);
 });
 
-test.it("has() returns false for a non-existing key", async (t) => {
+it("has() returns false for a non-existing key", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	t.expect(await keyv.has("nonexistent-key")).toBe(false);
 });
 
-test.it("has() returns correct result with namespace", async (t) => {
+it("has() returns correct result with namespace", async (t) => {
 	const keyv1 = new KeyvPostgres({ uri: postgresUri });
 	keyv1.namespace = "has-ns1";
 	const keyv2 = new KeyvPostgres({ uri: postgresUri });
@@ -587,7 +585,7 @@ test.it("has() returns correct result with namespace", async (t) => {
 	t.expect(await keyv2.has(key)).toBe(false);
 });
 
-test.it("has() returns true after set and false after delete", async (t) => {
+it("has() returns true after set and false after delete", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const key = faker.string.alphanumeric(10);
 	await keyv.set(key, "value");
@@ -596,7 +594,7 @@ test.it("has() returns true after set and false after delete", async (t) => {
 	t.expect(await keyv.has(key)).toBe(false);
 });
 
-test.it("has() returns false after clear", async (t) => {
+it("has() returns false after clear", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const key = faker.string.alphanumeric(10);
 	await keyv.set(key, "value");
@@ -605,7 +603,7 @@ test.it("has() returns false after clear", async (t) => {
 	t.expect(await keyv.has(key)).toBe(false);
 });
 
-test.it("has returns false and deletes expired key", async (t) => {
+it("has returns false and deletes expired key", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const key = faker.string.alphanumeric(10);
 	const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
@@ -615,7 +613,7 @@ test.it("has returns false and deletes expired key", async (t) => {
 	t.expect(await keyv.get(key)).toBeUndefined();
 });
 
-test.it("hasMany returns false for expired keys and deletes them", async (t) => {
+it("hasMany returns false for expired keys and deletes them", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri });
 	const expiredKey1 = faker.string.alphanumeric(10);
 	const expiredKey2 = faker.string.alphanumeric(10);
@@ -632,7 +630,7 @@ test.it("hasMany returns false for expired keys and deletes them", async (t) => 
 	t.expect(await keyv.get(expiredKey2)).toBeUndefined();
 });
 
-test.it("setting clearExpiredInterval to 0 stops an active timer", (t) => {
+it("setting clearExpiredInterval to 0 stops an active timer", (t) => {
 	const keyv = new KeyvPostgres({
 		uri: postgresUri,
 		clearExpiredInterval: 1000,

@@ -52,6 +52,7 @@
     "keyv": "workspace:^"
   },
   "devDependencies": {
+    "@keyv/test-suite": "workspace:^",
     "@biomejs/biome": "^2.3.13",
     "@vitest/coverage-v8": "^4.0.18",
     "rimraf": "^6.1.2",

@@ -1,9 +1,9 @@
 import { faker } from "@faker-js/faker";
 import Keyv from "keyv";
-import * as test from "vitest";
+import { it } from "vitest";
 import KeyvSqlite from "../src/index.js";
 
-test.it("Async Iterator with Keyv", async (t) => {
+it("Async Iterator with Keyv", async (t) => {
 	const store = new KeyvSqlite({
 		uri: "sqlite://test/testdb2.sqlite",
 		busyTimeout: 3000,
@@ -37,7 +37,7 @@ test.it("Async Iterator with Keyv", async (t) => {
 	}
 });
 
-test.it("Async Iterator with Keyv and no namespace", async (t) => {
+it("Async Iterator with Keyv and no namespace", async (t) => {
 	const store = new KeyvSqlite({
 		uri: "sqlite://test/testdb2.sqlite",
 		busyTimeout: 3000,

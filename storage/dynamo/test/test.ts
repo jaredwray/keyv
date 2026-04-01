@@ -2,9 +2,9 @@
 import process from "node:process";
 import { ResourceInUseException } from "@aws-sdk/client-dynamodb";
 import { faker } from "@faker-js/faker";
-import keyvTestSuite from "@keyv/test-suite";
+import { keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import * as test from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import KeyvDynamo, { createKeyv } from "../src/index.js";
 
 process.env.AWS_ACCESS_KEY_ID = "dummyAccessKeyId";
@@ -18,14 +18,15 @@ const keyvDynamodb = new KeyvDynamo({
 });
 const store = () => new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
 
-keyvTestSuite(test, Keyv, store);
+keyvTestSuite(it, Keyv, store);
+storageTestSuite(it, store, { iterator: false, ttl: false });
 
-test.beforeEach(async () => {
+beforeEach(async () => {
 	const keyv = store();
 	await keyv.clear();
 });
 
-test.it("should ensure table creation", async (t) => {
+it("should ensure table creation", async (t) => {
 	const store = new KeyvDynamo({
 		endpoint: dynamoURL,
 		tableName: faker.string.uuid(),
@@ -36,34 +37,34 @@ test.it("should ensure table creation", async (t) => {
 	await t.expect(store.get(key)).resolves.toBe(value);
 });
 
-test.it("should be able to create a keyv instance", (t) => {
+it("should be able to create a keyv instance", (t) => {
 	const keyv = new Keyv<string>({ store: keyvDynamodb });
 	t.expect((keyv.store as KeyvDynamo).endpoint).toEqual(dynamoURL);
 });
 
-test.it("should be able to create a keyv instance with namespace", (t) => {
+it("should be able to create a keyv instance with namespace", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: "test" });
 	t.expect(store.endpoint).toEqual(dynamoURL);
 	t.expect(store.namespace).toEqual("test");
 });
 
-test.it(".clear() entire cache store with default namespace", async (t) => {
+it(".clear() entire cache store with default namespace", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(await store.clear()).toBeUndefined();
 });
 
-test.it(".clear() entire cache store with namespace", async (t) => {
+it(".clear() entire cache store with namespace", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: "test" });
 	t.expect(await store.clear()).toBeUndefined();
 });
 
-test.it(".clear() an empty store should not fail", async () => {
+it(".clear() an empty store should not fail", async () => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	await store.clear();
 	await store.clear();
 });
 
-test.it("should emit error when not ResourceNotFoundException on ensureTable", async (t) => {
+it("should emit error when not ResourceNotFoundException on ensureTable", async (t) => {
 	const store = new KeyvDynamo({
 		endpoint: dynamoURL,
 		tableName: "invalid_table%&#@",
@@ -75,12 +76,12 @@ test.it("should emit error when not ResourceNotFoundException on ensureTable", a
 	await t.expect(expectedError).rejects.toThrow(Error);
 });
 
-test.it("should handle scan result with undefined Items", async (t) => {
+it("should handle scan result with undefined Items", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 
 	// Mock the scan method to return undefined Items
 	const originalScan = (store as any).client.scan;
-	(store as any).client.scan = test.vi.fn().mockResolvedValueOnce({
+	(store as any).client.scan = vi.fn().mockResolvedValueOnce({
 		Items: undefined,
 	});
 
@@ -88,7 +89,7 @@ test.it("should handle scan result with undefined Items", async (t) => {
 	(store as any).client.scan = originalScan;
 });
 
-test.it("should handle namespace filtering when namespace is undefined", async (t) => {
+it("should handle namespace filtering when namespace is undefined", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: undefined });
 
 	const key = faker.string.uuid();
@@ -98,33 +99,30 @@ test.it("should handle namespace filtering when namespace is undefined", async (
 	t.expect(await store.clear()).toBeUndefined();
 });
 
-test.it(
-	"should handle ResourceInUseException when table already exists (fallback to wait for table to be created)",
-	async (t) => {
-		const store = new KeyvDynamo({
-			endpoint: dynamoURL,
-			tableName: faker.string.uuid(),
-		});
+it("should handle ResourceInUseException when table already exists (fallback to wait for table to be created)", async (t) => {
+	const store = new KeyvDynamo({
+		endpoint: dynamoURL,
+		tableName: faker.string.uuid(),
+	});
 
-		const originalSend = (store as any).client.send;
-		(store as any).client.send = test.vi.fn().mockImplementation((command) => {
-			if (command.constructor.name === "CreateTableCommand") {
-				// Call CreateTableCommand twice to trigger the ResourceInUseException
-				originalSend.call((store as any).client, command).catch(() => {});
-			}
+	const originalSend = (store as any).client.send;
+	(store as any).client.send = vi.fn().mockImplementation((command) => {
+		if (command.constructor.name === "CreateTableCommand") {
+			// Call CreateTableCommand twice to trigger the ResourceInUseException
+			originalSend.call((store as any).client, command).catch(() => {});
+		}
 
-			return originalSend.call((store as any).client, command);
-		});
+		return originalSend.call((store as any).client, command);
+	});
 
-		const key = faker.string.uuid();
-		const value = faker.lorem.word();
-		await store.set(key, value);
-		(store as any).client.send = originalSend;
-		await t.expect(store.get(key)).resolves.toBe(value);
-	},
-);
+	const key = faker.string.uuid();
+	const value = faker.lorem.word();
+	await store.set(key, value);
+	(store as any).client.send = originalSend;
+	await t.expect(store.get(key)).resolves.toBe(value);
+});
 
-test.it("should wait for table when it exists but is not ACTIVE", async (t) => {
+it("should wait for table when it exists but is not ACTIVE", async (t) => {
 	const tableName = faker.string.uuid();
 
 	// First create a store and table
@@ -139,7 +137,7 @@ test.it("should wait for table when it exists but is not ACTIVE", async (t) => {
 	// Now test ensureTable directly with a mocked CREATING status
 	let describeCallCount = 0;
 	const originalSend = (store as any).client.send;
-	(store as any).client.send = test.vi.fn().mockImplementation(async (command) => {
+	(store as any).client.send = vi.fn().mockImplementation(async (command) => {
 		if (command.constructor.name === "DescribeTableCommand") {
 			describeCallCount++;
 			if (describeCallCount === 1) {
@@ -161,7 +159,7 @@ test.it("should wait for table when it exists but is not ACTIVE", async (t) => {
 	(store as any).client.send = originalSend;
 });
 
-test.it("should verify exposed client property", async (t) => {
+it("should verify exposed client property", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(store.client).toBeDefined();
 	t.expect(store.client).toHaveProperty("send");
@@ -173,50 +171,46 @@ test.it("should verify exposed client property", async (t) => {
 	t.expect(store.client).toHaveProperty("scan");
 });
 
-test.it(
-	"should handle ResourceInUseException and wait for table",
-	{ timeout: 10000 },
-	async (t) => {
-		const tableName = faker.string.uuid();
-		const store = new KeyvDynamo({
-			endpoint: dynamoURL,
-			tableName,
-		});
+it("should handle ResourceInUseException and wait for table", { timeout: 10000 }, async (t) => {
+	const tableName = faker.string.uuid();
+	const store = new KeyvDynamo({
+		endpoint: dynamoURL,
+		tableName,
+	});
 
-		// First create the table
-		const key1 = faker.string.uuid();
-		const value1 = faker.lorem.word();
-		await store.set(key1, value1);
+	// First create the table
+	const key1 = faker.string.uuid();
+	const value1 = faker.lorem.word();
+	await store.set(key1, value1);
 
-		// Now create another store instance that will hit ResourceInUseException
-		const store2 = new KeyvDynamo({
-			endpoint: dynamoURL,
-			tableName,
-		});
+	// Now create another store instance that will hit ResourceInUseException
+	const store2 = new KeyvDynamo({
+		endpoint: dynamoURL,
+		tableName,
+	});
 
-		const originalSend = (store2 as any).client.send;
-		let createTableCalled = false;
-		(store2 as any).client.send = test.vi.fn().mockImplementation(async (command) => {
-			if (command.constructor.name === "CreateTableCommand" && !createTableCalled) {
-				createTableCalled = true;
-				throw new ResourceInUseException({
-					message: "Table already being created",
-					$metadata: {},
-				});
-			}
-			return originalSend.call((store2 as any).client, command);
-		});
+	const originalSend = (store2 as any).client.send;
+	let createTableCalled = false;
+	(store2 as any).client.send = vi.fn().mockImplementation(async (command) => {
+		if (command.constructor.name === "CreateTableCommand" && !createTableCalled) {
+			createTableCalled = true;
+			throw new ResourceInUseException({
+				message: "Table already being created",
+				$metadata: {},
+			});
+		}
+		return originalSend.call((store2 as any).client, command);
+	});
 
-		// This should wait for the table to exist
-		const key2 = faker.string.uuid();
-		const value2 = faker.lorem.word();
-		await store2.set(key2, value2);
-		t.expect(await store2.get(key2)).toBe(value2);
-		(store2 as any).client.send = originalSend;
-	},
-);
+	// This should wait for the table to exist
+	const key2 = faker.string.uuid();
+	const value2 = faker.lorem.word();
+	await store2.set(key2, value2);
+	t.expect(await store2.get(key2)).toBe(value2);
+	(store2 as any).client.send = originalSend;
+});
 
-test.it("formatKey prefixes key and avoids double prefix", (t) => {
+it("formatKey prefixes key and avoids double prefix", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	store.namespace = "ns";
 	t.expect(store.formatKey("key")).toBe("ns:key");
@@ -225,30 +219,21 @@ test.it("formatKey prefixes key and avoids double prefix", (t) => {
 	t.expect(store.formatKey("key")).toBe("key");
 });
 
-test.it("createKeyPrefix returns prefixed key when namespace is set", (t) => {
+it("createKeyPrefix returns prefixed key when namespace is set", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
 	t.expect(store.createKeyPrefix("key")).toBe("key");
 	t.expect(store.createKeyPrefix("key", undefined)).toBe("key");
 });
 
-test.it("removeKeyPrefix strips prefix when namespace is set", (t) => {
+it("removeKeyPrefix strips prefix when namespace is set", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
 	t.expect(store.removeKeyPrefix("key")).toBe("key");
 	t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 });
 
-test.it("namespace getter and setter", (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	t.expect(store.namespace).toBeUndefined();
-	store.namespace = "test-ns";
-	t.expect(store.namespace).toBe("test-ns");
-	store.namespace = undefined;
-	t.expect(store.namespace).toBeUndefined();
-});
-
-test.it("keyPrefixSeparator getter and setter", (t) => {
+it("keyPrefixSeparator getter and setter", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(store.keyPrefixSeparator).toBe(":");
 	store.keyPrefixSeparator = "::";
@@ -256,7 +241,7 @@ test.it("keyPrefixSeparator getter and setter", (t) => {
 	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
 });
 
-test.it("client getter and setter", (t) => {
+it("client getter and setter", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	const originalClient = store.client;
 	t.expect(originalClient).toBeDefined();
@@ -265,14 +250,14 @@ test.it("client getter and setter", (t) => {
 	t.expect(store.client).toBe(newStore.client);
 });
 
-test.it("sixHoursInMilliseconds getter and setter", (t) => {
+it("sixHoursInMilliseconds getter and setter", (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	t.expect(store.sixHoursInMilliseconds).toBe(6 * 60 * 60 * 1000);
 	store.sixHoursInMilliseconds = 1000;
 	t.expect(store.sixHoursInMilliseconds).toBe(1000);
 });
 
-test.it("get/set with namespace", async (t) => {
+it("get/set with namespace", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -282,7 +267,7 @@ test.it("get/set with namespace", async (t) => {
 	t.expect(await store.get(key)).toBe(value);
 });
 
-test.it("delete with namespace", async (t) => {
+it("delete with namespace", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -292,45 +277,7 @@ test.it("delete with namespace", async (t) => {
 	t.expect(await store.get(key)).toBeUndefined();
 });
 
-test.it("setMany sets multiple keys", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	const key1 = faker.string.uuid();
-	const value1 = faker.lorem.word();
-	const key2 = faker.string.uuid();
-	const value2 = faker.lorem.word();
-	await store.setMany([
-		{ key: key1, value: value1 },
-		{ key: key2, value: value2 },
-	]);
-	t.expect(await store.get(key1)).toBe(value1);
-	t.expect(await store.get(key2)).toBe(value2);
-});
-
-test.it("has returns true for existing key", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	const key = faker.string.uuid();
-	await store.set(key, faker.lorem.word());
-	t.expect(await store.has(key)).toBe(true);
-	t.expect(await store.has("nonExistingKey")).toBe(false);
-});
-
-test.it("hasMany checks multiple keys", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	await store.set(key1, faker.lorem.word());
-	await store.set(key2, faker.lorem.word());
-	const results = await store.hasMany([key1, key2, key3]);
-	t.expect(results).toEqual([true, true, false]);
-});
-
-test.it("setMany with empty entries should not fail", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	await t.expect(store.setMany([])).resolves.toEqual([]);
-});
-
-test.it("has returns false for expired key", async (t) => {
+it("has returns false for expired key", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	const key = faker.string.uuid();
 	// Set with a TTL of 0ms so it expires immediately (expiresAt will be ~now+1s)
@@ -347,7 +294,7 @@ test.it("has returns false for expired key", async (t) => {
 	t.expect(await store.has(key)).toBe(false);
 });
 
-test.it("hasMany returns false for expired keys", async (t) => {
+it("hasMany returns false for expired keys", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	const key1 = faker.string.uuid();
 	const key2 = faker.string.uuid();
@@ -366,8 +313,8 @@ test.it("hasMany returns false for expired keys", async (t) => {
 	t.expect(results).toEqual([false, true]);
 });
 
-test.describe("createKeyv", () => {
-	test.it("should create Keyv instance with default options", (t) => {
+describe("createKeyv", () => {
+	it("should create Keyv instance with default options", (t) => {
 		const keyv = createKeyv();
 		t.expect(keyv).toBeDefined();
 		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
@@ -375,7 +322,7 @@ test.describe("createKeyv", () => {
 		t.expect((keyv.store as KeyvDynamo).namespace).toBeUndefined();
 	});
 
-	test.it("should create Keyv instance with string endpoint", (t) => {
+	it("should create Keyv instance with string endpoint", (t) => {
 		const keyv = createKeyv(dynamoURL);
 		t.expect(keyv).toBeDefined();
 		t.expect(keyv.store).toBeInstanceOf(KeyvDynamo);
@@ -385,7 +332,7 @@ test.describe("createKeyv", () => {
 		t.expect((keyv.store as KeyvDynamo).endpoint).toBe(dynamoURL);
 	});
 
-	test.it("should create Keyv instance with custom namespace", (t) => {
+	it("should create Keyv instance with custom namespace", (t) => {
 		const namespace = faker.string.alphanumeric(10);
 		const keyv = createKeyv({ endpoint: dynamoURL, namespace });
 		t.expect(keyv).toBeDefined();
@@ -396,7 +343,7 @@ test.describe("createKeyv", () => {
 		t.expect((keyv.store as KeyvDynamo).endpoint).toBe(dynamoURL);
 	});
 
-	test.it("should create Keyv instance with custom table name", (t) => {
+	it("should create Keyv instance with custom table name", (t) => {
 		const tableName = faker.string.alphanumeric(10);
 		const keyv = createKeyv({ endpoint: dynamoURL, tableName });
 		t.expect(keyv).toBeDefined();
@@ -407,7 +354,7 @@ test.describe("createKeyv", () => {
 		t.expect((keyv.store as KeyvDynamo).tableName).toBe(tableName);
 	});
 
-	test.it("should create Keyv instance with both namespace and table name", (t) => {
+	it("should create Keyv instance with both namespace and table name", (t) => {
 		const namespace = faker.string.alphanumeric(10);
 		const tableName = faker.string.alphanumeric(10);
 		const keyv = createKeyv({ endpoint: dynamoURL, namespace, tableName });
@@ -419,47 +366,41 @@ test.describe("createKeyv", () => {
 		t.expect((keyv.store as KeyvDynamo).tableName).toBe(tableName);
 	});
 
-	test.it(
-		"should create functional Keyv instance that can store and retrieve values",
-		async (t) => {
-			const keyv = createKeyv({ endpoint: dynamoURL });
-			const key = faker.string.uuid();
-			const value = faker.lorem.word();
+	it("should create functional Keyv instance that can store and retrieve values", async (t) => {
+		const keyv = createKeyv({ endpoint: dynamoURL });
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
 
-			await keyv.set(key, value);
-			const retrieved = await keyv.get(key);
-			t.expect(retrieved).toBe(value);
+		await keyv.set(key, value);
+		const retrieved = await keyv.get(key);
+		t.expect(retrieved).toBe(value);
 
-			await keyv.delete(key);
-			const deletedValue = await keyv.get(key);
-			t.expect(deletedValue).toBeUndefined();
-		},
-	);
+		await keyv.delete(key);
+		const deletedValue = await keyv.get(key);
+		t.expect(deletedValue).toBeUndefined();
+	});
 
-	test.it(
-		"should create functional Keyv instance with namespace that can store and retrieve values",
-		async (t) => {
-			const namespace = faker.string.alphanumeric(10);
-			const keyv = createKeyv({ endpoint: dynamoURL, namespace });
-			const key = faker.string.uuid();
-			const value = faker.lorem.word();
+	it("should create functional Keyv instance with namespace that can store and retrieve values", async (t) => {
+		const namespace = faker.string.alphanumeric(10);
+		const keyv = createKeyv({ endpoint: dynamoURL, namespace });
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
 
-			await keyv.set(key, value);
-			const retrieved = await keyv.get(key);
-			t.expect(retrieved).toBe(value);
+		await keyv.set(key, value);
+		const retrieved = await keyv.get(key);
+		t.expect(retrieved).toBe(value);
 
-			// Create another Keyv instance with same namespace to verify it can access the same data
-			const keyv2 = createKeyv({ endpoint: dynamoURL, namespace });
-			const retrieved2 = await keyv2.get(key);
-			t.expect(retrieved2).toBe(value);
+		// Create another Keyv instance with same namespace to verify it can access the same data
+		const keyv2 = createKeyv({ endpoint: dynamoURL, namespace });
+		const retrieved2 = await keyv2.get(key);
+		t.expect(retrieved2).toBe(value);
 
-			await keyv.delete(key);
-			const deletedValue = await keyv.get(key);
-			t.expect(deletedValue).toBeUndefined();
-		},
-	);
+		await keyv.delete(key);
+		const deletedValue = await keyv.get(key);
+		t.expect(deletedValue).toBeUndefined();
+	});
 
-	test.it("should handle various data types with createKeyv", async (t) => {
+	it("should handle various data types with createKeyv", async (t) => {
 		const keyv = createKeyv({ endpoint: dynamoURL });
 
 		// Test with string
@@ -525,7 +466,7 @@ test.describe("createKeyv", () => {
 	});
 });
 
-test.it("setMany returns false entries when batchWrite fails", async (t) => {
+it("setMany returns false entries when batchWrite fails", async (t) => {
 	const dynamo = store();
 	dynamo.on("error", () => {});
 	// Wait for table to be ready before mocking
@@ -544,7 +485,7 @@ test.it("setMany returns false entries when batchWrite fails", async (t) => {
 	dynamo._client.batchWrite = originalBatchWrite;
 });
 
-test.it("setMany marks unprocessed items as false", async (t) => {
+it("setMany marks unprocessed items as false", async (t) => {
 	const dynamo = store();
 	dynamo.on("error", () => {});
 	// Wait for table to be ready before mocking
@@ -568,7 +509,7 @@ test.it("setMany marks unprocessed items as false", async (t) => {
 	t.expect(result?.[1]).toBe(false);
 });
 
-test.it("setMany with per-entry ttl", async (t) => {
+it("setMany with per-entry ttl", async (t) => {
 	const dynamo = new KeyvDynamo({ endpoint: dynamoURL });
 	const key1 = faker.string.uuid();
 	const key2 = faker.string.uuid();
@@ -581,7 +522,7 @@ test.it("setMany with per-entry ttl", async (t) => {
 	t.expect(await dynamo.get(key2)).toBe("val2");
 });
 
-test.it("setMany handles unprocessed items with missing id", async (t) => {
+it("setMany handles unprocessed items with missing id", async (t) => {
 	const dynamo = store();
 	await dynamo.set("_warmup", "ok");
 	dynamo._client.batchWrite = async (input: any) => {
@@ -596,7 +537,7 @@ test.it("setMany handles unprocessed items with missing id", async (t) => {
 	t.expect(result).toEqual([true]);
 });
 
-test.it("getMany retries unprocessed keys", async (t) => {
+it("getMany retries unprocessed keys", async (t) => {
 	const dynamo = store();
 	const key1 = faker.string.uuid();
 	const key2 = faker.string.uuid();
@@ -626,12 +567,7 @@ test.it("getMany retries unprocessed keys", async (t) => {
 	dynamo._client.batchGet = originalBatchGet;
 });
 
-test.it("disconnect should resolve without error", async () => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL });
-	await store.disconnect();
-});
-
-test.it("iterator with default namespace", async (t) => {
+it("iterator with default namespace", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
 	const key1 = faker.string.uuid();
 	const key2 = faker.string.uuid();
@@ -649,7 +585,7 @@ test.it("iterator with default namespace", async (t) => {
 	t.expect(keys).toContain(key2);
 });
 
-test.it("iterator with namespace", async (t) => {
+it("iterator with namespace", async (t) => {
 	const tableName = faker.string.uuid();
 	const namespace = faker.string.alphanumeric(10);
 	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName, namespace });
@@ -674,17 +610,7 @@ test.it("iterator with namespace", async (t) => {
 	t.expect(keys).toContain(`${namespace}:${key2}`);
 });
 
-test.it("iterator returns empty when no keys exist", async (t) => {
-	const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
-	const entries: unknown[] = [];
-	for await (const entry of store.iterator()) {
-		entries.push(entry);
-	}
-
-	t.expect(entries.length).toBe(0);
-});
-
-test.it("hasMany retries unprocessed keys", async (t) => {
+it("hasMany retries unprocessed keys", async (t) => {
 	const dynamo = store();
 	const key1 = faker.string.uuid();
 	const key2 = faker.string.uuid();

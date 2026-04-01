@@ -1,14 +1,15 @@
 import { faker } from "@faker-js/faker";
-import keyvTestSuite from "@keyv/test-suite";
+import { keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import * as test from "vitest";
+import { beforeEach, it, vi } from "vitest";
 import KeyvSqlite, { createKeyv } from "../src/index.js";
 
 const store = () => new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite", busyTimeout: 3000 });
 
-keyvTestSuite(test, Keyv, store);
+keyvTestSuite(it, Keyv, store);
+storageTestSuite(it, store, { ttl: false });
 
-test.beforeEach(async () => {
+beforeEach(async () => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -16,7 +17,7 @@ test.beforeEach(async () => {
 	await keyv.clear();
 });
 
-test.it("table name can be numeric, alphabet, special case", (t) => {
+it("table name can be numeric, alphabet, special case", (t) => {
 	let keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		// @ts-expect-error testing
@@ -47,7 +48,7 @@ test.it("table name can be numeric, alphabet, special case", (t) => {
 	).toThrow("Invalid table name: must contain alphanumeric characters");
 });
 
-test.it("keySize validation throws on invalid values", (t) => {
+it("keySize validation throws on invalid values", (t) => {
 	// Test NaN
 	t.expect(
 		() =>
@@ -95,7 +96,7 @@ test.it("keySize validation throws on invalid values", (t) => {
 	).toThrow("Invalid keySize: must be a positive number between 1 and 65535");
 });
 
-test.it("keySize accepts valid values", (t) => {
+it("keySize accepts valid values", (t) => {
 	const keyv1 = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		keySize: 100,
@@ -115,7 +116,7 @@ test.it("keySize accepts valid values", (t) => {
 	t.expect(keyv3.keySize).toBe(1);
 });
 
-test.it("keyLength alias works for keySize", (t) => {
+it("keyLength alias works for keySize", (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		keyLength: 512,
@@ -124,13 +125,13 @@ test.it("keyLength alias works for keySize", (t) => {
 	t.expect(keyv.keyLength).toBe(512);
 });
 
-test.it("keyv options as a string", (t) => {
+it("keyv options as a string", (t) => {
 	const uri = "sqlite://test/testdb.sqlite";
 	const keyv = new KeyvSqlite(uri);
 	t.expect(keyv.uri).toBe(uri);
 });
 
-test.it("getMany will return multiple values", async (t) => {
+it("getMany will return multiple values", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -149,7 +150,7 @@ test.it("getMany will return multiple values", async (t) => {
 	t.expect(values).toStrictEqual([val1, val2, val3]);
 });
 
-test.it("deleteMany will delete multiple records", async (t) => {
+it("deleteMany will delete multiple records", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -171,7 +172,7 @@ test.it("deleteMany will delete multiple records", async (t) => {
 	t.expect(values1).toStrictEqual([undefined, undefined, undefined]);
 });
 
-test.it("Async Iterator single element test", async (t) => {
+it("Async Iterator single element test", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -187,7 +188,7 @@ test.it("Async Iterator single element test", async (t) => {
 	}
 });
 
-test.it("Async Iterator multiple element test", async (t) => {
+it("Async Iterator multiple element test", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -217,7 +218,7 @@ test.it("Async Iterator multiple element test", async (t) => {
 	t.expect(actual).toStrictEqual(expected);
 });
 
-test.it("Async Iterator multiple elements with limit=1 test", async (t) => {
+it("Async Iterator multiple elements with limit=1 test", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -250,7 +251,7 @@ test.it("Async Iterator multiple elements with limit=1 test", async (t) => {
 	t.expect(actual).toStrictEqual(expected);
 });
 
-test.it("Async Iterator 0 element test", async (t) => {
+it("Async Iterator 0 element test", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -262,7 +263,7 @@ test.it("Async Iterator 0 element test", async (t) => {
 	t.expect(key.value).toBe(undefined);
 });
 
-test.it("close connection successfully", async (t) => {
+it("close connection successfully", async (t) => {
 	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
 	const testKey = faker.string.uuid();
 	const testVal = faker.lorem.word();
@@ -273,7 +274,7 @@ test.it("close connection successfully", async (t) => {
 	await t.expect(async () => keyv.get(testKey)).rejects.toThrow();
 });
 
-test.it("handling namespaces with multiple keyv instances", async (t) => {
+it("handling namespaces with multiple keyv instances", async (t) => {
 	const storeA = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
 	const storeB = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
 	const keyvA = new Keyv({ store: storeA, namespace: "ns1" });
@@ -324,12 +325,12 @@ test.it("handling namespaces with multiple keyv instances", async (t) => {
 	);
 });
 
-test.it("will create a Keyv instance with a store", (t) => {
+it("will create a Keyv instance with a store", (t) => {
 	const keyv = createKeyv("sqlite://test/testdb.sqlite");
 	t.expect(keyv).toBeInstanceOf(Keyv);
 });
 
-test.it("WAL mode can be enabled", async (t) => {
+it("WAL mode can be enabled", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb-wal.sqlite",
 		wal: true,
@@ -341,7 +342,7 @@ test.it("WAL mode can be enabled", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("WAL mode is not enabled by default", async (t) => {
+it("WAL mode is not enabled by default", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb-nowal.sqlite",
 	});
@@ -352,7 +353,7 @@ test.it("WAL mode is not enabled by default", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("WAL mode does not work with in-memory database (remains as memory mode)", async (t) => {
+it("WAL mode does not work with in-memory database (remains as memory mode)", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://:memory:",
 		wal: true,
@@ -371,8 +372,8 @@ test.it("WAL mode does not work with in-memory database (remains as memory mode)
 	await keyv.disconnect();
 });
 
-test.it("WAL mode with in-memory database logs a warning", async (t) => {
-	const warnSpy = test.vi.spyOn(console, "warn").mockImplementation(() => {});
+it("WAL mode with in-memory database logs a warning", async (t) => {
+	const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://:memory:",
@@ -392,40 +393,7 @@ test.it("WAL mode with in-memory database logs a warning", async (t) => {
 
 // --- New feature tests ---
 
-test.it("setMany will set multiple records at once", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	const val1 = faker.lorem.word();
-	const val2 = faker.lorem.word();
-	const val3 = faker.lorem.word();
-	await keyv.setMany([
-		{ key: key1, value: val1 },
-		{ key: key2, value: val2 },
-		{ key: key3, value: val3 },
-	]);
-	const values = await keyv.getMany([key1, key2, key3]);
-	t.expect(values).toStrictEqual([val1, val2, val3]);
-});
-
-test.it("setMany with empty array does nothing", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	await keyv.setMany([]);
-	const iterator = keyv.iterator();
-	const result = await iterator.next();
-	t.expect(result.done).toBe(true);
-});
-
-test.it("setMany upserts existing keys", async (t) => {
+it("setMany upserts existing keys", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -445,36 +413,7 @@ test.it("setMany upserts existing keys", async (t) => {
 	t.expect(await keyv.get(key2)).toBe(val2);
 });
 
-test.it("hasMany checks multiple keys", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	await keyv.set(key1, faker.lorem.word());
-	await keyv.set(key3, faker.lorem.word());
-	const results = await keyv.hasMany([key1, key2, key3]);
-	t.expect(results).toStrictEqual([true, false, true]);
-});
-
-test.it("hasMany with no existing keys returns all false", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const results = await keyv.hasMany([
-		faker.string.uuid(),
-		faker.string.uuid(),
-		faker.string.uuid(),
-	]);
-	t.expect(results).toStrictEqual([false, false, false]);
-});
-
-test.it("clearExpired removes expired entries", async (t) => {
+it("clearExpired removes expired entries", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -498,7 +437,7 @@ test.it("clearExpired removes expired entries", async (t) => {
 	t.expect(await keyv.has(validKey)).toBe(true);
 });
 
-test.it("clearExpiredInterval auto-cleans expired entries", async (t) => {
+it("clearExpiredInterval auto-cleans expired entries", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -521,7 +460,7 @@ test.it("clearExpiredInterval auto-cleans expired entries", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("clearExpiredInterval setter restarts timer", async (t) => {
+it("clearExpiredInterval setter restarts timer", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -535,7 +474,7 @@ test.it("clearExpiredInterval setter restarts timer", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("namespace column stores namespace separately from key", async (t) => {
+it("namespace column stores namespace separately from key", async (t) => {
 	const storeA = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -568,7 +507,7 @@ test.it("namespace column stores namespace separately from key", async (t) => {
 	await storeB.clear();
 });
 
-test.it("namespaceLength option is respected", (t) => {
+it("namespaceLength option is respected", (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		namespaceLength: 128,
@@ -576,7 +515,7 @@ test.it("namespaceLength option is respected", (t) => {
 	t.expect(keyv.namespaceLength).toBe(128);
 });
 
-test.it("property getters return all configured values", (t) => {
+it("property getters return all configured values", (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		keySize: 512,
@@ -596,26 +535,7 @@ test.it("property getters return all configured values", (t) => {
 	t.expect(keyv.clearExpiredInterval).toBe(1000);
 });
 
-test.it("deleteMany returns false when no keys exist", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	const result = await keyv.deleteMany([faker.string.uuid(), faker.string.uuid()]);
-	t.expect(result).toEqual([false, false]);
-});
-
-test.it("has returns false for non-existent key", async (t) => {
-	const keyv = new KeyvSqlite({
-		uri: "sqlite://test/testdb.sqlite",
-		busyTimeout: 3000,
-	});
-	await keyv.clear();
-	t.expect(await keyv.has(faker.string.uuid())).toBe(false);
-});
-
-test.it("migrates old schema that lacks namespace column", async (t) => {
+it("migrates old schema that lacks namespace column", async (t) => {
 	const dbPath = "test/testdb-migration.sqlite";
 	const fs = await import("node:fs");
 	// Remove any leftover db
@@ -644,7 +564,7 @@ test.it("migrates old schema that lacks namespace column", async (t) => {
 	} catch {}
 });
 
-test.it("migrates schema that has namespace but lacks expires column", async (t) => {
+it("migrates schema that has namespace but lacks expires column", async (t) => {
 	const dbPath = "test/testdb-migration2.sqlite";
 	const fs = await import("node:fs");
 	try {
@@ -681,13 +601,13 @@ test.it("migrates schema that has namespace but lacks expires column", async (t)
 	} catch {}
 });
 
-test.it("iterationLimit can be updated after construction", (t) => {
+it("iterationLimit can be updated after construction", (t) => {
 	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
 	keyv.iterationLimit = 99;
 	t.expect(keyv.iterationLimit).toBe(99);
 });
 
-test.it("getExpiresFromValue handles non-string object values", async (t) => {
+it("getExpiresFromValue handles non-string object values", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -702,7 +622,7 @@ test.it("getExpiresFromValue handles non-string object values", async (t) => {
 
 // --- SQL injection prevention tests ---
 
-test.it("table name with SQL injection characters is sanitized at construction", async (t) => {
+it("table name with SQL injection characters is sanitized at construction", async (t) => {
 	// Attempt to inject via table name — toTableString strips all non-alphanumeric chars
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
@@ -720,14 +640,14 @@ test.it("table name with SQL injection characters is sanitized at construction",
 	await keyv.disconnect();
 });
 
-test.it("table setter sanitizes table name (prevents post-construction injection)", (t) => {
+it("table setter sanitizes table name (prevents post-construction injection)", (t) => {
 	const keyv = new KeyvSqlite({ uri: "sqlite://test/testdb.sqlite" });
 	keyv.table = "evil'; DROP TABLE keyv;--";
 	// Should be sanitized, not the raw malicious string
 	t.expect(keyv.table).toBe("evilDROPTABLEkeyv");
 });
 
-test.it("table name that is a SQLite reserved keyword works correctly", async (t) => {
+it("table name that is a SQLite reserved keyword works correctly", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		table: "select",
@@ -743,7 +663,7 @@ test.it("table name that is a SQLite reserved keyword works correctly", async (t
 	await keyv.disconnect();
 });
 
-test.it("table name with double quotes is escaped correctly", async (t) => {
+it("table name with double quotes is escaped correctly", async (t) => {
 	// Double quotes in the name would break identifier escaping without proper handling
 	// toTableString strips them, but escapeIdentifier also handles them as defense-in-depth
 	const keyv = new KeyvSqlite({
@@ -761,7 +681,7 @@ test.it("table name with double quotes is escaped correctly", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("property getters return correct defaults", async (t) => {
+it("property getters return correct defaults", async (t) => {
 	const keyv = new KeyvSqlite();
 	t.expect(keyv.uri).toBe("sqlite://:memory:");
 	t.expect(keyv.table).toBe("keyv");
@@ -777,7 +697,7 @@ test.it("property getters return correct defaults", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("property getters return constructor-provided values", async (t) => {
+it("property getters return constructor-provided values", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://:memory:",
 		table: "custom",
@@ -797,7 +717,7 @@ test.it("property getters return constructor-provided values", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("table setter sanitizes input", async (t) => {
+it("table setter sanitizes input", async (t) => {
 	const keyv = new KeyvSqlite("sqlite://:memory:");
 	keyv.table = "my_table";
 	t.expect(keyv.table).toBe("my_table");
@@ -806,7 +726,7 @@ test.it("table setter sanitizes input", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("keySize setter updates value", async (t) => {
+it("keySize setter updates value", async (t) => {
 	const keyv = new KeyvSqlite("sqlite://:memory:");
 	t.expect(keyv.keySize).toBe(255);
 	keyv.keySize = 512;
@@ -814,7 +734,7 @@ test.it("keySize setter updates value", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("namespaceLength setter updates value", async (t) => {
+it("namespaceLength setter updates value", async (t) => {
 	const keyv = new KeyvSqlite("sqlite://:memory:");
 	t.expect(keyv.namespaceLength).toBe(255);
 	keyv.namespaceLength = 128;
@@ -822,7 +742,7 @@ test.it("namespaceLength setter updates value", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("setMany returns false entries on query error", async (t) => {
+it("setMany returns false entries on query error", async (t) => {
 	const keyv = new KeyvSqlite("sqlite://:memory:");
 	let emittedError = false;
 	keyv.on("error", () => {
@@ -838,7 +758,7 @@ test.it("setMany returns false entries on query error", async (t) => {
 	t.expect(emittedError).toBe(true);
 });
 
-test.it("has returns false and deletes expired key", async (t) => {
+it("has returns false and deletes expired key", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -852,7 +772,7 @@ test.it("has returns false and deletes expired key", async (t) => {
 	t.expect(await keyv.get(key)).toBeUndefined();
 });
 
-test.it("getMany returns undefined for expired keys and deletes them", async (t) => {
+it("getMany returns undefined for expired keys and deletes them", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -875,7 +795,7 @@ test.it("getMany returns undefined for expired keys and deletes them", async (t)
 	t.expect(await keyv.get(expiredKey2)).toBeUndefined();
 });
 
-test.it("hasMany returns false for expired keys and deletes them", async (t) => {
+it("hasMany returns false for expired keys and deletes them", async (t) => {
 	const keyv = new KeyvSqlite({
 		uri: "sqlite://test/testdb.sqlite",
 		busyTimeout: 3000,
@@ -898,7 +818,7 @@ test.it("hasMany returns false for expired keys and deletes them", async (t) => 
 	t.expect(await keyv.has(expiredKey2)).toBe(false);
 });
 
-test.it("iterationLimit setter updates value", async (t) => {
+it("iterationLimit setter updates value", async (t) => {
 	const keyv = new KeyvSqlite("sqlite://:memory:");
 	t.expect(keyv.iterationLimit).toBe(10);
 	keyv.iterationLimit = 99;

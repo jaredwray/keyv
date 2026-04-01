@@ -1,13 +1,13 @@
 import { constants as zlibConstants } from "node:zlib";
-import { keyvCompressionTests } from "@keyv/test-suite";
-import * as test from "vitest";
+import { compressionTestSuite } from "@keyv/test-suite";
+import { it } from "vitest";
 import KeyvBrotli from "../src/index.js";
 
 const { BROTLI_PARAM_MODE, BROTLI_PARAM_QUALITY } = zlibConstants;
 
-keyvCompressionTests(test, new KeyvBrotli());
+compressionTestSuite(it, new KeyvBrotli());
 
-test.it("compression with compression options", async (t) => {
+it("compression with compression options", async (t) => {
 	const options = {
 		compressOptions: {
 			chunkSize: 1024,
@@ -26,7 +26,7 @@ test.it("compression with compression options", async (t) => {
 	t.expect(decompressed).toBe("whatever");
 });
 
-test.it("decompression with decompression options", async (t) => {
+it("decompression with decompression options", async (t) => {
 	const options = {
 		decompressOptions: {
 			chunkSize: 1024,
@@ -42,7 +42,7 @@ test.it("decompression with decompression options", async (t) => {
 	t.expect(decompressed).toBe("whatever");
 });
 
-test.it("compression/decompression with compression/decompression options", async (t) => {
+it("compression/decompression with compression/decompression options", async (t) => {
 	const options = {
 		compressOptions: {
 			chunkSize: 1024,

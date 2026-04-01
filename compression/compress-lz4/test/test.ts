@@ -1,11 +1,11 @@
-import { keyvCompressionTests } from "@keyv/test-suite";
+import { compressionTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
-import * as test from "vitest";
+import { it } from "vitest";
 import KeyvLz4 from "../src/index.js";
 
-keyvCompressionTests(test, new KeyvLz4());
+compressionTestSuite(it, new KeyvLz4());
 
-test.it("object type compression/decompression", async (t) => {
+it("object type compression/decompression", async (t) => {
 	const keyv = new KeyvLz4();
 	const value = JSON.stringify({
 		a: 1,
@@ -17,7 +17,7 @@ test.it("object type compression/decompression", async (t) => {
 	t.expect(decompressed).toEqual(value);
 });
 
-test.it("compression with dictionary option", async (t) => {
+it("compression with dictionary option", async (t) => {
 	const keyv = new KeyvLz4("test");
 	const compressed = await keyv.compress("whatever");
 	t.expect(typeof compressed).toBe("string");
@@ -26,12 +26,12 @@ test.it("compression with dictionary option", async (t) => {
 	t.expect(decompressed).toBe("whatever");
 });
 
-test.it("decompress should not throw error when empty with lz4", async (t) => {
+it("decompress should not throw error when empty with lz4", async (t) => {
 	const keyv = new Keyv({ store: new Map(), compression: new KeyvLz4() });
 	await t.expect(keyv.get("foo")).resolves.not.toThrowError();
 });
 
-test.it("should not throw error when empty", async (t) => {
+it("should not throw error when empty", async (t) => {
 	const keyv = new Keyv({ store: new Map() });
 	await t.expect(keyv.get("foo")).resolves.not.toThrowError();
 });

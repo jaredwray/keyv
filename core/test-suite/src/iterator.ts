@@ -1,22 +1,25 @@
 import { faker } from "@faker-js/faker";
 import type KeyvModule from "keyv";
-import type * as Vitest from "vitest";
 import { delay } from "./helper.js";
-import type { KeyvStoreFn } from "./types.js";
+import type { KeyvStoreFn, TestFunction } from "./types.js";
 
-const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
-	test.beforeEach(async () => {
-		const keyv = new Keyv({ store: store() });
-		await keyv.clear();
-	});
-
-	test.it(".iterator() returns an asyncIterator", (t) => {
+/**
+ * Registers Keyv iterator tests: async iterator protocol, iterating all values,
+ * namespace filtering, and expired value handling.
+ * Tests operate through the Keyv wrapper.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param Keyv - The Keyv constructor
+ * @param store - Factory that returns a fresh store instance per test
+ */
+const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
+	test(".iterator() returns an asyncIterator", (t) => {
 		const keyv = new Keyv({ store: store() });
 		t.expect(typeof keyv.iterator()[Symbol.asyncIterator]).toBe("function");
 	});
 
-	test.it("iterator() iterates over all values", async (t) => {
-		const keyv = new Keyv({ store: store() });
+	test("iterator() iterates over all values", async (t) => {
+		const namespace = faker.string.alphanumeric(8);
+		const keyv = new Keyv({ store: store(), namespace });
 		const map = new Map(
 			Array.from({ length: 5 })
 				.fill(0)
@@ -28,18 +31,24 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 		}
 
 		await Promise.all(toResolve);
-		t.expect.assertions(map.size);
-		for await (const [key, value] of keyv.iterator()) {
+		let count = 0;
+		for await (const [key, value] of keyv.iterator(namespace)) {
 			const doesKeyExist = map.has(key);
 			const isValueSame = map.get(key) === value;
 			t.expect(doesKeyExist && isValueSame).toBeTruthy();
+			count++;
 		}
+
+		t.expect(count).toBe(map.size);
 	});
 
-	test.it("iterator() doesn't yield values from other namespaces", async (t) => {
+	test("iterator() doesn't yield values from other namespaces", async (t) => {
 		const keyvStore = store();
 
-		const keyv1 = new Keyv({ store: keyvStore, namespace: "keyv1" });
+		const ns1 = faker.string.alphanumeric(8);
+		const ns2 = faker.string.alphanumeric(8);
+
+		const keyv1 = new Keyv({ store: keyvStore, namespace: ns1 });
 		const map1 = new Map(
 			Array.from({ length: 5 })
 				.fill(0)
@@ -52,7 +61,7 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 
 		await Promise.all(toResolve);
 
-		const keyv2 = new Keyv({ store: keyvStore, namespace: "keyv2" });
+		const keyv2 = new Keyv({ store: keyvStore, namespace: ns2 });
 		const map2 = new Map(
 			Array.from({ length: 5 })
 				.fill(0)
@@ -64,16 +73,20 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 		}
 
 		await Promise.all(toResolve);
-		t.expect.assertions(map2.size);
-		for await (const [key, value] of keyv2.iterator()) {
+		let count = 0;
+		for await (const [key, value] of keyv2.iterator(ns2)) {
 			const doesKeyExist = map2.has(key);
 			const isValueSame = map2.get(key) === value;
 			t.expect(doesKeyExist && isValueSame).toBeTruthy();
+			count++;
 		}
+
+		t.expect(count).toBe(map2.size);
 	});
 
-	test.it("iterator() doesn't yield expired values, and deletes them", async (t) => {
-		const keyv = new Keyv({ store: store() });
+	test("iterator() doesn't yield expired values, and deletes them", async (t) => {
+		const namespace = faker.string.alphanumeric(8);
+		const keyv = new Keyv({ store: store(), namespace });
 
 		// Create 5 unique key-value pairs that will expire
 		const expiringKey1 = faker.string.alphanumeric(10);
@@ -102,7 +115,7 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 		await keyv.set(nonExpiringKey, nonExpiringValue);
 
 		await delay(300);
-		const iterator = keyv.iterator();
+		const iterator = keyv.iterator(namespace);
 
 		// Collect all yielded entries
 		const keys: string[] = [];
@@ -119,4 +132,4 @@ const keyvIteratorTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: 
 	});
 };
 
-export default keyvIteratorTests;
+export { keyvIteratorTests };

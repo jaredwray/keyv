@@ -1,6 +1,10 @@
+import { serializationTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { describe, expect, it } from "vitest";
 import { KeyvMsgpackrSerializer, msgpackrSerializer } from "../src/index.js";
+
+// Standard serialization compliance tests
+serializationTestSuite(it, msgpackrSerializer);
 
 describe("KeyvMsgpackrSerializer", () => {
 	it("should be instantiable", () => {
@@ -10,63 +14,6 @@ describe("KeyvMsgpackrSerializer", () => {
 
 	it("msgpackrSerializer is a default instance", () => {
 		expect(msgpackrSerializer).toBeInstanceOf(KeyvMsgpackrSerializer);
-	});
-
-	it("stringify and parse of string value", () => {
-		const serialized = msgpackrSerializer.stringify({ value: "foo" });
-		const deserialized = msgpackrSerializer.parse<{ value: string }>(serialized);
-		expect(deserialized.value).toBe("foo");
-	});
-
-	it("stringify and parse of number value", () => {
-		const serialized = msgpackrSerializer.stringify({ value: 5 });
-		const deserialized = msgpackrSerializer.parse<{ value: number }>(serialized);
-		expect(deserialized.value).toBe(5);
-	});
-
-	it("stringify and parse of boolean value", () => {
-		const serialized = msgpackrSerializer.stringify({ value: true });
-		const deserialized = msgpackrSerializer.parse<{ value: boolean }>(serialized);
-		expect(deserialized.value).toBe(true);
-	});
-
-	it("stringify and parse of null value", () => {
-		const serialized = msgpackrSerializer.stringify({ value: null });
-		const deserialized = msgpackrSerializer.parse<{ value: null }>(serialized);
-		expect(deserialized.value).toBeNull();
-	});
-
-	it("stringify and parse of undefined value", () => {
-		const serialized = msgpackrSerializer.stringify({ value: undefined });
-		const deserialized = msgpackrSerializer.parse<{ value: undefined }>(serialized);
-		expect(deserialized.value).toBeUndefined();
-	});
-
-	it("stringify and parse of object value", () => {
-		const original = { foo: "bar", bar: 5, baz: true };
-		const serialized = msgpackrSerializer.stringify({ value: original });
-		const deserialized = msgpackrSerializer.parse<{ value: typeof original }>(serialized);
-		expect(deserialized.value).toEqual(original);
-	});
-
-	it("stringify and parse of array value", () => {
-		const serialized = msgpackrSerializer.stringify([1, "hello", true, null]);
-		const deserialized = msgpackrSerializer.parse<unknown[]>(serialized);
-		expect(deserialized).toEqual([1, "hello", true, null]);
-	});
-
-	it("stringify and parse of nested arrays", () => {
-		const serialized = msgpackrSerializer.stringify({
-			value: [
-				[1, 2],
-				[3, 4],
-			],
-		});
-		const deserialized = msgpackrSerializer.parse<{ value: number[][] }>(serialized);
-		expect(deserialized.value).toEqual([
-			[1, 2],
-			[3, 4],
-		]);
 	});
 });
 
@@ -152,13 +99,6 @@ describe("msgpackr extended type support", () => {
 });
 
 describe("Integration with Keyv", () => {
-	it("should work as a Keyv serializer for basic values", async () => {
-		const keyv = new Keyv({ serialization: msgpackrSerializer });
-		await keyv.set("key", "hello");
-		const value = await keyv.get("key");
-		expect(value).toBe("hello");
-	});
-
 	it("should work as a Keyv serializer for Date values", async () => {
 		const keyv = new Keyv({ serialization: msgpackrSerializer });
 		const date = new Date("2024-01-15T12:00:00.000Z");

@@ -1,34 +1,35 @@
 import { faker } from "@faker-js/faker";
 import type KeyvModule from "keyv";
-import type * as Vitest from "vitest";
-import type { KeyvStoreFn } from "./types";
+import type { KeyvStoreFn, TestFunction } from "./types.js";
 
 const delay = async (ms: number) =>
 	new Promise<void>((resolve) => {
 		setTimeout(resolve, ms);
 	});
 
-const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
-	test.beforeEach(async () => {
-		const keyv = new Keyv({ store: store() });
-		await keyv.clear();
-	});
-
-	test.it(".set(key, value) returns a Promise", (t) => {
+/**
+ * Registers Keyv API tests: set, get, getMany, delete, deleteMany, clear, and has.
+ * Tests operate through the Keyv wrapper, not directly on the storage adapter.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param Keyv - The Keyv constructor
+ * @param store - Factory that returns a fresh store instance per test
+ */
+const keyvApiTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
+	test(".set(key, value) returns a Promise", (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
 		t.expect(keyv.set(key, value) instanceof Promise).toBeTruthy();
 	});
 
-	test.it(".set(key, value) resolves to true", async (t) => {
+	test(".set(key, value) resolves to true", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
 		t.expect(await keyv.set(key, value)).toBeTruthy();
 	});
 
-	test.it(".set(key, value) sets a value", async (t) => {
+	test(".set(key, value) sets a value", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
@@ -36,7 +37,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.get(key)).toBe(value);
 	});
 
-	test.it(".set(key, value, ttl) sets a value that expires", async (t) => {
+	test(".set(key, value, ttl) sets a value that expires", async (t) => {
 		const ttl = 1000;
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
@@ -47,13 +48,13 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.get(key)).toBeUndefined();
 	});
 
-	test.it(".get(key) returns a Promise", (t) => {
+	test(".get(key) returns a Promise", (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		t.expect(keyv.get(key) instanceof Promise).toBeTruthy();
 	});
 
-	test.it(".get(key) resolves to value", async (t) => {
+	test(".get(key) resolves to value", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
@@ -61,13 +62,13 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.get(key)).toBe(value);
 	});
 
-	test.it(".get(key) with nonexistent key resolves to undefined", async (t) => {
+	test(".get(key) with nonexistent key resolves to undefined", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		t.expect(await keyv.get(key)).toBeUndefined();
 	});
 
-	test.it(".get([keys]) should return array values", async (t) => {
+	test(".get([keys]) should return array values", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const ttl = 3000;
 		const key1 = faker.string.alphanumeric(10);
@@ -86,7 +87,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(values[2]).toBe(value3);
 	});
 
-	test.it(".get([keys]) should return array value undefined when expires", async (t) => {
+	test(".get([keys]) should return array value undefined when expires", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key1 = faker.string.alphanumeric(10);
 		const value1 = faker.lorem.sentence();
@@ -105,7 +106,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(values[2]).toBe(value3);
 	});
 
-	test.it(".get([keys]) should return array values with undefined", async (t) => {
+	test(".get([keys]) should return array values with undefined", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const ttl = 3000;
 		const key1 = faker.string.alphanumeric(10);
@@ -122,7 +123,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(values[2]).toBe(value3);
 	});
 
-	test.it(".get([keys]) should return undefined array for all no existent keys", async (t) => {
+	test(".get([keys]) should return undefined array for all no existent keys", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
@@ -132,19 +133,19 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(values).toEqual([undefined, undefined, undefined]);
 	});
 
-	test.it(".delete(key) returns a Promise", (t) => {
+	test(".delete(key) returns a Promise", (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		t.expect(keyv.delete(key) instanceof Promise).toBeTruthy();
 	});
 
-	test.it(".delete([key]) returns a Promise", (t) => {
+	test(".delete([key]) returns a Promise", (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		t.expect(keyv.delete([key]) instanceof Promise).toBeTruthy();
 	});
 
-	test.it(".delete(key) resolves to true", async (t) => {
+	test(".delete(key) resolves to true", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
@@ -152,13 +153,13 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.delete(key)).toBeTruthy();
 	});
 
-	test.it(".delete(key) with nonexistent key resolves to false", async (t) => {
+	test(".delete(key) with nonexistent key resolves to false", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		t.expect(await keyv.delete(key)).toBeFalsy();
 	});
 
-	test.it(".delete(key) deletes a key", async (t) => {
+	test(".delete(key) deletes a key", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
@@ -167,7 +168,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.get(key)).toBeUndefined();
 	});
 
-	test.it(".deleteMany([keys]) should delete multiple key", async (t) => {
+	test(".deleteMany([keys]) should delete multiple key", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key1 = faker.string.alphanumeric(10);
 		const value1 = faker.lorem.sentence();
@@ -185,7 +186,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.get(key3)).toBeUndefined();
 	});
 
-	test.it(".deleteMany([keys]) with nonexistent keys resolves to array of false", async (t) => {
+	test(".deleteMany([keys]) with nonexistent keys resolves to array of false", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
@@ -195,14 +196,14 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect((result as boolean[]).every((v) => v === false)).toBe(true);
 	});
 
-	test.it(".clear() returns a Promise", async (t) => {
+	test(".clear() returns a Promise", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const returnValue = keyv.clear();
 		t.expect(returnValue instanceof Promise).toBeTruthy();
 		await returnValue;
 	});
 
-	test.it(".clear() resolves to undefined", async (t) => {
+	test(".clear() resolves to undefined", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
@@ -211,7 +212,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.clear()).toBeUndefined();
 	});
 
-	test.it(".clear() deletes all key/value pairs", async (t) => {
+	test(".clear() deletes all key/value pairs", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key1 = faker.string.alphanumeric(10);
 		const value1 = faker.lorem.sentence();
@@ -224,7 +225,7 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 		t.expect(await keyv.get(key2)).toBeUndefined();
 	});
 
-	test.it(".has(key) where key is the key we are looking for", async (t) => {
+	test(".has(key) where key is the key we are looking for", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
@@ -235,4 +236,4 @@ const keyvApiTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvS
 	});
 };
 
-export default keyvApiTests;
+export { keyvApiTests };

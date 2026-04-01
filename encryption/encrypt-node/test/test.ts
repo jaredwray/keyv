@@ -1,22 +1,17 @@
 import { randomBytes } from "node:crypto";
 import { faker } from "@faker-js/faker";
+import { encryptionTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { describe, expect, it } from "vitest";
 import KeyvEncryptNode from "../src/index.js";
 
+const secret = faker.string.alphanumeric(32);
+
+// Standard encryption compliance tests
+encryptionTestSuite(it, new KeyvEncryptNode({ key: secret }));
+
 describe("KeyvEncryptNode", () => {
-	const secret = faker.string.alphanumeric(32);
-
 	describe("default aes-256-gcm", () => {
-		it("should encrypt and decrypt a string", () => {
-			const encryption = new KeyvEncryptNode({ key: secret });
-			const data = faker.lorem.sentence();
-			const encrypted = encryption.encrypt(data);
-			expect(encrypted).not.toBe(data);
-			const decrypted = encryption.decrypt(encrypted);
-			expect(decrypted).toBe(data);
-		});
-
 		it("should produce different ciphertext each time due to random IV", () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
 			const data = faker.lorem.word();
@@ -39,29 +34,6 @@ describe("KeyvEncryptNode", () => {
 			const encryption2 = new KeyvEncryptNode({ key: faker.string.alphanumeric(20) });
 			const encrypted = encryption1.encrypt(faker.lorem.sentence());
 			expect(() => encryption2.decrypt(encrypted)).toThrow();
-		});
-
-		it("should handle unicode and emoji content", () => {
-			const encryption = new KeyvEncryptNode({ key: secret });
-			const data = `${faker.lorem.sentence()} 🌍 日本語 العربية ${faker.internet.emoji()}`;
-			const encrypted = encryption.encrypt(data);
-			const decrypted = encryption.decrypt(encrypted);
-			expect(decrypted).toBe(data);
-		});
-
-		it("should handle empty string", () => {
-			const encryption = new KeyvEncryptNode({ key: secret });
-			const encrypted = encryption.encrypt("");
-			const decrypted = encryption.decrypt(encrypted);
-			expect(decrypted).toBe("");
-		});
-
-		it("should handle large data", () => {
-			const encryption = new KeyvEncryptNode({ key: secret });
-			const data = faker.lorem.paragraphs(50);
-			const encrypted = encryption.encrypt(data);
-			const decrypted = encryption.decrypt(encrypted);
-			expect(decrypted).toBe(data);
 		});
 	});
 
@@ -161,16 +133,6 @@ describe("KeyvEncryptNode", () => {
 	});
 
 	describe("Keyv integration", () => {
-		it("should work with Keyv set and get", async () => {
-			const encryption = new KeyvEncryptNode({ key: secret });
-			const keyv = new Keyv({ encryption });
-			const key = faker.string.alphanumeric(10);
-			const value = faker.lorem.word();
-			await keyv.set(key, value);
-			const result = await keyv.get(key);
-			expect(result).toBe(value);
-		});
-
 		it("should work with Keyv for complex objects", async () => {
 			const encryption = new KeyvEncryptNode({ key: secret });
 			const keyv = new Keyv({ encryption });
