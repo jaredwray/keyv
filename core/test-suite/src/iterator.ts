@@ -3,6 +3,14 @@ import type KeyvModule from "keyv";
 import { delay } from "./helper.js";
 import type { KeyvStoreFn, TestFunction } from "./types.js";
 
+/**
+ * Registers Keyv iterator tests: async iterator protocol, iterating all values,
+ * namespace filtering, and expired value handling.
+ * Tests operate through the Keyv wrapper.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param Keyv - The Keyv constructor
+ * @param store - Factory that returns a fresh store instance per test
+ */
 const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test(".iterator() returns an asyncIterator", (t) => {
 		const keyv = new Keyv({ store: store() });

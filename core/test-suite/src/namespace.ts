@@ -2,6 +2,14 @@ import { faker } from "@faker-js/faker";
 import type KeyvModule from "keyv";
 import type { KeyvStoreFn, TestFunction } from "./types.js";
 
+/**
+ * Registers Keyv namespace isolation tests: verifies that namespaced set/get,
+ * delete, and clear operations do not collide across namespaces.
+ * Tests operate through the Keyv wrapper.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param Keyv - The Keyv constructor
+ * @param store - Factory that returns a fresh store instance per test
+ */
 const keyvNamespaceTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test("namespaced set/get don't collide", async (t) => {
 		const ns1 = faker.string.alphanumeric(8);

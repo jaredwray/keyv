@@ -5,6 +5,13 @@ import JSONbig from "json-bigint";
 import type KeyvModule from "keyv";
 import type { KeyvStoreFn, TestFunction } from "./types.js";
 
+/**
+ * Registers Keyv value type tests: verifies storage of false, null, undefined, numbers,
+ * objects, buffers, strings, symbols, BigInt, and special characters.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param Keyv - The Keyv constructor
+ * @param store - Factory that returns a fresh store instance per test
+ */
 const keyvValueTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test("value can be false", async (t) => {
 		const keyv = new Keyv({ store: store() });

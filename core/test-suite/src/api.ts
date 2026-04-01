@@ -7,6 +7,13 @@ const delay = async (ms: number) =>
 		setTimeout(resolve, ms);
 	});
 
+/**
+ * Registers Keyv API tests: set, get, getMany, delete, deleteMany, clear, and has.
+ * Tests operate through the Keyv wrapper, not directly on the storage adapter.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param Keyv - The Keyv constructor
+ * @param store - Factory that returns a fresh store instance per test
+ */
 const keyvApiTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	test(".set(key, value) returns a Promise", (t) => {
 		const keyv = new Keyv({ store: store() });

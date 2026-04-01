@@ -5,12 +5,7 @@ import {
 	compressionTestSuite,
 	keyvIteratorTests,
 	keyvTestSuite,
-	storageBasicTests,
-	storageBatchTests,
-	storageDisconnectTests,
-	storageIteratorTests,
-	storageNamespaceTests,
-	storageTtlTests,
+	storageTestSuite,
 } from "../src/index.js";
 
 const storeExtended = () => {
@@ -25,10 +20,4 @@ compressionTestSuite(it, new KeyvLz4TestAdapter());
 
 // Storage-level tests using KeyvMemoryAdapter
 const memoryStore = () => new KeyvMemoryAdapter(new Map());
-
-storageBasicTests(it, memoryStore);
-storageBatchTests(it, memoryStore);
-storageIteratorTests(it, memoryStore);
-storageTtlTests(it, memoryStore);
-storageNamespaceTests(it, memoryStore);
-storageDisconnectTests(it, memoryStore);
+storageTestSuite(it, memoryStore);

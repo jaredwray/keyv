@@ -2,6 +2,12 @@ import { faker } from "@faker-js/faker";
 import Keyv, { type KeyvCompressionAdapter } from "keyv";
 import type { TestFunction } from "./types.js";
 
+/**
+ * Registers compression adapter compliance tests: compress/decompress round-trips
+ * with arrays, strings, numbers, and integration with a Keyv instance.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param compression - The compression adapter instance to test
+ */
 const compressionTestSuite = (test: TestFunction, compression: KeyvCompressionAdapter) => {
 	test("number array compression/decompression", async (t) => {
 		const array = JSON.stringify([4, 5, 6, 7]);

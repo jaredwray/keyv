@@ -1,7 +1,24 @@
 import { faker } from "@faker-js/faker";
-import type { StorageFn, TestFunction } from "./types.js";
+import type { StorageFn, StorageTestOptions, TestFunction } from "./types.js";
 
-const storageIteratorTests = (test: TestFunction, store: StorageFn) => {
+/**
+ * Registers iterator tests directly on the storage adapter: async iterator protocol,
+ * iterating all pairs, namespace filtering, and empty store behavior.
+ * Skipped if `options.iterator` is `false`.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param store - Factory that returns a fresh {@link KeyvStorageAdapter} instance
+ * @param options - Test configuration (toggle flags)
+ */
+const storageIteratorTests = (
+	test: TestFunction,
+	store: StorageFn,
+	options?: StorageTestOptions,
+) => {
+	/* v8 ignore next 3 -- @preserve */
+	if (options?.iterator === false) {
+		return;
+	}
+
 	test("iterator() returns an asyncIterator", (t) => {
 		const s = store();
 		t.expect(s.iterator).toBeDefined();

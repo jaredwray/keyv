@@ -2,7 +2,19 @@ import { faker } from "@faker-js/faker";
 import { delay } from "./helper.js";
 import type { StorageFn, StorageTestOptions, TestFunction } from "./types.js";
 
+/**
+ * Registers TTL expiration tests directly on the storage adapter: set with TTL,
+ * has after expiry, and setMany with per-entry TTL. Skipped if `options.ttl` is `false`.
+ * @param test - The test registration function (e.g. vitest `it`)
+ * @param store - Factory that returns a fresh {@link KeyvStorageAdapter} instance
+ * @param options - Test configuration (missingValue, toggle flags)
+ */
 const storageTtlTests = (test: TestFunction, store: StorageFn, options?: StorageTestOptions) => {
+	/* v8 ignore next 3 -- @preserve */
+	if (options?.ttl === false) {
+		return;
+	}
+
 	const missingValue = options?.missingValue;
 
 	test("set(key, value, ttl) expires after TTL", async (t) => {
