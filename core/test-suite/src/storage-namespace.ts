@@ -10,6 +10,7 @@ const storageNamespaceTests = (test: TestFunction, store: StorageFn) => {
 		t.expect(s.namespace).toBeUndefined();
 	});
 
+	/* v8 ignore start -- @preserve */
 	test("createKeyPrefix returns prefixed key when namespace is set", (t) => {
 		const s = store();
 		// biome-ignore lint/suspicious/noExplicitAny: testing adapter method
@@ -69,6 +70,7 @@ const storageNamespaceTests = (test: TestFunction, store: StorageFn) => {
 		t.expect(adapter.keyPrefixSeparator).toBe("::");
 		adapter.keyPrefixSeparator = original;
 	});
+	/* v8 ignore stop */
 };
 
 export default storageNamespaceTests;

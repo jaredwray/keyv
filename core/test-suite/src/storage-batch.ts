@@ -25,6 +25,7 @@ const storageBatchTests = (test: TestFunction, store: StorageFn, options?: Stora
 	test("setMany with empty array does not error", async (t) => {
 		const s = store();
 		const result = await s.setMany([]);
+		/* v8 ignore next -- @preserve */
 		t.expect(Array.isArray(result) || result === undefined).toBe(true);
 	});
 

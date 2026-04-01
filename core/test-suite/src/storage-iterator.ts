@@ -5,6 +5,7 @@ const storageIteratorTests = (test: TestFunction, store: StorageFn) => {
 	test("iterator() returns an asyncIterator", (t) => {
 		const s = store();
 		t.expect(s.iterator).toBeDefined();
+		/* v8 ignore next 3 -- @preserve */
 		if (!s.iterator) {
 			return;
 		}
@@ -15,6 +16,7 @@ const storageIteratorTests = (test: TestFunction, store: StorageFn) => {
 
 	test("iterator() iterates over all stored pairs", async (t) => {
 		const s = store();
+		/* v8 ignore next 3 -- @preserve */
 		if (!s.iterator) {
 			return;
 		}
@@ -42,6 +44,7 @@ const storageIteratorTests = (test: TestFunction, store: StorageFn) => {
 
 	test("iterator() with namespace only yields namespaced keys", async (t) => {
 		const s = store();
+		/* v8 ignore next 3 -- @preserve */
 		if (!s.iterator) {
 			return;
 		}
@@ -71,6 +74,7 @@ const storageIteratorTests = (test: TestFunction, store: StorageFn) => {
 
 	test("iterator() on empty store yields nothing", async (t) => {
 		const s = store();
+		/* v8 ignore next 3 -- @preserve */
 		if (!s.iterator) {
 			return;
 		}
@@ -80,6 +84,7 @@ const storageIteratorTests = (test: TestFunction, store: StorageFn) => {
 
 		const entries: unknown[] = [];
 		for await (const entry of s.iterator(namespace)) {
+			/* v8 ignore next -- @preserve */
 			entries.push(entry);
 		}
 

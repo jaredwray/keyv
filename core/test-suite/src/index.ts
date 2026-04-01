@@ -12,6 +12,7 @@ const keyvTestSuite = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvS
 	keyvNamespaceTest(test, Keyv, store);
 };
 
+/* v8 ignore next 4 -- @preserve */
 const storageTestSuite = (test: TestFunction, store: StorageFn, options?: StorageTestOptions) => {
 	storageBasicTests(test, store, options);
 	storageBatchTests(test, store, options);
