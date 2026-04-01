@@ -92,11 +92,6 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Setup NPM Auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish keyv
         run: pnpm --filter keyv publish --tag alpha --no-git-checks --access public --provenance
 
