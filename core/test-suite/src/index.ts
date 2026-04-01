@@ -44,6 +44,7 @@ export { compressionTestSuite } from "./compression.js";
 export { delay, delay as sleep } from "./helper.js";
 export { keyvIteratorTests } from "./iterator.js";
 export { keyvNamespaceTests } from "./namespace.js";
+export { serializationTestSuite } from "./serialization.js";
 export { storageBasicTests } from "./storage-basic.js";
 export { storageBatchTests } from "./storage-batch.js";
 export { storageDisconnectTests } from "./storage-disconnect.js";
