@@ -1,6 +1,6 @@
 import zlib from "node:zlib";
 import { Keyv } from "keyv";
-import * as test from "vitest";
+import { it } from "vitest";
 import KeyvBrotli from "../src/index.js";
 
 type MyType = {
@@ -8,7 +8,7 @@ type MyType = {
 	b?: number[];
 };
 
-test.it("default options", async (t) => {
+it("default options", async (t) => {
 	const keyv = new Keyv({
 		compression: new KeyvBrotli(),
 	});
@@ -17,7 +17,7 @@ test.it("default options", async (t) => {
 	t.expect(await keyv.get<MyType>("testkey")).toEqual({ a: "testvalue" });
 });
 
-test.it("compression user defined options", async (t) => {
+it("compression user defined options", async (t) => {
 	const options = {
 		compressOptions: {
 			chunkSize: 1024,
@@ -35,7 +35,7 @@ test.it("compression user defined options", async (t) => {
 	t.expect(await keyv.get<MyType>("testkey")).toEqual({ a: "testvalue" });
 });
 
-test.it("user defined options", async (t) => {
+it("user defined options", async (t) => {
 	const options = {
 		decompressOptions: {
 			chunkSize: 1024,
@@ -53,7 +53,7 @@ test.it("user defined options", async (t) => {
 	t.expect(await keyv.get<MyType>("testkey")).toEqual({ a: "testvalue" });
 });
 
-test.it("using number array", async (t) => {
+it("using number array", async (t) => {
 	const options = {
 		decompressOptions: {
 			chunkSize: 1024,

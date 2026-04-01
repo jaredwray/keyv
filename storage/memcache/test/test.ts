@@ -2,10 +2,8 @@ import { EventEmitter } from "node:events";
 import { faker } from "@faker-js/faker";
 import { keyvApiTests, keyvValueTests } from "@keyv/test-suite";
 import Keyv from "keyv";
-import * as test from "vitest";
+import { beforeEach, expect, it } from "vitest";
 import KeyvMemcache, { createKeyv } from "../src/index.js";
-
-const { beforeEach, expect, it } = test;
 
 const snooze = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -411,5 +409,5 @@ it("handles legacy JSON without v field in get", async () => {
 
 const store = () => keyvMemcache;
 
-keyvApiTests(test, Keyv, store);
-keyvValueTests(test, Keyv, store);
+keyvApiTests(it, Keyv, store);
+keyvValueTests(it, Keyv, store);

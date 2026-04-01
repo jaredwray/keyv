@@ -3,44 +3,38 @@ import { faker } from "@faker-js/faker";
 import BigNumber from "bignumber.js";
 import JSONbig from "json-bigint";
 import type KeyvModule from "keyv";
-import type * as Vitest from "vitest";
-import type { KeyvStoreFn } from "./types";
+import type { KeyvStoreFn, TestFunction } from "./types.js";
 
-const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
-	test.beforeEach(async () => {
-		const keyv = new Keyv({ store: store() });
-		await keyv.clear();
-	});
-
-	test.it("value can be false", async (t) => {
+const keyvValueTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
+	test("value can be false", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, false);
 		t.expect(await keyv.get(key)).toBeFalsy();
 	});
 
-	test.it("value can be null", async (t) => {
+	test("value can be null", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, null);
 		t.expect(await keyv.get(key)).toBeNull();
 	});
 
-	test.it("value can be undefined", async (t) => {
+	test("value can be undefined", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, undefined);
 		t.expect(await keyv.get(key)).toBeUndefined();
 	});
 
-	test.it("value can be a number", async (t) => {
+	test("value can be a number", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, 0);
 		t.expect(await keyv.get(key)).toBe(0);
 	});
 
-	test.it("value can be an object", async (t) => {
+	test("value can be an object", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = { fizz: "buzz" };
@@ -48,7 +42,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		t.expect(await keyv.get(key)).toEqual(value);
 	});
 
-	test.it("value can be a buffer", async (t) => {
+	test("value can be a buffer", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const buf = Buffer.from("bar");
@@ -63,7 +57,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		}
 	});
 
-	test.it("value can be an object containing a buffer", async (t) => {
+	test("value can be an object containing a buffer", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = { buff: Buffer.from("buzz") };
@@ -71,7 +65,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		t.expect(await keyv.get(key)).toEqual(value);
 	});
 
-	test.it("value can contain quotes", async (t) => {
+	test("value can contain quotes", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = '"';
@@ -79,7 +73,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		t.expect(await keyv.get(key)).toEqual(value);
 	});
 
-	test.it("value can be a string", async (t) => {
+	test("value can be a string", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.sentence();
@@ -87,7 +81,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		t.expect(await keyv.get(key)).toBe(value);
 	});
 
-	test.it("value can not be symbol", async (t) => {
+	test("value can not be symbol", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		keyv.on("error", () => {});
 		const key = faker.string.alphanumeric(10);
@@ -97,7 +91,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		t.expect(result).toBe(false);
 	});
 
-	test.it("value can be BigInt using other serializer/deserializer", async (t) => {
+	test("value can be BigInt using other serializer/deserializer", async (t) => {
 		const keyv = new Keyv({
 			store: store(),
 			serialization: {
@@ -112,7 +106,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		t.expect(JSONbig.stringify(storedValue)).toBe(BigNumber(value).toString());
 	});
 
-	test.it("single quotes value should be saved", async (t) => {
+	test("single quotes value should be saved", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
@@ -130,7 +124,7 @@ const keyvValueTests = (test: typeof Vitest, Keyv: typeof KeyvModule, store: Key
 		t.expect(await keyv.get(key3)).toBe(value);
 	});
 
-	test.it("single quotes key should be saved", async (t) => {
+	test("single quotes key should be saved", async (t) => {
 		const keyv = new Keyv({ store: store() });
 
 		const value = "'";

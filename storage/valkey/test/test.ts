@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import Redis, { type Cluster } from "iovalkey";
 import Keyv from "keyv";
-import * as test from "vitest";
+import { it } from "vitest";
 import KeyvValkey, { createKeyv } from "../src/index.js";
 
 const REDIS_HOST = "localhost:6370";
@@ -10,10 +10,10 @@ const redisURI = `redis://${REDIS_HOST}`;
 
 const store = () => new KeyvValkey(redisURI);
 
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
+keyvTestSuite(it, Keyv, store);
+keyvIteratorTests(it, Keyv, store);
 
-test.it("reuse a redis instance", async (t) => {
+it("reuse a redis instance", async (t) => {
 	const redis = new Redis(redisURI);
 	// @ts-expect-error foo doesn't exist on Redis
 	redis.foo = "bar";
@@ -26,7 +26,7 @@ test.it("reuse a redis instance", async (t) => {
 	t.expect(await keyv.get(key)).toBe(value);
 });
 
-test.it("set an undefined key", async (t) => {
+it("set an undefined key", async (t) => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis);
 
@@ -36,7 +36,7 @@ test.it("set an undefined key", async (t) => {
 	t.expect(result).toBe(undefined);
 });
 
-test.it("Async Iterator 0 element test", async (t) => {
+it("Async Iterator 0 element test", async (t) => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis);
 	await keyv.clear();
@@ -45,7 +45,7 @@ test.it("Async Iterator 0 element test", async (t) => {
 	t.expect(key.value).toBe(undefined);
 });
 
-test.it("close connection successfully", async (t) => {
+it("close connection successfully", async (t) => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis);
 	const key = faker.string.alphanumeric(10);
@@ -59,7 +59,7 @@ test.it("close connection successfully", async (t) => {
 	}
 });
 
-test.it("clear method with empty keys should not error", async (t) => {
+it("clear method with empty keys should not error", async (t) => {
 	try {
 		const keyv = new KeyvValkey(redisURI);
 		t.expect(await keyv.clear()).toBeUndefined();
@@ -68,7 +68,7 @@ test.it("clear method with empty keys should not error", async (t) => {
 	}
 });
 
-test.it(".clear() cleaned namespace", async (t) => {
+it(".clear() cleaned namespace", async (t) => {
 	// Setup
 	const keyvRedis = new KeyvValkey(redisURI);
 	const ns = faker.string.alphanumeric(8);
@@ -98,7 +98,7 @@ test.it(".clear() cleaned namespace", async (t) => {
 	t.expect(await redis.memory("USAGE", `namespace:${ns}`)).toBe(null);
 });
 
-test.it("Keyv stores ttl without const", async (t) => {
+it("Keyv stores ttl without const", async (t) => {
 	const keyv = new Keyv(new KeyvValkey(redisURI));
 	const key = faker.string.alphanumeric(10);
 	const value = faker.string.alphanumeric(10);
@@ -110,7 +110,7 @@ test.it("Keyv stores ttl without const", async (t) => {
 	t.expect(await keyv.get(key)).toBe(undefined);
 });
 
-test.it("should handle KeyvOptions without uri", (t) => {
+it("should handle KeyvOptions without uri", (t) => {
 	const options = {
 		isCluster: true,
 	};
@@ -118,7 +118,7 @@ test.it("should handle KeyvOptions without uri", (t) => {
 	t.expect(keyv.client instanceof Redis).toBeTruthy();
 });
 
-test.it("should handle KeyvOptions with family option", (t) => {
+it("should handle KeyvOptions with family option", (t) => {
 	const options = {
 		options: {},
 		family: 4,
@@ -127,7 +127,7 @@ test.it("should handle KeyvOptions with family option", (t) => {
 	t.expect(keyv.client instanceof Redis).toBeTruthy();
 });
 
-test.it("should handle RedisOptions", (t) => {
+it("should handle RedisOptions", (t) => {
 	const options = {
 		db: 2,
 		connectionName: "name",
@@ -136,7 +136,7 @@ test.it("should handle RedisOptions", (t) => {
 	t.expect(keyv.client instanceof Redis).toBeTruthy();
 });
 
-test.it("set method should use sets when useSets is false", async (t) => {
+it("set method should use sets when useSets is false", async (t) => {
 	const options = { useSets: false };
 	const keyv = new KeyvValkey(options);
 
@@ -148,7 +148,7 @@ test.it("set method should use sets when useSets is false", async (t) => {
 	t.expect(result).toBe(value);
 });
 
-test.it("clear method when useSets is false", async (t) => {
+it("clear method when useSets is false", async (t) => {
 	const options = { useSets: false };
 	const keyv = new KeyvValkey(options);
 
@@ -168,13 +168,13 @@ test.it("clear method when useSets is false", async (t) => {
 	t.expect(value2).toBe(undefined);
 });
 
-test.it("clear method when useSets is false and empty keys should not error", async (t) => {
+it("clear method when useSets is false and empty keys should not error", async (t) => {
 	const options = { useSets: false };
 	const keyv = new KeyvValkey(options);
 	t.expect(await keyv.clear()).toBeUndefined();
 });
 
-test.it("when passing in ioredis set the options.useSets", (t) => {
+it("when passing in ioredis set the options.useSets", (t) => {
 	const options = { useSets: false };
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
@@ -182,7 +182,7 @@ test.it("when passing in ioredis set the options.useSets", (t) => {
 	t.expect(keyv.useSets).toBe(false);
 });
 
-test.it("del should work when not using useSets", async (t) => {
+it("del should work when not using useSets", async (t) => {
 	const options = { useSets: false };
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, options);
@@ -198,7 +198,7 @@ test.it("del should work when not using useSets", async (t) => {
 	t.expect(result).toBe(undefined);
 });
 
-test.it("del should work when using useSets", async (t) => {
+it("del should work when using useSets", async (t) => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, { useSets: true });
 	const ns = `del-sets-${faker.string.alphanumeric(8)}`;
@@ -217,7 +217,7 @@ test.it("del should work when using useSets", async (t) => {
 	t.expect(resultFalse).toBe(false);
 });
 
-test.it("can create a full keyv instance with a uri", async (t) => {
+it("can create a full keyv instance with a uri", async (t) => {
 	const keyv = createKeyv(redisURI);
 	t.expect(keyv).toBeTruthy();
 	const key = faker.string.alphanumeric(10);
@@ -226,39 +226,39 @@ test.it("can create a full keyv instance with a uri", async (t) => {
 	t.expect(await keyv.get(key)).toBe(value);
 });
 
-test.it("should have default useSets as false", (t) => {
+it("should have default useSets as false", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	t.expect(keyv.useSets).toBe(false);
 });
 
-test.it("should allow setting useSets via setter", (t) => {
+it("should allow setting useSets via setter", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	keyv.useSets = false;
 	t.expect(keyv.useSets).toBe(false);
 });
 
-test.it("should allow setting and getting namespace via setter", (t) => {
+it("should allow setting and getting namespace via setter", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	t.expect(keyv.namespace).toBeUndefined();
 	keyv.namespace = "test-ns";
 	t.expect(keyv.namespace).toBe("test-ns");
 });
 
-test.it("should allow setting redis instance via setter", (t) => {
+it("should allow setting redis instance via setter", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const newRedis = new Redis(redisURI);
 	keyv.client = newRedis;
 	t.expect(keyv.client).toBe(newRedis);
 });
 
-test.it("useSets getter should reflect current useSets value", (t) => {
+it("useSets getter should reflect current useSets value", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	t.expect(keyv.useSets).toBe(false);
 	keyv.useSets = true;
 	t.expect(keyv.useSets).toBe(true);
 });
 
-test.it("deprecated useRedisSets getter/setter should still work", (t) => {
+it("deprecated useRedisSets getter/setter should still work", (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	t.expect(keyv.useRedisSets).toBe(false);
 	keyv.useRedisSets = true;
@@ -266,7 +266,7 @@ test.it("deprecated useRedisSets getter/setter should still work", (t) => {
 	t.expect(keyv.useSets).toBe(true);
 });
 
-test.it("setMany should set multiple keys", async (t) => {
+it("setMany should set multiple keys", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const key1 = faker.string.alphanumeric(10);
 	const key2 = faker.string.alphanumeric(10);
@@ -284,7 +284,7 @@ test.it("setMany should set multiple keys", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("setMany with TTL should expire keys", async (t) => {
+it("setMany with TTL should expire keys", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const key = faker.string.alphanumeric(10);
 	const value = faker.string.alphanumeric(10);
@@ -297,14 +297,14 @@ test.it("setMany with TTL should expire keys", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("setMany with empty array should not error", async (t) => {
+it("setMany with empty array should not error", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	await keyv.setMany([]);
 	t.expect(true).toBe(true);
 	await keyv.disconnect();
 });
 
-test.it("setMany should skip undefined values", async (t) => {
+it("setMany should skip undefined values", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const key1 = faker.string.alphanumeric(10);
 	const key2 = faker.string.alphanumeric(10);
@@ -318,7 +318,7 @@ test.it("setMany should skip undefined values", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("setMany with all undefined values should not error", async (t) => {
+it("setMany with all undefined values should not error", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const key1 = faker.string.alphanumeric(10);
 	const key2 = faker.string.alphanumeric(10);
@@ -331,7 +331,7 @@ test.it("setMany with all undefined values should not error", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("setMany with useSets should track keys in set", async (t) => {
+it("setMany with useSets should track keys in set", async (t) => {
 	const keyv = new KeyvValkey(redisURI, { useSets: true });
 	const ns = `setmany-${faker.string.alphanumeric(8)}`;
 	keyv.namespace = ns;
@@ -350,7 +350,7 @@ test.it("setMany with useSets should track keys in set", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("hasMany should return array of booleans", async (t) => {
+it("hasMany should return array of booleans", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const key1 = faker.string.alphanumeric(10);
 	const key2 = faker.string.alphanumeric(10);
@@ -362,14 +362,14 @@ test.it("hasMany should return array of booleans", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("hasMany with empty array should return empty array", async (t) => {
+it("hasMany with empty array should return empty array", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const results = await keyv.hasMany([]);
 	t.expect(results).toEqual([]);
 	await keyv.disconnect();
 });
 
-test.it("deleteMany should batch delete keys", async (t) => {
+it("deleteMany should batch delete keys", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const key1 = faker.string.alphanumeric(10);
 	const key2 = faker.string.alphanumeric(10);
@@ -384,7 +384,7 @@ test.it("deleteMany should batch delete keys", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("deleteMany with nonexistent keys should return array of false", async (t) => {
+it("deleteMany with nonexistent keys should return array of false", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const key1 = faker.string.alphanumeric(10);
 	const key2 = faker.string.alphanumeric(10);
@@ -393,14 +393,14 @@ test.it("deleteMany with nonexistent keys should return array of false", async (
 	await keyv.disconnect();
 });
 
-test.it("deleteMany with empty array should return empty array", async (t) => {
+it("deleteMany with empty array should return empty array", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const result = await keyv.deleteMany([]);
 	t.expect(result).toEqual([]);
 	await keyv.disconnect();
 });
 
-test.it("clear with useSets should clear keys tracked in set", async (t) => {
+it("clear with useSets should clear keys tracked in set", async (t) => {
 	const keyv = new KeyvValkey(redisURI, { useSets: true });
 	const ns = `clear-sets-${faker.string.alphanumeric(8)}`;
 	keyv.namespace = ns;
@@ -417,7 +417,7 @@ test.it("clear with useSets should clear keys tracked in set", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("iterator without namespace should not error", async (t) => {
+it("iterator without namespace should not error", async (t) => {
 	const keyv = new KeyvValkey(redisURI);
 	const iterator = keyv.iterator();
 	const result = await iterator.next();
@@ -425,13 +425,13 @@ test.it("iterator without namespace should not error", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("createKeyv without arguments should use default uri", async (t) => {
+it("createKeyv without arguments should use default uri", async (t) => {
 	const keyv = createKeyv();
 	t.expect(keyv).toBeTruthy();
 	await keyv.disconnect();
 });
 
-test.it("iterator with useSets should iterate keys", async (t) => {
+it("iterator with useSets should iterate keys", async (t) => {
 	const keyvRedis = new KeyvValkey(redisURI, { useSets: true });
 	const ns = `iter-sets-${faker.string.alphanumeric(8)}`;
 	const keyv = new Keyv(keyvRedis, { namespace: ns });
@@ -454,7 +454,7 @@ test.it("iterator with useSets should iterate keys", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("useSets should use sets: prefix for SET tracking key", async (t) => {
+it("useSets should use sets: prefix for SET tracking key", async (t) => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, { useSets: true });
 	const ns = `sets-prefix-${faker.string.alphanumeric(8)}`;
@@ -474,7 +474,7 @@ test.it("useSets should use sets: prefix for SET tracking key", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("useSets clear should clean up legacy namespace: SET keys", async (t) => {
+it("useSets clear should clean up legacy namespace: SET keys", async (t) => {
 	const redis = new Redis(redisURI);
 	const ns = `legacy-${faker.string.alphanumeric(8)}`;
 
@@ -495,7 +495,7 @@ test.it("useSets clear should clean up legacy namespace: SET keys", async (t) =>
 	await keyv.disconnect();
 });
 
-test.it("useSets should not collide with string keys at namespace path", async (t) => {
+it("useSets should not collide with string keys at namespace path", async (t) => {
 	const redis = new Redis(redisURI);
 	const ns = `collision-${faker.string.alphanumeric(8)}`;
 
@@ -517,7 +517,7 @@ test.it("useSets should not collide with string keys at namespace path", async (
 	await keyv.disconnect();
 });
 
-test.it("useSets without namespace should use 'sets' as key prefix", async (t) => {
+it("useSets without namespace should use 'sets' as key prefix", async (t) => {
 	const redis = new Redis(redisURI);
 	const keyv = new KeyvValkey(redis, { useSets: true });
 
@@ -537,7 +537,7 @@ test.it("useSets without namespace should use 'sets' as key prefix", async (t) =
 	await keyv.disconnect();
 });
 
-test.it("deleteMany with useSets should remove from set", async (t) => {
+it("deleteMany with useSets should remove from set", async (t) => {
 	const keyv = new KeyvValkey(redisURI, { useSets: true });
 	const ns = `delmany-${faker.string.alphanumeric(8)}`;
 	keyv.namespace = ns;
@@ -553,7 +553,7 @@ test.it("deleteMany with useSets should remove from set", async (t) => {
 	await keyv.disconnect();
 });
 
-test.it("iterator should iterate over multiple keys in namespace", async (t) => {
+it("iterator should iterate over multiple keys in namespace", async (t) => {
 	const redis = new Redis(redisURI);
 	const keyvRedis = new KeyvValkey(redis);
 	const ns = `iterator-${faker.string.alphanumeric(8)}`;
@@ -590,7 +590,7 @@ test.it("iterator should iterate over multiple keys in namespace", async (t) => 
 	await keyv.disconnect();
 });
 
-test.it("setMany returns false entries on exec error", async (t) => {
+it("setMany returns false entries on exec error", async (t) => {
 	const store = new KeyvValkey(redisURI);
 	let emittedError = false;
 	store.on("error", () => {
@@ -614,7 +614,7 @@ test.it("setMany returns false entries on exec error", async (t) => {
 	await store.disconnect();
 });
 
-test.it("has() returns true for an existing key", async (t) => {
+it("has() returns true for an existing key", async (t) => {
 	const store = new KeyvValkey(redisURI);
 	const key = faker.string.alphanumeric(10);
 	await store.set(key, "value");
@@ -623,13 +623,13 @@ test.it("has() returns true for an existing key", async (t) => {
 	await store.disconnect();
 });
 
-test.it("has() returns false for a non-existing key", async (t) => {
+it("has() returns false for a non-existing key", async (t) => {
 	const store = new KeyvValkey(redisURI);
 	t.expect(await store.has("nonexistent-key")).toBe(false);
 	await store.disconnect();
 });
 
-test.it("has() returns false after delete", async (t) => {
+it("has() returns false after delete", async (t) => {
 	const store = new KeyvValkey(redisURI);
 	const key = faker.string.alphanumeric(10);
 	await store.set(key, "value");

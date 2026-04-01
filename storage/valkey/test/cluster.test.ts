@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import Redis, { type Cluster } from "iovalkey";
-import * as test from "vitest";
+import { it } from "vitest";
 import KeyvValkey from "../src/index.js";
 
 const clusterNodes = [
@@ -17,7 +17,7 @@ async function createReadyCluster() {
 	return cluster;
 }
 
-test.it("cluster: setMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
+it("cluster: setMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
 	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
@@ -43,7 +43,7 @@ test.it("cluster: setMany should work without CROSSSLOT errors", { retry: 3 }, a
 	await keyv.disconnect();
 });
 
-test.it("cluster: getMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
+it("cluster: getMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
 	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
@@ -64,7 +64,7 @@ test.it("cluster: getMany should work without CROSSSLOT errors", { retry: 3 }, a
 	await keyv.disconnect();
 });
 
-test.it("cluster: deleteMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
+it("cluster: deleteMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
 	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 
@@ -88,7 +88,7 @@ test.it("cluster: deleteMany should work without CROSSSLOT errors", { retry: 3 }
 	await keyv.disconnect();
 });
 
-test.it("cluster: hasMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
+it("cluster: hasMany should work without CROSSSLOT errors", { retry: 3 }, async (t) => {
 	const cluster = await createReadyCluster();
 	const keyv = new KeyvValkey(cluster as Cluster);
 

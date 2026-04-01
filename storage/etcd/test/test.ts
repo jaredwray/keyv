@@ -1,17 +1,17 @@
 import { faker } from "@faker-js/faker";
 import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
 import { Keyv } from "keyv";
-import * as test from "vitest";
+import { it } from "vitest";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
 
 const etcdUrl = "etcd://127.0.0.1:2379";
 
 const store = () => new KeyvEtcd({ uri: etcdUrl, busyTimeout: 3000 });
 
-keyvTestSuite(test, Keyv, store);
-keyvIteratorTests(test, Keyv, store);
+keyvTestSuite(it, Keyv, store);
+keyvIteratorTests(it, Keyv, store);
 
-test.it("default options", (t) => {
+it("default options", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.url).toBe("127.0.0.1:2379");
 	t.expect(store.ttl).toBeUndefined();
@@ -19,7 +19,7 @@ test.it("default options", (t) => {
 	t.expect(store.namespace).toBeUndefined();
 });
 
-test.it("enable ttl using default url", (t) => {
+it("enable ttl using default url", (t) => {
 	const store = new KeyvEtcd({ ttl: 1000 });
 	t.expect(store.url).toBe("127.0.0.1:2379");
 	t.expect(store.ttl).toBe(1000);
@@ -28,7 +28,7 @@ test.it("enable ttl using default url", (t) => {
 	t.expect(store.lease).toBeDefined();
 });
 
-test.it("disable ttl using default url", (t) => {
+it("disable ttl using default url", (t) => {
 	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd({ ttl: true });
 	t.expect(store.url).toBe("127.0.0.1:2379");
@@ -38,7 +38,7 @@ test.it("disable ttl using default url", (t) => {
 	t.expect(store.lease).toBeUndefined();
 });
 
-test.it("enable ttl using url", (t) => {
+it("enable ttl using url", (t) => {
 	const store = new KeyvEtcd({
 		url: "127.0.0.1:2379",
 		ttl: 1000,
@@ -50,7 +50,7 @@ test.it("enable ttl using url", (t) => {
 	t.expect(store.lease).toBeDefined();
 });
 
-test.it("enable ttl using url and options", (t) => {
+it("enable ttl using url and options", (t) => {
 	const store = new KeyvEtcd("127.0.0.1:2379", { ttl: 1000 });
 	t.expect(store.url).toBe("127.0.0.1:2379");
 	t.expect(store.ttl).toBe(1000);
@@ -59,7 +59,7 @@ test.it("enable ttl using url and options", (t) => {
 	t.expect(store.lease).toBeDefined();
 });
 
-test.it("disable ttl using url and options", (t) => {
+it("disable ttl using url and options", (t) => {
 	// @ts-expect-error - ttl is not a number, just for test
 	const store = new KeyvEtcd("127.0.0.1:2379", { ttl: true });
 	t.expect(store.url).toBe("127.0.0.1:2379");
@@ -75,7 +75,7 @@ async function sleep(ms: number): Promise<void> {
 	});
 }
 
-test.it("KeyvEtcd respects default tll option", async (t) => {
+it("KeyvEtcd respects default tll option", async (t) => {
 	const keyv = new KeyvEtcd(etcdUrl, { ttl: 1000 });
 	const key = faker.string.uuid();
 	const value = faker.lorem.word();
@@ -85,7 +85,7 @@ test.it("KeyvEtcd respects default tll option", async (t) => {
 	t.expect(await keyv.get(key)).toBe(null);
 });
 
-test.it("set respects per-call ttl", async (t) => {
+it("set respects per-call ttl", async (t) => {
 	const keyv = new KeyvEtcd(etcdUrl);
 	const key = faker.string.uuid();
 	await keyv.set(key, "value", 1000);
@@ -94,13 +94,13 @@ test.it("set respects per-call ttl", async (t) => {
 	t.expect(await keyv.get(key)).toBe(null);
 });
 
-test.it(".delete() with key as number", async (t) => {
+it(".delete() with key as number", async (t) => {
 	const store = new KeyvEtcd({ uri: etcdUrl });
 	// @ts-expect-error - key needs be a string, just for test
 	t.expect(await store.delete(123)).toBeFalsy();
 });
 
-test.it(".clear() with default namespace", async (t) => {
+it(".clear() with default namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const key = faker.string.uuid();
 	const value = faker.lorem.word();
@@ -112,7 +112,7 @@ test.it(".clear() with default namespace", async (t) => {
 	t.expect(result2).toBe(null);
 });
 
-test.it(".clear() with namespace", async (t) => {
+it(".clear() with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -122,7 +122,7 @@ test.it(".clear() with namespace", async (t) => {
 	t.expect(await store.get(key)).toBe(null);
 });
 
-test.it("close connection successfully", async (t) => {
+it("close connection successfully", async (t) => {
 	const keyv = new KeyvEtcd(etcdUrl);
 	const key = faker.string.uuid();
 	t.expect(await keyv.get(key)).toBe(null);
@@ -135,7 +135,7 @@ test.it("close connection successfully", async (t) => {
 	}
 });
 
-test.it("iterator with namespace", async (t) => {
+it("iterator with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -158,7 +158,7 @@ test.it("iterator with namespace", async (t) => {
 	t.expect(results.get(key2)).toBe(value2);
 });
 
-test.it("iterator without namespace", async (t) => {
+it("iterator without namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.clear();
 	const key = faker.string.uuid();
@@ -172,7 +172,7 @@ test.it("iterator without namespace", async (t) => {
 	t.expect(entry.value[1]).toBe(value);
 });
 
-test.it("get/set with namespace", async (t) => {
+it("get/set with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -182,7 +182,7 @@ test.it("get/set with namespace", async (t) => {
 	t.expect(await store.get(key)).toBe(value);
 });
 
-test.it("delete with namespace", async (t) => {
+it("delete with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -192,7 +192,7 @@ test.it("delete with namespace", async (t) => {
 	t.expect(await store.get(key)).toBe(null);
 });
 
-test.it("has with namespace", async (t) => {
+it("has with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -203,7 +203,7 @@ test.it("has with namespace", async (t) => {
 	t.expect(await store.has(key)).toBe(false);
 });
 
-test.it("getMany with namespace", async (t) => {
+it("getMany with namespace", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const namespace = faker.string.alphanumeric(10);
 	store.namespace = namespace;
@@ -217,7 +217,7 @@ test.it("getMany with namespace", async (t) => {
 	t.expect(results).toEqual([value1, value2]);
 });
 
-test.it("formatKey prefixes key and avoids double prefix", (t) => {
+it("formatKey prefixes key and avoids double prefix", (t) => {
 	const store = new KeyvEtcd();
 	store.namespace = "ns";
 	t.expect(store.formatKey("key")).toBe("ns:key");
@@ -226,21 +226,21 @@ test.it("formatKey prefixes key and avoids double prefix", (t) => {
 	t.expect(store.formatKey("key")).toBe("key");
 });
 
-test.it("createKeyPrefix returns prefixed key when namespace is set", (t) => {
+it("createKeyPrefix returns prefixed key when namespace is set", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
 	t.expect(store.createKeyPrefix("key")).toBe("key");
 	t.expect(store.createKeyPrefix("key", undefined)).toBe("key");
 });
 
-test.it("removeKeyPrefix strips prefix when namespace is set", (t) => {
+it("removeKeyPrefix strips prefix when namespace is set", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
 	t.expect(store.removeKeyPrefix("key")).toBe("key");
 	t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 });
 
-test.it("namespace getter and setter", (t) => {
+it("namespace getter and setter", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.namespace).toBeUndefined();
 	store.namespace = "test-ns";
@@ -249,7 +249,7 @@ test.it("namespace getter and setter", (t) => {
 	t.expect(store.namespace).toBeUndefined();
 });
 
-test.it("keyPrefixSeparator getter and setter", (t) => {
+it("keyPrefixSeparator getter and setter", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.keyPrefixSeparator).toBe(":");
 	store.keyPrefixSeparator = "::";
@@ -257,7 +257,7 @@ test.it("keyPrefixSeparator getter and setter", (t) => {
 	t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
 });
 
-test.it("setMany sets multiple keys", async (t) => {
+it("setMany sets multiple keys", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const key1 = faker.string.uuid();
 	const value1 = faker.lorem.word();
@@ -271,7 +271,7 @@ test.it("setMany sets multiple keys", async (t) => {
 	t.expect(await store.get(key2)).toBe(value2);
 });
 
-test.it("setMany emits error on failure", async (t) => {
+it("setMany emits error on failure", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.disconnect();
 	const errors: unknown[] = [];
@@ -282,7 +282,7 @@ test.it("setMany emits error on failure", async (t) => {
 	t.expect(errors.length).toBeGreaterThan(0);
 });
 
-test.it("hasMany checks multiple keys", async (t) => {
+it("hasMany checks multiple keys", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const key1 = faker.string.uuid();
 	const key2 = faker.string.uuid();
@@ -293,14 +293,14 @@ test.it("hasMany checks multiple keys", async (t) => {
 	t.expect(results).toEqual([true, true, false]);
 });
 
-test.it("url getter and setter", (t) => {
+it("url getter and setter", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.url).toBe("127.0.0.1:2379");
 	store.url = "10.0.0.1:2379";
 	t.expect(store.url).toBe("10.0.0.1:2379");
 });
 
-test.it("ttl getter and setter", (t) => {
+it("ttl getter and setter", (t) => {
 	const store = new KeyvEtcd();
 	t.expect(store.ttl).toBeUndefined();
 	store.ttl = 5000;
@@ -309,7 +309,7 @@ test.it("ttl getter and setter", (t) => {
 	t.expect(store.ttl).toBeUndefined();
 });
 
-test.it("busyTimeout getter and setter", (t) => {
+it("busyTimeout getter and setter", (t) => {
 	const store = new KeyvEtcd({ busyTimeout: 3000 });
 	t.expect(store.busyTimeout).toBe(3000);
 	store.busyTimeout = 5000;
@@ -318,27 +318,27 @@ test.it("busyTimeout getter and setter", (t) => {
 	t.expect(store.busyTimeout).toBeUndefined();
 });
 
-test.it("createKeyv returns a Keyv instance with KeyvEtcd store", (t) => {
+it("createKeyv returns a Keyv instance with KeyvEtcd store", (t) => {
 	const keyv = createKeyv(etcdUrl);
 	t.expect(keyv).toBeInstanceOf(Keyv);
 	t.expect(keyv.store).toBeInstanceOf(KeyvEtcd);
 });
 
-test.it("createKeyv with options", (t) => {
+it("createKeyv with options", (t) => {
 	const keyv = createKeyv(etcdUrl, { ttl: 5000 });
 	t.expect(keyv).toBeInstanceOf(Keyv);
 	t.expect(keyv.store).toBeInstanceOf(KeyvEtcd);
 	t.expect((keyv.store as KeyvEtcd).ttl).toBe(5000);
 });
 
-test.it("createKeyv with options object", (t) => {
+it("createKeyv with options object", (t) => {
 	const keyv = createKeyv({ url: "127.0.0.1:2379", ttl: 3000 });
 	t.expect(keyv).toBeInstanceOf(Keyv);
 	t.expect(keyv.store).toBeInstanceOf(KeyvEtcd);
 	t.expect((keyv.store as KeyvEtcd).ttl).toBe(3000);
 });
 
-test.it("createKeyv set and get", async (t) => {
+it("createKeyv set and get", async (t) => {
 	const keyv = createKeyv(etcdUrl);
 	const key = faker.string.uuid();
 	const value = faker.lorem.word();
@@ -347,7 +347,7 @@ test.it("createKeyv set and get", async (t) => {
 	await keyv.delete(key);
 });
 
-test.it("get emits error on disconnected client", async (t) => {
+it("get emits error on disconnected client", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.disconnect();
 	const errors: unknown[] = [];
@@ -358,7 +358,7 @@ test.it("get emits error on disconnected client", async (t) => {
 	t.expect(errors.length).toBeGreaterThan(0);
 });
 
-test.it("delete emits error on disconnected client", async (t) => {
+it("delete emits error on disconnected client", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.disconnect();
 	const errors: unknown[] = [];
@@ -370,7 +370,7 @@ test.it("delete emits error on disconnected client", async (t) => {
 	t.expect(errors.length).toBeGreaterThan(0);
 });
 
-test.it("clear emits error on disconnected client", async (t) => {
+it("clear emits error on disconnected client", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.disconnect();
 	const errors: unknown[] = [];
@@ -381,13 +381,13 @@ test.it("clear emits error on disconnected client", async (t) => {
 	t.expect(errors.length).toBeGreaterThan(0);
 });
 
-test.it("has returns false on disconnected client", async (t) => {
+it("has returns false on disconnected client", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	await store.disconnect();
 	t.expect(await store.has("key")).toBe(false);
 });
 
-test.it("client getter and setter", (t) => {
+it("client getter and setter", (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const originalClient = store.client;
 	t.expect(originalClient).toBeDefined();
@@ -397,14 +397,14 @@ test.it("client getter and setter", (t) => {
 	t.expect(store.client).not.toBe(originalClient);
 });
 
-test.it("lease getter and setter", (t) => {
+it("lease getter and setter", (t) => {
 	const store = new KeyvEtcd(etcdUrl, { ttl: 1000 });
 	t.expect(store.lease).toBeDefined();
 	store.lease = undefined;
 	t.expect(store.lease).toBeUndefined();
 });
 
-test.it("has returns false for expired key", async (t) => {
+it("has returns false for expired key", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const key = faker.string.uuid();
 	await store.set(key, "value", 1);
@@ -412,7 +412,7 @@ test.it("has returns false for expired key", async (t) => {
 	t.expect(await store.has(key)).toBe(false);
 });
 
-test.it("get returns null for expired key", async (t) => {
+it("get returns null for expired key", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const key = faker.string.uuid();
 	await store.set(key, "value", 1);
@@ -420,7 +420,7 @@ test.it("get returns null for expired key", async (t) => {
 	t.expect(await store.get(key)).toBe(null);
 });
 
-test.it("handles legacy data without envelope in get", async (t) => {
+it("handles legacy data without envelope in get", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const key = faker.string.uuid();
 	// Write raw value directly to etcd without envelope
@@ -429,7 +429,7 @@ test.it("handles legacy data without envelope in get", async (t) => {
 	t.expect(result).toBe("raw-legacy-value");
 });
 
-test.it("handles legacy JSON data without v field in get", async (t) => {
+it("handles legacy JSON data without v field in get", async (t) => {
 	const store = new KeyvEtcd(etcdUrl);
 	const key = faker.string.uuid();
 	// Write JSON that is not our envelope format

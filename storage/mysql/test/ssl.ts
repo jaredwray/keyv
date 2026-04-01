@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import * as test from "vitest";
+import { beforeEach, it } from "vitest";
 import KeyvMysql from "../src/index.js";
 
 const options = {
@@ -12,7 +12,7 @@ const options = {
 	},
 };
 
-test.beforeEach(async () => {
+beforeEach(async () => {
 	const keyv = new KeyvMysql({
 		uri: "mysql://root@localhost:3307/keyv_test",
 		...options,
@@ -20,7 +20,7 @@ test.beforeEach(async () => {
 	await keyv.clear();
 });
 
-test.it("throws if ssl is not used", async (t) => {
+it("throws if ssl is not used", async (t) => {
 	try {
 		new KeyvMysql({ uri: "mysql://root@localhost:3307/keyv_test" });
 	} catch {
@@ -28,7 +28,7 @@ test.it("throws if ssl is not used", async (t) => {
 	}
 });
 
-test.it("set with ssl ", async (t) => {
+it("set with ssl ", async (t) => {
 	const keyv = new KeyvMysql({
 		uri: "mysql://root@localhost:3307/keyv_test",
 		...options,

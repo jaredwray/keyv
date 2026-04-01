@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import * as test from "vitest";
+import { beforeEach, it } from "vitest";
 import KeyvPostgres from "../src/index.js";
 import { endAllPools } from "../src/pool.js";
 
@@ -9,12 +9,12 @@ const options = { ssl: { rejectUnauthorized: false } };
 
 const store = () => new KeyvPostgres({ uri: postgresUri, iterationLimit: 2, ...options });
 
-test.beforeEach(async () => {
+beforeEach(async () => {
 	const keyv = new KeyvPostgres({ uri: postgresUri, ...options });
 	await keyv.clear();
 });
 
-test.it("throws if ssl is not used", async (t) => {
+it("throws if ssl is not used", async (t) => {
 	await endAllPools();
 	try {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
@@ -28,7 +28,7 @@ test.it("throws if ssl is not used", async (t) => {
 	}
 });
 
-test.it("iterator with default namespace", async (t) => {
+it("iterator with default namespace", async (t) => {
 	const keyv = new KeyvPostgres({ uri: postgresUri, ...options });
 	const key1 = faker.string.alphanumeric(10);
 	const value1 = faker.lorem.sentence();
@@ -55,12 +55,12 @@ test.it("iterator with default namespace", async (t) => {
 	t.expect(values).toContain(value3);
 });
 
-test.it(".clear() with undefined namespace", async (t) => {
+it(".clear() with undefined namespace", async (t) => {
 	const keyv = store();
 	t.expect(await keyv.clear()).toBeUndefined();
 });
 
-test.it("close connection successfully", async (t) => {
+it("close connection successfully", async (t) => {
 	const keyv = store();
 	const key = faker.string.alphanumeric(10);
 	t.expect(await keyv.get(key)).toBeUndefined();
