@@ -31,11 +31,15 @@ const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: K
 		}
 
 		await Promise.all(toResolve);
+		let count = 0;
 		for await (const [key, value] of keyv.iterator(namespace)) {
 			const doesKeyExist = map.has(key);
 			const isValueSame = map.get(key) === value;
 			t.expect(doesKeyExist && isValueSame).toBeTruthy();
+			count++;
 		}
+
+		t.expect(count).toBe(map.size);
 	});
 
 	test("iterator() doesn't yield values from other namespaces", async (t) => {
@@ -69,11 +73,15 @@ const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: K
 		}
 
 		await Promise.all(toResolve);
+		let count = 0;
 		for await (const [key, value] of keyv2.iterator(ns2)) {
 			const doesKeyExist = map2.has(key);
 			const isValueSame = map2.get(key) === value;
 			t.expect(doesKeyExist && isValueSame).toBeTruthy();
+			count++;
 		}
+
+		t.expect(count).toBe(map2.size);
 	});
 
 	test("iterator() doesn't yield expired values, and deletes them", async (t) => {
