@@ -50,12 +50,13 @@ const storageIteratorTests = (
 		}
 
 		const collected = new Map<string, string>();
-		for await (const [key, value] of s.iterator(namespace)) {
+		for await (const [key, value] of s.iterator()) {
 			collected.set(key as string, value as string);
 		}
 
-		for (const [key] of entries) {
-			t.expect(collected.has(key)).toBe(true);
+		t.expect(collected.size).toBe(entries.size);
+		for (const [key, value] of entries) {
+			t.expect(collected.get(key)).toBe(value);
 		}
 	});
 
@@ -81,12 +82,14 @@ const storageIteratorTests = (
 		await s.set(nsKey1, nsVal1);
 		await s.set(nsKey2, nsVal2);
 
-		const keys: string[] = [];
-		for await (const [key] of s.iterator(namespace)) {
-			keys.push(key as string);
+		const collected = new Map<string, string>();
+		for await (const [key, value] of s.iterator()) {
+			collected.set(key as string, value as string);
 		}
 
-		t.expect(keys.length).toBe(2);
+		t.expect(collected.size).toBe(2);
+		t.expect(collected.has(nsKey1)).toBe(true);
+		t.expect(collected.has(nsKey2)).toBe(true);
 	});
 
 	test("iterator() on empty store yields nothing", async (t) => {
@@ -100,7 +103,7 @@ const storageIteratorTests = (
 		s.namespace = namespace;
 
 		const entries: unknown[] = [];
-		for await (const entry of s.iterator(namespace)) {
+		for await (const entry of s.iterator()) {
 			/* v8 ignore next -- @preserve */
 			entries.push(entry);
 		}
