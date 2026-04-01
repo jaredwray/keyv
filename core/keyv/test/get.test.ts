@@ -238,20 +238,6 @@ testRunner.it(
 );
 
 testRunner.it(
-	"keyv.getManyRaw([keys]) should return array raw values with storage adapter",
-	async (t) => {
-		const keyv = new Keyv({ store: createStore() });
-		await keyv.clear();
-		await keyv.set("foo", "bar");
-		await keyv.set("foo1", "bar1");
-		const values = await keyv.getManyRaw<string>(["foo", "foo1"]);
-		t.expect(Array.isArray(values)).toBeTruthy();
-		t.expect(values[0]).toEqual({ value: "bar" });
-		t.expect(values[1]).toEqual({ value: "bar1" });
-	},
-);
-
-testRunner.it(
 	"keyv.getManyRaw([keys]) should return array raw values undefined with storage adapter",
 	async (t) => {
 		const keyv = new Keyv({ store: createStore() });

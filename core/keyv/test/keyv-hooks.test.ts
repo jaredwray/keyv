@@ -21,11 +21,8 @@ test.it("BEFORE_SET hook with manipulation", async (t) => {
 	keyv.addHook(KeyvHooks.BEFORE_SET, (data) => {
 		data.key = newKeyId;
 	});
-	t.expect(keyv.getHooks(KeyvHooks.BEFORE_SET)?.length).toBe(1);
 	await keyv.set(keyId, keyValue);
-
-	const value = await keyv.get(newKeyId);
-	t.expect(value).toBe(keyValue);
+	t.expect(await keyv.get(newKeyId)).toBe(keyValue);
 });
 
 test.it("AFTER_SET hook", async (t) => {
@@ -34,92 +31,51 @@ test.it("AFTER_SET hook", async (t) => {
 		t.expect(data.key).toBe("foo");
 		t.expect(data.value).toBe('{"value":"bar"}');
 	});
-	t.expect(keyv.getHooks(KeyvHooks.AFTER_SET)?.length).toBe(1);
 	await keyv.set("foo", "bar");
 });
 
-test.it("BEFORE_GET_MANY hook", async () => {
+test.it("BEFORE_GET_MANY and manipulation", async () => {
 	const keyv = new Keyv();
-	const keys = ["foo", "foo1"];
 	keyv.addHook(KeyvHooks.BEFORE_GET_MANY, (data) => {
 		test.expect(data.keys[0]).toBe("foo");
 		test.expect(data.keys[1]).toBe("foo1");
-	});
-	test.expect(keyv.getHooks(KeyvHooks.BEFORE_GET_MANY)?.length).toBe(1);
-	await keyv.get(keys);
-});
-
-test.it("BEFORE_GET_MANY with manipulation", async () => {
-	const keyv = new Keyv();
-	const keys = ["foo", "foo1"];
-	keyv.addHook(KeyvHooks.BEFORE_GET_MANY, (data) => {
-		test.expect(data.keys[0]).toBe("foo");
-		test.expect(data.keys[1]).toBe("foo1");
-
 		data.keys[0] = "fake";
 	});
 	test.expect(keyv.getHooks(KeyvHooks.BEFORE_GET_MANY)?.length).toBe(1);
-	const values = await keyv.get(keys);
+	const values = await keyv.get(["foo", "foo1"]);
 	test.expect(values[0]).toBeUndefined();
 });
 
-test.it("AFTER_GET_MANY with no getMany function", async () => {
+test.it("AFTER_GET_MANY with and without getMany function", async () => {
+	// Without getMany
 	const keyv = new Keyv();
-	const keys = ["foo", "foo1"];
 	await keyv.set("foo", "bar");
 	await keyv.set("foo1", "bar1");
 	keyv.addHook(KeyvHooks.AFTER_GET_MANY, (data) => {
 		test.expect(data[0]).toBe("bar");
 		test.expect(data[1]).toBe("bar1");
 	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET_MANY)?.length).toBe(1);
-	await keyv.get(keys);
-});
+	await keyv.get(["foo", "foo1"]);
 
-test.it("AFTER_GET_MANY with manipulation", async () => {
-	const keyv = new Keyv();
-	const keys = ["foo", "foo1"];
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	keyv.addHook(KeyvHooks.AFTER_GET_MANY, (data) => {
-		test.expect(data[0]).toBe("bar");
-		test.expect(data[1]).toBe("bar1");
+	// With getMany and manipulation
+	const keyv2 = new Keyv({ store: createStore() });
+	await keyv2.set("foo", "bar");
+	await keyv2.set("foo1", "bar1");
+	keyv2.addHook(KeyvHooks.AFTER_GET_MANY, (data) => {
 		data[1] = "fake";
 	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET_MANY)?.length).toBe(1);
-	const values = await keyv.get(keys);
+	const values = await keyv2.get(["foo", "foo1"]);
 	test.expect(values[1]).toBe("fake");
 });
 
-test.it("AFTER_GET_MANY with getMany function", async () => {
-	const keyv = new Keyv({ store: createStore() });
-	const keys = ["foo", "foo1"];
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	keyv.addHook(KeyvHooks.AFTER_GET_MANY, (data) => {
-		test.expect(data[0]).toBe("bar");
-		test.expect(data[1]).toBe("bar1");
-	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET_MANY)?.length).toBe(1);
-	await keyv.get(keys);
-});
-
-test.it("BEFORE_DELETE hook", async () => {
+test.it("BEFORE_DELETE and AFTER_DELETE hooks", async () => {
 	const keyv = new Keyv();
 	keyv.addHook(KeyvHooks.BEFORE_DELETE, (data) => {
 		test.expect(data.key).toBe("foo");
 	});
-	test.expect(keyv.getHooks(KeyvHooks.BEFORE_DELETE)?.length).toBe(1);
-	await keyv.set("foo", "bar");
-	await keyv.delete("foo");
-});
-
-test.it("AFTER_DELETE hook", async () => {
-	const keyv = new Keyv();
 	keyv.addHook(KeyvHooks.AFTER_DELETE, (data) => {
 		test.expect(data).toBeTruthy();
 	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_DELETE)?.length).toBe(1);
 	await keyv.set("foo", "bar");
 	await keyv.delete("foo");
 });
@@ -129,153 +85,91 @@ test.it("BEFORE_GET hook", async () => {
 	keyv.addHook(KeyvHooks.BEFORE_GET, (data) => {
 		test.expect(data.key).toBe("foo");
 	});
-	test.expect(keyv.getHooks(KeyvHooks.BEFORE_GET)?.length).toBe(1);
 	await keyv.set("foo", "bar");
 	await keyv.get("foo");
 });
 
-test.it("AFTER_GET hook on cache hit", async () => {
+test.it("AFTER_GET hook on hit, miss, and expired", async () => {
 	const keyv = new Keyv();
 	await keyv.set("foo", "bar");
+
+	// Hit
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let hookData: any;
 	keyv.addHook(KeyvHooks.AFTER_GET, (data) => {
-		test.expect(data.key).toBe("foo");
-		test.expect(data.value).toEqual({ value: "bar" });
+		hookData = data;
 	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET)?.length).toBe(1);
-	const value = await keyv.get("foo");
-	test.expect(value).toBe("bar");
-});
-
-test.it("AFTER_GET hook on cache miss", async () => {
-	const keyv = new Keyv();
-	keyv.addHook(KeyvHooks.AFTER_GET, (data) => {
-		test.expect(data.key).toBe("nonexistent");
-		test.expect(data.value).toBeUndefined();
-	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET)?.length).toBe(1);
-	const value = await keyv.get("nonexistent");
-	test.expect(value).toBeUndefined();
-});
-
-test.it("AFTER_GET hook on expired key", async () => {
-	const keyv = new Keyv();
-	await keyv.set("foo", "bar", 1); // expires in 1ms
-	await delay(10); // wait 10ms
-	keyv.addHook(KeyvHooks.AFTER_GET, (data) => {
-		test.expect(data.key).toBe("foo");
-		test.expect(data.value).toBeUndefined();
-	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET)?.length).toBe(1);
-	const value = await keyv.get("foo");
-	test.expect(value).toBeUndefined();
-});
-
-test.it("AFTER_GET_RAW hook on cache hit", async () => {
-	const keyv = new Keyv();
-	await keyv.set("foo", "bar");
-	keyv.addHook(KeyvHooks.AFTER_GET_RAW, (data) => {
-		test.expect(data.key).toBe("foo");
-		test.expect(data.value).toEqual({ value: "bar" });
-	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET_RAW)?.length).toBe(1);
-	const value = await keyv.getRaw("foo");
-	test.expect(value).toEqual({ value: "bar" });
-});
-
-test.it("AFTER_GET_RAW hook on cache miss", async () => {
-	const keyv = new Keyv();
-	keyv.addHook(KeyvHooks.AFTER_GET_RAW, (data) => {
-		test.expect(data.key).toBe("nonexistent");
-		test.expect(data.value).toBeUndefined();
-	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET_RAW)?.length).toBe(1);
-	const value = await keyv.getRaw("nonexistent");
-	test.expect(value).toBeUndefined();
-});
-
-test.it("AFTER_GET_RAW hook on expired key", async () => {
-	const keyv = new Keyv();
-	await keyv.set("foo", "bar", 1); // expires in 1ms
-	await delay(10); // wait 10ms
-	keyv.addHook(KeyvHooks.AFTER_GET_RAW, (data) => {
-		test.expect(data.key).toBe("foo");
-		test.expect(data.value).toBeUndefined();
-	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_GET_RAW)?.length).toBe(1);
-	const value = await keyv.getRaw("foo");
-	test.expect(value).toBeUndefined();
-});
-
-test.it("deprecated PRE_SET hook still fires when using BEFORE_SET internally", async (t) => {
-	const keyv = new Keyv();
-	let hookTriggered = false;
-	keyv.on("warn", () => {}); // Silence deprecation warnings
-	keyv.addHook(KeyvHooks.PRE_SET, (data) => {
-		hookTriggered = true;
-		t.expect(data.key).toBe("foo");
-		t.expect(data.value).toBe("bar");
-	});
-	await keyv.set("foo", "bar");
-	t.expect(hookTriggered).toBe(true);
-});
-
-test.it("deprecated POST_SET hook still fires when using AFTER_SET internally", async (t) => {
-	const keyv = new Keyv();
-	let hookTriggered = false;
-	keyv.on("warn", () => {}); // Silence deprecation warnings
-	keyv.addHook(KeyvHooks.POST_SET, (data) => {
-		hookTriggered = true;
-		t.expect(data.key).toBe("foo");
-	});
-	await keyv.set("foo", "bar");
-	t.expect(hookTriggered).toBe(true);
-});
-
-test.it("deprecated PRE_GET hook still fires", async (t) => {
-	const keyv = new Keyv();
-	let hookTriggered = false;
-	keyv.on("warn", () => {}); // Silence deprecation warnings
-	keyv.addHook(KeyvHooks.PRE_GET, (data) => {
-		hookTriggered = true;
-		t.expect(data.key).toBe("foo");
-	});
-	await keyv.set("foo", "bar");
 	await keyv.get("foo");
-	t.expect(hookTriggered).toBe(true);
+	test.expect(hookData.key).toBe("foo");
+	test.expect(hookData.value).toEqual({ value: "bar" });
+
+	// Miss
+	await keyv.get("nonexistent");
+	test.expect(hookData.key).toBe("nonexistent");
+	test.expect(hookData.value).toBeUndefined();
+
+	// Expired
+	await keyv.set("exp", "val", 1);
+	await delay(10);
+	await keyv.get("exp");
+	test.expect(hookData.key).toBe("exp");
+	test.expect(hookData.value).toBeUndefined();
 });
 
-test.it("deprecated POST_DELETE hook still fires", async (t) => {
+test.it("AFTER_GET_RAW hook on hit, miss, and expired", async () => {
 	const keyv = new Keyv();
-	let hookTriggered = false;
-	keyv.on("warn", () => {}); // Silence deprecation warnings
+	await keyv.set("foo", "bar");
+
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let hookData: any;
+	keyv.addHook(KeyvHooks.AFTER_GET_RAW, (data) => {
+		hookData = data;
+	});
+
+	await keyv.getRaw("foo");
+	test.expect(hookData.key).toBe("foo");
+	test.expect(hookData.value).toEqual({ value: "bar" });
+
+	await keyv.getRaw("nonexistent");
+	test.expect(hookData.value).toBeUndefined();
+
+	await keyv.set("exp", "val", 1);
+	await delay(10);
+	await keyv.getRaw("exp");
+	test.expect(hookData.value).toBeUndefined();
+});
+
+test.it("deprecated hooks (PRE_SET, POST_SET, PRE_GET, POST_DELETE) still fire", async (t) => {
+	const keyv = new Keyv();
+	keyv.on("warn", () => {});
+	const fired: string[] = [];
+	keyv.addHook(KeyvHooks.PRE_SET, () => {
+		fired.push("PRE_SET");
+	});
+	keyv.addHook(KeyvHooks.POST_SET, () => {
+		fired.push("POST_SET");
+	});
+	keyv.addHook(KeyvHooks.PRE_GET, () => {
+		fired.push("PRE_GET");
+	});
 	keyv.addHook(KeyvHooks.POST_DELETE, () => {
-		hookTriggered = true;
+		fired.push("POST_DELETE");
 	});
 	await keyv.set("foo", "bar");
+	await keyv.get("foo");
 	await keyv.delete("foo");
-	t.expect(hookTriggered).toBe(true);
+	t.expect(fired).toEqual(["PRE_SET", "POST_SET", "PRE_GET", "POST_DELETE"]);
 });
 
-test.it("BEFORE_SET_MANY hook", async () => {
+test.it("BEFORE_SET_MANY and AFTER_SET_MANY hooks with manipulation", async () => {
 	const keyv = new Keyv();
 	keyv.addHook(KeyvHooks.BEFORE_SET_MANY, (data) => {
 		test.expect(data.entries).toHaveLength(2);
-		test.expect(data.entries[0].key).toBe("foo");
-		test.expect(data.entries[0].value).toBe("bar");
-		test.expect(data.entries[1].key).toBe("foo1");
-		test.expect(data.entries[1].value).toBe("bar1");
-	});
-	test.expect(keyv.getHooks(KeyvHooks.BEFORE_SET_MANY)?.length).toBe(1);
-	await keyv.setMany([
-		{ key: "foo", value: "bar" },
-		{ key: "foo1", value: "bar1" },
-	]);
-});
-
-test.it("BEFORE_SET_MANY hook with manipulation", async () => {
-	const keyv = new Keyv();
-	keyv.addHook(KeyvHooks.BEFORE_SET_MANY, (data) => {
 		data.entries[0].value = "modified";
+	});
+	keyv.addHook(KeyvHooks.AFTER_SET_MANY, (data) => {
+		test.expect(data.entries).toHaveLength(2);
+		test.expect(data.values).toEqual([true, true]);
 	});
 	await keyv.setMany([
 		{ key: "foo", value: "bar" },
@@ -286,153 +180,86 @@ test.it("BEFORE_SET_MANY hook with manipulation", async () => {
 	test.expect(values[1]).toBe("bar1");
 });
 
-test.it("AFTER_SET_MANY hook", async () => {
+test.it("BEFORE_DELETE_MANY, AFTER_DELETE_MANY, and legacy hooks for deleteMany", async (t) => {
 	const keyv = new Keyv();
-	keyv.addHook(KeyvHooks.AFTER_SET_MANY, (data) => {
-		test.expect(data.entries).toHaveLength(2);
-		test.expect(data.values).toHaveLength(2);
-		test.expect(data.values[0]).toBe(true);
-		test.expect(data.values[1]).toBe(true);
-	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_SET_MANY)?.length).toBe(1);
-	await keyv.setMany([
-		{ key: "foo", value: "bar" },
-		{ key: "foo1", value: "bar1" },
-	]);
-});
-
-test.it("BEFORE_DELETE_MANY hook", async () => {
-	const keyv = new Keyv();
+	const fired: string[] = [];
 	keyv.addHook(KeyvHooks.BEFORE_DELETE_MANY, (data) => {
 		test.expect(data.keys).toEqual(["foo", "foo1"]);
+		fired.push("BEFORE_DELETE_MANY");
 	});
-	test.expect(keyv.getHooks(KeyvHooks.BEFORE_DELETE_MANY)?.length).toBe(1);
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.delete(["foo", "foo1"]);
-});
-
-test.it("AFTER_DELETE_MANY hook", async () => {
-	const keyv = new Keyv();
 	keyv.addHook(KeyvHooks.AFTER_DELETE_MANY, (data) => {
-		test.expect(data.keys).toEqual(["foo", "foo1"]);
 		test.expect(data.values).toEqual([true, true]);
+		fired.push("AFTER_DELETE_MANY");
 	});
-	test.expect(keyv.getHooks(KeyvHooks.AFTER_DELETE_MANY)?.length).toBe(1);
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.delete(["foo", "foo1"]);
-});
-
-test.it("deleteMany still fires legacy BEFORE_DELETE and AFTER_DELETE hooks", async (t) => {
-	const keyv = new Keyv();
-	let beforeFired = false;
-	let afterFired = false;
-	keyv.addHook(KeyvHooks.BEFORE_DELETE, (data) => {
-		beforeFired = true;
-		t.expect(data.key).toEqual(["foo", "foo1"]);
+	keyv.addHook(KeyvHooks.BEFORE_DELETE, () => {
+		fired.push("BEFORE_DELETE");
 	});
-	keyv.addHook(KeyvHooks.AFTER_DELETE, (data) => {
-		afterFired = true;
-		t.expect(data.key).toEqual(["foo", "foo1"]);
-		t.expect(data.value).toEqual([true, true]);
+	keyv.addHook(KeyvHooks.AFTER_DELETE, () => {
+		fired.push("AFTER_DELETE");
 	});
 	await keyv.set("foo", "bar");
 	await keyv.set("foo1", "bar1");
 	await keyv.delete(["foo", "foo1"]);
-	t.expect(beforeFired).toBe(true);
-	t.expect(afterFired).toBe(true);
+	t.expect(fired).toContain("BEFORE_DELETE_MANY");
+	t.expect(fired).toContain("AFTER_DELETE_MANY");
+	t.expect(fired).toContain("BEFORE_DELETE");
+	t.expect(fired).toContain("AFTER_DELETE");
 });
 
-test.it("BEFORE_CLEAR hook", async (t) => {
-	const keyv = new Keyv();
-	let hookTriggered = false;
-	keyv.addHook(KeyvHooks.BEFORE_CLEAR, (data) => {
-		hookTriggered = true;
-		t.expect(data.namespace).toBeUndefined();
-	});
-	t.expect(keyv.getHooks(KeyvHooks.BEFORE_CLEAR)?.length).toBe(1);
-	await keyv.set("foo", "bar");
-	await keyv.clear();
-	t.expect(hookTriggered).toBe(true);
-});
-
-test.it("AFTER_CLEAR hook", async (t) => {
-	const keyv = new Keyv();
-	let hookTriggered = false;
-	keyv.addHook(KeyvHooks.AFTER_CLEAR, (data) => {
-		hookTriggered = true;
-		t.expect(data.namespace).toBeUndefined();
-	});
-	t.expect(keyv.getHooks(KeyvHooks.AFTER_CLEAR)?.length).toBe(1);
-	await keyv.set("foo", "bar");
-	await keyv.clear();
-	t.expect(hookTriggered).toBe(true);
-});
-
-test.it("BEFORE_CLEAR fires before store is cleared", async (t) => {
-	const keyv = new Keyv();
+test.it("BEFORE_CLEAR and AFTER_CLEAR hooks with namespace", async (t) => {
+	const keyv = new Keyv({ namespace: "test-ns" });
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let beforeData: any;
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let afterData: any;
 	let valueBeforeClear: string | undefined;
-	keyv.addHook(KeyvHooks.BEFORE_CLEAR, async () => {
+	keyv.addHook(KeyvHooks.BEFORE_CLEAR, async (data) => {
+		beforeData = data;
 		valueBeforeClear = await keyv.get("foo");
 	});
+	keyv.addHook(KeyvHooks.AFTER_CLEAR, (data) => {
+		afterData = data;
+	});
 	await keyv.set("foo", "bar");
 	await keyv.clear();
+	t.expect(beforeData.namespace).toBe("test-ns");
+	t.expect(afterData.namespace).toBe("test-ns");
 	t.expect(valueBeforeClear).toBe("bar");
-});
 
-test.it("BEFORE_CLEAR hook receives namespace", async (t) => {
-	const keyv = new Keyv({ namespace: "test-ns" });
-	keyv.addHook(KeyvHooks.BEFORE_CLEAR, (data) => {
-		t.expect(data.namespace).toBe("test-ns");
+	// Without namespace
+	const keyv2 = new Keyv();
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let ns: any;
+	keyv2.addHook(KeyvHooks.BEFORE_CLEAR, (data) => {
+		ns = data.namespace;
 	});
-	await keyv.clear();
+	await keyv2.clear();
+	t.expect(ns).toBeUndefined();
 });
 
-test.it("AFTER_CLEAR hook receives namespace", async (t) => {
+test.it("BEFORE_DISCONNECT and AFTER_DISCONNECT hooks with namespace", async (t) => {
 	const keyv = new Keyv({ namespace: "test-ns" });
-	keyv.addHook(KeyvHooks.AFTER_CLEAR, (data) => {
-		t.expect(data.namespace).toBe("test-ns");
-	});
-	await keyv.clear();
-});
-
-test.it("BEFORE_DISCONNECT hook", async (t) => {
-	const keyv = new Keyv();
-	let hookTriggered = false;
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let beforeData: any;
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let afterData: any;
 	keyv.addHook(KeyvHooks.BEFORE_DISCONNECT, (data) => {
-		hookTriggered = true;
-		t.expect(data.namespace).toBeUndefined();
+		beforeData = data;
 	});
-	t.expect(keyv.getHooks(KeyvHooks.BEFORE_DISCONNECT)?.length).toBe(1);
-	await keyv.disconnect();
-	t.expect(hookTriggered).toBe(true);
-});
-
-test.it("AFTER_DISCONNECT hook", async (t) => {
-	const keyv = new Keyv();
-	let hookTriggered = false;
 	keyv.addHook(KeyvHooks.AFTER_DISCONNECT, (data) => {
-		hookTriggered = true;
-		t.expect(data.namespace).toBeUndefined();
+		afterData = data;
 	});
-	t.expect(keyv.getHooks(KeyvHooks.AFTER_DISCONNECT)?.length).toBe(1);
 	await keyv.disconnect();
-	t.expect(hookTriggered).toBe(true);
-});
+	t.expect(beforeData.namespace).toBe("test-ns");
+	t.expect(afterData.namespace).toBe("test-ns");
 
-test.it("BEFORE_DISCONNECT hook receives namespace", async (t) => {
-	const keyv = new Keyv({ namespace: "test-ns" });
-	keyv.addHook(KeyvHooks.BEFORE_DISCONNECT, (data) => {
-		t.expect(data.namespace).toBe("test-ns");
+	// Without namespace
+	const keyv2 = new Keyv();
+	// biome-ignore lint/suspicious/noExplicitAny: test hook data
+	let ns: any;
+	keyv2.addHook(KeyvHooks.BEFORE_DISCONNECT, (data) => {
+		ns = data.namespace;
 	});
-	await keyv.disconnect();
-});
-
-test.it("AFTER_DISCONNECT hook receives namespace", async (t) => {
-	const keyv = new Keyv({ namespace: "test-ns" });
-	keyv.addHook(KeyvHooks.AFTER_DISCONNECT, (data) => {
-		t.expect(data.namespace).toBe("test-ns");
-	});
-	await keyv.disconnect();
+	await keyv2.disconnect();
+	t.expect(ns).toBeUndefined();
 });

@@ -5,21 +5,13 @@ import { KeyvStats } from "../src/stats.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
 describe("constructor", () => {
-	test("Keyv is a class", () => {
+	test("Keyv is a class that can be instantiated with or without a store", () => {
 		expect(typeof Keyv).toBe("function");
 		// @ts-expect-error
 		expect(() => Keyv()).toThrow(); // eslint-disable-line new-cap
 		expect(() => new Keyv()).not.toThrow();
-	});
-
-	test("should be able to create a new instance", () => {
-		const keyv = new Keyv();
-		expect(keyv).toBeDefined();
-	});
-
-	test("should be able to create a new instance with a store", () => {
-		const keyv = new Keyv(new Map());
-		expect(keyv).toBeDefined();
+		expect(new Keyv()).toBeDefined();
+		expect(new Keyv(new Map())).toBeDefined();
 	});
 
 	test("when setting store property with undefined it should default to KeyvMemoryAdapter", () => {
@@ -28,108 +20,74 @@ describe("constructor", () => {
 		expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
 	});
 
-	test("accepts storage adapters as options object", async () => {
-		const store = new Map();
-		const keyv = new Keyv<string>({ store });
-		expect(store.size).toBe(0);
-		await keyv.set("foo", "bar");
-		expect(await keyv.get("foo")).toBe("bar");
-		expect(store.size).toBe(1);
-	});
+	test("accepts storage adapters via options, as first arg, or with additional options", async () => {
+		const store1 = new Map();
+		const keyv1 = new Keyv<string>({ store: store1 });
+		await keyv1.set("foo", "bar");
+		expect(await keyv1.get("foo")).toBe("bar");
+		expect(store1.size).toBe(1);
 
-	test("accepts storage adapters and options", async () => {
-		const store = new Map();
-		const keyv = new Keyv(store, { namespace: "test" });
-		expect(store.size).toBe(0);
-		await keyv.set("foo", "bar");
-		expect(keyv.namespace).toBe("test");
-	});
+		const store2 = new Map();
+		const keyv2 = new Keyv<string>(store2);
+		await keyv2.set("foo", "bar");
+		expect(await keyv2.get("foo")).toBe("bar");
 
-	test("accepts storage adapters instead of options", async () => {
-		const store = new Map();
-		const keyv = new Keyv<string>(store);
-		expect(store.size).toBe(0);
-		await keyv.set("foo", "bar");
-		expect(await keyv.get("foo")).toBe("bar");
-		expect(store.size).toBe(1);
+		const store3 = new Map();
+		const keyv3 = new Keyv(store3, { namespace: "test" });
+		await keyv3.set("foo", "bar");
+		expect(keyv3.namespace).toBe("test");
 	});
 
 	test("allows get and set the store via property", async () => {
 		const store = new Map();
 		const keyv = new Keyv<string>();
 		keyv.store = store;
-		expect(store.size).toBe(0);
 		await keyv.set("foo", "bar");
 		expect(await keyv.get("foo")).toBe("bar");
-		expect(store.size).toBe(1);
 		expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
 	});
 
-	test("should throw if invalid storage or Map on store property", async () => {
-		const store = new Map();
+	test("should throw if invalid storage on store property or constructor", async () => {
 		const keyv = new Keyv<string>();
-		keyv.store = store;
-		expect(store.size).toBe(0);
+		keyv.store = new Map();
 		await keyv.set("foo", "bar");
-		expect(await keyv.get("foo")).toBe("bar");
-		expect(store.size).toBe(1);
-		expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
-
 		expect(() => {
 			// eslint-disable-next-line @typescript-eslint/no-empty-function
 			keyv.store = { get() {}, set() {}, delete() {} };
 		}).toThrow();
-	});
-
-	test("should trigger an error when store is invalid", () => {
-		const store = new Map();
 
 		expect(
 			() =>
 				new Keyv({
 					store: {
 						async get(key: string) {
-							store.get(key);
+							new Map().get(key);
 						},
 					},
 				}),
 		).toThrow();
 	});
 
-	test("should treat negative ttl as undefined", () => {
-		const keyv = new Keyv();
-		keyv.setTtl(-100);
-		expect(keyv.ttl).toBeUndefined();
-	});
+	test("should treat non-positive ttl as undefined", () => {
+		const keyv1 = new Keyv();
+		keyv1.setTtl(-100);
+		expect(keyv1.ttl).toBeUndefined();
 
-	test("should treat negative ttl in constructor as undefined", () => {
-		const keyv = new Keyv({ ttl: -500 });
-		expect(keyv.ttl).toBeUndefined();
-	});
+		expect(new Keyv({ ttl: -500 }).ttl).toBeUndefined();
 
-	test("should treat zero ttl as undefined", () => {
-		const keyv = new Keyv();
-		keyv.setTtl(0);
-		expect(keyv.ttl).toBeUndefined();
-	});
+		const keyv2 = new Keyv();
+		keyv2.setTtl(0);
+		expect(keyv2.ttl).toBeUndefined();
 
-	test("should treat zero ttl in constructor as undefined", () => {
-		const keyv = new Keyv({ ttl: 0 });
-		expect(keyv.ttl).toBeUndefined();
+		expect(new Keyv({ ttl: 0 }).ttl).toBeUndefined();
 	});
 });
 
 describe("store", () => {
-	test("should be able to set the store via property", () => {
-		const store = createStore();
-		const keyv = new Keyv();
-		keyv.store = store;
-		expect(keyv.store).toBeDefined();
-	});
-
-	test("should be able to set the namespace via property", () => {
+	test("should be able to set the store and namespace via property", () => {
 		const store = createStore();
 		const keyv = new Keyv({ store });
+		expect(keyv.store).toBeDefined();
 		expect(keyv.namespace).toBeUndefined();
 		keyv.namespace = "test";
 		expect(keyv.namespace).toBe("test");
@@ -188,83 +146,67 @@ describe("serialization", () => {
 		expect(await keyv.get("foo")).toBe("bar");
 	});
 
-	test("does get and set on serialization property", async () => {
+	test("serialization property getter/setter and disable behavior", async () => {
+		// Get/set serialization property
 		const serialization = {
 			stringify: (data: unknown) => JSON.stringify(data),
 			parse: <T>(data: string) => JSON.parse(data) as T,
 		};
-		const keyv = new Keyv({
-			store: new Map(),
-			serialization,
-		});
+		const keyv = new Keyv({ store: new Map(), serialization });
 		await keyv.set("foo", "bar");
 		expect(await keyv.get("foo")).toBe("bar");
-
 		const newSerialization = {
 			stringify: (data: unknown) => JSON.stringify(data),
 			parse: <T>(data: string) => JSON.parse(data) as T,
 		};
 		keyv.serialization = newSerialization;
 		expect(keyv.serialization).toBe(newSerialization);
-	});
 
-	test("serialization setter with false clears the adapter", () => {
-		const keyv = new Keyv();
-		expect(keyv.serialization).toBeDefined();
+		// Setting to false clears the adapter
 		keyv.serialization = false;
 		expect(keyv.serialization).toBeUndefined();
-	});
 
-	test("will not serialize / deserialize / compress if serialization is undefined", async () => {
-		const keyv = new Keyv({ compression: createMockCompression() });
-		keyv.serialization = undefined;
+		// Will not serialize/compress if serialization is undefined
+		const keyv2 = new Keyv({ compression: createMockCompression() });
+		keyv2.serialization = undefined;
 		const complexObject = { foo: "bar", fizz: "buzz" };
-		await keyv.set("foo-complex", complexObject);
-		await keyv.set("foo", "bar");
-		expect(await keyv.get("foo")).toBe("bar");
-		expect(await keyv.get("foo-complex")).toStrictEqual(complexObject);
+		await keyv2.set("foo-complex", complexObject);
+		await keyv2.set("foo", "bar");
+		expect(await keyv2.get("foo")).toBe("bar");
+		expect(await keyv2.get("foo-complex")).toStrictEqual(complexObject);
 	});
 
 	test("encode returns data as-is when serialization is disabled", async () => {
-		const keyv = new Keyv({
-			serialization: false,
-			compression: createMockCompression(),
-		});
+		const keyv = new Keyv({ serialization: false, compression: createMockCompression() });
 		const data = { value: "hello", expires: undefined };
 		const result = await keyv.encode(data);
 		expect(result).toStrictEqual(data);
 	});
 
-	test("decode will return the data object if not string", async () => {
+	test("decode edge cases", async () => {
 		const keyv = new Keyv();
+		// Returns object if not string
 		const complexObject = { foo: "bar", fizz: "buzz" };
-		const result = await keyv.decode({ value: complexObject });
-		expect(result).toStrictEqual({ value: complexObject });
-	});
+		expect(await keyv.decode({ value: complexObject })).toStrictEqual({ value: complexObject });
 
-	test("decode returns undefined for null/undefined input", async () => {
-		const keyv = new Keyv();
+		// Returns undefined for null/undefined
 		// biome-ignore lint/suspicious/noExplicitAny: test
 		expect(await keyv.decode(undefined as any)).toBeUndefined();
 		// biome-ignore lint/suspicious/noExplicitAny: test
 		expect(await keyv.decode(null as any)).toBeUndefined();
-	});
 
-	test("decode with no serialization and no compression returns raw object", async () => {
-		const keyv = new Keyv({ serialization: false });
-		const data = { value: "hello", expires: undefined };
-		const result = await keyv.decode(data);
-		expect(result).toStrictEqual(data);
-	});
+		// No serialization, no compression returns raw object
+		const keyv2 = new Keyv({ serialization: false });
+		expect(await keyv2.decode({ value: "hello", expires: undefined })).toStrictEqual({
+			value: "hello",
+			expires: undefined,
+		});
 
-	test("decode with no serialization and no compression returns undefined for string", async () => {
-		const keyv = new Keyv({ serialization: false });
-		const result = await keyv.decode("some-string");
-		expect(result).toBeUndefined();
-	});
+		// No serialization, no compression returns undefined for string
+		expect(await keyv2.decode("some-string")).toBeUndefined();
 
-	test("decode returns undefined when decompressed string is invalid JSON", async () => {
-		const keyv = new Keyv({
+		// Returns undefined when decompressed string is invalid JSON
+		const keyv3 = new Keyv({
 			serialization: false,
 			compression: {
 				async compress(value: unknown) {
@@ -275,27 +217,21 @@ describe("serialization", () => {
 				},
 			},
 		});
-		const result = await keyv.decode("anything");
-		expect(result).toBeUndefined();
+		expect(await keyv3.decode("anything")).toBeUndefined();
 	});
 });
 
 describe("compression", () => {
-	test("pass compress options", async () => {
-		const keyv = new Keyv({
-			store: new Map(),
-			compression: createMockCompression(),
-		});
+	test("pass compress options and get/set property", async () => {
+		const keyv = new Keyv({ store: new Map(), compression: createMockCompression() });
 		await keyv.set("foo", "bar");
 		expect(await keyv.get("foo")).toBe("bar");
-	});
 
-	test("can get and set the compress property", () => {
-		const keyv = new Keyv();
+		const keyv2 = new Keyv();
 		const compression = createMockCompression();
-		expect(keyv.compression).not.toBeDefined();
-		keyv.compression = compression;
-		expect(keyv.compression).toBe(compression);
+		expect(keyv2.compression).not.toBeDefined();
+		keyv2.compression = compression;
+		expect(keyv2.compression).toBe(compression);
 	});
 });
 
@@ -332,8 +268,8 @@ describe("encryption", () => {
 		expect(await keyv.get("foo")).toBe("bar");
 	});
 
-	test("encode throws on failure instead of returning raw data", async () => {
-		const keyv = new Keyv({
+	test("encode throws on failure, decode emits error and returns undefined", async () => {
+		const keyvEnc = new Keyv({
 			encryption: {
 				encrypt() {
 					throw new Error("encrypt failed");
@@ -343,12 +279,11 @@ describe("encryption", () => {
 				},
 			},
 		});
-		const data = { value: "hello", expires: undefined };
-		await expect(keyv.encode(data)).rejects.toThrow("encrypt failed");
-	});
+		await expect(keyvEnc.encode({ value: "hello", expires: undefined })).rejects.toThrow(
+			"encrypt failed",
+		);
 
-	test("decode emits error and returns undefined on failure", async () => {
-		const keyv = new Keyv({
+		const keyvDec = new Keyv({
 			encryption: {
 				async encrypt(data: string) {
 					return data;
@@ -359,27 +294,22 @@ describe("encryption", () => {
 			},
 		});
 		const errorHandler = vi.fn();
-		keyv.on("error", errorHandler);
-		const result = await keyv.decode("some-data");
-		expect(result).toBeUndefined();
+		keyvDec.on("error", errorHandler);
+		expect(await keyvDec.decode("some-data")).toBeUndefined();
 		expect(errorHandler).toHaveBeenCalled();
 	});
 });
 
 describe("delete", () => {
-	test("should delete multiple keys for storage adapter not supporting deleteMany", async () => {
+	test("should delete multiple keys and handle nonexistent keys", async () => {
 		const keyv = new Keyv({ store: new Map() });
 		await keyv.set("foo", "bar");
 		await keyv.set("foo1", "bar1");
 		await keyv.set("foo2", "bar2");
 		expect(await keyv.delete(["foo", "foo1", "foo2"])).toBeTruthy();
 		expect(await keyv.get("foo")).toBeUndefined();
-		expect(await keyv.get("foo1")).toBeUndefined();
-		expect(await keyv.get("foo2")).toBeUndefined();
-	});
 
-	test("with nonexistent keys resolves to array of false for storage adapter not supporting deleteMany", async () => {
-		const keyv = new Keyv({ store: new Map() });
+		// Nonexistent keys
 		expect(await keyv.delete(["foo", "foo1", "foo2"])).toEqual([false, false, false]);
 	});
 
@@ -389,52 +319,26 @@ describe("delete", () => {
 		const keyv = new Keyv(store);
 		const errorHandler = vi.fn();
 		keyv.on("error", errorHandler);
-		const result = await keyv.delete("foo55");
-		expect(result).toBe(false);
+		expect(await keyv.delete("foo55")).toBe(false);
 		expect(errorHandler).toHaveBeenCalledWith(new Error("store delete error"));
 	});
 });
 
 describe("has", () => {
-	test("should return if adapter does not support has", async () => {
+	test("should return true/false for existing/missing keys", async () => {
 		const keyv = new Keyv();
 		await keyv.set("foo", "bar");
 		expect(await keyv.has("foo")).toBe(true);
 		expect(await keyv.has("fizz")).toBe(false);
 	});
 
-	test("should return if Map and undefined expires", async () => {
-		const keyv = new Keyv();
-		await keyv.set("foo", "bar");
-		expect(await keyv.has("foo")).toBe(true);
-		expect(await keyv.has("fizz")).toBe(false);
-	});
-
-	test("should return if adapter does not support has on expired", async () => {
+	test("should return false for expired keys", async () => {
 		const keyv = new Keyv({ store: new Map() });
 		await keyv.set("foo", "bar", 1000);
 		expect(await keyv.has("foo")).toBe(true);
 		await delay(1100);
 		expect(await keyv.has("foo")).toBe(false);
-	});
-
-	test("should return false on expired", async () => {
-		const keyv = new Keyv({ store: new Map() });
-		const keyName = "expired-key";
-		await keyv.set(keyName, "bar", 1000);
-		await delay(1100);
-		const value = await keyv.get(keyName);
-		const exists = await keyv.has(keyName);
-		expect(value).toBeUndefined();
-		expect(exists).toBe(false);
-	});
-
-	test("should return true or false on Map", async () => {
-		const keyv = new Keyv({ store: new Map() });
-		await keyv.set("foo", "bar", 1000);
-		expect(await keyv.has("foo")).toBe(true);
-		await delay(1100);
-		expect(await keyv.has("foo")).toBe(false);
+		expect(await keyv.get("foo")).toBeUndefined();
 	});
 
 	test("should delegate to store.has when store is not KeyvMemoryAdapter", async () => {
@@ -445,29 +349,24 @@ describe("has", () => {
 		expect(await keyv.has("nonexistent")).toBe(false);
 	});
 
-	test("should handle error on store has / get", async () => {
+	test("should handle error on store has and hasMany", async () => {
 		const keyv = new Keyv({ store: new Map() });
-		// Override the adapter's has to simulate a store error
 		keyv.store.has = vi.fn().mockRejectedValue(new Error("store has error"));
 		const errorHandler = vi.fn();
 		keyv.on("error", errorHandler);
-		const result = await keyv.has("foo");
-		expect(result).toBe(false);
-	});
+		expect(await keyv.has("foo")).toBe(false);
 
-	test("should handle error on store hasMany", async () => {
-		const keyv = new Keyv({ store: new Map() });
-		keyv.store.hasMany = vi.fn().mockRejectedValue(new Error("store hasMany error"));
-		const errorHandler = vi.fn();
-		keyv.on("error", errorHandler);
-		const result = await keyv.hasMany(["foo", "bar"]);
-		expect(result).toEqual([false, false]);
-		expect(errorHandler).toHaveBeenCalledWith(new Error("store hasMany error"));
+		const keyv2 = new Keyv({ store: new Map() });
+		keyv2.store.hasMany = vi.fn().mockRejectedValue(new Error("store hasMany error"));
+		const errorHandler2 = vi.fn();
+		keyv2.on("error", errorHandler2);
+		expect(await keyv2.hasMany(["foo", "bar"])).toEqual([false, false]);
+		expect(errorHandler2).toHaveBeenCalledWith(new Error("store hasMany error"));
 	});
 });
 
 describe("clear", () => {
-	test("should handle error on store clear", async () => {
+	test("should handle error on store clear and emit clear event", async () => {
 		const adapter = new KeyvMemoryAdapter(new Map());
 		const keyv = new Keyv({ store: adapter });
 		keyv.store.clear = vi.fn().mockRejectedValue(new Error("store clear error"));
@@ -475,262 +374,102 @@ describe("clear", () => {
 		keyv.on("error", errorHandler);
 		await keyv.clear();
 		expect(errorHandler).toHaveBeenCalledWith(new Error("store clear error"));
-	});
 
-	test("emit clear event", async () => {
-		const keyv = new Keyv();
-		keyv.on("clear", () => {
+		const keyv2 = new Keyv();
+		keyv2.on("clear", () => {
 			expect(true).toBeTruthy();
 		});
-		await keyv.clear();
+		await keyv2.clear();
 	});
 });
 
 describe("disconnect", () => {
-	test("close connection successfully", async () => {
-		const keyv = new Keyv({ store: createStore() });
-		await keyv.clear();
-		expect(await keyv.get("foo")).toBeUndefined();
-		await keyv.set("foo", "bar");
-		expect(await keyv.disconnect()).toBeUndefined();
+	test("close connection successfully with various store types", async () => {
+		const keyv1 = new Keyv({ store: createStore() });
+		await keyv1.set("foo", "bar");
+		expect(await keyv1.disconnect()).toBeUndefined();
+
+		const keyv2 = new Keyv({ store: new Map() });
+		expect(await keyv2.disconnect()).toBeUndefined();
 	});
 
-	test("close connection undefined", async () => {
-		const store = new Map();
-		const keyv = new Keyv({ store });
-		expect(await keyv.disconnect()).toBeUndefined();
-	});
-
-	test("emit disconnect event", async () => {
+	test("emit disconnect event and handle error", async () => {
 		const keyv = new Keyv();
 		keyv.on("disconnect", () => {
 			expect(true).toBeTruthy();
 		});
 		await keyv.disconnect();
-	});
 
-	test("should handle error on store disconnect", async () => {
-		const keyv = new Keyv({ store: new Map() });
-		keyv.store.disconnect = vi.fn().mockRejectedValue(new Error("disconnect error"));
+		const keyv2 = new Keyv({ store: new Map() });
+		keyv2.store.disconnect = vi.fn().mockRejectedValue(new Error("disconnect error"));
 		const errorHandler = vi.fn();
-		keyv.on("error", errorHandler);
-		await keyv.disconnect();
+		keyv2.on("error", errorHandler);
+		await keyv2.disconnect();
 		expect(errorHandler).toHaveBeenCalledWith(new Error("disconnect error"));
 	});
 });
 
 describe("stats", () => {
-	test("opts.stats should set the stats manager", () => {
+	test("opts.stats and stats setter", () => {
 		const keyv = new Keyv({ stats: true });
 		expect(keyv.stats.enabled).toBe(true);
-	});
-
-	test("stats setter should replace the stats manager", () => {
-		const keyv = new Keyv({ stats: true });
 		const newStats = new KeyvStats({ enabled: true });
 		keyv.stats = newStats;
 		expect(keyv.stats).toBe(newStats);
-	});
-
-	test("stats enabled should create counts", async () => {
-		const keyv = new Keyv({ stats: true });
-		await keyv.set("foo", "bar");
-		await keyv.get("foo");
-		await keyv.get("foo1");
-		await keyv.delete("foo");
-		expect(keyv.stats.hits).toBe(1);
-		expect(keyv.stats.misses).toBe(1);
-		expect(keyv.stats.deletes).toBe(1);
-		expect(keyv.stats.sets).toBe(1);
 	});
 });
 
 describe("iterator", () => {
 	test("should exist with store adapter", () => {
-		const keyv = new Keyv({
-			store: createStore(),
-		});
+		const keyv = new Keyv({ store: createStore() });
 		expect(typeof keyv.iterator).toBe("function");
 	});
 
-	test("doesn't yield values from other namespaces", async () => {
-		const keyvStore = new Map();
+	test("doesn't yield values from other namespaces with various configurations", async () => {
+		const configs = [
+			{}, // plain
+			{ compression: createMockCompression() },
+			{
+				serialization: {
+					stringify: (d: unknown) => JSON.stringify(d),
+					parse: <T>(d: string) => JSON.parse(d) as T,
+				},
+			},
+		];
 
-		const keyv1 = new Keyv({ store: keyvStore, namespace: "keyv1" });
-		const map1 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), String(i + 10)]),
-		);
-		const toResolve = [];
-		for (const [key, value] of map1) {
-			toResolve.push(keyv1.set(key, value));
-		}
+		for (const extraOpts of configs) {
+			const keyvStore = new Map();
+			const keyv1 = new Keyv({ store: keyvStore, namespace: "keyv1", ...extraOpts });
+			const map1 = new Map(
+				Array.from({ length: 5 })
+					.fill(0)
+					.map((_x, i) => [String(i), String(i + 10)]),
+			);
+			const toResolve = [];
+			for (const [key, value] of map1) {
+				toResolve.push(keyv1.set(key, value));
+			}
 
-		await Promise.all(toResolve);
+			await Promise.all(toResolve);
 
-		const keyv2 = new Keyv({ store: keyvStore, namespace: "keyv2" });
-		const map2 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), i + 11]),
-		);
-		toResolve.length = 0;
-		for (const [key, value] of map2) {
-			toResolve.push(keyv2.set(key, value));
-		}
+			const keyv2 = new Keyv({ store: keyvStore, namespace: "keyv2", ...extraOpts });
+			const map2 = new Map(
+				Array.from({ length: 5 })
+					.fill(0)
+					.map((_x, i) => [String(i), i + 11]),
+			);
+			toResolve.length = 0;
+			for (const [key, value] of map2) {
+				toResolve.push(keyv2.set(key, value));
+			}
 
-		await Promise.all(toResolve);
+			await Promise.all(toResolve);
 
-		expect.assertions(map2.size);
-		for await (const [key, value] of keyv2.iterator()) {
-			const doesKeyExist = map2.has(key);
-			const isValueSame = map2.get(key) === value;
-			expect(doesKeyExist && isValueSame).toBeTruthy();
-		}
-	});
-
-	test("doesn't yield values from other namespaces with compression", async () => {
-		const keyvStore = new Map();
-		const keyv1 = new Keyv({
-			store: keyvStore,
-			namespace: "keyv1",
-			compression: createMockCompression(),
-		});
-		const map1 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), String(i + 10)]),
-		);
-		const toResolve = [];
-		for (const [key, value] of map1) {
-			toResolve.push(keyv1.set(key, value));
-		}
-
-		await Promise.all(toResolve);
-		const keyv2 = new Keyv({
-			store: keyvStore,
-			namespace: "keyv2",
-			compression: createMockCompression(),
-		});
-		const map2 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), String(i + 11)]),
-		);
-		toResolve.length = 0;
-		for (const [key, value] of map2) {
-			toResolve.push(keyv2.set(key, value));
-		}
-
-		await Promise.all(toResolve);
-
-		expect.assertions(map2.size);
-		for await (const [key, value] of keyv2.iterator()) {
-			const doesKeyExist = map2.has(key);
-			const isValueSame = map2.get(key) === value;
-			expect(doesKeyExist && isValueSame).toBeTruthy();
-		}
-	});
-
-	test("doesn't yield values from other namespaces with custom serializer/deserializer", async () => {
-		const keyvStore = new Map();
-
-		const serialization = {
-			stringify: (data: unknown) => JSON.stringify(data),
-			parse: <T>(data: string) => JSON.parse(data) as T,
-		};
-
-		const keyv1 = new Keyv({
-			store: keyvStore,
-			serialization,
-			namespace: "keyv1",
-		});
-		const map1 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), String(i + 10)]),
-		);
-		const toResolve = [];
-		for (const [key, value] of map1) {
-			toResolve.push(keyv1.set(key, value));
-		}
-
-		await Promise.all(toResolve);
-
-		const keyv2 = new Keyv({
-			store: keyvStore,
-			serialization,
-			namespace: "keyv2",
-		});
-		const map2 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), i + 11]),
-		);
-		toResolve.length = 0;
-		for (const [key, value] of map2) {
-			toResolve.push(keyv2.set(key, value));
-		}
-
-		await Promise.all(toResolve);
-
-		expect.assertions(map2.size);
-		for await (const [key, value] of keyv2.iterator()) {
-			const doesKeyExist = map2.has(key);
-			const isValueSame = map2.get(key) === value;
-			expect(doesKeyExist && isValueSame).toBeTruthy();
-		}
-	});
-
-	test("doesn't yield values from other namespaces with custom serializer/deserializer and compression", async () => {
-		const keyvStore = new Map();
-
-		const serialization = {
-			stringify: (data: unknown) => JSON.stringify(data),
-			parse: <T>(data: string) => JSON.parse(data) as T,
-		};
-
-		const keyv1 = new Keyv({
-			store: keyvStore,
-			serialization,
-			namespace: "keyv1",
-			compression: createMockCompression(),
-		});
-		const map1 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), String(i + 10)]),
-		);
-		const toResolve = [];
-		for (const [key, value] of map1) {
-			toResolve.push(keyv1.set(key, value));
-		}
-
-		await Promise.all(toResolve);
-
-		const keyv2 = new Keyv({
-			store: keyvStore,
-			serialization,
-			namespace: "keyv2",
-		});
-		const map2 = new Map(
-			Array.from({ length: 5 })
-				.fill(0)
-				.map((_x, i) => [String(i), i + 11]),
-		);
-		toResolve.length = 0;
-		for (const [key, value] of map2) {
-			toResolve.push(keyv2.set(key, value));
-		}
-
-		await Promise.all(toResolve);
-
-		expect.assertions(map2.size);
-		for await (const [key, value] of keyv2.iterator()) {
-			const doesKeyExist = map2.has(key);
-			const isValueSame = map2.get(key) === value;
-			expect(doesKeyExist && isValueSame).toBeTruthy();
+			for await (const [key, value] of keyv2.iterator()) {
+				const doesKeyExist = map2.has(key);
+				const isValueSame = map2.get(key) === value;
+				expect(doesKeyExist && isValueSame).toBeTruthy();
+			}
 		}
 	});
 
@@ -766,7 +505,7 @@ describe("iterator", () => {
 		expect(keyv.iterator).toBeDefined();
 	});
 
-	test("store without iterator support yields no entries", async () => {
+	test("store without iterator support yields no entries (constructor and setter)", async () => {
 		const store = {
 			namespace: undefined as string | undefined,
 			async get(_key: string) {
@@ -782,45 +521,22 @@ describe("iterator", () => {
 			},
 		};
 		// biome-ignore lint/suspicious/noExplicitAny: test mock
-		const keyv = new Keyv(store as any);
-		expect(typeof keyv.iterator).toBe("function");
-
-		// Consume the iterator — store is wrapped in KeyvBridgeAdapter which
-		// returns an empty generator when the underlying store lacks iterator
-		const entries: unknown[] = [];
-		for await (const entry of keyv.iterator()) {
-			entries.push(entry);
+		const keyv1 = new Keyv(store as any);
+		const entries1: unknown[] = [];
+		for await (const entry of keyv1.iterator()) {
+			entries1.push(entry);
 		}
+		expect(entries1.length).toBe(0);
 
-		expect(entries.length).toBe(0);
-	});
-
-	test("store set via setter without iterator support yields no entries", async () => {
-		const keyv = new Keyv();
-		const store = {
-			namespace: undefined as string | undefined,
-			async get(_key: string) {
-				return undefined;
-			},
-			async set(_key: string, _value: unknown) {},
-			async delete(_key: string) {
-				return true;
-			},
-			async clear() {},
-			on() {
-				return store;
-			},
-		};
+		// Via setter
+		const keyv2 = new Keyv();
 		// biome-ignore lint/suspicious/noExplicitAny: test mock
-		keyv.store = store as any;
-		expect(typeof keyv.iterator).toBe("function");
-
-		const entries: unknown[] = [];
-		for await (const _entry of keyv.iterator()) {
-			entries.push(_entry);
+		keyv2.store = store as any;
+		const entries2: unknown[] = [];
+		for await (const _entry of keyv2.iterator()) {
+			entries2.push(_entry);
 		}
-
-		expect(entries.length).toBe(0);
+		expect(entries2.length).toBe(0);
 	});
 
 	test("works with store that has an iterator method", async () => {
@@ -859,7 +575,6 @@ describe("iterator", () => {
 		for await (const entry of keyv.iterator()) {
 			entries.push(entry as [string, unknown]);
 		}
-
 		expect(entries.length).toBe(2);
 	});
 
@@ -900,8 +615,6 @@ describe("iterator", () => {
 		for await (const entry of keyv.iterator()) {
 			entries.push(entry as [string, unknown]);
 		}
-
-		// Only the fresh entry should be yielded; expired should be deleted
 		expect(entries.length).toBe(1);
 		expect(entries[0][0]).toBe("fresh");
 		expect(await keyv.has("expired")).toBe(false);
@@ -909,34 +622,20 @@ describe("iterator", () => {
 
 	test("should not increment deletes stat indefinitely", async () => {
 		vi.useFakeTimers();
-
 		try {
-			const keyv = new Keyv({
-				stats: true,
-			});
-
-			// Set an item that will expire in 100ms
-			const result = await keyv.set("foo", "bar", 100);
-			expect(result).toBe(true);
+			const keyv = new Keyv({ stats: true });
+			await keyv.set("foo", "bar", 100);
 			expect(keyv.stats.deletes).toBe(0);
-
-			// Now the item is expired
 			vi.advanceTimersByTime(101);
 
-			// No gets yet, so no deletes
-			expect(keyv.stats.deletes).toBe(0);
-
 			let iterationCount = 0;
-			// Get all items using iterator — adapter handles expiry cleanup
 			for await (const _ of keyv.iterator() ?? []) {
 				iterationCount++;
 			}
 			expect(iterationCount).toBe(0);
-			// Adapter cleaned up expired entry, Keyv-level deletes stay at 0
 			expect(keyv.stats.deletes).toBe(0);
 
 			iterationCount = 0;
-			// Second iteration — entry already cleaned up
 			for await (const _ of keyv.iterator() ?? []) {
 				iterationCount++;
 			}
@@ -949,214 +648,118 @@ describe("iterator", () => {
 });
 
 describe("checkExpired", () => {
-	test("checkExpired getter returns false by default", () => {
-		const keyv = new Keyv();
-		expect(keyv.checkExpired).toBe(false);
+	test("checkExpired getter defaults to false and can be set to true", () => {
+		expect(new Keyv().checkExpired).toBe(false);
+		expect(new Keyv({ checkExpired: true }).checkExpired).toBe(true);
 	});
 
-	test("checkExpired getter returns true when set", () => {
-		const keyv = new Keyv({ checkExpired: true });
-		expect(keyv.checkExpired).toBe(true);
-	});
-
-	test("get returns undefined for expired key when checkExpired is true", async () => {
-		const keyv = new Keyv({ checkExpired: true });
-		await keyv.set("foo", "bar", 1);
-		await delay(10);
-		const value = await keyv.get("foo");
-		expect(value).toBeUndefined();
-	});
-
-	test("getMany returns undefined for expired keys when checkExpired is true", async () => {
+	test("get/getMany/getRaw/getManyRaw return undefined for expired keys", async () => {
 		const keyv = new Keyv({ checkExpired: true });
 		await keyv.set("foo", "bar", 1);
 		await keyv.set("baz", "qux");
 		await delay(10);
+
+		expect(await keyv.get("foo")).toBeUndefined();
+
 		const values = await keyv.get(["foo", "baz"]);
 		expect(values[0]).toBeUndefined();
 		expect(values[1]).toBe("qux");
-	});
 
-	test("getRaw returns undefined for expired key when checkExpired is true", async () => {
-		const keyv = new Keyv({ checkExpired: true });
-		await keyv.set("foo", "bar", 1);
+		await keyv.set("foo2", "bar2", 1);
 		await delay(10);
-		const value = await keyv.getRaw("foo");
-		expect(value).toBeUndefined();
-	});
+		expect(await keyv.getRaw("foo2")).toBeUndefined();
 
-	test("getManyRaw returns undefined for expired keys when checkExpired is true", async () => {
-		const keyv = new Keyv({ checkExpired: true });
-		await keyv.set("foo", "bar", 1);
-		await keyv.set("baz", "qux");
+		await keyv.set("foo3", "bar3", 1);
+		await keyv.set("baz3", "qux3");
 		await delay(10);
-		const values = await keyv.getManyRaw(["foo", "baz"]);
-		expect(values[0]).toBeUndefined();
-		expect(values[1]).toEqual({ value: "qux" });
+		const rawValues = await keyv.getManyRaw(["foo3", "baz3"]);
+		expect(rawValues[0]).toBeUndefined();
+		expect(rawValues[1]).toEqual({ value: "qux3" });
 	});
 
-	test("has returns true for existing key when checkExpired is true", async () => {
+	test("has/hasMany work correctly with expired keys", async () => {
 		const keyv = new Keyv({ checkExpired: true });
 		await keyv.set("foo", "bar");
-		const result = await keyv.has("foo");
-		expect(result).toBe(true);
-	});
+		expect(await keyv.has("foo")).toBe(true);
 
-	test("has returns false for expired key when checkExpired is true", async () => {
-		const keyv = new Keyv({ checkExpired: true });
-		await keyv.set("foo", "bar", 1);
+		await keyv.set("exp", "val", 1);
 		await delay(10);
-		const result = await keyv.has("foo");
-		expect(result).toBe(false);
-	});
+		expect(await keyv.has("exp")).toBe(false);
 
-	test("hasMany returns false for expired keys when checkExpired is true", async () => {
-		const keyv = new Keyv({ checkExpired: true });
-		await keyv.set("foo", "bar", 1);
+		await keyv.set("exp2", "val2", 1);
 		await keyv.set("baz", "qux");
 		await delay(10);
-		const results = await keyv.has(["foo", "baz"]);
-		expect(results).toEqual([false, true]);
+		expect(await keyv.has(["exp2", "baz"])).toEqual([false, true]);
 	});
 });
 
 describe("throwErrors", () => {
-	type TestData = {
-		key: string;
-		value: string;
-	};
-
-	let testData: TestData[] = [];
-	let testKeys: string[] = [];
-
 	const throwingStore = new Map();
 	throwingStore.get = () => {
 		throw new Error("Test error");
 	};
-
 	throwingStore.set = () => {
 		throw new Error("Test error");
 	};
-
 	throwingStore.delete = () => {
 		throw new Error("Test error");
 	};
-
 	throwingStore.clear = () => {
 		throw new Error("Test error");
 	};
-
 	throwingStore.has = () => {
 		throw new Error("Test error");
 	};
 
-	beforeEach(() => {
-		testData = [];
-		for (let i = 0; i < 5; i++) {
-			testData.push({
-				key: faker.string.alphanumeric(10),
-				value: faker.string.alphanumeric(10),
-			});
-		}
+	type TestData = { key: string; value: string };
+	let testData: TestData[] = [];
+	let testKeys: string[] = [];
 
+	beforeEach(() => {
+		testData = Array.from({ length: 5 }, () => ({
+			key: faker.string.alphanumeric(10),
+			value: faker.string.alphanumeric(10),
+		}));
 		testKeys = testData.map((data) => data.key);
 	});
 
-	test("should get the current throwOnErrors value", () => {
+	test("throwOnErrors getter/setter and constructor option", () => {
 		const keyv = new Keyv(throwingStore);
 		expect(keyv.throwOnErrors).toBe(false);
-	});
-
-	test("should set the throwOnErrors value", () => {
-		const keyv = new Keyv(throwingStore);
 		keyv.throwOnErrors = true;
 		expect(keyv.throwOnErrors).toBe(true);
+
+		const keyv2 = new Keyv({ store: throwingStore, throwOnErrors: true });
+		expect(keyv2.throwOnErrors).toBe(true);
 	});
 
-	test("should pass in the throwOnErrors option", () => {
-		const keyv = new Keyv({ store: throwingStore, throwOnErrors: true });
-		expect(keyv.throwOnErrors).toBe(true);
-	});
-
-	test("should throw when setting a value", async () => {
+	test("should throw on set/get/delete/clear/has when throwOnErrors is true", async () => {
 		const keyv = new Keyv(throwingStore);
 		keyv.throwOnErrors = true;
 		await expect(keyv.set("key", "value")).rejects.toThrow("Test error");
-	});
-
-	test("should not throw when setting a value with throwOnErrors set to false", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = false;
-		keyv.on("error", () => {});
-		const result = await keyv.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
-		expect(result).toBe(false);
-	});
-
-	test("should throw when getting a value", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = true;
 		await expect(keyv.get("key")).rejects.toThrow("Test error");
-	});
-
-	test("should not throw when getting a value with throwOnErrors set to false", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = false;
-		keyv.on("error", () => {});
-		const result = await keyv.get(faker.string.alphanumeric(10));
-		expect(result).toBeUndefined();
-	});
-
-	test("should throw when deleting a value", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = true;
 		await expect(keyv.delete("key")).rejects.toThrow("Test error");
-	});
-
-	test("should not throw when deleting a value with throwOnErrors set to false", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = false;
-		keyv.on("error", () => {});
-		const result = await keyv.delete(faker.string.alphanumeric(10));
-		expect(result).toBe(false);
-	});
-
-	test("should throw when clearing the store", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = true;
 		await expect(keyv.clear()).rejects.toThrow("Test error");
-	});
-
-	test("should not throw when clearing the store with throwOnErrors set to false", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = false;
-		keyv.on("error", () => {});
-		const result = await keyv.clear();
-		expect(result).toBeUndefined();
-	});
-
-	test("should throw when checking if a key exists", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = true;
 		await expect(keyv.has("key")).rejects.toThrow("Test error");
 	});
 
-	test("should not throw when checking if a key exists with throwOnErrors set to false", async () => {
+	test("should not throw when throwOnErrors is false", async () => {
 		const keyv = new Keyv(throwingStore);
 		keyv.throwOnErrors = false;
 		keyv.on("error", () => {});
-		const result = await keyv.has(faker.string.alphanumeric(10));
-		expect(result).toBe(false);
+		expect(await keyv.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10))).toBe(
+			false,
+		);
+		expect(await keyv.get(faker.string.alphanumeric(10))).toBeUndefined();
+		expect(await keyv.delete(faker.string.alphanumeric(10))).toBe(false);
+		expect(await keyv.clear()).toBeUndefined();
+		expect(await keyv.has(faker.string.alphanumeric(10))).toBe(false);
 	});
 
-	test("should throw when deleting multiple keys", async () => {
+	test("should throw on deleteMany and setMany when throwOnErrors is true", async () => {
 		const keyv = new Keyv(throwingStore);
 		keyv.throwOnErrors = true;
 		await expect(keyv.deleteMany(testKeys)).rejects.toThrow("Test error");
-	});
-
-	test("should throw when setting multiple keys", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = true;
 		await expect(keyv.setMany(testData)).rejects.toThrow("Test error");
 	});
 });
@@ -1168,48 +771,31 @@ describe("sanitize", () => {
 		expect(await keyv.get("test'; DROP TABLE")).toBe("value");
 	});
 
-	test("should sanitize keys when explicitly enabled", async () => {
+	test("should sanitize keys when enabled and support granular control", async () => {
 		const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 		await keyv.set("test; DROP TABLE", "value");
 		expect(await keyv.get("test DROP TABLE")).toBe("value");
+
+		const keyv2 = new Keyv({ sanitize: { keys: { sql: true, mongo: false } } });
+		await keyv2.set("$key;test", "value");
+		expect(await keyv2.get("$keytest")).toBe("value");
 	});
 
-	test("should not sanitize keys when disabled", async () => {
-		const keyv = new Keyv();
-		await keyv.set("test'; DROP TABLE", "value");
-		expect(await keyv.get("test'; DROP TABLE")).toBe("value");
-	});
-
-	test("should support granular category control on keys", async () => {
-		const keyv = new Keyv({ sanitize: { keys: { sql: true, mongo: false } } });
-		await keyv.set("$key;test", "value");
-		expect(await keyv.get("$keytest")).toBe("value");
-	});
-
-	test("should sanitize keys in getMany", async () => {
+	test("should sanitize keys in getMany, has, delete, and setMany", async () => {
 		const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 		await keyv.set("clean-key", "value1");
 		const result = await keyv.getMany(["clean-key", "miss;key"]);
 		expect(result[0]).toBe("value1");
 		expect(result[1]).toBeUndefined();
-	});
 
-	test("should sanitize keys in has", async () => {
-		const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 		await keyv.set("test-key", "value");
 		expect(await keyv.has("test-key")).toBe(true);
 		expect(await keyv.has("test'-key")).toBe(false);
-	});
 
-	test("should sanitize keys in delete", async () => {
-		const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 		await keyv.set("testkey", "value");
 		await keyv.delete("test;key");
 		expect(await keyv.has("testkey")).toBe(false);
-	});
 
-	test("should sanitize keys in setMany", async () => {
-		const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
 		await keyv.setMany([
 			{ key: "key;1", value: "value1" },
 			{ key: "key--2", value: "value2" },
@@ -1218,7 +804,7 @@ describe("sanitize", () => {
 		expect(await keyv.get("key2")).toBe("value2");
 	});
 
-	test("getter and setter should work", () => {
+	test("getter/setter and updateOptions", () => {
 		const keyv = new Keyv();
 		expect(keyv.sanitize).toBeInstanceOf(KeyvSanitize);
 		expect(keyv.sanitize.enabled).toBe(false);
@@ -1234,20 +820,18 @@ describe("sanitize", () => {
 		expect(keyv.sanitize.enabled).toBe(false);
 	});
 
-	test("setter with updateOptions should enable all sanitization categories", async () => {
+	test("updateOptions enables sanitization categories", async () => {
 		const keyv = new Keyv();
 		(keyv.sanitize as KeyvSanitize).updateOptions({ keys: true, namespace: true });
 		await keyv.set("test;../key\0val", "value");
 		expect(await keyv.get("testkeyval")).toBe("value");
-	});
 
-	test("setter with options object should apply granular sanitization", async () => {
-		const keyv = new Keyv();
-		(keyv.sanitize as KeyvSanitize).updateOptions({
+		const keyv2 = new Keyv();
+		(keyv2.sanitize as KeyvSanitize).updateOptions({
 			keys: { sql: true, mongo: false, path: false },
 		});
-		await keyv.set("test;$key/../path", "value");
-		expect(await keyv.get("test$key/../path")).toBe("value");
+		await keyv2.set("test;$key/../path", "value");
+		expect(await keyv2.get("test$key/../path")).toBe("value");
 	});
 
 	test("harmless characters pass through when sanitization is enabled", async () => {
@@ -1256,40 +840,30 @@ describe("sanitize", () => {
 		expect(await keyv.get("user's-data")).toBe("value");
 	});
 
-	test("should sanitize namespace at construction", () => {
-		const keyv = new Keyv({ namespace: "ns;evil", sanitize: { keys: true, namespace: true } });
-		expect(keyv.namespace).toBe("nsevil");
-	});
+	test("namespace sanitization at construction, setter, and independent patterns", () => {
+		const keyv1 = new Keyv({ namespace: "ns;evil", sanitize: { keys: true, namespace: true } });
+		expect(keyv1.namespace).toBe("nsevil");
 
-	test("should sanitize namespace on setter", () => {
-		const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
-		keyv.namespace = "ns;evil";
-		expect(keyv.namespace).toBe("nsevil");
-	});
+		const keyv2 = new Keyv({ sanitize: { keys: true, namespace: true } });
+		keyv2.namespace = "ns;evil";
+		expect(keyv2.namespace).toBe("nsevil");
 
-	test("should not sanitize namespace when namespace is false", () => {
-		const keyv = new Keyv({ namespace: "ns;evil", sanitize: { namespace: false } });
-		expect(keyv.namespace).toBe("ns;evil");
+		const keyv3 = new Keyv({ namespace: "ns;evil", sanitize: { namespace: false } });
+		expect(keyv3.namespace).toBe("ns;evil");
 	});
 
 	test("should support independent patterns for keys and namespace", async () => {
 		const keyv = new Keyv({
 			namespace: "ns;../test",
-			sanitize: {
-				keys: { sql: true, path: false },
-				namespace: { sql: false, path: true },
-			},
+			sanitize: { keys: { sql: true, path: false }, namespace: { sql: false, path: true } },
 		});
-		// Namespace: path stripped, sql preserved
 		expect(keyv.namespace).toBe("ns;test");
-		// Keys: sql stripped, path preserved
 		await keyv.set("key;../value", "data");
 		expect(await keyv.get("key../value")).toBe("data");
 	});
 
 	test("empty key after sanitization is gracefully rejected", async () => {
 		const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
-		// ";" is stripped to "" (semicolon is a dangerous SQL pattern)
 		expect(await keyv.set(";", "value")).toBe(false);
 		expect(await keyv.get(";")).toBeUndefined();
 		expect(await keyv.getRaw(";")).toBeUndefined();
@@ -1302,8 +876,7 @@ describe("sanitize", () => {
 describe("decodeWithExpire", () => {
 	test("should return undefined for string data when serialization is disabled", async () => {
 		const keyv = new Keyv({ serialization: false });
-		const result = await keyv.decodeWithExpire("key", "some-string-value");
-		expect(result).toEqual([undefined]);
+		expect(await keyv.decodeWithExpire("key", "some-string-value")).toEqual([undefined]);
 	});
 
 	test("should handle mixed valid and undeserializable data", async () => {

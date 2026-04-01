@@ -126,16 +126,6 @@ testRunner.it(
 	},
 );
 
-testRunner.it("Keyv respects default ttl option (duplicate)", async (t) => {
-	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 100 });
-	await keyv.set("foo", "bar");
-	tk.freeze(Date.now() + 150);
-	t.expect(await keyv.get("foo")).toBeUndefined();
-	t.expect(store.size).toBe(0);
-	tk.reset();
-});
-
 testRunner.it("should be able to set the ttl as default option and then property", async (t) => {
 	const keyv = new Keyv({ store: new Map(), ttl: 100 });
 	t.expect(keyv.ttl).toBe(100);
