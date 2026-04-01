@@ -41,6 +41,7 @@ const storageTestSuite = (test: TestFunction, store: StorageFn, options?: Storag
 export { keyvTestSuite, storageTestSuite };
 export { keyvApiTests } from "./api.js";
 export { compressionTestSuite } from "./compression.js";
+export { encryptionTestSuite } from "./encryption.js";
 export { delay, delay as sleep } from "./helper.js";
 export { keyvIteratorTests } from "./iterator.js";
 export { keyvNamespaceTests } from "./namespace.js";

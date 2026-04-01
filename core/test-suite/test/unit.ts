@@ -1,8 +1,10 @@
 import Keyv, { KeyvJsonSerializer, KeyvMemoryAdapter } from "keyv";
 import { it } from "vitest";
 import { KeyvLz4TestAdapter } from "../src/compression-adapter.js";
+import { KeyvAes256TestAdapter } from "../src/encryption-adapter.js";
 import {
 	compressionTestSuite,
+	encryptionTestSuite,
 	keyvIteratorTests,
 	keyvTestSuite,
 	serializationTestSuite,
@@ -25,3 +27,6 @@ storageTestSuite(it, memoryStore);
 
 // Serialization tests using built-in JSON serializer
 serializationTestSuite(it, new KeyvJsonSerializer());
+
+// Encryption tests using AES-256-GCM test adapter
+encryptionTestSuite(it, new KeyvAes256TestAdapter("test-secret-key"));
