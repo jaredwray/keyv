@@ -101,4 +101,4 @@ const storageBatchTests = (test: TestFunction, store: StorageFn, options?: Stora
 	});
 };
 
-export default storageBatchTests;
+export { storageBatchTests };

@@ -1,9 +1,9 @@
-import { keyvCompressionTests } from "@keyv/test-suite";
+import { compressionTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { it } from "vitest";
 import KeyvGzip from "../src/index.js";
 
-keyvCompressionTests(it, new KeyvGzip());
+compressionTestSuite(it, new KeyvGzip());
 
 it("object type compression/decompression", async (t) => {
 	const keyv = new KeyvGzip();

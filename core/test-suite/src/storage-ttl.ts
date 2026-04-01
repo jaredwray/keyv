@@ -41,4 +41,4 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 	});
 };
 
-export default storageTtlTests;
+export { storageTtlTests };

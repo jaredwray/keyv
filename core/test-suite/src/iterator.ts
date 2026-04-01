@@ -116,4 +116,4 @@ const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: K
 	});
 };
 
-export default keyvIteratorTests;
+export { keyvIteratorTests };

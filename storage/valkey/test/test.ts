@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
 import Redis, { type Cluster } from "iovalkey";
 import Keyv from "keyv";
 import { it } from "vitest";

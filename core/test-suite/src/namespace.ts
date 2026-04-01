@@ -53,4 +53,4 @@ const keyvNamespaceTests = (test: TestFunction, Keyv: typeof KeyvModule, store: 
 	});
 };
 
-export default keyvNamespaceTests;
+export { keyvNamespaceTests };

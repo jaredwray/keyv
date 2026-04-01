@@ -2,7 +2,7 @@
 import process from "node:process";
 import { ResourceInUseException } from "@aws-sdk/client-dynamodb";
 import { faker } from "@faker-js/faker";
-import keyvTestSuite from "@keyv/test-suite";
+import { keyvTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { beforeEach, describe, it, vi } from "vitest";
 import KeyvDynamo, { createKeyv } from "../src/index.js";

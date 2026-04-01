@@ -1,4 +1,4 @@
-import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { afterAll, it } from "vitest";
 import KeyvRedis, { type RedisClientType } from "../src/index.js";

@@ -1,15 +1,15 @@
 import type KeyvModule from "keyv";
-import keyvApiTests from "./api.js";
-import keyvNamespaceTest from "./namespace.js";
-import storageBasicTests from "./storage-basic.js";
-import storageBatchTests from "./storage-batch.js";
+import { keyvApiTests } from "./api.js";
+import { keyvNamespaceTests } from "./namespace.js";
+import { storageBasicTests } from "./storage-basic.js";
+import { storageBatchTests } from "./storage-batch.js";
 import type { KeyvStoreFn, StorageFn, StorageTestOptions, TestFunction } from "./types.js";
-import keyvValueTests from "./values.js";
+import { keyvValueTests } from "./values.js";
 
 const keyvTestSuite = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvStoreFn) => {
 	keyvApiTests(test, Keyv, store);
 	keyvValueTests(test, Keyv, store);
-	keyvNamespaceTest(test, Keyv, store);
+	keyvNamespaceTests(test, Keyv, store);
 };
 
 /* v8 ignore next 4 -- @preserve */
@@ -18,19 +18,18 @@ const storageTestSuite = (test: TestFunction, store: StorageFn, options?: Storag
 	storageBatchTests(test, store, options);
 };
 
-export default keyvTestSuite;
-export { storageTestSuite };
+export { keyvTestSuite, storageTestSuite };
 
-export { default as keyvApiTests } from "./api.js";
-export { default as keyvCompressionTests } from "./compression.js";
+export { keyvApiTests } from "./api.js";
+export { compressionTestSuite } from "./compression.js";
 export { delay, delay as sleep } from "./helper.js";
-export { default as keyvIteratorTests } from "./iterator.js";
-export { default as keyvNamespaceTest } from "./namespace.js";
-export { default as storageBasicTests } from "./storage-basic.js";
-export { default as storageBatchTests } from "./storage-batch.js";
-export { default as storageDisconnectTests } from "./storage-disconnect.js";
-export { default as storageIteratorTests } from "./storage-iterator.js";
-export { default as storageNamespaceTests } from "./storage-namespace.js";
-export { default as storageTtlTests } from "./storage-ttl.js";
+export { keyvIteratorTests } from "./iterator.js";
+export { keyvNamespaceTests } from "./namespace.js";
+export { storageBasicTests } from "./storage-basic.js";
+export { storageBatchTests } from "./storage-batch.js";
+export { storageDisconnectTests } from "./storage-disconnect.js";
+export { storageIteratorTests } from "./storage-iterator.js";
+export { storageNamespaceTests } from "./storage-namespace.js";
+export { storageTtlTests } from "./storage-ttl.js";
 export type { StorageFn, StorageTestOptions, TestFunction } from "./types.js";
-export { default as keyvValueTests } from "./values.js";
+export { keyvValueTests } from "./values.js";

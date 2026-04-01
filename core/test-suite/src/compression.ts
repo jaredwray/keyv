@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import Keyv, { type KeyvCompressionAdapter } from "keyv";
 import type { TestFunction } from "./types.js";
 
-const keyvCompressionTests = (test: TestFunction, compression: KeyvCompressionAdapter) => {
+const compressionTestSuite = (test: TestFunction, compression: KeyvCompressionAdapter) => {
 	test("number array compression/decompression", async (t) => {
 		const array = JSON.stringify([4, 5, 6, 7]);
 		const compressed = await compression.compress(array);
@@ -34,4 +34,4 @@ const keyvCompressionTests = (test: TestFunction, compression: KeyvCompressionAd
 	});
 };
 
-export default keyvCompressionTests;
+export { compressionTestSuite };

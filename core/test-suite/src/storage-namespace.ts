@@ -73,4 +73,4 @@ const storageNamespaceTests = (test: TestFunction, store: StorageFn) => {
 	/* v8 ignore stop */
 };
 
-export default storageNamespaceTests;
+export { storageNamespaceTests };

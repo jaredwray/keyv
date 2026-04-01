@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import keyvTestSuite, { delay, keyvIteratorTests } from "@keyv/test-suite";
+import { delay, keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type mysql from "mysql2";
 import { it } from "vitest";

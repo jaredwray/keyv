@@ -1,11 +1,11 @@
 import { constants as zlibConstants } from "node:zlib";
-import { keyvCompressionTests } from "@keyv/test-suite";
+import { compressionTestSuite } from "@keyv/test-suite";
 import { it } from "vitest";
 import KeyvBrotli from "../src/index.js";
 
 const { BROTLI_PARAM_MODE, BROTLI_PARAM_QUALITY } = zlibConstants;
 
-keyvCompressionTests(it, new KeyvBrotli());
+compressionTestSuite(it, new KeyvBrotli());
 
 it("compression with compression options", async (t) => {
 	const options = {

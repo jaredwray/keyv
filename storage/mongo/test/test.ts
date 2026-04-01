@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test file
 import { faker } from "@faker-js/faker";
-import keyvTestSuite, { keyvIteratorTests } from "@keyv/test-suite";
+import { keyvIteratorTests, keyvTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { afterAll, it } from "vitest";
 import KeyvMongo, { createKeyv } from "../src/index.js";

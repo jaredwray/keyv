@@ -71,4 +71,4 @@ const storageBasicTests = (test: TestFunction, store: StorageFn, options?: Stora
 	});
 };
 
-export default storageBasicTests;
+export { storageBasicTests };

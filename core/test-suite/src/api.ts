@@ -229,4 +229,4 @@ const keyvApiTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvSt
 	});
 };
 
-export default keyvApiTests;
+export { keyvApiTests };

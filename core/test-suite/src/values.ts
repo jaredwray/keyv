@@ -136,4 +136,4 @@ const keyvValueTests = (test: TestFunction, Keyv: typeof KeyvModule, store: Keyv
 	});
 };
 
-export default keyvValueTests;
+export { keyvValueTests };

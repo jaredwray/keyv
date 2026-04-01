@@ -1,9 +1,10 @@
 import Keyv, { KeyvMemoryAdapter } from "keyv";
 import { it } from "vitest";
 import { KeyvLz4TestAdapter } from "../src/compression-adapter.js";
-import keyvTestSuite, {
-	keyvCompressionTests,
+import {
+	compressionTestSuite,
 	keyvIteratorTests,
+	keyvTestSuite,
 	storageBasicTests,
 	storageBatchTests,
 	storageDisconnectTests,
@@ -20,7 +21,7 @@ const storeExtended = () => {
 
 keyvTestSuite(it, Keyv, storeExtended);
 keyvIteratorTests(it, Keyv, storeExtended);
-keyvCompressionTests(it, new KeyvLz4TestAdapter());
+compressionTestSuite(it, new KeyvLz4TestAdapter());
 
 // Storage-level tests using KeyvMemoryAdapter
 const memoryStore = () => new KeyvMemoryAdapter(new Map());

@@ -13,4 +13,4 @@ const storageDisconnectTests = (test: TestFunction, store: StorageFn) => {
 	});
 };
 
-export default storageDisconnectTests;
+export { storageDisconnectTests };

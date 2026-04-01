@@ -92,4 +92,4 @@ const storageIteratorTests = (test: TestFunction, store: StorageFn) => {
 	});
 };
 
-export default storageIteratorTests;
+export { storageIteratorTests };

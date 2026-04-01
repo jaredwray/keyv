@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import keyvTestSuite from "@keyv/test-suite";
+import { keyvTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import { beforeEach, it, vi } from "vitest";
 import KeyvSqlite, { createKeyv } from "../src/index.js";

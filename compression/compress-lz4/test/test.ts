@@ -1,9 +1,9 @@
-import { keyvCompressionTests } from "@keyv/test-suite";
+import { compressionTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { it } from "vitest";
 import KeyvLz4 from "../src/index.js";
 
-keyvCompressionTests(it, new KeyvLz4());
+compressionTestSuite(it, new KeyvLz4());
 
 it("object type compression/decompression", async (t) => {
 	const keyv = new KeyvLz4();
