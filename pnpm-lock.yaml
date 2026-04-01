@@ -280,6 +280,9 @@ importers:
       '@faker-js/faker':
         specifier: ^9.8.0
         version: 9.9.0
+      '@keyv/test-suite':
+        specifier: workspace:^
+        version: link:../../core/test-suite
       '@vitest/coverage-v8':
         specifier: ^4.0.18
         version: 4.0.18(vitest@4.0.18(@types/node@25.5.0)(happy-dom@20.8.7)(terser@5.37.0)(tsx@4.21.0))
