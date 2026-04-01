@@ -97,7 +97,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish keyv
-        run: pnpm --filter keyv publish --tag beta --no-git-checks
+        run: pnpm --filter keyv publish --tag beta --no-git-checks --access public
 
       - name: Publish remaining packages
         run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag beta --no-git-checks --access public
