@@ -97,9 +97,6 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
-      - name: Approve Builds
-        run: pnpm approve-builds
-
       - name: Build
         run: pnpm build
 
