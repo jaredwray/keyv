@@ -7,7 +7,7 @@
 [![browser](https://github.com/jaredwray/keyv/actions/workflows/browser-compat.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/browser-compat.yaml)
 [![codecov](https://codecov.io/gh/jaredwray/keyv/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/dm/keyv.svg)](https://www.npmjs.com/package/keyv)
-[![npm](https://img.shields.io/npm/v/keyv.svg)](https://www.npmjs.com/package/keyv)
+[![npm](https://img.shields.io/npm/v/keyv.svg)](https://www.npmjs.com/package/keyv) 
 
 # Getting Started
 
