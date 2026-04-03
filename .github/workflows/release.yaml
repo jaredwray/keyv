@@ -89,13 +89,13 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Verify NPM Authentication
-        run: npm whoami --registry https://registry.npmjs.org
+      - name: Debug NPM Auth
+        run: |
+          npm whoami --registry https://registry.npmjs.org
+          npm access list packages jaredwray
+          npm owner ls keyv
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Verify NPM Owners
-        run: npm owner ls keyv
 
       - name: Install Dependencies
         run: pnpm install
