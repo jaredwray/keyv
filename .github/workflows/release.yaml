@@ -89,6 +89,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Verify NPM Authentication
+        run: npm whoami --registry https://registry.npmjs.org
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Install Dependencies
         run: pnpm install
 
@@ -99,7 +104,7 @@ jobs:
         run: pnpm build
 
       - name: Publish keyv
-        run: pnpm --filter keyv publish --tag alpha --no-git-checks --access public
+        run: cd core/keyv && pnpm publish --tag alpha --no-git-checks --access public
 
       - name: Publish remaining packages
         run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag alpha --no-git-checks --access public --provenance
