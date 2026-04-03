@@ -78,10 +78,6 @@
 	"tsd": {
 		"directory": "test"
 	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
-	},
 	"files": [
 		"dist",
 		"LICENSE"
