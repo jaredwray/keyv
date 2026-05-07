@@ -277,6 +277,41 @@ it("delete with namespace", async (t) => {
 	t.expect(await store.get(key)).toBeUndefined();
 });
 
+it("get returns value for items missing both expiry fields", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key = faker.string.uuid();
+	await store.client.put({
+		TableName: store.tableName,
+		Item: {
+			id: store.formatKey(key),
+			value: "no-expiry",
+		},
+	});
+	t.expect(await store.get(key)).toBe("no-expiry");
+});
+
+it("set stores expiresAtMs at millisecond precision", async (t) => {
+	const dynamo = new KeyvDynamo({ endpoint: dynamoURL });
+	const key = faker.string.uuid();
+	const value = faker.lorem.sentence();
+
+	const beforeSet = Date.now();
+	await dynamo.set(key, value, 1000);
+	const afterSet = Date.now();
+
+	const result = await dynamo.client.get({
+		TableName: dynamo.tableName,
+		Key: { id: dynamo.formatKey(key) },
+	});
+
+	t.expect(typeof result.Item?.expiresAtMs).toBe("number");
+	t.expect(result.Item?.expiresAtMs).toBeGreaterThanOrEqual(beforeSet + 1000);
+	t.expect(result.Item?.expiresAtMs).toBeLessThanOrEqual(afterSet + 1000);
+
+	t.expect(typeof result.Item?.expiresAt).toBe("number");
+	t.expect(result.Item?.expiresAt).toBeGreaterThanOrEqual(Math.ceil((beforeSet + 1000) / 1000));
+});
+
 it("has returns false for expired key", async (t) => {
 	const store = new KeyvDynamo({ endpoint: dynamoURL });
 	const key = faker.string.uuid();
