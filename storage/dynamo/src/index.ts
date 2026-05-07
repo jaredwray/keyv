@@ -180,12 +180,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 		try {
 			await this._tableReady;
 
-			const sixHoursFromNowEpoch = Math.floor((Date.now() + this._sixHoursInMilliseconds) / 1000);
-
-			const expiresAt =
-				typeof ttl === "number"
-					? Math.floor((Date.now() + (ttl + 1000)) / 1000)
-					: sixHoursFromNowEpoch;
+			const now = Date.now();
+			const expiresAtMs = typeof ttl === "number" ? now + ttl : now + this._sixHoursInMilliseconds;
+			const expiresAt = Math.ceil(expiresAtMs / 1000);
 
 			const putInput: PutCommandInput = {
 				TableName: this._opts.tableName,
@@ -193,6 +190,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					id: this.formatKey(key),
 					value,
 					expiresAt,
+					expiresAtMs,
 				},
 			};
 
@@ -204,6 +202,17 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			return false;
 		}
 		/* v8 ignore stop -- @preserve */
+	}
+
+	private _isExpired(item: Record<string, unknown>): boolean {
+		const now = Date.now();
+		if (typeof item.expiresAtMs === "number") {
+			return item.expiresAtMs <= now;
+		}
+		if (typeof item.expiresAt === "number") {
+			return (item.expiresAt - 1) * 1000 <= now;
+		}
+		return false;
 	}
 
 	/**
@@ -218,13 +227,12 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return entries.map(() => true);
 			}
 
-			const sixHoursFromNowEpoch = Math.floor((Date.now() + this._sixHoursInMilliseconds) / 1000);
+			const now = Date.now();
 
 			const putRequests = entries.map(({ key, value, ttl }) => {
-				const expiresAt =
-					typeof ttl === "number"
-						? Math.floor((Date.now() + (ttl + 1000)) / 1000)
-						: sixHoursFromNowEpoch;
+				const expiresAtMs =
+					typeof ttl === "number" ? now + ttl : now + this._sixHoursInMilliseconds;
+				const expiresAt = Math.ceil(expiresAtMs / 1000);
 
 				return {
 					PutRequest: {
@@ -232,6 +240,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 							id: this.formatKey(key),
 							value,
 							expiresAt,
+							expiresAtMs,
 						},
 					},
 				};
@@ -298,9 +307,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return undefined as KeyvStorageGetResult<Value>;
 			}
 
-			// expiresAt includes a +1s buffer for DynamoDB's native TTL, so subtract 1 for accurate check
-			const nowInSeconds = Math.floor(Date.now() / 1000);
-			if (typeof Item.expiresAt === "number" && Item.expiresAt - 1 <= nowInSeconds) {
+			if (this._isExpired(Item)) {
 				await this.delete(key);
 				return undefined as KeyvStorageGetResult<Value>;
 			}
@@ -352,7 +359,6 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			const nowInSeconds = Math.floor(Date.now() / 1000);
 			const itemMap = new Map(allItems.map((item) => [item?.id, item]));
 			const expiredKeys: string[] = [];
 			const results = formattedKeys.map((key) => {
@@ -361,7 +367,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					return undefined as KeyvStorageGetResult<Value>;
 				}
 
-				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
+				if (this._isExpired(item)) {
 					expiredKeys.push(key);
 					return undefined as KeyvStorageGetResult<Value>;
 				}
@@ -476,9 +482,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return false;
 			}
 
-			// expiresAt includes a +1s buffer for DynamoDB's native TTL, so subtract 1 for accurate check
-			const nowInSeconds = Math.floor(Date.now() / 1000);
-			if (typeof Item.expiresAt === "number" && Item.expiresAt - 1 <= nowInSeconds) {
+			if (this._isExpired(Item)) {
 				await this.delete(key);
 				return false;
 			}
@@ -527,7 +531,6 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			const nowInSeconds = Math.floor(Date.now() / 1000);
 			const itemMap = new Map(allItems.map((item) => [item?.id, item]));
 			const expiredKeys: string[] = [];
 			const results = formattedKeys.map((key) => {
@@ -536,7 +539,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					return false;
 				}
 
-				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
+				if (this._isExpired(item)) {
 					expiredKeys.push(key);
 					return false;
 				}
@@ -592,10 +595,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 			lastEvaluatedKey = scanResult.LastEvaluatedKey as Record<string, unknown> | undefined;
 
-			const nowInSeconds = Math.floor(Date.now() / 1000);
 			for (const item of scanResult.Items ?? []) {
 				/* v8 ignore next 3 -- @preserve */
-				if (typeof item.expiresAt === "number" && item.expiresAt - 1 <= nowInSeconds) {
+				if (this._isExpired(item)) {
 					await this.delete(item.id as string);
 					continue;
 				}
