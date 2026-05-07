@@ -277,6 +277,19 @@ it("delete with namespace", async (t) => {
 	t.expect(await store.get(key)).toBeUndefined();
 });
 
+it("get returns value for items missing both expiry fields", async (t) => {
+	const store = new KeyvDynamo({ endpoint: dynamoURL });
+	const key = faker.string.uuid();
+	await store.client.put({
+		TableName: store.tableName,
+		Item: {
+			id: store.formatKey(key),
+			value: "no-expiry",
+		},
+	});
+	t.expect(await store.get(key)).toBe("no-expiry");
+});
+
 it("set stores expiresAtMs at millisecond precision", async (t) => {
 	const dynamo = new KeyvDynamo({ endpoint: dynamoURL });
 	const key = faker.string.uuid();
