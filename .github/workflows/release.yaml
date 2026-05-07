@@ -99,4 +99,4 @@ jobs:
         run: pnpm --filter keyv publish --tag beta --no-git-checks --access public --loglevel=verbose
 
       - name: Publish remaining packages
-        run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag beta --no-git-checks --access public --provenance
+        run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag beta --no-git-checks --access public
