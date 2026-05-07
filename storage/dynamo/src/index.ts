@@ -204,7 +204,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 		/* v8 ignore stop -- @preserve */
 	}
 
-	private _isExpired(item: Record<string, unknown>, now: number = Date.now()): boolean {
+	private isExpired(item: Record<string, unknown>, now: number = Date.now()): boolean {
 		if (typeof item.expiresAtMs === "number") {
 			return item.expiresAtMs <= now;
 		}
@@ -306,7 +306,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return undefined as KeyvStorageGetResult<Value>;
 			}
 
-			if (this._isExpired(Item)) {
+			if (this.isExpired(Item)) {
 				await this.delete(key);
 				return undefined as KeyvStorageGetResult<Value>;
 			}
@@ -367,7 +367,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					return undefined as KeyvStorageGetResult<Value>;
 				}
 
-				if (this._isExpired(item, now)) {
+				if (this.isExpired(item, now)) {
 					expiredKeys.push(key);
 					return undefined as KeyvStorageGetResult<Value>;
 				}
@@ -482,7 +482,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return false;
 			}
 
-			if (this._isExpired(Item)) {
+			if (this.isExpired(Item)) {
 				await this.delete(key);
 				return false;
 			}
@@ -540,7 +540,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					return false;
 				}
 
-				if (this._isExpired(item, now)) {
+				if (this.isExpired(item, now)) {
 					expiredKeys.push(key);
 					return false;
 				}
@@ -599,7 +599,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			const now = Date.now();
 			for (const item of scanResult.Items ?? []) {
 				/* v8 ignore next 3 -- @preserve */
-				if (this._isExpired(item, now)) {
+				if (this.isExpired(item, now)) {
 					await this.delete(item.id as string);
 					continue;
 				}
