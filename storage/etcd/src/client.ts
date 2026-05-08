@@ -6,14 +6,12 @@ export type EtcdClientOptions = {
 
 export type RangeRequest = {
 	key: string;
-	rangeEnd?: string;
+	rangeEnd?: string | Buffer;
 	keysOnly?: boolean;
-	limit?: number;
 };
 
 export type RangeResponse = {
 	kvs?: Array<{ key: string; value: string }>;
-	count?: string;
 };
 
 export type PutRequest = {
@@ -24,7 +22,7 @@ export type PutRequest = {
 
 export type DeleteRangeRequest = {
 	key: string;
-	rangeEnd?: string;
+	rangeEnd?: string | Buffer;
 };
 
 export type DeleteRangeResponse = {
@@ -36,38 +34,43 @@ export type LeaseGrantResponse = {
 	TTL: string;
 };
 
-export function b64encode(input: string): string {
-	return Buffer.from(input, "utf8").toString("base64");
+export function b64encode(input: string | Buffer): string {
+	if (typeof input === "string") {
+		return Buffer.from(input, "utf8").toString("base64");
+	}
+	return input.toString("base64");
 }
 
 export function b64decode(input: string): string {
 	return Buffer.from(input, "base64").toString("utf8");
 }
 
-// Returns the next key after `prefix` in lexicographic byte order, suitable as
-// `range_end` for a prefix scan. An empty prefix or all-0xFF prefix produces
-// "\x00", which paired with key="\x00" is etcd's idiom for "scan everything".
-export function prefixEnd(prefix: string): string {
+// Returns the next key after `prefix` in lexicographic byte order as raw
+// bytes, suitable as `range_end` for a prefix scan. Returned as a Buffer so
+// that incremented bytes (e.g., 0xBF → 0xC0) can produce sequences that are
+// not valid UTF-8 — etcd treats keys as bytes, and round-tripping through
+// UTF-8 here would corrupt those ranges. An empty prefix or an all-0xFF
+// prefix returns the single byte 0x00, which paired with key=0x00 is etcd's
+// idiom for "scan everything".
+export function prefixEnd(prefix: string): Buffer {
 	if (prefix === "") {
-		return "\x00";
+		return Buffer.from([0x00]);
 	}
 	const buf = Buffer.from(prefix, "utf8");
 	for (let i = buf.length - 1; i >= 0; i--) {
 		if ((buf[i] ?? 0) < 0xff) {
 			const out = Buffer.from(buf.subarray(0, i + 1));
 			out[i] = (buf[i] ?? 0) + 1;
-			return out.toString("utf8");
+			return out;
 		}
 	}
-	return "\x00";
+	/* v8 ignore next -- @preserve UTF-8 of any JS string cannot be all 0xFF */
+	return Buffer.from([0x00]);
 }
 
 export function parseEtcdUrl(input: string): string {
 	if (input.startsWith("http://") || input.startsWith("https://")) {
 		return input;
-	}
-	if (input.startsWith("etcd://")) {
-		return `http://${input.slice("etcd://".length)}`;
 	}
 	return `http://${input}`;
 }
@@ -83,10 +86,6 @@ export class EtcdClient {
 			end--;
 		}
 		this._baseUrl = end === url.length ? url : url.slice(0, end);
-	}
-
-	get closed(): boolean {
-		return this._closed;
 	}
 
 	close(): void {
@@ -109,9 +108,11 @@ export class EtcdClient {
 		if (text) {
 			try {
 				parsed = JSON.parse(text);
+				/* v8 ignore start -- defensive: etcd's gateway always returns JSON */
 			} catch {
 				parsed = undefined;
 			}
+			/* v8 ignore stop */
 		}
 
 		if (!response.ok) {
@@ -135,9 +136,6 @@ export class EtcdClient {
 		}
 		if (req.keysOnly) {
 			body.keys_only = true;
-		}
-		if (typeof req.limit === "number") {
-			body.limit = req.limit;
 		}
 		return this.request<RangeResponse>("/v3/kv/range", body);
 	}
@@ -248,7 +246,6 @@ export class EtcdRangeBuilder {
 }
 
 export class Lease {
-	private _id?: string;
 	private _grantPromise?: Promise<string>;
 
 	constructor(
@@ -256,20 +253,9 @@ export class Lease {
 		private readonly ttlSeconds: number,
 	) {}
 
-	get id(): string | undefined {
-		return this._id;
-	}
-
 	async grant(): Promise<string> {
-		if (this._id !== undefined) {
-			return this._id;
-		}
 		if (!this._grantPromise) {
-			this._grantPromise = (async () => {
-				const result = await this.client.leaseGrant(this.ttlSeconds);
-				this._id = result.ID;
-				return result.ID;
-			})();
+			this._grantPromise = this.client.leaseGrant(this.ttlSeconds).then((r) => r.ID);
 		}
 		return this._grantPromise;
 	}

@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { it } from "vitest";
+import { EtcdClient, prefixEnd } from "../src/client.js";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
 
 const etcdUrl = "etcd://127.0.0.1:2379";
@@ -415,4 +416,54 @@ it("handles legacy JSON data without v field in get", async (t) => {
 	const result = await store.get(key);
 	// Should return the raw string since parsed.v is undefined
 	t.expect(result).toBe(JSON.stringify({ foo: "bar" }));
+});
+
+it("prefixEnd preserves raw bytes for non-ASCII prefixes", (t) => {
+	// "ÿ" encodes as bytes [0xC3, 0xBF]; incrementing the trailing byte yields
+	// [0xC3, 0xC0], which is not valid UTF-8. prefixEnd must keep these bytes
+	// intact so etcd's byte-based range_end is correct.
+	const result = prefixEnd("ÿ");
+	t.expect(Buffer.isBuffer(result)).toBe(true);
+	t.expect(result.equals(Buffer.from([0xc3, 0xc0]))).toBe(true);
+
+	// ASCII case still increments last byte
+	t.expect(prefixEnd("ns:").equals(Buffer.from("ns;"))).toBe(true);
+
+	// Empty prefix collapses to 0x00 ("scan everything")
+	t.expect(prefixEnd("").equals(Buffer.from([0x00]))).toBe(true);
+});
+
+it("EtcdClient strips trailing slashes from the base URL", async (t) => {
+	const client = new EtcdClient({ url: "http://127.0.0.1:2379///" });
+	const status = await client.status();
+	t.expect(status).toBeDefined();
+});
+
+it("EtcdClient surfaces error responses from etcd", async (t) => {
+	const client = new EtcdClient({ url: "http://127.0.0.1:2379" });
+	let error: Error | undefined;
+	try {
+		// Putting with a non-existent lease ID forces etcd to return an error.
+		await client.putRaw({ key: "k", value: "v", lease: "999999999999999" });
+	} catch (e) {
+		error = e as Error;
+	}
+	t.expect(error).toBeDefined();
+	t.expect(error?.message).toMatch(/lease/i);
+});
+
+it("Lease caches the granted ID across concurrent puts", async (t) => {
+	const store = new KeyvEtcd(etcdUrl, { ttl: 5000 });
+	const sharedLease = store.lease;
+	t.expect(sharedLease).toBeDefined();
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	// Two sequential puts on the same default lease — the second must reuse the
+	// already-granted lease ID rather than minting a fresh grant.
+	await store.set(key1, "a");
+	await store.set(key2, "b");
+	const id1 = await sharedLease?.grant();
+	const id2 = await sharedLease?.grant();
+	t.expect(id1).toBeDefined();
+	t.expect(id1).toBe(id2);
 });
