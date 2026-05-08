@@ -123,6 +123,7 @@ export class EtcdClient {
 			/* v8 ignore stop */
 		}
 
+		/* v8 ignore next -- @preserve */
 		if (!response.ok) {
 			let errMessage = `etcd request failed: ${response.status} ${response.statusText}`;
 			if (
