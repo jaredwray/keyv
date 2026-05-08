@@ -138,7 +138,7 @@ const value2 = await keyv2.get('foo'); // 'bar2'
 | `url` | `string` | `'127.0.0.1:2379'` | The etcd server URL. The `etcd://` protocol prefix is automatically stripped. |
 | `uri` | `string` | — | Alias for `url` |
 | `ttl` | `number` | `undefined` | Default TTL in milliseconds for all keys. Uses etcd leases internally. |
-| `busyTimeout` | `number` | `undefined` | Busy timeout in milliseconds |
+| `busyTimeout` | `number` | `undefined` | Per-request timeout in milliseconds. Aborts hung requests via `AbortSignal.timeout`. |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
 
 ```js
@@ -190,7 +190,7 @@ Default TTL in milliseconds for all keys. Converted to seconds internally for et
 
 ### .busyTimeout
 
-Busy timeout in milliseconds.
+Per-request timeout in milliseconds. When set, every HTTP request to etcd is aborted via `AbortSignal.timeout` if it does not complete within this window. Updating the setter applies to subsequent requests.
 
 | Type | Default |
 |---|---|

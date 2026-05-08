@@ -13,7 +13,7 @@ export type KeyvEtcdOptions = {
 	uri?: string;
 	/** Default TTL in milliseconds for all keys. Converted to seconds internally for etcd leases. */
 	ttl?: number;
-	/** Busy timeout in milliseconds */
+	/** Per-request timeout in milliseconds. Aborts hung requests via `AbortSignal.timeout`. */
 	busyTimeout?: number;
 	/** Optional namespace for key prefixing */
 	namespace?: string;
@@ -72,6 +72,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 
 		this._client = new EtcdClient({
 			url: this._url,
+			timeout: this._busyTimeout,
 		});
 
 		this._client.status().catch((error) => this.emit("error", error));
@@ -142,7 +143,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Gets the busy timeout in milliseconds.
+	 * Gets the per-request timeout in milliseconds.
 	 * @default undefined
 	 */
 	public get busyTimeout(): number | undefined {
@@ -150,10 +151,12 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Sets the busy timeout in milliseconds.
+	 * Sets the busy timeout in milliseconds. The new value applies to subsequent
+	 * requests via the underlying client.
 	 */
 	public set busyTimeout(value: number | undefined) {
 		this._busyTimeout = value;
+		this._client.timeout = value;
 	}
 
 	/**

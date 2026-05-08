@@ -291,10 +291,30 @@ it("ttl getter and setter", (t) => {
 it("busyTimeout getter and setter", (t) => {
 	const store = new KeyvEtcd({ busyTimeout: 3000 });
 	t.expect(store.busyTimeout).toBe(3000);
+	t.expect(store.client.timeout).toBe(3000);
 	store.busyTimeout = 5000;
 	t.expect(store.busyTimeout).toBe(5000);
+	t.expect(store.client.timeout).toBe(5000);
 	store.busyTimeout = undefined;
 	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.client.timeout).toBeUndefined();
+});
+
+it("EtcdClient aborts hung requests when timeout is set", async (t) => {
+	// 192.0.2.1 is RFC 5737 TEST-NET-1 — guaranteed not to route, so the
+	// fetch hangs until our AbortSignal.timeout fires.
+	const client = new EtcdClient({ url: "http://192.0.2.1:2379", timeout: 200 });
+	const start = Date.now();
+	let error: Error | undefined;
+	try {
+		await client.status();
+	} catch (e) {
+		error = e as Error;
+	}
+	const elapsed = Date.now() - start;
+	t.expect(error).toBeDefined();
+	// Should be way under fetch's default ~30s connect timeout.
+	t.expect(elapsed).toBeLessThan(2000);
 });
 
 it("createKeyv returns a Keyv instance with KeyvEtcd store", (t) => {

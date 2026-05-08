@@ -2,6 +2,8 @@ const JSON_HEADERS = { "content-type": "application/json" };
 
 export type EtcdClientOptions = {
 	url: string;
+	/** Per-request timeout in milliseconds. Aborts the underlying fetch when exceeded. */
+	timeout?: number;
 };
 
 export type RangeRequest = {
@@ -78,6 +80,7 @@ export function parseEtcdUrl(input: string): string {
 export class EtcdClient {
 	private readonly _baseUrl: string;
 	private _closed = false;
+	public timeout: number | undefined;
 
 	constructor(options: EtcdClientOptions) {
 		const url = parseEtcdUrl(options.url);
@@ -86,6 +89,7 @@ export class EtcdClient {
 			end--;
 		}
 		this._baseUrl = end === url.length ? url : url.slice(0, end);
+		this.timeout = options.timeout;
 	}
 
 	close(): void {
@@ -97,10 +101,14 @@ export class EtcdClient {
 			throw new Error("etcd client is closed");
 		}
 
+		const timeout = this.timeout;
+		const signal = timeout !== undefined && timeout > 0 ? AbortSignal.timeout(timeout) : undefined;
+
 		const response = await fetch(`${this._baseUrl}${path}`, {
 			method: "POST",
 			headers: JSON_HEADERS,
 			body: JSON.stringify(body ?? {}),
+			signal,
 		});
 
 		const text = await response.text();
