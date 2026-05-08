@@ -1,6 +1,6 @@
-import { Etcd3, type Lease } from "etcd3";
 import { Hookified } from "hookified";
 import { Keyv, type KeyvEntry, type KeyvStorageGetResult } from "keyv";
+import { EtcdClient, type Lease } from "./client.js";
 import type { ClearOutput, DeleteOutput, GetOutput, HasOutput } from "./types.js";
 
 /**
@@ -21,7 +21,7 @@ export type KeyvEtcdOptions = {
 
 /**
  * Etcd storage adapter for Keyv.
- * Uses the [etcd3](https://github.com/microsoft/etcd3) client to connect to an etcd server.
+ * Talks to etcd over its built-in HTTP/JSON gateway with no third-party client dependency.
  *
  * @example
  * ```typescript
@@ -31,7 +31,7 @@ export type KeyvEtcdOptions = {
  */
 // biome-ignore lint/suspicious/noExplicitAny: any is allowed
 export class KeyvEtcd<GenericValue = any> extends Hookified {
-	private _client!: Etcd3;
+	private _client!: EtcdClient;
 	private _lease?: Lease;
 	private _url = "127.0.0.1:2379";
 	private _ttl?: number;
@@ -70,12 +70,11 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 		this._ttl = typeof merged.ttl === "number" ? merged.ttl : undefined;
 		this._busyTimeout = merged.busyTimeout;
 
-		this._client = new Etcd3({
-			hosts: this._url,
+		this._client = new EtcdClient({
+			url: this._url,
 		});
 
-		// Https://github.com/microsoft/etcd3/issues/105
-		this._client.getRoles().catch((error) => this.emit("error", error));
+		this._client.status().catch((error) => this.emit("error", error));
 
 		if (typeof this._ttl === "number") {
 			this._lease = this._client.lease(this._ttl / 1000, {
@@ -85,16 +84,16 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Gets the underlying etcd3 client instance.
+	 * Gets the underlying etcd client instance.
 	 */
-	public get client(): Etcd3 {
+	public get client(): EtcdClient {
 		return this._client;
 	}
 
 	/**
-	 * Sets the underlying etcd3 client instance.
+	 * Sets the underlying etcd client instance.
 	 */
-	public set client(value: Etcd3) {
+	public set client(value: EtcdClient) {
 		this._client = value;
 	}
 

@@ -1,6 +1,6 @@
 # @keyv/etcd [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
-> Etcd storage adapter for [Keyv](https://github.com/jaredwray/keyv) using the [etcd3](https://github.com/microsoft/etcd3) client
+> Etcd storage adapter for [Keyv](https://github.com/jaredwray/keyv) with a built-in etcd v3 HTTP gateway client (zero third-party dependencies)
 
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
@@ -10,7 +10,7 @@
 
 ## Features
 
-- Built on the [etcd3](https://github.com/microsoft/etcd3) package with full TypeScript support
+- Built-in etcd v3 HTTP/JSON gateway client (no third-party etcd dependency) with full TypeScript support
 - TTL support via etcd leases (millisecond input, converted to seconds internally)
 - Namespace support for key isolation across multiple Keyv instances
 - Async iterator support for scanning keys
@@ -158,11 +158,11 @@ const store3 = new KeyvEtcd('etcd://localhost:2379', { ttl: 5000, busyTimeout: 3
 
 ### .client
 
-The underlying `Etcd3` client instance. Can be used to access the etcd3 client directly.
+The underlying `EtcdClient` instance — a lightweight wrapper around the etcd v3 HTTP/JSON gateway. Can be used to issue raw etcd requests directly.
 
 | Type | Default |
 |---|---|
-| `Etcd3` | Created from the `url` option |
+| `EtcdClient` | Created from the `url` option |
 
 ### .lease
 
