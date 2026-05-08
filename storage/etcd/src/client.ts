@@ -77,7 +77,12 @@ export class EtcdClient {
 	private _closed = false;
 
 	constructor(options: EtcdClientOptions) {
-		this._baseUrl = parseEtcdUrl(options.url).replace(/\/+$/, "");
+		const url = parseEtcdUrl(options.url);
+		let end = url.length;
+		while (end > 0 && url.charCodeAt(end - 1) === 47) {
+			end--;
+		}
+		this._baseUrl = end === url.length ? url : url.slice(0, end);
 	}
 
 	get closed(): boolean {
