@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { it } from "vitest";
+import { EtcdClient, prefixEnd } from "../src/client.js";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
 
 const etcdUrl = "etcd://127.0.0.1:2379";
@@ -290,10 +291,30 @@ it("ttl getter and setter", (t) => {
 it("busyTimeout getter and setter", (t) => {
 	const store = new KeyvEtcd({ busyTimeout: 3000 });
 	t.expect(store.busyTimeout).toBe(3000);
+	t.expect(store.client.timeout).toBe(3000);
 	store.busyTimeout = 5000;
 	t.expect(store.busyTimeout).toBe(5000);
+	t.expect(store.client.timeout).toBe(5000);
 	store.busyTimeout = undefined;
 	t.expect(store.busyTimeout).toBeUndefined();
+	t.expect(store.client.timeout).toBeUndefined();
+});
+
+it("EtcdClient aborts hung requests when timeout is set", async (t) => {
+	// 192.0.2.1 is RFC 5737 TEST-NET-1 — guaranteed not to route, so the
+	// fetch hangs until our AbortSignal.timeout fires.
+	const client = new EtcdClient({ url: "http://192.0.2.1:2379", timeout: 200 });
+	const start = Date.now();
+	let error: Error | undefined;
+	try {
+		await client.status();
+	} catch (e) {
+		error = e as Error;
+	}
+	const elapsed = Date.now() - start;
+	t.expect(error).toBeDefined();
+	// Should be way under fetch's default ~30s connect timeout.
+	t.expect(elapsed).toBeLessThan(2000);
 });
 
 it("createKeyv returns a Keyv instance with KeyvEtcd store", (t) => {
@@ -415,4 +436,54 @@ it("handles legacy JSON data without v field in get", async (t) => {
 	const result = await store.get(key);
 	// Should return the raw string since parsed.v is undefined
 	t.expect(result).toBe(JSON.stringify({ foo: "bar" }));
+});
+
+it("prefixEnd preserves raw bytes for non-ASCII prefixes", (t) => {
+	// "ÿ" encodes as bytes [0xC3, 0xBF]; incrementing the trailing byte yields
+	// [0xC3, 0xC0], which is not valid UTF-8. prefixEnd must keep these bytes
+	// intact so etcd's byte-based range_end is correct.
+	const result = prefixEnd("ÿ");
+	t.expect(Buffer.isBuffer(result)).toBe(true);
+	t.expect(result.equals(Buffer.from([0xc3, 0xc0]))).toBe(true);
+
+	// ASCII case still increments last byte
+	t.expect(prefixEnd("ns:").equals(Buffer.from("ns;"))).toBe(true);
+
+	// Empty prefix collapses to 0x00 ("scan everything")
+	t.expect(prefixEnd("").equals(Buffer.from([0x00]))).toBe(true);
+});
+
+it("EtcdClient strips trailing slashes from the base URL", async (t) => {
+	const client = new EtcdClient({ url: "http://127.0.0.1:2379///" });
+	const status = await client.status();
+	t.expect(status).toBeDefined();
+});
+
+it("EtcdClient surfaces error responses from etcd", async (t) => {
+	const client = new EtcdClient({ url: "http://127.0.0.1:2379" });
+	let error: Error | undefined;
+	try {
+		// Putting with a non-existent lease ID forces etcd to return an error.
+		await client.putRaw({ key: "k", value: "v", lease: "999999999999999" });
+	} catch (e) {
+		error = e as Error;
+	}
+	t.expect(error).toBeDefined();
+	t.expect(error?.message).toMatch(/lease/i);
+});
+
+it("Lease caches the granted ID across concurrent puts", async (t) => {
+	const store = new KeyvEtcd(etcdUrl, { ttl: 5000 });
+	const sharedLease = store.lease;
+	t.expect(sharedLease).toBeDefined();
+	const key1 = faker.string.uuid();
+	const key2 = faker.string.uuid();
+	// Two sequential puts on the same default lease — the second must reuse the
+	// already-granted lease ID rather than minting a fresh grant.
+	await store.set(key1, "a");
+	await store.set(key2, "b");
+	const id1 = await sharedLease?.grant();
+	const id2 = await sharedLease?.grant();
+	t.expect(id1).toBeDefined();
+	t.expect(id1).toBe(id2);
 });
