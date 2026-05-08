@@ -1,6 +1,6 @@
 # @keyv/etcd [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
-> Etcd storage adapter for [Keyv](https://github.com/jaredwray/keyv) with a built-in etcd v3 HTTP gateway client (zero third-party dependencies)
+> Etcd storage adapter for [Keyv](https://github.com/jaredwray/keyv), powered by our own from-scratch etcd v3 client — no third-party etcd library required
 
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
@@ -10,15 +10,22 @@
 
 ## Features
 
-- Built-in etcd v3 HTTP/JSON gateway client (no third-party etcd dependency) with full TypeScript support
+- Talks to etcd directly over its HTTP/JSON gateway via a small in-house client — no `etcd3` or other third-party etcd packages
+- Full TypeScript support
 - TTL support via etcd leases (millisecond input, converted to seconds internally)
 - Namespace support for key isolation across multiple Keyv instances
 - Async iterator support for scanning keys
 - `setMany`, `getMany`, `deleteMany`, and `hasMany` batch operations
 - `createKeyv` helper for quick setup
 
+## Requirements
+
+- **etcd v3 or newer** — this adapter uses the etcd v3 API (`/v3/kv/range`, `/v3/kv/put`, `/v3/lease/grant`, etc.) exposed by etcd's built-in HTTP/JSON gateway. etcd v2 is not supported.
+- **Node.js 20 or newer** — the client uses the global `fetch` and `AbortSignal.timeout` APIs.
+
 ## Table of Contents
 
+- [Requirements](#requirements)
 - [Install](#install)
 - [Quick Start with createKeyv](#quick-start-with-createkeyv)
 - [Usage](#usage)
@@ -52,6 +59,13 @@
 
 ```shell
 npm install --save keyv @keyv/etcd
+```
+
+You also need a running etcd v3+ server reachable from your Node process. For local development:
+
+```shell
+docker run --rm -p 2379:2379 registry.k8s.io/etcd:3.5.15-0 \
+  etcd --listen-client-urls=http://0.0.0.0:2379 --advertise-client-urls=http://0.0.0.0:2379
 ```
 
 ## Quick Start with createKeyv
