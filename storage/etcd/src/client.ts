@@ -124,14 +124,19 @@ export class EtcdClient {
 		}
 
 		if (!response.ok) {
-			const errMessage =
-				(typeof parsed === "object" &&
-					parsed !== null &&
-					"error" in parsed &&
-					typeof (parsed as { error: unknown }).error === "string" &&
-					(parsed as { error: string }).error) ||
-				/* v8 ignore next -- @preserve etcd's JSON gateway always returns {error} on failure */
-				`etcd request failed: ${response.status} ${response.statusText}`;
+			let errMessage: string;
+			if (
+				typeof parsed === "object" &&
+				parsed !== null &&
+				"error" in parsed &&
+				typeof (parsed as { error: unknown }).error === "string"
+			) {
+				errMessage = (parsed as { error: string }).error;
+				/* v8 ignore start -- @preserve etcd's JSON gateway always returns {error} on failure */
+			} else {
+				errMessage = `etcd request failed: ${response.status} ${response.statusText}`;
+			}
+			/* v8 ignore stop */
 			throw new Error(errMessage);
 		}
 
