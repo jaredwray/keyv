@@ -50,7 +50,7 @@ class EventManager {
 	public off(event: string, listener: EventListener): void {
 		const listeners = this._eventListeners.get(event) ?? [];
 		const index = listeners.findIndex(
-			(v) => v === listener || v._originalListener === listener,
+			(v) => v === listener || (v._originalListener === listener && listener !== undefined),
 		);
 		if (index !== -1) {
 			listeners.splice(index, 1);
