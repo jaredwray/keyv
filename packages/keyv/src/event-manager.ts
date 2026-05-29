@@ -1,5 +1,7 @@
 // biome-ignore lint/suspicious/noExplicitAny: type format
-type EventListener = (...arguments_: any[]) => void;
+type EventListener = ((...arguments_: any[]) => void) & {
+	_originalListener?: EventListener;
+};
 
 class EventManager {
 	_eventListeners: Map<string, EventListener[]>;
@@ -30,7 +32,7 @@ class EventManager {
 		if (listeners) {
 			if (listeners.length >= this._maxListeners) {
 				console.warn(
-					`MaxListenersExceededWarning: Possible event memory leak detected. ${listeners.length + 1} ${event} listeners added. Use setMaxListeners() to increase limit.`,
+					`MaxListenersExceededWarning: Possible event memory leak detected. ${listeners.length + 1} ${event} listeners added to Keyv's EventManager. Use setMaxListeners() to increase limit.`,
 				);
 			}
 
@@ -47,7 +49,9 @@ class EventManager {
 
 	public off(event: string, listener: EventListener): void {
 		const listeners = this._eventListeners.get(event) ?? [];
-		const index = listeners.indexOf(listener);
+		const index = listeners.findIndex(
+			(v) => v === listener || v._originalListener === listener,
+		);
 		if (index !== -1) {
 			listeners.splice(index, 1);
 		}
@@ -63,6 +67,7 @@ class EventManager {
 			listener(...arguments_);
 			this.off(event, onceListener);
 		};
+		onceListener._originalListener = listener;
 
 		this.on(event, onceListener);
 	}
