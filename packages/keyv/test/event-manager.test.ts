@@ -130,3 +130,15 @@ test.it("once method", (t) => {
 
 	t.expect(dataReceived).toBe(1);
 });
+
+test.it("remove once listener handler", (t) => {
+	const emitter = new EventManager();
+	const listener: EventListener = (data) => {
+		console.log(data);
+	};
+
+	emitter.once("test-event", listener);
+	t.expect(emitter.listeners("test-event").length).toBe(1);
+	emitter.off("test-event", listener);
+	t.expect(emitter.listeners("test-event").length).toBe(0);
+});
