@@ -42,16 +42,19 @@
  *
  * ## Safety properties
  *
+ * - Fail closed: registry lookups (`npm view`) treat only a real 404 as "not
+ *   found"; any other failure (outage, network, auth) throws and aborts, so a
+ *   transient error can never silently skip a check.
  * - Skip-unchanged: a package whose exact version already exists on the
  *   registry is skipped, so re-running on an unchanged branch is a no-op that
  *   exits 0 (pnpm would otherwise error on a duplicate publish).
- * - Downgrade guard: before any publish that would move `latest`, the script
- *   refuses if the new version isn't >= the current `latest`. This makes the
- *   one catastrophic mistake — `latest` moving onto an old major or backwards —
- *   mechanically impossible.
- * - Per-package versions: each package publishes at its own version, so a
- *   package that has drifted from the shared keyv version still publishes
- *   correctly (drift is only warned about, never auto-"fixed").
+ * - Per-package tag + downgrade guard: each package is tagged from its OWN
+ *   version, and any package that would move its own `latest` is refused unless
+ *   the new version is >= that package's current `latest`. This makes the one
+ *   catastrophic mistake — `latest` moving onto an old major or backwards, for
+ *   keyv or any adapter — mechanically impossible, even under version drift.
+ * - Core-first publish: `keyv` publishes before the adapters that peer-depend on
+ *   it; if core fails, the run aborts so dependents never ship without it.
  *
  * ## Inputs (environment variables)
  *
@@ -289,39 +292,48 @@ function getPublishablePackages(): WorkspacePackage[] {
 }
 
 /**
- * True when the exact name@version already exists on the registry. `npm view`
- * is a read-only public query (no auth); it prints the version when found and
- * exits non-zero when the version doesn't exist, which we treat as "not
- * published". stderr is silenced so the not-found case is quiet.
+ * Run a read-only `npm view` query and return trimmed stdout.
+ *
+ * Returns `null` only when the package/version genuinely does not exist (npm
+ * reports `E404`). Any other failure — registry outage, network/DNS error, auth
+ * or policy error — is re-thrown so the release **fails closed** instead of
+ * mistaking an outage for "not published" / "no latest tag" (the latter would
+ * silently bypass the downgrade guard). stderr is captured (not inherited) so
+ * the expected not-found case stays quiet.
  */
-function isPublished(name: string, version: string): boolean {
+function npmView(args: string[]): string | null {
 	try {
-		const out = execFileSync("npm", ["view", `${name}@${version}`, "version"], {
+		return execFileSync("npm", ["view", ...args], {
 			encoding: "utf-8",
-			stdio: ["ignore", "pipe", "ignore"],
+			stdio: ["ignore", "pipe", "pipe"],
 		}).trim();
-		return out.length > 0;
-	} catch {
-		// npm view exits non-zero when the exact version does not exist.
-		return false;
+	} catch (error) {
+		const stderr = (error as { stderr?: Buffer | string }).stderr?.toString() ?? "";
+		if (stderr.includes("E404") || stderr.includes("404 Not Found")) {
+			return null; // package or version not found — an expected, benign result
+		}
+		throw new Error(`npm view ${args.join(" ")} failed (treating as fatal): ${stderr.trim() || (error as Error).message}`);
 	}
 }
 
 /**
- * The version the `latest` dist-tag currently points at, if any (read-only).
- * Returns undefined for a brand-new package that has no `latest` yet, which the
- * downgrade guard treats as "nothing to protect".
+ * True when the exact name@version already exists on the registry. A genuine
+ * "not found" yields false; a registry/network failure throws (fail closed) so
+ * we never mistakenly re-publish or skip on a transient error.
+ */
+function isPublished(name: string, version: string): boolean {
+	const out = npmView([`${name}@${version}`, "version"]);
+	return out !== null && out.length > 0;
+}
+
+/**
+ * The version the `latest` dist-tag currently points at, or undefined when the
+ * package has no `latest` yet (e.g. a brand-new package). A registry/network
+ * failure throws (fail closed) so the downgrade guard is never silently skipped.
  */
 function currentLatest(name: string): string | undefined {
-	try {
-		const out = execFileSync("npm", ["view", name, "dist-tags.latest"], {
-			encoding: "utf-8",
-			stdio: ["ignore", "pipe", "ignore"],
-		}).trim();
-		return out.length > 0 ? out : undefined;
-	} catch {
-		return undefined;
-	}
+	const out = npmView([name, "dist-tags.latest"]);
+	return out && out.length > 0 ? out : undefined;
 }
 
 /**
@@ -353,11 +365,13 @@ function appendSummary(markdown: string): void {
 /**
  * Orchestrates a release:
  *   1. Read inputs (DRY_RUN, LATEST_MAJOR) and the release version.
- *   2. Compute the single dist-tag for this release.
+ *   2. Compute keyv's release dist-tag (for the headline/summary).
  *   3. Discover publishable packages and warn on version drift.
- *   4. Build and print the publish plan (skipping already-published versions).
- *   5. Run the downgrade guard if this release would move `latest`.
- *   6. Stop here on a dry run; otherwise publish each pending package.
+ *   4. Build the plan: tag each package from its OWN version, skipping versions
+ *      already on the registry.
+ *   5. Run the per-package downgrade guard for any package that moves `latest`.
+ *   6. Stop here on a dry run; otherwise publish core `keyv` first, then the
+ *      rest (aborting if core fails).
  */
 function main(): void {
 	// --- Step 1: inputs ---
@@ -377,69 +391,92 @@ function main(): void {
 		}
 	).version;
 
-	// --- Step 2: compute the tag (throws on a stable release with no LATEST_MAJOR) ---
-	const plan = computeDistTag(releaseVersion, latestMajor);
+	// --- Step 2: compute keyv's release dist-tag (throws on a stable release with
+	// no LATEST_MAJOR). Each package is tagged from its OWN version in Step 4;
+	// this is just keyv's tag, used for the headline/summary.
+	const releasePlan = computeDistTag(releaseVersion, latestMajor);
 
 	console.log(`\nRelease version: ${releaseVersion}`);
-	console.log(`Dist-tag:        ${plan.tag}  (${plan.reason})`);
+	console.log(`Dist-tag (keyv): ${releasePlan.tag}  (${releasePlan.reason})`);
 	console.log(`Mode:            ${dryRun ? "DRY RUN — nothing will be published" : "PUBLISH"}\n`);
 
 	// --- Step 3: discover packages ---
 	const packages = getPublishablePackages();
 
-	// Surface (but don't fail on) version drift. Each package publishes at its
-	// own version, so drift is harmless for tagging — just worth flagging.
+	// Surface version drift. Each package is tagged and published from its own
+	// version (below), so benign drift is handled; this is just for visibility.
 	const drifted = packages.filter((p) => p.version !== releaseVersion);
 	if (drifted.length > 0) {
 		console.warn(`⚠️  ${drifted.length} package(s) differ from keyv@${releaseVersion}:`);
 		for (const p of drifted) {
 			console.warn(`     ${p.name}@${p.version}`);
 		}
-		console.warn("    (each publishes at its own version; run `pnpm version:sync` to unify)\n");
+		console.warn("    (each is tagged from its own version; run `pnpm version:sync` to unify)\n");
 	}
 
 	// --- Step 4: build the plan ---
-	// Each package is either published or skipped (already on the registry).
-	// This is the per-package skip-unchanged check that makes re-runs safe.
-	type Row = { name: string; version: string; action: "publish" | "skip" };
-	const rows: Row[] = packages.map((p) => ({
-		name: p.name,
-		version: p.version,
-		action: isPublished(p.name, p.version) ? "skip" : "publish",
-	}));
+	// Compute the tag from EACH package's own version (not keyv's), so a drifted
+	// package can never be published under the wrong channel — a stable adapter
+	// during a beta core won't be tagged `beta`, and an old-major adapter during a
+	// v6 GA won't be tagged `latest`. Then skip any version already on the registry
+	// (the registry check fails closed on a non-404 error).
+	type Row = { name: string; version: string; tag: string; setsLatest: boolean; action: "publish" | "skip" };
+	const rows: Row[] = packages.map((p) => {
+		let pkgPlan: DistTagPlan;
+		try {
+			pkgPlan = computeDistTag(p.version, latestMajor);
+		} catch (error) {
+			throw new Error(`Cannot determine dist-tag for ${p.name}@${p.version}: ${(error as Error).message}`);
+		}
+		return {
+			name: p.name,
+			version: p.version,
+			tag: pkgPlan.tag,
+			setsLatest: pkgPlan.setsLatest,
+			action: isPublished(p.name, p.version) ? "skip" : "publish",
+		};
+	});
 
 	const nameWidth = Math.max(7, ...rows.map((r) => r.name.length));
 	console.log("Publish plan:");
 	for (const r of rows) {
 		const mark = r.action === "publish" ? "PUBLISH" : "skip (already published)";
-		console.log(`  ${r.name.padEnd(nameWidth)}  ${r.version.padEnd(16)}  → ${plan.tag.padEnd(8)}  [${mark}]`);
+		console.log(`  ${r.name.padEnd(nameWidth)}  ${r.version.padEnd(16)}  → ${r.tag.padEnd(8)}  [${mark}]`);
 	}
 
 	const toPublish = rows.filter((r) => r.action === "publish");
 	console.log(`\n${toPublish.length} to publish, ${rows.length - toPublish.length} already published.\n`);
 
 	// Mirror the plan into the GitHub Actions job summary (Markdown) when in CI.
-	appendSummary(`### Release plan — dist-tag \`${plan.tag}\`${dryRun ? " (dry run)" : ""}`);
-	appendSummary(`Version \`${releaseVersion}\` · ${plan.reason}\n`);
+	appendSummary(`### Release plan — keyv dist-tag \`${releasePlan.tag}\`${dryRun ? " (dry run)" : ""}`);
+	appendSummary(`Version \`${releaseVersion}\` · ${releasePlan.reason}\n`);
 	appendSummary("| Package | Version | Tag | Action |");
 	appendSummary("| --- | --- | --- | --- |");
 	for (const r of rows) {
-		appendSummary(`| ${r.name} | ${r.version} | ${plan.tag} | ${r.action} |`);
+		appendSummary(`| ${r.name} | ${r.version} | ${r.tag} | ${r.action} |`);
 	}
 
-	// --- Step 5: downgrade guard ---
-	// Never let `latest` move backwards (onto an old major or a lower version).
-	// This is the one mistake that would break `pnpm add keyv` for everyone, so
-	// it aborts the whole run (exit 1) before any package is published.
-	if (plan.setsLatest) {
-		const existing = currentLatest("keyv");
-		if (existing && !isVersionGte(releaseVersion, existing)) {
-			console.error(
-				`\n✖ Refusing to publish: keyv@${releaseVersion} would move "latest" backwards from ${existing}.`,
-			);
-			process.exit(1);
+	// --- Step 5: downgrade guard (per package) ---
+	// For every package that would move its own `latest`, refuse if the version
+	// being published isn't >= that package's current `latest`. Checking each
+	// package — not just keyv — means a drifted adapter whose `latest` is already
+	// ahead can't be silently moved backwards. currentLatest() fails closed, so a
+	// registry error aborts here rather than skipping the guard.
+	const violations: string[] = [];
+	for (const r of toPublish.filter((row) => row.setsLatest)) {
+		const existing = currentLatest(r.name);
+		if (existing && !isVersionGte(r.version, existing)) {
+			violations.push(`${r.name}: ${r.version} is older than current latest ${existing}`);
+		} else {
+			console.log(`latest guard ok: ${r.name}@${r.version} >= current latest (${existing ?? "none"}).`);
 		}
-		console.log(`latest guard ok: ${releaseVersion} >= current latest (${existing ?? "none"}).`);
+	}
+	if (violations.length > 0) {
+		console.error('\n✖ Refusing to publish — these would move "latest" backwards:');
+		for (const v of violations) {
+			console.error(`     ${v}`);
+		}
+		process.exit(1);
 	}
 
 	// --- Step 6: publish (or stop) ---
@@ -453,16 +490,22 @@ function main(): void {
 		return;
 	}
 
-	// Publish each pending package independently. One failure doesn't abort the
-	// rest; failures are collected and reported, and the script exits non-zero
-	// so CI surfaces the problem.
+	// Publish core `keyv` first: every @keyv/* adapter declares keyv as a peer
+	// dependency, so dependents must never reach the registry without the matching
+	// core. If the core publish fails, abort immediately — do not publish the rest.
+	const ordered = [...toPublish].sort((a, b) => (a.name === "keyv" ? -1 : b.name === "keyv" ? 1 : 0));
+
 	const failures: string[] = [];
-	for (const r of toPublish) {
-		console.log(`\nPublishing ${r.name}@${r.version} → ${plan.tag} ...`);
+	for (const r of ordered) {
+		console.log(`\nPublishing ${r.name}@${r.version} → ${r.tag} ...`);
 		try {
-			publishPackage(r.name, plan.tag);
+			publishPackage(r.name, r.tag);
 		} catch (error) {
 			console.error(`✖ Failed to publish ${r.name}@${r.version}: ${(error as Error).message}`);
+			if (r.name === "keyv") {
+				console.error("✖ Aborting: core `keyv` failed to publish, so its dependents will not be published.");
+				process.exit(1);
+			}
 			failures.push(`${r.name}@${r.version}`);
 		}
 	}
@@ -472,7 +515,7 @@ function main(): void {
 		process.exit(1);
 	}
 
-	console.log(`\n✓ Published ${toPublish.length} package(s) under "${plan.tag}".`);
+	console.log(`\n✓ Published ${toPublish.length} package(s).`);
 }
 
 // Only run when executed directly (e.g. `pnpm tsx scripts/release-publish.ts`),
