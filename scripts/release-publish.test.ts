@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { computeDistTag, isVersionGte, parseVersion } from "./release-publish.ts";
+import { computeDistTag, isVersionGte, parseVersion, publishArgs } from "./release-publish.ts";
 
 describe("parseVersion", () => {
 	test("parses a stable version", () => {
@@ -80,5 +80,27 @@ describe("isVersionGte (downgrade guard)", () => {
 
 	test("stable outranks same-triple pre-release", () => {
 		expect(isVersionGte("6.0.0", "6.0.0-beta.1")).toBe(true);
+	});
+});
+
+describe("publishArgs", () => {
+	test("builds the exact pnpm publish command for a package + tag", () => {
+		expect(publishArgs("keyv", "beta")).toEqual([
+			"--filter",
+			"keyv",
+			"publish",
+			"--tag",
+			"beta",
+			"--no-git-checks",
+			"--access",
+			"public",
+			"--loglevel=verbose",
+		]);
+	});
+
+	test("uses the given package name and tag", () => {
+		expect(`pnpm ${publishArgs("@keyv/redis", "v5-lts").join(" ")}`).toBe(
+			"pnpm --filter @keyv/redis publish --tag v5-lts --no-git-checks --access public --loglevel=verbose",
+		);
 	});
 });

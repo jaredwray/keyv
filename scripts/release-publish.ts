@@ -337,18 +337,25 @@ function currentLatest(name: string): string | undefined {
 }
 
 /**
- * Publish a single workspace package under exactly one dist-tag. Flags:
+ * The exact `pnpm` argument list used to publish a package — the single source
+ * of truth so the same command is both printed and executed. Flags:
  * `--no-git-checks` (the release commit may be detached/tagged in CI),
  * `--access public` (required for the scoped `@keyv/*` packages), and verbose
- * logging to aid debugging during the rollout. Inherits stdio so npm's output
+ * logging to aid debugging during the rollout.
+ */
+export function publishArgs(name: string, tag: string): string[] {
+	return ["--filter", name, "publish", "--tag", tag, "--no-git-checks", "--access", "public", "--loglevel=verbose"];
+}
+
+/**
+ * Publish a single workspace package under exactly one dist-tag. Echoes the
+ * exact `pnpm` command first, then runs it inheriting stdio so npm's output
  * streams to the job log. Throws if the publish fails (caught by the caller).
  */
 function publishPackage(name: string, tag: string): void {
-	execFileSync(
-		"pnpm",
-		["--filter", name, "publish", "--tag", tag, "--no-git-checks", "--access", "public", "--loglevel=verbose"],
-		{ stdio: "inherit" },
-	);
+	const args = publishArgs(name, tag);
+	console.log(`  $ pnpm ${args.join(" ")}`);
+	execFileSync("pnpm", args, { stdio: "inherit" });
 }
 
 function appendSummary(markdown: string): void {
@@ -480,24 +487,31 @@ function main(): void {
 	}
 
 	// --- Step 6: publish (or stop) ---
-	if (dryRun) {
-		console.log("\nDry run complete — nothing published.");
-		return;
-	}
-
-	if (toPublish.length === 0) {
-		console.log("Nothing to publish — all versions already on the registry.");
-		return;
-	}
-
 	// Publish core `keyv` first: every @keyv/* adapter declares keyv as a peer
 	// dependency, so dependents must never reach the registry without the matching
 	// core. If the core publish fails, abort immediately — do not publish the rest.
 	const ordered = [...toPublish].sort((a, b) => (a.name === "keyv" ? -1 : b.name === "keyv" ? 1 : 0));
 
+	if (dryRun) {
+		if (ordered.length > 0) {
+			console.log("Commands that would run (in order):");
+			for (const r of ordered) {
+				console.log(`  $ pnpm ${publishArgs(r.name, r.tag).join(" ")}`);
+			}
+			console.log("");
+		}
+		console.log("Dry run complete — nothing published.");
+		return;
+	}
+
+	if (ordered.length === 0) {
+		console.log("Nothing to publish — all versions already on the registry.");
+		return;
+	}
+
 	const failures: string[] = [];
 	for (const r of ordered) {
-		console.log(`\nPublishing ${r.name}@${r.version} → ${r.tag} ...`);
+		console.log(`\nPublishing ${r.name}@${r.version} → ${r.tag}`);
 		try {
 			publishPackage(r.name, r.tag);
 		} catch (error) {

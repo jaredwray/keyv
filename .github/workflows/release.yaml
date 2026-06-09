@@ -115,6 +115,6 @@ jobs:
       # real; manual runs default to dry_run=true. Uses OIDC only — no token.
       - name: Publish (compute dist-tag, skip unchanged, guard latest)
         env:
-          LATEST_MAJOR: ${{ vars.LATEST_MAJOR }}
+          LATEST_MAJOR: 5 # Version 5 is the LTS at this time
           DRY_RUN: ${{ inputs.dry_run }}
         run: pnpm tsx scripts/release-publish.ts
