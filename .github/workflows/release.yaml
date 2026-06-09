@@ -2,12 +2,16 @@ name: release
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — compute and print the publish plan without publishing"
+        type: boolean
+        default: true
   release:
     types: [published]
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   build:
@@ -15,10 +19,10 @@ jobs:
     timeout-minutes: 15
     name: Build
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup node
         uses: actions/setup-node@v6
@@ -40,10 +44,10 @@ jobs:
     timeout-minutes: 30
     name: Test
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup node
         uses: actions/setup-node@v6
@@ -72,22 +76,26 @@ jobs:
     timeout-minutes: 15
     name: Publish
     environment: release
+    # OIDC trusted publishing: GitHub mints a short-lived OIDC token that pnpm
+    # exchanges with npm for a one-time publish credential. No NPM_TOKEN needed.
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Provenance is generated automatically when publishing via OIDC; setting
+      # this makes it explicit and fails closed if OIDC ever isn't available.
+      NPM_CONFIG_PROVENANCE: "true"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup node
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-          cache: 'pnpm'
-
-      - name: Setup NPM Registry
-        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install Dependencies
         run: pnpm install
@@ -95,8 +103,18 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Publish keyv
-        run: pnpm --filter keyv publish --tag beta --no-git-checks --access public --loglevel=verbose
+      # Verify the dist-tag logic before any publish runs.
+      - name: Verify release-tag logic
+        run: pnpm test:scripts
 
-      - name: Publish remaining packages
-        run: pnpm --filter '!keyv' --filter '!@keyv/website' --filter '!@keyv/mono-repo' publish --tag beta --no-git-checks --access public
+      # Computes the dist-tag from the released version (pre-release -> beta;
+      # stable current major -> latest; stable old major -> v{major}-lts),
+      # skips versions already on the registry, guards `latest` from moving
+      # backwards, then publishes each package at its own version under that
+      # tag. `release` events ignore dry_run (inputs is empty) and publish for
+      # real; manual runs default to dry_run=true. Uses OIDC only — no token.
+      - name: Publish (compute dist-tag, skip unchanged, guard latest)
+        env:
+          LATEST_MAJOR: ${{ vars.LATEST_MAJOR }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: pnpm tsx scripts/release-publish.ts

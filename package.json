@@ -23,7 +23,8 @@
     "website:build": "pnpm recursive --filter @keyv/website run website:build",
     "website:serve": "pnpm recursive --filter @keyv/website run website:serve",
     "clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean",
-    "version:sync": "pnpm tsx scripts/version-sync.ts"
+    "version:sync": "pnpm tsx scripts/version-sync.ts",
+    "test:scripts": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
