@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/compress-brotli",
-	"version": "6.0.0-beta.1",
+	"version": "6.0.0-beta.2",
 	"description": "brotli compression for keyv",
 	"type": "module",
 	"main": "./dist/index.mjs",
@@ -64,7 +64,7 @@
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 18"
+		"node": ">= 22"
 	},
 	"files": [
 		"dist",

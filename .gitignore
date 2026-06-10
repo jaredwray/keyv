@@ -105,6 +105,7 @@ website/site/docs/**
 !website/site/docs/v4-to-v5.md
 !website/site/docs/v5-to-v6.md
 !website/site/docs/third-party-storage-adapters.md
+!website/site/docs/versioning.md
 !website/site/docs/caching/**
 core/keyv/test.db
 

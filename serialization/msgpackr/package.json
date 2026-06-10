@@ -1,6 +1,6 @@
 {
   "name": "@keyv/serialize-msgpackr",
-  "version": "6.0.0-beta.1",
+  "version": "6.0.0-beta.2",
   "description": "MessagePack serialization adapter for Keyv using msgpackr",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -63,6 +63,9 @@
   },
   "tsd": {
     "directory": "test"
+  },
+  "engines": {
+    "node": ">= 22"
   },
   "files": [
     "dist",

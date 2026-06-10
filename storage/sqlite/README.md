@@ -105,10 +105,10 @@ const keyv = createKeyv({
 | Driver | Package | Runtime | Type |
 | --- | --- | --- | --- |
 | `better-sqlite3` | `better-sqlite3` | Node.js | Synchronous (fallback) |
-| `node:sqlite` | Built-in | Node.js 22.5+ | Synchronous |
+| `node:sqlite` | Built-in | Node.js 22.13+ | Synchronous |
 | `bun:sqlite` | Built-in | Bun | Synchronous |
 
-`better-sqlite3` is included as a direct dependency and used as a fallback when native runtime drivers are unavailable. On Bun, the native `bun:sqlite` driver is preferred. On Node.js 22.5+, the built-in `node:sqlite` driver is preferred. If you still need to use `sqlite3` then go to the [using sqlite3](#using-sqlite3).
+The built-in runtime drivers are preferred: on Node.js 22.13+ the built-in `node:sqlite` driver is used (available behind the `--experimental-sqlite` flag from 22.5), and on Bun the native `bun:sqlite` driver is used. `better-sqlite3` is included as a direct dependency and used as a fallback when a built-in driver is unavailable, or explicitly via `driver: 'better-sqlite3'`. If you still need to use `sqlite3` then go to the [using sqlite3](#using-sqlite3).
 
 ## Selecting a specific driver
 
@@ -177,7 +177,7 @@ The `createSqlite3Driver` export is a real-world example of a custom driver — 
 
 # Using sqlite3
 
-The callback-based [`sqlite3`](https://www.npmjs.com/package/sqlite3) package is not auto-detected or bundled with `@keyv/sqlite`. If you need to use it, install it in your project and pass it via the `createSqlite3Driver` helper:
+The callback-based [`sqlite3`](https://www.npmjs.com/package/sqlite3) package is not auto-detected or bundled with `@keyv/sqlite`. If you need to use it, install it in your project and pass it via the `createSqlite3Driver` helper. Note that `sqlite3` ships no prebuilt binaries for newer Node.js versions (it fails to compile on Node 26+), so prefer the default `better-sqlite3` or `node:sqlite` drivers unless you have an existing dependency on it:
 
 ```bash
 npm install sqlite3
