@@ -90,7 +90,7 @@ describe("driver selection", () => {
 		await store.disconnect();
 	});
 
-	it("auto-detects better-sqlite3 by default", async () => {
+	it("auto-detects a built-in driver by default", async () => {
 		const store = new KeyvSqlite("sqlite://:memory:");
 		const key = faker.string.uuid();
 		const val = faker.lorem.word();

@@ -105,10 +105,10 @@ const keyv = createKeyv({
 | Driver | Package | Runtime | Type |
 | --- | --- | --- | --- |
 | `better-sqlite3` | `better-sqlite3` | Node.js | Synchronous (fallback) |
-| `node:sqlite` | Built-in | Node.js 22.5+ | Synchronous |
+| `node:sqlite` | Built-in | Node.js 22.13+ | Synchronous |
 | `bun:sqlite` | Built-in | Bun | Synchronous |
 
-`better-sqlite3` is included as a direct dependency and used as a fallback when native runtime drivers are unavailable. On Bun, the native `bun:sqlite` driver is preferred. On Node.js 22.5+, the built-in `node:sqlite` driver is preferred. If you still need to use `sqlite3` then go to the [using sqlite3](#using-sqlite3).
+The built-in runtime drivers are preferred: on Node.js 22.13+ the built-in `node:sqlite` driver is used (available behind the `--experimental-sqlite` flag from 22.5), and on Bun the native `bun:sqlite` driver is used. `better-sqlite3` is included as a direct dependency and used as a fallback when a built-in driver is unavailable, or explicitly via `driver: 'better-sqlite3'`. If you still need to use `sqlite3` then go to the [using sqlite3](#using-sqlite3).
 
 ## Selecting a specific driver
 
