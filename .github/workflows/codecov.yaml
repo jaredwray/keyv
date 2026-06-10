@@ -42,7 +42,7 @@ jobs:
         run: pnpm test:ci
 
       - name: Code Coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_KEY }}
           verbose: true
