@@ -1,77 +1,77 @@
 {
-	"name": "@keyv/compress-gzip",
-	"version": "6.0.0-beta.2",
-	"description": "gzip compression for keyv",
-	"type": "module",
-	"main": "./dist/index.mjs",
-	"module": "./dist/index.mjs",
-	"types": "./dist/index.d.mts",
-	"exports": {
-		".": {
-			"require": {
-				"types": "./dist/index.d.cts",
-				"default": "./dist/index.cjs"
-			},
-			"import": {
-				"types": "./dist/index.d.mts",
-				"default": "./dist/index.mjs"
-			}
-		}
-	},
-	"scripts": {
-		"build": "tsdown",
-		"prepublishOnly": "pnpm build",
-		"lint": "biome check --write --error-on-warnings",
-		"lint:ci": "biome check --error-on-warnings",
-		"test": "pnpm lint && vitest run --coverage",
-		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
-		"clean": "rimraf node_modules ./dist ./coverage ./test/testdb.sqlite"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/jaredwray/keyv.git"
-	},
-	"keywords": [
-		"compress",
-		"gzip",
-		"keyv",
-		"storage",
-		"adapter",
-		"key",
-		"value",
-		"store",
-		"cache",
-		"ttl"
-	],
-	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/jaredwray/keyv/issues"
-	},
-	"homepage": "https://github.com/jaredwray/keyv",
-	"dependencies": {
-		"@types/pako": "^2.0.4",
-		"pako": "^2.1.0"
-	},
-	"peerDependencies": {
-		"keyv": "workspace:^"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.4.16",
-		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.1.8",
-		"rimraf": "^6.1.2",
-		"tsd": "^0.33.0",
-		"vitest": "^4.1.8"
-	},
-	"tsd": {
-		"directory": "test"
-	},
-	"engines": {
-		"node": ">= 22"
-	},
-	"files": [
-		"dist",
-		"LICENSE"
-	]
+  "name": "@keyv/compress-gzip",
+  "version": "6.0.0-beta.2",
+  "description": "gzip compression for keyv",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepublishOnly": "pnpm build",
+    "lint": "biome check --write --error-on-warnings",
+    "lint:ci": "biome check --error-on-warnings",
+    "test": "pnpm lint && vitest run --coverage",
+    "test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+    "clean": "rimraf node_modules ./dist ./coverage ./test/testdb.sqlite"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/keyv.git"
+  },
+  "keywords": [
+    "compress",
+    "gzip",
+    "keyv",
+    "storage",
+    "adapter",
+    "key",
+    "value",
+    "store",
+    "cache",
+    "ttl"
+  ],
+  "author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/keyv/issues"
+  },
+  "homepage": "https://github.com/jaredwray/keyv",
+  "dependencies": {
+    "@types/pako": "^2.0.4",
+    "pako": "^2.1.0"
+  },
+  "peerDependencies": {
+    "keyv": "workspace:^"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@keyv/test-suite": "workspace:^",
+    "@vitest/coverage-v8": "^4.1.8",
+    "rimraf": "^6.1.2",
+    "tsd": "^0.33.0",
+    "vitest": "^4.1.8"
+  },
+  "tsd": {
+    "directory": "test"
+  },
+  "engines": {
+    "node": ">= 22"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ]
 }
