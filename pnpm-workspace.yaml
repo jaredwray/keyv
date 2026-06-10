@@ -9,5 +9,6 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   msgpackr-extract: true
+  sqlite3: true
 # 4 days minimum release age
 minimumReleaseAge: 5760
