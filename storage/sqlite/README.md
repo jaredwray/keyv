@@ -177,7 +177,7 @@ The `createSqlite3Driver` export is a real-world example of a custom driver — 
 
 # Using sqlite3
 
-The callback-based [`sqlite3`](https://www.npmjs.com/package/sqlite3) package is not auto-detected or bundled with `@keyv/sqlite`. If you need to use it, install it in your project and pass it via the `createSqlite3Driver` helper:
+The callback-based [`sqlite3`](https://www.npmjs.com/package/sqlite3) package is not auto-detected or bundled with `@keyv/sqlite`. If you need to use it, install it in your project and pass it via the `createSqlite3Driver` helper. Note that `sqlite3` ships no prebuilt binaries for newer Node.js versions (it fails to compile on Node 26+), so prefer the default `better-sqlite3` or `node:sqlite` drivers unless you have an existing dependency on it:
 
 ```bash
 npm install sqlite3
