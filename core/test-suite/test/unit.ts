@@ -9,6 +9,7 @@ import {
 	keyvTestSuite,
 	serializationTestSuite,
 	storageTestSuite,
+	storageTtlTests,
 } from "../src/index.js";
 
 const storeExtended = () => {
@@ -24,6 +25,9 @@ compressionTestSuite(it, new KeyvLz4TestAdapter());
 // Storage-level tests using KeyvMemoryAdapter
 const memoryStore = () => new KeyvMemoryAdapter(new Map());
 storageTestSuite(it, memoryStore);
+
+// TTL tests at second granularity (used by stores like etcd and DynamoDB)
+storageTtlTests(it, memoryStore, { ttlGranularity: "seconds" });
 
 // Serialization tests using built-in JSON serializer
 serializationTestSuite(it, new KeyvJsonSerializer());

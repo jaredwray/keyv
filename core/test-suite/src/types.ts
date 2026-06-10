@@ -32,6 +32,12 @@ export type StorageTestOptions = {
 	iterator?: boolean;
 	/** Enable TTL tests. Default: true */
 	ttl?: boolean;
+	/**
+	 * TTL granularity used by the TTL tests. Use "seconds" for backends that only
+	 * support second-level TTLs (e.g. etcd leases, DynamoDB TTL), which makes the
+	 * tests use second-scale TTL values and waits. Default: "milliseconds"
+	 */
+	ttlGranularity?: "milliseconds" | "seconds";
 	/** Enable namespace getter/setter test. Default: true */
 	namespace?: boolean;
 	/** Enable disconnect test. Default: true */
