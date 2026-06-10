@@ -5,6 +5,9 @@ packages:
   - 'encryption/*'
   - 'storage/*'
   - 'website'
-minimumReleaseAge: 2880
-minimumReleaseAgeExclude:
-  - memcache
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  msgpackr-extract: true
+# 4 days minimum release age
+minimumReleaseAge: 5760

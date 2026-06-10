@@ -16,16 +16,15 @@ jobs:
     timeout-minutes: 30
     name: Node 24
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
 
       - name: Start Services
         run: pnpm test:services:start

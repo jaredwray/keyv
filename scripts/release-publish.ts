@@ -340,11 +340,26 @@ function currentLatest(name: string): string | undefined {
  * The exact `pnpm` argument list used to publish a package — the single source
  * of truth so the same command is both printed and executed. Flags:
  * `--no-git-checks` (the release commit may be detached/tagged in CI),
- * `--access public` (required for the scoped `@keyv/*` packages), and verbose
- * logging to aid debugging during the rollout.
+ * `--access public` (required for the scoped `@keyv/*` packages),
+ * `--provenance` (REQUIRED: generates the npm provenance attestation from the
+ * CI OIDC context so every published package is verifiably built here; it
+ * fails closed when no OIDC context is available, and release-publish.test.ts
+ * asserts the flag is always present), and verbose logging to aid debugging
+ * during the rollout.
  */
 export function publishArgs(name: string, tag: string): string[] {
-	return ["--filter", name, "publish", "--tag", tag, "--no-git-checks", "--access", "public", "--loglevel=verbose"];
+	return [
+		"--filter",
+		name,
+		"publish",
+		"--tag",
+		tag,
+		"--no-git-checks",
+		"--access",
+		"public",
+		"--provenance",
+		"--loglevel=verbose",
+	];
 }
 
 /**

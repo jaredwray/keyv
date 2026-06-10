@@ -94,13 +94,22 @@ describe("publishArgs", () => {
 			"--no-git-checks",
 			"--access",
 			"public",
+			"--provenance",
 			"--loglevel=verbose",
 		]);
 	});
 
 	test("uses the given package name and tag", () => {
 		expect(`pnpm ${publishArgs("@keyv/redis", "v5-lts").join(" ")}`).toBe(
-			"pnpm --filter @keyv/redis publish --tag v5-lts --no-git-checks --access public --loglevel=verbose",
+			"pnpm --filter @keyv/redis publish --tag v5-lts --no-git-checks --access public --provenance --loglevel=verbose",
 		);
+	});
+
+	// Release-blocking guard: the workflow runs these tests before publishing,
+	// so removing --provenance from publishArgs fails the release. Provenance
+	// attestation is required for every package published from this repo.
+	test("always includes --provenance (required for npm provenance attestation)", () => {
+		expect(publishArgs("keyv", "latest")).toContain("--provenance");
+		expect(publishArgs("@keyv/redis", "beta")).toContain("--provenance");
 	});
 });

@@ -12,7 +12,8 @@ You can contribute changes to this repo by opening a pull request:
 2) Run tests and linting locally.
 	- [Install and run Docker](https://docs.docker.com/get-docker/) if you aren't already. NOTE: on docker set `enable host networking` to true as it is required for the tests in redis clustering.
 	- Install `aws cli` as you will need it to run dynamodb tests.
-	- Install `pnpm` by doing `npm install -g pnpm` if you haven't already, and run `pnpm install`
+	- Install Node.js 22 or later (we test against Node 22, 24, and 26).
+	- Enable [Corepack](https://github.com/nodejs/corepack) with `corepack enable` so the pnpm version pinned in the `packageManager` field of `package.json` (pnpm 11) is used automatically, then run `pnpm install`. NOTE: on Node 25+ Corepack no longer ships with Node, so install it first with `npm install -g corepack`.
 	- Run `pnpm test:services:start`, allow for the services to come up.
 	- Run `pnpm test`.
 3) Commit your changes and push them to your forked repository.

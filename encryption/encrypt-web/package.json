@@ -65,7 +65,7 @@
 		"vitest": "^4.0.18"
 	},
 	"engines": {
-		"node": ">= 18"
+		"node": ">= 22"
 	},
 	"files": [
 		"dist",
