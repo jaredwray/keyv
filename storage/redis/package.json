@@ -49,7 +49,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@redis/client": "^5.10.0",
+		"@redis/client": "^6.0.0",
 		"cluster-key-slot": "^1.1.2",
 		"hookified": "^2.0.0"
 	},
