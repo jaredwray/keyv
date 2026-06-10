@@ -58,11 +58,11 @@
 		"keyv": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.8",
+		"@biomejs/biome": "^2.4.16",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.0.14",
+		"@vitest/coverage-v8": "^4.1.8",
 		"rimraf": "^6.1.2",
-		"vitest": "^4.0.14"
+		"vitest": "^4.1.8"
 	},
 	"tsd": {
 		"directory": "test"
