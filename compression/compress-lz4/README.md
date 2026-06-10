@@ -1,4 +1,4 @@
-# @keyv/compress-lz4 [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/compress-lz4 [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > lz4 compression for Keyv
 
