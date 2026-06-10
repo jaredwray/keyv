@@ -11,7 +11,7 @@ const store = () => new KeyvEtcd({ uri: etcdUrl, busyTimeout: 3000 });
 
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
-storageTestSuite(it, store, { missingValue: null, batch: false });
+storageTestSuite(it, store, { missingValue: null, batch: false, ttlGranularity: "seconds" });
 
 it("default options", (t) => {
 	const store = new KeyvEtcd();
