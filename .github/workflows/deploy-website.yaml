@@ -16,16 +16,15 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
 
-    - name: Use Node.js 22
-      uses: actions/setup-node@v4
+    - name: Use Node.js 24
+      uses: actions/setup-node@v6
       with:
-        node-version: 22
-        cache: 'pnpm'
+        node-version: 24
 
     - name: Install Dependencies
       run: pnpm install

@@ -1,9 +1,80 @@
 import { faker } from "@faker-js/faker";
-import sqlite3 from "sqlite3";
+import BetterSqlite3 from "better-sqlite3";
 import { describe, expect, it, vi } from "vitest";
 import { resolveDriver } from "../src/drivers/index.js";
 import type { SqliteDriver } from "../src/drivers/types.js";
-import KeyvSqlite, { createSqlite3Driver } from "../src/index.js";
+import KeyvSqlite, {
+	createSqlite3Driver,
+	type Sqlite3DatabaseLike,
+	type Sqlite3ModuleLike,
+} from "../src/index.js";
+
+// Callback-style sqlite3 stand-in backed by better-sqlite3. The real `sqlite3`
+// package is unmaintained and does not build on Node 26, so the driver is
+// exercised against this Sqlite3ModuleLike-conforming module instead.
+type Sqlite3TestModule = Sqlite3ModuleLike & { verbose(): Sqlite3TestModule };
+
+function createSqlite3TestModule(): Sqlite3TestModule {
+	class Database implements Sqlite3DatabaseLike {
+		private readonly db: InstanceType<typeof BetterSqlite3>;
+
+		constructor(filename: string, callback?: (err: Error | null) => void) {
+			this.db = new BetterSqlite3(filename);
+			queueMicrotask(() => callback?.(null));
+		}
+
+		all(
+			sql: string,
+			params: unknown[],
+			callback: (err: Error | null, rows: unknown[]) => void,
+		): void {
+			try {
+				callback(null, this.db.prepare(sql).all(...(params as never[])));
+			} catch (error) {
+				callback(error as Error, []);
+			}
+		}
+
+		run(sql: string, params: unknown[], callback: (err: Error | null) => void): void {
+			try {
+				this.db.prepare(sql).run(...(params as never[]));
+				callback(null);
+			} catch (error) {
+				callback(error as Error);
+			}
+		}
+
+		exec(sql: string, callback?: (err: Error | null) => void): void {
+			try {
+				this.db.exec(sql);
+				callback?.(null);
+			} catch (error) {
+				callback?.(error as Error);
+			}
+		}
+
+		configure(_option: string, value: number): void {
+			this.db.pragma(`busy_timeout = ${value}`);
+		}
+
+		close(callback?: (err: Error | null) => void): void {
+			try {
+				this.db.close();
+				callback?.(null);
+			} catch (error) {
+				callback?.(error as Error);
+			}
+		}
+	}
+
+	const module: Sqlite3TestModule = {
+		Database,
+		verbose: () => module,
+	};
+	return module;
+}
+
+const sqlite3 = createSqlite3TestModule();
 
 describe("driver selection", () => {
 	it("driverName is available after ready", async () => {
@@ -19,7 +90,7 @@ describe("driver selection", () => {
 		await store.disconnect();
 	});
 
-	it("auto-detects better-sqlite3 by default", async () => {
+	it("auto-detects a built-in driver by default", async () => {
 		const store = new KeyvSqlite("sqlite://:memory:");
 		const key = faker.string.uuid();
 		const val = faker.lorem.word();
