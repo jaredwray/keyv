@@ -19,7 +19,7 @@ const keyvDynamodb = new KeyvDynamo({
 const store = () => new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
 
 keyvTestSuite(it, Keyv, store);
-storageTestSuite(it, store, { iterator: false, ttl: false });
+storageTestSuite(it, store, { iterator: false, ttlGranularity: "seconds" });
 
 beforeEach(async () => {
 	const keyv = store();
