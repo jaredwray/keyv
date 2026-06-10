@@ -12,3 +12,7 @@ allowBuilds:
   sqlite3: true
 # 4 days minimum release age
 minimumReleaseAge: 5760
+# keep @types/node within the Node major from .nvmrc across all packages,
+# including transitive resolutions (e.g. @types/pg, @types/ws, vitest peers)
+overrides:
+  "@types/node": ^24.13.1
