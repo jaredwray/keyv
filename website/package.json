@@ -11,10 +11,10 @@
     "test": "echo 'no tests needed'",
     "generate-docs": "rimraf ./dist && tsx ./src/docs.ts",
     "build": "echo 'no build needed'",
-    "website:build": "pnpm generate-docs && docula build",
-    "build-serve": "pnpm clean && pnpm generate-docs && docula serve",
+    "website:build": "pnpm generate-docs && docula build -o ./dist",
+    "build-serve": "pnpm clean && pnpm generate-docs && docula serve --build -o ./dist",
     "clean": "rimraf ./dist ./docs/compression ./docs/test-suite ./docs/storage-adapters",
-    "website:serve": "docula serve"
+    "website:serve": "docula serve --build -o ./dist"
   },
   "devDependencies": {
     "docula": "^2.0.0",
