@@ -32,7 +32,7 @@
 		"url": "git+https://github.com/jaredwray/keyv.git"
 	},
 	"engines": {
-		"node": ">= 22"
+		"node": ">= 22.18.0"
 	},
 	"files": [
 		"dist",
