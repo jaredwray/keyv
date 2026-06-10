@@ -48,6 +48,49 @@ Set your test script in `package.json` to `vitest`.
 
 Take a look at [keyv/redis](https://github.com/jaredwray/keyv/tree/main/storage/redis) for an example of an existing storage adapter using `@keyv/test-suite`.
 
+## Storage Adapter Tests
+
+To test a storage adapter directly (without the `Keyv` wrapper), use `storageTestSuite`. It runs basic CRUD, batch, iterator, TTL, namespace, and disconnect tests against the adapter:
+
+```js
+import { it } from 'vitest';
+import { storageTestSuite } from '@keyv/test-suite';
+import KeyvStore from './';
+
+const store = () => new KeyvStore();
+storageTestSuite(it, store);
+```
+
+### Storage Test Options
+
+`storageTestSuite` (and the individual `storage*Tests` functions) accept an options object as the third argument:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `missingValue` | `undefined \| null` | `undefined` | Value returned by `get()` for missing or expired keys |
+| `basic` | `boolean` | `true` | Enable basic CRUD tests (`set`/`get`/`delete`/`has`/`clear`) |
+| `batch` | `boolean` | `true` | Enable batch operation tests (`setMany`/`getMany`/`hasMany`/`deleteMany`) |
+| `iterator` | `boolean` | `true` | Enable iterator tests |
+| `ttl` | `boolean` | `true` | Enable TTL tests |
+| `ttlGranularity` | `'milliseconds' \| 'seconds'` | `'milliseconds'` | TTL granularity used by the TTL tests |
+| `namespace` | `boolean` | `true` | Enable namespace getter/setter test |
+| `disconnect` | `boolean` | `true` | Enable disconnect test |
+
+### TTL Granularity
+
+By default the TTL tests use sub-second TTL values (100ms TTL with a 200ms expiry wait). Storage backends such as etcd (leases) and DynamoDB only support TTLs at second-level resolution, so they can't honor sub-second TTLs. For those adapters, set `ttlGranularity: 'seconds'` and the TTL tests will use second-scale values instead (1 second TTL with a 3 second expiry wait):
+
+```js
+import { it } from 'vitest';
+import { storageTestSuite } from '@keyv/test-suite';
+import KeyvStore from './';
+
+const store = () => new KeyvStore();
+storageTestSuite(it, store, { ttlGranularity: 'seconds' });
+```
+
+Use `ttl: false` only when the adapter has no storage-level TTL support at all.
+
 ## Testing Compression Adapters
 
 If you're testing a compression adapter, you can use the `keyvCompressionTests` method instead of `keyvTestSuite`.
