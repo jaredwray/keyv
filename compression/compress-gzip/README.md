@@ -1,4 +1,4 @@
-# @keyv/compress-gzip [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwra/keyv)
+# @keyv/compress-gzip [<img width="100" align="right" src="https://jaredwray.com/images/keyv-symbol.svg" alt="keyv">](https://github.com/jaredwray/keyv)
 
 > Gzip compression for Keyv
 
