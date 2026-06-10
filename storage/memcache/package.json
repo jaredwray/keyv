@@ -63,7 +63,7 @@
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 22"
+		"node": ">= 22.18.0"
 	},
 	"files": [
 		"dist",

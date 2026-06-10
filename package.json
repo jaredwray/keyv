@@ -9,7 +9,7 @@
   "private": true,
   "packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed",
   "engines": {
-    "node": ">= 22"
+    "node": ">= 22.18.0"
   },
   "scripts": {
     "build:keyv": "pnpm recursive --filter=keyv run build",
@@ -30,14 +30,14 @@
     "@biomejs/biome": "^2.4.16",
     "@faker-js/faker": "^10.4.0",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.13.1",
     "@vitest/coverage-v8": "^4.1.8",
-    "js-yaml": "^4.1.1",
-    "rimraf": "^6.1.2",
+    "js-yaml": "^4.2.0",
+    "rimraf": "^6.1.3",
     "tsd": "^0.33.0",
-    "tsdown": "^0.21.7",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.2",
+    "tsdown": "^0.22.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }
 }
