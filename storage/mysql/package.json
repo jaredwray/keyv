@@ -52,7 +52,7 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"hookified": "^2.0.0",
-		"mysql2": "^3.16.1"
+		"mysql2": "^3.22.5"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.16",
