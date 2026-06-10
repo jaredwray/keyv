@@ -1,5 +1,6 @@
 export const options = {
 	githubPath: 'jaredwray/keyv',
+	autoReadme: false,
 	siteTitle: 'Keyv',
 	siteDescription: 'Simple key-value storage with support for multiple backends',
 	siteUrl: 'https://keyv.org',
