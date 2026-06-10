@@ -38,7 +38,6 @@ const storageTestSuite = (test: TestFunction, store: StorageFn, options?: Storag
 	storageDisconnectTests(test, store, options);
 };
 
-export { keyvTestSuite, storageTestSuite };
 export { keyvApiTests } from "./api.js";
 export { compressionTestSuite } from "./compression.js";
 export { encryptionTestSuite } from "./encryption.js";
@@ -54,3 +53,4 @@ export { storageNamespaceTests } from "./storage-namespace.js";
 export { storageTtlTests } from "./storage-ttl.js";
 export type { StorageFn, StorageTestOptions, TestFunction } from "./types.js";
 export { keyvValueTests } from "./values.js";
+export { keyvTestSuite, storageTestSuite };

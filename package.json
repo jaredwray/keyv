@@ -1,43 +1,43 @@
 {
-  "name": "@keyv/mono-repo",
-  "version": "6.0.0-beta.2",
-  "type": "module",
-  "description": "Keyv Mono Repo",
-  "repository": "https://github.com/jaredwray/keyv.git",
-  "author": "Jared Wray <me@jaredwray.com>",
-  "license": "MIT",
-  "private": true,
-  "packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed",
-  "engines": {
-    "node": ">= 22"
-  },
-  "scripts": {
-    "build:keyv": "pnpm recursive --filter=keyv run build",
-    "build": "pnpm build:keyv && pnpm recursive --filter '!keyv' run build",
-    "build:list": "pnpm build:keyv && pnpm --filter '!keyv' --workspace-concurrency 1 -r build",
-    "test": "pnpm -r test",
-    "test:list": "pnpm -r --workspace-concurrency 1 test",
-    "test:ci": "pnpm -r test:ci",
-    "test:services:start": "chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh",
-    "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
-    "website:build": "pnpm recursive --filter @keyv/website run website:build",
-    "website:serve": "pnpm recursive --filter @keyv/website run website:serve",
-    "clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean",
-    "version:sync": "pnpm tsx scripts/version-sync.ts",
-    "test:scripts": "vitest run --config vitest.config.ts"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.3.13",
-    "@faker-js/faker": "^10.2.0",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.10.1",
-    "@vitest/coverage-v8": "^4.0.18",
-    "js-yaml": "^4.1.1",
-    "rimraf": "^6.1.2",
-    "tsd": "^0.33.0",
-    "tsdown": "^0.21.7",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.2",
-    "vitest": "^4.0.18"
-  }
+	"name": "@keyv/mono-repo",
+	"version": "6.0.0-beta.2",
+	"type": "module",
+	"description": "Keyv Mono Repo",
+	"repository": "https://github.com/jaredwray/keyv.git",
+	"author": "Jared Wray <me@jaredwray.com>",
+	"license": "MIT",
+	"private": true,
+	"packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed",
+	"engines": {
+		"node": ">= 22"
+	},
+	"scripts": {
+		"build:keyv": "pnpm recursive --filter=keyv run build",
+		"build": "pnpm build:keyv && pnpm recursive --filter '!keyv' run build",
+		"build:list": "pnpm build:keyv && pnpm --filter '!keyv' --workspace-concurrency 1 -r build",
+		"test": "pnpm -r test",
+		"test:list": "pnpm -r --workspace-concurrency 1 test",
+		"test:ci": "pnpm -r test:ci",
+		"test:services:start": "chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh",
+		"test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
+		"website:build": "pnpm recursive --filter @keyv/website run website:build",
+		"website:serve": "pnpm recursive --filter @keyv/website run website:serve",
+		"clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean",
+		"version:sync": "pnpm tsx scripts/version-sync.ts",
+		"test:scripts": "vitest run --config vitest.config.ts"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.16",
+		"@faker-js/faker": "^10.4.0",
+		"@types/js-yaml": "^4.0.9",
+		"@types/node": "^24.10.1",
+		"@vitest/coverage-v8": "^4.1.8",
+		"js-yaml": "^4.1.1",
+		"rimraf": "^6.1.2",
+		"tsd": "^0.33.0",
+		"tsdown": "^0.21.7",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.2",
+		"vitest": "^4.1.8"
+	}
 }

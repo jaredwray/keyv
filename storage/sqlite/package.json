@@ -62,7 +62,7 @@
 		"@keyv/test-suite": "workspace:^",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"@types/better-sqlite3": "^7.6.0",
-		"tinybench": "^6.0.0",
+		"tinybench": "^6.0.2",
 		"tsd": "^0.33.0"
 	},
 	"tsd": {
