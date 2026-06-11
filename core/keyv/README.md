@@ -5,10 +5,11 @@
 [![build](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/tests.yaml)
 [![bun](https://github.com/jaredwray/keyv/actions/workflows/bun-test.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/bun-test.yaml)
 [![browser](https://github.com/jaredwray/keyv/actions/workflows/browser-compat.yaml/badge.svg)](https://github.com/jaredwray/keyv/actions/workflows/browser-compat.yaml)
-[![codecov](https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
+[![](https://data.jsdelivr.com/v1/package/npm/keyv/badge)](https://www.jsdelivr.com/package/npm/keyv)
+[![codecov](https://codecov.io/gh/jaredwray/keyv/graph/badge.svg?token=bRzR3RyOXZ)](https://codecov.io/gh/jaredwray/keyv)
 [![npm](https://img.shields.io/npm/dm/keyv.svg)](https://www.npmjs.com/package/keyv)
 [![npm](https://img.shields.io/npm/v/keyv.svg)](https://www.npmjs.com/package/keyv)
-
+ 
 Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. It supports TTL based expiry, making it suitable as a cache or a persistent key-value store.
 
 # Features
