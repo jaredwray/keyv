@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
-import { it } from "vitest";
+import { expect, it } from "vitest";
 import { EtcdClient, prefixEnd } from "../src/client.js";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
 
@@ -470,6 +470,47 @@ it("EtcdClient surfaces error responses from etcd", async (t) => {
 	}
 	t.expect(error).toBeDefined();
 	t.expect(error?.message).toMatch(/lease/i);
+});
+
+// etcd <3.6 and etcd >=3.6 report errors with different JSON shapes (the
+// grpc-gateway v2 upgrade in 3.6 dropped the top-level `error` field in favour
+// of google.rpc.Status `message`). Stub fetch so both shapes are exercised
+// deterministically, regardless of which etcd version backs the live suite.
+async function expectSurfacedError(responseBody: unknown): Promise<void> {
+	const client = new EtcdClient({ url: "http://127.0.0.1:2379" });
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = (async () =>
+		new Response(JSON.stringify(responseBody), {
+			status: 404,
+			headers: { "content-type": "application/json" },
+		})) as typeof fetch;
+	try {
+		let error: Error | undefined;
+		try {
+			await client.putRaw({ key: "k", value: "v", lease: "1" });
+		} catch (e) {
+			error = e as Error;
+		}
+		expect(error).toBeDefined();
+		expect(error?.message).toMatch(/lease/i);
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
+}
+
+it("surfaces the legacy `error` field from etcd <3.6", async () => {
+	await expectSurfacedError({
+		error: "etcdserver: requested lease not found",
+		code: 5,
+		message: "etcdserver: requested lease not found",
+	});
+});
+
+it("surfaces the grpc-gateway v2 `message` field from etcd >=3.6", async () => {
+	await expectSurfacedError({
+		code: 5,
+		message: "etcdserver: requested lease not found",
+	});
 });
 
 it("Lease caches the granted ID across concurrent puts", async (t) => {
