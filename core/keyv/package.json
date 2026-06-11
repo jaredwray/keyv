@@ -59,7 +59,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^2.0.1"
+		"hookified": "^3.0.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.16",

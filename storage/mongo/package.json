@@ -50,7 +50,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^2.0.0",
+		"hookified": "^3.0.0",
 		"mongodb": "^7.2.0"
 	},
 	"devDependencies": {
