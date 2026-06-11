@@ -132,8 +132,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../keyv
@@ -169,8 +169,8 @@ importers:
   core/keyv:
     dependencies:
       hookified:
-        specifier: ^2.0.1
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.16
@@ -364,8 +364,8 @@ importers:
         specifier: ^3.1063.0
         version: 3.1063.0(@aws-sdk/client-dynamodb@3.1063.0)
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -377,8 +377,8 @@ importers:
   storage/etcd:
     dependencies:
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -390,8 +390,8 @@ importers:
   storage/memcache:
     dependencies:
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -409,8 +409,8 @@ importers:
   storage/mongo:
     dependencies:
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -443,8 +443,8 @@ importers:
   storage/mysql:
     dependencies:
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       mysql2:
         specifier: ^3.22.5
         version: 3.22.5(@types/node@24.13.1)
@@ -480,8 +480,8 @@ importers:
   storage/postgres:
     dependencies:
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -523,8 +523,8 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -542,8 +542,8 @@ importers:
         specifier: ^12.10.0
         version: 12.10.0
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -570,8 +570,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.2
       hookified:
-        specifier: ^2.0.0
-        version: 2.0.1
+        specifier: ^3.0.0
+        version: 3.0.0
       iovalkey:
         specifier: ^0.3.3
         version: 0.3.3
@@ -2691,11 +2691,12 @@ packages:
   hookified@1.15.1:
     resolution: {integrity: sha512-MvG/clsADq1GPM2KGo2nyfaWVyn9naPiXrqIe4jYjXNZQt238kWyOGrsyc/DmRAQ+Re6yeo6yX/yoNCG5KAEVg==}
 
-  hookified@2.0.1:
-    resolution: {integrity: sha512-rCuuGZ7qae0+C0ySqe8nRj8JJ5/6zym5YBs19iga9ju+ubLELkgpvnfi4A6NP8Aow7mCxfCqyAAbkj9QqyEXRg==}
-
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
+
+  hookified@3.0.0:
+    resolution: {integrity: sha512-x+jzDjd9CWxdgl6u/K4pjnvw7PZx6ZSpiPGAV43uXlJiJy7r2jIEUxxU1Cv7+rwy1GK5Qt5S+Jp7n81DpcUvTA==}
+    engines: {node: '>=22.18.0'}
 
   hosted-git-info@2.8.9:
     resolution: {integrity: sha512-mxIDAb9Lsm6DoOJ7xH+5+X4y1LU/4Hi50L9C5sIswK3JzULS4bwk1FvjdBgvYR4bzT4tuUQiC15FE2f5HbLvYw==}
@@ -6194,9 +6195,9 @@ snapshots:
 
   hookified@1.15.1: {}
 
-  hookified@2.0.1: {}
-
   hookified@2.2.0: {}
+
+  hookified@3.0.0: {}
 
   hosted-git-info@2.8.9: {}
 
