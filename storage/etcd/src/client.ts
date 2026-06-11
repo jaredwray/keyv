@@ -126,13 +126,18 @@ export class EtcdClient {
 		/* v8 ignore next -- @preserve */
 		if (!response.ok) {
 			let errMessage = `etcd request failed: ${response.status} ${response.statusText}`;
-			if (
-				typeof parsed === "object" &&
-				parsed !== null &&
-				"error" in parsed &&
-				typeof (parsed as { error: unknown }).error === "string"
-			) {
-				errMessage = (parsed as { error: string }).error;
+			if (typeof parsed === "object" && parsed !== null) {
+				// etcd <3.6 returns a top-level `error` string. etcd >=3.6 upgraded its
+				// JSON gateway to grpc-gateway v2, which dropped the `error` field and
+				// surfaces failures as a google.rpc.Status with a `message` field
+				// instead. Read whichever the server provides so the real error text is
+				// preserved across all etcd versions.
+				const status = parsed as { error?: unknown; message?: unknown };
+				if (typeof status.error === "string") {
+					errMessage = status.error;
+				} else if (typeof status.message === "string") {
+					errMessage = status.message;
+				}
 			}
 			throw new Error(errMessage);
 		}
