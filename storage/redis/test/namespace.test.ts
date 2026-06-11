@@ -208,7 +208,6 @@ describe("Namespace", () => {
 			{ key: key3, value: val3, ttl: 100 },
 		]);
 		await keyvRedis.deleteMany([key2, key3]);
-		await delay(300);
 		const value = await keyvRedis.get(key1);
 		expect(value).toBe(val1);
 		const value2 = await keyvRedis.get(key2);
