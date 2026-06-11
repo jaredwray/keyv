@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { EtcdClient, prefixEnd } from "../src/client.js";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
 
@@ -478,12 +478,14 @@ it("EtcdClient surfaces error responses from etcd", async (t) => {
 // deterministically, regardless of which etcd version backs the live suite.
 async function expectSurfacedError(responseBody: unknown): Promise<void> {
 	const client = new EtcdClient({ url: "http://127.0.0.1:2379" });
-	const originalFetch = globalThis.fetch;
-	globalThis.fetch = (async () =>
-		new Response(JSON.stringify(responseBody), {
-			status: 404,
-			headers: { "content-type": "application/json" },
-		})) as typeof fetch;
+	vi.stubGlobal(
+		"fetch",
+		async () =>
+			new Response(JSON.stringify(responseBody), {
+				status: 404,
+				headers: { "content-type": "application/json" },
+			}),
+	);
 	try {
 		let error: Error | undefined;
 		try {
@@ -494,7 +496,7 @@ async function expectSurfacedError(responseBody: unknown): Promise<void> {
 		expect(error).toBeDefined();
 		expect(error?.message).toMatch(/lease/i);
 	} finally {
-		globalThis.fetch = originalFetch;
+		vi.unstubAllGlobals();
 	}
 }
 
