@@ -27,7 +27,7 @@ This release rolls up the entire v6 beta cycle — everything merged since `v6.0
 
 - **`StoredData` and `StoredDataRaw` types removed.** Use the `KeyvValue<T>` envelope (`{ value, expires? }`) and the new raw API instead. (#1929)
 - **Keys are no longer prefixed in core.** Namespacing/prefixing is now handled by the storage adapters that need it, not the core. (#1899)
-- **`get` no longer checks expiry by default.** Expiration is evaluated lazily/where appropriate to keep the hot path fast; expired entries still resolve to `undefined` through the normal read paths. (#1923)
+- **`get` no longer checks expiry by default.** Expiration is evaluated lazily/where appropriate to keep the hot path fast; expired entries still resolve to `undefined` through the normal read paths. To re-enable core-level expiry checks, set the `checkExpired: true` option. (#1923)
 - **Moved to [Hookified](https://github.com/jaredwray/hookified) for events + hooks.** Replaces the old `EventEmitter` base across core and adapters. (#1900)
 - **`.set()` now returns a boolean** instead of the instance. (#1904)
 - **Iterator API simplified** and various method signatures cleaned up. (#1902)
@@ -134,7 +134,7 @@ const many = await keyv.getManyRaw(['a', 'b']);
 
 ## 🔎 Core: Capability Detection
 
-New helpers report exactly which parts of an interface an object implements. Each returns per-capability booleans plus a top-level flag that is `true` only when the full interface is satisfied. (#1909, #1930)
+New helpers report exactly which parts of an interface an object implements. Each returns a `compatible` flag — `true` only when the full interface is satisfied — plus a `methods` map describing whether each method `exists` and its `methodType` (`"sync"` / `"async"` / `"none"`). (#1909, #1930)
 
 ```ts
 import Keyv, {
@@ -145,17 +145,18 @@ import Keyv, {
   detectKeyvEncryption,
 } from 'keyv';
 
-detectKeyv(new Keyv()).keyv; // true
-detectKeyv(new Map()).keyv;  // false (but get/set/... still reported true)
+detectKeyv(new Keyv()).compatible; // true (only when ALL capabilities are present)
+detectKeyv(new Map()).compatible;  // false — but methods.get.exists is still true
 
-// Storage detection also reports map-likeness and sync/async per method
+// Storage detection reports the detected store type plus sync/async per method
 const r = detectKeyvStorage(new Map());
-r.mapLike;            // true
-r.methodTypes.get;    // "sync"
+r.compatible;             // true
+r.store;                  // "mapLike"  ("keyvStorage" | "mapLike" | "asyncMap" | "none")
+r.methods.get.methodType; // "sync"
 
-detectKeyvSerialization(JSON).keyvSerialization;                      // true
-detectKeyvCompression({ compress: d => d, decompress: d => d });      // { keyvCompression: true, ... }
-detectKeyvEncryption({ encrypt: d => d, decrypt: d => d });           // { keyvEncryption: true, ... }
+detectKeyvSerialization(JSON).compatible;                                    // true
+detectKeyvCompression({ compress: d => d, decompress: d => d }).compatible;  // true
+detectKeyvEncryption({ encrypt: d => d, decrypt: d => d }).compatible;       // true
 ```
 
 ---
@@ -218,14 +219,7 @@ Applied to every key-accepting method (`get`, `set`, `delete`, `has`, the `*Many
   }
   ```
 
-- **`emitErrors`** — set to `false` to suppress the `'error'` event entirely. (#1910)
-- **`useKeyPrefix`** — toggle key prefixing on the instance (prefixing now lives in adapters, not core). (#1899)
-
-  ```js
-  const keyv = new Keyv({ useKeyPrefix: false });
-  keyv.useKeyPrefix = true; // can be flipped at runtime
-  ```
-
+- **Key prefixing moved to adapters.** Prefixing/namespacing is now handled by the storage adapters that need it rather than the core. (#1899)
 - **Encode/decode now propagate errors** instead of swallowing them, and several stats/telemetry edge cases were fixed (no `STAT_SET` on empty set, `setRaw` telemetry, `getManyRaw` dead code). (#1922, #1920, #1921, #1919)
 
 ---
