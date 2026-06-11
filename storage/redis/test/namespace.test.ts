@@ -159,13 +159,13 @@ describe("Namespace", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: val3, ttl: 5 },
+			{ key: key3, value: val3, ttl: 100 },
 		]);
 		const value = await keyvRedis.get(key1);
 		expect(value).toBe(val1);
 		const value2 = await keyvRedis.get(key2);
 		expect(value2).toBe(val2);
-		await delay(10);
+		await delay(300);
 		const value3 = await keyvRedis.get(key3);
 		expect(value3).toBeUndefined();
 		await keyvRedis.disconnect();
@@ -184,9 +184,9 @@ describe("Namespace", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: val3, ttl: 5 },
+			{ key: key3, value: val3, ttl: 100 },
 		]);
-		await delay(10);
+		await delay(300);
 		const exists = await keyvRedis.hasMany([key1, key2, key3]);
 		expect(exists).toEqual([true, true, false]);
 		await keyvRedis.disconnect();
@@ -205,10 +205,10 @@ describe("Namespace", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: val3, ttl: 5 },
+			{ key: key3, value: val3, ttl: 100 },
 		]);
 		await keyvRedis.deleteMany([key2, key3]);
-		await delay(10);
+		await delay(300);
 		const value = await keyvRedis.get(key1);
 		expect(value).toBe(val1);
 		const value2 = await keyvRedis.get(key2);

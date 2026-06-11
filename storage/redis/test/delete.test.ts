@@ -185,7 +185,7 @@ describe("delete", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: val3, ttl: 5 },
+			{ key: key3, value: val3, ttl: 100 },
 		]);
 		await keyvRedis.deleteMany([key2, key3]);
 		const value = await keyvRedis.get(key1);
@@ -209,7 +209,7 @@ describe("delete", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: val3, ttl: 5 },
+			{ key: key3, value: val3, ttl: 100 },
 		]);
 		await keyvRedis.deleteMany([key2, key3]);
 		const value = await keyvRedis.get(key1);

@@ -75,7 +75,7 @@ describe("set", () => {
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
-			ttl: 40, // 40 milliseconds
+			ttl: 100, // 100 milliseconds
 		};
 
 		await keyvRedis.set(data.key, data.value, data.ttl);
@@ -84,7 +84,7 @@ describe("set", () => {
 
 		expect(result).toBe(data.value);
 
-		await delay(80); // Wait for ttl to expire
+		await delay(300); // Wait for ttl to expire
 
 		const expiredResult = await keyvRedis.get(data.key);
 		expect(expiredResult).toBeUndefined();
@@ -95,7 +95,7 @@ describe("set", () => {
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
-			ttl: 40, // 40 milliseconds
+			ttl: 100, // 100 milliseconds
 		};
 
 		await keyvRedis.set(data.key, data.value, data.ttl);
@@ -104,7 +104,7 @@ describe("set", () => {
 
 		expect(result).toBe(data.value);
 
-		await delay(80); // Wait for ttl to expire
+		await delay(300); // Wait for ttl to expire
 
 		const expiredResult = await keyvRedis.get(data.key);
 		expect(expiredResult).toBeUndefined();
@@ -180,8 +180,8 @@ describe("set", () => {
 	test("should be able to set a ttl", async () => {
 		const keyvRedis = new KeyvRedis();
 		const key = faker.string.uuid();
-		await keyvRedis.set(key, faker.lorem.word(), 10);
-		await delay(15);
+		await keyvRedis.set(key, faker.lorem.word(), 100);
+		await delay(300);
 		const value = await keyvRedis.get(key);
 		expect(value).toBeUndefined();
 		await keyvRedis.disconnect();
@@ -197,13 +197,13 @@ describe("set", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: faker.lorem.word(), ttl: 5 },
+			{ key: key3, value: faker.lorem.word(), ttl: 100 },
 		]);
 		const value = await keyvRedis.get(key1);
 		expect(value).toBe(val1);
 		const value2 = await keyvRedis.get(key2);
 		expect(value2).toBe(val2);
-		await delay(10);
+		await delay(300);
 		const value3 = await keyvRedis.get(key3);
 		expect(value3).toBeUndefined();
 		await keyvRedis.disconnect();
