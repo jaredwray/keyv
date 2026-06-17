@@ -199,6 +199,8 @@ describe("opts", () => {
 		expect(keyv.opts.keyLength).toBe(512);
 		expect(keyv.opts.iterationLimit).toBe(25);
 		expect(keyv.opts.wal).toBe(false);
+		// The resolved database path is included as db.
+		expect(keyv.opts.db).toBe("test/testdb.sqlite");
 	});
 });
 
