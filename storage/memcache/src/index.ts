@@ -61,12 +61,17 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 		this.client = new Memcache(memcacheOptions);
 
 		// Surface asynchronous client errors (connection drops, timeouts, retry exhaustion)
-		// to listeners on the adapter. The client emits `(nodeId, error)`, so forward the Error.
+		// to listeners on the adapter. The client emits `(nodeId, error)`, so pick the Error,
+		// wrapping any non-Error payload so listeners always receive a standard Error and
+		// skipping empty notifications that carry nothing to report.
 		this.client.on("error", (...arguments_: unknown[]) => {
-			const error =
+			const rawError =
 				arguments_.find((argument) => argument instanceof Error) ??
 				arguments_[arguments_.length - 1];
-			this.emit("error", error);
+			if (rawError) {
+				const error = rawError instanceof Error ? rawError : new Error(String(rawError));
+				this.emit("error", error);
+			}
 		});
 	}
 
