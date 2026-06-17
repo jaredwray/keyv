@@ -43,6 +43,24 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	private _eventsWiredClient: any;
 
 	/**
+	 * Stable reference to the `error` listener so it can be removed from a client
+	 * when the underlying client is replaced.
+	 */
+	private readonly _errorHandler = (error: Error) => this.emit("error", error);
+
+	/**
+	 * Stable reference to the `connect` listener so it can be removed from a client
+	 * when the underlying client is replaced.
+	 */
+	private readonly _connectHandler = () => this.emit("connect", this._client);
+
+	/**
+	 * Stable reference to the `reconnecting` listener so it can be removed from a client
+	 * when the underlying client is replaced.
+	 */
+	private readonly _reconnectingHandler = () => this.emit("reconnecting");
+
+	/**
 	 * Creates a new KeyvValkey adapter instance.
 	 *
 	 * Accepts either a connection URI string, a pre-configured iovalkey Redis/Cluster instance,
@@ -188,6 +206,10 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
+		if (keys.length === 0) {
+			return [];
+		}
+
 		const resolvedKeys = keys.map((key) => this.getKeyName(key));
 
 		if (this.isCluster()) {
@@ -531,6 +553,8 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * Wires the underlying iovalkey client events (`error`, `connect`, `reconnecting`) so they
 	 * are re-emitted on this adapter via Hookified. Listeners are only attached once per client
 	 * instance, so repeated calls (such as when the client is replaced) do not create duplicates.
+	 * When the client is replaced, the listeners are removed from the previous client to avoid
+	 * leaking listeners and re-emitting events from a discarded client.
 	 * @returns {void}
 	 */
 	private initClient(): void {
@@ -538,11 +562,17 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			return;
 		}
 
+		if (this._eventsWiredClient) {
+			this._eventsWiredClient.removeListener("error", this._errorHandler);
+			this._eventsWiredClient.removeListener("connect", this._connectHandler);
+			this._eventsWiredClient.removeListener("reconnecting", this._reconnectingHandler);
+		}
+
 		this._eventsWiredClient = this._client;
 
-		this._client.on("error", (error: Error) => this.emit("error", error));
-		this._client.on("connect", () => this.emit("connect", this._client));
-		this._client.on("reconnecting", () => this.emit("reconnecting"));
+		this._client.on("error", this._errorHandler);
+		this._client.on("connect", this._connectHandler);
+		this._client.on("reconnecting", this._reconnectingHandler);
 	}
 
 	/**

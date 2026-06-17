@@ -36,6 +36,7 @@ describe("events", () => {
 
 	test("should re-wire the error listener when the client is replaced", async () => {
 		const keyv = new KeyvValkey(valkeyUri);
+		const oldClient = keyv.client;
 		const newClient = new Redis(valkeyUri);
 		keyv.client = newClient;
 
@@ -49,6 +50,9 @@ describe("events", () => {
 
 		expect(received).toBe(error);
 		expect(newClient.listenerCount("error")).toBe(1);
+		// The old client's listener must be removed so it no longer drives the adapter.
+		expect(oldClient.listenerCount("error")).toBe(0);
+		await oldClient.disconnect();
 		await keyv.disconnect();
 	});
 

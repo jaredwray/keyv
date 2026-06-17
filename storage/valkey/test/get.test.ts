@@ -61,4 +61,10 @@ describe("get", () => {
 		expect(values).toEqual([undefined, undefined]);
 		await keyv.disconnect();
 	});
+
+	test("should return an empty array for getMany with an empty input", async () => {
+		const keyv = new KeyvValkey(valkeyUri);
+		expect(await keyv.getMany([])).toEqual([]);
+		await keyv.disconnect();
+	});
 });
