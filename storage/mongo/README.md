@@ -218,9 +218,8 @@ In standard mode, uses a single unordered MongoDB `bulkWrite` operation for effi
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
-const keyv = new Keyv({ store });
 
-const results = await keyv.set([
+const results = await store.setMany([
   { key: 'key1', value: 'value1' },
   { key: 'key2', value: 'value2', ttl: 5000 },
 ]); // [true, true]
@@ -258,12 +257,11 @@ In standard mode, uses a single MongoDB query with the `$in` operator for effici
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
-const keyv = new Keyv({ store });
 
-await keyv.set('key1', 'value1');
-await keyv.set('key2', 'value2');
+await store.set('key1', 'value1');
+await store.set('key2', 'value2');
 
-const values = await keyv.get(['key1', 'key2', 'key3']);
+const values = await store.getMany(['key1', 'key2', 'key3']);
 console.log(values); // ['value1', 'value2', undefined]
 ```
 
@@ -294,12 +292,11 @@ Uses a single MongoDB query with the `$in` operator for efficiency in both stand
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
-const keyv = new Keyv({ store });
 
-await keyv.set('key1', 'value1');
-await keyv.set('key2', 'value2');
+await store.set('key1', 'value1');
+await store.set('key2', 'value2');
 
-const results = await keyv.has(['key1', 'key2', 'key3']);
+const results = await store.hasMany(['key1', 'key2', 'key3']);
 console.log(results); // [true, true, false]
 ```
 
@@ -326,16 +323,15 @@ console.log(await keyv.delete('nonexistent')); // false
 - `keys` *(string[])* - Array of keys to delete.
 - Returns: `Promise<boolean[]>` - An array of booleans indicating whether each key was deleted.
 
-In standard mode, uses a single MongoDB query with the `$in` operator. In GridFS mode, all matching files are found and deleted in parallel.
+Each key is deleted individually in parallel so that per-key success/failure information is preserved in the returned array.
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
-const keyv = new Keyv({ store });
 
-await keyv.set('key1', 'value1');
-await keyv.set('key2', 'value2');
+await store.set('key1', 'value1');
+await store.set('key2', 'value2');
 
-const results = await keyv.delete(['key1', 'key2', 'key3']); // [true, true, false]
+const results = await store.deleteMany(['key1', 'key2', 'key3']); // [true, true, false]
 ```
 
 ### clear
@@ -541,4 +537,4 @@ await store.clearUnusedFor(3600); // remove files unused for 1 hour
 
 ## License
 
-[MIT © Jared Wray](LISCENCE)
+[MIT © Jared Wray](LICENSE)
