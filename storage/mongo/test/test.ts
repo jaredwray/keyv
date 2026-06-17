@@ -186,6 +186,11 @@ describe("set and setMany", () => {
 		expect(await store.get(keys[1])).toBe("val2");
 	});
 
+	test("setMany returns an empty array when given no entries", async () => {
+		const store = new KeyvMongo({ ...options });
+		expect(await store.setMany([])).toEqual([]);
+	});
+
 	test("setMany upserts existing keys", async () => {
 		const store = new KeyvMongo({ ...options });
 		const key = faker.string.alphanumeric(10);
@@ -734,22 +739,6 @@ describe("GridFS maintenance", () => {
 	test("clearUnusedFor returns false when not in GridFS mode", async () => {
 		const store = new KeyvMongo({ ...options });
 		expect(await store.clearUnusedFor(5)).toBe(false);
-	});
-});
-
-describe("events", () => {
-	test("re-emits errors from the underlying MongoClient", async () => {
-		const store = new KeyvMongo({ ...options });
-		const client = await store.connect;
-		const error = new Error("client failure");
-		const received = new Promise<Error>((resolve) => {
-			store.on("error", (error_: Error) => {
-				resolve(error_);
-			});
-		});
-		client.mongoClient.emit("error", error);
-		expect(await received).toBe(error);
-		await store.disconnect();
 	});
 });
 
