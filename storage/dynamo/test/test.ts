@@ -40,6 +40,16 @@ describe("construction and properties", () => {
 		t.expect(store.namespace).toEqual(namespace);
 	});
 
+	it("should support uri as an alias for endpoint", (t) => {
+		const store = new KeyvDynamo({ uri: dynamoURL });
+		t.expect(store.endpoint).toEqual(dynamoURL);
+	});
+
+	it("should let endpoint take precedence over uri when both are set", (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL, uri: "http://localhost:9999" });
+		t.expect(store.endpoint).toEqual(dynamoURL);
+	});
+
 	it("should expose the underlying client", (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		t.expect(store.client).toBeDefined();

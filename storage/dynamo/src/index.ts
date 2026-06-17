@@ -36,9 +36,15 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			options = { endpoint: options };
 		}
 
+		// `uri` is an alias for `endpoint`; `endpoint` wins when both are set.
+		const { uri, ...rest } = options;
+		if (uri !== undefined && rest.endpoint === undefined) {
+			rest.endpoint = uri;
+		}
+
 		this._opts = {
 			tableName: "keyv",
-			...options,
+			...rest,
 		};
 
 		if (this._opts.namespace) {
@@ -747,6 +753,8 @@ export default KeyvDynamo;
 export type KeyvDynamoOptions = {
 	namespace?: string;
 	tableName?: string;
+	/** Alias for `endpoint`. `endpoint` takes precedence when both are set. */
+	uri?: string;
 } & DynamoDBClientConfig;
 
 /**
