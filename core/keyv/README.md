@@ -46,17 +46,17 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.ttl](#ttl)
   - [.store](#store)
   - [.serialization](#serialization-1)
-  - [.compression](#compression)
-  - [.useKeyPrefix](#usekeyprefix)
-  - [.emitErrors](#emiterrors)
+  - [.compression](#compression-1)
+  - [.encryption](#encryption-1)
   - [.throwOnErrors](#throwonerrors)
+  - [.checkExpired](#checkexpired)
   - [.stats](#stats)
   - [.sanitize](#sanitize)
   - [Keyv Instance](#keyv-instance)
 	- [.set(key, value, [ttl])](#setkey-value-ttl)
 	- [.setMany(entries)](#setmanyentries)
-	- [.get(key, [options])](#getkey-options)
-	- [.getMany(keys, [options])](#getmanykeys-options)
+	- [.get(key)](#getkey)
+	- [.getMany(keys)](#getmanykeys)
   - [.getRaw(key)](#getrawkey)
   - [.getManyRaw(keys)](#getmanyrawkeys)
   - [.setRaw(key, value)](#setrawkey-value)
@@ -193,12 +193,11 @@ await cache.get('foo'); // 'cache'
 
 # Events
 
-Keyv is a custom `EventEmitter` and will emit an `'error'` event if there is an error.
-If there is no listener for the `'error'` event, an uncaught exception will be thrown.
-To disable the `'error'` event, pass `emitErrors: false` in the constructor options.
+Keyv is an `EventEmitter` (built on [hookified](https://github.com/jaredwray/hookified)) and will emit an `'error'` event if there is an error. By default an error is only thrown if there are no listeners attached to the `'error'` event. To always throw on errors regardless of listeners, enable the [`throwOnErrors`](#throwonerrors) option.
 
 ```js
-const keyv = new Keyv({ emitErrors: false });
+const keyv = new Keyv();
+keyv.on('error', err => console.log('Connection Error', err));
 ```
 
 In addition it will emit `clear` and `disconnect` events when the corresponding methods are called.
@@ -216,41 +215,46 @@ keyv.on('disconnect', handleDisconnect);
 
 # Hooks
 
-Keyv supports hooks for `get`, `set`, and `delete` methods. Hooks are useful for logging, debugging, and other custom functionality. Here is a list of all the hooks:
+Keyv supports hooks for all of its operations. Hooks are useful for logging, debugging, and other custom functionality. Each operation fires a `BEFORE_*` hook before it runs and an `AFTER_*` hook after it completes. Here is the list of all the hooks:
 
 ```
-PRE_GET
-POST_GET
-PRE_GET_RAW
-POST_GET_RAW
-PRE_GET_MANY
-POST_GET_MANY
-PRE_GET_MANY_RAW
-POST_GET_MANY_RAW
-PRE_SET
-POST_SET
-PRE_SET_RAW
-POST_SET_RAW
-PRE_SET_MANY_RAW
-POST_SET_MANY_RAW
-PRE_DELETE
-POST_DELETE
+BEFORE_GET            / AFTER_GET
+BEFORE_GET_MANY       / AFTER_GET_MANY
+BEFORE_GET_RAW        / AFTER_GET_RAW
+BEFORE_GET_MANY_RAW   / AFTER_GET_MANY_RAW
+BEFORE_SET            / AFTER_SET
+BEFORE_SET_RAW        / AFTER_SET_RAW
+BEFORE_SET_MANY       / AFTER_SET_MANY
+BEFORE_SET_MANY_RAW   / AFTER_SET_MANY_RAW
+BEFORE_DELETE         / AFTER_DELETE
+BEFORE_DELETE_MANY    / AFTER_DELETE_MANY
+BEFORE_HAS            / AFTER_HAS
+BEFORE_HAS_MANY       / AFTER_HAS_MANY
+BEFORE_CLEAR          / AFTER_CLEAR
+BEFORE_DISCONNECT     / AFTER_DISCONNECT
 ```
 
-You can access this by importing `KeyvHooks` from the main Keyv package.
+> The older `PRE_*` / `POST_*` hook names (e.g. `PRE_GET`, `POST_SET`) are deprecated aliases that still fire for backward compatibility. Prefer the `BEFORE_*` / `AFTER_*` names going forward.
+
+You can access these by importing `KeyvHooks` from the main Keyv package and registering a handler with `onHook()`:
 
 ```js
 import Keyv, { KeyvHooks } from 'keyv';
+
+const keyv = new Keyv();
+keyv.onHook(KeyvHooks.BEFORE_SET, (data) => {
+  console.log(`Setting key ${data.key} to ${data.value}`);
+});
 ```
 
 ## Get Hooks
 
-The `POST_GET` and `POST_GET_RAW` hooks fire on both cache hits and misses. When a cache miss occurs (key doesn't exist or is expired), the hooks receive `undefined` as the value.
+The `AFTER_GET` and `AFTER_GET_RAW` hooks fire on both cache hits and misses. When a cache miss occurs (key doesn't exist or is expired), the hook receives `undefined` as the value.
 
 ```js
-// POST_GET hook - fires on both hits and misses
+// AFTER_GET hook - fires on both hits and misses
 const keyv = new Keyv();
-keyv.hooks.addHandler(KeyvHooks.POST_GET, (data) => {
+keyv.onHook(KeyvHooks.AFTER_GET, (data) => {
   if (data.value === undefined) {
     console.log(`Cache miss for key: ${data.key}`);
   } else {
@@ -263,9 +267,9 @@ await keyv.get('missing-key');  // Logs cache miss with undefined
 ```
 
 ```js
-// POST_GET_RAW hook - same behavior as POST_GET
+// AFTER_GET_RAW hook - same behavior as AFTER_GET
 const keyv = new Keyv();
-keyv.hooks.addHandler(KeyvHooks.POST_GET_RAW, (data) => {
+keyv.onHook(KeyvHooks.AFTER_GET_RAW, (data) => {
   console.log(`Key: ${data.key}, Value:`, data.value);
 });
 
@@ -275,31 +279,31 @@ await keyv.getRaw('foo'); // Logs with value or undefined
 ## Set Hooks
 
 ```js
-//PRE_SET hook
+// BEFORE_SET hook
 const keyv = new Keyv();
-keyv.hooks.addHandler(KeyvHooks.PRE_SET, (data) => console.log(`Setting key ${data.key} to ${data.value}`));
+keyv.onHook(KeyvHooks.BEFORE_SET, (data) => console.log(`Setting key ${data.key} to ${data.value}`));
 
-//POST_SET hook
+// AFTER_SET hook
 const keyv = new Keyv();
-keyv.hooks.addHandler(KeyvHooks.POST_SET, ({key, value}) => console.log(`Set key ${key} to ${value}`));
+keyv.onHook(KeyvHooks.AFTER_SET, ({ key, value }) => console.log(`Set key ${key} to ${value}`));
 ```
 
-In these examples you can also manipulate the value before it is set. For example, you could add a prefix to all keys.
+In the `BEFORE_SET` hook you can also manipulate the value before it is set. For example, you could add a prefix to all keys.
 
 ```js
 const keyv = new Keyv();
-keyv.hooks.addHandler(KeyvHooks.PRE_SET, (data) => {
+keyv.onHook(KeyvHooks.BEFORE_SET, (data) => {
   console.log(`Manipulating key ${data.key} and ${data.value}`);
   data.key = `prefix-${data.key}`;
   data.value = `prefix-${data.value}`;
 });
 ```
 
-Now this key will have prefix- added to it before it is set.
+Now this key will have `prefix-` added to it before it is set.
 
 ## Delete Hooks
 
-In `PRE_DELETE` and `POST_DELETE` hooks, the value could be a single item or an `Array`. This is based on the fact that `delete` can accept a single key or an `Array` of keys.
+In the `BEFORE_DELETE` and `AFTER_DELETE` hooks, the value could be a single item or an `Array`. This is based on the fact that `delete` can accept a single key or an `Array` of keys.
 
 
 # Serialization
@@ -353,13 +357,13 @@ const keyv = new Keyv({ serialization: false });
 
 ## Pipeline
 
-When serialization and/or compression are configured, Keyv applies them in this order:
+When serialization, compression, and/or encryption are configured, Keyv applies them in this order:
 
-**On set:** serialize (optional) → compress (optional) → store
+**On set:** serialize → compress (optional) → encrypt (optional) → store
 
-**On get:** store → decompress (optional) → parse (optional) → value
+**On get:** store → decrypt (optional) → decompress (optional) → parse → value
 
-If compression is configured without a serializer, Keyv will use `JSON.stringify`/`JSON.parse` as a minimum fallback since compression adapters require string input.
+Compression and encryption operate on the serialized string, so they only run when a serializer is configured. The built-in `KeyvJsonSerializer` is enabled by default, so this works out of the box. If you disable serialization with `serialization: false`, values are passed through to the store as-is and compression/encryption are skipped.
 
 # Official Storage Adapters
 
@@ -518,7 +522,7 @@ keyvCompressionTests(test, new KeyvGzip());
 
 # Encryption
 
-Keyv provides a `KeyvEncryptionAdapter` interface for encryption support. This interface is available for custom implementations but is not yet wired into the core pipeline.
+Keyv supports pluggable encryption of stored values via the `KeyvEncryptionAdapter` interface. Pass an adapter with `encrypt` and `decrypt` methods using the `encryption` option (or set the [`.encryption`](#encryption-1) property). Encryption runs on the serialized (and optionally compressed) value, so it requires a serializer — the built-in `KeyvJsonSerializer` is enabled by default.
 
 ```typescript
 interface KeyvEncryptionAdapter {
@@ -527,9 +531,22 @@ interface KeyvEncryptionAdapter {
 }
 ```
 
+```js
+import Keyv from 'keyv';
+
+const encryption = {
+  encrypt: async (data) => Buffer.from(data).toString('base64'),
+  decrypt: async (data) => Buffer.from(data, 'base64').toString('utf8'),
+};
+
+const keyv = new Keyv({ encryption });
+await keyv.set('foo', 'bar'); // value is encrypted at rest
+await keyv.get('foo'); // 'bar'
+```
+
 # Capability Detection
 
-Keyv exports helper functions to check whether an object implements the expected interface for a Keyv instance, storage adapter, compression adapter, serialization adapter, or encryption adapter. Each function returns an object with boolean flags for every capability, plus a top-level boolean indicating whether the object fully satisfies the interface.
+Keyv exports helper functions to check whether an object implements the expected interface for a Keyv instance, storage adapter, compression adapter, serialization adapter, or encryption adapter. Each function returns an object with a top-level `compatible` boolean (whether the object fully satisfies the interface) plus a `methods` record describing every method it looked for.
 
 ```ts
 import {
@@ -538,43 +555,47 @@ import {
   detectKeyvCompression,
   detectKeyvSerialization,
   detectKeyvEncryption,
-  detectCapabilities,
 } from 'keyv';
 ```
 
+Every entry in the `methods` record has the shape `{ exists: boolean, methodType: "sync" | "async" | "none" }`.
+
 ## detectKeyv(obj)
 
-Returns a `KeyvCapability` with a boolean for each Keyv method/property. The `keyv` flag is `true` only when **all** capabilities are present.
+Returns a `KeyvCapability`: `{ compatible, methods, properties }`. `compatible` is `true` only when **all** Keyv methods and properties are present.
 
 ```ts
 import Keyv, { detectKeyv } from 'keyv';
 
-detectKeyv(new Keyv());
-// { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
-//   getMany: true, setMany: true, deleteMany: true, hasMany: true,
-//   disconnect: true, getRaw: true, getManyRaw: true, setRaw: true,
-//   setManyRaw: true, hooks: true, stats: true, iterator: true }
+const result = detectKeyv(new Keyv());
+result.compatible;              // true — all capabilities present
+result.methods.get.exists;      // true
+result.methods.get.methodType;  // "async"
+result.properties.hooks;        // true
+result.properties.stats;        // true
 
-detectKeyv(new Map());
-// { keyv: false, get: true, set: true, ... }
+const partial = detectKeyv(new Map());
+partial.compatible;             // false — missing getMany, setMany, hooks, stats, etc.
+partial.methods.get.exists;     // true
 ```
 
 ## detectKeyvStorage(obj)
 
-Returns a `KeyvStorageCapability`. The `keyvStorage` flag is `true` when the object has `get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, and `hasMany`.
+Returns a `KeyvStorageCapability`: `{ compatible, store, methods }`. `compatible` is `true` when the object is a usable storage adapter, and `store` reports the detected kind:
 
-The result also includes:
-- **`mapLike`** — `true` when the object has synchronous `get`, `set`, `delete`, `has`, `entries`, and `keys` methods (i.e. it behaves like a `Map`)
-- **`methodTypes`** — a record mapping each method name to `"sync"`, `"async"`, or `"none"` (not present)
+- **`"keyvStorage"`** — implements the full async storage adapter interface (`get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, `hasMany`, all async)
+- **`"mapLike"`** — has synchronous `get`, `set`, `delete`, and `has` (i.e. it behaves like a `Map`)
+- **`"asyncMap"`** — has at least async `get`, `set`, `delete`, and `clear`
+- **`"none"`** — not a usable store
 
 ```ts
 import { detectKeyvStorage } from 'keyv';
 
 // Map-like object
-const result = detectKeyvStorage(new Map());
-result.mapLike; // true
-result.methodTypes.get; // "sync"
-result.methodTypes.set; // "sync"
+const map = detectKeyvStorage(new Map());
+map.compatible;              // true
+map.store;                   // "mapLike"
+map.methods.get.methodType;  // "sync"
 
 // Async storage adapter
 const adapter = {
@@ -583,58 +604,48 @@ const adapter = {
   deleteMany: async () => {}, hasMany: async () => {},
 };
 const adapterResult = detectKeyvStorage(adapter);
-adapterResult.keyvStorage; // true
-adapterResult.mapLike; // false
-adapterResult.methodTypes.get; // "async"
+adapterResult.compatible;             // true
+adapterResult.store;                  // "keyvStorage"
+adapterResult.methods.get.methodType; // "async"
 ```
 
 ## detectKeyvCompression(obj)
 
-Returns a `KeyvCompressionCapability`. The `keyvCompression` flag is `true` when both `compress` and `decompress` methods are present.
+Returns a `KeyvCompressionCapability`: `{ compatible, methods }`. `compatible` is `true` when both `compress` and `decompress` methods are present.
 
 ```ts
 import { detectKeyvCompression } from 'keyv';
 
-detectKeyvCompression({ compress: (d) => d, decompress: (d) => d });
-// { keyvCompression: true, compress: true, decompress: true }
+const result = detectKeyvCompression({ compress: (d) => d, decompress: (d) => d });
+result.compatible;                // true
+result.methods.compress.exists;   // true
+result.methods.decompress.exists; // true
 ```
 
 ## detectKeyvSerialization(obj)
 
-Returns a `KeyvSerializationCapability`. The `keyvSerialization` flag is `true` when both `stringify` and `parse` methods are present.
+Returns a `KeyvSerializationCapability`: `{ compatible, methods }`. `compatible` is `true` when both `stringify` and `parse` methods are present.
 
 ```ts
 import { detectKeyvSerialization } from 'keyv';
 
-detectKeyvSerialization(JSON);
-// { keyvSerialization: true, stringify: true, parse: true }
+const result = detectKeyvSerialization(JSON);
+result.compatible;               // true
+result.methods.stringify.exists; // true
+result.methods.parse.exists;     // true
 ```
 
 ## detectKeyvEncryption(obj)
 
-Returns a `KeyvEncryptionCapability`. The `keyvEncryption` flag is `true` when both `encrypt` and `decrypt` methods are present.
+Returns a `KeyvEncryptionCapability`: `{ compatible, methods }`. `compatible` is `true` when both `encrypt` and `decrypt` methods are present.
 
 ```ts
 import { detectKeyvEncryption } from 'keyv';
 
-detectKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
-// { keyvEncryption: true, encrypt: true, decrypt: true }
-```
-
-## detectCapabilities(obj, spec)
-
-A generic helper for building your own capability checks. Accepts a `CapabilitySpec` describing which methods and properties to look for, which are required, and the name of the composite boolean key.
-
-```ts
-import { detectCapabilities } from 'keyv';
-
-const result = detectCapabilities(myObject, {
-  methods: ['read', 'write'],
-  properties: ['name'],
-  requiredKeys: ['read', 'write', 'name'],
-  compositeKey: 'isValid',
-});
-// { isValid: true/false, read: true/false, write: true/false, name: true/false }
+const result = detectKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
+result.compatible;              // true
+result.methods.encrypt.exists;  // true
+result.methods.decrypt.exists;  // true
 ```
 
 # API
@@ -700,6 +711,41 @@ Default: `new Map()`
 
 The storage adapter instance to be used by Keyv.
 
+## options.stats
+
+Type: `Boolean`<br />
+Default: `false`
+
+Enable statistics tracking (hits, misses, sets, deletes, errors). See [.stats](#stats) for details.
+
+## options.throwOnErrors
+
+Type: `Boolean`<br />
+Default: `false`
+
+Throw on all errors instead of only when there are no `'error'` listeners. See [.throwOnErrors](#throwonerrors) for details.
+
+## options.sanitize
+
+Type: `KeyvSanitizeOptions`<br />
+Default: `undefined`
+
+Enable sanitization of keys and namespaces by stripping dangerous patterns. See [.sanitize](#sanitize) for details.
+
+## options.encryption
+
+Type: `KeyvEncryptionAdapter`<br />
+Default: `undefined`
+
+Encryption adapter used to encrypt and decrypt stored values. See [Encryption](#encryption) for details.
+
+## options.checkExpired
+
+Type: `Boolean`<br />
+Default: `false`
+
+When `true`, Keyv checks expiry at its own layer on `get`/`getMany`/`has`/`hasMany` instead of trusting the storage adapter. See [.checkExpired](#checkexpired) for details.
+
 # Keyv Instance
 
 Keys must always be strings. Values can be of any type.
@@ -716,13 +762,13 @@ Returns a promise which resolves to `true`.
 
 Set multiple values using `KeyvEntry<Value>` objects (`{ key: string, value: Value, ttl?: number }`). The `Value` type is inferred from the entries provided.
 
-## .get(key, [options])
+## .get(key)
 
-Returns a promise which resolves to the retrieved value.
+Returns a promise which resolves to the retrieved value, or `undefined` if the key does not exist or is expired. If an array of keys is passed it delegates to `.getMany()` and resolves to an array of values.
 
-## .getMany(keys, [options])
+## .getMany(keys)
 
-Returns a promise which resolves to an array of retrieved values.
+Returns a promise which resolves to an array of retrieved values, with `undefined` for keys that do not exist or are expired.
 
 ## .getRaw(key)
 
@@ -833,7 +879,7 @@ for await (const [key, value] of keyv.iterator()) {
 The iterator works with any storage backend:
 - **Map stores**: iterates using the built-in `Symbol.iterator`
 - **Storage adapters**: delegates to the adapter's `iterator()` method (e.g., Redis SCAN, SQL cursor)
-- **Unsupported stores**: emits an `error` event if the store does not support iteration
+- **Unsupported stores**: yields nothing if the store does not support iteration
 
 # API - Properties
 
@@ -916,48 +962,33 @@ keyv.compression = new KeyvGzip();
 console.log(keyv.compression); // KeyvGzip
 ```
 
-## .useKeyPrefix
+## .encryption
 
-Type: `Boolean`<br />
-Default: `true`
+Type: `KeyvEncryptionAdapter`<br />
+Default: `undefined`
 
-If set to `true` Keyv will prefix all keys with the namespace. This is useful if you want to avoid collisions with other data in your storage.
+The encryption adapter used to encrypt and decrypt stored values. If `undefined` (default) values are not encrypted. See [Encryption](#encryption) for more details.
 
 ```js
-const keyv = new Keyv({ useKeyPrefix: false });
-console.log(keyv.useKeyPrefix); // false
-keyv.useKeyPrefix = true;
-console.log(keyv.useKeyPrefix); // true
+const keyv = new Keyv();
+console.log(keyv.encryption); // undefined
+keyv.encryption = {
+  encrypt: async (data) => Buffer.from(data).toString('base64'),
+  decrypt: async (data) => Buffer.from(data, 'base64').toString('utf8'),
+};
+console.log(keyv.encryption); // the encryption adapter
 ```
 
-With many of the storage adapters you will also need to set the `namespace` option to `undefined` to have it work correctly. This is because in `v5` we started the transition to having the storage adapter handle the namespacing and `Keyv` will no longer handle it internally via KeyPrefixing. Here is an example of doing ith with `KeyvSqlite`:
-
-```js
-import Keyv from 'keyv';
-import KeyvSqlite from '@keyv/sqlite';
-
-const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
-const keyv = new Keyv({ store });
-keyv.useKeyPrefix = false; // disable key prefixing
-store.namespace = undefined; // disable namespacing in the storage adapter
-
-await keyv.set('foo', 'bar'); // true
-await keyv.get('foo'); // 'bar'
-await keyv.clear();
-```
-
-## .emitErrors
+## .checkExpired
 
 Type: `Boolean`<br />
-Default: `true`
+Default: `false`
 
-If set to `true`, Keyv will emit an `'error'` event when an error occurs. Set to `false` to suppress error events.
+A read-only property (configured via the `checkExpired` constructor option). When `true`, Keyv checks expiry at its own layer on `get`, `getMany`, `has`, and `hasMany`, deleting any expired entries it encounters. When `false` (default) it trusts the storage adapter to handle expiry.
 
 ```js
-const keyv = new Keyv({ emitErrors: false });
-console.log(keyv.emitErrors); // false
-keyv.emitErrors = true;
-console.log(keyv.emitErrors); // true
+const keyv = new Keyv({ checkExpired: true });
+console.log(keyv.checkExpired); // true
 ```
 
 ## .throwOnErrors
@@ -1060,10 +1091,12 @@ const stats = new KeyvStats({ enabled: true, maxEntries: 500, emitter: keyv });
 ```
 
 ## .sanitize
-Type: `boolean | KeyvSanitizeOptions`<br />
-Default: `false`
+Type: `KeyvSanitize` (configured via the `sanitize` option: `KeyvSanitizeOptions`)<br />
+Default: disabled
 
-Detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped.
+The `.sanitize` property is a `KeyvSanitize` adapter. It is configured through the `sanitize` constructor option (`true`, or a `KeyvSanitizeOptions` object) and disabled by default.
+
+It detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped.
 
 Results are cached in an LRU cache (10,000 entries) for fast repeated lookups.
 
@@ -1118,11 +1151,16 @@ const keyv = new Keyv({
 });
 ```
 
-Change at runtime:
+Change at runtime by updating the options on the existing adapter, or by replacing it:
 ```js
-keyv.sanitize = false; // disable
-keyv.sanitize = true;  // enable all
-keyv.sanitize = { keys: { sql: true, mongo: false } }; // granular
+import { KeyvSanitize } from 'keyv';
+
+// Update options on the existing adapter
+keyv.sanitize.updateOptions({ keys: true, namespace: true });   // enable all
+keyv.sanitize.updateOptions({ keys: { sql: true, mongo: false } }); // granular
+
+// Or replace the adapter entirely
+keyv.sanitize = new KeyvSanitize({ keys: true, namespace: true });
 ```
 
 Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`. Namespace sanitization is applied at construction and when the `namespace` setter is used.

@@ -1,80 +1,85 @@
-import { describe, expect, it } from "vitest";
+import { faker } from "@faker-js/faker";
+import { describe, expect, test } from "vitest";
 import { Keyv } from "../src/index.js";
 import { KeyvStats } from "../src/stats.js";
 
-it("will initialize at zero, increment counters, and handle errors", async () => {
-	const stats = new KeyvStats({ enabled: true });
-	expect(stats.hits).toBe(0);
-	expect(stats.misses).toBe(0);
-	expect(stats.sets).toBe(0);
-	expect(stats.deletes).toBe(0);
-	expect(stats.errors).toBe(0);
+describe("stats counters", () => {
+	test("will initialize at zero, increment counters, and handle errors", async () => {
+		const stats = new KeyvStats({ enabled: true });
+		expect(stats.hits).toBe(0);
+		expect(stats.misses).toBe(0);
+		expect(stats.sets).toBe(0);
+		expect(stats.deletes).toBe(0);
+		expect(stats.errors).toBe(0);
 
-	const keyv = new Keyv({ stats: true });
-	await keyv.set("key1", "value1");
-	expect(keyv.stats.sets).toBe(1);
-	await keyv.get("key1");
-	expect(keyv.stats.hits).toBe(1);
-	await keyv.get("missing");
-	expect(keyv.stats.misses).toBe(1);
-	await keyv.delete("key1");
-	expect(keyv.stats.deletes).toBe(1);
-});
+		const keyv = new Keyv({ stats: true });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await keyv.set(key, value);
+		expect(keyv.stats.sets).toBe(1);
+		await keyv.get(key);
+		expect(keyv.stats.hits).toBe(1);
+		await keyv.get(faker.string.alphanumeric(10));
+		expect(keyv.stats.misses).toBe(1);
+		await keyv.delete(key);
+		expect(keyv.stats.deletes).toBe(1);
+	});
 
-it("will increment error counter on store error", async () => {
-	// biome-ignore lint/suspicious/noExplicitAny: testing with Map as store
-	const errorStore = new Map() as any;
-	const keyv = new Keyv({ store: errorStore, stats: true });
-	keyv.on("error", () => {});
-	errorStore.get = () => {
-		throw new Error("store error");
-	};
-	await keyv.get("badkey");
-	expect(keyv.stats.errors).toBe(1);
-});
+	test("will increment error counter on store error", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: testing with Map as store
+		const errorStore = new Map() as any;
+		const keyv = new Keyv({ store: errorStore, stats: true });
+		keyv.on("error", () => {});
+		errorStore.get = () => {
+			throw new Error("store error");
+		};
+		await keyv.get("badkey");
+		expect(keyv.stats.errors).toBe(1);
+	});
 
-it("will not increment counters when disabled, and reset works", async () => {
-	const keyv = new Keyv({ stats: false });
-	await keyv.set("key1", "value1");
-	await keyv.get("key1");
-	expect(keyv.stats.sets).toBe(0);
-	expect(keyv.stats.hits).toBe(0);
+	test("will not increment counters when disabled, and reset works", async () => {
+		const keyv = new Keyv({ stats: false });
+		await keyv.set("key1", "value1");
+		await keyv.get("key1");
+		expect(keyv.stats.sets).toBe(0);
+		expect(keyv.stats.hits).toBe(0);
 
-	// Reset
-	const keyv2 = new Keyv({ stats: true });
-	await keyv2.set("key1", "value1");
-	await keyv2.get("key1");
-	await keyv2.get("missing");
-	await keyv2.delete("key1");
-	keyv2.stats.reset();
-	expect(keyv2.stats.sets).toBe(0);
-	expect(keyv2.stats.hits).toBe(0);
-	expect(keyv2.stats.misses).toBe(0);
-	expect(keyv2.stats.deletes).toBe(0);
-});
+		// Reset
+		const keyv2 = new Keyv({ stats: true });
+		await keyv2.set("key1", "value1");
+		await keyv2.get("key1");
+		await keyv2.get("missing");
+		await keyv2.delete("key1");
+		keyv2.stats.reset();
+		expect(keyv2.stats.sets).toBe(0);
+		expect(keyv2.stats.hits).toBe(0);
+		expect(keyv2.stats.misses).toBe(0);
+		expect(keyv2.stats.deletes).toBe(0);
+	});
 
-it("will default enabled to false and maxEntries to 1000", () => {
-	const stats = new KeyvStats();
-	expect(stats.enabled).toBe(false);
-	expect(stats.maxEntries).toBe(1000);
-});
+	test("will default enabled to false and maxEntries to 1000", () => {
+		const stats = new KeyvStats();
+		expect(stats.enabled).toBe(false);
+		expect(stats.maxEntries).toBe(1000);
+	});
 
-it("will unsubscribe when enabled is set to false and re-subscribe on true", async () => {
-	const keyv = new Keyv({ stats: true });
-	await keyv.set("key1", "value1");
-	expect(keyv.stats.sets).toBe(1);
+	test("will unsubscribe when enabled is set to false and re-subscribe on true", async () => {
+		const keyv = new Keyv({ stats: true });
+		await keyv.set("key1", "value1");
+		expect(keyv.stats.sets).toBe(1);
 
-	keyv.stats.enabled = false;
-	await keyv.set("key2", "value2");
-	expect(keyv.stats.sets).toBe(1);
+		keyv.stats.enabled = false;
+		await keyv.set("key2", "value2");
+		expect(keyv.stats.sets).toBe(1);
 
-	keyv.stats.enabled = true;
-	await keyv.set("key3", "value3");
-	expect(keyv.stats.sets).toBe(2);
+		keyv.stats.enabled = true;
+		await keyv.set("key3", "value3");
+		expect(keyv.stats.sets).toBe(2);
+	});
 });
 
 describe("LRU key frequency maps", () => {
-	it("should accept options and enforce maxEntries", () => {
+	test("should accept options and enforce maxEntries", () => {
 		const stats = new KeyvStats({ enabled: true, maxEntries: 500 });
 		expect(stats.maxEntries).toBe(500);
 
@@ -86,7 +91,7 @@ describe("LRU key frequency maps", () => {
 		expect(stats2.hitKeys.size).toBe(1000);
 	});
 
-	it("should track keys, evict LRU, and preserve recently accessed", () => {
+	test("should track keys, evict LRU, and preserve recently accessed", () => {
 		const stats = new KeyvStats();
 		stats.incrementKeys(stats.hitKeys, "user:123");
 		stats.incrementKeys(stats.hitKeys, "user:123");
@@ -116,7 +121,7 @@ describe("LRU key frequency maps", () => {
 		expect(stats3.hitKeys.has("b")).toBe(false);
 	});
 
-	it("should track each event type independently", () => {
+	test("should track each event type independently", () => {
 		const stats = new KeyvStats();
 		stats.incrementKeys(stats.hitKeys, "key1");
 		stats.incrementKeys(stats.missKeys, "key1");
@@ -131,7 +136,7 @@ describe("LRU key frequency maps", () => {
 		expect(stats.errorKeys.get("key4")).toBe(1);
 	});
 
-	it("should build composite key with and without namespace", () => {
+	test("should build composite key with and without namespace", () => {
 		const stats = new KeyvStats();
 		expect(
 			stats.buildKeyEventName({
@@ -147,7 +152,7 @@ describe("LRU key frequency maps", () => {
 		expect(stats.buildKeyEventName({ event: "error", timestamp: Date.now() })).toBe("");
 	});
 
-	it("should not track empty keys or when maxEntries is 0", () => {
+	test("should not track empty keys or when maxEntries is 0", () => {
 		const stats = new KeyvStats();
 		stats.incrementKeys(stats.errorKeys, "");
 		expect(stats.errorKeys.size).toBe(0);
@@ -157,7 +162,7 @@ describe("LRU key frequency maps", () => {
 		expect(stats2.hitKeys.size).toBe(0);
 	});
 
-	it("should clear all LRU maps on reset", () => {
+	test("should clear all LRU maps on reset", () => {
 		const stats = new KeyvStats();
 		stats.incrementKeys(stats.hitKeys, "a");
 		stats.incrementKeys(stats.missKeys, "b");
@@ -169,7 +174,7 @@ describe("LRU key frequency maps", () => {
 		expect(stats.missKeys.size).toBe(0);
 	});
 
-	it("should populate LRU maps via subscribe with namespace", async () => {
+	test("should populate LRU maps via subscribe with namespace", async () => {
 		const keyv = new Keyv({ stats: true, namespace: "myns" });
 		await keyv.set("foo", "bar");
 		await keyv.get("foo");
@@ -181,7 +186,7 @@ describe("LRU key frequency maps", () => {
 		expect(keyv.stats.deleteKeys.get("myns:foo")).toBe(1);
 	});
 
-	it("should track error keys via subscribe", async () => {
+	test("should track error keys via subscribe", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: testing with Map as store
 		const errorStore = new Map() as any;
 		const keyv = new Keyv({ store: errorStore, stats: true });
@@ -195,7 +200,7 @@ describe("LRU key frequency maps", () => {
 });
 
 describe("unsubscribe", () => {
-	it("should stop tracking and be safe to call multiple times", async () => {
+	test("should stop tracking and be safe to call multiple times", async () => {
 		const keyv = new Keyv({ stats: true });
 		await keyv.set("key1", "value1");
 		keyv.stats.unsubscribe();
