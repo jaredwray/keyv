@@ -113,9 +113,6 @@ const store = new KeyvMysql({ uri, keyLength: 512 });
 store.keyLength; // 512
 ```
 
-
-The `opts` getter still exists for backward compatibility but should not be used for new code.
-
 ### New features
 
 #### Native TTL support with `expires` column
@@ -407,21 +404,23 @@ await keyvMysql.disconnect();
 
 ## SSL
 
+SSL options are passed through to `mysql2` as part of the options object. The constructor takes a single argument, so include the `uri` alongside the `ssl` configuration:
+
 ```js
 import Keyv from 'keyv';
 import KeyvMysql from '@keyv/mysql';
 import fs from 'fs';
+import path from 'path';
 
-const options = {
+const keyvMysql = new KeyvMysql({
+	uri: 'mysql://user:pass@localhost:3306/dbname',
 	ssl: {
 		rejectUnauthorized: false,
 		ca: fs.readFileSync(path.join(__dirname, '/certs/ca.pem')).toString(),
 		key: fs.readFileSync(path.join(__dirname, '/certs/client-key.pem')).toString(),
 		cert: fs.readFileSync(path.join(__dirname, '/certs/client-cert.pem')).toString(),
 	},
-};
-
-const keyvMysql = new KeyvMysql('mysql://user:pass@localhost:3306/dbname', options);
+});
 const keyv = new Keyv({ store: keyvMysql });
 ```
 

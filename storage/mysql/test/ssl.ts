@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { beforeEach, it } from "vitest";
+import { faker } from "@faker-js/faker";
+import { beforeEach, describe, expect, test } from "vitest";
 import KeyvMysql from "../src/index.js";
+import { endPool } from "../src/pool.js";
+
+const uri = "mysql://root@localhost:3307/keyv_test";
 
 const options = {
 	ssl: {
@@ -13,26 +17,31 @@ const options = {
 };
 
 beforeEach(async () => {
-	const keyv = new KeyvMysql({
-		uri: "mysql://root@localhost:3307/keyv_test",
-		...options,
-	});
+	const keyv = new KeyvMysql({ uri, ...options });
 	await keyv.clear();
 });
 
-it("throws if ssl is not used", async (t) => {
-	try {
-		new KeyvMysql({ uri: "mysql://root@localhost:3307/keyv_test" });
-	} catch {
-		t.expect(true).toBeTruthy();
-	}
-});
-
-it("set with ssl ", async (t) => {
-	const keyv = new KeyvMysql({
-		uri: "mysql://root@localhost:3307/keyv_test",
-		...options,
+describe("ssl", () => {
+	test("rejects when ssl is required but not provided", async () => {
+		// The shared pool is cached by uri, so reset it to force a fresh
+		// non-ssl connection (and reset again afterwards for the ssl tests).
+		endPool();
+		try {
+			const keyv = new KeyvMysql({ uri });
+			await keyv.get(faker.string.alphanumeric(10));
+			expect.fail();
+		} catch {
+			expect(true).toBeTruthy();
+		} finally {
+			endPool();
+		}
 	});
-	await keyv.set("key", "value");
-	t.expect(await keyv.get("key")).toBe("value");
+
+	test("sets and gets a value over an ssl connection", async () => {
+		const keyv = new KeyvMysql({ uri, ...options });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await keyv.set(key, value);
+		expect(await keyv.get(key)).toBe(value);
+	});
 });
