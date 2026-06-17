@@ -11,7 +11,7 @@ import type {
  * Configuration options for the KeyvMongo adapter.
  * Extends `MongoClientOptions`, so any MongoDB driver option may also be provided.
  */
-export type Options = {
+export type KeyvMongoOptions = {
 	/**
 	 * The MongoDB connection URI.
 	 * @default 'mongodb://127.0.0.1:27017'
@@ -44,12 +44,6 @@ export type Options = {
 	 */
 	readPreference?: ReadPreference;
 } & MongoClientOptions;
-
-/**
- * Options accepted by the KeyvMongo constructor: either an {@link Options} object or a
- * MongoDB connection URI string.
- */
-export type KeyvMongoOptions = Options | string;
 
 /**
  * Fields common to every resolved KeyvMongo connection, regardless of mode.

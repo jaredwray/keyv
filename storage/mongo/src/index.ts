@@ -8,7 +8,7 @@ import {
 	MongoClient as mongoClient,
 	type ReadPreference,
 } from "mongodb";
-import type { KeyvMongoConnect, KeyvMongoOptions, Options } from "./types.js";
+import type { KeyvMongoConnect, KeyvMongoOptions } from "./types.js";
 
 /**
  * MongoDB storage adapter for Keyv.
@@ -66,10 +66,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @param url - Configuration options, connection URI string, or undefined for defaults.
 	 * @param options - Additional configuration options that override the first parameter.
 	 */
-	constructor(url?: KeyvMongoOptions, options?: Options) {
+	constructor(url?: KeyvMongoOptions | string, options?: KeyvMongoOptions) {
 		super({ throwOnEmptyListeners: false });
 
-		let mergedOptions: Options = {};
+		let mergedOptions: KeyvMongoOptions = {};
 
 		if (typeof url === "string") {
 			this._url = url;
@@ -728,7 +728,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Extracts MongoDB driver options from the provided options, filtering out Keyv-specific properties.
 	 */
-	private extractMongoOptions(options: Options): MongoClientOptions {
+	private extractMongoOptions(options: KeyvMongoOptions): MongoClientOptions {
 		const keyvKeys = new Set([
 			"url",
 			"collection",
@@ -818,7 +818,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
  * @param options - Optional {@link KeyvMongoOptions} configuration object or connection URI string.
  * @returns A new Keyv instance backed by MongoDB.
  */
-export const createKeyv = (options?: KeyvMongoOptions) => {
+export const createKeyv = (options?: KeyvMongoOptions | string) => {
 	const store = new KeyvMongo(options);
 	const namespace = typeof options === "object" ? options?.namespace : undefined;
 	return new Keyv({ store, namespace });
