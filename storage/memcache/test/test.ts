@@ -370,6 +370,47 @@ describe("error handling", () => {
 		keyv.on("error", () => {});
 		expect(await keyv.has(faker.string.uuid())).toBe(false);
 	});
+
+	test("forwards asynchronous client errors to adapter listeners", () => {
+		const store = new KeyvMemcache(uri);
+		let captured: unknown;
+		store.on("error", (error) => {
+			captured = error;
+		});
+
+		// The memcache client forwards node errors as `(nodeId, error)`.
+		const boom = new Error("boom");
+		store.client.emit("error", "node-1", boom);
+
+		expect(captured).toBe(boom);
+	});
+
+	test("wraps a client error event that carries no Error argument", () => {
+		const store = new KeyvMemcache(uri);
+		let captured: unknown;
+		store.on("error", (error) => {
+			captured = error;
+		});
+
+		// Degenerate shape: no Error instance present, so the payload is wrapped in an Error.
+		store.client.emit("error", "connection reset");
+
+		expect(captured).toBeInstanceOf(Error);
+		expect((captured as Error).message).toBe("connection reset");
+	});
+
+	test("does not emit when a client error event carries no payload", () => {
+		const store = new KeyvMemcache(uri);
+		let emitted = false;
+		store.on("error", () => {
+			emitted = true;
+		});
+
+		// Nothing to surface, so nothing should be forwarded to listeners.
+		store.client.emit("error");
+
+		expect(emitted).toBe(false);
+	});
 });
 
 describe("disconnect", () => {
