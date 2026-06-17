@@ -29,6 +29,13 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	private readonly _tableReady: Promise<void>;
 	private _keyPrefixSeparator = ":";
 
+	/**
+	 * Creates a new KeyvDynamo adapter.
+	 * @param options - A {@link KeyvDynamoOptions} object, or a DynamoDB endpoint URL string
+	 * (equivalent to passing `{ endpoint }`). Because the options extend `DynamoDBClientConfig`,
+	 * any AWS SDK client option (`region`, `credentials`, etc.) is also accepted. Defaults to
+	 * `{ tableName: "keyv" }`.
+	 */
 	constructor(options: KeyvDynamoOptions | string) {
 		super({ throwOnEmptyListeners: false });
 		options ??= {};
@@ -36,9 +43,13 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			options = { endpoint: options };
 		}
 
+		// `uri` is an alias for `endpoint`; `endpoint` wins when both are set.
+		const { uri, ...rest } = options;
+
 		this._opts = {
 			tableName: "keyv",
-			...options,
+			...rest,
+			endpoint: rest.endpoint ?? uri,
 		};
 
 		if (this._opts.namespace) {
@@ -54,6 +65,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Gets the default TTL fallback in milliseconds (6 hours).
+	 * @returns The default TTL fallback, in milliseconds.
 	 */
 	public get sixHoursInMilliseconds(): number {
 		return this._sixHoursInMilliseconds;
@@ -61,6 +73,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Sets the default TTL fallback in milliseconds.
+	 * @param value - The default TTL fallback, in milliseconds.
 	 */
 	public set sixHoursInMilliseconds(value: number) {
 		this._sixHoursInMilliseconds = value;
@@ -68,6 +81,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Gets the namespace used to prefix keys.
+	 * @returns The configured namespace, or `undefined` if none is set.
 	 */
 	public get namespace(): string | undefined {
 		return this._namespace;
@@ -75,6 +89,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Sets the namespace used to prefix keys.
+	 * @param value - The namespace to use, or `undefined` to clear it.
 	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
@@ -82,6 +97,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Gets the underlying DynamoDB Document client instance.
+	 * @returns The `DynamoDBDocument` client used for all operations.
 	 */
 	public get client(): DynamoDBDocument {
 		return this._client;
@@ -89,6 +105,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Sets the underlying DynamoDB Document client instance.
+	 * @param value - The `DynamoDBDocument` client to use for all operations.
 	 */
 	public set client(value: DynamoDBDocument) {
 		this._client = value;
@@ -96,6 +113,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Gets the DynamoDB table name.
+	 * @returns The name of the table used for storage.
 	 */
 	public get tableName(): string {
 		return this._opts.tableName;
@@ -103,21 +121,24 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Gets the DynamoDB endpoint URL, if configured.
+	 * @returns The endpoint URL, or `undefined` if none is configured.
 	 */
 	public get endpoint(): string | undefined {
 		return this._opts.endpoint as string | undefined;
 	}
 
 	/**
-	 * Gets the separator between the namespace and key.
+	 * Gets the separator placed between the namespace and key.
 	 * @default ':'
+	 * @returns The namespace/key separator.
 	 */
 	public get keyPrefixSeparator(): string {
 		return this._keyPrefixSeparator;
 	}
 
 	/**
-	 * Sets the separator between the namespace and key.
+	 * Sets the separator placed between the namespace and key.
+	 * @param value - The separator to place between the namespace and key.
 	 */
 	public set keyPrefixSeparator(value: string) {
 		this._keyPrefixSeparator = value;
@@ -175,6 +196,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to store
 	 * @param value - The value to store
 	 * @param ttl - Optional TTL in milliseconds
+	 * @returns `true` if the value was stored, `false` if the write failed.
 	 */
 	public async set(key: string, value: unknown, ttl?: number): Promise<boolean> {
 		try {
@@ -204,19 +226,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 		/* v8 ignore stop -- @preserve */
 	}
 
-	private isExpired(item: Record<string, unknown>, now: number = Date.now()): boolean {
-		if (typeof item.expiresAtMs === "number") {
-			return item.expiresAtMs <= now;
-		}
-		if (typeof item.expiresAt === "number") {
-			return (item.expiresAt - 1) * 1000 <= now;
-		}
-		return false;
-	}
-
 	/**
 	 * Stores multiple values in DynamoDB.
+	 * @template Value - The type of the values being stored.
 	 * @param entries - An array of objects containing key, value, and optional ttl
+	 * @returns An array of booleans, one per entry, indicating which writes succeeded.
 	 */
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
@@ -288,8 +302,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Retrieves a value from DynamoDB.
+	 * @template Value - The expected type of the stored value.
 	 * @param key - The key to retrieve
-	 * @returns The stored value, or `undefined` if the key does not exist.
+	 * @returns The stored value, or `undefined` if the key does not exist or has expired.
 	 */
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		try {
@@ -322,8 +337,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Retrieves multiple values from DynamoDB.
+	 * @template Value - The expected type of the stored values.
 	 * @param keys - An array of keys to retrieve
-	 * @returns An array of stored data corresponding to each key.
+	 * @returns An array of stored values corresponding to each key, with `undefined` for
+	 * keys that are missing or expired.
 	 */
 	public async getMany<Value>(
 		keys: string[],
@@ -394,7 +411,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to delete
 	 * @returns `true` if the key was deleted, `false` otherwise.
 	 */
-	public async delete(key: string) {
+	public async delete(key: string): Promise<boolean> {
 		try {
 			await this._tableReady;
 
@@ -443,8 +460,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Clears data from DynamoDB. If a namespace is set, only keys with
 	 * the namespace prefix are deleted. Otherwise, all keys are deleted.
+	 * @returns A promise that resolves once the matching keys have been deleted.
 	 */
-	public async clear() {
+	public async clear(): Promise<void> {
 		try {
 			await this._tableReady;
 
@@ -563,6 +581,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Disconnects from the DynamoDB client. This is a no-op for DynamoDB
 	 * since it uses HTTP requests and does not maintain a persistent connection.
+	 * @returns A promise that resolves immediately.
 	 */
 	public async disconnect(): Promise<void> {
 		// DynamoDB uses HTTP requests, no persistent connection to close.
@@ -572,6 +591,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * Iterates over all key-value pairs in the store matching the configured namespace.
 	 * Keys are returned without the namespace prefix. Does not require a namespace to be
 	 * passed; it uses the namespace configured on the adapter.
+	 * @template Value - The expected type of the stored values.
 	 * @yields `[key, value]` pairs as an async generator.
 	 */
 	public async *iterator<Value>(): AsyncGenerator<
@@ -630,6 +650,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Ensures the DynamoDB table exists and is active.
 	 * @param tableName - The table name to check or create
+	 * @returns A promise that resolves once the table exists and is active.
 	 */
 	public async ensureTable(tableName: string): Promise<void> {
 		try {
@@ -656,6 +677,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Creates a new DynamoDB table with TTL support.
 	 * @param tableName - The table name to create
+	 * @returns A promise that resolves once the table has been created and is active.
 	 */
 	public async createTable(tableName: string): Promise<void> {
 		try {
@@ -741,12 +763,39 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			}
 		}
 	}
+
+	/**
+	 * Determines whether a stored item has expired, based on its `expiresAtMs`
+	 * (millisecond) or `expiresAt` (second) fields.
+	 * @param item - The raw DynamoDB item to inspect.
+	 * @param now - The reference timestamp in milliseconds. Defaults to `Date.now()`.
+	 * @returns `true` if the item has expired, `false` if it is still valid or has no expiry.
+	 */
+	private isExpired(item: Record<string, unknown>, now: number = Date.now()): boolean {
+		if (typeof item.expiresAtMs === "number") {
+			return item.expiresAtMs <= now;
+		}
+		if (typeof item.expiresAt === "number") {
+			return (item.expiresAt - 1) * 1000 <= now;
+		}
+		return false;
+	}
 }
 
 export default KeyvDynamo;
+
+/**
+ * Configuration options for the {@link KeyvDynamo} adapter. Extends
+ * [`DynamoDBClientConfig`](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/client/dynamodb/),
+ * so any AWS SDK client option (`endpoint`, `region`, `credentials`, etc.) is also accepted.
+ */
 export type KeyvDynamoOptions = {
+	/** Key prefix used to isolate entries belonging to this instance. */
 	namespace?: string;
+	/** The DynamoDB table name. Created automatically if it does not exist. Defaults to `"keyv"`. */
 	tableName?: string;
+	/** Alias for `endpoint`. `endpoint` takes precedence when both are set. */
+	uri?: string;
 } & DynamoDBClientConfig;
 
 /**
