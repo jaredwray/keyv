@@ -15,6 +15,7 @@
 - Namespace support for key isolation across multiple Keyv instances
 - Automatic table creation with `PAY_PER_REQUEST` billing mode
 - `setMany`, `getMany`, `deleteMany`, and `hasMany` batch operations
+- Async `iterator` support with namespace-aware filtering
 - `createKeyv` helper for quick setup
 
 > **Note:** DynamoDB doesn't guarantee data will be deleted immediately upon expiration. See the [DynamoDB TTL documentation](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html) for details.
@@ -32,6 +33,8 @@
   - [.namespace](#namespace)
   - [.keyPrefixSeparator](#keyprefixseparator)
   - [.sixHoursInMilliseconds](#sixhoursinmilliseconds)
+  - [.tableName](#tablename)
+  - [.endpoint](#endpoint)
 - [Methods](#methods)
   - [constructor(options?)](#constructoroptions)
   - [.get(key)](#getkey)
@@ -43,6 +46,8 @@
   - [.clear()](#clear)
   - [.has(key)](#haskey)
   - [.hasMany(keys)](#hasmanykeys)
+  - [.iterator()](#iterator)
+  - [.disconnect()](#disconnect)
   - [.formatKey(key)](#formatkeykey)
   - [.createKeyPrefix(key, namespace?)](#createkeyprefixkey-namespace)
   - [.removeKeyPrefix(key, namespace?)](#removekeyprefixkey-namespace)
@@ -254,6 +259,22 @@ The default TTL fallback in milliseconds. Used when no TTL is specified in a `se
 |---|---|
 | `number` | `21600000` (6 hours) |
 
+### .tableName
+
+The DynamoDB table name in use. Read-only.
+
+| Type | Default |
+|---|---|
+| `string` | `'keyv'` |
+
+### .endpoint
+
+The configured DynamoDB endpoint URL, if one was provided. Read-only.
+
+| Type | Default |
+|---|---|
+| `string \| undefined` | `undefined` |
+
 ## Methods
 
 ### constructor(options?)
@@ -367,6 +388,29 @@ const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
 await store.set('key1', 'value1');
 await store.set('key2', 'value2');
 const results = await store.hasMany(['key1', 'key2', 'key3']); // [true, true, false]
+```
+
+### .iterator()
+
+Returns an async iterator over all `[key, value]` pairs in the store. If a namespace is set, only keys with that namespace are yielded and the namespace prefix is removed from the returned keys. The namespace does not need to be passed in — it uses the namespace configured on the adapter. Expired entries are skipped and deleted.
+
+```js
+const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
+await store.set('key1', 'value1');
+await store.set('key2', 'value2');
+
+for await (const [key, value] of store.iterator()) {
+  console.log(key, value);
+}
+```
+
+### .disconnect()
+
+Disconnects from the DynamoDB client. This is a no-op for DynamoDB since it communicates over HTTP requests and does not maintain a persistent connection.
+
+```js
+const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
+await store.disconnect();
 ```
 
 ### .formatKey(key)

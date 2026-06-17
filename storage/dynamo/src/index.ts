@@ -570,6 +570,8 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Iterates over all key-value pairs in the store matching the configured namespace.
+	 * Keys are returned without the namespace prefix. Does not require a namespace to be
+	 * passed; it uses the namespace configured on the adapter.
 	 * @yields `[key, value]` pairs as an async generator.
 	 */
 	public async *iterator<Value>(): AsyncGenerator<
@@ -604,7 +606,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 					continue;
 				}
 
-				yield [item.id as string, item.value as Awaited<Value>];
+				yield [
+					this.removeKeyPrefix(item.id as string, this._namespace),
+					item.value as Awaited<Value>,
+				];
 			}
 		} while (lastEvaluatedKey);
 	}
