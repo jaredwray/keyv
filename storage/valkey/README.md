@@ -73,8 +73,8 @@ Or you can manually create a storage adapter instance and pass it to Keyv:
 import Keyv from 'keyv';
 import KeyvValkey from '@keyv/valkey';
 
-const KeyvValkey = new KeyvValkey('redis://user:pass@localhost:6379');
-const keyv = new Keyv({ store: KeyvValkey });
+const keyvValkey = new KeyvValkey('redis://user:pass@localhost:6379');
+const keyv = new Keyv({ store: keyvValkey });
 ```
 
 Or reuse a previous Redis instance:
@@ -85,8 +85,8 @@ import Redis from 'iovalkey';
 import KeyvValkey from '@keyv/valkey';
 
 const redis = new Redis('redis://user:pass@localhost:6379');
-const KeyvValkey = new KeyvValkey(redis);
-const keyv = new Keyv({ store: KeyvValkey });
+const keyvValkey = new KeyvValkey(redis);
+const keyv = new Keyv({ store: keyvValkey });
 ```
 
 Or reuse a previous Redis cluster:
@@ -96,9 +96,9 @@ import Keyv from 'keyv';
 import Redis from 'iovalkey';
 import KeyvValkey from '@keyv/valkey';
 
-const redis = new Redis.Cluster('redis://user:pass@localhost:6379');
-const KeyvValkey = new KeyvValkey(redis);
-const keyv = new Keyv({ store: KeyvValkey });
+const cluster = new Redis.Cluster([{ host: '127.0.0.1', port: 7001 }]);
+const keyvValkey = new KeyvValkey(cluster);
+const keyv = new Keyv({ store: keyvValkey });
 ```
 ## Migrating to v6
 
@@ -110,11 +110,10 @@ In v6, all configuration options are exposed as top-level properties with getter
 
 ```js
 // v6
-store.useSets; // true
-store.useSets = false;
+store.useSets; // false (default)
+store.useSets = true;
+store.namespace = 'my-namespace';
 ```
-
-The `opts` getter still exists for backward compatibility but should not be used for new code.
 
 #### `useRedisSets` renamed to `useSets`
 
@@ -157,6 +156,7 @@ The `clear()` method automatically detects and cleans up legacy `namespace:`-pre
 | --- | --- | --- | --- |
 | `uri` | `string` | `undefined` | Valkey connection URI |
 | `useSets` | `boolean` | `false` | Whether to use sets for namespace key management |
+| `namespace` | `string` | `undefined` | Namespace used to prefix keys for multi-tenant isolation |
 
 ## Properties
 
@@ -337,4 +337,4 @@ Single-key methods (`get`, `set`, `delete`, `has`) work automatically in cluster
 
 ## License
 
-[MIT © Jared Wray](LISCENCE)
+[MIT © Jared Wray](LICENSE)

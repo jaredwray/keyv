@@ -36,6 +36,13 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	private _client: any;
 
 	/**
+	 * Tracks the client instance whose events have already been wired up so that
+	 * repeated initialization does not attach duplicate listeners.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: matches the internal client typing
+	private _eventsWiredClient: any;
+
+	/**
 	 * Creates a new KeyvValkey adapter instance.
 	 *
 	 * Accepts either a connection URI string, a pre-configured iovalkey Redis/Cluster instance,
@@ -44,8 +51,8 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 *
 	 * @param {KeyvValkeyOptions | KeyvUriOptions} uri - Connection URI string (e.g. `"redis://localhost:6379"`),
 	 *   a pre-configured iovalkey Redis/Cluster instance, or an options object.
-	 * @param {KeyvValkeyOptions} [options] - Additional adapter options such as `useSets`. Merged with
-	 *   options derived from `uri` when `uri` is a string or plain options object.
+	 * @param {KeyvValkeyOptions} [options] - Additional adapter options such as `useSets` and `namespace`.
+	 *   Merged with options derived from `uri` when `uri` is a string or plain options object.
 	 */
 	constructor(uri: KeyvValkeyOptions | KeyvUriOptions, options?: KeyvValkeyOptions) {
 		super({ throwOnEmptyListeners: false });
@@ -70,7 +77,11 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			this._useSets = options.useSets;
 		}
 
-		this._client.on("error", (error: Error) => this.emit("error", error));
+		if (options !== undefined && options.namespace !== undefined) {
+			this._namespace = options.namespace;
+		}
+
+		this.initClient();
 	}
 
 	/**
@@ -138,11 +149,13 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Replaces the underlying iovalkey Redis or Cluster client instance.
+	 * Replaces the underlying iovalkey Redis or Cluster client instance. This re-wires the
+	 * event listeners so errors from the new client continue to be re-emitted on the adapter.
 	 * @param {Redis | Cluster} value - The new iovalkey Redis or Cluster instance to use.
 	 */
 	public set client(value: Redis | Cluster) {
 		this._client = value;
+		this.initClient();
 	}
 
 	/**
@@ -185,7 +198,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				Array.from(slotMap.values(), async (slotKeys) => {
 					const values = await this._client.mget(slotKeys);
 					for (const [index, value] of values.entries()) {
-						resultMap.set(slotKeys[index], value);
+						resultMap.set(slotKeys[index], value ?? undefined);
 					}
 				}),
 			);
@@ -193,19 +206,21 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			return resolvedKeys.map((k) => resultMap.get(k) as KeyvStorageGetResult<Value | undefined>);
 		}
 
-		return this._client.mget(resolvedKeys);
+		const values: Array<string | null> = await this._client.mget(resolvedKeys);
+		return values.map((value) => value ?? undefined);
 	}
 
 	/**
 	 * Stores a key-value pair in the Valkey store with an optional TTL (time-to-live).
-	 * If the value is `undefined`, the operation is skipped and returns `undefined`.
+	 * If the value is `undefined`, the operation is skipped and returns `false`.
 	 * When `useSets` is enabled, the key is also added to the namespace tracking set
 	 * within an atomic transaction.
 	 * @param {string} key - The key under which to store the value.
 	 * @param {any} value - The value to store. If `undefined`, the operation is a no-op.
 	 * @param {number} [ttl] - Optional time-to-live in milliseconds. When provided, the key
 	 *   will automatically expire after this duration.
-	 * @returns {Promise<undefined>} Returns `undefined` if the value is `undefined`.
+	 * @returns {Promise<boolean>} `true` if the value was stored, `false` if the value was
+	 *   `undefined` or an error occurred while storing.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
@@ -249,9 +264,12 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * hash slot and each group is executed as a separate `MULTI/EXEC` transaction to avoid
 	 * CROSSSLOT errors. When `useSets` is enabled, each key is also added to the namespace
 	 * tracking set within the same transaction.
-	 * @param {Array<{ key: string; value: any; ttl?: number }>} entries - An array of objects
-	 *   containing `key`, `value`, and an optional `ttl` in milliseconds for each entry.
-	 * @returns {Promise<void>}
+	 * @template Value - The type of the stored values.
+	 * @param {KeyvEntry<Value>[]} entries - An array of `{ key, value, ttl? }` entries where
+	 *   `ttl` is an optional time-to-live in milliseconds.
+	 * @returns {Promise<boolean[] | undefined>} An array of booleans in the same order as the
+	 *   input entries. Each element is `true` if the corresponding entry was stored (entries with
+	 *   `undefined` values are reported as `true`), or `false` if it failed.
 	 */
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
@@ -344,7 +362,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @param {string} key - The key to delete.
 	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` if the key did not exist.
 	 */
-	public async delete(key: string) {
+	public async delete(key: string): Promise<boolean> {
 		key = this.getKeyName(key);
 		let items = 0;
 		// biome-ignore lint/suspicious/noExplicitAny: allowed
@@ -423,7 +441,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * to find and remove all keys matching the namespace prefix.
 	 * @returns {Promise<void>}
 	 */
-	public async clear() {
+	public async clear(): Promise<void> {
 		if (this._useSets) {
 			const setKey = this.getSetKey();
 			const keys: string[] = await this._client.smembers(setKey);
@@ -458,15 +476,16 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Creates an async generator that iterates over all key-value pairs matching
-	 * the given namespace. Uses the `SCAN` command for cursor-based iteration to
-	 * avoid blocking the server. Values are fetched in batches using `MGET`.
-	 * @param {string} [namespace] - The namespace to iterate over. If not provided,
-	 *   iterates over keys matching the empty namespace prefix.
-	 * @yields {[string, string]} A tuple of `[key, value]` for each matching entry.
-	 *   The key has the internal namespace prefix stripped when `useSets` is disabled.
+	 * Creates an async generator that iterates over all key-value pairs within the adapter's
+	 * configured namespace. The namespace is not passed in; it uses the namespace set on the
+	 * instance, so only keys for the current namespace are returned. Uses the `SCAN` command
+	 * for cursor-based iteration to avoid blocking the server, fetching values in batches with `MGET`.
+	 * @template Value - The type of the stored values.
+	 * @returns {AsyncGenerator<[string, Value | undefined], void, unknown>} An async generator
+	 *   yielding `[key, value]` tuples for each matching entry. The internal namespace prefix is
+	 *   stripped from each yielded key, and missing values are returned as `undefined`.
 	 */
-	public async *iterator() {
+	public async *iterator<Value>(): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const scan = this._client.scan.bind(this._client);
 		const get = this._client.mget.bind(this._client);
 		const keyPrefix = this.getKeyPrefix();
@@ -480,7 +499,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				const values = await get(keys);
 				for (const [i] of keys.entries()) {
 					const key = prefix ? keys[i].slice(prefix.length) : keys[i];
-					const value = values[i];
+					const value = (values[i] ?? undefined) as Value | undefined;
 					yield [key, value];
 				}
 			}
@@ -492,7 +511,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @param {string} key - The key to check for existence.
 	 * @returns {Promise<boolean>} `true` if the key exists, `false` otherwise.
 	 */
-	public async has(key: string) {
+	public async has(key: string): Promise<boolean> {
 		key = this.getKeyName(key);
 		const value: number = await this._client.exists(key);
 		return value !== 0;
@@ -504,8 +523,26 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * and any subsequent calls will throw an error.
 	 * @returns {Promise<void>}
 	 */
-	public async disconnect() {
+	public async disconnect(): Promise<void> {
 		return this._client.disconnect();
+	}
+
+	/**
+	 * Wires the underlying iovalkey client events (`error`, `connect`, `reconnecting`) so they
+	 * are re-emitted on this adapter via Hookified. Listeners are only attached once per client
+	 * instance, so repeated calls (such as when the client is replaced) do not create duplicates.
+	 * @returns {void}
+	 */
+	private initClient(): void {
+		if (this._eventsWiredClient === this._client) {
+			return;
+		}
+
+		this._eventsWiredClient = this._client;
+
+		this._client.on("error", (error: Error) => this.emit("error", error));
+		this._client.on("connect", () => this.emit("connect", this._client));
+		this._client.on("reconnecting", () => this.emit("reconnecting"));
 	}
 
 	/**
@@ -617,7 +654,7 @@ export function createKeyv(
 ): Keyv {
 	connect ??= "redis://localhost:6379";
 	const adapter = new KeyvValkey(connect, options);
-	const keyv = new Keyv(adapter);
+	const keyv = new Keyv({ store: adapter, namespace: options?.namespace });
 	return keyv;
 }
 
