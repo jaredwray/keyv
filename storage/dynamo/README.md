@@ -213,6 +213,7 @@ Options extend [`DynamoDBClientConfig`](https://docs.aws.amazon.com/AWSJavaScrip
 | `tableName` | `string` | `'keyv'` | The DynamoDB table name. Created automatically if it doesn't exist. |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
 | `endpoint` | `string` | — | The DynamoDB endpoint URL (e.g., `'http://localhost:8000'` for local development) |
+| `uri` | `string` | — | Alias for `endpoint` (for consistency with other Keyv adapters). `endpoint` takes precedence when both are set. |
 | `region` | `string` | — | The AWS region (e.g., `'us-east-1'`) |
 
 ```js
