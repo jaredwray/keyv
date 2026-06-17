@@ -21,7 +21,7 @@ export type MapInterface<K, V> = {
 	[Symbol.iterator](): IterableIterator<[K, V]>;
 	get(key: K): V | undefined;
 	has(key: K): boolean;
-	set(key: K, value: V): Map<K, V>;
+	set(key: K, value: V): MapInterface<K, V>;
 };
 
 /**
@@ -368,19 +368,17 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 	 * with the key and value.
 	 * @param {K} key - The key of the entry to set.
 	 * @param {V} value - The value to associate with the key.
-	 * @returns {Map<K, V>} The internal `Map` instance where the key was stored.
+	 * @returns {this} The BigMap instance, enabling method chaining (matches the native `Map.set` API).
 	 */
-	public set(key: K, value: V): Map<K, V> {
-		let store: Map<K, V>;
-		if (this._storeSize === 1) {
-			store = this._store[0];
-		} else {
-			store = this._resolve(typeof key === "string" ? key : String(key));
-		}
+	public set(key: K, value: V): this {
+		const store =
+			this._storeSize === 1
+				? this._store[0]
+				: this._resolve(typeof key === "string" ? key : String(key));
 
 		store.set(key, value);
 		this.emit(BigMapEvents.SET, key, value);
-		return store;
+		return this;
 	}
 
 	/**

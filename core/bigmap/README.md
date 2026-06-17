@@ -427,11 +427,14 @@ Sets the value for a key in the map.
 - `key` (K): The key to set
 - `value` (V): The value to associate with the key
 
-**Returns:** `Map<K, V>` - The internal Map instance where the key was stored
+**Returns:** `BigMap<K, V>` - The BigMap instance, enabling method chaining (matches the native `Map.set` API).
 
 **Example:**
 ```typescript
 bigMap.set('user123', { name: 'Alice' });
+
+// set() returns the BigMap instance, so calls can be chained
+bigMap.set('a', { name: 'Alice' }).set('b', { name: 'Bob' });
 ```
 
 ### get

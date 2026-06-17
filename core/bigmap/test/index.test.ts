@@ -378,11 +378,14 @@ describe("BigMap Set / Get", () => {
 		expect(bigMap.get(key)).toBe(value);
 	});
 
-	test("should return the internal store from set()", () => {
+	test("should return the BigMap instance from set() to allow chaining", () => {
 		const bigMap = new BigMap<string, number>();
-		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
-		const store = bigMap.set(key, value);
-		expect(store).toBe(bigMap.getStore(key));
+		const [first, second] = fakeEntries<number>(FakeDataType.NUMBER, 2);
+
+		const result = bigMap.set(first.key, first.value).set(second.key, second.value);
+		expect(result).toBe(bigMap);
+		expect(bigMap.get(first.key)).toBe(first.value);
+		expect(bigMap.get(second.key)).toBe(second.value);
 	});
 
 	test("should return undefined for a non-existing key", () => {
