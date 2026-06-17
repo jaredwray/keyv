@@ -218,7 +218,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 
-		if (this._useGridFS) {
+		if (client.useGridFS) {
 			const file = await client.store.findOne({
 				filename: { $eq: strippedKey },
 				"metadata.namespace": { $eq: ns },
@@ -230,8 +230,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 			// Delete expired GridFS entry
 			if (file.metadata?.expiresAt && new Date(file.metadata.expiresAt as Date) <= new Date()) {
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				await client.bucket!.delete(file._id);
+				await client.bucket.delete(file._id);
 				return undefined;
 			}
 
@@ -244,8 +243,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				},
 			);
 
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const stream = client.bucket!.openDownloadStream(file._id);
+			const stream = client.bucket.openDownloadStream(file._id);
 
 			return new Promise((resolve) => {
 				const resp: Uint8Array[] = [];
@@ -350,11 +348,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			const expiresAt = typeof ttl === "number" && ttl > 0 ? new Date(Date.now() + ttl) : null;
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
+			const client = await this.connect;
 
-			if (this._useGridFS) {
-				const client = await this.connect;
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				const stream = client.bucket!.openUploadStream(strippedKey, {
+			if (client.useGridFS) {
+				const stream = client.bucket.openUploadStream(strippedKey, {
 					metadata: {
 						expiresAt,
 						lastAccessed: new Date(),
@@ -375,7 +372,6 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				});
 			}
 
-			const client = await this.connect;
 			await client.store.updateOne(
 				{ key: { $eq: strippedKey }, namespace: { $eq: ns } },
 				{ $set: { key: strippedKey, value, namespace: ns, expiresAt } },
@@ -456,10 +452,9 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 
-		if (this._useGridFS) {
+		if (client.useGridFS) {
 			try {
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				const connection = client.db!;
+				const connection = client.db;
 				const bucket = new GridFSBucket(connection, {
 					bucketName: this._collection,
 				});
@@ -473,8 +468,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 					return false;
 				}
 
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				await client.bucket!.delete(files[0]._id);
+				await client.bucket.delete(files[0]._id);
 				return true;
 			} catch (error) {
 				this.emit("error", error);
@@ -508,9 +502,8 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const client = await this.connect;
 		const ns = this.getNamespaceValue();
 
-		if (this._useGridFS) {
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const connection = client.db!;
+		if (client.useGridFS) {
+			const connection = client.db;
 			const bucket = new GridFSBucket(connection, {
 				bucketName: this._collection,
 			});
@@ -520,10 +513,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				})
 				.toArray();
 
-			await Promise.all(
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				files.map(async (file) => client.bucket!.delete(file._id)),
-			);
+			await Promise.all(files.map(async (file) => client.bucket.delete(file._id)));
 			return;
 		}
 
@@ -538,34 +528,27 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @returns `true` if running in GridFS mode, `false` otherwise.
 	 */
 	public async clearExpired(): Promise<boolean> {
-		if (!this._useGridFS) {
+		const client = await this.connect;
+		if (!client.useGridFS) {
 			return false;
 		}
 
 		const ns = this.getNamespaceValue();
-
-		return this.connect.then(async (client) => {
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			const connection = client.db!;
-			const bucket = new GridFSBucket(connection, {
-				bucketName: this._collection,
-			});
-
-			return bucket
-				.find({
-					"metadata.expiresAt": {
-						$lte: new Date(Date.now()),
-					},
-					"metadata.namespace": { $eq: ns },
-				})
-				.toArray()
-				.then(async (expiredFiles) =>
-					Promise.all(
-						// biome-ignore lint/style/noNonNullAssertion: need to fix
-						expiredFiles.map(async (file) => client.bucket!.delete(file._id)),
-					).then(() => true),
-				);
+		const bucket = new GridFSBucket(client.db, {
+			bucketName: this._collection,
 		});
+
+		const expiredFiles = await bucket
+			.find({
+				"metadata.expiresAt": {
+					$lte: new Date(Date.now()),
+				},
+				"metadata.namespace": { $eq: ns },
+			})
+			.toArray();
+
+		await Promise.all(expiredFiles.map(async (file) => client.bucket.delete(file._id)));
+		return true;
 	}
 
 	/**
@@ -575,15 +558,13 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @returns `true` if running in GridFS mode, `false` otherwise.
 	 */
 	public async clearUnusedFor(seconds: number): Promise<boolean> {
-		if (!this._useGridFS) {
+		const client = await this.connect;
+		if (!client.useGridFS) {
 			return false;
 		}
 
 		const ns = this.getNamespaceValue();
-		const client = await this.connect;
-		// biome-ignore lint/style/noNonNullAssertion: need to fix
-		const connection = client.db!;
-		const bucket = new GridFSBucket(connection, {
+		const bucket = new GridFSBucket(client.db, {
 			bucketName: this._collection,
 		});
 
@@ -596,10 +577,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			})
 			.toArray();
 
-		await Promise.all(
-			// biome-ignore lint/style/noNonNullAssertion: need to fix
-			lastAccessedFiles.map(async (file) => client.bucket!.delete(file._id)),
-		);
+		await Promise.all(lastAccessedFiles.map(async (file) => client.bucket.delete(file._id)));
 		return true;
 	}
 
@@ -613,19 +591,17 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const client = await this.connect;
 		const namespaceValue = this.getNamespaceValue();
 
-		if (this._useGridFS) {
+		if (client.useGridFS) {
 			const now = new Date();
 			const cursor = client.store.find({ "metadata.namespace": { $eq: namespaceValue } });
 
 			for await (const file of cursor) {
 				if (file.metadata?.expiresAt && new Date(file.metadata.expiresAt as Date) <= now) {
-					// biome-ignore lint/style/noNonNullAssertion: need to fix
-					await client.bucket!.delete(file._id);
+					await client.bucket.delete(file._id);
 					continue;
 				}
 
-				// biome-ignore lint/style/noNonNullAssertion: need to fix
-				const stream = client.bucket!.openDownloadStream(file._id);
+				const stream = client.bucket.openDownloadStream(file._id);
 				const data = await new Promise<string | undefined>((resolve) => {
 					const resp: Uint8Array[] = [];
 					/* v8 ignore next -- @preserve */
@@ -807,6 +783,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				await store.createIndex({ "metadata.namespace": 1 });
 
 				return {
+					useGridFS: true,
 					bucket,
 					store,
 					db: database,
@@ -826,7 +803,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			await store.createIndex({ key: 1, namespace: 1 }, { unique: true, background: true });
 			await store.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, background: true });
 
-			return { store, mongoClient: client };
+			return { useGridFS: false, store, mongoClient: client };
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);

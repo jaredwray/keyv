@@ -52,15 +52,38 @@ export type Options = {
 export type KeyvMongoOptions = Options | string;
 
 /**
- * The resolved MongoDB connection details produced once the adapter has connected.
+ * Fields common to every resolved KeyvMongo connection, regardless of mode.
  */
-export type KeyvMongoConnect = {
-	/** The GridFS bucket. Present only when `useGridFS` is enabled. */
-	bucket?: GridFSBucket;
+type KeyvMongoConnectBase = {
 	/** The collection used for storage. In GridFS mode this is the `<collection>.files` collection. */
 	store: Collection;
-	/** The database handle. Present only when `useGridFS` is enabled. */
-	db?: Db;
 	/** The underlying MongoDB client instance. */
 	mongoClient: MongoClient;
 };
+
+/**
+ * Resolved connection details for standard (non-GridFS) mode.
+ */
+export type KeyvMongoConnectStandard = KeyvMongoConnectBase & {
+	/** Discriminant: always `false` in standard mode. */
+	useGridFS: false;
+};
+
+/**
+ * Resolved connection details for GridFS mode, where `bucket` and `db` are always present.
+ */
+export type KeyvMongoConnectGridFS = KeyvMongoConnectBase & {
+	/** Discriminant: always `true` in GridFS mode. */
+	useGridFS: true;
+	/** The GridFS bucket. */
+	bucket: GridFSBucket;
+	/** The database handle. */
+	db: Db;
+};
+
+/**
+ * The resolved MongoDB connection details produced once the adapter has connected.
+ * Discriminated union: the `useGridFS` discriminant selects {@link KeyvMongoConnectStandard}
+ * or {@link KeyvMongoConnectGridFS}.
+ */
+export type KeyvMongoConnect = KeyvMongoConnectStandard | KeyvMongoConnectGridFS;
