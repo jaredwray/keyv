@@ -28,10 +28,7 @@ describe("ssl", () => {
 		endPool();
 		try {
 			const keyv = new KeyvMysql({ uri });
-			await keyv.get(faker.string.alphanumeric(10));
-			expect.fail();
-		} catch {
-			expect(true).toBeTruthy();
+			await expect(keyv.get(faker.string.alphanumeric(10))).rejects.toThrow();
 		} finally {
 			endPool();
 		}
