@@ -186,6 +186,18 @@ describe("BigMap Events", () => {
 
 		expect(emitted).toBe(true);
 	});
+
+	test("should emit a clear event when the store size changes", () => {
+		const bigMap = new BigMap<string, number>();
+		let emitted = 0;
+		bigMap.on(BigMapEvents.CLEAR, () => {
+			emitted++;
+		});
+
+		bigMap.storeSize = 4;
+
+		expect(emitted).toBe(1);
+	});
 });
 
 describe("BigMap Iterators", () => {

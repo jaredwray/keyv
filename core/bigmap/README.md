@@ -212,7 +212,7 @@ for (const [key, value] of bigMap.entries()) {
 |-------------------|----------------------|----------------|------------------------------------------------------------------------------|
 | `set`             | `BigMapEvents.SET`   | `(key, value)` | Emitted after a value is set.                                                |
 | `delete`          | `BigMapEvents.DELETE`| `(key)`        | Emitted after an existing entry is removed. Not emitted when the key was absent. |
-| `clear`           | `BigMapEvents.CLEAR` | _(none)_       | Emitted after all entries are cleared.                                       |
+| `clear`           | `BigMapEvents.CLEAR` | _(none)_       | Emitted after all entries are cleared, including when `storeSize` changes.    |
 
 ```typescript
 import { BigMap, BigMapEvents } from '@keyv/bigmap';
@@ -235,6 +235,8 @@ bigMap.set('key1', 100); // logs: set key1 100
 bigMap.delete('key1');   // logs: deleted key1
 bigMap.clear();          // logs: cleared
 ```
+
+> **Note:** When Hookified's `eventLogger` option is enabled, event arguments — including the value passed to `set` — are serialized with `JSON.stringify` for logging. Values that cannot be JSON-serialized, such as `BigInt` or circular objects, will cause the operation to throw while logging. Leave `eventLogger` unset (the default) if you need to store such values.
 
 # Advanced Features
 
@@ -394,7 +396,7 @@ const customBigMap = new BigMap<string, number>({
 | Property | Type | Access | Description |
 |----------|------|--------|-------------|
 | `size` | `number` | Read-only | Gets the total number of entries in the BigMap. |
-| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this will clear all entries. Default: `2` |
+| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this clears all entries and emits `BigMapEvents.CLEAR`. Default: `2` |
 | `storeHashFunction` | `StoreHashFunction \| undefined` | Read/Write | Gets or sets the hash function used for key distribution. |
 | `store` | `Array<Map<K, V>>` | Read-only | Gets the internal array of Map instances. |
 

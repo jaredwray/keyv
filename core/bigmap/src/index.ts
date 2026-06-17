@@ -154,7 +154,8 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 
 	/**
 	 * Sets the number of internal `Map` instances in the store.
-	 * Changing the store size clears all existing entries.
+	 * Changing the store size clears all existing entries and emits
+	 * {@link BigMapEvents.CLEAR}.
 	 * @param {number} size - The new size of the store.
 	 * @throws {Error} If the size is less than 1.
 	 */
@@ -166,6 +167,7 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 		this._storeSize = size;
 		this._isPowerOf2 = (size & (size - 1)) === 0;
 		this.initStore();
+		this.emit(BigMapEvents.CLEAR);
 	}
 
 	/**
