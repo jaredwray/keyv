@@ -305,6 +305,12 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			return query;
 		});
 
+		// Prevent an unhandled rejection when an instance is constructed but never
+		// queried (e.g. the shared pool is closed by another instance before the
+		// table-creation queries finish). Real query failures still surface to
+		// callers because `this.query` awaits the same `connected` promise below.
+		connected.catch(() => {});
+
 		this.query = async <T>(sqlString: string): QueryType<T> => {
 			const query = await connected;
 			return query(sqlString) as QueryType<T>;
@@ -335,7 +341,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			return undefined as KeyvStorageGetResult<Value>;
 		}
 
-		return row.value as KeyvStorageGetResult<Value>;
+		// Coerce a SQL NULL value to undefined so the adapter never returns null.
+		return (row.value ?? undefined) as KeyvStorageGetResult<Value>;
 	}
 
 	/**
@@ -344,6 +351,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @returns Array of stored values in the same order as the input keys, with undefined for missing keys
 	 */
 	public async getMany<Value>(keys: string[]) {
+		if (keys.length === 0) {
+			return [];
+		}
+
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
@@ -367,7 +378,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			await this.query(mysql.format(delSql, [expiredKeys, ns]));
 		}
 
-		return strippedKeys.map((key) => validMap.get(key) as KeyvStorageGetResult<Value | undefined>);
+		// Coerce missing keys and SQL NULL values to undefined so the adapter never returns null.
+		return strippedKeys.map(
+			(key) => (validMap.get(key) ?? undefined) as KeyvStorageGetResult<Value | undefined>,
+		);
 	}
 
 	/**
