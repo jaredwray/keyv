@@ -195,6 +195,8 @@ describe("opts", () => {
 		expect(keyv.opts.uri).toBe(sqliteUri);
 		expect(keyv.opts.table).toBe("cache");
 		expect(keyv.opts.keySize).toBe(512);
+		// keySize is also exposed under its keyLength alias.
+		expect(keyv.opts.keyLength).toBe(512);
 		expect(keyv.opts.iterationLimit).toBe(25);
 		expect(keyv.opts.wal).toBe(false);
 	});

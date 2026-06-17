@@ -413,6 +413,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Get all current settings as a plain {@link KeyvSqliteOptions} object.
 	 * Provided for backward compatibility with v5; prefer the individual property getters.
+	 * `keySize` is also exposed under its `keyLength` alias.
 	 * @returns {KeyvSqliteOptions} A snapshot of the current configuration.
 	 */
 	public get opts(): KeyvSqliteOptions {
@@ -420,6 +421,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			uri: this._uri,
 			table: this._table,
 			keySize: this._keySize,
+			keyLength: this._keySize,
 			namespaceLength: this._namespaceLength,
 			busyTimeout: this._busyTimeout,
 			iterationLimit: this._iterationLimit,
