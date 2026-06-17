@@ -12,20 +12,23 @@ import type {
 
 export type KeyvRedisOptions = {
 	/**
-	 * Namespace for the current instance.
-	 * Defaults to `keyv`
+	 * Namespace for the current instance. When undefined, no namespace prefixing is applied.
+	 * @default undefined
 	 */
 	namespace?: string;
 	/**
 	 * Separator to use between namespace and key.
+	 * @default "::"
 	 */
 	keyPrefixSeparator?: string;
 	/**
 	 * Number of keys to delete in a single batch.
+	 * @default 1000
 	 */
 	clearBatchSize?: number;
 	/**
 	 * Enable Unlink instead of using Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 * @default true
 	 */
 	useUnlink?: boolean;
 

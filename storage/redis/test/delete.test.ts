@@ -144,7 +144,7 @@ describe("delete", () => {
 		expect(didError).toBe(false);
 	});
 
-	test("should throw on getMany an error when throwOnErrors is true and an error occurs", async () => {
+	test("should throw on deleteMany when throwOnErrors is true and an error occurs", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {

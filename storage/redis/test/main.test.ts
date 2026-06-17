@@ -77,7 +77,7 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.namespace).toBe("test");
 	});
 
-	test("should be able to pass in the url and options to constructor", () => {
+	test("should be able to pass in the url and all options to constructor", () => {
 		const uri = "redis://localhost:6379";
 		const options = {
 			namespace: "test",

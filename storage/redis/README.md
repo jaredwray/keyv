@@ -159,7 +159,7 @@ export type KeyvRedisOptions = {
 	/**
 	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
 	 * If set, it will throw an error if the connection does not succeed within the specified time.
-   * @default undefined
+	 * @default undefined
 	 */
 	connectionTimeout?: number;
 };
@@ -481,79 +481,38 @@ const tlsOptions = {
 const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 ```
 
-# Keyv Redis Options
-
-Here are all the options that you can set on the constructor
-
-```ts
-export type KeyvRedisOptions = {
-	/**
-	 * Namespace for the current instance.
-	 */
-	namespace?: string;
-	/**
-	 * Separator to use between namespace and key.
-	 */
-	keyPrefixSeparator?: string;
-	/**
-	 * Number of keys to delete in a single batch.
-	 */
-	clearBatchSize?: number;
-	/**
-	 * Enable Unlink instead of using Del for clearing keys. This is more performant but may not be supported by all Redis versions.
-	 */
-	useUnlink?: boolean;
-
-	/**
-	 * Whether to allow clearing all keys when no namespace is set.
-	 * If set to true and no namespace is set, iterate() will return all keys.
-	 * Defaults to `false`.
-	 */
-	noNamespaceAffectsAll?: boolean;
-
-	/**
-	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
-	 * set to true so that it throws an error when trying to connect to the Redis server fails.
-	 */
-	throwOnConnectError?: boolean;
-
-	/**
-	 * This is used to throw an error if at any point there is a failure. Use this if you want to
-	 * ensure that all operations are successful and you want to handle errors. By default, this is
-	 * set to false so that it does not throw an error on every operation and instead emits an error event
-	 * and returns no-op responses.
-	 * @default false
-	 */
-	throwOnErrors?: boolean;
-
-	/**
-	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
-	 * If set, it will throw an error if the connection does not succeed within the specified time.
-	 * @default undefined
-	 */
-	connectionTimeout?: number;
-};
-```
-
 # API
-* **constructor([connection], [options])**
-* **namespace** - The namespace to use for the keys.
-* **client** - The Redis client instance.
-* **keyPrefixSeparator** - The separator to use between the namespace and key. It can be set to a blank string.
+
+## Properties
+* **client** - The Redis client, cluster, or sentinel connection instance.
+* **namespace** - The namespace to use for the keys. If `undefined` no namespace prefixing is applied. Default is `undefined`.
+* **keyPrefixSeparator** - The separator to use between the namespace and key. It can be set to a blank string. Default is `::`.
 * **clearBatchSize** - The number of keys to delete in a single batch. Has to be greater than 0. Default is `1000`.
-* **useUnlink** - Use the `UNLINK` command for deleting keys isntead of `DEL`.
-* **noNamespaceAffectsAll**: Whether to allow clearing all keys when no namespace is set (default is `false`).
-* **set** - Set a key.
-* **setMany** - Set multiple keys using `KeyvEntry<Value>` objects (`{ key: string, value: Value, ttl?: number }`) via `MULTI/EXEC` transactions. Returns `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
-* **get** - Get a key.
-* **getMany** - Get multiple keys.
-* **has** - Check if a key exists.
-* **hasMany** - Check if multiple keys exist.
-* **delete** - Delete a key.
-* **deleteMany** - Delete multiple keys. Returns `boolean[]`.
-* **clear** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
-* **disconnect** - Disconnect from the Redis server using `Quit` command. If you set `force` to `true` it will force the disconnect.
-* **iterator** - Create a new iterator for the keys. The iterator uses the namespace configured on the instance. If no namespace is set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
+* **useUnlink** - Use the `UNLINK` command for deleting keys instead of `DEL`. Default is `true`.
+* **noNamespaceAffectsAll** - Whether to allow clearing and iterating all keys when no namespace is set. Default is `false`.
+* **throwOnConnectError** - Whether to throw an error if the client fails to connect. Default is `true`.
+* **throwOnErrors** - Whether to throw an error if any operation fails instead of emitting an error event and returning a no-op response. Default is `false`.
+* **connectionTimeout** - The connection timeout in milliseconds. Default is `undefined` which uses the Redis client default.
+
+## Methods
+* **constructor([connection], [options])** - Create a new `KeyvRedis` instance. See [Keyv Redis Options](#keyv-redis-options).
+* **getClient()** - Get the connected Redis client. Connects first if the client is not already connected.
+* **set(key, value, [ttl])** - Set a key. `ttl` is in milliseconds. Returns `boolean`.
+* **setMany(entries)** - Set multiple keys using `KeyvEntry<Value>` objects (`{ key: string, value: Value, ttl?: number }`) via `MULTI/EXEC` transactions. Returns `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
+* **get(key)** - Get a key. Returns the value or `undefined` if the key does not exist.
+* **getMany(keys)** - Get multiple keys. Returns an array of values where each entry is the value or `undefined` if the key does not exist.
+* **has(key)** - Check if a key exists. Returns `boolean`.
+* **hasMany(keys)** - Check if multiple keys exist. Returns `boolean[]`.
+* **delete(key)** - Delete a key. Returns `boolean`.
+* **deleteMany(keys)** - Delete multiple keys. Returns `boolean[]`.
+* **clear()** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
+* **disconnect([force])** - Disconnect from the Redis server using the `Quit` command. If you set `force` to `true` it will force the disconnect.
+* **iterator()** - Create a new async iterator for the keys and values. The iterator uses the namespace configured on the instance and does not take a namespace parameter. If no namespace is set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
+* **createKeyPrefix(key, [namespace])** - Helper that returns the key with the namespace prefix applied such as `namespace::key`.
+* **getKeyWithoutPrefix(key, [namespace])** - Helper that returns the key with the namespace prefix removed.
+* **isCluster()** - Returns `true` if the client is a Redis cluster.
+* **isSentinel()** - Returns `true` if the client is a Redis sentinel.
+* **getMasterNodes()** - Get the master node clients in the cluster. If the client is not a cluster it returns the single client.
 
 # Using Custom Redis Client Events
 
