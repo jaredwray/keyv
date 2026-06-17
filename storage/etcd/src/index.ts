@@ -248,10 +248,10 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * Unwraps a stored value, checking expiry metadata.
 	 * Handles legacy data (stored without envelope) gracefully.
 	 */
-	private unwrapValue<T>(raw: unknown): { value: T | null; expired: boolean } {
+	private unwrapValue<T>(raw: unknown): { value: T | undefined; expired: boolean } {
 		/* v8 ignore next -- @preserve */
 		if (raw === null || raw === undefined) {
-			return { value: null, expired: false };
+			return { value: undefined, expired: false };
 		}
 
 		try {
@@ -262,7 +262,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 			}
 
 			if (parsed.e !== null && Date.now() > parsed.e) {
-				return { value: null, expired: true };
+				return { value: undefined, expired: true };
 			}
 
 			return { value: parsed.v, expired: false };
@@ -281,16 +281,16 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 		try {
 			const raw = await this._client.get(this.formatKey(key));
 			if (raw === null) {
-				return null as unknown as GetOutput<GenericValue>;
+				return undefined;
 			}
 
 			const { value, expired } = this.unwrapValue<GenericValue>(raw);
 			if (expired) {
 				await this.delete(key);
-				return null as unknown as GetOutput<GenericValue>;
+				return undefined;
 			}
 
-			return value as unknown as GetOutput<GenericValue>;
+			return value;
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -302,25 +302,19 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * @returns An array of stored data corresponding to each key.
 	 */
 	public async getMany(keys: string[]): Promise<Array<KeyvStorageGetResult<GenericValue>>> {
-		const promises = [];
-		for (const key of keys) {
-			promises.push(this.get(key));
+		const promises = keys.map(async (key) => this.get(key));
+		const results = await Promise.allSettled(promises);
+		const data: Array<KeyvStorageGetResult<GenericValue>> = [];
+		for (const result of results) {
+			/* v8 ignore next 2 -- @preserve get() swallows errors, so rejection is defensive */
+			if (result.status === "rejected") {
+				data.push(undefined);
+			} else {
+				data.push(result.value as KeyvStorageGetResult<GenericValue>);
+			}
 		}
 
-		return Promise.allSettled(promises).then((values) => {
-			const data: Array<KeyvStorageGetResult<GenericValue>> = [];
-			for (const value of values) {
-				// @ts-expect-error - value is an object
-				if (value.value === null) {
-					data.push(undefined);
-				} else {
-					// @ts-expect-error - value is an object
-					data.push(value.value as KeyvStorageGetResult<GenericValue>);
-				}
-			}
-
-			return data;
-		});
+		return data;
 	}
 
 	/**
@@ -423,7 +417,9 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 
 	/**
 	 * Returns an async iterator over key-value pairs. If a namespace is set,
-	 * only keys matching the namespace prefix are yielded.
+	 * only keys matching the namespace prefix are yielded, and the namespace
+	 * prefix is removed from the returned keys. The namespace does not need to
+	 * be passed in — it uses the namespace configured on the adapter.
 	 */
 	public async *iterator() {
 		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";

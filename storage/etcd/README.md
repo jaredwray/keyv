@@ -53,6 +53,8 @@
   - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
   - [.formatKey(key)](#formatkeykey)
+  - [.createKeyPrefix(key, namespace?)](#createkeyprefixkey-namespace)
+  - [.removeKeyPrefix(key, namespace?)](#removekeyprefixkey-namespace)
 - [License](#license)
 
 ## Install
@@ -129,13 +131,14 @@ await store.disconnect();
 
 ## Usage with Namespaces
 
+Namespacing is handled natively by the adapter — keys are prefixed with the namespace and separator (`namespace:key`) before being written to etcd, and the prefix is stripped from keys returned by `iterator()`. Setting a `namespace` on a `Keyv` instance propagates it to the underlying store automatically. Use a separate store instance per namespace so each keeps its own prefix:
+
 ```js
 import Keyv from 'keyv';
 import KeyvEtcd from '@keyv/etcd';
 
-const store = new KeyvEtcd('etcd://localhost:2379');
-const keyv1 = new Keyv({ store, namespace: 'namespace1' });
-const keyv2 = new Keyv({ store, namespace: 'namespace2' });
+const keyv1 = new Keyv({ store: new KeyvEtcd('etcd://localhost:2379'), namespace: 'namespace1' });
+const keyv2 = new Keyv({ store: new KeyvEtcd('etcd://localhost:2379'), namespace: 'namespace2' });
 
 // keys are isolated by namespace
 await keyv1.set('foo', 'bar1');
@@ -143,6 +146,16 @@ await keyv2.set('foo', 'bar2');
 
 const value1 = await keyv1.get('foo'); // 'bar1'
 const value2 = await keyv2.get('foo'); // 'bar2'
+```
+
+You can also set the namespace directly on the store:
+
+```js
+const store = new KeyvEtcd('etcd://localhost:2379');
+store.namespace = 'myapp';
+
+await store.set('foo', 'bar'); // stored as 'myapp:foo'
+await store.get('foo'); // 'bar'
 ```
 
 ## Options
@@ -350,7 +363,7 @@ const results = await store.hasMany(['key1', 'key2', 'key3']); // [true, true, f
 
 ### .iterator()
 
-Returns an async iterator over key-value pairs. The iterator uses the namespace configured on the instance.
+Returns an async iterator over `[key, value]` pairs. If a namespace is set, only keys with that namespace are yielded and the namespace prefix is removed from the returned keys. The namespace does not need to be passed in — it uses the namespace configured on the adapter. Expired entries are skipped and deleted.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
@@ -382,6 +395,26 @@ store.formatKey('foo'); // 'foo'
 store.namespace = 'myapp';
 store.formatKey('foo'); // 'myapp:foo'
 store.formatKey('myapp:foo'); // 'myapp:foo' (no double-prefix)
+```
+
+### .createKeyPrefix(key, namespace?)
+
+Creates a prefixed key by prepending the namespace and separator. If no namespace is provided, the key is returned unchanged.
+
+```js
+const store = new KeyvEtcd('etcd://localhost:2379');
+store.createKeyPrefix('key', 'ns'); // 'ns:key'
+store.createKeyPrefix('key'); // 'key'
+```
+
+### .removeKeyPrefix(key, namespace?)
+
+Removes the namespace prefix from a key. If no namespace is provided, the key is returned unchanged.
+
+```js
+const store = new KeyvEtcd('etcd://localhost:2379');
+store.removeKeyPrefix('ns:key', 'ns'); // 'key'
+store.removeKeyPrefix('key'); // 'key'
 ```
 
 ## License
