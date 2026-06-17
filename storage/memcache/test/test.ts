@@ -1,11 +1,9 @@
 import { EventEmitter } from "node:events";
 import { faker } from "@faker-js/faker";
-import { keyvApiTests, keyvValueTests, storageTestSuite } from "@keyv/test-suite";
+import { delay, keyvApiTests, keyvValueTests, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import { beforeEach, expect, it } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import KeyvMemcache, { createKeyv } from "../src/index.js";
-
-const snooze = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Handle all the tests with listeners.
 EventEmitter.setMaxListeners(200);
@@ -22,354 +20,380 @@ beforeEach(async () => {
 	await keyvMemcache.clear();
 });
 
-it("keyv get / no expired", async () => {
-	const keyv = new Keyv<string>({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	const val = faker.lorem.word();
-
-	await keyv.set(key, val);
-
-	const value = await keyv.get(key);
-
-	expect(value).toBe(val);
-});
-
-it("testing defaults", () => {
-	const m = new KeyvMemcache();
-	expect(m.nodes).toEqual(["localhost:11211"]);
-});
-
-it("keyv clear", async () => {
-	const keyv = new Keyv({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	await keyv.set(key, faker.lorem.word());
-	await keyv.clear();
-	expect(await keyv.get(key)).toBeUndefined();
-});
-
-it("keyv get", async () => {
-	const keyv = new Keyv({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	const val = faker.lorem.word();
-	expect(await keyv.get(key)).toBeUndefined();
-	await keyv.set(key, val);
-	expect(await keyv.get(key)).toBe(val);
-});
-
-it("format key for no namespace", () => {
-	const key = faker.string.uuid();
-	expect(new KeyvMemcache(uri).formatKey(key)).toBe(key);
-});
-
-it("format key for namespace", () => {
-	const key = faker.string.uuid();
-	const localMemcache = new KeyvMemcache(uri);
-	new Keyv({ store: localMemcache });
-	expect(localMemcache.formatKey(key)).toBe(key);
-});
-
-it("keyv get with namespace", async () => {
-	const keyv1 = new Keyv({ store: keyvMemcache, namespace: "keyv1" });
-	const keyv2 = new Keyv({ store: keyvMemcache, namespace: "2" });
-
-	const key = faker.string.uuid();
-	const val1 = faker.lorem.word();
-	const val2 = faker.lorem.word();
-
-	await keyv1.set(key, val1);
-	expect(await keyv1.get(key)).toBe(val1);
-
-	await keyv2.set(key, val2);
-	expect(await keyv2.get(key)).toBe(val2);
-});
-
-it("keyv get / should still exist", async () => {
-	const keyv = new Keyv<string>({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	const val = faker.lorem.word();
-
-	await keyv.set(key, val, 10_000);
-
-	await snooze(2000);
-
-	const value = await keyv.get(key);
-
-	expect(value).toBe(val);
-});
-
-it("keyv get / expired existing", async () => {
-	const keyv = new Keyv<string>({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	const val = faker.lorem.word();
-
-	await keyv.set(key, val, 1000);
-
-	await snooze(3000);
-
-	const value = await keyv.get(key);
-
-	expect(value).toBeUndefined();
-});
-
-it("keyv get / expired existing with bad number", async () => {
-	const keyv = new Keyv<string>({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	const val = faker.lorem.word();
-
-	await keyv.set(key, val, 1);
-
-	await snooze(1000);
-
-	const value = await keyv.get(key);
-
-	expect(value).toBeUndefined();
-});
-
-it("keyv get / expired", async () => {
-	const keyv = new Keyv<string>({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	const val = faker.lorem.word();
-
-	await keyv.set(key, val, 1000);
-
-	await snooze(2000);
-
-	const value = await keyv.get(key);
-
-	expect(value).toBeUndefined();
-});
-
-it("keyv has / expired", async () => {
-	const keyv = new Keyv({ store: keyvMemcache });
-	const key = faker.string.uuid();
-	const val = faker.lorem.word();
-
-	await keyv.set(key, val, 1000);
-
-	await snooze(2000);
-
-	const value = await keyv.has(key);
-
-	expect(value).toBeFalsy();
-});
-
-it("keyvMemcache getMany", async () => {
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const value = await keyvMemcache.getMany([key1, key2]);
-	expect(Array.isArray(value)).toBeTruthy();
-
-	expect(value[0]).toBeUndefined();
-});
-
-it("keyvMemcache setMany", async () => {
-	const keyv = new Keyv({ store: keyvMemcache });
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const key3 = faker.string.uuid();
-	const val1 = faker.lorem.word();
-	const val2 = faker.lorem.word();
-	const val3 = faker.lorem.word();
-
-	await keyv.setMany([
-		{ key: key1, value: val1 },
-		{ key: key2, value: val2 },
-		{ key: key3, value: val3 },
-	]);
-
-	expect(await keyv.get(key1)).toBe(val1);
-	expect(await keyv.get(key2)).toBe(val2);
-	expect(await keyv.get(key3)).toBe(val3);
-});
-
-it("keyvMemcache setMany with ttl", async () => {
-	const keyv = new Keyv({ store: keyvMemcache });
-	const key1 = faker.string.uuid();
-	const key2 = faker.string.uuid();
-	const val1 = faker.lorem.word();
-	const val2 = faker.lorem.word();
-
-	await keyv.setMany([
-		{ key: key1, value: val1, ttl: 1000 },
-		{ key: key2, value: val2, ttl: 1000 },
-	]);
-
-	expect(await keyv.get(key1)).toBe(val1);
-
-	await snooze(2000);
-
-	expect(await keyv.get(key1)).toBeUndefined();
-});
-
-it("keyvMemcache setMany should emit error on failure", { timeout: 30_000 }, async () => {
-	const badMemcache = new KeyvMemcache("baduri:11211");
-	let errorEmitted = false;
-	badMemcache.on("error", () => {
-		errorEmitted = true;
+describe("constructor", () => {
+	test("defaults to localhost:11211 when no uri is provided", () => {
+		const store = new KeyvMemcache();
+		expect(store.nodes).toEqual(["localhost:11211"]);
 	});
 
-	await badMemcache.setMany([{ key: faker.string.uuid(), value: faker.lorem.word() }]);
-	expect(errorEmitted).toBeTruthy();
-});
-
-it("keyv has / false", { timeout: 30_000 }, async () => {
-	const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
-	keyv.on("error", () => {});
-
-	const value = await keyv.has(faker.string.uuid());
-
-	expect(value).toBeFalsy();
-});
-
-it("clear should emit an error", async () => {
-	const badMemcache = new KeyvMemcache("baduri:11211");
-	let errorEmitted = false;
-	badMemcache.on("error", () => {
-		errorEmitted = true;
+	test("sets nodes from a string uri", () => {
+		const store = new KeyvMemcache("myserver:11211");
+		expect(store.nodes).toEqual(["myserver:11211"]);
 	});
 
-	await badMemcache.clear();
-	expect(errorEmitted).toBeTruthy();
-});
-
-it("delete should emit an error", async () => {
-	const badMemcache = new KeyvMemcache("baduri:11211");
-	let errorEmitted = false;
-	badMemcache.on("error", () => {
-		errorEmitted = true;
+	test("sets nodes from an options object", () => {
+		const store = new KeyvMemcache({ nodes: ["server1:11211", "server2:11211"] });
+		expect(store.nodes).toEqual(["server1:11211", "server2:11211"]);
 	});
 
-	const result = await badMemcache.delete(faker.string.uuid());
-	expect(errorEmitted).toBeTruthy();
-	expect(result).toBe(false);
-});
-
-it("set should emit an error", async () => {
-	const badMemcache = new KeyvMemcache("baduri:11211");
-	let errorEmitted = false;
-	badMemcache.on("error", () => {
-		errorEmitted = true;
+	test("passes timeout through to the memcache client", () => {
+		const store = new KeyvMemcache({ nodes: [uri], timeout: 3000 });
+		expect(store.timeout).toBe(3000);
 	});
 
-	await badMemcache.set(faker.string.uuid(), faker.lorem.word());
-	expect(errorEmitted).toBeTruthy();
-});
-
-it("get should emit an error", async () => {
-	const badMemcache = new KeyvMemcache("baduri:11211");
-	let errorEmitted = false;
-	badMemcache.on("error", () => {
-		errorEmitted = true;
+	test("passes keepAlive through to the memcache client", () => {
+		const store = new KeyvMemcache({ nodes: [uri], keepAlive: false });
+		expect(store.keepAlive).toBe(false);
 	});
 
-	const result = await badMemcache.get(faker.string.uuid());
-	expect(errorEmitted).toBeTruthy();
-	expect(result).toBeUndefined();
+	test("passes retries and retryDelay through to the memcache client", () => {
+		const store = new KeyvMemcache({ nodes: [uri], retries: 3, retryDelay: 200 });
+		expect(store.retries).toBe(3);
+		expect(store.retryDelay).toBe(200);
+	});
+
+	test("merges a string uri with an additional options object", () => {
+		const store = new KeyvMemcache(uri, { timeout: 2000 });
+		expect(store.nodes).toEqual([uri]);
+		expect(store.timeout).toBe(2000);
+	});
+
+	test("prefers nodes from options over the string uri", () => {
+		const store = new KeyvMemcache("ignored:11211", { nodes: ["server1:11211"] });
+		expect(store.nodes).toEqual(["server1:11211"]);
+	});
 });
 
-it("disconnect should work", async () => {
-	const memcache = new KeyvMemcache(uri);
-	const key = faker.string.uuid();
-	await memcache.set(key, faker.lorem.word());
-	await memcache.disconnect();
-	expect(true).toBeTruthy();
+describe("get", () => {
+	test("returns undefined for a key that does not exist", async () => {
+		const keyv = new Keyv({ store: keyvMemcache });
+		const key = faker.string.uuid();
+		expect(await keyv.get(key)).toBeUndefined();
+	});
+
+	test("returns a previously set value", async () => {
+		const keyv = new Keyv<string>({ store: keyvMemcache });
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		await keyv.set(key, value);
+		expect(await keyv.get(key)).toBe(value);
+	});
+
+	test("returns the value directly from the adapter", async () => {
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		await keyvMemcache.set(key, value);
+		expect(await keyvMemcache.get(key)).toBe(value);
+	});
+
+	test("returns undefined for a missing key from the adapter", async () => {
+		expect(await keyvMemcache.get(faker.string.uuid())).toBeUndefined();
+	});
+
+	test("handles legacy non-JSON data", async () => {
+		const key = faker.string.uuid();
+		// Write a raw string directly, bypassing the value envelope.
+		await keyvMemcache.client.set(keyvMemcache.formatKey(key), "raw-legacy");
+		expect(await keyvMemcache.get(key)).toBe("raw-legacy");
+	});
+
+	test("handles legacy JSON without the value envelope", async () => {
+		const key = faker.string.uuid();
+		const value = JSON.stringify({ foo: "bar" });
+		await keyvMemcache.client.set(keyvMemcache.formatKey(key), value);
+		expect(await keyvMemcache.get(key)).toBe(value);
+	});
 });
 
-it("createKeyv returns a Keyv instance", () => {
-	const keyv = createKeyv(uri);
-	expect(keyv).toBeInstanceOf(Keyv);
+describe("getMany", () => {
+	test("returns undefined for keys that do not exist", async () => {
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const values = await keyvMemcache.getMany([key1, key2]);
+		expect(Array.isArray(values)).toBe(true);
+		expect(values).toEqual([undefined, undefined]);
+	});
+
+	test("returns values in the same order as the keys", async () => {
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const val1 = faker.lorem.word();
+		const val2 = faker.lorem.word();
+		await keyvMemcache.set(key1, val1);
+		await keyvMemcache.set(key2, val2);
+		const values = await keyvMemcache.getMany([key1, key2]);
+		expect(values).toEqual([val1, val2]);
+	});
 });
 
-it("constructor with string URI sets nodes", () => {
-	const m = new KeyvMemcache("myserver:11211");
-	expect(m.nodes).toEqual(["myserver:11211"]);
+describe("set and setMany", () => {
+	test("sets many values that can be read back", async () => {
+		const keyv = new Keyv({ store: keyvMemcache });
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const key3 = faker.string.uuid();
+		const val1 = faker.lorem.word();
+		const val2 = faker.lorem.word();
+		const val3 = faker.lorem.word();
+
+		await keyv.setMany([
+			{ key: key1, value: val1 },
+			{ key: key2, value: val2 },
+			{ key: key3, value: val3 },
+		]);
+
+		expect(await keyv.get(key1)).toBe(val1);
+		expect(await keyv.get(key2)).toBe(val2);
+		expect(await keyv.get(key3)).toBe(val3);
+	});
+
+	test("sets many values with a per-entry ttl", async () => {
+		const keyv = new Keyv({ store: keyvMemcache });
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const val1 = faker.lorem.word();
+		const val2 = faker.lorem.word();
+
+		await keyv.setMany([
+			{ key: key1, value: val1, ttl: 1000 },
+			{ key: key2, value: val2, ttl: 1000 },
+		]);
+
+		expect(await keyv.get(key1)).toBe(val1);
+
+		await delay(2000);
+
+		expect(await keyv.get(key1)).toBeUndefined();
+	});
 });
 
-it("constructor with options object containing nodes", () => {
-	const m = new KeyvMemcache({ nodes: ["server1:11211", "server2:11211"] });
-	expect(m.nodes).toEqual(["server1:11211", "server2:11211"]);
+describe("has", () => {
+	test("returns true for an existing key and false for a missing one", async () => {
+		const keyv = new Keyv({ store: keyvMemcache });
+		const key = faker.string.uuid();
+		await keyv.set(key, faker.lorem.word());
+		expect(await keyv.has(key)).toBe(true);
+		expect(await keyv.has(faker.string.uuid())).toBe(false);
+	});
 });
 
-it("constructor with options passes timeout to memcache client", () => {
-	const m = new KeyvMemcache({ nodes: [uri], timeout: 3000 });
-	expect(m.timeout).toBe(3000);
+describe("clear", () => {
+	test("removes all stored values", async () => {
+		const keyv = new Keyv({ store: keyvMemcache });
+		const key = faker.string.uuid();
+		await keyv.set(key, faker.lorem.word());
+		await keyv.clear();
+		expect(await keyv.get(key)).toBeUndefined();
+	});
+
+	test("flushes the entire server regardless of namespace", async () => {
+		const store1 = new KeyvMemcache(uri);
+		const store2 = new KeyvMemcache(uri);
+		const keyv1 = new Keyv({ store: store1, namespace: "ns1" });
+		const keyv2 = new Keyv({ store: store2, namespace: "ns2" });
+
+		const key = faker.string.uuid();
+		await keyv1.set(key, faker.lorem.word());
+		await keyv2.set(key, faker.lorem.word());
+
+		// Clearing from one instance flushes everything.
+		await keyv1.clear();
+
+		expect(await keyv1.get(key)).toBeUndefined();
+		expect(await keyv2.get(key)).toBeUndefined();
+	});
 });
 
-it("constructor with options passes keepAlive to memcache client", () => {
-	const m = new KeyvMemcache({ nodes: [uri], keepAlive: false });
-	expect(m.keepAlive).toBe(false);
+describe("namespace", () => {
+	test("formatKey returns the key unchanged when no namespace is set", () => {
+		const key = faker.string.uuid();
+		expect(new KeyvMemcache(uri).formatKey(key)).toBe(key);
+	});
+
+	test("formatKey prefixes the key when a namespace is set", () => {
+		const store = new KeyvMemcache(uri);
+		store.namespace = "myapp";
+		const key = faker.string.uuid();
+		expect(store.formatKey(key)).toBe(`myapp:${key}`);
+	});
+
+	test("accepts a namespace through the constructor options", () => {
+		const store = new KeyvMemcache(uri, { namespace: "opt-ns" });
+		expect(store.namespace).toBe("opt-ns");
+		expect(store.formatKey("foo")).toBe("opt-ns:foo");
+	});
+
+	test("prefixes keys natively when a namespace is set", async () => {
+		const store = new KeyvMemcache(uri);
+		store.namespace = "native-ns";
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		await store.set(key, value);
+		expect(await store.get(key)).toBe(value);
+		// The underlying client stores the value under the prefixed key.
+		expect(await store.client.get(`native-ns:${key}`)).toBeDefined();
+	});
+
+	test("isolates keys across namespaces on the same store", async () => {
+		const store = new KeyvMemcache(uri);
+		const key = faker.string.uuid();
+
+		store.namespace = "ns-a";
+		await store.set(key, "a");
+		store.namespace = "ns-b";
+		await store.set(key, "b");
+
+		expect(await store.get(key)).toBe("b");
+		store.namespace = "ns-a";
+		expect(await store.get(key)).toBe("a");
+	});
+
+	test("isolates keys across Keyv instances with separate stores", async () => {
+		// Each namespace needs its own store instance: the namespace lives on the
+		// adapter, so a single shared store cannot serve two namespaces at once.
+		const keyv1 = new Keyv({ store: new KeyvMemcache(uri), namespace: "keyv1" });
+		const keyv2 = new Keyv({ store: new KeyvMemcache(uri), namespace: "keyv2" });
+
+		const key = faker.string.uuid();
+		const val1 = faker.lorem.word();
+		const val2 = faker.lorem.word();
+
+		await keyv1.set(key, val1);
+		await keyv2.set(key, val2);
+
+		expect(await keyv1.get(key)).toBe(val1);
+		expect(await keyv2.get(key)).toBe(val2);
+	});
 });
 
-it("constructor with options passes retries to memcache client", () => {
-	const m = new KeyvMemcache({ nodes: [uri], retries: 3, retryDelay: 200 });
-	expect(m.retries).toBe(3);
-	expect(m.retryDelay).toBe(200);
+describe("ttl and expiration", () => {
+	test("keeps a value that has not yet expired", async () => {
+		const keyv = new Keyv<string>({ store: keyvMemcache });
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		await keyv.set(key, value, 10_000);
+		await delay(2000);
+		expect(await keyv.get(key)).toBe(value);
+	});
+
+	test("returns undefined once a value has expired", async () => {
+		const keyv = new Keyv<string>({ store: keyvMemcache });
+		const key = faker.string.uuid();
+		await keyv.set(key, faker.lorem.word(), 1000);
+		await delay(2000);
+		expect(await keyv.get(key)).toBeUndefined();
+	});
+
+	test("get returns undefined for a sub-second expired key", async () => {
+		const key = faker.string.uuid();
+		await keyvMemcache.set(key, faker.lorem.word(), 1);
+		await delay(50);
+		expect(await keyvMemcache.get(key)).toBeUndefined();
+	});
+
+	test("has returns false for a sub-second expired key", async () => {
+		const key = faker.string.uuid();
+		await keyvMemcache.set(key, faker.lorem.word(), 1);
+		await delay(50);
+		expect(await keyvMemcache.has(key)).toBe(false);
+	});
+
+	test("has returns false once a value has expired", async () => {
+		const keyv = new Keyv({ store: keyvMemcache });
+		const key = faker.string.uuid();
+		await keyv.set(key, faker.lorem.word(), 1000);
+		await delay(2000);
+		expect(await keyv.has(key)).toBe(false);
+	});
 });
 
-it("string URI with additional options merges correctly", () => {
-	const m = new KeyvMemcache(uri, { timeout: 2000 });
-	expect(m.nodes).toEqual([uri]);
-	expect(m.timeout).toBe(2000);
+describe("error handling", () => {
+	test("get emits an error and returns undefined on connection failure", async () => {
+		const store = new KeyvMemcache("baduri:11211");
+		let errorEmitted = false;
+		store.on("error", () => {
+			errorEmitted = true;
+		});
+
+		const result = await store.get(faker.string.uuid());
+		expect(errorEmitted).toBe(true);
+		expect(result).toBeUndefined();
+	});
+
+	test("set emits an error on connection failure", async () => {
+		const store = new KeyvMemcache("baduri:11211");
+		let errorEmitted = false;
+		store.on("error", () => {
+			errorEmitted = true;
+		});
+
+		await store.set(faker.string.uuid(), faker.lorem.word());
+		expect(errorEmitted).toBe(true);
+	});
+
+	test("setMany emits an error on connection failure", { timeout: 30_000 }, async () => {
+		const store = new KeyvMemcache("baduri:11211");
+		let errorEmitted = false;
+		store.on("error", () => {
+			errorEmitted = true;
+		});
+
+		await store.setMany([{ key: faker.string.uuid(), value: faker.lorem.word() }]);
+		expect(errorEmitted).toBe(true);
+	});
+
+	test("delete emits an error and returns false on connection failure", async () => {
+		const store = new KeyvMemcache("baduri:11211");
+		let errorEmitted = false;
+		store.on("error", () => {
+			errorEmitted = true;
+		});
+
+		const result = await store.delete(faker.string.uuid());
+		expect(errorEmitted).toBe(true);
+		expect(result).toBe(false);
+	});
+
+	test("clear emits an error on connection failure", async () => {
+		const store = new KeyvMemcache("baduri:11211");
+		let errorEmitted = false;
+		store.on("error", () => {
+			errorEmitted = true;
+		});
+
+		await store.clear();
+		expect(errorEmitted).toBe(true);
+	});
+
+	test("has returns false on connection failure", { timeout: 30_000 }, async () => {
+		const keyv = new Keyv({ store: new KeyvMemcache("baduri:11211") });
+		keyv.on("error", () => {});
+		expect(await keyv.has(faker.string.uuid())).toBe(false);
+	});
 });
 
-it("nodes from options takes precedence over string URI", () => {
-	const m = new KeyvMemcache("ignored:11211", { nodes: ["server1:11211"] });
-	expect(m.nodes).toEqual(["server1:11211"]);
+describe("disconnect", () => {
+	test("disconnects without throwing", async () => {
+		const store = new KeyvMemcache(uri);
+		const key = faker.string.uuid();
+		await store.set(key, faker.lorem.word());
+		await expect(store.disconnect()).resolves.toBeUndefined();
+	});
 });
 
-it("createKeyv with options passes them through", () => {
-	const keyv = createKeyv({ nodes: [uri], timeout: 3000 });
-	expect(keyv).toBeInstanceOf(Keyv);
-});
+describe("createKeyv", () => {
+	test("returns a Keyv instance from a string uri", () => {
+		expect(createKeyv(uri)).toBeInstanceOf(Keyv);
+	});
 
-it("clear flushes the entire server", async () => {
-	const store1 = new KeyvMemcache(uri);
-	const store2 = new KeyvMemcache(uri);
-	const keyv1 = new Keyv({ store: store1, namespace: "ns1" });
-	const keyv2 = new Keyv({ store: store2, namespace: "ns2" });
-
-	const key = faker.string.uuid();
-	await keyv1.set(key, faker.lorem.word());
-	await keyv2.set(key, faker.lorem.word());
-
-	// Clear from one instance flushes everything
-	await keyv1.clear();
-
-	expect(await keyv1.get(key)).toBeUndefined();
-	expect(await keyv2.get(key)).toBeUndefined();
-});
-
-it("get returns undefined for expired key", async () => {
-	const key = faker.string.uuid();
-	await keyvMemcache.set(key, "value", 1);
-	await snooze(50);
-	expect(await keyvMemcache.get(key)).toBeUndefined();
-});
-
-it("has returns false for expired key", async () => {
-	const key = faker.string.uuid();
-	await keyvMemcache.set(key, "value", 1);
-	await snooze(50);
-	expect(await keyvMemcache.has(key)).toBe(false);
-});
-
-it("handles legacy non-JSON data in get", async () => {
-	const key = faker.string.uuid();
-	// Write raw string directly bypassing wrapValue
-	await keyvMemcache.client.set(keyvMemcache.formatKey(key), "raw-legacy");
-	const result = await keyvMemcache.get(key);
-	expect(result).toBe("raw-legacy");
-});
-
-it("handles legacy JSON without v field in get", async () => {
-	const key = faker.string.uuid();
-	await keyvMemcache.client.set(keyvMemcache.formatKey(key), JSON.stringify({ foo: "bar" }));
-	const result = await keyvMemcache.get(key);
-	expect(result).toBe(JSON.stringify({ foo: "bar" }));
+	test("returns a Keyv instance from an options object", () => {
+		expect(createKeyv({ nodes: [uri], timeout: 3000 })).toBeInstanceOf(Keyv);
+	});
 });
 
 const store = () => keyvMemcache;
 
-keyvApiTests(it, Keyv, store);
-keyvValueTests(it, Keyv, store);
-storageTestSuite(it, store, { iterator: false });
+keyvApiTests(test, Keyv, store);
+keyvValueTests(test, Keyv, store);
+// Memcached does not support key enumeration, so the iterator suite is disabled.
+storageTestSuite(test, store, { iterator: false });
