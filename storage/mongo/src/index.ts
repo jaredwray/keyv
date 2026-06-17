@@ -761,14 +761,20 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Initializes the MongoDB connection and sets up indexes. Connection or setup failures are
-	 * emitted as an `error` event and re-thrown so that the `connect` promise rejects instead of
-	 * hanging.
+	 * Initializes the MongoDB connection, wires up client error events, and sets up indexes.
+	 * Connection or setup failures are emitted as an `error` event and re-thrown so that the
+	 * `connect` promise rejects instead of hanging.
 	 */
 	private async initConnection(): Promise<KeyvMongoConnect> {
 		try {
 			const client = new mongoClient(this._url, this._mongoOptions);
 			await client.connect();
+
+			// The driver relays topology `error` events (connection drops, timeouts) on the
+			// MongoClient, so forward them to listeners on the adapter.
+			client.on("error", (error) => {
+				this.emit("error", error);
+			});
 
 			const database = client.db(this._db);
 
