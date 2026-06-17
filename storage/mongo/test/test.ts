@@ -186,6 +186,15 @@ describe("set and setMany", () => {
 		expect(await store.get(keys[1])).toBe("val2");
 	});
 
+	test("setMany returns an empty array when given no entries", async () => {
+		const store = new KeyvMongo({ ...options });
+		try {
+			expect(await store.setMany([])).toEqual([]);
+		} finally {
+			await store.disconnect();
+		}
+	});
+
 	test("setMany upserts existing keys", async () => {
 		const store = new KeyvMongo({ ...options });
 		const key = faker.string.alphanumeric(10);

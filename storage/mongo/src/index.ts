@@ -113,6 +113,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		this._mongoOptions = this.extractMongoOptions(mergedOptions);
 
 		this.connect = this.initConnection();
+		// Prevent an unhandled promise rejection if the eager connection fails before
+		// any operation awaits `this.connect`. Errors are still surfaced via the `error`
+		// event and re-thrown for callers that await the promise directly.
+		this.connect.catch(() => {});
 	}
 
 	/**
@@ -394,6 +398,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @returns Array of booleans (one per entry) indicating which writes succeeded, in input order.
 	 */
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+		if (entries.length === 0) {
+			return [];
+		}
+
 		if (this._useGridFS) {
 			const settled = await Promise.allSettled(
 				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
@@ -762,7 +770,8 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			const client = new mongoClient(this._url, this._mongoOptions);
 			await client.connect();
 
-			// Surface asynchronous client errors (connection drops, timeouts) to listeners on the adapter.
+			// The driver relays topology `error` events (connection drops, timeouts) on the
+			// MongoClient, so forward them to listeners on the adapter.
 			client.on("error", (error) => {
 				this.emit("error", error);
 			});
