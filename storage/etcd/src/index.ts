@@ -302,12 +302,19 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * @returns An array of stored data corresponding to each key.
 	 */
 	public async getMany(keys: string[]): Promise<Array<KeyvStorageGetResult<GenericValue>>> {
-		const results = await Promise.allSettled(keys.map(async (key) => this.get(key)));
-		return results.map((result) =>
-			result.status === "fulfilled"
-				? (result.value as KeyvStorageGetResult<GenericValue>)
-				: undefined,
-		);
+		const promises = keys.map(async (key) => this.get(key));
+		const results = await Promise.allSettled(promises);
+		const data: Array<KeyvStorageGetResult<GenericValue>> = [];
+		for (const result of results) {
+			/* v8 ignore next 2 -- @preserve get() swallows errors, so rejection is defensive */
+			if (result.status === "rejected") {
+				data.push(undefined);
+			} else {
+				data.push(result.value as KeyvStorageGetResult<GenericValue>);
+			}
+		}
+
+		return data;
 	}
 
 	/**
