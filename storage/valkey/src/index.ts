@@ -684,7 +684,9 @@ export function createKeyv(
 ): Keyv {
 	connect ??= "redis://localhost:6379";
 	const adapter = new KeyvValkey(connect, options);
-	const keyv = new Keyv({ store: adapter, namespace: options?.namespace });
+	// Use the adapter's resolved namespace so it is preserved whether the namespace
+	// was provided via the connect options object or the separate options argument.
+	const keyv = new Keyv({ store: adapter, namespace: adapter.namespace });
 	return keyv;
 }
 

@@ -28,6 +28,32 @@ describe("events", () => {
 		await keyv.disconnect();
 	});
 
+	test("should re-emit the client connect event on the adapter", async () => {
+		const keyv = new KeyvValkey(valkeyUri);
+		let received: unknown;
+		keyv.on("connect", (client) => {
+			received = client;
+		});
+
+		keyv.client.emit("connect");
+
+		expect(received).toBe(keyv.client);
+		await keyv.disconnect();
+	});
+
+	test("should re-emit the client reconnecting event on the adapter", async () => {
+		const keyv = new KeyvValkey(valkeyUri);
+		let received = false;
+		keyv.on("reconnecting", () => {
+			received = true;
+		});
+
+		keyv.client.emit("reconnecting");
+
+		expect(received).toBe(true);
+		await keyv.disconnect();
+	});
+
 	test("should wire a single error listener on the client", async () => {
 		const keyv = new KeyvValkey(valkeyUri);
 		expect(keyv.client.listenerCount("error")).toBe(1);

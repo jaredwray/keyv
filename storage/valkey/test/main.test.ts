@@ -114,4 +114,23 @@ describe("createKeyv", () => {
 		expect(keyv.store.namespace).toBe(namespace);
 		await keyv.disconnect();
 	});
+
+	test("should preserve the namespace from the connect options object", async () => {
+		const namespace = `ck-obj-${faker.string.alphanumeric(8)}`;
+		const keyv = createKeyv({ uri: valkeyUri, namespace });
+		expect(keyv.namespace).toBe(namespace);
+		expect(keyv.store.namespace).toBe(namespace);
+
+		// Keys are stored under the namespace prefix natively, not un-namespaced.
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await keyv.set(key, value);
+		const client = new Redis(valkeyUri);
+		expect(await client.exists(`namespace:${namespace}:${key}`)).toBe(1);
+		expect(await client.exists(key)).toBe(0);
+		await client.disconnect();
+
+		await keyv.clear();
+		await keyv.disconnect();
+	});
 });
