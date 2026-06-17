@@ -234,16 +234,16 @@ describe("KeyvRedis Sentinel", () => {
 	});
 
 	describe("KeyvRedis Iterators", () => {
-		test("should no throw an error on iterator", async () => {
+		test("should not throw an error on iterator", async () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
-			const iteratorNamespace = faker.string.uuid();
+			keyvRedis.namespace = faker.string.uuid();
 
 			let errorThrown = false;
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator(iteratorNamespace)) {
+				for await (const [key, value] of keyvRedis.iterator()) {
 					keys.push(key);
 					values.push(value);
 				}
@@ -304,7 +304,7 @@ describe("KeyvRedis Sentinel", () => {
 			await keyvRedis.set(nsKey3, nsVal3);
 			const keys = [];
 			const values = [];
-			for await (const [key, value] of keyvRedis.iterator(namespace)) {
+			for await (const [key, value] of keyvRedis.iterator()) {
 				keys.push(key);
 				values.push(value);
 			}

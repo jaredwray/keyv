@@ -89,7 +89,7 @@ describe("get", () => {
 		vi.spyOn(keyvRedis.client, "get").mockRestore();
 	});
 
-	test("should throw and error on getMany client error", async () => {
+	test("should throw an error on getMany client error", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {
@@ -112,7 +112,7 @@ describe("get", () => {
 		vi.spyOn(keyvRedis.client, "mGet").mockRestore();
 	});
 
-	test("should not throw and error on getMany client error", async () => {
+	test("should not throw an error on getMany client error", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: false });
 
 		const data = {

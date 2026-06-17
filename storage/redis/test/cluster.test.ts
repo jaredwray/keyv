@@ -257,16 +257,16 @@ describe("KeyvRedis Cluster", () => {
 	});
 
 	describe("KeyvRedis Iterators", () => {
-		test("should no throw an error on iterator", async () => {
+		test("should not throw an error on iterator", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
+			keyvRedis.namespace = faker.string.uuid();
 
-			const iteratorNamespace = faker.string.uuid();
 			let errorThrown = false;
 			try {
 				const keys = [];
 				const values = [];
-				for await (const [key, value] of keyvRedis.iterator(iteratorNamespace)) {
+				for await (const [key, value] of keyvRedis.iterator()) {
 					keys.push(key);
 					values.push(value);
 				}
@@ -327,7 +327,7 @@ describe("KeyvRedis Cluster", () => {
 			await keyvRedis.set(nsKey3, nsVal3);
 			const keys = [];
 			const values = [];
-			for await (const [key, value] of keyvRedis.iterator(namespace)) {
+			for await (const [key, value] of keyvRedis.iterator()) {
 				keys.push(key);
 				values.push(value);
 			}

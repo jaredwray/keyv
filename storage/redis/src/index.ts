@@ -43,15 +43,55 @@ export {
 };
 
 export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapter {
+	/**
+	 * The underlying Redis client, cluster, or sentinel connection used for all storage operations.
+	 */
 	private _client!: RedisClientConnectionType;
+	/**
+	 * Namespace used to prefix keys. When undefined, no namespace prefixing is applied.
+	 * @default undefined
+	 */
 	private _namespace: string | undefined;
+	/**
+	 * Separator placed between the namespace and the key such as 'namespace::key'.
+	 * @default "::"
+	 */
 	private _keyPrefixSeparator = "::";
+	/**
+	 * Number of keys to delete in a single batch when clearing.
+	 * @default 1000
+	 */
 	private _clearBatchSize = 1000;
+	/**
+	 * Whether to use the UNLINK command instead of DEL when removing keys.
+	 * @default true
+	 */
 	private _useUnlink = true;
+	/**
+	 * Whether operations with no namespace set affect all keys in the database.
+	 * @default false
+	 */
 	private _noNamespaceAffectsAll = false;
+	/**
+	 * Whether to throw an error when the client fails to connect.
+	 * @default true
+	 */
 	private _throwOnConnectError = true;
+	/**
+	 * Whether to throw an error when any operation fails instead of emitting an error event.
+	 * @default false
+	 */
 	private _throwOnErrors = false;
+	/**
+	 * Connection timeout in milliseconds. When undefined, the Redis client default is used.
+	 * @default undefined
+	 */
 	private _connectionTimeout: number | undefined;
+	/**
+	 * Tracks the client instance whose events have already been wired up so that
+	 * repeated initialization does not attach duplicate listeners.
+	 */
+	private _eventsWiredClient: RedisClientConnectionType | undefined;
 
 	/**
 	 * KeyvRedis constructor.
@@ -107,14 +147,16 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get the Redis client.
+	 * Get the Redis client, cluster, or sentinel connection.
+	 * @returns {RedisClientConnectionType} The current Redis client connection.
 	 */
 	public get client(): RedisClientConnectionType {
 		return this._client;
 	}
 
 	/**
-	 * Set the Redis client.
+	 * Set the Redis client, cluster, or sentinel connection. This will re-wire the event listeners.
+	 * @param {RedisClientConnectionType} value - The Redis client connection to use.
 	 */
 	public set client(value: RedisClientConnectionType) {
 		this._client = value;
@@ -123,6 +165,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Get the namespace for the adapter. If undefined, it will not use a namespace including keyPrefixing.
+	 * @returns {string | undefined} The current namespace, or undefined if no namespace is set.
 	 * @default undefined
 	 */
 	public get namespace(): string | undefined {
@@ -131,6 +174,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Set the namespace for the adapter. If undefined, it will not use a namespace including keyPrefixing.
+	 * @param {string | undefined} value - The namespace to use, or undefined to disable namespacing.
 	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
@@ -138,6 +182,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Get the separator between the namespace and key.
+	 * @returns {string} The separator placed between the namespace and key.
 	 * @default '::'
 	 */
 	public get keyPrefixSeparator(): string {
@@ -146,6 +191,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Set the separator between the namespace and key.
+	 * @param {string} value - The separator to place between the namespace and key.
 	 */
 	public set keyPrefixSeparator(value: string) {
 		this._keyPrefixSeparator = value;
@@ -153,6 +199,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Get the number of keys to delete in a single batch.
+	 * @returns {number} The number of keys to delete in a single batch.
 	 * @default 1000
 	 */
 	public get clearBatchSize(): number {
@@ -160,7 +207,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Set the number of keys to delete in a single batch.
+	 * Set the number of keys to delete in a single batch. Must be greater than 0 otherwise an error event is emitted.
+	 * @param {number} value - The number of keys to delete in a single batch.
 	 */
 	public set clearBatchSize(value: number) {
 		if (value > 0) {
@@ -172,6 +220,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Get if Unlink is used instead of Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 * @returns {boolean} True if the UNLINK command is used instead of DEL.
 	 * @default true
 	 */
 	public get useUnlink(): boolean {
@@ -180,6 +229,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Set if Unlink is used instead of Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 * @param {boolean} value - True to use the UNLINK command instead of DEL.
 	 */
 	public set useUnlink(value: boolean) {
 		this._useUnlink = value;
@@ -189,6 +239,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * Get if no namespace affects all keys.
 	 * Whether to allow clearing all keys when no namespace is set.
 	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * @returns {boolean} True if operations with no namespace affect all keys.
 	 * @default false
 	 */
 	public get noNamespaceAffectsAll(): boolean {
@@ -196,7 +247,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Set if not namespace affects all keys.
+	 * Set if no namespace affects all keys.
+	 * @param {boolean} value - True to allow operations with no namespace to affect all keys.
 	 */
 	public set noNamespaceAffectsAll(value: boolean) {
 		this._noNamespaceAffectsAll = value;
@@ -206,6 +258,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * Get if throwOnConnectError is set to true.
 	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
 	 * set to true so that it throws an error when trying to connect to the Redis server fails.
+	 * @returns {boolean} True if an error is thrown when the client fails to connect.
 	 * @default true
 	 */
 	public get throwOnConnectError(): boolean {
@@ -216,6 +269,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * Set if throwOnConnectError is set to true.
 	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
 	 * set to true so that it throws an error when trying to connect to the Redis server fails.
+	 * @param {boolean} value - True to throw an error when the client fails to connect.
 	 */
 	public set throwOnConnectError(value: boolean) {
 		this._throwOnConnectError = value;
@@ -227,6 +281,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * ensure that all operations are successful and you want to handle errors. By default, this is
 	 * set to false so that it does not throw an error on every operation and instead emits an error event
 	 * and returns no-op responses.
+	 * @returns {boolean} True if an error is thrown when any operation fails.
 	 * @default false
 	 */
 	public get throwOnErrors(): boolean {
@@ -239,6 +294,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * ensure that all operations are successful and you want to handle errors. By default, this is
 	 * set to false so that it does not throw an error on every operation and instead emits an error event
 	 * and returns no-op responses.
+	 * @param {boolean} value - True to throw an error when any operation fails.
 	 */
 	public set throwOnErrors(value: boolean) {
 		this._throwOnErrors = value;
@@ -246,6 +302,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Get the connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default.
+	 * @returns {number | undefined} The connection timeout in milliseconds, or undefined to use the default.
 	 * @default undefined
 	 */
 	public get connectionTimeout(): number | undefined {
@@ -254,6 +311,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Set the connection timeout in milliseconds such as 5000 (5 seconds). Default is undefined. If undefined, it will use the default.
+	 * @param {number | undefined} value - The connection timeout in milliseconds, or undefined to use the default.
 	 * @default undefined
 	 */
 	public set connectionTimeout(value: number | undefined) {
@@ -261,7 +319,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
+	 * Get the connected Redis client. If the client is not already connected it will connect first, respecting
+	 * the connectionTimeout. If the connection fails it will emit an error event and, when throwOnConnectError
+	 * is true, throw an error.
+	 * @returns {Promise<RedisClientConnectionType>} The connected Redis client.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
 		if (this._client.isOpen) {
@@ -297,6 +358,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @param {string} key - the key to set
 	 * @param {string} value - the value to set
 	 * @param {number} [ttl] - the time to live in milliseconds
+	 * @returns {Promise<boolean>} - true if the value was set, false if an error occurred and throwOnErrors is false
 	 */
 	public async set(key: string, value: string, ttl?: number): Promise<boolean> {
 		const client = await this.getClient();
@@ -325,6 +387,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	/**
 	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
 	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
+	 * @returns {Promise<boolean[] | undefined>} - array of booleans indicating whether each entry was successfully set
 	 */
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
@@ -709,8 +772,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get an async iterator for the keys and values in the store. It will only iterate over keys with the current namespace.
-	 * @returns {AsyncGenerator<[string, T | undefined], void, unknown>} - async iterator with key value pairs
+	 * Get an async iterator for the keys and values in the store. The namespace is not passed in and instead
+	 * uses the namespace configured on the instance. It will only iterate over keys with the current namespace.
+	 * If no namespace is set it will iterate over keys with no namespace prefix unless noNamespaceAffectsAll is true.
+	 * @returns {AsyncGenerator<[string, U | undefined], void, unknown>} - async iterator with key value pairs
 	 */
 	public async *iterator<U = T>(): AsyncGenerator<[string, U | undefined], void, unknown> {
 		// When instance is not a cluster, it will only have one client
@@ -892,14 +957,28 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		return slotMap;
 	}
 
+	/**
+	 * Check if the provided client is a cluster client.
+	 * @param {RedisClientConnectionType} client - the client to check
+	 * @returns {boolean} - true if the client is a cluster client, false if not
+	 */
 	private isClientCluster(client: RedisClientConnectionType): boolean {
 		return (client as any).slots !== undefined;
 	}
 
+	/**
+	 * Check if the provided client is a sentinel client.
+	 * @param {RedisClientConnectionType} client - the client to check
+	 * @returns {boolean} - true if the client is a sentinel client, false if not
+	 */
 	private isClientSentinel(client: RedisClientConnectionType): boolean {
 		return (client as any).getSentinelNode !== undefined;
 	}
 
+	/**
+	 * Apply the provided options to the instance. Only defined options are applied.
+	 * @param {KeyvRedisOptions} [options] - the options to apply
+	 */
 	private setOptions(options?: KeyvRedisOptions): void {
 		if (!options) {
 			return;
@@ -938,7 +1017,19 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		}
 	}
 
+	/**
+	 * Wire up the client events (error, connect, disconnect, reconnecting) to be re-emitted on this instance.
+	 * Listeners are only attached once per client instance to avoid duplicates.
+	 */
 	private initClient(): void {
+		// Only wire up listeners once per client instance so that repeated calls
+		// (for example on reconnect via getClient) do not accumulate duplicate listeners.
+		if (this._eventsWiredClient === this._client) {
+			return;
+		}
+
+		this._eventsWiredClient = this._client;
+
 		this._client.on("error", (error) => {
 			this.emit("error", error);
 		});
@@ -958,6 +1049,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		});
 	}
 
+	/**
+	 * Create a promise that rejects after the provided timeout. Used to race against the connection.
+	 * @param {number} timeoutMs - the timeout in milliseconds before the promise rejects
+	 * @returns {Promise<never>} - a promise that always rejects once the timeout elapses
+	 */
 	private async createTimeoutPromise(timeoutMs: number): Promise<never> {
 		return new Promise<never>((_, reject) =>
 			setTimeout(() => {
