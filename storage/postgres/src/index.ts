@@ -766,4 +766,4 @@ export const createKeyv = (options?: KeyvPostgresOptions) =>
 	new Keyv({ store: new KeyvPostgres(options) });
 
 export default KeyvPostgres;
-export type { KeyvPostgresOptions } from "./types";
+export type { KeyvPostgresOptions } from "./types.js";
