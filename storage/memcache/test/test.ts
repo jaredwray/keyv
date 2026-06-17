@@ -370,6 +370,33 @@ describe("error handling", () => {
 		keyv.on("error", () => {});
 		expect(await keyv.has(faker.string.uuid())).toBe(false);
 	});
+
+	test("forwards asynchronous client errors to adapter listeners", () => {
+		const store = new KeyvMemcache(uri);
+		let captured: unknown;
+		store.on("error", (error) => {
+			captured = error;
+		});
+
+		// The memcache client forwards node errors as `(nodeId, error)`.
+		const boom = new Error("boom");
+		store.client.emit("error", "node-1", boom);
+
+		expect(captured).toBe(boom);
+	});
+
+	test("forwards a client error event that carries no Error argument", () => {
+		const store = new KeyvMemcache(uri);
+		let captured: unknown;
+		store.on("error", (error) => {
+			captured = error;
+		});
+
+		// Degenerate shape: no Error instance present, so the last argument is forwarded.
+		store.client.emit("error", "connection reset");
+
+		expect(captured).toBe("connection reset");
+	});
 });
 
 describe("disconnect", () => {

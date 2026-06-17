@@ -74,6 +74,7 @@ The `createKeyv` helper creates a `Keyv` instance with a Memcache store in a sin
 import { createKeyv } from '@keyv/memcache';
 
 const keyv = createKeyv('localhost:11211');
+keyv.on('error', handleConnectionError);
 
 // set a value
 await keyv.set('foo', 'bar', 6000);
@@ -101,6 +102,7 @@ import KeyvMemcache from '@keyv/memcache';
 
 const memcache = new KeyvMemcache('localhost:11211');
 const keyv = new Keyv({ store: memcache });
+keyv.on('error', handleConnectionError);
 
 //set
 await keyv.set("foo","bar", 6000) //Expiring time is optional
