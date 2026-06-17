@@ -594,18 +594,30 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the store by deleting each key individually.
+	 * Deletes multiple keys from the store using batched `DELETE ... WHERE key IN (?, ?) RETURNING key`
+	 * statements. Batching (998 keys per query) reduces database roundtrips to `ceil(keys.length / 998)`
+	 * compared to deleting each key individually, mirroring {@link getMany} and {@link hasMany}.
 	 * @param {string[]} keys - An array of keys to delete.
 	 * @returns {Promise<boolean[]>} An array of booleans in the same order as the input keys,
 	 *   where `true` indicates the key existed and was deleted, `false` indicates it was not found.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		const results: boolean[] = [];
-		for (const key of keys) {
-			results.push(await this.delete(key));
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
+		const ns = this.getNamespaceValue();
+		const batchSize = 998; // 999 max params - 1 for namespace
+		const deletedKeys = new Set<string>();
+
+		for (let i = 0; i < strippedKeys.length; i += batchSize) {
+			const batch = strippedKeys.slice(i, i + batchSize);
+			const placeholders = batch.map(() => "?").join(", ");
+			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ? RETURNING key`;
+			const rows = (await this.query(del, ...batch, ns)) as Array<{ key: string }>;
+			for (const row of rows) {
+				deletedKeys.add(row.key);
+			}
 		}
 
-		return results;
+		return strippedKeys.map((key) => deletedKeys.has(key));
 	}
 
 	/**

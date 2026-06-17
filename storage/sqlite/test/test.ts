@@ -341,6 +341,22 @@ describe("delete and deleteMany", () => {
 		await keyv.deleteMany([key1, key2, key3]);
 		expect(await keyv.getMany([key1, key2, key3])).toStrictEqual([undefined, undefined, undefined]);
 	});
+
+	test("deleteMany returns per-key booleans for existing and missing keys", async () => {
+		const keyv = store();
+		const existingKey1 = faker.string.uuid();
+		const existingKey2 = faker.string.uuid();
+		const missingKey = faker.string.uuid();
+		await keyv.set(existingKey1, faker.lorem.word());
+		await keyv.set(existingKey2, faker.lorem.word());
+		expect(await keyv.deleteMany([existingKey1, missingKey, existingKey2])).toStrictEqual([
+			true,
+			false,
+			true,
+		]);
+		// A second delete of the same keys now reports them all as missing.
+		expect(await keyv.deleteMany([existingKey1, existingKey2])).toStrictEqual([false, false]);
+	});
 });
 
 describe("clearExpired", () => {
