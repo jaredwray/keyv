@@ -27,6 +27,7 @@
 	- [For...of Loop](#forof-loop)
 	- [forEach](#foreach)
 	- [Keys, Values, and Entries](#keys-values-and-entries)
+- [Events](#events)
 - [Advanced Features](#advanced-features)
 	- [Type Safety with Generics](#type-safety-with-generics)
 	- [Large-Scale Data](#large-scale-data)
@@ -54,6 +55,7 @@
 		- [initStore](#initstore)
 - [Types](#types)
 - [StoreHashFunction](#storehashfunction)
+- [BigMapEvents](#bigmapevents)
 - [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
 - [Benchmark](#benchmark)
 - [Contributing](#contributing)
@@ -201,6 +203,40 @@ for (const [key, value] of bigMap.entries()) {
   console.log(key, value);
 }
 ```
+
+# Events
+
+`BigMap` extends [Hookified](https://github.com/jaredwray/hookified), so it emits events on mutating operations. Subscribe with `on` (or `once`) using the `BigMapEvents` enum (the values are also plain strings such as `"set"`). Listeners are invoked synchronously, and `BigMapOptions` also accepts any [Hookified options](https://github.com/jaredwray/hookified).
+
+| Event             | Enum                 | Payload        | Description                                                                  |
+|-------------------|----------------------|----------------|------------------------------------------------------------------------------|
+| `set`             | `BigMapEvents.SET`   | `(key, value)` | Emitted after a value is set.                                                |
+| `delete`          | `BigMapEvents.DELETE`| `(key)`        | Emitted after an existing entry is removed. Not emitted when the key was absent. |
+| `clear`           | `BigMapEvents.CLEAR` | _(none)_       | Emitted after all entries are cleared, including when `storeSize` changes.    |
+
+```typescript
+import { BigMap, BigMapEvents } from '@keyv/bigmap';
+
+const bigMap = new BigMap<string, number>();
+
+bigMap.on(BigMapEvents.SET, (key, value) => {
+  console.log('set', key, value);
+});
+
+bigMap.on(BigMapEvents.DELETE, (key) => {
+  console.log('deleted', key);
+});
+
+bigMap.on(BigMapEvents.CLEAR, () => {
+  console.log('cleared');
+});
+
+bigMap.set('key1', 100); // logs: set key1 100
+bigMap.delete('key1');   // logs: deleted key1
+bigMap.clear();          // logs: cleared
+```
+
+> **Note:** When Hookified's `eventLogger` option is enabled, event arguments — including the value passed to `set` — are serialized with `JSON.stringify` for logging. Values that cannot be JSON-serialized, such as `BigInt` or circular objects, will cause the operation to throw while logging. Leave `eventLogger` unset (the default) if you need to store such values.
 
 # Advanced Features
 
@@ -360,7 +396,7 @@ const customBigMap = new BigMap<string, number>({
 | Property | Type | Access | Description |
 |----------|------|--------|-------------|
 | `size` | `number` | Read-only | Gets the total number of entries in the BigMap. |
-| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this will clear all entries. Default: `2` |
+| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this clears all entries and emits `BigMapEvents.CLEAR`. Default: `2` |
 | `storeHashFunction` | `StoreHashFunction \| undefined` | Read/Write | Gets or sets the hash function used for key distribution. |
 | `store` | `Array<Map<K, V>>` | Read-only | Gets the internal array of Map instances. |
 
@@ -393,11 +429,14 @@ Sets the value for a key in the map.
 - `key` (K): The key to set
 - `value` (V): The value to associate with the key
 
-**Returns:** `Map<K, V>` - The internal Map instance where the key was stored
+**Returns:** `BigMap<K, V>` - The BigMap instance, enabling method chaining (matches the native `Map.set` API).
 
 **Example:**
 ```typescript
 bigMap.set('user123', { name: 'Alice' });
+
+// set() returns the BigMap instance, so calls can be chained
+bigMap.set('a', { name: 'Alice' }).set('b', { name: 'Bob' });
 ```
 
 ### get
@@ -585,6 +624,18 @@ type StoreHashFunction = (key: string, storeSize: number) => number;
 - `storeSize` (number): The total number of stores
 
 **Returns:** `number` - The index of the store to use (0 to storeSize - 1)
+
+### BigMapEvents
+
+Enum of the event names emitted by `BigMap`. See [Events](#events) for payloads and usage.
+
+```typescript
+enum BigMapEvents {
+  SET = 'set',
+  DELETE = 'delete',
+  CLEAR = 'clear',
+}
+```
 
 ### defaultHashFunction
 

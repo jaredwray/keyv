@@ -1,5 +1,4 @@
 import { faker } from "@faker-js/faker";
-import * as testRunner from "vitest";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import Keyv, { KeyvMemoryAdapter, type KeyvStorageAdapter } from "../src/index.js";
 import { createStore, delay } from "./test-utils.js";
@@ -85,109 +84,110 @@ describe("Keyv", async () => {
 	});
 });
 
-testRunner.it(".getRaw(key) returns the raw object instead of the value", async (t) => {
-	const keyv = new Keyv();
-	await keyv.set("foo", "bar");
-	const value = await keyv.get("foo");
-	const rawObject = await keyv.getRaw("foo");
-	t.expect(value).toBe("bar");
-	t.expect(rawObject?.value).toBe("bar");
+describe("getRaw", () => {
+	test(".getRaw(key) returns the raw object instead of the value", async () => {
+		const keyv = new Keyv();
+		await keyv.set("foo", "bar");
+		const value = await keyv.get("foo");
+		const rawObject = await keyv.getRaw("foo");
+		expect(value).toBe("bar");
+		expect(rawObject?.value).toBe("bar");
+	});
 });
 
-testRunner.it("Keyv should wait for the expired get", async (t) => {
-	t.expect.assertions(4);
-	const _store = new Map();
-	const store = {
-		get: async (key: string) => _store.get(key),
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		set(key: string, value: any) {
-			_store.set(key, value);
-		},
-		clear() {
-			_store.clear();
-		},
-		async delete(key: string) {
-			await new Promise<void>((resolve) => {
-				setTimeout(() => {
-					// Simulate database latency
-					resolve();
-				}, 20);
-			});
-			return _store.delete(key);
-		},
-	} as KeyvStorageAdapter;
+describe("get", () => {
+	test("Keyv should wait for the expired get", async () => {
+		expect.assertions(4);
+		const _store = new Map();
+		const store = {
+			get: async (key: string) => _store.get(key),
+			// biome-ignore lint/suspicious/noExplicitAny: type format
+			set(key: string, value: any) {
+				_store.set(key, value);
+			},
+			clear() {
+				_store.clear();
+			},
+			async delete(key: string) {
+				await new Promise<void>((resolve) => {
+					setTimeout(() => {
+						// Simulate database latency
+						resolve();
+					}, 20);
+				});
+				return _store.delete(key);
+			},
+		} as KeyvStorageAdapter;
 
-	const keyv = new Keyv({ store, checkExpired: true });
+		const keyv = new Keyv({ store, checkExpired: true });
 
-	// Round 1
-	const v1 = await keyv.get("foo");
-	t.expect(v1).toBeUndefined();
+		// Round 1
+		const v1 = await keyv.get("foo");
+		expect(v1).toBeUndefined();
 
-	await keyv.set("foo", "bar", 1000);
-	const v2 = await keyv.get("foo");
-	t.expect(v2).toBe("bar");
+		await keyv.set("foo", "bar", 1000);
+		const v2 = await keyv.get("foo");
+		expect(v2).toBe("bar");
 
-	await new Promise<void>((resolve) => {
-		setTimeout(() => {
-			// Wait for expired
-			resolve();
-		}, 1100);
+		await new Promise<void>((resolve) => {
+			setTimeout(() => {
+				// Wait for expired
+				resolve();
+			}, 1100);
+		});
+
+		// Round 2
+		const v3 = await keyv.get("foo");
+		expect(v3).toBeUndefined();
+
+		await keyv.set("foo", "bar", 1000);
+		await new Promise<void>((resolve) => {
+			setTimeout(() => {
+				// Simulate database latency
+				resolve();
+			}, 30);
+		});
+		const v4 = await keyv.get("foo");
+		expect(v4).toBe("bar");
 	});
 
-	// Round 2
-	const v3 = await keyv.get("foo");
-	t.expect(v3).toBeUndefined();
+	test("keyv.get([keys]) should return array values", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		await keyv.set("foo", "bar");
+		await keyv.set("foo1", "bar1");
+		await keyv.set("foo2", "bar2");
+		const values = (await keyv.get<string>(["foo", "foo1", "foo2"])) as string[];
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values[0]).toBe("bar");
+		expect(values[1]).toBe("bar1");
+		expect(values[2]).toBe("bar2");
 
-	await keyv.set("foo", "bar", 1000);
-	await new Promise<void>((resolve) => {
-		setTimeout(() => {
-			// Simulate database latency
-			resolve();
-		}, 30);
+		const rawValues = await keyv.getManyRaw<string>(["foo", "foo1", "foo2"]);
+		expect(Array.isArray(rawValues)).toBeTruthy();
+		expect(rawValues[0]).toEqual({ value: "bar" });
+		expect(rawValues[1]).toEqual({ value: "bar1" });
+		expect(rawValues[2]).toEqual({ value: "bar2" });
 	});
-	const v4 = await keyv.get("foo");
-	t.expect(v4).toBe("bar");
-});
 
-testRunner.it("keyv.get([keys]) should return array values", async (t) => {
-	const keyv = new Keyv({ store: new Map() });
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1");
-	await keyv.set("foo2", "bar2");
-	const values = (await keyv.get<string>(["foo", "foo1", "foo2"])) as string[];
-	t.expect(Array.isArray(values)).toBeTruthy();
-	t.expect(values[0]).toBe("bar");
-	t.expect(values[1]).toBe("bar1");
-	t.expect(values[2]).toBe("bar2");
-
-	const rawValues = await keyv.getManyRaw<string>(["foo", "foo1", "foo2"]);
-	t.expect(Array.isArray(rawValues)).toBeTruthy();
-	t.expect(rawValues[0]).toEqual({ value: "bar" });
-	t.expect(rawValues[1]).toEqual({ value: "bar1" });
-	t.expect(rawValues[2]).toEqual({ value: "bar2" });
-});
-
-testRunner.it("keyv.get([keys]) should return array value undefined when expires", async (t) => {
-	const keyv = new Keyv({ store: new Map() });
-	await keyv.set("foo", "bar");
-	await keyv.set("foo1", "bar1", 1);
-	await keyv.set("foo2", "bar2");
-	await new Promise<void>((resolve) => {
-		setTimeout(() => {
-			// Simulate database latency
-			resolve();
-		}, 30);
+	test("keyv.get([keys]) should return array value undefined when expires", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		await keyv.set("foo", "bar");
+		await keyv.set("foo1", "bar1", 1);
+		await keyv.set("foo2", "bar2");
+		await new Promise<void>((resolve) => {
+			setTimeout(() => {
+				// Simulate database latency
+				resolve();
+			}, 30);
+		});
+		const values = await keyv.get<string>(["foo", "foo1", "foo2"]);
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values[0]).toBe("bar");
+		expect(values[1]).toBeUndefined();
+		expect(values[2]).toBe("bar2");
 	});
-	const values = await keyv.get<string>(["foo", "foo1", "foo2"]);
-	t.expect(Array.isArray(values)).toBeTruthy();
-	t.expect(values[0]).toBe("bar");
-	t.expect(values[1]).toBeUndefined();
-	t.expect(values[2]).toBe("bar2");
-});
 
-testRunner.it(
-	"keyv.get([keys]) should return array value undefined when expires sqlite",
-	async (t) => {
+	test("keyv.get([keys]) should return array value undefined when expires sqlite", async () => {
 		const keyv = new Keyv({ store: new Map() });
 
 		const dataSet = [
@@ -213,14 +213,11 @@ testRunner.it(
 
 		await delay(30);
 		const values = await keyv.get<string>(dataSet.map((item) => item.key));
-		t.expect(Array.isArray(values)).toBeTruthy();
-		t.expect(values).toEqual([dataSet[0].value, undefined, dataSet[2].value]);
-	},
-);
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values).toEqual([dataSet[0].value, undefined, dataSet[2].value]);
+	});
 
-testRunner.it(
-	"keyv.get([keys]) should return empty array when expires with storage adapter",
-	async (t) => {
+	test("keyv.get([keys]) should return empty array when expires with storage adapter", async () => {
 		const keyv = new Keyv({ store: createStore() });
 		await keyv.clear();
 		await keyv.set("foo", "bar", 1);
@@ -232,100 +229,90 @@ testRunner.it(
 			}, 30);
 		});
 		const values = await keyv.get(["foo", "foo1", "foo2"]);
-		t.expect(Array.isArray(values)).toBeTruthy();
-		t.expect(values.length).toBe(3);
-	},
-);
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values.length).toBe(3);
+	});
 
-testRunner.it(
-	"keyv.getManyRaw([keys]) should return array raw values undefined with storage adapter",
-	async (t) => {
+	test("keyv.getManyRaw([keys]) should return array raw values undefined with storage adapter", async () => {
 		const keyv = new Keyv({ store: createStore() });
 		await keyv.clear();
 		const values = await keyv.getManyRaw<string>(["foo", "foo1"]);
-		t.expect(Array.isArray(values)).toBeTruthy();
-		t.expect(values[0]).toBeUndefined();
-		t.expect(values[1]).toBeUndefined();
-	},
-);
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values[0]).toBeUndefined();
+		expect(values[1]).toBeUndefined();
+	});
 
-testRunner.it("keyv.get([keys]) should return array values with undefined", async (t) => {
-	const keyv = new Keyv({ store: new Map() });
-	await keyv.set("foo", "bar");
-	await keyv.set("foo2", "bar2");
-	const values = await keyv.get<string>(["foo", "foo1", "foo2"]);
-	t.expect(Array.isArray(values)).toBeTruthy();
-	t.expect(values[0]).toBe("bar");
-	t.expect(values[1]).toBeUndefined();
-	t.expect(values[2]).toBe("bar2");
-});
+	test("keyv.get([keys]) should return array values with undefined", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		await keyv.set("foo", "bar");
+		await keyv.set("foo2", "bar2");
+		const values = await keyv.get<string>(["foo", "foo1", "foo2"]);
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values[0]).toBe("bar");
+		expect(values[1]).toBeUndefined();
+		expect(values[2]).toBe("bar2");
+	});
 
-testRunner.it(
-	"keyv.get([keys]) should return array values with all undefined using storage adapter",
-	async (t) => {
+	test("keyv.get([keys]) should return array values with all undefined using storage adapter", async () => {
 		const keyv = new Keyv({ store: createStore() });
 		const values = await keyv.get<string>(["foo", "foo1", "foo2"]);
-		t.expect(Array.isArray(values)).toBeTruthy();
-		t.expect(values[0]).toBeUndefined();
-		t.expect(values[1]).toBeUndefined();
-		t.expect(values[2]).toBeUndefined();
-	},
-);
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values[0]).toBeUndefined();
+		expect(values[1]).toBeUndefined();
+		expect(values[2]).toBeUndefined();
+	});
 
-testRunner.it(
-	"keyv.get([keys]) should return undefined array for all no existent keys",
-	async (t) => {
+	test("keyv.get([keys]) should return undefined array for all no existent keys", async () => {
 		const keyv = new Keyv({ store: new Map() });
 		const values = await keyv.get(["foo", "foo1", "foo2"]);
-		t.expect(Array.isArray(values)).toBeTruthy();
-		t.expect(values).toEqual([undefined, undefined, undefined]);
-	},
-);
+		expect(Array.isArray(values)).toBeTruthy();
+		expect(values).toEqual([undefined, undefined, undefined]);
+	});
 
-testRunner.it("get keys, one key expired", async (t) => {
-	const keyv = new Keyv({ store: new Map() });
-	await keyv.set("foo", "bar", 10_000);
-	await keyv.set("fizz", "buzz", 100);
-	await keyv.set("ping", "pong", 10_000);
-	await snooze(150);
-	await keyv.get(["foo", "fizz", "ping"]);
-	t.expect(await keyv.get("fizz")).toBeUndefined();
-	t.expect(await keyv.get("foo")).toBe("bar");
-	t.expect(await keyv.get("ping")).toBe("pong");
+	test("get keys, one key expired", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		await keyv.set("foo", "bar", 10_000);
+		await keyv.set("fizz", "buzz", 100);
+		await keyv.set("ping", "pong", 10_000);
+		await snooze(150);
+		await keyv.get(["foo", "fizz", "ping"]);
+		expect(await keyv.get("fizz")).toBeUndefined();
+		expect(await keyv.get("foo")).toBe("bar");
+		expect(await keyv.get("ping")).toBe("pong");
+	});
 });
 
 // --- Coverage tests for fallback paths ---
 
-testRunner.it("getMany should fallback to individual get when store has no getMany", async (t) => {
-	const store = createStore();
-	store.getMany = undefined as unknown as typeof store.getMany;
-	const keyv = new Keyv({ store });
-	await keyv.set("key1", "val1");
-	await keyv.set("key2", "val2");
-	const result = await keyv.getMany(["key1", "key2", "nonexistent"]);
-	t.expect(result).toEqual(["val1", "val2", undefined]);
-});
+describe("getMany", () => {
+	test("getMany should fallback to individual get when store has no getMany", async () => {
+		const store = createStore();
+		store.getMany = undefined as unknown as typeof store.getMany;
+		const keyv = new Keyv({ store });
+		await keyv.set("key1", "val1");
+		await keyv.set("key2", "val2");
+		const result = await keyv.getMany(["key1", "key2", "nonexistent"]);
+		expect(result).toEqual(["val1", "val2", undefined]);
+	});
 
-testRunner.it("getMany fallback should handle expired keys", async (t) => {
-	const store = createStore();
-	store.getMany = undefined as unknown as typeof store.getMany;
-	const keyv = new Keyv({ store, checkExpired: true });
-	await keyv.set("key1", "val1", 1);
-	await snooze(100);
-	const result = await keyv.getMany(["key1"]);
-	t.expect(result).toEqual([undefined]);
-});
+	test("getMany fallback should handle expired keys", async () => {
+		const store = createStore();
+		store.getMany = undefined as unknown as typeof store.getMany;
+		const keyv = new Keyv({ store, checkExpired: true });
+		await keyv.set("key1", "val1", 1);
+		await snooze(100);
+		const result = await keyv.getMany(["key1"]);
+		expect(result).toEqual([undefined]);
+	});
 
-testRunner.it(
-	"getManyRaw should fallback to individual get when store has no getMany",
-	async (t) => {
+	test("getManyRaw should fallback to individual get when store has no getMany", async () => {
 		const store = createStore();
 		store.getMany = undefined as unknown as typeof store.getMany;
 		const keyv = new Keyv({ store });
 		await keyv.set("key1", "val1");
 		const result = await keyv.getManyRaw(["key1", "nonexistent"]);
-		t.expect(result[0]).toBeDefined();
-		t.expect(result[0]?.value).toBe("val1");
-		t.expect(result[1]).toBeUndefined();
-	},
-);
+		expect(result[0]).toBeDefined();
+		expect(result[0]?.value).toBe("val1");
+		expect(result[1]).toBeUndefined();
+	});
+});
