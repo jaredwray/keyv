@@ -147,39 +147,6 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Initializes the database connection and ensures the table schema exists.
-	 * Called from the constructor; errors are emitted rather than thrown.
-	 */
-	private async init(
-		createTable: string,
-		migration: string,
-		migrationExpires: string,
-		dropOldPk: string,
-		createIndex: string,
-		createExpiresIndex: string,
-	): Promise<Query> {
-		const query = await this.connect();
-
-		try {
-			await query(createTable);
-			await query(migration);
-			await query(migrationExpires);
-			await query(dropOldPk);
-			await query(createIndex);
-			await query(createExpiresIndex);
-		} catch (error) {
-			// 23505 = unique_violation: safe to ignore when concurrent instances
-			// race to create the same index (the index already exists).
-			/* v8 ignore next -- @preserve */
-			if ((error as DatabaseError).code !== "23505") {
-				this.emit("error", error);
-			}
-		}
-
-		return query;
-	}
-
-	/**
 	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
 	 */
 	public get namespace(): string | undefined {
@@ -632,6 +599,56 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
+	 * Disconnects from the PostgreSQL database and releases the connection pool.
+	 * Also stops the automatic expired-entry cleanup interval if running.
+	 * @returns A promise that resolves once the pool has been closed.
+	 */
+	public async disconnect(): Promise<void> {
+		this.stopClearExpiredTimer();
+		await endPool(this._uri, { ...this._poolConfig, ssl: this._ssl });
+	}
+
+	/**
+	 * Initializes the database connection and ensures the table schema exists.
+	 * Called from the constructor; errors are emitted rather than thrown.
+	 * @param createTable - SQL statement that creates the storage table (and schema if needed).
+	 * @param migration - SQL statement that adds the `namespace` column to legacy tables.
+	 * @param migrationExpires - SQL statement that adds the `expires` column to legacy tables.
+	 * @param dropOldPk - SQL statement that drops the legacy single-column primary key.
+	 * @param createIndex - SQL statement that creates the unique `(key, namespace)` index.
+	 * @param createExpiresIndex - SQL statement that creates the partial index on `expires`.
+	 * @returns A promise resolving to the query function once initialization completes.
+	 */
+	private async init(
+		createTable: string,
+		migration: string,
+		migrationExpires: string,
+		dropOldPk: string,
+		createIndex: string,
+		createExpiresIndex: string,
+	): Promise<Query> {
+		const query = await this.connect();
+
+		try {
+			await query(createTable);
+			await query(migration);
+			await query(migrationExpires);
+			await query(dropOldPk);
+			await query(createIndex);
+			await query(createExpiresIndex);
+		} catch (error) {
+			// 23505 = unique_violation: safe to ignore when concurrent instances
+			// race to create the same index (the index already exists).
+			/* v8 ignore next -- @preserve */
+			if ((error as DatabaseError).code !== "23505") {
+				this.emit("error", error);
+			}
+		}
+
+		return query;
+	}
+
+	/**
 	 * Establishes a connection to the PostgreSQL database via the connection pool.
 	 * @returns A query function that executes SQL statements and returns result rows.
 	 */
@@ -642,16 +659,6 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			const data = await conn.query(sql, values);
 			return data.rows;
 		};
-	}
-
-	/**
-	 * Disconnects from the PostgreSQL database and releases the connection pool.
-	 * Also stops the automatic expired-entry cleanup interval if running.
-	 * @returns A promise that resolves once the pool has been closed.
-	 */
-	public async disconnect(): Promise<void> {
-		this.stopClearExpiredTimer();
-		await endPool(this._uri, { ...this._poolConfig, ssl: this._ssl });
 	}
 
 	/**
