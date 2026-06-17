@@ -22,7 +22,7 @@ describe("set", () => {
 		expect(result).toBe(data.value);
 	});
 
-	test("should throw error on bad uri", async () => {
+	test("should throw on connection error with a bad uri", async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, { connectionTimeout: 500 });
 		keyvRedis.on("error", () => {}); // Silence expected connection errors
 
@@ -42,7 +42,7 @@ describe("set", () => {
 		expect(didError).toBe(true);
 	});
 
-	test("should throw error on bad uri", async () => {
+	test("should throw on set client error when throwOnErrors is true", async () => {
 		const keyvRedis = new KeyvRedis(redisBadUri, {
 			throwOnConnectError: false,
 			throwOnErrors: true,
@@ -90,27 +90,7 @@ describe("set", () => {
 		expect(expiredResult).toBeUndefined();
 	});
 
-	test("should set a value with ttl", async () => {
-		const keyvRedis = new KeyvRedis(redisUri);
-		const data = {
-			key: faker.string.alphanumeric(10),
-			value: faker.lorem.sentence(),
-			ttl: 100, // 100 milliseconds
-		};
-
-		await keyvRedis.set(data.key, data.value, data.ttl);
-
-		const result = await keyvRedis.get(data.key);
-
-		expect(result).toBe(data.value);
-
-		await delay(300); // Wait for ttl to expire
-
-		const expiredResult = await keyvRedis.get(data.key);
-		expect(expiredResult).toBeUndefined();
-	});
-
-	test("show throw on redis client set and get error", async () => {
+	test("should throw on redis client set error when throwOnErrors is true", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {
@@ -134,7 +114,7 @@ describe("set", () => {
 		vi.spyOn(keyvRedis.client, "set").mockRestore();
 	});
 
-	test("show throw on redis client setMany and get error", async () => {
+	test("should throw on redis client setMany error when throwOnErrors is true", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {
@@ -158,7 +138,7 @@ describe("set", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
-	test("setMany should return false entries on error when throwOnErrors is false", async () => {
+	test("should return false entries on setMany error when throwOnErrors is false", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		keyvRedis.on("error", () => {}); // Silence expected errors
 

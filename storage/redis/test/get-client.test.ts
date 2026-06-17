@@ -43,7 +43,7 @@ describe("getClient", () => {
 		expect(didError).toBe(true);
 	});
 
-	test("should throw an error if not connected with Keyv", async () => {
+	test("should throw an error if not connected with Keyv when throwOnErrors is true", async () => {
 		const keyv = createKeyv(redisBadUri, {
 			throwOnErrors: true,
 			connectionTimeout: 500,
@@ -58,7 +58,7 @@ describe("getClient", () => {
 		expect(didError).toBe(true);
 	});
 
-	test("should throw an error if not connected with Keyv", async () => {
+	test("should throw an error if not connected with Keyv when throwOnConnectError is true", async () => {
 		const keyv = createKeyv(redisBadUri, {
 			throwOnConnectError: true,
 			connectionTimeout: 500,
