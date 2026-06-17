@@ -27,6 +27,7 @@
 	- [For...of Loop](#forof-loop)
 	- [forEach](#foreach)
 	- [Keys, Values, and Entries](#keys-values-and-entries)
+- [Events](#events)
 - [Advanced Features](#advanced-features)
 	- [Type Safety with Generics](#type-safety-with-generics)
 	- [Large-Scale Data](#large-scale-data)
@@ -54,6 +55,7 @@
 		- [initStore](#initstore)
 - [Types](#types)
 - [StoreHashFunction](#storehashfunction)
+- [BigMapEvents](#bigmapevents)
 - [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
 - [Benchmark](#benchmark)
 - [Contributing](#contributing)
@@ -200,6 +202,38 @@ for (const value of bigMap.values()) {
 for (const [key, value] of bigMap.entries()) {
   console.log(key, value);
 }
+```
+
+# Events
+
+`BigMap` extends [Hookified](https://github.com/jaredwray/hookified), so it emits events on mutating operations. Subscribe with `on` (or `once`) using the `BigMapEvents` enum (the values are also plain strings such as `"set"`). Listeners are invoked synchronously, and `BigMapOptions` also accepts any [Hookified options](https://github.com/jaredwray/hookified).
+
+| Event             | Enum                 | Payload        | Description                                                                  |
+|-------------------|----------------------|----------------|------------------------------------------------------------------------------|
+| `set`             | `BigMapEvents.SET`   | `(key, value)` | Emitted after a value is set.                                                |
+| `delete`          | `BigMapEvents.DELETE`| `(key)`        | Emitted after an existing entry is removed. Not emitted when the key was absent. |
+| `clear`           | `BigMapEvents.CLEAR` | _(none)_       | Emitted after all entries are cleared.                                       |
+
+```typescript
+import { BigMap, BigMapEvents } from '@keyv/bigmap';
+
+const bigMap = new BigMap<string, number>();
+
+bigMap.on(BigMapEvents.SET, (key, value) => {
+  console.log('set', key, value);
+});
+
+bigMap.on(BigMapEvents.DELETE, (key) => {
+  console.log('deleted', key);
+});
+
+bigMap.on(BigMapEvents.CLEAR, () => {
+  console.log('cleared');
+});
+
+bigMap.set('key1', 100); // logs: set key1 100
+bigMap.delete('key1');   // logs: deleted key1
+bigMap.clear();          // logs: cleared
 ```
 
 # Advanced Features
@@ -585,6 +619,18 @@ type StoreHashFunction = (key: string, storeSize: number) => number;
 - `storeSize` (number): The total number of stores
 
 **Returns:** `number` - The index of the store to use (0 to storeSize - 1)
+
+### BigMapEvents
+
+Enum of the event names emitted by `BigMap`. See [Events](#events) for payloads and usage.
+
+```typescript
+enum BigMapEvents {
+  SET = 'set',
+  DELETE = 'delete',
+  CLEAR = 'clear',
+}
+```
 
 ### defaultHashFunction
 

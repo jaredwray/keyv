@@ -1,185 +1,257 @@
 import { faker } from "@faker-js/faker";
 import type { KeyvMemoryAdapter } from "keyv";
-import { describe, expect, it } from "vitest";
-import { BigMap, createKeyv, defaultHashFunction } from "../src/index.js";
+import { describe, expect, test } from "vitest";
+import { BigMap, BigMapEvents, createKeyv, defaultHashFunction } from "../src/index.js";
 
 enum FakeDataType {
 	STRING = "string",
 	NUMBER = "number",
 }
 
-function getFake<T>(type: FakeDataType, amount = 1): Array<{ key: string; value: T }> {
-	if (type === FakeDataType.STRING) {
-		return Array.from({ length: amount }, () => ({
-			key: faker.string.alpha(5),
-			value: faker.string.alpha(10) as T,
-		}));
+type FakeEntry<T> = { key: string; value: T };
+
+/**
+ * Generates an array of fake entries with guaranteed-unique keys so that
+ * assertions on size and per-key values are never flaky.
+ */
+function fakeEntries<T>(type: FakeDataType, amount = 1): Array<FakeEntry<T>> {
+	const entries: Array<FakeEntry<T>> = [];
+	const seen = new Set<string>();
+
+	while (entries.length < amount) {
+		const key = faker.string.alphanumeric(12);
+		if (seen.has(key)) {
+			continue;
+		}
+
+		seen.add(key);
+		const value = (
+			type === FakeDataType.STRING
+				? faker.string.alpha(10)
+				: faker.number.int({ min: 1, max: 1000 })
+		) as T;
+		entries.push({ key, value });
 	}
 
-	return Array.from({ length: amount }, () => ({
-		key: faker.string.alpha(5),
-		value: faker.number.int({ min: 1, max: 100 }) as T,
-	}));
+	return entries;
+}
+
+/**
+ * Convenience helper for tests that only need a single fake entry.
+ */
+function fakeEntry<T>(type: FakeDataType): FakeEntry<T> {
+	return fakeEntries<T>(type, 1)[0];
 }
 
 describe("BigMap Instance", () => {
-	it("should create an instance of BigMap", () => {
+	test("should create an instance of BigMap", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap).toBeInstanceOf(BigMap);
 	});
 
-	it("should initialize with an empty map", () => {
+	test("should initialize with an empty map", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap.size).toBe(0);
-		expect(bigMap.get("nonExistingKey")).toBeUndefined();
-		expect(bigMap.has("nonExistingKey")).toBe(false);
+		expect(bigMap.get(faker.string.alpha(5))).toBeUndefined();
+		expect(bigMap.has(faker.string.alpha(5))).toBe(false);
 	});
 
-	it("should allow setting a custom store size", () => {
+	test("should default the store size to 2", () => {
+		const bigMap = new BigMap<string, number>();
+		expect(bigMap.storeSize).toBe(2);
+	});
+
+	test("should allow setting a custom store size", () => {
 		const customSize = 10;
 		const bigMap = new BigMap<string, number>({ storeSize: customSize });
 		expect(bigMap.storeSize).toBe(customSize);
 	});
 
-	it("should default store size to 2", () => {
-		const bigMap = new BigMap<string, number>();
-		expect(bigMap.storeSize).toBe(2);
+	test("should throw an error when constructed with a store size less than 1", () => {
+		expect(() => new BigMap<string, number>({ storeSize: 0 })).toThrow(
+			"Store size must be at least 1.",
+		);
 	});
 
-	it("should throw an error when store size is set to less than 1", () => {
-		expect(() => {
-			new BigMap<string, number>({ storeSize: 0 });
-		}).toThrow("Store size must be at least 1.");
-	});
-
-	it("should throw an error when setting store size less than 1", () => {
+	test("should throw an error when the store size is set to less than 1", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(() => {
 			bigMap.storeSize = 0;
 		}).toThrow("Store size must be at least 1.");
 	});
 
-	it("should allow setting a custom hash function", () => {
-		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
-
-		const bigMap = new BigMap<string, number>({
-			storeHashFunction: customHashFunction,
-		});
-
-		expect(bigMap.storeHashFunction).toBe(customHashFunction);
-
-		bigMap.storeHashFunction = undefined;
-		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
-	});
-
-	it("should not throw an error when store size is set to 1", () => {
+	test("should not throw an error when the store size is set to 1", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(() => {
 			bigMap.storeSize = 1;
 		}).not.toThrow();
 	});
 
-	it("should clear entries when store size is set", () => {
-		const bigMap = new BigMap<string, number>();
+	test("should allow setting a custom hash function", () => {
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
+		const bigMap = new BigMap<string, number>({ storeHashFunction: customHashFunction });
+		expect(bigMap.storeHashFunction).toBe(customHashFunction);
 
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
-		dataSet.forEach((item) => {
-			bigMap.set(item.key, item.value);
-		});
+		bigMap.storeHashFunction = undefined;
+		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
+	});
+
+	test("should clear entries when the store size is set", () => {
+		const bigMap = new BigMap<string, number>();
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 2);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
 
 		expect(bigMap.size).toBe(2);
 
 		bigMap.storeSize = 5; // This should clear the map
 		expect(bigMap.size).toBe(0);
-		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
-		expect(bigMap.get(dataSet[1].key)).toBeUndefined();
+		expect(bigMap.get(entries[0].key)).toBeUndefined();
+		expect(bigMap.get(entries[1].key)).toBeUndefined();
 	});
 
-	it("should have the correct store size", () => {
+	test("should report the correct size after sets and deletes", () => {
 		const bigMap = new BigMap<string, number>({ storeSize: 3 });
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 50);
-		dataSet.forEach((item) => {
-			bigMap.set(item.key, item.value);
-		});
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 50);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
 
 		expect(bigMap.size).toBe(50);
 
-		// Remove some items
 		for (let i = 0; i < 20; i++) {
-			bigMap.delete(dataSet[i].key);
+			bigMap.delete(entries[i].key);
 		}
 
 		expect(bigMap.size).toBe(30);
 	});
 });
 
+describe("BigMap Events", () => {
+	test("should expose hookified event methods", () => {
+		const bigMap = new BigMap<string, number>();
+		expect(typeof bigMap.on).toBe("function");
+		expect(typeof bigMap.once).toBe("function");
+		expect(typeof bigMap.emit).toBe("function");
+	});
+
+	test("should emit a set event with the key and value", () => {
+		const bigMap = new BigMap<string, number>();
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		const received: FakeEntry<number>[] = [];
+		bigMap.on(BigMapEvents.SET, (k: string, v: number) => {
+			received.push({ key: k, value: v });
+		});
+
+		bigMap.set(key, value);
+
+		expect(received).toEqual([{ key, value }]);
+	});
+
+	test("should emit a delete event with the key when an entry is removed", () => {
+		const bigMap = new BigMap<string, number>();
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		bigMap.set(key, value);
+
+		let received: string | undefined;
+		bigMap.on(BigMapEvents.DELETE, (k: string) => {
+			received = k;
+		});
+
+		bigMap.delete(key);
+
+		expect(received).toBe(key);
+	});
+
+	test("should not emit a delete event when the key does not exist", () => {
+		const bigMap = new BigMap<string, number>();
+		let emitted = false;
+		bigMap.on(BigMapEvents.DELETE, () => {
+			emitted = true;
+		});
+
+		expect(bigMap.delete(faker.string.alpha(5))).toBe(false);
+		expect(emitted).toBe(false);
+	});
+
+	test("should emit a clear event when the map is cleared", () => {
+		const bigMap = new BigMap<string, number>();
+		let emitted = false;
+		bigMap.on(BigMapEvents.CLEAR, () => {
+			emitted = true;
+		});
+
+		bigMap.clear();
+
+		expect(emitted).toBe(true);
+	});
+});
+
 describe("BigMap Iterators", () => {
-	it("should iterate using for..of", () => {
+	test("should iterate using for..of", () => {
 		const bigMap = new BigMap<string, string>();
-
-		const dataSet = getFake<string>(FakeDataType.STRING, 3);
-		for (const data of dataSet) {
-			bigMap.set(data.key, data.value);
+		const entries = fakeEntries<string>(FakeDataType.STRING, 3);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
 		}
 
-		const entries: Array<[string, string]> = [];
+		const result: Array<[string, string]> = [];
 		for (const [key, value] of bigMap) {
-			entries.push([key, value]);
+			result.push([key, value]);
 		}
 
-		expect(entries.length).toBe(3);
-		for (const entry of entries) {
-			expect(dataSet.some((data) => data.key === entry[0] && data.value === entry[1])).toBe(true);
+		expect(result.length).toBe(3);
+		for (const [key, value] of result) {
+			expect(entries.some((entry) => entry.key === key && entry.value === value)).toBe(true);
 		}
 	});
 
-	it("should iterate over keys", () => {
+	test("should iterate over keys", () => {
 		const bigMap = new BigMap<string, number>();
-
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
-
-		for (const data of dataSet) {
-			bigMap.set(data.key, data.value);
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 2);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
 		}
 
-		const keys: string[] = [];
-		for (const key of bigMap.keys()) {
-			keys.push(key);
-		}
-
-		expect(keys).toContain(dataSet[0].key);
-		expect(keys).toContain(dataSet[1].key);
+		const keys = [...bigMap.keys()];
 		expect(keys.length).toBe(2);
+		expect(keys).toContain(entries[0].key);
+		expect(keys).toContain(entries[1].key);
 	});
 
-	it("should iterate over entries", () => {
+	test("should iterate over values", () => {
 		const bigMap = new BigMap<string, number>();
-
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
-
-		for (const data of dataSet) {
-			bigMap.set(data.key, data.value);
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 2);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
 		}
 
-		const entries: Array<[string, number]> = [];
-		for (const [key, value] of bigMap.entries()) {
-			entries.push([key, value]);
-		}
-
-		for (const entry of entries) {
-			expect(dataSet.some((data) => data.key === entry[0] && data.value === entry[1])).toBe(true);
-		}
-
-		expect(entries.length).toBe(2);
+		const values = [...bigMap.values()];
+		expect(values.length).toBe(2);
+		expect(values).toContain(entries[0].value);
+		expect(values).toContain(entries[1].value);
 	});
 
-	it("should iterate over keys for forEach function", () => {
+	test("should iterate over entries", () => {
+		const bigMap = new BigMap<string, number>();
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 2);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
+
+		const result = [...bigMap.entries()];
+		expect(result.length).toBe(2);
+		for (const [key, value] of result) {
+			expect(entries.some((entry) => entry.key === key && entry.value === value)).toBe(true);
+		}
+	});
+
+	test("should iterate over keys with forEach", () => {
 		const bigMap = new BigMap<string, string>();
-
-		const dataSet = getFake<string>(FakeDataType.STRING, 2);
-
-		for (const data of dataSet) {
-			bigMap.set(data.key, data.value);
+		const entries = fakeEntries<string>(FakeDataType.STRING, 2);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
 		}
 
 		const keys: string[] = [];
@@ -187,81 +259,76 @@ describe("BigMap Iterators", () => {
 			keys.push(key);
 		});
 
-		expect(keys).toContain(dataSet[0].key);
-		expect(keys).toContain(dataSet[1].key);
+		expect(keys).toContain(entries[0].key);
+		expect(keys).toContain(entries[1].key);
 	});
 
-	it("should pass the BigMap instance as third argument in forEach", () => {
+	test("should pass the BigMap instance as the third argument in forEach", () => {
 		const bigMap = new BigMap<string, number>();
-		bigMap.set("key1", 10);
-		bigMap.set("key2", 20);
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 2);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
 
 		bigMap.forEach((_value, _key, map) => {
 			expect(map).toBe(bigMap);
 		});
 	});
 
-	it("should apply thisArg correctly in forEach", () => {
+	test("should apply thisArg correctly in forEach", () => {
 		const bigMap = new BigMap<string, number>();
-		bigMap.set("key1", 10);
-		bigMap.set("key2", 20);
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 3);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
 
+		const expectedSum = entries.reduce((sum, { value }) => sum + value, 0);
 		const context = { sum: 0 };
 		bigMap.forEach(function (value) {
 			this.sum += value;
 		}, context);
 
-		expect(context.sum).toBe(30);
-	});
-
-	it("should iterate over values", () => {
-		const bigMap = new BigMap<string, number>();
-
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
-		for (const data of dataSet) {
-			bigMap.set(data.key, data.value);
-		}
-
-		const values: number[] = [];
-		for (const value of bigMap.values()) {
-			values.push(value);
-		}
-
-		expect(values).toContain(dataSet[0].value);
-		expect(values).toContain(dataSet[1].value);
-		expect(values.length).toBe(2);
+		expect(context.sum).toBe(expectedSum);
 	});
 });
 
 describe("BigMap Hash", () => {
-	it("should use the default hash function", () => {
+	test("should use the default hash function", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
 	});
 
-	it("should use a custom hash function", () => {
+	test("should use a custom hash function", () => {
 		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
-		const bigMap = new BigMap<string, number>({
-			storeHashFunction: customHashFunction,
-		});
+		const bigMap = new BigMap<string, number>({ storeHashFunction: customHashFunction });
 		expect(bigMap.storeHashFunction).toBe(customHashFunction);
 	});
 
-	it("should return the same hash for the same key", () => {
+	test("should return the same hash for the same key", () => {
 		const bigMap = new BigMap<string, number>();
-		const key = "testKey";
-		const hash1 = bigMap.storeHashFunction?.(key, bigMap.storeSize);
-		const hash2 = bigMap.storeHashFunction?.(key, bigMap.storeSize);
+		// Fixed keys are used here because the assertion depends on two specific
+		// keys landing in different buckets, which random keys cannot guarantee.
+		const hash1 = bigMap.storeHashFunction?.("testKey", bigMap.storeSize);
+		const hash2 = bigMap.storeHashFunction?.("testKey", bigMap.storeSize);
+		const hash3 = bigMap.storeHashFunction?.("differentKey", bigMap.storeSize);
 		expect(hash1).toBe(hash2);
-		// Test with a different key
-		const differentKey = "differentKey";
-		const hash3 = bigMap.storeHashFunction?.(differentKey, bigMap.storeSize);
 		expect(hash1).not.toBe(hash3);
+	});
+
+	test("should update the hash function via the setter", () => {
+		const bigMap = new BigMap<string, number>();
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
+		bigMap.storeHashFunction = customHashFunction;
+		expect(bigMap.storeHashFunction).toBe(customHashFunction);
+
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		bigMap.set(key, value);
+		expect(bigMap.get(key)).toBe(value);
 	});
 });
 
 describe("BigMap Store", () => {
-	it("should initialize the store with empty maps", () => {
+	test("should initialize the store with empty maps", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap.store).toHaveLength(2);
 		for (const map of bigMap.store) {
@@ -269,216 +336,172 @@ describe("BigMap Store", () => {
 		}
 	});
 
-	it("should return index of 0 when store size is 1", () => {
-		const bigMap = new BigMap<string, number>({ storeSize: 1 });
-		expect(bigMap.getStoreMap(0)).toBeInstanceOf(Map);
-		expect(bigMap.storeSize).toBe(1);
-		expect(bigMap.getStore("key")).toBeDefined();
-	});
-
-	it("should get the correct store map by index", () => {
+	test("should get the correct store map by index", () => {
 		const bigMap = new BigMap<string, number>();
-		const map = bigMap.getStoreMap(0);
-		expect(map).toBeInstanceOf(Map);
+		expect(bigMap.getStoreMap(0)).toBeInstanceOf(Map);
 	});
 
-	it("should throw an error for invalid store map index", () => {
+	test("should throw an error for an invalid store map index", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(() => bigMap.getStoreMap(2)).toThrowError(
 			"Index out of bounds: 2. Valid range is 0 to 1.",
 		);
 	});
 
-	it("should be able to get the store from getStore()", () => {
+	test("should get the store for a key via getStore()", () => {
 		const bigMap = new BigMap<string, number>();
-		const key = "testKey";
-		const store = bigMap.getStore(key);
+		const store = bigMap.getStore(faker.string.alpha(8));
 		expect(store).toBeInstanceOf(Map);
 	});
 
-	it("should get the store from a custom hash function", () => {
+	test("should get the store for a key with a custom hash function", () => {
 		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
-		const bigMap = new BigMap<string, number>({
-			storeHashFunction: customHashFunction,
-		});
-		const key = "testKey";
-		const store = bigMap.getStore(key);
+		const bigMap = new BigMap<string, number>({ storeHashFunction: customHashFunction });
+		const store = bigMap.getStore(faker.string.alpha(8));
 		expect(store).toBeInstanceOf(Map);
 		expect(bigMap.storeHashFunction).toBe(customHashFunction);
 	});
 
-	it("should fallback to default hash function when storeHashFunction is undefined", () => {
-		const bigMap = new BigMap<string, number>();
-		// Force _storeHashFunction to be undefined by using Object.defineProperty
-		Object.defineProperty(bigMap, "_storeHashFunction", {
-			value: undefined,
-			writable: true,
-		});
-		const key = "testKey";
-		const store = bigMap.getStore(key);
-		expect(store).toBeInstanceOf(Map);
+	test("should return the only store when the store size is 1", () => {
+		const bigMap = new BigMap<string, number>({ storeSize: 1 });
+		expect(bigMap.storeSize).toBe(1);
+		expect(bigMap.getStoreMap(0)).toBeInstanceOf(Map);
+		expect(bigMap.getStore(faker.string.alpha(8))).toBe(bigMap.getStoreMap(0));
 	});
 });
 
 describe("BigMap Set / Get", () => {
-	it("should set and get values", () => {
+	test("should set and get a value", () => {
 		const bigMap = new BigMap<string, number>();
-		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
-		bigMap.set(data.key, data.value);
-		expect(bigMap.get(data.key)).toBe(data.value);
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		bigMap.set(key, value);
+		expect(bigMap.get(key)).toBe(value);
 	});
 
-	it("should return undefined for non-existing keys", () => {
+	test("should return the internal store from set()", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(bigMap.get("nonExistingKey")).toBeUndefined();
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		const store = bigMap.set(key, value);
+		expect(store).toBe(bigMap.getStore(key));
 	});
 
-	it("should do 500 sets and gets", () => {
+	test("should return undefined for a non-existing key", () => {
 		const bigMap = new BigMap<string, number>();
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 500);
+		expect(bigMap.get(faker.string.alpha(8))).toBeUndefined();
+	});
 
-		dataSet.forEach((item) => {
-			bigMap.set(item.key, item.value);
-		});
+	test("should handle 500 sets and gets", () => {
+		const bigMap = new BigMap<string, number>();
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 500);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
 
-		dataSet.forEach((item) => {
-			expect(bigMap.get(item.key)).toBe(item.value);
-		});
+		for (const { key, value } of entries) {
+			expect(bigMap.get(key)).toBe(value);
+		}
 	});
 });
 
 describe("BigMap Delete", () => {
-	it("should delete keys", () => {
+	test("should delete a key", () => {
 		const bigMap = new BigMap<string, number>();
-		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
-		bigMap.set(data.key, data.value);
-		expect(bigMap.delete(data.key)).toBe(true);
-		expect(bigMap.get(data.key)).toBeUndefined();
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		bigMap.set(key, value);
+		expect(bigMap.delete(key)).toBe(true);
+		expect(bigMap.get(key)).toBeUndefined();
 	});
 
-	it("should return false when deleting non-existing keys", () => {
+	test("should return false when deleting a non-existing key", () => {
 		const bigMap = new BigMap<string, number>();
-		expect(bigMap.delete("nonExistingKey")).toBe(false);
+		expect(bigMap.delete(faker.string.alpha(8))).toBe(false);
 	});
 });
 
 describe("BigMap Has", () => {
-	it("should check if a key exists", () => {
+	test("should return true for an existing key and false otherwise", () => {
 		const bigMap = new BigMap<string, number>();
-		const data = getFake<number>(FakeDataType.NUMBER, 1)[0];
-		bigMap.set(data.key, data.value);
-		expect(bigMap.has(data.key)).toBe(true);
-		expect(bigMap.has("nonExistingKey")).toBe(false);
-	});
-
-	it("should return false for non-existing keys", () => {
-		const bigMap = new BigMap<string, number>();
-		expect(bigMap.has("nonExistingKey")).toBe(false);
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		bigMap.set(key, value);
+		expect(bigMap.has(key)).toBe(true);
+		expect(bigMap.has(faker.string.alpha(8))).toBe(false);
 	});
 });
 
 describe("BigMap Clear", () => {
-	it("should clear all entries", () => {
+	test("should clear all entries", () => {
 		const bigMap = new BigMap<string, number>();
-		const dataSet = getFake<number>(FakeDataType.NUMBER, 2);
-		dataSet.forEach((item) => {
-			bigMap.set(item.key, item.value);
-		});
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 2);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
 
 		expect(bigMap.size).toBe(2);
 		bigMap.clear();
 		expect(bigMap.size).toBe(0);
-		expect(bigMap.get(dataSet[0].key)).toBeUndefined();
-		expect(bigMap.has(dataSet[0].key)).toBe(false);
+		expect(bigMap.get(entries[0].key)).toBeUndefined();
+		expect(bigMap.has(entries[0].key)).toBe(false);
 	});
 });
 
-describe("storeSize === 1 fast paths", () => {
-	it("should get, set, has, and delete with a single-bucket BigMap", () => {
+describe("BigMap Non-String Keys", () => {
+	test("should support number keys across set, get, has, delete, and getStore", () => {
+		const bigMap = new BigMap<number, string>();
+		const key = faker.number.int({ min: 1, max: 1_000_000 });
+		const value = faker.string.alpha(8);
+
+		bigMap.set(key, value);
+		expect(bigMap.get(key)).toBe(value);
+		expect(bigMap.has(key)).toBe(true);
+		expect(bigMap.getStore(key)).toBeInstanceOf(Map);
+		expect(bigMap.delete(key)).toBe(true);
+		expect(bigMap.has(key)).toBe(false);
+	});
+});
+
+describe("BigMap Single Bucket", () => {
+	test("should get, set, has, and delete with a single-bucket BigMap", () => {
 		const bigMap = new BigMap<string, number>({ storeSize: 1 });
-		bigMap.set("a", 1);
-		expect(bigMap.get("a")).toBe(1);
-		expect(bigMap.has("a")).toBe(true);
-		expect(bigMap.delete("a")).toBe(true);
-		expect(bigMap.get("a")).toBeUndefined();
-		expect(bigMap.has("a")).toBe(false);
-		expect(bigMap.delete("a")).toBe(false);
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+
+		bigMap.set(key, value);
+		expect(bigMap.get(key)).toBe(value);
+		expect(bigMap.has(key)).toBe(true);
+		expect(bigMap.delete(key)).toBe(true);
+		expect(bigMap.get(key)).toBeUndefined();
+		expect(bigMap.has(key)).toBe(false);
+		expect(bigMap.delete(key)).toBe(false);
 	});
 });
 
-describe("storeHashFunction setter", () => {
-	it("should update hash function via the setter", () => {
-		const bigMap = new BigMap<string, number>();
-		const customHash = (key: string, storeSize: number) => key.length % storeSize;
-		bigMap.storeHashFunction = customHash;
-		expect(bigMap.storeHashFunction).toBe(customHash);
-
-		bigMap.set("ab", 42);
-		expect(bigMap.get("ab")).toBe(42);
-	});
-});
-
-describe("non-power-of-2 default hash", () => {
-	it("should use modulo fallback for non-power-of-2 store sizes", () => {
+describe("BigMap Non-Power-of-2 Store Size", () => {
+	test("should use the modulo fallback for non-power-of-2 store sizes", () => {
 		const bigMap = new BigMap<string, string>({ storeSize: 3 });
-		for (let i = 0; i < 100; i++) {
-			bigMap.set(`key-${i}`, `val-${i}`);
+		const entries = fakeEntries<string>(FakeDataType.STRING, 100);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
 		}
 
 		expect(bigMap.size).toBe(100);
-		for (let i = 0; i < 100; i++) {
-			expect(bigMap.get(`key-${i}`)).toBe(`val-${i}`);
+		for (const { key, value } of entries) {
+			expect(bigMap.get(key)).toBe(value);
 		}
 	});
 
-	it("should return a valid index from defaultHashFunction with non-power-of-2 size", () => {
-		const result = defaultHashFunction("testkey", 3);
+	test("should return a valid index from defaultHashFunction for a non-power-of-2 size", () => {
+		const result = defaultHashFunction(faker.string.alpha(7), 3);
 		expect(result).toBeGreaterThanOrEqual(0);
 		expect(result).toBeLessThan(3);
 	});
 });
 
-describe("createKeyv", () => {
-	it("should create a Keyv instance with BigMap adapter", () => {
-		const keyv = createKeyv();
-		expect(keyv).toBeDefined();
-		expect((keyv.store as KeyvMemoryAdapter).store).toBeInstanceOf(BigMap);
-	});
-
-	it("should create a Keyv instance with custom options", () => {
-		const keyv = createKeyv({ storeSize: 8 });
-		expect(keyv).toBeDefined();
-		expect((keyv.store as KeyvMemoryAdapter).store).toBeInstanceOf(BigMap);
-		expect(((keyv.store as KeyvMemoryAdapter).store as BigMap<string, unknown>).storeSize).toBe(8);
-	});
-
-	it("should work with set and get operations", async () => {
-		const keyv = createKeyv<string, number>();
-		await keyv.set("testKey", 123);
-		const value = await keyv.get<number>("testKey");
-		expect(value).toBe(123);
-	});
-
-	it("should work with custom hash function", async () => {
-		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
-		const keyv = createKeyv({
-			storeSize: 4,
-			storeHashFunction: customHashFunction,
-		});
-		await keyv.set("test", "value");
-		const value = await keyv.get("test");
-		expect(value).toBe("value");
-	});
-});
-
-describe("bucket distribution", () => {
-	it("should populate all configured buckets", () => {
+describe("BigMap Bucket Distribution", () => {
+	test("should populate all configured buckets", () => {
 		const storeSize = 8;
 		const bigMap = new BigMap<string, string>({ storeSize });
-
-		// Insert enough keys to statistically hit all buckets
-		for (let i = 0; i < 1000; i++) {
-			bigMap.set(`key-${i}`, `value-${i}`);
+		const entries = fakeEntries<string>(FakeDataType.STRING, 1000);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
 		}
 
 		for (let i = 0; i < storeSize; i++) {
@@ -486,62 +509,95 @@ describe("bucket distribution", () => {
 		}
 	});
 
-	it("should distribute single-character keys across multiple buckets", () => {
+	test("should distribute single-character keys across multiple buckets", () => {
 		const storeSize = 4;
 		const bigMap = new BigMap<string, string>({ storeSize });
+		// Fixed single-character keys are intentional: before the hash fix every
+		// length-1 key collided into the same bucket.
 		const chars = "abcdefghijklmnopqrstuvwxyz";
 		for (const c of chars) {
 			bigMap.set(c, c);
 		}
 
-		// With 26 single-char keys and 4 buckets, at least 2 buckets should be used.
-		// Before the fix, all length-1 keys hashed to the same value.
 		const usedBuckets = Array.from(
 			{ length: storeSize },
 			(_, i) => bigMap.getStoreMap(i).size,
-		).filter((s) => s > 0).length;
+		).filter((size) => size > 0).length;
 		expect(usedBuckets).toBeGreaterThanOrEqual(2);
 	});
 
-	it("should distribute two-character keys across multiple buckets", () => {
+	test("should distribute two-character keys across multiple buckets", () => {
 		const storeSize = 4;
 		const bigMap = new BigMap<string, string>({ storeSize });
 		const pairs = ["ab", "cd", "ef", "gh", "ij", "kl", "mn", "op", "qr", "st", "uv", "wx"];
-		for (const p of pairs) {
-			bigMap.set(p, p);
+		for (const pair of pairs) {
+			bigMap.set(pair, pair);
 		}
 
 		const usedBuckets = Array.from(
 			{ length: storeSize },
 			(_, i) => bigMap.getStoreMap(i).size,
-		).filter((s) => s > 0).length;
+		).filter((size) => size > 0).length;
 		expect(usedBuckets).toBeGreaterThanOrEqual(2);
 	});
 
-	it("should normalize out-of-range hash values to valid bucket indices", () => {
+	test("should normalize out-of-range hash values to valid bucket indices", () => {
 		const storeSize = 4;
-		// Custom hash that returns values outside [0, storeSize - 1]
+		// Custom hash that returns a value outside [0, storeSize - 1].
 		const bigMap = new BigMap<string, string>({
 			storeSize,
-			storeHashFunction: (_key: string, _bucketCount: number) => 7,
+			storeHashFunction: () => 7,
 		});
 
-		bigMap.set("a", "1");
-		// 7 % 4 = 3, should land in bucket 3 without throwing
-		expect(bigMap.get("a")).toBe("1");
+		const value = faker.string.alpha(6);
+		bigMap.set("a", value);
+		// 7 % 4 = 3, so the entry should land in bucket 3 without throwing.
+		expect(bigMap.get("a")).toBe(value);
 		expect(bigMap.getStoreMap(3).size).toBe(1);
 	});
 
-	it("should normalize negative hash values to valid bucket indices", () => {
+	test("should normalize negative hash values to valid bucket indices", () => {
 		const storeSize = 4;
 		const bigMap = new BigMap<string, string>({
 			storeSize,
-			storeHashFunction: (_key: string, _bucketCount: number) => -5,
+			storeHashFunction: () => -5,
 		});
 
-		bigMap.set("a", "1");
-		// abs(-5) % 4 = 1, should land in bucket 1
-		expect(bigMap.get("a")).toBe("1");
+		const value = faker.string.alpha(6);
+		bigMap.set("a", value);
+		// abs(-5) % 4 = 1, so the entry should land in bucket 1.
+		expect(bigMap.get("a")).toBe(value);
 		expect(bigMap.getStoreMap(1).size).toBe(1);
+	});
+});
+
+describe("createKeyv", () => {
+	test("should create a Keyv instance with the BigMap adapter", () => {
+		const keyv = createKeyv();
+		expect(keyv).toBeDefined();
+		expect((keyv.store as KeyvMemoryAdapter).store).toBeInstanceOf(BigMap);
+	});
+
+	test("should create a Keyv instance with custom options", () => {
+		const keyv = createKeyv({ storeSize: 8 });
+		expect(keyv).toBeDefined();
+		const store = (keyv.store as KeyvMemoryAdapter).store as BigMap<string, unknown>;
+		expect(store).toBeInstanceOf(BigMap);
+		expect(store.storeSize).toBe(8);
+	});
+
+	test("should work with set and get operations", async () => {
+		const keyv = createKeyv<string, number>();
+		const { key, value } = fakeEntry<number>(FakeDataType.NUMBER);
+		await keyv.set(key, value);
+		expect(await keyv.get<number>(key)).toBe(value);
+	});
+
+	test("should work with a custom hash function", async () => {
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
+		const keyv = createKeyv({ storeSize: 4, storeHashFunction: customHashFunction });
+		const { key, value } = fakeEntry<string>(FakeDataType.STRING);
+		await keyv.set(key, value);
+		expect(await keyv.get(key)).toBe(value);
 	});
 });
