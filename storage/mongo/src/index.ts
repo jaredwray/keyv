@@ -56,90 +56,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	private _mongoOptions: MongoClientOptions = {};
 
 	/**
-	 * Promise that resolves to the MongoDB connection details.
+	 * Promise that resolves to the MongoDB connection details once the client has connected
+	 * and the required indexes have been created.
 	 */
 	public connect: Promise<KeyvMongoConnect>;
-
-	/**
-	 * Get the MongoDB connection URI.
-	 * @default 'mongodb://127.0.0.1:27017'
-	 */
-	public get url(): string {
-		return this._url;
-	}
-
-	/**
-	 * Set the MongoDB connection URI.
-	 */
-	public set url(value: string) {
-		this._url = value;
-	}
-
-	/**
-	 * Get the collection name used for storage.
-	 * @default 'keyv'
-	 */
-	public get collection(): string {
-		return this._collection;
-	}
-
-	/**
-	 * Set the collection name used for storage.
-	 */
-	public set collection(value: string) {
-		this._collection = value;
-	}
-
-	/**
-	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
-	 */
-	public get namespace(): string | undefined {
-		return this._namespace;
-	}
-
-	/**
-	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
-	 */
-	public set namespace(value: string | undefined) {
-		this._namespace = value;
-	}
-
-	/**
-	 * Get whether GridFS is used for storing values. This is read-only and can only be set via the constructor
-	 * because the MongoDB connection shape differs between GridFS and standard modes.
-	 * @default false
-	 */
-	public get useGridFS(): boolean {
-		return this._useGridFS;
-	}
-
-	/**
-	 * Get the database name for the MongoDB connection.
-	 */
-	public get db(): string | undefined {
-		return this._db;
-	}
-
-	/**
-	 * Set the database name for the MongoDB connection.
-	 */
-	public set db(value: string | undefined) {
-		this._db = value;
-	}
-
-	/**
-	 * Get the MongoDB read preference for GridFS operations.
-	 */
-	public get readPreference(): ReadPreference | undefined {
-		return this._readPreference;
-	}
-
-	/**
-	 * Set the MongoDB read preference for GridFS operations.
-	 */
-	public set readPreference(value: ReadPreference | undefined) {
-		this._readPreference = value;
-	}
 
 	/**
 	 * Creates a new KeyvMongo instance.
@@ -196,9 +116,102 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
+	 * Get the MongoDB connection URI.
+	 * @returns The MongoDB connection URI.
+	 * @default 'mongodb://127.0.0.1:27017'
+	 */
+	public get url(): string {
+		return this._url;
+	}
+
+	/**
+	 * Set the MongoDB connection URI.
+	 * @param value - The MongoDB connection URI to use.
+	 */
+	public set url(value: string) {
+		this._url = value;
+	}
+
+	/**
+	 * Get the collection name used for storage.
+	 * @returns The collection name used for storage.
+	 * @default 'keyv'
+	 */
+	public get collection(): string {
+		return this._collection;
+	}
+
+	/**
+	 * Set the collection name used for storage.
+	 * @param value - The collection name to use for storage.
+	 */
+	public set collection(value: string) {
+		this._collection = value;
+	}
+
+	/**
+	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
+	 * @returns The current namespace, or `undefined` if no namespace is set.
+	 */
+	public get namespace(): string | undefined {
+		return this._namespace;
+	}
+
+	/**
+	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+	 * @param value - The namespace to use, or `undefined` to disable namespacing.
+	 */
+	public set namespace(value: string | undefined) {
+		this._namespace = value;
+	}
+
+	/**
+	 * Get whether GridFS is used for storing values. This is read-only and can only be set via the constructor
+	 * because the MongoDB connection shape differs between GridFS and standard modes.
+	 * @returns `true` if GridFS is used for storing values, `false` otherwise.
+	 * @default false
+	 */
+	public get useGridFS(): boolean {
+		return this._useGridFS;
+	}
+
+	/**
+	 * Get the database name for the MongoDB connection.
+	 * @returns The database name, or `undefined` if none is set.
+	 */
+	public get db(): string | undefined {
+		return this._db;
+	}
+
+	/**
+	 * Set the database name for the MongoDB connection.
+	 * @param value - The database name to use, or `undefined` to use the driver default.
+	 */
+	public set db(value: string | undefined) {
+		this._db = value;
+	}
+
+	/**
+	 * Get the MongoDB read preference for GridFS operations.
+	 * @returns The configured read preference, or `undefined` if none is set.
+	 */
+	public get readPreference(): ReadPreference | undefined {
+		return this._readPreference;
+	}
+
+	/**
+	 * Set the MongoDB read preference for GridFS operations.
+	 * @param value - The read preference to use, or `undefined` to use the driver default.
+	 */
+	public set readPreference(value: ReadPreference | undefined) {
+		this._readPreference = value;
+	}
+
+	/**
 	 * Get a value from the store by key. In GridFS mode, also updates the `lastAccessed` timestamp.
+	 * @template Value - The type of the stored value.
 	 * @param key - The key to retrieve.
-	 * @returns The stored value, or `undefined` if the key does not exist.
+	 * @returns The stored value, or `undefined` if the key does not exist or has expired.
 	 */
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		const client = await this.connect;
@@ -273,10 +286,11 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Get multiple values from the store at once. In standard mode, uses a single query with the `$in` operator.
 	 * In GridFS mode, each key is fetched individually in parallel.
+	 * @template Value - The type of the stored values.
 	 * @param keys - Array of keys to retrieve.
 	 * @returns Array of values in the same order as the input keys. Missing keys return `undefined`.
 	 */
-	public async getMany<Value>(keys: string[]) {
+	public async getMany<Value>(keys: string[]): Promise<Array<KeyvStorageGetResult<Value>>> {
 		if (this._useGridFS) {
 			const promises = [];
 			for (const key of keys) {
@@ -328,6 +342,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to set.
 	 * @param value - The value to store.
 	 * @param ttl - Time to live in milliseconds. If specified, the key will expire after this duration.
+	 * @returns `true` if the value was set, `false` if an error occurred.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
@@ -378,7 +393,9 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Set multiple values in the store at once. In standard mode, uses a single `bulkWrite` operation.
 	 * In GridFS mode, each entry is set individually in parallel.
+	 * @template Value - The type of the stored values.
 	 * @param entries - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds.
+	 * @returns Array of booleans (one per entry) indicating which writes succeeded, in input order.
 	 */
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (this._useGridFS) {
@@ -430,7 +447,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to delete.
 	 * @returns `true` if the key was deleted, `false` if the key was not found.
 	 */
-	public async delete(key: string) {
+	public async delete(key: string): Promise<boolean> {
 		if (typeof key !== "string") {
 			return false;
 		}
@@ -485,8 +502,9 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Delete all keys in the current namespace.
+	 * @returns A promise that resolves once the matching keys have been deleted.
 	 */
-	public async clear() {
+	public async clear(): Promise<void> {
 		const client = await this.connect;
 		const ns = this.getNamespaceValue();
 
@@ -587,7 +605,9 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Iterate over all key-value pairs in the store matching the configured namespace.
-	 * @yields `[key, value]` pairs as an async generator.
+	 * Expired entries are skipped and deleted as they are encountered.
+	 * @yields A `[key, value]` pair for each non-expired entry.
+	 * @returns An async generator of `[key, value]` pairs.
 	 */
 	public async *iterator() {
 		const client = await this.connect;
@@ -643,7 +663,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @param key - The key to check.
 	 * @returns `true` if the key exists, `false` otherwise.
 	 */
-	public async has(key: string) {
+	public async has(key: string): Promise<boolean> {
 		const client = await this.connect;
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
@@ -702,6 +722,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Close the MongoDB connection.
+	 * @returns A promise that resolves once the connection has been closed.
 	 */
 	public async disconnect(): Promise<void> {
 		const client = await this.connect;
@@ -756,56 +777,62 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Initializes the MongoDB connection and sets up indexes.
+	 * Initializes the MongoDB connection, wires up client error events, and sets up indexes.
+	 * Connection or setup failures are emitted as an `error` event and re-thrown so that the
+	 * `connect` promise rejects instead of hanging.
 	 */
-	private initConnection(): Promise<KeyvMongoConnect> {
-		// biome-ignore lint/suspicious/noAsyncPromiseExecutor: need to fix
-		return new Promise(async (resolve, _reject) => {
-			try {
-				const client = new mongoClient(this._url, this._mongoOptions);
-				await client.connect();
+	private async initConnection(): Promise<KeyvMongoConnect> {
+		try {
+			const client = new mongoClient(this._url, this._mongoOptions);
+			await client.connect();
 
-				const database = client.db(this._db);
-
-				if (this._useGridFS) {
-					const bucket = new GridFSBucket(database, {
-						readPreference: this._readPreference,
-						bucketName: this._collection,
-					});
-					const store = database.collection(`${this._collection}.files`);
-
-					await store.createIndex({ uploadDate: -1 });
-					await store.createIndex({ "metadata.expiresAt": 1 });
-					await store.createIndex({ "metadata.lastAccessed": 1 });
-					await store.createIndex({ "metadata.filename": 1 });
-					await store.createIndex({ "metadata.namespace": 1 });
-
-					resolve({
-						bucket,
-						store,
-						db: database,
-						mongoClient: client,
-					});
-				} else {
-					const store = database.collection(this._collection);
-
-					// Migration: drop old single-field unique index on key
-					try {
-						await store.dropIndex("key_1");
-					} catch {
-						// Index doesn't exist or already dropped - safe to ignore
-					}
-
-					await store.createIndex({ key: 1, namespace: 1 }, { unique: true, background: true });
-					await store.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, background: true });
-
-					resolve({ store, mongoClient: client });
-				}
-			} catch (error) {
-				/* v8 ignore next -- @preserve */
+			// Surface asynchronous client errors (connection drops, timeouts) to listeners on the adapter.
+			client.on("error", (error) => {
 				this.emit("error", error);
+			});
+
+			const database = client.db(this._db);
+
+			if (this._useGridFS) {
+				const bucket = new GridFSBucket(database, {
+					readPreference: this._readPreference,
+					bucketName: this._collection,
+				});
+				const store = database.collection(`${this._collection}.files`);
+
+				await store.createIndex({ uploadDate: -1 });
+				await store.createIndex({ "metadata.expiresAt": 1 });
+				await store.createIndex({ "metadata.lastAccessed": 1 });
+				await store.createIndex({ "metadata.filename": 1 });
+				await store.createIndex({ "metadata.namespace": 1 });
+
+				return {
+					bucket,
+					store,
+					db: database,
+					mongoClient: client,
+				};
 			}
-		});
+
+			const store = database.collection(this._collection);
+
+			// Migration: drop old single-field unique index on key
+			try {
+				await store.dropIndex("key_1");
+			} catch {
+				// Index doesn't exist or already dropped - safe to ignore
+			}
+
+			await store.createIndex({ key: 1, namespace: 1 }, { unique: true, background: true });
+			await store.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, background: true });
+
+			return { store, mongoClient: client };
+			/* v8 ignore start -- @preserve */
+		} catch (error) {
+			this.emit("error", error);
+			throw error;
+		}
+		/* v8 ignore stop -- @preserve */
 	}
 }
 

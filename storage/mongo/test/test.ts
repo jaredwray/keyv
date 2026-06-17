@@ -737,6 +737,22 @@ describe("GridFS maintenance", () => {
 	});
 });
 
+describe("events", () => {
+	test("re-emits errors from the underlying MongoClient", async () => {
+		const store = new KeyvMongo({ ...options });
+		const client = await store.connect;
+		const error = new Error("client failure");
+		const received = new Promise<Error>((resolve) => {
+			store.on("error", (error_: Error) => {
+				resolve(error_);
+			});
+		});
+		client.mongoClient.emit("error", error);
+		expect(await received).toBe(error);
+		await store.disconnect();
+	});
+});
+
 describe("disconnect", () => {
 	test("closes the connection", async () => {
 		const keyv = new KeyvMongo({ namespace: faker.string.alphanumeric(8), ...options });
