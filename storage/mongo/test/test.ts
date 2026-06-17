@@ -188,7 +188,11 @@ describe("set and setMany", () => {
 
 	test("setMany returns an empty array when given no entries", async () => {
 		const store = new KeyvMongo({ ...options });
-		expect(await store.setMany([])).toEqual([]);
+		try {
+			expect(await store.setMany([])).toEqual([]);
+		} finally {
+			await store.disconnect();
+		}
 	});
 
 	test("setMany upserts existing keys", async () => {
