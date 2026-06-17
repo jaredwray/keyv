@@ -1,38 +1,72 @@
 const JSON_HEADERS = { "content-type": "application/json" };
 
+/**
+ * Options for constructing an {@link EtcdClient}.
+ */
 export type EtcdClientOptions = {
+	/** The etcd server URL. A `http://` scheme is added automatically if none is present. */
 	url: string;
 	/** Per-request timeout in milliseconds. Aborts the underlying fetch when exceeded. */
 	timeout?: number;
 };
 
+/**
+ * Parameters for an etcd range (read) request.
+ */
 export type RangeRequest = {
+	/** The key to read, or the start key of a range scan. */
 	key: string;
+	/** Exclusive end of the range scan. When omitted, only `key` is read. */
 	rangeEnd?: string | Buffer;
+	/** When `true`, only keys are returned and values are omitted. */
 	keysOnly?: boolean;
 };
 
+/**
+ * Response from an etcd range request.
+ */
 export type RangeResponse = {
+	/** The matched key-value pairs, base64-encoded as returned by the etcd JSON gateway. */
 	kvs?: Array<{ key: string; value: string }>;
 };
 
+/**
+ * Parameters for an etcd put (write) request.
+ */
 export type PutRequest = {
+	/** The key to write. */
 	key: string;
+	/** The value to store under the key. */
 	value: string;
+	/** Optional lease ID to associate with the key for TTL support. */
 	lease?: string;
 };
 
+/**
+ * Parameters for an etcd delete-range request.
+ */
 export type DeleteRangeRequest = {
+	/** The key to delete, or the start key of a range delete. */
 	key: string;
+	/** Exclusive end of the range delete. When omitted, only `key` is deleted. */
 	rangeEnd?: string | Buffer;
 };
 
+/**
+ * Response from an etcd delete-range request.
+ */
 export type DeleteRangeResponse = {
+	/** The number of keys deleted, as a decimal string. */
 	deleted: string;
 };
 
+/**
+ * Response from an etcd lease-grant request.
+ */
 export type LeaseGrantResponse = {
+	/** The granted lease ID, as a decimal string to avoid 64-bit precision loss. */
 	ID: string;
+	/** The granted TTL in seconds, as a decimal string. */
 	TTL: string;
 };
 
