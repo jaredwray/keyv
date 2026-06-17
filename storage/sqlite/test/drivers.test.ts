@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import BetterSqlite3 from "better-sqlite3";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { resolveDriver } from "../src/drivers/index.js";
 import type { SqliteDriver } from "../src/drivers/types.js";
 import KeyvSqlite, {
@@ -77,20 +77,20 @@ function createSqlite3TestModule(): Sqlite3TestModule {
 const sqlite3 = createSqlite3TestModule();
 
 describe("driver selection", () => {
-	it("driverName is available after ready", async () => {
+	test("driverName is available after ready", async () => {
 		const store = new KeyvSqlite("sqlite://:memory:");
 		await store.ready;
 		expect(store.driverName).toEqual(expect.any(String));
 		await store.disconnect();
 	});
 
-	it("ready promise resolves without error", async () => {
+	test("ready promise resolves without error", async () => {
 		const store = new KeyvSqlite("sqlite://:memory:");
 		await expect(store.ready).resolves.toBeUndefined();
 		await store.disconnect();
 	});
 
-	it("auto-detects a built-in driver by default", async () => {
+	test("auto-detects a built-in driver by default", async () => {
 		const store = new KeyvSqlite("sqlite://:memory:");
 		const key = faker.string.uuid();
 		const val = faker.lorem.word();
@@ -99,7 +99,7 @@ describe("driver selection", () => {
 		await store.disconnect();
 	});
 
-	it("accepts explicit driver: 'better-sqlite3'", async () => {
+	test("accepts explicit driver: 'better-sqlite3'", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
@@ -111,7 +111,7 @@ describe("driver selection", () => {
 		await store.disconnect();
 	});
 
-	it("throws for invalid driver name", async () => {
+	test("throws for invalid driver name", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			// @ts-expect-error testing invalid driver
@@ -120,13 +120,13 @@ describe("driver selection", () => {
 		await expect(store.get("key1")).rejects.toThrow(/Failed to load SQLite driver/);
 	});
 
-	it("bun:sqlite driver fails to load outside Bun runtime", async () => {
+	test("bun:sqlite driver fails to load outside Bun runtime", async () => {
 		await expect(resolveDriver("bun:sqlite")).rejects.toThrow(
 			/Failed to load SQLite driver "bun:sqlite"/,
 		);
 	});
 
-	it("accepts a custom SqliteDriver object", async () => {
+	test("accepts a custom SqliteDriver object", async () => {
 		const Database = (await import("better-sqlite3")).default;
 		const customDriver: SqliteDriver = {
 			name: "better-sqlite3",
@@ -165,7 +165,7 @@ describe("driver selection", () => {
 });
 
 describe("better-sqlite3 driver operations", () => {
-	it("get/set/delete/has work correctly", async () => {
+	test("get/set/delete/has work correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
@@ -184,7 +184,7 @@ describe("better-sqlite3 driver operations", () => {
 		await store.disconnect();
 	});
 
-	it("getMany/setMany/deleteMany/hasMany work correctly", async () => {
+	test("getMany/setMany/deleteMany/hasMany work correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
@@ -209,7 +209,7 @@ describe("better-sqlite3 driver operations", () => {
 		await store.disconnect();
 	});
 
-	it("clear works correctly", async () => {
+	test("clear works correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
@@ -221,7 +221,7 @@ describe("better-sqlite3 driver operations", () => {
 		await store.disconnect();
 	});
 
-	it("iterator works correctly", async () => {
+	test("iterator works correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
@@ -237,7 +237,7 @@ describe("better-sqlite3 driver operations", () => {
 		await store.disconnect();
 	});
 
-	it("WAL mode works with file-based database", async () => {
+	test("WAL mode works with file-based database", async () => {
 		const fs = await import("node:fs");
 		const dbPath = "test/testdb-wal-driver.sqlite";
 		try {
@@ -262,7 +262,7 @@ describe("better-sqlite3 driver operations", () => {
 		} catch {}
 	});
 
-	it("WAL mode on in-memory database logs warning", async () => {
+	test("WAL mode on in-memory database logs warning", async () => {
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
@@ -277,7 +277,7 @@ describe("better-sqlite3 driver operations", () => {
 		await store.disconnect();
 	});
 
-	it("busyTimeout option is accepted", async () => {
+	test("busyTimeout option is accepted", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: "better-sqlite3",
@@ -292,7 +292,7 @@ describe("better-sqlite3 driver operations", () => {
 });
 
 describe("sqlite3 helper driver", () => {
-	it("basic set/get with in-memory db", async () => {
+	test("basic set/get with in-memory db", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: createSqlite3Driver(sqlite3),
@@ -304,12 +304,12 @@ describe("sqlite3 helper driver", () => {
 		await store.disconnect();
 	});
 
-	it("driver name is 'custom'", () => {
+	test("driver name is 'custom'", () => {
 		const driver = createSqlite3Driver(sqlite3);
 		expect(driver.name).toBe("custom");
 	});
 
-	it("get/set/delete/has work correctly", async () => {
+	test("get/set/delete/has work correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: createSqlite3Driver(sqlite3),
@@ -328,7 +328,7 @@ describe("sqlite3 helper driver", () => {
 		await store.disconnect();
 	});
 
-	it("getMany/setMany/deleteMany/hasMany work correctly", async () => {
+	test("getMany/setMany/deleteMany/hasMany work correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: createSqlite3Driver(sqlite3),
@@ -353,7 +353,7 @@ describe("sqlite3 helper driver", () => {
 		await store.disconnect();
 	});
 
-	it("clear works correctly", async () => {
+	test("clear works correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: createSqlite3Driver(sqlite3),
@@ -365,7 +365,7 @@ describe("sqlite3 helper driver", () => {
 		await store.disconnect();
 	});
 
-	it("iterator works correctly", async () => {
+	test("iterator works correctly", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: createSqlite3Driver(sqlite3),
@@ -381,7 +381,7 @@ describe("sqlite3 helper driver", () => {
 		await store.disconnect();
 	});
 
-	it("WAL mode works with file-based database", async () => {
+	test("WAL mode works with file-based database", async () => {
 		const fs = await import("node:fs");
 		const dbPath = "test/testdb-wal-sqlite3.sqlite";
 		try {
@@ -406,7 +406,7 @@ describe("sqlite3 helper driver", () => {
 		} catch {}
 	});
 
-	it("WAL mode on in-memory database logs warning", async () => {
+	test("WAL mode on in-memory database logs warning", async () => {
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
@@ -421,7 +421,7 @@ describe("sqlite3 helper driver", () => {
 		await store.disconnect();
 	});
 
-	it("busyTimeout option is accepted", async () => {
+	test("busyTimeout option is accepted", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: createSqlite3Driver(sqlite3),
@@ -434,7 +434,7 @@ describe("sqlite3 helper driver", () => {
 		await store.disconnect();
 	});
 
-	it("works with sqlite3.verbose()", async () => {
+	test("works with sqlite3.verbose()", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
 			driver: createSqlite3Driver(sqlite3.verbose()),

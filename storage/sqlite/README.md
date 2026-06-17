@@ -466,7 +466,7 @@ await store.ready; // connection and schema migration complete
 
 ## opts
 
-Get all current settings as a plain object. This getter exists for backward compatibility.
+Get a snapshot of all current settings as a plain object. This getter exists for backward compatibility with v5 — prefer the individual property getters above.
 
 - Type: `KeyvSqliteOptions`
 
@@ -476,8 +476,9 @@ const store = new KeyvSqlite({
   table: 'cache',
   wal: true,
 });
-console.log(store.uri); // 'sqlite://:memory:'
-console.log(store.table); // 'cache'
+console.log(store.opts.uri); // 'sqlite://:memory:'
+console.log(store.opts.table); // 'cache'
+console.log(store.opts.wal); // true
 ```
 
 # Methods
