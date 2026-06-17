@@ -44,6 +44,7 @@
   - [.hasMany(keys)](#hasmanykeys)
   - [.disconnect()](#disconnect)
   - [.formatKey(key)](#formatkeykey)
+  - [Properties](#properties)
 - [Works with Memcached and Google Cloud](#works-with-memcached-and-google-cloud)
   - [Using Memcached](#using-memcached)
   - [Using Google Cloud](#using-google-cloud)
@@ -119,13 +120,14 @@ await memcache.disconnect();
 
 ## Usage with Namespaces
 
+The namespace lives on the store adapter, which prefixes every key with `namespace:`. Because the namespace is held on the adapter, give each namespace its own `KeyvMemcache` instance rather than sharing a single store between multiple `Keyv` instances:
+
 ```js
 import Keyv from 'keyv';
 import KeyvMemcache from '@keyv/memcache';
 
-const memcache = new KeyvMemcache('localhost:11211');
-const keyv1 = new Keyv({ store: memcache, namespace: "namespace1" });
-const keyv2 = new Keyv({ store: memcache, namespace: "namespace2" });
+const keyv1 = new Keyv({ store: new KeyvMemcache('localhost:11211'), namespace: "namespace1" });
+const keyv2 = new Keyv({ store: new KeyvMemcache('localhost:11211'), namespace: "namespace2" });
 
 //set
 await keyv1.set("foo","bar1", 6000) //Expiring time is optional
@@ -136,6 +138,16 @@ const obj1 = await keyv1.get("foo"); //will return bar1
 const obj2 = await keyv2.get("foo"); //will return bar2
 
 ```
+
+You can also set the namespace directly on the store, which is handy when you only need a single namespace:
+
+```js
+const memcache = new KeyvMemcache('localhost:11211');
+memcache.namespace = "namespace1";
+const keyv = new Keyv({ store: memcache });
+```
+
+> **Note:** `clear()` always flushes the entire Memcached server because Memcached cannot enumerate keys, so it is not scoped to a namespace.
 
 ## Options
 
@@ -260,23 +272,23 @@ const memcache4 = new KeyvMemcache('localhost:11211', { namespace: 'myapp' });
 
 ### .get(key)
 
-Retrieves a value from the memcache server. Returns the stored data or `undefined` if the key does not exist.
+Retrieves a value from the memcache server. Returns the stored value, or `undefined` if the key does not exist or has expired.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 await memcache.set('foo', 'bar');
-const result = await memcache.get('foo'); // { value: 'bar', expires: ... }
+const result = await memcache.get('foo'); // 'bar'
 ```
 
 ### .getMany(keys)
 
-Retrieves multiple values from the memcache server. Returns an array of stored data corresponding to each key.
+Retrieves multiple values from the memcache server. Returns an array of values corresponding to each key, with `undefined` for any key that does not exist.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 await memcache.set('key1', 'value1');
 await memcache.set('key2', 'value2');
-const results = await memcache.getMany(['key1', 'key2']);
+const results = await memcache.getMany(['key1', 'key2', 'key3']); // ['value1', 'value2', undefined]
 ```
 
 ### .set(key, value, ttl?)
@@ -373,6 +385,20 @@ memcache.formatKey('foo'); // 'foo'
 memcache.namespace = 'myapp';
 memcache.formatKey('foo'); // 'myapp:foo'
 ```
+
+### Properties
+
+The following public properties are available on a `KeyvMemcache` instance:
+
+| Property | Type | Description |
+|---|---|---|
+| `client` | `Memcache` | The underlying [memcache](https://github.com/jaredwray/memcache) client instance for advanced use. |
+| `namespace` | `string \| undefined` | The namespace used to prefix keys. Can be read and set directly. |
+| `nodes` | `(string \| MemcacheNode)[]` | The configured memcache nodes (read-only). |
+| `timeout` | `number \| undefined` | The configured operation timeout in milliseconds (read-only). |
+| `keepAlive` | `boolean \| undefined` | The configured keep-alive setting (read-only). |
+| `retries` | `number \| undefined` | The configured number of retry attempts (read-only). |
+| `retryDelay` | `number \| undefined` | The configured base retry delay in milliseconds (read-only). |
 
 ## Works with Memcached and Google Cloud
 
