@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker";
 import tk from "timekeeper";
-import * as testRunner from "vitest";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import Keyv, { KeyvMemoryAdapter, type KeyvStorageAdapter } from "../src/index.js";
 import { createStore } from "./test-utils.js";
@@ -63,132 +62,129 @@ describe("Keyv", async () => {
 	});
 });
 
-testRunner.it("Keyv passes ttl info to stores", async (t) => {
-	t.expect.assertions(1);
-	const store = new Map();
-	const storeSet = store.set;
-	// @ts-expect-error
-	store.set = (key, value, ttl) => {
-		t.expect(ttl).toBe(100);
+describe("ttl", () => {
+	test("Keyv passes ttl info to stores", async () => {
+		expect.assertions(1);
+		const store = new Map();
+		const storeSet = store.set;
 		// @ts-expect-error
-		storeSet.call(store, key, value, ttl);
-	};
+		store.set = (key, value, ttl) => {
+			expect(ttl).toBe(100);
+			// @ts-expect-error
+			storeSet.call(store, key, value, ttl);
+		};
 
-	const keyv = new Keyv({ store });
-	await keyv.set("foo", "bar", 100);
-});
+		const keyv = new Keyv({ store });
+		await keyv.set("foo", "bar", 100);
+	});
 
-testRunner.it("Keyv respects default ttl option", async (t) => {
-	const store = new Map();
-	const keyv = new Keyv({ store, ttl: 100 });
-	await keyv.set("foo", "bar");
-	t.expect(await keyv.get("foo")).toBe("bar");
-	tk.freeze(Date.now() + 150);
-	t.expect(await keyv.get("foo")).toBeUndefined();
-	t.expect(store.size).toBe(0);
-	tk.reset();
-});
+	test("Keyv respects default ttl option", async () => {
+		const store = new Map();
+		const keyv = new Keyv({ store, ttl: 100 });
+		await keyv.set("foo", "bar");
+		expect(await keyv.get("foo")).toBe("bar");
+		tk.freeze(Date.now() + 150);
+		expect(await keyv.get("foo")).toBeUndefined();
+		expect(store.size).toBe(0);
+		tk.reset();
+	});
 
-testRunner.it(".set(key, val, ttl) overwrites default ttl option", async (t) => {
-	const startTime = Date.now();
-	tk.freeze(startTime);
-	const keyv = new Keyv({ ttl: 200 });
-	await keyv.set("foo", "bar");
-	await keyv.set("fizz", "buzz", 100);
-	await keyv.set("ping", "pong", 300);
-	t.expect(await keyv.get("foo")).toBe("bar");
-	t.expect(await keyv.get("fizz")).toBe("buzz");
-	t.expect(await keyv.get("ping")).toBe("pong");
-	tk.freeze(startTime + 150);
-	t.expect(await keyv.get("foo")).toBe("bar");
-	t.expect(await keyv.get("fizz")).toBeUndefined();
-	t.expect(await keyv.get("ping")).toBe("pong");
-	tk.freeze(startTime + 250);
-	t.expect(await keyv.get("foo")).toBeUndefined();
-	t.expect(await keyv.get("ping")).toBe("pong");
-	tk.freeze(startTime + 350);
-	t.expect(await keyv.get("ping")).toBeUndefined();
-	tk.reset();
-});
+	test(".set(key, val, ttl) overwrites default ttl option", async () => {
+		const startTime = Date.now();
+		tk.freeze(startTime);
+		const keyv = new Keyv({ ttl: 200 });
+		await keyv.set("foo", "bar");
+		await keyv.set("fizz", "buzz", 100);
+		await keyv.set("ping", "pong", 300);
+		expect(await keyv.get("foo")).toBe("bar");
+		expect(await keyv.get("fizz")).toBe("buzz");
+		expect(await keyv.get("ping")).toBe("pong");
+		tk.freeze(startTime + 150);
+		expect(await keyv.get("foo")).toBe("bar");
+		expect(await keyv.get("fizz")).toBeUndefined();
+		expect(await keyv.get("ping")).toBe("pong");
+		tk.freeze(startTime + 250);
+		expect(await keyv.get("foo")).toBeUndefined();
+		expect(await keyv.get("ping")).toBe("pong");
+		tk.freeze(startTime + 350);
+		expect(await keyv.get("ping")).toBeUndefined();
+		tk.reset();
+	});
 
-testRunner.it(
-	'.set(key, val, ttl) where ttl is "0" overwrites default ttl option and sets key to never expire',
-	async (t) => {
+	test('.set(key, val, ttl) where ttl is "0" overwrites default ttl option and sets key to never expire', async () => {
 		const startTime = Date.now();
 		tk.freeze(startTime);
 		const store = new Map();
 		const keyv = new Keyv({ store, ttl: 200 });
 		await keyv.set("foo", "bar", 0);
-		t.expect(await keyv.get("foo")).toBe("bar");
+		expect(await keyv.get("foo")).toBe("bar");
 		tk.freeze(startTime + 250);
-		t.expect(await keyv.get("foo")).toBe("bar");
+		expect(await keyv.get("foo")).toBe("bar");
 		tk.reset();
-	},
-);
+	});
 
-testRunner.it("should be able to set the ttl as default option and then property", async (t) => {
-	const keyv = new Keyv({ store: new Map(), ttl: 100 });
-	t.expect(keyv.ttl).toBe(100);
-	keyv.ttl = 200;
-	t.expect(keyv.ttl).toBe(200);
-	t.expect(keyv.ttl).toBe(200);
-});
-
-testRunner.it(
-	"should be able to set the ttl as default option and then property with undefined",
-	async (t) => {
-		const keyv = new Keyv({ store: new Map() });
-		t.expect(keyv.ttl).not.toBeDefined();
+	test("should be able to set the ttl as default option and then property", async () => {
+		const keyv = new Keyv({ store: new Map(), ttl: 100 });
+		expect(keyv.ttl).toBe(100);
 		keyv.ttl = 200;
-		t.expect(keyv.ttl).toBe(200);
-		t.expect(keyv.ttl).toBe(200);
+		expect(keyv.ttl).toBe(200);
+		expect(keyv.ttl).toBe(200);
+	});
+
+	test("should be able to set the ttl as default option and then property with undefined", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		expect(keyv.ttl).not.toBeDefined();
+		keyv.ttl = 200;
+		expect(keyv.ttl).toBe(200);
+		expect(keyv.ttl).toBe(200);
 		keyv.ttl = undefined;
-		t.expect(keyv.ttl).not.toBeDefined();
-		t.expect(keyv.ttl).not.toBeDefined();
-	},
-);
-
-testRunner.it("should emit error if set fails", async (t) => {
-	const adapter = new KeyvMemoryAdapter(new Map());
-	adapter.set = testRunner.vi.fn().mockRejectedValue(new Error("store set error"));
-	const keyv = new Keyv({ store: adapter });
-	const errorHandler = testRunner.vi.fn();
-	keyv.on("error", errorHandler);
-	const result = await keyv.set("foo", "bar");
-	t.expect(result).toBe(false);
-	t.expect(errorHandler).toHaveBeenCalledWith(new Error("store set error"));
+		expect(keyv.ttl).not.toBeDefined();
+		expect(keyv.ttl).not.toBeDefined();
+	});
 });
 
-testRunner.it("should return when value equals non boolean", async (t) => {
-	const store = new Map();
-	// @ts-expect-error
-	store.set = () => "foo";
-	const keyv = new Keyv(store);
-	const result = await keyv.set("foo111", "bar111");
-	t.expect(result).toBe(true);
+describe("set", () => {
+	test("should emit error if set fails", async () => {
+		const adapter = new KeyvMemoryAdapter(new Map());
+		adapter.set = vi.fn().mockRejectedValue(new Error("store set error"));
+		const keyv = new Keyv({ store: adapter });
+		const errorHandler = vi.fn();
+		keyv.on("error", errorHandler);
+		const result = await keyv.set("foo", "bar");
+		expect(result).toBe(false);
+		expect(errorHandler).toHaveBeenCalledWith(new Error("store set error"));
+	});
+
+	test("should return when value equals non boolean", async () => {
+		const store = new Map();
+		// @ts-expect-error
+		store.set = () => "foo";
+		const keyv = new Keyv(store);
+		const result = await keyv.set("foo111", "bar111");
+		expect(result).toBe(true);
+	});
+
+	test("should return store set value equals non boolean", async () => {
+		const store = new Map();
+		// @ts-expect-error
+		store.set = () => true;
+		const keyv = new Keyv(store);
+		const result = await keyv.set("foo1112", "bar1112");
+		expect(result).toBe(true);
+	});
+
+	test("should emit error and return false when setting a Symbol value", async () => {
+		const keyv = new Keyv({ store: new Map() });
+		const errorHandler = vi.fn();
+		keyv.on("error", errorHandler);
+		const result = await keyv.set("key", Symbol("test"));
+		expect(result).toBe(false);
+		expect(errorHandler).toHaveBeenCalledWith("symbol cannot be serialized");
+	});
 });
 
-testRunner.it("should return store set value equals non boolean", async (t) => {
-	const store = new Map();
-	// @ts-expect-error
-	store.set = () => true;
-	const keyv = new Keyv(store);
-	const result = await keyv.set("foo1112", "bar1112");
-	t.expect(result).toBe(true);
-});
-
-testRunner.it("should emit error and return false when setting a Symbol value", async (t) => {
-	const keyv = new Keyv({ store: new Map() });
-	const errorHandler = testRunner.vi.fn();
-	keyv.on("error", errorHandler);
-	const result = await keyv.set("key", Symbol("test"));
-	t.expect(result).toBe(false);
-	t.expect(errorHandler).toHaveBeenCalledWith("symbol cannot be serialized");
-});
-
-testRunner.it(
-	"setMany returns array of true when store.setMany returns void (backward compat)",
-	async (t) => {
+describe("setMany", () => {
+	test("setMany returns array of true when store.setMany returns void (backward compat)", async () => {
 		const map = new Map<string, unknown>();
 		const store: KeyvStorageAdapter = {
 			namespace: undefined as string | undefined,
@@ -217,43 +213,43 @@ testRunner.it(
 			{ key: "a", value: "1" },
 			{ key: "b", value: "2" },
 		]);
-		t.expect(result).toEqual([true, true]);
-	},
-);
+		expect(result).toEqual([true, true]);
+	});
 
-testRunner.it("setMany returns false entries when store.setMany throws", async (t) => {
-	const store = {
-		async get(_key: string) {},
-		async set(_key: string, _value: unknown) {},
-		async delete(_key: string) {
-			return true;
-		},
-		async clear() {},
-		async setMany(_entries: Array<{ key: string; value: unknown; ttl?: number }>) {
-			throw new Error("store setMany failure");
-		},
-		on() {
-			return store;
-		},
-	};
-	// biome-ignore lint/suspicious/noExplicitAny: test mock
-	const keyv = new Keyv({ store: store as any });
-	keyv.on("error", () => {});
-	const result = await keyv.setMany([
-		{ key: "a", value: "1" },
-		{ key: "b", value: "2" },
-	]);
-	t.expect(result).toEqual([false, false]);
-});
+	test("setMany returns false entries when store.setMany throws", async () => {
+		const store = {
+			async get(_key: string) {},
+			async set(_key: string, _value: unknown) {},
+			async delete(_key: string) {
+				return true;
+			},
+			async clear() {},
+			async setMany(_entries: Array<{ key: string; value: unknown; ttl?: number }>) {
+				throw new Error("store setMany failure");
+			},
+			on() {
+				return store;
+			},
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test mock
+		const keyv = new Keyv({ store: store as any });
+		keyv.on("error", () => {});
+		const result = await keyv.setMany([
+			{ key: "a", value: "1" },
+			{ key: "b", value: "2" },
+		]);
+		expect(result).toEqual([false, false]);
+	});
 
-testRunner.it("setMany should fallback to individual set when store has no setMany", async (t) => {
-	const store = createStore();
-	const keyv = new Keyv({ store });
-	const result = await keyv.setMany([
-		{ key: "k1", value: "v1" },
-		{ key: "k2", value: "v2" },
-	]);
-	t.expect(result).toEqual([true, true]);
-	t.expect(await keyv.get("k1")).toBe("v1");
-	t.expect(await keyv.get("k2")).toBe("v2");
+	test("setMany should fallback to individual set when store has no setMany", async () => {
+		const store = createStore();
+		const keyv = new Keyv({ store });
+		const result = await keyv.setMany([
+			{ key: "k1", value: "v1" },
+			{ key: "k2", value: "v2" },
+		]);
+		expect(result).toEqual([true, true]);
+		expect(await keyv.get("k1")).toBe("v1");
+		expect(await keyv.get("k2")).toBe("v2");
+	});
 });

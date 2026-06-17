@@ -35,6 +35,52 @@ import {
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export class Keyv<GenericValue = any> extends Hookified {
 	/**
+	 * Keyv Constructor
+	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any> | any} store  to be provided or just the options
+	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
+	 */
+	constructor(
+		store?: KeyvStorageAdapter | KeyvOptions | KeyvMapAny,
+		options?: Omit<KeyvOptions, "store">,
+	);
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvOptions} options to be provided
+	 */
+	constructor(options?: KeyvOptions);
+	/**
+	 * Keyv Constructor
+	 * @param {KeyvStorageAdapter | KeyvOptions} store
+	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
+	 */
+	constructor(store?: KeyvStorageAdapter | KeyvOptions, options?: Omit<KeyvOptions, "store">) {
+		const mergedOptions = Keyv.resolveOptions(store, options);
+
+		super({
+			throwOnHookError: false,
+			throwOnEmptyListeners: true,
+			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
+		});
+
+		this.deprecatedHooks = buildDeprecatedHooks();
+		this._compression = mergedOptions.compression;
+		this._encryption = mergedOptions.encryption;
+		this.initSerialization(mergedOptions);
+		this.initSanitize(mergedOptions);
+		this.initNamespace(mergedOptions.namespace);
+		this.initStats(mergedOptions);
+
+		if (mergedOptions.store) {
+			this.setStore(mergedOptions.store);
+		}
+
+		this.setTtl(mergedOptions.ttl);
+		this._checkExpired = mergedOptions.checkExpired ?? false;
+	}
+
+	// --- Properties ---
+
+	/**
 	 * Stats manager for tracking cache operation metrics (hits, misses, sets, deletes, errors).
 	 * @default this is disabled.
 	 */
@@ -80,50 +126,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * When true, Keyv checks expiry at its layer on get/getMany/has/hasMany.
 	 */
 	private _checkExpired = false;
-
-	/**
-	 * Keyv Constructor
-	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any> | any} store  to be provided or just the options
-	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
-	 */
-	constructor(
-		store?: KeyvStorageAdapter | KeyvOptions | KeyvMapAny,
-		options?: Omit<KeyvOptions, "store">,
-	);
-	/**
-	 * Keyv Constructor
-	 * @param {KeyvOptions} options to be provided
-	 */
-	constructor(options?: KeyvOptions);
-	/**
-	 * Keyv Constructor
-	 * @param {KeyvStorageAdapter | KeyvOptions} store
-	 * @param {Omit<KeyvOptions, 'store'>} [options] if you provide the store you can then provide the Keyv Options
-	 */
-	constructor(store?: KeyvStorageAdapter | KeyvOptions, options?: Omit<KeyvOptions, "store">) {
-		const mergedOptions = Keyv.resolveOptions(store, options);
-
-		super({
-			throwOnHookError: false,
-			throwOnEmptyListeners: true,
-			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
-		});
-
-		this.deprecatedHooks = buildDeprecatedHooks();
-		this._compression = mergedOptions.compression;
-		this._encryption = mergedOptions.encryption;
-		this.initSerialization(mergedOptions);
-		this.initSanitize(mergedOptions);
-		this.initNamespace(mergedOptions.namespace);
-		this.initStats(mergedOptions);
-
-		if (mergedOptions.store) {
-			this.setStore(mergedOptions.store);
-		}
-
-		this.setTtl(mergedOptions.ttl);
-		this._checkExpired = mergedOptions.checkExpired ?? false;
-	}
 
 	/**
 	 * Get the current storage adapter.
@@ -274,14 +276,6 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * When true, Keyv checks expiry at its layer on get/getMany/has/hasMany.
-	 * When false (default), trusts the storage adapter.
-	 */
-	public get checkExpired(): boolean {
-		return this._checkExpired;
-	}
-
-	/**
 	 * Set the stats. When setting a new instance it will unsubscribe the old listeners
 	 * and subscribe the new instance.
 	 * @param {KeyvStats} stats The stats instance to set.
@@ -290,6 +284,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 		this._stats.unsubscribe();
 		this._stats = stats;
 		this._stats.subscribe(this);
+	}
+
+	/**
+	 * Get whether Keyv checks expiry at its own layer on get/getMany/has/hasMany.
+	 * When false (default), it trusts the storage adapter to handle expiry.
+	 * @returns {boolean} `true` if Keyv checks expiry at its layer.
+	 */
+	public get checkExpired(): boolean {
+		return this._checkExpired;
 	}
 
 	/**
@@ -357,8 +360,12 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get the Value of a Key
+	 * Get the value of a key. If an array of keys is passed in it will return an array of values
+	 * delegating to {@link getMany}.
 	 * @param {string | string[]} key passing in a single key or multiple as an array
+	 * @returns {Promise<Value | undefined | Array<Value | undefined>>} the value of the key, or
+	 * `undefined` if the key does not exist or is expired. When an array of keys is passed in it
+	 * returns an array of values in the same order (with `undefined` for missing keys).
 	 */
 	public async get<Value = GenericValue>(key: string): Promise<Value | undefined>;
 	public async get<Value = GenericValue>(key: string[]): Promise<Array<Value | undefined>>;
@@ -416,8 +423,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Get many values of keys
-	 * @param {string[]} keys passing in a single key or multiple as an array
+	 * Get many values for an array of keys.
+	 * @param {string[]} keys the keys to get
+	 * @returns {Promise<Array<Value | undefined>>} an array of values in the same order as the
+	 * keys, with `undefined` for keys that do not exist or are expired.
 	 */
 	public async getMany<Value = GenericValue>(keys: string[]): Promise<Array<Value | undefined>> {
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
@@ -566,10 +575,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Set an item to the store
-	 * @param {string | Array<KeyvEntry<Value>>} key the key to use. If you pass in an array of KeyvEntry it will set many items
+	 * @param {string} key the key to use
 	 * @param {Value} value the value of the key
-	 * @param {number} [ttl] time to live in milliseconds
-	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
+	 * @param {number} [ttl] time to live in milliseconds. Overrides the instance-level `ttl`.
+	 * @returns {Promise<boolean>} `true` if it was set successfully, `false` on failure.
 	 */
 	public async set<Value = GenericValue>(
 		key: string,
@@ -624,7 +633,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Set many items to the store
 	 * @param {Array<KeyvEntry<Value>>} entries the entries to set
-	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
+	 * @returns {Promise<boolean[]>} an array of booleans, one per entry: `true` if set successfully, `false` on failure.
 	 */
 	public async setMany<Value = GenericValue>(entries: KeyvEntry<Value>[]): Promise<boolean[]> {
 		entries = entries.map((e) => ({
@@ -688,7 +697,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * The store-level TTL is derived automatically from `value.expires`.
 	 * @param {string} key the key to set
 	 * @param {KeyvValue<Value>} value the raw value envelope to store
-	 * @returns {boolean} if it sets then it will return a true. On failure will return false.
+	 * @returns {Promise<boolean>} `true` if it was set successfully, `false` on failure.
 	 */
 	public async setRaw<Value = GenericValue>(
 		key: string,
@@ -737,7 +746,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Each entry's value should be a KeyvValue object with { value, expires? }. If you need TTL-based expiration,
 	 * set `expires` on each value directly. The store-level TTL is derived automatically from `value.expires`.
 	 * @param {KeyvEntry<KeyvValue<Value>>[]} entries the raw entries to set
-	 * @returns {boolean[]} will return an array of booleans if it sets then it will return a true. On failure will return false.
+	 * @returns {Promise<boolean[]>} an array of booleans, one per entry: `true` if set successfully, `false` on failure.
 	 */
 	public async setManyRaw<Value = GenericValue>(
 		entries: KeyvEntry<KeyvValue<Value>>[],
@@ -784,15 +793,16 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Delete an Entry
+	 * Delete an entry. If an array of keys is passed in it will delete many entries
+	 * delegating to {@link deleteMany}.
 	 * @param {string} key the key to be deleted
-	 * @returns {boolean} will return true if item is deleted. false if there is an error
+	 * @returns {Promise<boolean>} `true` if the item was deleted, `false` if there was an error.
 	 */
 	public async delete(key: string): Promise<boolean>;
 	/**
-	 * Delete multiple Entries
+	 * Delete multiple entries
 	 * @param {string[]} keys the keys to be deleted
-	 * @returns {boolean[]} will return array of booleans for each key
+	 * @returns {Promise<boolean[]>} an array of booleans indicating success for each key.
 	 */
 	public async delete(keys: string[]): Promise<boolean[]>;
 	public async delete(key: string | string[]): Promise<boolean | boolean[]> {
@@ -829,7 +839,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Delete many items from the store
 	 * @param {string[]} keys the keys to be deleted
-	 * @returns {boolean[]} array of booleans indicating success for each key
+	 * @returns {Promise<boolean[]>} an array of booleans indicating success for each key.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		/* v8 ignore next -- @preserve */
@@ -861,9 +871,11 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Has a key.
-	 * @param {string} key the key to check
-	 * @returns {boolean} will return true if the key exists
+	 * Check if a key exists. If an array of keys is passed in it will check many keys
+	 * delegating to {@link hasMany}.
+	 * @param {string | string[]} key the key (or keys) to check
+	 * @returns {Promise<boolean | boolean[]>} `true` if the key exists, `false` if not. When an
+	 * array of keys is passed in it returns an array of booleans in the same order.
 	 */
 	public async has(key: string[]): Promise<boolean[]>;
 	public async has(key: string): Promise<boolean>;
@@ -902,7 +914,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	/**
 	 * Check if many keys exist
 	 * @param {string[]} keys the keys to check
-	 * @returns {boolean[]} will return an array of booleans if the keys exist
+	 * @returns {Promise<boolean[]>} an array of booleans in the same order as the keys, `true` if the key exists.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
@@ -929,8 +941,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Clear the store
-	 * @returns {void}
+	 * Clear the store. If a namespace is set only entries in that namespace are removed.
+	 * Emits a `clear` event.
+	 * @returns {Promise<void>} resolves once the entries have been cleared.
 	 */
 	public async clear(): Promise<void> {
 		this.emit("clear");
