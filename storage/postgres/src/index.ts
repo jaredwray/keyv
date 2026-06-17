@@ -1,6 +1,6 @@
 import type { ConnectionOptions } from "node:tls";
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter } from "keyv";
+import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
 import type { DatabaseError, PoolConfig } from "pg";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
@@ -144,39 +144,6 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		};
 
 		this.startClearExpiredTimer();
-	}
-
-	/**
-	 * Initializes the database connection and ensures the table schema exists.
-	 * Called from the constructor; errors are emitted rather than thrown.
-	 */
-	private async init(
-		createTable: string,
-		migration: string,
-		migrationExpires: string,
-		dropOldPk: string,
-		createIndex: string,
-		createExpiresIndex: string,
-	): Promise<Query> {
-		const query = await this.connect();
-
-		try {
-			await query(createTable);
-			await query(migration);
-			await query(migrationExpires);
-			await query(dropOldPk);
-			await query(createIndex);
-			await query(createExpiresIndex);
-		} catch (error) {
-			// 23505 = unique_violation: safe to ignore when concurrent instances
-			// race to create the same index (the index already exists).
-			/* v8 ignore next -- @preserve */
-			if ((error as DatabaseError).code !== "23505") {
-				this.emit("error", error);
-			}
-		}
-
-		return query;
 	}
 
 	/**
@@ -332,11 +299,13 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets a value by key.
+	 * Gets a value by key. Expired entries are deleted on read and reported as missing.
+	 * @template Value - The type of the stored value.
 	 * @param key - The key to retrieve.
-	 * @returns The value associated with the key, or `undefined` if not found.
+	 * @returns A promise resolving to the value associated with the key, or `undefined` if the
+	 * key does not exist or has expired. A SQL `NULL` value is normalized to `undefined`.
 	 */
-	public async get<Value>(key: string): Promise<Value | undefined> {
+	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
@@ -353,28 +322,33 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
-		return row.value;
+		// Coerce a SQL NULL value to undefined so the adapter never returns null.
+		return (row.value ?? undefined) as KeyvStorageGetResult<Value>;
 	}
 
 	/**
-	 * Gets multiple values by their keys.
+	 * Gets multiple values by their keys. Expired entries are deleted on read and reported as missing.
+	 * @template Value - The type of the stored values.
 	 * @param keys - An array of keys to retrieve.
-	 * @returns An array of values in the same order as the keys, with `undefined` for missing keys.
+	 * @returns A promise resolving to an array of values in the same order as the keys, with
+	 * `undefined` for missing, expired, or SQL `NULL` entries.
 	 */
-	public async getMany<Value>(keys: string[]): Promise<Array<Value | undefined>> {
+	public async getMany<Value>(
+		keys: string[],
+	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
 		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
 		const rows = await this.query(getMany, [strippedKeys, ns]);
 
-		const validMap = new Map<string, Value>();
+		const validMap = new Map<string, KeyvStorageGetResult<Value>>();
 		const expiredKeys: string[] = [];
 		for (const row of rows) {
 			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
 				expiredKeys.push(row.key as string);
 			} else {
-				validMap.set(row.key as string, row.value as Value);
+				validMap.set(row.key as string, row.value as KeyvStorageGetResult<Value>);
 			}
 		}
 
@@ -383,13 +357,19 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			await this.query(del, [expiredKeys, ns]);
 		}
 
-		return strippedKeys.map((key) => validMap.get(key));
+		// Coerce missing keys and SQL NULL values to undefined so the adapter never returns null.
+		return strippedKeys.map(
+			(key) => (validMap.get(key) ?? undefined) as KeyvStorageGetResult<Value | undefined>,
+		);
 	}
 
 	/**
 	 * Sets a key-value pair. Uses an upsert operation via `ON CONFLICT` to insert or update.
+	 * Any TTL is read from the serialized value's `expires` field and stored in the `expires` column.
 	 * @param key - The key to set.
 	 * @param value - The value to store.
+	 * @returns A promise resolving to `true` on success, or `false` if an error occurred (an
+	 * `error` event is also emitted).
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any): Promise<boolean> {
@@ -411,8 +391,12 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Sets multiple key-value pairs at once using PostgreSQL `UNNEST` for efficient bulk operations.
+	 * Sets multiple key-value pairs at once using a single atomic PostgreSQL
+	 * `INSERT ... UNNEST ... ON CONFLICT` statement for efficient bulk upserts.
+	 * @template Value - The type of the stored values.
 	 * @param entries - An array of key-value entry objects.
+	 * @returns A promise resolving to an array of booleans (one per entry). Because the statement
+	 * is atomic, all entries succeed (`true`) or all fail (`false`); on failure an `error` event is emitted.
 	 */
 	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
@@ -460,7 +444,9 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Clears all keys in the current namespace. If no namespace is set, all keys are removed.
+	 * Clears all keys in the current namespace. If no namespace is set, only keys without a
+	 * namespace (the default namespace) are removed.
+	 * @returns A promise that resolves once the matching keys have been deleted.
 	 */
 	public async clear(): Promise<void> {
 		if (this._namespace) {
@@ -473,7 +459,9 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Utility helper method to delete all expired entries from the store where the `expires` column is less than the current timestamp.
+	 * Utility helper method to delete all expired entries from the store where the `expires`
+	 * column is set and less than the current timestamp. Useful for periodic cleanup.
+	 * @returns A promise that resolves once expired entries have been deleted.
 	 */
 	public async clearExpired(): Promise<void> {
 		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE expires IS NOT NULL AND expires < $1`;
@@ -481,9 +469,12 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Iterates over all key-value pairs, optionally filtered by namespace.
-	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`.
-	 * @yields A `[key, value]` tuple for each entry.
+	 * Iterates over all key-value pairs scoped to the namespace configured on the instance.
+	 * The namespace does not need to be passed in — it is read from the `namespace` property.
+	 * Uses cursor-based (keyset) pagination with batch size controlled by `iterationLimit`,
+	 * which handles concurrent deletions during iteration without skipping entries.
+	 * @yields A `[key, value]` tuple for each non-expired entry.
+	 * @returns An async generator of `[key, value]` tuples.
 	 */
 	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
 		const limit = Number.parseInt(String(this._iterationLimit), 10) || 10;
@@ -608,6 +599,56 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
+	 * Disconnects from the PostgreSQL database and releases the connection pool.
+	 * Also stops the automatic expired-entry cleanup interval if running.
+	 * @returns A promise that resolves once the pool has been closed.
+	 */
+	public async disconnect(): Promise<void> {
+		this.stopClearExpiredTimer();
+		await endPool(this._uri, { ...this._poolConfig, ssl: this._ssl });
+	}
+
+	/**
+	 * Initializes the database connection and ensures the table schema exists.
+	 * Called from the constructor; errors are emitted rather than thrown.
+	 * @param createTable - SQL statement that creates the storage table (and schema if needed).
+	 * @param migration - SQL statement that adds the `namespace` column to legacy tables.
+	 * @param migrationExpires - SQL statement that adds the `expires` column to legacy tables.
+	 * @param dropOldPk - SQL statement that drops the legacy single-column primary key.
+	 * @param createIndex - SQL statement that creates the unique `(key, namespace)` index.
+	 * @param createExpiresIndex - SQL statement that creates the partial index on `expires`.
+	 * @returns A promise resolving to the query function once initialization completes.
+	 */
+	private async init(
+		createTable: string,
+		migration: string,
+		migrationExpires: string,
+		dropOldPk: string,
+		createIndex: string,
+		createExpiresIndex: string,
+	): Promise<Query> {
+		const query = await this.connect();
+
+		try {
+			await query(createTable);
+			await query(migration);
+			await query(migrationExpires);
+			await query(dropOldPk);
+			await query(createIndex);
+			await query(createExpiresIndex);
+		} catch (error) {
+			// 23505 = unique_violation: safe to ignore when concurrent instances
+			// race to create the same index (the index already exists).
+			/* v8 ignore next -- @preserve */
+			if ((error as DatabaseError).code !== "23505") {
+				this.emit("error", error);
+			}
+		}
+
+		return query;
+	}
+
+	/**
 	 * Establishes a connection to the PostgreSQL database via the connection pool.
 	 * @returns A query function that executes SQL statements and returns result rows.
 	 */
@@ -618,15 +659,6 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			const data = await conn.query(sql, values);
 			return data.rows;
 		};
-	}
-
-	/**
-	 * Disconnects from the PostgreSQL database and releases the connection pool.
-	 * Also stops the automatic expired-entry cleanup interval if running.
-	 */
-	public async disconnect(): Promise<void> {
-		this.stopClearExpiredTimer();
-		await endPool(this._uri, { ...this._poolConfig, ssl: this._ssl });
 	}
 
 	/**
@@ -703,6 +735,11 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		}
 	}
 
+	/**
+	 * Applies a {@link KeyvPostgresOptions} object to the instance, assigning known adapter
+	 * options and forwarding any remaining properties to the underlying pg `PoolConfig`.
+	 * @param options - The options object to apply.
+	 */
 	private setOptions(options: KeyvPostgresOptions): void {
 		if (options.uri !== undefined) {
 			this._uri = options.uri;
@@ -759,10 +796,10 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 /**
  * Helper function to create a Keyv instance with KeyvPostgres as the storage adapter.
- * @param options - Optional {@link KeyvPostgresOptions} configuration object.
+ * @param options - Optional {@link KeyvPostgresOptions} configuration object or a PostgreSQL connection URI string.
  * @returns A new Keyv instance backed by PostgreSQL.
  */
-export const createKeyv = (options?: KeyvPostgresOptions) =>
+export const createKeyv = (options?: KeyvPostgresOptions | string) =>
 	new Keyv({ store: new KeyvPostgres(options) });
 
 export default KeyvPostgres;

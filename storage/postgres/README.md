@@ -82,8 +82,7 @@ const keyv = createKeyv({ uri: 'postgresql://user:pass@localhost:5432/dbname', t
 
 ## Breaking changes
 
-
-The `opts` getter still exists for backward compatibility but should not be used for new code.
+v6 changes how namespaces are stored and which base class the adapter extends. Configuration is now exposed through dedicated [properties](#properties) (getters/setters) on the instance rather than a generic options bag. The sections below describe the changes and how to migrate existing data.
 
 ### Native namespace support
 
@@ -352,7 +351,7 @@ const results = await keyv.setMany([
 
 ## .get(key)
 
-Get a value by key. Returns `undefined` if the key does not exist.
+Get a value by key. Returns `undefined` if the key does not exist or has expired. A SQL `NULL` value is normalized to `undefined` (the adapter never returns `null`).
 
 ```js
 const value = await keyv.get('foo'); // 'bar'
@@ -360,7 +359,7 @@ const value = await keyv.get('foo'); // 'bar'
 
 ## .getMany(keys)
 
-Get multiple values at once. Returns an array of values in the same order as the keys, with `undefined` for missing keys.
+Get multiple values at once. Returns an array of values in the same order as the keys, with `undefined` for missing, expired, or `NULL` entries (never `null`).
 
 ```js
 const values = await keyv.getMany(['foo', 'baz']); // ['bar', 'qux']
