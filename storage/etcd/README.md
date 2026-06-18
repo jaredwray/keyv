@@ -43,7 +43,7 @@
   - [constructor(url?, options?)](#constructorurl-options)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -282,24 +282,26 @@ await store.set('key2', 'value2');
 const results = await store.getMany(['key1', 'key2']);
 ```
 
-### .set(key, value, ttl?)
+### .set(key, value, expires?)
 
-Stores a value in the etcd server. If a `ttl` is provided, a dedicated etcd lease is created for that key. Otherwise, if a default TTL is configured via the constructor `ttl` option, the shared lease is used. Returns `true` on success, `false` on failure.
+Stores a value in the etcd server. If `expires` is provided, a dedicated etcd lease (sized from the remaining time) is created for that key. Otherwise, if a default TTL is configured via the constructor `ttl` option, the shared lease is used. Returns `true` on success, `false` on failure.
+
+> When you call the adapter directly, the third argument is an **absolute** `expires` timestamp (Unix ms since epoch), not a relative duration. Through Keyv (`keyv.set(key, value, ttl)`) you still pass a relative TTL — Keyv converts it to `expires` for you.
 
 - `key` *(string)* - The key to set.
 - `value` *(any)* - The value to store.
-- `ttl` *(number, optional)* - Time to live in milliseconds.
+- `expires` *(number, optional)* - Absolute expiry as Unix ms since epoch. `undefined` means no expiry.
 - Returns: `Promise<boolean>`
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
 await store.set('foo', 'bar');
-await store.set('foo', 'bar', 5000); // expires in 5 seconds
+await store.set('foo', 'bar', Date.now() + 5000); // expires in ~5 seconds
 ```
 
 ### .setMany(entries)
 
-Stores multiple values in the etcd server. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
+Stores multiple values in the etcd server. Each entry is a `KeyvStorageEntry<Value>` object (`{ key: string, value: Value, expires?: number }`) where `expires` is an absolute Unix ms timestamp, and `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');

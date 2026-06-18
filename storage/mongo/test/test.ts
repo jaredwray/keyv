@@ -97,7 +97,7 @@ describe("get", () => {
 	test("returns undefined and deletes an expired entry", async () => {
 		const store = new KeyvMongo({ ...options });
 		const key = faker.string.alphanumeric(10);
-		await store.set(key, "expiring-value", 1);
+		await store.set(key, "expiring-value", Date.now() - 1000);
 		await delay(50);
 		expect(await store.get(key)).toBeUndefined();
 	});
@@ -117,7 +117,7 @@ describe("get", () => {
 	test("returns undefined and deletes an expired entry in GridFS", async () => {
 		const store = new KeyvMongo({ useGridFS: true, ...options });
 		const key = faker.string.alphanumeric(10);
-		await store.set(key, "expiring-value", 1);
+		await store.set(key, "expiring-value", Date.now() - 1000);
 		await delay(50);
 		expect(await store.get(key)).toBeUndefined();
 	});
@@ -164,22 +164,22 @@ describe("set and setMany", () => {
 	test("stores and returns a value in GridFS", async () => {
 		const store = new KeyvMongo({ useGridFS: true, ...options });
 		const key = faker.string.alphanumeric(10);
-		const result = await store.set(key, "keyv1", 0);
+		const result = await store.set(key, "keyv1");
 		expect(result).toBe(true);
 		expect(await store.get(key)).toBe("keyv1");
 	});
 
-	test("stores a value with a ttl in GridFS", async () => {
+	test("stores a value with an expiry in GridFS", async () => {
 		const store = new KeyvMongo({ useGridFS: true, ...options });
 		const key = faker.string.alphanumeric(10);
-		expect(await store.set(key, "keyv1", 0)).toBe(true);
+		expect(await store.set(key, "keyv1", Date.now() + 60000)).toBe(true);
 	});
 
-	test("setMany stores multiple values with a per-entry ttl", async () => {
+	test("setMany stores multiple values with a per-entry expiry", async () => {
 		const store = new KeyvMongo({ ...options });
 		const keys = [faker.string.alphanumeric(10), faker.string.alphanumeric(10)];
 		await store.setMany([
-			{ key: keys[0], value: "val1", ttl: 60000 },
+			{ key: keys[0], value: "val1", expires: Date.now() + 60000 },
 			{ key: keys[1], value: "val2" },
 		]);
 		expect(await store.get(keys[0])).toBe("val1");
@@ -275,13 +275,13 @@ describe("set and setMany", () => {
 		// Mock the set method to throw for the second call.
 		let callCount = 0;
 		const originalSet = store.set.bind(store);
-		store.set = async (key: string, value: any, ttl?: number) => {
+		store.set = async (key: string, value: any, expires?: number) => {
 			callCount++;
 			if (callCount === 2) {
 				throw new Error("GridFS set failure");
 			}
 
-			return originalSet(key, value, ttl);
+			return originalSet(key, value, expires);
 		};
 
 		const result = await store.setMany([
@@ -458,7 +458,7 @@ describe("iterator", () => {
 		await store.clear();
 		const expiredKey = faker.string.alphanumeric(10);
 		const freshKey = faker.string.alphanumeric(10);
-		await store.set(expiredKey, "expired-value", 1);
+		await store.set(expiredKey, "expired-value", Date.now() - 1000);
 		await store.set(freshKey, "fresh-value");
 		await delay(50);
 		const entries: Array<[string, unknown]> = [];
@@ -722,7 +722,7 @@ describe("GridFS maintenance", () => {
 		const store = new KeyvMongo({ useGridFS: true, ...options });
 		await store.clear();
 		const key = faker.string.alphanumeric(10);
-		await store.set(key, "expiring-value", 1);
+		await store.set(key, "expiring-value", Date.now() - 1000);
 		await delay(50);
 		expect(await store.clearExpired()).toBe(true);
 		expect(await store.get(key)).toBeUndefined();

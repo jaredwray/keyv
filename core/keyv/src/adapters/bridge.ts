@@ -2,8 +2,8 @@
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
-import { type KeyvEntry, KeyvEvents } from "../types/keyv.js";
-import { isDataExpired } from "../utils.js";
+import { KeyvEvents, type KeyvStorageEntry } from "../types/keyv.js";
+import { isDataExpired, ttlFromExpires } from "../utils.js";
 
 /**
  * Configuration options for KeyvBridgeAdapter.
@@ -29,6 +29,8 @@ export type KeyvBridgeAdapterOptions = {
 export type KeyvBridgeStore = {
 	/** Store configuration/options (e.g. dialect, url) */
 	opts?: any;
+	/** Namespace the store scopes its keys under, when it manages its own namespacing. */
+	namespace?: string;
 	/** Retrieves a value by key */
 	get(key: string): Promise<any>;
 	/** Sets a value with a key and optional TTL */
@@ -87,6 +89,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	private _namespace?: string;
 	private _keySeparator = ":";
 	private readonly _capabilities: KeyvStorageCapability;
+	/**
+	 * Whether the wrapped store manages its own namespace (exposes a `namespace` property).
+	 * When true the bridge propagates its namespace to the store and does not prefix keys,
+	 * so the store's native, namespace-scoped operations (notably `clear()`) are used directly.
+	 */
+	private readonly _storeHandlesNamespace: boolean;
 
 	/**
 	 * Creates a new KeyvBridgeAdapter instance.
@@ -97,6 +105,14 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		super({ throwOnHookError: false });
 		this._store = store;
 
+		// Detect optional methods at construction time
+		this._capabilities = detectKeyvStorage(store);
+		// Only a full storage adapter (keyvStorage) that exposes a `namespace` manages its own
+		// namespacing. asyncMap/map-like stores — even if they expose `namespace` — stay on the
+		// bridge's key-prefixing path so a single shared store can host multiple namespaces.
+		this._storeHandlesNamespace =
+			this._capabilities.store === "keyvStorage" && "namespace" in store;
+
 		if (options?.keySeparator) {
 			this._keySeparator = options.keySeparator;
 		}
@@ -105,8 +121,10 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 			this._namespace = options.namespace;
 		}
 
-		// Detect optional methods at construction time
-		this._capabilities = detectKeyvStorage(store);
+		// Hand our namespace to a store that scopes its own keys.
+		if (this._storeHandlesNamespace) {
+			this._store.namespace = this._namespace;
+		}
 
 		// Forward error events from the underlying store
 		if (typeof store.on === "function") {
@@ -129,10 +147,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the detected capabilities of the underlying store.
+	 * Gets the capabilities of the underlying store, with `expires: true` to declare that
+	 * the bridge accepts an absolute `expires` timestamp (which it converts to a ttl for the
+	 * wrapped legacy store).
 	 */
 	public get capabilities(): KeyvStorageCapability {
-		return this._capabilities;
+		return { ...this._capabilities, expires: true };
 	}
 
 	/**
@@ -157,10 +177,14 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Sets the namespace.
+	 * Sets the namespace. When the wrapped store manages its own namespace, the value is
+	 * propagated to it so its native scoped operations stay in sync.
 	 */
 	public set namespace(namespace: string | undefined) {
 		this._namespace = namespace;
+		if (this._storeHandlesNamespace) {
+			this._store.namespace = namespace;
+		}
 	}
 
 	/**
@@ -170,6 +194,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns The prefixed key if namespace is provided, otherwise the original key
 	 */
 	public getKeyPrefix(key: string, namespace?: string) {
+		// When the wrapped store manages its own namespace, the bridge must not also prefix
+		// keys — that would double-namespace. The store applies the namespace itself.
+		if (this._storeHandlesNamespace) {
+			return key;
+		}
+
 		if (namespace) {
 			return `${namespace}${this._keySeparator}${key}`;
 		}
@@ -255,15 +285,30 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stores a value in the store with an optional TTL.
+	 * Stores a value in the store with an optional absolute expiry.
+	 * The wrapped store's `set(key, value, ttl?)` expects a relative duration, so the absolute
+	 * `expires` is converted to a remaining ttl (`undefined` when already expired or absent).
+	 * The value is passed through unchanged — the bridge does not wrap it in an envelope — so
+	 * expiry is enforced by the wrapped legacy store's own ttl handling. (The read-side
+	 * {@link isDataExpired} check only fires when a caller stores a raw `{ value, expires }`
+	 * object directly; when Keyv core drives the bridge the value arrives already encoded.)
 	 * @param key - The key to store the value under
 	 * @param value - The value to store
-	 * @param ttl - Optional time-to-live in milliseconds
+	 * @param expires - Optional absolute expiry as Unix ms since epoch
 	 * @returns Always returns true indicating success
 	 */
-	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const result = await this._store.set(keyPrefix, value, ttl);
+		// `ttlFromExpires` returns undefined for both "no expiry" and "already expired", so an
+		// elapsed deadline would otherwise be stored with no ttl and persist forever (the bridge
+		// embeds no envelope to expire it on read). Delete instead, so a past `expires` yields an
+		// absent key — consistent with how the native adapters treat an already-expired write.
+		if (typeof expires === "number" && expires <= Date.now()) {
+			await this._store.delete(keyPrefix);
+			return true;
+		}
+
+		const result = await this._store.set(keyPrefix, value, ttlFromExpires(expires));
 		if (typeof result === "boolean") {
 			return result;
 		}
@@ -274,21 +319,38 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Stores multiple entries in the store at once.
 	 * Delegates to the store's native setMany if available, otherwise loops over set.
-	 * @param entries - Array of entries containing key, value, and optional TTL
+	 * @param entries - Array of entries containing key, value, and optional absolute `expires`
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (this._capabilities.methods.setMany.exists) {
-			const prefixedEntries = entries.map((entry) => ({
-				...entry,
-				key: this.getKeyPrefix(entry.key, this._namespace),
-			}));
-			await this._store.setMany?.(prefixedEntries);
+			const now = Date.now();
+			const isExpired = (entry: KeyvStorageEntry<Value>) =>
+				typeof entry.expires === "number" && entry.expires <= now;
+			// Already-expired entries must not persist (see `set`); batch the live ones and
+			// delete the elapsed ones rather than writing them with no ttl.
+			const live = entries.filter((entry) => !isExpired(entry));
+			if (live.length > 0) {
+				await this._store.setMany?.(
+					live.map((entry) => ({
+						key: this.getKeyPrefix(entry.key, this._namespace),
+						value: entry.value,
+						ttl: ttlFromExpires(entry.expires),
+					})),
+				);
+			}
+
+			for (const entry of entries) {
+				if (isExpired(entry)) {
+					await this._store.delete(this.getKeyPrefix(entry.key, this._namespace));
+				}
+			}
+
 			return entries.map(() => true);
 		}
 
 		const results: boolean[] = [];
 		for (const entry of entries) {
-			await this.set(entry.key, entry.value, entry.ttl);
+			await this.set(entry.key, entry.value, entry.expires);
 			results.push(true);
 		}
 
@@ -379,6 +441,13 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * entire store is cleared.
 	 */
 	public async clear(): Promise<void> {
+		// A store that manages its own namespace scopes clear() to the namespace the bridge
+		// propagated to it, so delegate directly rather than risk an unscoped wipe of the backend.
+		if (this._namespace && this._storeHandlesNamespace) {
+			await this._store.clear();
+			return;
+		}
+
 		if (!this._namespace || !this._capabilities.methods.iterator.exists) {
 			await this._store.clear();
 			return;
@@ -413,7 +482,10 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const namespace = this._namespace;
-		const prefix = namespace ? `${namespace}${this._keySeparator}` : undefined;
+		// A namespace-managing store already scopes its iterator, so the bridge must not also
+		// filter/strip a prefix it never applied.
+		const prefix =
+			namespace && !this._storeHandlesNamespace ? `${namespace}${this._keySeparator}` : undefined;
 
 		/* v8 ignore next -- @preserve */
 		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {

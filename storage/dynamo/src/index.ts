@@ -19,9 +19,20 @@ import {
 	type ScanCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { Hookified } from "hookified";
-import { Keyv, type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
+import {
+	Keyv,
+	type KeyvStorageAdapter,
+	type KeyvStorageEntry,
+	type KeyvStorageGetResult,
+	keyvStorageCapability,
+} from "keyv";
 
 export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	private _sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
 	private _namespace?: string;
 	private _opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
@@ -192,18 +203,18 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stores a value in DynamoDB. Uses a 6-hour default TTL if no TTL is specified.
+	 * Stores a value in DynamoDB. Uses a 6-hour default expiry if no expiry is specified.
 	 * @param key - The key to store
 	 * @param value - The value to store
-	 * @param ttl - Optional TTL in milliseconds
+	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for the 6-hour default.
 	 * @returns `true` if the value was stored, `false` if the write failed.
 	 */
-	public async set(key: string, value: unknown, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: unknown, expires?: number): Promise<boolean> {
 		try {
 			await this._tableReady;
 
-			const now = Date.now();
-			const expiresAtMs = typeof ttl === "number" ? now + ttl : now + this._sixHoursInMilliseconds;
+			const expiresAtMs =
+				typeof expires === "number" ? expires : Date.now() + this._sixHoursInMilliseconds;
 			const expiresAt = Math.ceil(expiresAtMs / 1000);
 
 			const putInput: PutCommandInput = {
@@ -229,10 +240,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Stores multiple values in DynamoDB.
 	 * @template Value - The type of the values being stored.
-	 * @param entries - An array of objects containing key, value, and optional ttl
+	 * @param entries - An array of `{ key, value, expires? }` entries, where `expires` is an
+	 * absolute Unix ms timestamp (or `undefined` for the 6-hour default).
 	 * @returns An array of booleans, one per entry, indicating which writes succeeded.
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
 			await this._tableReady;
 
@@ -240,11 +252,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return entries.map(() => true);
 			}
 
-			const now = Date.now();
-
-			const putRequests = entries.map(({ key, value, ttl }) => {
+			const putRequests = entries.map(({ key, value, expires }) => {
 				const expiresAtMs =
-					typeof ttl === "number" ? now + ttl : now + this._sixHoursInMilliseconds;
+					typeof expires === "number" ? expires : Date.now() + this._sixHoursInMilliseconds;
 				const expiresAt = Math.ceil(expiresAtMs / 1000);
 
 				return {

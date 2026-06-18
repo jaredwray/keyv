@@ -1,5 +1,10 @@
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
+import Keyv, {
+	type KeyvStorageAdapter,
+	type KeyvStorageEntry,
+	type KeyvStorageGetResult,
+	keyvStorageCapability,
+} from "keyv";
 import mysql, { type ConnectionOptions } from "mysql2";
 import { endPool, pool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
@@ -33,6 +38,11 @@ type QueryType<T> = Promise<
  * Provides a persistent key-value store using MySQL as the backend.
  */
 export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	/**
 	 * The MySQL connection URI.
 	 * @default 'mysql://localhost'
@@ -389,18 +399,18 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * If the key already exists, it will be updated.
 	 * @param key - The key to set
 	 * @param value - The value to store
+	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns Promise that resolves when the operation completes
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		try {
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
-			const expires = this.getExpiresFromValue(value);
 			const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE value=?, expires=?;`;
-			const insert = [strippedKey, value, ns, expires, value, expires];
+			const insert = [strippedKey, value, ns, expires ?? null, value, expires ?? null];
 			const upsert = mysql.format(sql, insert);
 			await this.query(upsert);
 			return true;
@@ -414,21 +424,21 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Sets multiple key-value pairs at once.
-	 * @param entries - Array of key-value entry objects
+	 * @param entries - Array of `{ key, value, expires? }` entry objects. `expires` is absolute Unix ms.
 	 * @returns Promise that resolves when the operation completes
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}
 
 		try {
 			const ns = this.getNamespaceValue();
-			const values = entries.map(({ key, value }) => [
+			const values = entries.map(({ key, value, expires }) => [
 				this.removeKeyPrefix(key),
 				value,
 				ns,
-				this.getExpiresFromValue(value),
+				expires ?? null,
 			]);
 			const placeholders = values.map(() => "(?, ?, ?, ?)").join(", ");
 			const flatValues = values.flat();
@@ -637,32 +647,6 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	private getNamespaceValue(): string {
 		return this._namespace ?? "";
-	}
-
-	/**
-	 * Extracts the expires timestamp from a serialized value.
-	 * @param value - The serialized value (string or object)
-	 * @returns The expires timestamp in milliseconds, or null if not present
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: value can be any type
-	private getExpiresFromValue(value: any): number | null {
-		// biome-ignore lint/suspicious/noExplicitAny: parsed data can be any type
-		let data: any;
-		if (typeof value === "string") {
-			try {
-				data = JSON.parse(value);
-			} catch {
-				return null;
-			}
-		} else {
-			data = value;
-		}
-
-		if (data && typeof data === "object" && typeof data.expires === "number") {
-			return data.expires;
-		}
-
-		return null;
 	}
 
 	/**

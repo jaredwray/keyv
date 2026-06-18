@@ -1,7 +1,12 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
+import Keyv, {
+	type KeyvStorageAdapter,
+	type KeyvStorageEntry,
+	type KeyvStorageGetResult,
+	keyvStorageCapability,
+} from "keyv";
 import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
 
 /**
@@ -10,6 +15,11 @@ import type { KeyvUriOptions, KeyvValkeyOptions } from "./types.js";
  * interface with support for namespacing, TTL, batch operations, and async iteration.
  */
 class KeyvValkey extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	/**
 	 * The namespace used to prefix keys for multi-tenant separation.
 	 * When set, all keys are scoped under this namespace to prevent collisions
@@ -233,19 +243,19 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stores a key-value pair in the Valkey store with an optional TTL (time-to-live).
+	 * Stores a key-value pair in the Valkey store with an optional absolute expiry.
 	 * If the value is `undefined`, the operation is skipped and returns `false`.
 	 * When `useSets` is enabled, the key is also added to the namespace tracking set
 	 * within an atomic transaction.
 	 * @param {string} key - The key under which to store the value.
 	 * @param {any} value - The value to store. If `undefined`, the operation is a no-op.
-	 * @param {number} [ttl] - Optional time-to-live in milliseconds. When provided, the key
-	 *   will automatically expire after this duration.
+	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
+	 *   When provided, the key is set to expire at that timestamp via `PXAT`.
 	 * @returns {Promise<boolean>} `true` if the value was stored, `false` if the value was
 	 *   `undefined` or an error occurred while storing.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		if (value === undefined) {
 			return false;
 		}
@@ -255,8 +265,8 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 
 			// biome-ignore lint/suspicious/noExplicitAny: type format
 			const set = async (redis: any) => {
-				if (typeof ttl === "number") {
-					await redis.set(key, value, "PX", ttl);
+				if (typeof expires === "number") {
+					await redis.set(key, value, "PXAT", expires);
 				} else {
 					await redis.set(key, value);
 				}
@@ -287,13 +297,13 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * CROSSSLOT errors. When `useSets` is enabled, each key is also added to the namespace
 	 * tracking set within the same transaction.
 	 * @template Value - The type of the stored values.
-	 * @param {KeyvEntry<Value>[]} entries - An array of `{ key, value, ttl? }` entries where
-	 *   `ttl` is an optional time-to-live in milliseconds.
+	 * @param {KeyvStorageEntry<Value>[]} entries - An array of `{ key, value, expires? }` entries where
+	 *   `expires` is an optional absolute expiry as Unix ms since epoch.
 	 * @returns {Promise<boolean[] | undefined>} An array of booleans in the same order as the
 	 *   input entries. Each element is `true` if the corresponding entry was stored (entries with
 	 *   `undefined` values are reported as `true`), or `false` if it failed.
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}
@@ -304,11 +314,11 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			k: string;
 			// biome-ignore lint/suspicious/noExplicitAny: type format
 			value: any;
-			ttl?: number;
+			expires?: number;
 			originalIndex: number;
 		}> = [];
 		for (let i = 0; i < entries.length; i++) {
-			const { key, value, ttl } = entries[i];
+			const { key, value, expires } = entries[i];
 			if (value === undefined) {
 				results[i] = true;
 				continue;
@@ -317,7 +327,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			resolvedEntries.push({
 				k: this.getKeyName(key),
 				value,
-				ttl,
+				expires,
 				originalIndex: i,
 			});
 		}
@@ -342,9 +352,9 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			await Promise.all(
 				Array.from(slotMap.values(), async (group) => {
 					const trx = this._client.multi();
-					for (const { k, value, ttl } of group) {
-						if (typeof ttl === "number") {
-							trx.set(k, value, "PX", ttl);
+					for (const { k, value, expires } of group) {
+						if (typeof expires === "number") {
+							trx.set(k, value, "PXAT", expires);
 						} else {
 							trx.set(k, value);
 						}

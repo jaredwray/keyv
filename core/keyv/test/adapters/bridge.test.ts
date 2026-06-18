@@ -172,12 +172,15 @@ describe("KeyvBridgeAdapter - Core Operations (minimal store)", () => {
 		expect(await bridge.get("nullkey")).toBeUndefined();
 	});
 
-	test("should pass ttl to store set", async () => {
+	test("should convert absolute expires to a relative ttl for the wrapped store", async () => {
 		const setSpy = vi.fn().mockResolvedValue(undefined);
 		const store: KeyvBridgeStore = { get: vi.fn(), set: setSpy, delete: vi.fn(), clear: vi.fn() };
 		const bridge = new KeyvBridgeAdapter(store);
-		await bridge.set("key", "value", 5000);
-		expect(setSpy).toHaveBeenCalledWith("key", "value", 5000);
+		await bridge.set("key", "value", Date.now() + 5000);
+		expect(setSpy).toHaveBeenCalledWith("key", "value", expect.any(Number));
+		const passedTtl = setSpy.mock.calls[0][2] as number;
+		expect(passedTtl).toBeGreaterThan(4000);
+		expect(passedTtl).toBeLessThanOrEqual(5000);
 	});
 });
 
@@ -198,6 +201,17 @@ describe("KeyvBridgeAdapter - TTL / Expiration", () => {
 
 		store._map.set(key3, { value: "permanent" });
 		expect(await bridge.get(key3)).toEqual({ value: "permanent" });
+	});
+
+	test("should delete rather than persist a write with an already-elapsed expires", async () => {
+		const store = createFullStore();
+		const bridge = new KeyvBridgeAdapter(store);
+		await bridge.set("k", "live");
+		expect(store._map.has("k")).toBe(true);
+		// An elapsed deadline must remove the key, not store it forever with no ttl.
+		expect(await bridge.set("k", "stale", Date.now() - 1000)).toBe(true);
+		expect(store._map.has("k")).toBe(false);
+		expect(await bridge.get("k")).toBeUndefined();
 	});
 });
 
@@ -330,6 +344,35 @@ describe("KeyvBridgeAdapter - Native Delegation (full store)", () => {
 		expect(nsSetManySpy).toHaveBeenCalledWith([{ key: "ns:key1", value: "value1" }]);
 		await nsBridge.deleteMany(["key1", "key2"]);
 		expect(nsDeleteManySpy).toHaveBeenCalledWith(["ns:key1", "ns:key2"]);
+	});
+
+	test("setMany should batch only live entries and delete already-expired ones", async () => {
+		const store = createFullStore();
+		const setManySpy = vi.spyOn(store, "setMany");
+		const bridge = new KeyvBridgeAdapter(store);
+
+		// Seed a key that the expired entry in the batch should remove.
+		await bridge.set("gone", "old");
+		const result = await bridge.setMany([
+			{ key: "live", value: "v1", expires: Date.now() + 60_000 },
+			{ key: "gone", value: "v2", expires: Date.now() - 1000 },
+		]);
+		expect(result).toEqual([true, true]);
+		// Only the live entry is batched into the native setMany.
+		expect(setManySpy).toHaveBeenCalledWith([
+			{ key: "live", value: "v1", ttl: expect.any(Number) },
+		]);
+		expect(store._map.has("live")).toBe(true);
+		expect(store._map.has("gone")).toBe(false);
+
+		// An all-expired batch skips the native setMany entirely.
+		setManySpy.mockClear();
+		await bridge.set("p", "present");
+		expect(await bridge.setMany([{ key: "p", value: "x", expires: Date.now() - 1 }])).toEqual([
+			true,
+		]);
+		expect(setManySpy).not.toHaveBeenCalled();
+		expect(store._map.has("p")).toBe(false);
 	});
 });
 
@@ -542,5 +585,85 @@ describe("KeyvBridgeAdapter - v5 Adapter Compatibility", () => {
 			/* consume */
 		}
 		expect(iteratorSpy).toHaveBeenCalledWith(undefined);
+	});
+});
+
+describe("KeyvBridgeAdapter - namespace-managing store", () => {
+	// Simulates a legacy full adapter that scopes its own keys by `namespace` (like the
+	// first-party storage adapters do), including a namespace-scoped clear() and NO iterator().
+	function createNamespacingStore() {
+		const map = new Map<string, unknown>();
+		const nsKey = (key: string) => (store.namespace ? `${store.namespace}::${key}` : key);
+		const store = {
+			namespace: undefined as string | undefined,
+			async get(key: string) {
+				return map.get(nsKey(key));
+			},
+			async set(key: string, value: unknown, _ttl?: number) {
+				map.set(nsKey(key), value);
+			},
+			async delete(key: string) {
+				return map.delete(nsKey(key));
+			},
+			async clear() {
+				const prefix = store.namespace ? `${store.namespace}::` : "";
+				for (const k of [...map.keys()]) {
+					if (k.startsWith(prefix)) {
+						map.delete(k);
+					}
+				}
+			},
+			async has(key: string) {
+				return map.has(nsKey(key));
+			},
+			async hasMany(keys: string[]) {
+				return keys.map((key) => map.has(nsKey(key)));
+			},
+			async getMany(keys: string[]) {
+				return keys.map((key) => map.get(nsKey(key)));
+			},
+			async setMany(entries: Array<{ key: string; value: unknown; ttl?: number }>) {
+				for (const entry of entries) {
+					map.set(nsKey(entry.key), entry.value);
+				}
+				return entries.map(() => true);
+			},
+			async deleteMany(keys: string[]) {
+				return keys.map((key) => map.delete(nsKey(key)));
+			},
+			_map: map,
+		};
+		return store;
+	}
+
+	test("propagates namespace and does not double-prefix keys", async () => {
+		const store = createNamespacingStore();
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "a" });
+		// The bridge hands its namespace to the store instead of prefixing keys itself.
+		expect(store.namespace).toBe("a");
+		await bridge.set("k", "v");
+		expect(store._map.has("a::k")).toBe(true); // store's own namespacing
+		expect(store._map.has("a:k")).toBe(false); // NOT bridge-prefixed
+		expect(await bridge.get("k")).toBe("v");
+	});
+
+	test("scopes clear() to the namespace instead of wiping the whole backend", async () => {
+		const store = createNamespacingStore();
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "a" });
+		await bridge.set("k", "v");
+		// Another namespace's data living in the same backend.
+		store._map.set("b::other", "keep");
+
+		await bridge.clear();
+
+		expect(store._map.has("a::k")).toBe(false); // our namespace cleared
+		expect(store._map.has("b::other")).toBe(true); // other namespace preserved
+	});
+
+	test("setter re-propagates the namespace to the store", () => {
+		const store = createNamespacingStore();
+		const bridge = new KeyvBridgeAdapter(store);
+		bridge.namespace = "x";
+		expect(store.namespace).toBe("x");
 	});
 });

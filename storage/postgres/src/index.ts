@@ -1,6 +1,11 @@
 import type { ConnectionOptions } from "node:tls";
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
+import Keyv, {
+	type KeyvStorageAdapter,
+	type KeyvStorageEntry,
+	type KeyvStorageGetResult,
+	keyvStorageCapability,
+} from "keyv";
 import type { DatabaseError, PoolConfig } from "pg";
 import { endPool, pool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
@@ -20,6 +25,11 @@ function escapeIdentifier(identifier: string): string {
  * Uses the `pg` library for connection pooling and parameterized queries.
  */
 export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	/** Function for executing SQL queries against the PostgreSQL database. */
 	private query: Query;
 
@@ -365,22 +375,22 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Sets a key-value pair. Uses an upsert operation via `ON CONFLICT` to insert or update.
-	 * Any TTL is read from the serialized value's `expires` field and stored in the `expires` column.
+	 * The absolute `expires` is stored in the `expires` column.
 	 * @param key - The key to set.
 	 * @param value - The value to store.
+	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns A promise resolving to `true` on success, or `false` if an error occurred (an
 	 * `error` event is also emitted).
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		try {
 			const strippedKey = this.removeKeyPrefix(key);
-			const expires = this.getExpiresFromValue(value);
 			const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
       VALUES($1, $2, $3, $4)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, [strippedKey, value, this.getNamespaceValue(), expires]);
+			await this.query(upsert, [strippedKey, value, this.getNamespaceValue(), expires ?? null]);
 			return true;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
@@ -398,15 +408,15 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns A promise resolving to an array of booleans (one per entry). Because the statement
 	 * is atomic, all entries succeed (`true`) or all fail (`false`); on failure an `error` event is emitted.
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
 			const keys = [];
 			const values = [];
 			const expiresArray: Array<number | null> = [];
-			for (const { key, value } of entries) {
+			for (const { key, value, expires } of entries) {
 				keys.push(this.removeKeyPrefix(key));
 				values.push(value);
-				expiresArray.push(this.getExpiresFromValue(value));
+				expiresArray.push(expires ?? null);
 			}
 			const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
       SELECT k, v, $3, e FROM UNNEST($1::text[], $2::text[], $4::bigint[]) AS t(k, v, e)
@@ -678,32 +688,6 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	private getNamespaceValue(): string | null {
 		return this._namespace ?? null;
-	}
-
-	/**
-	 * Extracts the `expires` timestamp from a serialized value.
-	 * The Keyv core serializes data as JSON like `{"value":"...","expires":1234567890}`.
-	 * Returns the expires value as a number, or null if not present or not parseable.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private getExpiresFromValue(value: any): number | null {
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		let data: any;
-		if (typeof value === "string") {
-			try {
-				data = JSON.parse(value);
-			} catch {
-				return null;
-			}
-		} else {
-			data = value;
-		}
-
-		if (data && typeof data === "object" && typeof data.expires === "number") {
-			return data.expires;
-		}
-
-		return null;
 	}
 
 	/**

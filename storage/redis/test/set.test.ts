@@ -70,15 +70,15 @@ describe("set", () => {
 		expect(didError).toBe(true);
 	});
 
-	test("should set a value with ttl", async () => {
+	test("should set a value with expires", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
-			ttl: 100, // 100 milliseconds
+			expires: Date.now() + 100, // 100 milliseconds from now
 		};
 
-		await keyvRedis.set(data.key, data.value, data.ttl);
+		await keyvRedis.set(data.key, data.value, data.expires);
 
 		const result = await keyvRedis.get(data.key);
 
@@ -88,6 +88,94 @@ describe("set", () => {
 
 		const expiredResult = await keyvRedis.get(data.key);
 		expect(expiredResult).toBeUndefined();
+	});
+
+	test("should fall back to relative PX when the server does not support PXAT", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		// Force the pre-6.2 fallback path without needing an old server.
+		(keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported = false;
+		const setSpy = vi.spyOn(keyvRedis.client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		const value = faker.lorem.word();
+		await keyvRedis.set(key, value, Date.now() + 1000);
+
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		const options = call?.[2] as Record<string, number>;
+		expect(options).toHaveProperty("PX");
+		expect(options).not.toHaveProperty("PXAT");
+		expect(options.PX).toBeGreaterThan(0);
+		expect(options.PX).toBeLessThanOrEqual(1000);
+		// And the value still round-trips and expires.
+		expect(await keyvRedis.get(key)).toBe(value);
+
+		setSpy.mockRestore();
+	});
+
+	test("should not send PX 0 on the PX fallback for an already-expired write", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		// Force the pre-6.2 fallback path; an absolute expiry already in the past must floor to
+		// PX >= 1, not PX 0 (which Redis rejects as an invalid expire time).
+		(keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported = false;
+		const setSpy = vi.spyOn(keyvRedis.client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		let didError = false;
+		try {
+			await keyvRedis.set(key, faker.lorem.word(), Date.now() - 1000);
+		} catch {
+			didError = true;
+		}
+		expect(didError).toBe(false);
+
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		const options = call?.[2] as Record<string, number>;
+		expect(options).toHaveProperty("PX");
+		expect(options.PX).toBeGreaterThanOrEqual(1);
+		// PX is floored to 1ms, so the key expires almost immediately rather than living forever.
+		await delay(50);
+		expect(await keyvRedis.get(key)).toBeUndefined();
+
+		setSpy.mockRestore();
+	});
+
+	test("should assume PXAT support when INFO omits the redis_version", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		const client = await keyvRedis.getClient();
+		// INFO without a redis_version line → detection can't parse a version, defaults to PXAT.
+		const infoSpy = vi
+			.spyOn(client, "info")
+			.mockResolvedValue("# Server\r\nredis_mode:standalone\r\n");
+		const setSpy = vi.spyOn(client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		await keyvRedis.set(key, faker.lorem.word(), Date.now() + 1000);
+
+		expect((keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported).toBe(true);
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		expect(call?.[2] as Record<string, number>).toHaveProperty("PXAT");
+
+		infoSpy.mockRestore();
+		setSpy.mockRestore();
+		await keyvRedis.disconnect();
+	});
+
+	test("should assume PXAT support when INFO throws", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		const client = await keyvRedis.getClient();
+		const infoSpy = vi.spyOn(client, "info").mockRejectedValue(new Error("INFO unavailable"));
+		const setSpy = vi.spyOn(client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		await keyvRedis.set(key, faker.lorem.word(), Date.now() + 1000);
+
+		expect((keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported).toBe(true);
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		expect(call?.[2] as Record<string, number>).toHaveProperty("PXAT");
+
+		infoSpy.mockRestore();
+		setSpy.mockRestore();
+		await keyvRedis.disconnect();
 	});
 
 	test("should throw on redis client set error when throwOnErrors is true", async () => {
@@ -157,10 +245,10 @@ describe("set", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
-	test("should be able to set a ttl", async () => {
+	test("should be able to set an expires", async () => {
 		const keyvRedis = new KeyvRedis();
 		const key = faker.string.uuid();
-		await keyvRedis.set(key, faker.lorem.word(), 100);
+		await keyvRedis.set(key, faker.lorem.word(), Date.now() + 100);
 		await delay(300);
 		const value = await keyvRedis.get(key);
 		expect(value).toBeUndefined();
@@ -177,7 +265,7 @@ describe("set", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: faker.lorem.word(), ttl: 100 },
+			{ key: key3, value: faker.lorem.word(), expires: Date.now() + 100 },
 		]);
 		const value = await keyvRedis.get(key1);
 		expect(value).toBe(val1);

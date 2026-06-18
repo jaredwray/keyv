@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import { faker } from "@faker-js/faker";
 import { delay, keyvApiTests, keyvValueTests, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvMemcache, { createKeyv } from "../src/index.js";
 
 // Handle all the tests with listeners.
@@ -90,17 +90,12 @@ describe("get", () => {
 		expect(await keyvMemcache.get(faker.string.uuid())).toBeUndefined();
 	});
 
-	test("handles legacy non-JSON data", async () => {
+	test("returns the raw value the server stores", async () => {
 		const key = faker.string.uuid();
-		// Write a raw string directly, bypassing the value envelope.
-		await keyvMemcache.client.set(keyvMemcache.formatKey(key), "raw-legacy");
-		expect(await keyvMemcache.get(key)).toBe("raw-legacy");
-	});
-
-	test("handles legacy JSON without the value envelope", async () => {
-		const key = faker.string.uuid();
-		const value = JSON.stringify({ foo: "bar" });
-		await keyvMemcache.client.set(keyvMemcache.formatKey(key), value);
+		const value = faker.lorem.word();
+		// The adapter stores the value verbatim, with no envelope wrapping.
+		await keyvMemcache.set(key, value);
+		expect(await keyvMemcache.client.get(keyvMemcache.formatKey(key))).toBe(value);
 		expect(await keyvMemcache.get(key)).toBe(value);
 	});
 });
@@ -164,6 +159,23 @@ describe("set and setMany", () => {
 		await delay(2000);
 
 		expect(await keyv.get(key1)).toBeUndefined();
+	});
+
+	test("encodes a far-future expires as an absolute exptime (>30 day rule)", async () => {
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		// memcached treats exptime > 2,592,000s as an absolute Unix timestamp in seconds, so an
+		// expiry more than 30 days out must be sent as Math.ceil(expires / 1000), not a relative delta.
+		const expires = Date.now() + 40 * 24 * 60 * 60 * 1000; // 40 days from now
+		const setSpy = vi.spyOn(keyvMemcache.client, "set");
+
+		await keyvMemcache.set(key, value, expires);
+
+		const call = setSpy.mock.calls.find((c) => c[0] === keyvMemcache.formatKey(key));
+		expect(call?.[2]).toBe(Math.ceil(expires / 1000));
+		expect(await keyvMemcache.get(key)).toBe(value);
+
+		setSpy.mockRestore();
 	});
 });
 
@@ -286,15 +298,17 @@ describe("ttl and expiration", () => {
 
 	test("get returns undefined for a sub-second expired key", async () => {
 		const key = faker.string.uuid();
-		await keyvMemcache.set(key, faker.lorem.word(), 1);
-		await delay(50);
+		// Direct adapter set takes an absolute expiry (Unix ms). A 1s window is the
+		// smallest memcache exptime, so this evicts within ~1s.
+		await keyvMemcache.set(key, faker.lorem.word(), Date.now() + 1000);
+		await delay(1500);
 		expect(await keyvMemcache.get(key)).toBeUndefined();
 	});
 
 	test("has returns false for a sub-second expired key", async () => {
 		const key = faker.string.uuid();
-		await keyvMemcache.set(key, faker.lorem.word(), 1);
-		await delay(50);
+		await keyvMemcache.set(key, faker.lorem.word(), Date.now() + 1000);
+		await delay(1500);
 		expect(await keyvMemcache.has(key)).toBe(false);
 	});
 
@@ -437,4 +451,5 @@ const store = () => keyvMemcache;
 keyvApiTests(test, Keyv, store);
 keyvValueTests(test, Keyv, store);
 // Memcached does not support key enumeration, so the iterator suite is disabled.
-storageTestSuite(test, store, { iterator: false });
+// Memcached `exptime` has 1-second granularity, so use second-scale expiry deadlines.
+storageTestSuite(test, store, { iterator: false, ttlGranularity: "seconds" });

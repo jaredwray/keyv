@@ -146,7 +146,7 @@ describe("get", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: faker.lorem.word(), ttl: 100 },
+			{ key: key3, value: faker.lorem.word(), expires: Date.now() + 100 },
 		]);
 		await delay(300);
 		const values = await keyvRedis.getMany([key1, key2, key3]);

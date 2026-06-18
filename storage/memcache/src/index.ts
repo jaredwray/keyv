@@ -1,6 +1,6 @@
 import { Hookified } from "hookified";
-import type { KeyvEntry, KeyvStorageAdapter, KeyvStorageGetResult } from "keyv";
-import { Keyv } from "keyv";
+import type { KeyvStorageAdapter, KeyvStorageEntry, KeyvStorageGetResult } from "keyv";
+import { Keyv, keyvStorageCapability } from "keyv";
 import { Memcache, type MemcacheNode, type MemcacheOptions } from "memcache";
 
 /**
@@ -23,6 +23,11 @@ export type KeyvMemcacheOptions = {
  * ```
  */
 export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	/** Optional namespace used to prefix all keys. */
 	public namespace?: string;
 	/** The underlying Memcache client instance. */
@@ -58,7 +63,11 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 		this.namespace = allOptions.namespace;
 
 		const { namespace: _namespace, ...memcacheOptions } = allOptions;
-		this.client = new Memcache(memcacheOptions);
+		// The memcache client rejects any exptime above `maxExpiration` (default 30 days). Since
+		// `set` converts a far-future absolute `expires` into a memcached absolute Unix-timestamp
+		// exptime (the >30-day rule), raise the ceiling to the 32-bit wire maximum (~year 2106) so
+		// those writes are permitted instead of throwing. A user-supplied value still wins.
+		this.client = new Memcache({ maxExpiration: 4_294_967_295, ...memcacheOptions });
 
 		// Surface asynchronous client errors (connection drops, timeouts, retry exhaustion)
 		// to listeners on the adapter. The client emits `(nodeId, error)`, so pick the Error,
@@ -124,17 +133,11 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		try {
 			const raw = await this.client.get(this.formatKey(key));
-			if (raw === undefined) {
-				return undefined;
-			}
-
-			const { value, expired } = this.unwrapValue<Value>(raw);
-			if (expired) {
-				await this.delete(key);
-				return undefined;
-			}
-
-			return value as KeyvStorageGetResult<Value>;
+			// Expiry is enforced server-side by the exptime set on write. memcached's exptime is
+			// second-granular, so a value may be returned up to ~1s past a sub-second/just-elapsed
+			// deadline; enable Keyv's `checkExpired` for millisecond-precise expiry. null/undefined
+			// is a cache miss.
+			return (raw ?? undefined) as KeyvStorageGetResult<Value>;
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -162,13 +165,22 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 * Stores a value in the memcache server.
 	 * @param key - The key to store
 	 * @param value - The value to store
-	 * @param ttl - Optional time to live in milliseconds. Converted to seconds internally for memcache.
+	 * @param expires - Optional absolute expiry as Unix ms since epoch. Converted to the memcache
+	 * `exptime` (seconds) internally; `undefined` means no expiry.
 	 * @returns `true` if the value was stored, `false` if the write failed.
 	 */
-	public async set(key: string, value: unknown, ttl?: number): Promise<boolean> {
-		const exptime = ttl !== undefined ? Math.ceil(ttl / 1000) : 0;
+	public async set(key: string, value: unknown, expires?: number): Promise<boolean> {
+		// memcache exptime: 0 = never expire. Values over 30 days (2,592,000s) are
+		// interpreted as an absolute Unix timestamp in seconds; smaller values are a
+		// relative duration in seconds. Compute from the absolute `expires` accordingly.
+		const exptime =
+			expires === undefined
+				? 0
+				: expires - Date.now() > 2_592_000_000
+					? Math.ceil(expires / 1000)
+					: Math.max(1, Math.ceil((expires - Date.now()) / 1000));
 		try {
-			await this.client.set(this.formatKey(key), this.wrapValue(value, ttl), exptime);
+			await this.client.set(this.formatKey(key), value, exptime);
 			return true;
 		} catch (error) {
 			this.emit("error", error);
@@ -179,12 +191,12 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Stores multiple values in the memcache server.
 	 * @template Value - The type of the values being stored.
-	 * @param entries - An array of entries, each with a key, value, and optional ttl in milliseconds.
+	 * @param entries - An array of entries, each with a key, value, and optional absolute `expires` in Unix ms.
 	 * @returns An array of booleans, one per entry, indicating which writes succeeded.
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		const settled = await Promise.allSettled(
-			entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
+			entries.map(async ({ key, value, expires }) => this.set(key, value, expires)),
 		);
 		return settled.map((result) => (result.status === "fulfilled" ? result.value : false));
 	}
@@ -223,17 +235,9 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	public async has(key: string): Promise<boolean> {
 		try {
 			const raw = await this.client.get(this.formatKey(key));
-			if (raw === undefined) {
-				return false;
-			}
-
-			const { expired } = this.unwrapValue(raw);
-			if (expired) {
-				await this.delete(key);
-				return false;
-			}
-
-			return true;
+			// Existence is determined server-side via the exptime set on write, which is
+			// second-granular (see get() for the sub-second caveat).
+			return raw !== undefined && raw !== null;
 		} catch {
 			/* v8 ignore next -- @preserve */
 			return false;
@@ -286,46 +290,6 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return result;
-	}
-
-	/**
-	 * Wraps a value with expiry metadata for storage.
-	 * @param value - The value to wrap.
-	 * @param ttl - Optional time to live in milliseconds, used to compute the absolute expiry timestamp.
-	 * @returns A JSON envelope string containing the value and its expiry timestamp.
-	 */
-	private wrapValue(value: unknown, ttl?: number): string {
-		const expires = typeof ttl === "number" ? Date.now() + ttl : null;
-		return JSON.stringify({ v: value, e: expires });
-	}
-
-	/**
-	 * Unwraps a stored value, checking its expiry metadata. Handles legacy data
-	 * (stored without the envelope) gracefully by returning it as-is.
-	 * @template T - The expected type of the unwrapped value.
-	 * @param raw - The raw value read back from the memcache server.
-	 * @returns An object with the unwrapped `value` (or `undefined`) and an `expired` flag.
-	 */
-	private unwrapValue<T>(raw: unknown): { value: T | undefined; expired: boolean } {
-		/* v8 ignore next -- @preserve */
-		if (raw === null || raw === undefined) {
-			return { value: undefined, expired: false };
-		}
-
-		try {
-			const parsed = JSON.parse(raw as string) as { v: T; e: number | null };
-			if (parsed.v === undefined) {
-				return { value: raw as T, expired: false };
-			}
-
-			if (parsed.e !== null && Date.now() > parsed.e) {
-				return { value: undefined, expired: true };
-			}
-
-			return { value: parsed.v, expired: false };
-		} catch {
-			return { value: raw as T, expired: false };
-		}
 	}
 }
 

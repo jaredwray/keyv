@@ -119,6 +119,29 @@ describe("KeyvBridgeAdapter + keyv-file", () => {
 		await keyv.delete(key);
 		expect(await keyv.get(key)).toBeUndefined();
 	});
+
+	test("should expire values end-to-end when Keyv wraps a legacy store via the bridge", async () => {
+		const filename = path.join(tmpDir, `${faker.string.alphanumeric(8)}.json`);
+		const legacyStore = new KeyvFile({ filename, writeDelay: 0 });
+		// Passing the raw legacy adapter (no `capabilities.expires`) makes Keyv resolve it through
+		// KeyvBridgeAdapter. A relative ttl from the public API must round-trip to an absolute
+		// `expires`, convert back to a ttl the legacy store honors, and actually expire.
+		const keyv = new Keyv({ store: legacyStore });
+		const key = faker.string.uuid();
+		await keyv.set(key, "value", 100);
+		expect(await keyv.get(key)).toBe("value");
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		expect(await keyv.get(key)).toBeUndefined();
+	});
+
+	test("should not persist a value written with an already-elapsed expires", async () => {
+		const key = faker.string.uuid();
+		await bridge.set(key, "live");
+		// An already-expired write must remove the key, not store it without a ttl.
+		await bridge.set(key, "stale", Date.now() - 1000);
+		expect(await bridge.get(key)).toBeUndefined();
+		expect(await bridge.has(key)).toBe(false);
+	});
 });
 
 // keyv-anyredis tests - requires a running Redis server

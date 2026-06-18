@@ -412,6 +412,34 @@ const keyv = new Keyv({ store: lru });
 
 View the complete list of third-party storage adapters and learn how to build your own at https://keyv.org/docs/third-party-storage-adapters/
 
+## Storage Adapter Contract (v6)
+
+> The public API above is unchanged — `keyv.set(key, value, ttl)` still takes a relative TTL in milliseconds. The change below only affects authors of custom **storage adapters**.
+
+As of v6, Keyv passes an **absolute `expires`** timestamp (Unix ms since epoch) to a storage adapter's write methods instead of a relative TTL. Keyv computes `expires` once, so adapters never need to derive or parse it:
+
+```ts
+import { keyvStorageCapability } from 'keyv';
+
+type KeyvStorageEntry<Value> = { key: string; value: Value; expires?: number };
+
+class MyAdapter {
+  // Declare support for the absolute-`expires` contract:
+  get capabilities() {
+    return keyvStorageCapability(this); // -> { ...detected, expires: true }
+  }
+
+  // `expires` is absolute Unix ms; `undefined` means no expiry; `<= Date.now()` means already expired.
+  async set(key: string, value: unknown, expires?: number): Promise<boolean> { /* ... */ }
+  async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> { /* ... */ }
+  // ...get, delete, clear, has, getMany, deleteMany, hasMany, etc.
+}
+```
+
+A v6 adapter declares `capabilities.expires === true` (the `keyvStorageCapability(this)` helper sets it for you). Keyv then passes the absolute `expires` to it directly — this takes precedence over structural detection, so an adapter whose methods aren't written with `async` is still used directly rather than bridged. Any **legacy** storage adapter that does *not* declare `capabilities.expires` is treated as a relative-TTL adapter and transparently wrapped by [`KeyvBridgeAdapter`](#third-party-storage-adapters), which converts the absolute `expires` back to a relative TTL before delegating (and deletes outright when the deadline has already elapsed) — so existing third-party adapters keep working unchanged. Stores that expose absolute-expiry primitives (e.g. Redis `PXAT`) use `expires` directly. Map-like stores wrapped via `new Keyv({ store: new Map() })` are unaffected.
+
+> **Adapters are the expiry authority.** Declaring `capabilities.expires === true` is a two-way contract: because Keyv core does not filter expired reads by default (`checkExpired` is off), a v6 adapter must enforce expiry itself — `get`/`getMany`/`has` must not return a key past its deadline, whether via a native mechanism (key expiry, TTL index, lease) or a client-side check. Run `@keyv/test-suite`'s `storageTtlTests` against your adapter to verify it.
+
 # Using BigMap to Scale
 
 ## Understanding JavaScript Map Limitations

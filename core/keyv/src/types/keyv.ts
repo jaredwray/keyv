@@ -127,7 +127,8 @@ export enum KeyvHooks {
 }
 
 /**
- * Represents a key-value entry with an optional TTL, used for batch operations like `setMany`.
+ * Represents a key-value entry with an optional TTL, used for the public
+ * batch API `Keyv.setMany`.
  */
 // biome-ignore lint/suspicious/noExplicitAny: type format
 export type KeyvEntry<Value = any> = {
@@ -143,6 +144,22 @@ export type KeyvEntry<Value = any> = {
 	 * Time to live in milliseconds.
 	 */
 	ttl?: number;
+};
+
+/**
+ * Represents a key-value entry at the storage-adapter boundary, carrying an
+ * absolute `expires` timestamp instead of a relative `ttl`. Keyv core computes
+ * `expires` once and passes these to a storage adapter's `setMany`, so adapters
+ * never derive expiry themselves.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: type format
+export type KeyvStorageEntry<Value = any> = {
+	/** Key to set. */
+	key: string;
+	/** Value to set (already encoded by Keyv core). */
+	value: Value;
+	/** Absolute expiry as Unix ms since epoch, or `undefined` for no expiry. */
+	expires?: number;
 };
 
 /**

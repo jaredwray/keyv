@@ -23,6 +23,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`get` and `getMany` No Longer Support Raw](#get-and-getmany-no-longer-support-raw)
   - [Iterator Changes](#iterator-changes)
   - [Removed `.ttlSupport` from Storage Adapters](#removed-ttlsupport-from-storage-adapters)
+  - [Storage Adapters Receive Absolute `expires` Instead of Relative `ttl`](#storage-adapters-receive-absolute-expires-instead-of-relative-ttl)
   - [Returns `undefined` Instead of `null`](#returns-undefined-instead-of-null)
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
   - [`@keyv/memcache` Moves from `memjs` to `memcache`](#keyvmemcache-moves-from-memjs-to-memcache)
@@ -67,6 +68,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 | Update `@keyv/postgres`  | COMPLETE |
 | Update `@keyv/redis`  | COMPLETE |
 | Add GitHub Actions release workflow | COMPLETE |
+| Storage adapters receive absolute `expires` instead of relative `ttl` | COMPLETE |
 
 ---
 
@@ -425,6 +427,64 @@ class MyAdapter {
   // ...
 }
 ```
+
+---
+
+### Storage Adapters Receive Absolute `expires` Instead of Relative `ttl`
+
+> **Most users do not need to do anything.** The public Keyv API is unchanged — you still call `keyv.set(key, value, ttl)` with a **relative** TTL in milliseconds, and `KeyvOptions.ttl` is still relative. This change only affects authors of **custom or third-party storage adapters**.
+
+In v5, Keyv passed each storage adapter a **relative** `ttl` (milliseconds from now) on `set`/`setMany`, and adapters re-derived the absolute deadline themselves. Some adapters even recovered the expiry by parsing the already-encoded value (`JSON.parse`), which **silently failed** under compression, encryption, or a non-JSON serializer (`@keyv/serialize-msgpackr`, `@keyv/serialize-superjson`) — leaving the expiry unset so the entry never expired.
+
+In v6, Keyv computes the **absolute** expiry once and passes it across the storage boundary as `expires` (a Unix timestamp in milliseconds). Adapters store it directly and never parse the value to recover it.
+
+**The v6 storage-adapter contract:**
+
+- **`set(key, value, expires?)`** — `expires` is an absolute Unix timestamp in milliseconds. `undefined` means no expiry; a value `<= Date.now()` is already expired.
+- **`setMany(entries)`** — each entry is a `KeyvStorageEntry` (`{ key, value, expires? }`) rather than the public `KeyvEntry` (`{ key, value, ttl? }`).
+- **Declare support** by exposing `capabilities.expires === true`. The `keyvStorageCapability(this)` helper builds the full capability descriptor for you.
+
+**v5 (before):**
+```typescript
+class MyAdapter {
+  // ttl is relative milliseconds, or undefined
+  async set(key: string, value: string, ttl?: number) {
+    const expires = typeof ttl === 'number' ? Date.now() + ttl : undefined;
+    // ...persist value with expires...
+  }
+
+  async setMany(entries: Array<{ key: string; value: string; ttl?: number }>) {
+    // ...derive expires from each ttl...
+  }
+}
+```
+
+**v6 (after):**
+```typescript
+import { keyvStorageCapability, type KeyvStorageAdapter, type KeyvStorageEntry } from 'keyv';
+
+class MyAdapter implements KeyvStorageAdapter {
+  // Advertise the v6 absolute-expires contract.
+  get capabilities() {
+    return keyvStorageCapability(this);
+  }
+
+  // expires is an absolute Unix ms timestamp, or undefined
+  async set(key: string, value: string, expires?: number) {
+    // ...persist value with expires directly — no Date.now() math, no parsing...
+  }
+
+  async setMany(entries: KeyvStorageEntry[]) {
+    // each entry already carries an absolute `expires`
+  }
+}
+```
+
+**Backward compatibility — legacy adapters keep working.** If an adapter does **not** advertise `capabilities.expires`, Keyv treats it as a v5-style adapter and automatically wraps it in `KeyvBridgeAdapter`, which converts the absolute `expires` back to a relative `ttl` before delegating to your `set`/`setMany`. So existing third-party adapters continue to function without code changes. Upgrading to the v6 contract is still recommended: it removes the bridge conversion and eliminates the silent-expiry bug described above.
+
+**Adapters are the expiry authority.** Keyv core does not filter expired reads by default (`checkExpired` defaults to `false`). A v6 adapter must enforce expiry itself — via a native server-side mechanism (e.g. Redis `PXAT`, a SQL `expires` column swept on read, a Mongo TTL index) and/or a client-side check on `get`. Where a backend's expiry is coarser than milliseconds (e.g. Memcached's second-granular `exptime`), document the window and let users opt into `checkExpired: true` for millisecond-precise reads.
+
+> **Why this is better:** the absolute `expires` is computed once on the Keyv host, so it is immune to clock skew and to latency between Keyv and the store; adapters never re-parse encoded values; and the silent-expiry bug under compression/encryption/alternate serializers is gone. See the per-adapter "Expiration and TTL" notes (for example, [`@keyv/redis`](https://github.com/jaredwray/keyv/tree/main/storage/redis#expiration-and-ttl)) for backend-specific details.
 
 ---
 

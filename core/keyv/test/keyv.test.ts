@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import Keyv, { KeyvMemoryAdapter, KeyvSanitize } from "../src/index.js";
+import Keyv, { KeyvBridgeAdapter, KeyvMemoryAdapter, KeyvSanitize } from "../src/index.js";
 import { KeyvStats } from "../src/stats.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
@@ -900,5 +900,154 @@ describe("decodeWithExpire", () => {
 		const result = await keyv.decodeWithExpire("key", objectData);
 		expect(result[0]?.value).toBe("test-value");
 		expect(mockCompression.decompress).not.toHaveBeenCalled();
+	});
+});
+
+describe("storage adapter expiry negotiation", () => {
+	const createFullStorageAdapter = (capabilities?: { expires?: boolean }) => {
+		const calls: Array<{ key: string; arg?: number }> = [];
+		return {
+			namespace: undefined as string | undefined,
+			capabilities,
+			calls,
+			async get() {
+				return undefined;
+			},
+			async set(key: string, _value: unknown, arg?: number) {
+				calls.push({ key, arg });
+				return true;
+			},
+			async setMany() {
+				return [];
+			},
+			async delete() {
+				return true;
+			},
+			async deleteMany() {
+				return [];
+			},
+			async clear() {},
+			async has() {
+				return false;
+			},
+			async hasMany() {
+				return [];
+			},
+			async getMany() {
+				return [];
+			},
+			on() {},
+		};
+	};
+
+	test("uses a v6 adapter (capabilities.expires) directly", () => {
+		const keyv = new Keyv();
+		const adapter = createFullStorageAdapter({ expires: true });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		expect(keyv.resolveStore(adapter as any)).toBe(adapter);
+	});
+
+	test("wraps a legacy ttl adapter (no capabilities) in the bridge", () => {
+		const keyv = new Keyv();
+		const adapter = createFullStorageAdapter();
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		expect(keyv.resolveStore(adapter as any)).toBeInstanceOf(KeyvBridgeAdapter);
+	});
+
+	test("passes absolute expires to a v6 adapter but a relative ttl to a legacy adapter", async () => {
+		const v6 = createFullStorageAdapter({ expires: true });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		await new Keyv({ store: v6 as any }).set("k", "v", 1000);
+		// An absolute ms-since-epoch timestamp is far larger than any relative ttl.
+		expect(v6.calls[0].arg).toBeGreaterThan(1e12);
+
+		const legacy = createFullStorageAdapter();
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		await new Keyv({ store: legacy as any }).set("k", "v", 1000);
+		// The bridge converts the absolute expires back to a relative ttl (~1000ms).
+		expect(legacy.calls[0].arg).toBeGreaterThan(500);
+		expect(legacy.calls[0].arg).toBeLessThanOrEqual(1000);
+	});
+
+	// A v6 adapter whose methods return promises WITHOUT the `async` keyword structurally
+	// classifies as map-like rather than keyvStorage. The explicit `capabilities.expires`
+	// declaration must still make Keyv use it directly (not wrap it).
+	const createNonAsyncV6Adapter = (capabilities?: { expires?: boolean }) => {
+		const map = new Map<string, unknown>();
+		const calls: Array<{ key: string; arg?: number }> = [];
+		return {
+			capabilities,
+			calls,
+			get(key: string) {
+				return Promise.resolve(map.get(key));
+			},
+			set(key: string, value: unknown, arg?: number) {
+				calls.push({ key, arg });
+				map.set(key, value);
+				return Promise.resolve(true);
+			},
+			delete(key: string) {
+				return Promise.resolve(map.delete(key));
+			},
+			clear() {
+				map.clear();
+				return Promise.resolve();
+			},
+			has(key: string) {
+				return Promise.resolve(map.has(key));
+			},
+			on() {},
+		};
+	};
+
+	test("uses a capabilities.expires adapter directly even when its methods are not async", async () => {
+		const keyv = new Keyv();
+		// Without the capability it is not used directly (structurally wrapped)...
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		const plain = createNonAsyncV6Adapter() as any;
+		expect(keyv.resolveStore(plain)).not.toBe(plain);
+
+		// ...but the explicit declaration is authoritative and used directly.
+		const v6 = createNonAsyncV6Adapter({ expires: true });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		expect(keyv.resolveStore(v6 as any)).toBe(v6);
+
+		// And it receives an absolute expires (proving it was not bridged to a relative ttl).
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		await new Keyv({ store: v6 as any }).set("k", "v", 1000);
+		expect(v6.calls[0].arg).toBeGreaterThan(1e12);
+	});
+
+	test("getMany/getManyRaw fall back to single gets when a directly-used adapter lacks getMany", async () => {
+		const map = new Map<string, unknown>();
+		const adapter = {
+			capabilities: { expires: true },
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+				return true;
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+			async has(key: string) {
+				return map.has(key);
+			},
+			on() {},
+			// intentionally no getMany
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		const keyv = new Keyv({ store: adapter as any });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2");
+		expect(await keyv.getMany(["a", "b", "c"])).toEqual(["1", "2", undefined]);
+		const raw = await keyv.getManyRaw(["a", "c"]);
+		expect(raw[0]).toMatchObject({ value: "1" });
+		expect(raw[1]).toBeUndefined();
 	});
 });

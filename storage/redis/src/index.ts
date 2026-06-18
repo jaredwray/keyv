@@ -17,7 +17,7 @@ import {
 } from "@redis/client";
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
-import type { KeyvEntry, KeyvStorageAdapter } from "keyv";
+import { type KeyvStorageAdapter, type KeyvStorageEntry, keyvStorageCapability } from "keyv";
 import {
 	defaultReconnectStrategy,
 	type KeyvRedisEntry,
@@ -43,6 +43,11 @@ export {
 };
 
 export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	/**
 	 * The underlying Redis client, cluster, or sentinel connection used for all storage operations.
 	 */
@@ -354,20 +359,80 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Set a key value pair in the store. TTL is in milliseconds.
+	 * Whether the connected server supports the absolute-expiry `PXAT` option (Redis 6.2+).
+	 * Detected lazily on first expiring write and cached. `undefined` until detected.
+	 */
+	private _pxatSupported?: boolean;
+
+	/**
+	 * Lazily detect whether the server supports `SET ... PXAT` (Redis 6.2+), caching the result.
+	 * Falls back to assuming support (PXAT) when the version cannot be determined (e.g. clusters
+	 * where `INFO` isn't directly available, or a transient error) — those deployments are modern.
+	 * @param client - the Redis client/cluster/sentinel connection to introspect
+	 * @returns {Promise<boolean>} true if PXAT may be used, false to fall back to relative PX
+	 */
+	private async supportsPxat(client: RedisClientConnectionType): Promise<boolean> {
+		if (this._pxatSupported !== undefined) {
+			return this._pxatSupported;
+		}
+
+		try {
+			const info = String(await (client as RedisClientType).info("server"));
+			const match = /redis_version:(\d+)\.(\d+)/.exec(info);
+			if (match) {
+				const major = Number(match[1]);
+				const minor = Number(match[2]);
+				this._pxatSupported = major > 6 || (major === 6 && minor >= 2);
+			} else {
+				this._pxatSupported = true;
+			}
+		} catch {
+			this._pxatSupported = true;
+		}
+
+		return this._pxatSupported;
+	}
+
+	/**
+	 * Build the `SET` expiry option for an absolute `expires`. Prefers the skew-immune absolute
+	 * `PXAT`; falls back to a relative `PX` (remaining ms) for servers older than 6.2.
+	 * @param expires - absolute expiry as Unix ms since epoch
+	 * @param usePxat - whether the server supports PXAT (from {@link supportsPxat})
+	 */
+	private expiryOptions(expires: number, usePxat: boolean): { PXAT: number } | { PX: number } {
+		// Redis rejects `SET ... PX 0` ("invalid expire time"), so floor the relative fallback at
+		// 1ms for an already-elapsed deadline — the key is written and reaped almost immediately,
+		// matching how an absolute PXAT in the past behaves (and the memcache exptime floor).
+		return usePxat ? { PXAT: expires } : { PX: Math.max(1, expires - Date.now()) };
+	}
+
+	/**
+	 * Resolve the `SET` expiry option for a single write, detecting PXAT support as needed.
+	 * @param client - the Redis client/cluster/sentinel connection
+	 * @param expires - absolute expiry as Unix ms since epoch
+	 */
+	private async buildExpiryOptions(
+		client: RedisClientConnectionType,
+		expires: number,
+	): Promise<{ PXAT: number } | { PX: number }> {
+		return this.expiryOptions(expires, await this.supportsPxat(client));
+	}
+
+	/**
+	 * Set a key value pair in the store. Expiry is an absolute Unix timestamp in milliseconds.
 	 * @param {string} key - the key to set
 	 * @param {string} value - the value to set
-	 * @param {number} [ttl] - the time to live in milliseconds
+	 * @param {number} [expires] - absolute expiry as Unix ms since epoch, or undefined for no expiry
 	 * @returns {Promise<boolean>} - true if the value was set, false if an error occurred and throwOnErrors is false
 	 */
-	public async set(key: string, value: string, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: string, expires?: number): Promise<boolean> {
 		const client = await this.getClient();
 
 		try {
 			key = this.createKeyPrefix(key, this._namespace);
 
-			if (ttl) {
-				await client.set(key, value, { PX: ttl });
+			if (typeof expires === "number") {
+				await client.set(key, value, await this.buildExpiryOptions(client, expires));
 			} else {
 				await client.set(key, value);
 			}
@@ -385,11 +450,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Will set many key value pairs in the store. TTL is in milliseconds. This will be done as a single transaction.
-	 * @param {KeyvEntry[]} entries - the key value pairs to set with optional ttl
+	 * Will set many key value pairs in the store. Expiry is an absolute Unix timestamp in milliseconds. This will be done as a single transaction.
+	 * @param {KeyvStorageEntry[]} entries - the key value pairs to set with optional absolute expires
 	 * @returns {Promise<boolean[] | undefined>} - array of booleans indicating whether each entry was successfully set
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		try {
 			const results = new Array<boolean>(entries.length).fill(false);
 
@@ -398,7 +463,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				await this.getClient();
 
 				// Group entries by slot to avoid CROSSSLOT errors, tracking original indices
-				const slotMap = new Map<number, Array<{ entry: KeyvEntry<Value>; index: number }>>();
+				const slotMap = new Map<number, Array<{ entry: KeyvStorageEntry<Value>; index: number }>>();
 				for (let i = 0; i < entries.length; i++) {
 					const entry = entries[i];
 					const prefixedKey = this.createKeyPrefix(entry.key, this._namespace);
@@ -412,13 +477,14 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				await Promise.all(
 					Array.from(slotMap.entries(), async ([slot, slotEntries]) => {
 						const client = await this.getSlotMaster(slot);
+						const usePxat = await this.supportsPxat(client);
 						const multi = client.multi();
 						for (const {
-							entry: { key, value, ttl },
+							entry: { key, value, expires },
 						} of slotEntries) {
 							const prefixedKey = this.createKeyPrefix(key, this._namespace);
-							if (ttl) {
-								multi.set(prefixedKey, value as string, { PX: ttl });
+							if (typeof expires === "number") {
+								multi.set(prefixedKey, value as string, this.expiryOptions(expires, usePxat));
 							} else {
 								multi.set(prefixedKey, value as string);
 							}
@@ -432,11 +498,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			} else {
 				// Non-cluster mode can use a single multi
 				const client = (await this.getClient()) as RedisClientType;
+				const usePxat = await this.supportsPxat(client);
 				const multi = client.multi();
-				for (const { key, value, ttl } of entries) {
+				for (const { key, value, expires } of entries) {
 					const prefixedKey = this.createKeyPrefix(key, this._namespace);
-					if (ttl) {
-						multi.set(prefixedKey, value as string, { PX: ttl });
+					if (typeof expires === "number") {
+						multi.set(prefixedKey, value as string, this.expiryOptions(expires, usePxat));
 					} else {
 						multi.set(prefixedKey, value as string);
 					}

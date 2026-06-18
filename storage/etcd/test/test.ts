@@ -192,23 +192,13 @@ describe("get, set, and delete", () => {
 		t.expect(await store.delete(123)).toBeFalsy();
 	});
 
-	it("should handle legacy data stored without an envelope", async (t) => {
+	it("should store and retrieve a raw value", async (t) => {
 		const store = new KeyvEtcd(etcdUrl);
 		const key = faker.string.uuid();
-		// Write raw value directly to etcd without envelope
-		await store.client.put(store.formatKey(key)).value("raw-legacy-value");
+		// The adapter stores the raw encoded value with no envelope wrapping.
+		await store.client.put(store.formatKey(key)).value("raw-value");
 		const result = await store.get(key);
-		t.expect(result).toBe("raw-legacy-value");
-	});
-
-	it("should handle legacy JSON data without a v field", async (t) => {
-		const store = new KeyvEtcd(etcdUrl);
-		const key = faker.string.uuid();
-		// Write JSON that is not our envelope format
-		await store.client.put(store.formatKey(key)).value(JSON.stringify({ foo: "bar" }));
-		const result = await store.get(key);
-		// Should return the raw string since parsed.v is undefined
-		t.expect(result).toBe(JSON.stringify({ foo: "bar" }));
+		t.expect(result).toBe("raw-value");
 	});
 });
 
@@ -223,10 +213,11 @@ describe("ttl and expiration", () => {
 		t.expect(await keyv.get(key)).toBeUndefined();
 	});
 
-	it("should respect a per-call ttl", async (t) => {
+	it("should respect a per-call absolute expires", async (t) => {
 		const keyv = new KeyvEtcd(etcdUrl);
 		const key = faker.string.uuid();
-		await keyv.set(key, "value", 1000);
+		// Adapter set takes an absolute expiry (Unix ms). etcd leases are second-granular.
+		await keyv.set(key, "value", Date.now() + 1000);
 		t.expect(await keyv.get(key)).toBe("value");
 		await sleep(3000);
 		t.expect(await keyv.get(key)).toBeUndefined();
@@ -235,17 +226,42 @@ describe("ttl and expiration", () => {
 	it("should return false from has for an expired key", async (t) => {
 		const store = new KeyvEtcd(etcdUrl);
 		const key = faker.string.uuid();
-		await store.set(key, "value", 1);
-		await sleep(50);
+		// etcd leases are clamped to a minimum of one second, so wait past that.
+		await store.set(key, "value", Date.now() + 1000);
+		await sleep(3000);
 		t.expect(await store.has(key)).toBe(false);
 	});
 
 	it("should return undefined from get for an expired key", async (t) => {
 		const store = new KeyvEtcd(etcdUrl);
 		const key = faker.string.uuid();
-		await store.set(key, "value", 1);
-		await sleep(50);
+		// etcd leases are clamped to a minimum of one second, so wait past that.
+		await store.set(key, "value", Date.now() + 1000);
+		await sleep(3000);
 		t.expect(await store.get(key)).toBeUndefined();
+	});
+
+	it("should expire a present-but-stale envelope on has via the client-side check", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const key = faker.string.uuid();
+		// Write an envelope whose `e` is already in the past with NO lease, so the key
+		// persists server-side. has() must apply the precise client-side check, report it
+		// expired, and reap the key (etcd leases are coarse and lazily revoked).
+		await store.client
+			.put(store.formatKey(key))
+			.value(JSON.stringify({ v: "stale", e: Date.now() - 1000 }));
+		t.expect(await store.has(key)).toBe(false);
+		t.expect(await store.client.get(store.formatKey(key))).toBeNull();
+	});
+
+	it("should return non-envelope values written directly to etcd as-is", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const key = faker.string.uuid();
+		// A valid-JSON value that is not our { v, e } envelope (e.g. written by another
+		// client) must be returned verbatim and never treated as expired.
+		await store.client.put(store.formatKey(key)).value(JSON.stringify({ foo: "bar" }));
+		t.expect(await store.get(key)).toBe(JSON.stringify({ foo: "bar" }));
+		t.expect(await store.has(key)).toBe(true);
 	});
 
 	it("should cache the granted lease id across concurrent puts", async (t) => {
