@@ -396,7 +396,7 @@ This is useful for manual cleanup of expired GridFS files, since GridFS does not
 ```js
 const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true });
 
-await store.set('temp', 'data', 1000); // expires in 1 second
+await store.set('temp', 'data', Date.now() + 1000); // adapter takes an absolute expires (Unix ms); expires in ~1 second
 
 // After expiration...
 await store.clearExpired(); // removes expired GridFS files

@@ -968,4 +968,86 @@ describe("storage adapter expiry negotiation", () => {
 		expect(legacy.calls[0].arg).toBeGreaterThan(500);
 		expect(legacy.calls[0].arg).toBeLessThanOrEqual(1000);
 	});
+
+	// A v6 adapter whose methods return promises WITHOUT the `async` keyword structurally
+	// classifies as map-like rather than keyvStorage. The explicit `capabilities.expires`
+	// declaration must still make Keyv use it directly (not wrap it).
+	const createNonAsyncV6Adapter = (capabilities?: { expires?: boolean }) => {
+		const map = new Map<string, unknown>();
+		const calls: Array<{ key: string; arg?: number }> = [];
+		return {
+			capabilities,
+			calls,
+			get(key: string) {
+				return Promise.resolve(map.get(key));
+			},
+			set(key: string, value: unknown, arg?: number) {
+				calls.push({ key, arg });
+				map.set(key, value);
+				return Promise.resolve(true);
+			},
+			delete(key: string) {
+				return Promise.resolve(map.delete(key));
+			},
+			clear() {
+				map.clear();
+				return Promise.resolve();
+			},
+			has(key: string) {
+				return Promise.resolve(map.has(key));
+			},
+			on() {},
+		};
+	};
+
+	test("uses a capabilities.expires adapter directly even when its methods are not async", async () => {
+		const keyv = new Keyv();
+		// Without the capability it is not used directly (structurally wrapped)...
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		const plain = createNonAsyncV6Adapter() as any;
+		expect(keyv.resolveStore(plain)).not.toBe(plain);
+
+		// ...but the explicit declaration is authoritative and used directly.
+		const v6 = createNonAsyncV6Adapter({ expires: true });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		expect(keyv.resolveStore(v6 as any)).toBe(v6);
+
+		// And it receives an absolute expires (proving it was not bridged to a relative ttl).
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		await new Keyv({ store: v6 as any }).set("k", "v", 1000);
+		expect(v6.calls[0].arg).toBeGreaterThan(1e12);
+	});
+
+	test("getMany/getManyRaw fall back to single gets when a directly-used adapter lacks getMany", async () => {
+		const map = new Map<string, unknown>();
+		const adapter = {
+			capabilities: { expires: true },
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+				return true;
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+			async has(key: string) {
+				return map.has(key);
+			},
+			on() {},
+			// intentionally no getMany
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		const keyv = new Keyv({ store: adapter as any });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2");
+		expect(await keyv.getMany(["a", "b", "c"])).toEqual(["1", "2", undefined]);
+		const raw = await keyv.getManyRaw(["a", "c"]);
+		expect(raw[0]).toMatchObject({ value: "1" });
+		expect(raw[1]).toBeUndefined();
+	});
 });

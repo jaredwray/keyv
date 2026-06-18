@@ -296,11 +296,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Resolves a store to a fully-compliant KeyvStorageAdapter using a 3-tier detection chain:
-	 * 1. If the store already implements the full KeyvStorageAdapter interface, use it directly.
-	 * 2. If the store is map-like (synchronous get/set/delete/has), wrap it in KeyvMemoryAdapter.
-	 * 3. If the store has async get/set/delete/clear, wrap it in KeyvBridgeAdapter.
-	 * 4. Otherwise, emit an error and fall back to a default in-memory KeyvMemoryAdapter.
+	 * Resolves a store to a fully-compliant KeyvStorageAdapter:
+	 * 1. If the store declares the v6 `capabilities.expires` contract, use it directly (this takes
+	 *    precedence over structural detection, so a full adapter whose async methods aren't written
+	 *    with the `async` keyword is not mis-bridged).
+	 * 2. If the store implements the full async storage interface (but doesn't declare `expires`),
+	 *    treat it as a legacy relative-`ttl` adapter and wrap it in KeyvBridgeAdapter.
+	 * 3. If the store is map-like (synchronous get/set/delete/has), wrap it in KeyvMemoryAdapter.
+	 * 4. If the store has async get/set/delete/clear, wrap it in KeyvBridgeAdapter.
+	 * 5. Otherwise, emit an error and fall back to a default in-memory KeyvMemoryAdapter.
 	 *
 	 * NOTE: this is used for internal but provided public for custom adapter testing
 	 * @param {unknown} store The store to resolve.
@@ -308,17 +312,19 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: accepts any store type
 	public resolveStore(store: any): KeyvStorageAdapter {
+		// A v6 adapter explicitly declaring the absolute-`expires` contract is authoritative and
+		// used directly, even when structural detection would classify it as `asyncMap` (e.g. its
+		// methods return promises without the `async` keyword). Without this it would be bridged
+		// and wrongly handed a relative ttl where its contract expects an absolute `expires`.
+		if ((store as KeyvStorageAdapter | undefined)?.capabilities?.expires === true) {
+			return store as KeyvStorageAdapter;
+		}
+
 		const cap = detectKeyvStorage(store);
 
 		if (cap.store === "keyvStorage") {
-			const adapter = store as KeyvStorageAdapter;
-			// v6 adapters declare `capabilities.expires` and receive the absolute `expires`
-			// directly. Legacy relative-`ttl` adapters (no such capability) are wrapped by the
-			// bridge, which converts the absolute `expires` back to a ttl before delegating.
-			if (adapter.capabilities?.expires) {
-				return adapter;
-			}
-
+			// Full async adapter without the `expires` capability → legacy relative-`ttl` adapter;
+			// the bridge converts the absolute `expires` back to a ttl before delegating.
 			return new KeyvBridgeAdapter(store as KeyvBridgeStore);
 		}
 
@@ -431,6 +437,24 @@ export class Keyv<GenericValue = any> extends Hookified {
 	}
 
 	/**
+	 * Reads many keys from the store, preferring its native `getMany` and falling back to parallel
+	 * single `get`s when an adapter does not implement it. A directly-used v6 adapter is not
+	 * structurally required to provide `getMany` (the bridge and memory adapters always do), so
+	 * this keeps `getMany`/`getManyRaw` working regardless of the resolved adapter.
+	 * @param keys - the keys to read
+	 * @returns the raw store results in the same order as `keys`
+	 */
+	private async storeGetMany<Value>(
+		keys: string[],
+	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
+		if (typeof this._store.getMany === "function") {
+			return this._store.getMany<Value>(keys);
+		}
+
+		return Promise.all(keys.map(async (key) => this._store.get<Value>(key)));
+	}
+
+	/**
 	 * Get many values for an array of keys.
 	 * @param {string[]} keys the keys to get
 	 * @returns {Promise<Array<Value | undefined>>} an array of values in the same order as the
@@ -441,9 +465,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
 
-		const rawData =
-			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
-			this._store.getMany!<Value>(keys);
+		const rawData = await this.storeGetMany<Value>(keys);
 
 		let deserialized: Array<KeyvValue<Value> | undefined>;
 		if (this._checkExpired) {
@@ -545,9 +567,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 			return result;
 		}
 
-		const rawData =
-			await // biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
-			this._store.getMany!<Value>(keys);
+		const rawData = await this.storeGetMany<Value>(keys);
 
 		let result: Array<KeyvValue<Value> | undefined>;
 		if (this._checkExpired) {

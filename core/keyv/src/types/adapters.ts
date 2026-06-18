@@ -49,6 +49,10 @@ export type KeyvStorageAdapter = {
 	 * `keyvStorageCapability(this)`) to declare they accept an absolute `expires` timestamp
 	 * on `set`/`setMany`. Full storage adapters that omit it are treated as legacy relative-`ttl`
 	 * adapters and wrapped by `KeyvBridgeAdapter`, which converts `expires` back to a ttl.
+	 *
+	 * Declaring `expires: true` also obliges the adapter to enforce expiry on read: Keyv core
+	 * does not filter expired entries by default, so `get`/`getMany`/`has` must not return a key
+	 * past its deadline. See {@link KeyvStorageCapability.expires}.
 	 */
 	capabilities?: KeyvStorageCapability;
 	/** Retrieves a value by key. */

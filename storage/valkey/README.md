@@ -27,7 +27,7 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
 - [Methods](#methods)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -232,23 +232,23 @@ Returns an array of values for the given keys. Returns `undefined` for any key t
 const values = await store.getMany(['foo', 'bar']);
 ```
 
-### .set(key, value, ttl?)
+### .set(key, value, expires?)
 
-Sets a value for the given key with an optional TTL in milliseconds.
+Sets a value for the given key with an optional absolute `expires` (Unix ms since epoch). The adapter writes it via `PXAT`. Through Keyv (`keyv.set(key, value, ttl)`) you still pass a relative TTL in milliseconds — Keyv converts it to `expires` for you.
 
 ```js
 await store.set('foo', 'bar');
-await store.set('foo', 'bar', 5000); // expires in 5 seconds
+await store.set('foo', 'bar', Date.now() + 5000); // expires in ~5 seconds
 ```
 
 ### .setMany(entries)
 
-Sets multiple key-value pairs in a single batch operation using `MULTI/EXEC` transactions. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Entries with `undefined` values are skipped. Returns a `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
+Sets multiple key-value pairs in a single batch operation using `MULTI/EXEC` transactions. Each entry is a `KeyvStorageEntry<Value>` object (`{ key: string, value: Value, expires?: number }`) where `expires` is an absolute Unix ms timestamp, and `Value` is inferred from the entries provided. Entries with `undefined` values are skipped. Returns a `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
 
 ```js
 const results = await store.setMany([
   { key: 'foo', value: 'bar' },
-  { key: 'baz', value: 'qux', ttl: 5000 },
+  { key: 'baz', value: 'qux', expires: Date.now() + 5000 },
 ]); // [true, true]
 ```
 

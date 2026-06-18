@@ -64,6 +64,13 @@ export type KeyvStorageCapability = {
 	 * `expires` timestamp (ms since epoch) on `set`/`setMany`. Adapters that omit this
 	 * (legacy relative-`ttl` adapters) are wrapped by `KeyvBridgeAdapter`, which converts
 	 * the absolute `expires` back to a relative ttl before delegating.
+	 *
+	 * Declaring `expires: true` is a two-way contract: the adapter is then used directly and
+	 * must ENFORCE expiry on read. Keyv core does not filter expired entries by default
+	 * (`checkExpired` is off), so the adapter is the expiry authority — `get`/`getMany`/`has`
+	 * must return nothing for a key past its deadline, via a native mechanism (TTL index, key
+	 * expiry, lease) and/or a client-side check. Validate with `@keyv/test-suite`'s
+	 * `storageTtlTests`.
 	 */
 	expires?: boolean;
 };
