@@ -37,6 +37,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - [Serialization](#serialization)
 - [Official Storage Adapters](#official-storage-adapters)
 - [Third-party Storage Adapters](#third-party-storage-adapters)
+- [Built-in Adapters: Memory and Bridge](#built-in-adapters-memory-and-bridge)
 - [Using BigMap to Scale](#using-bigmap-to-scale)
 - [Compression](#compression)
 - [Capability Detection](#capability-detection)
@@ -436,9 +437,60 @@ class MyAdapter {
 }
 ```
 
-A v6 adapter declares `capabilities.expires === true` (the `keyvStorageCapability(this)` helper sets it for you). Keyv then passes the absolute `expires` to it directly — this takes precedence over structural detection, so an adapter whose methods aren't written with `async` is still used directly rather than bridged. Any **legacy** storage adapter that does *not* declare `capabilities.expires` is treated as a relative-TTL adapter and transparently wrapped by [`KeyvBridgeAdapter`](#third-party-storage-adapters), which converts the absolute `expires` back to a relative TTL before delegating (and deletes outright when the deadline has already elapsed) — so existing third-party adapters keep working unchanged. Stores that expose absolute-expiry primitives (e.g. Redis `PXAT`) use `expires` directly. Map-like stores wrapped via `new Keyv({ store: new Map() })` are unaffected.
+A v6 adapter declares `capabilities.expires === true` (the `keyvStorageCapability(this)` helper sets it for you). Keyv then passes the absolute `expires` to it directly — this takes precedence over structural detection, so an adapter whose methods aren't written with `async` is still used directly rather than bridged. Any **legacy** storage adapter that does *not* declare `capabilities.expires` is treated as a relative-TTL adapter and transparently wrapped by [`KeyvBridgeAdapter`](#built-in-adapters-memory-and-bridge), which converts the absolute `expires` back to a relative TTL before delegating (and deletes outright when the deadline has already elapsed) — so existing third-party adapters keep working unchanged. Stores that expose absolute-expiry primitives (e.g. Redis `PXAT`) use `expires` directly. Map-like stores wrapped via `new Keyv({ store: new Map() })` are unaffected.
 
 > **Adapters are the expiry authority.** Declaring `capabilities.expires === true` is a two-way contract: because Keyv core does not filter expired reads by default (`checkExpired` is off), a v6 adapter must enforce expiry itself — `get`/`getMany`/`has` must not return a key past its deadline, whether via a native mechanism (key expiry, TTL index, lease) or a client-side check. Run `@keyv/test-suite`'s `storageTtlTests` against your adapter to verify it.
+
+# Built-in Adapters: Memory and Bridge
+
+Keyv ships with two storage adapters built directly into the core package. You rarely instantiate them yourself — Keyv selects and wires up the right one automatically when you create an instance — but knowing how they work explains how the default in-memory store behaves and how legacy or async stores are adapted to the v6 contract. Both are exported from `keyv`:
+
+## KeyvMemoryAdapter
+
+`KeyvMemoryAdapter` is the **default store**. When you create a Keyv instance without a store (`new Keyv()`), it uses `new KeyvMemoryAdapter(new Map())` under the hood. It wraps any synchronous, `Map`-like object — the built-in `Map`, [`quick-lru`](https://github.com/sindresorhus/quick-lru), [`lru.min`](https://github.com/wellwelwel/lru.min), or anything exposing `get`, `set`, `delete`, `clear`, and `has`.
+
+It adds the pieces a raw `Map` does not have:
+
+- **Namespace prefixing** — keys are prefixed with the `namespace` and `keySeparator` (default `:`), so one underlying store can host multiple namespaces and `clear()` only removes the current namespace's keys.
+- **TTL expiry** — values are wrapped in an internal `{ value, expires }` envelope. Because the envelope lives *outside* the serialized/compressed/encrypted payload, expiry metadata is never serialized. Expired entries are evicted lazily on `get`, `getMany`, `has`, and `iterator()`. When the underlying store accepts a TTL argument (e.g. QuickLRU), the adapter also passes a derived relative duration so the store can evict on its own.
+- **Batch and iteration** — `getMany`, `setMany`, `hasMany`, `deleteMany`, and an async `iterator()` (when the store supports `entries()`).
+- **v6 contract** — declares `capabilities.expires === true`, so Keyv hands it the absolute `expires` timestamp directly and trusts it to enforce expiry.
+
+```js
+import Keyv, { KeyvMemoryAdapter } from 'keyv';
+
+// Wrap any Map-like store, optionally with a namespace
+const adapter = new KeyvMemoryAdapter(new Map(), { namespace: 'cache' });
+const keyv = new Keyv({ store: adapter });
+
+// Or wrap an LRU to bound memory usage
+import QuickLRU from 'quick-lru';
+const cache = new Keyv({ store: new KeyvMemoryAdapter(new QuickLRU({ maxSize: 1000 })) });
+```
+
+## KeyvBridgeAdapter
+
+`KeyvBridgeAdapter` wraps any **promise-based / async store** and adapts it to the v6 storage contract. Keyv applies it automatically when you pass:
+
+- a **legacy storage adapter** — a full async adapter that does *not* declare `capabilities.expires` (i.e. pre-v6 third-party adapters), or
+- an **async `Map`-like store** with async `get`, `set`, `delete`, and `clear`.
+
+This is why existing third-party adapters keep working unchanged on v6. The bridge:
+
+- **Converts expiry** — Keyv passes an absolute `expires` timestamp; the bridge converts it back to the relative TTL the wrapped store expects. A write whose deadline has already elapsed is deleted instead of stored, so a past `expires` becomes an absent key — matching how the native adapters treat an already-expired write.
+- **Delegates when it can** — if the wrapped store implements `getMany`, `setMany`, `has`, `hasMany`, `deleteMany`, `iterator`, or `disconnect`, the bridge calls them directly; otherwise it falls back to looping over the single-key primitives.
+- **Handles namespacing both ways** — if the wrapped store manages its own namespace (a full adapter exposing a `namespace` property), the bridge propagates its namespace to the store and does *not* prefix keys, avoiding double-namespacing, so the store's native scoped `clear()` and `iterator()` are used. Otherwise the bridge prefixes keys itself, letting one shared store host multiple namespaces.
+- **Forwards errors** — re-emits `error` events from the wrapped store so connection failures surface on the Keyv instance.
+
+```js
+import Keyv, { KeyvBridgeAdapter } from 'keyv';
+
+// Usually automatic — just pass the store:
+const keyv = new Keyv({ store: myAsyncStore });
+
+// ...which is equivalent to wrapping it explicitly:
+const explicit = new Keyv({ store: new KeyvBridgeAdapter(myAsyncStore, { namespace: 'cache' }) });
+```
 
 # Using BigMap to Scale
 
