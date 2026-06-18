@@ -90,6 +90,28 @@ describe("set", () => {
 		expect(expiredResult).toBeUndefined();
 	});
 
+	test("should fall back to relative PX when the server does not support PXAT", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		// Force the pre-6.2 fallback path without needing an old server.
+		(keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported = false;
+		const setSpy = vi.spyOn(keyvRedis.client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		const value = faker.lorem.word();
+		await keyvRedis.set(key, value, Date.now() + 1000);
+
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		const options = call?.[2] as Record<string, number>;
+		expect(options).toHaveProperty("PX");
+		expect(options).not.toHaveProperty("PXAT");
+		expect(options.PX).toBeGreaterThan(0);
+		expect(options.PX).toBeLessThanOrEqual(1000);
+		// And the value still round-trips and expires.
+		expect(await keyvRedis.get(key)).toBe(value);
+
+		setSpy.mockRestore();
+	});
+
 	test("should throw on redis client set error when throwOnErrors is true", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 

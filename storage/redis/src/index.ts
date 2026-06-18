@@ -359,6 +359,63 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
+	 * Whether the connected server supports the absolute-expiry `PXAT` option (Redis 6.2+).
+	 * Detected lazily on first expiring write and cached. `undefined` until detected.
+	 */
+	private _pxatSupported?: boolean;
+
+	/**
+	 * Lazily detect whether the server supports `SET ... PXAT` (Redis 6.2+), caching the result.
+	 * Falls back to assuming support (PXAT) when the version cannot be determined (e.g. clusters
+	 * where `INFO` isn't directly available, or a transient error) — those deployments are modern.
+	 * @param client - the Redis client/cluster/sentinel connection to introspect
+	 * @returns {Promise<boolean>} true if PXAT may be used, false to fall back to relative PX
+	 */
+	private async supportsPxat(client: RedisClientConnectionType): Promise<boolean> {
+		if (this._pxatSupported !== undefined) {
+			return this._pxatSupported;
+		}
+
+		try {
+			const info = String(await (client as RedisClientType).info("server"));
+			const match = /redis_version:(\d+)\.(\d+)/.exec(info);
+			if (match) {
+				const major = Number(match[1]);
+				const minor = Number(match[2]);
+				this._pxatSupported = major > 6 || (major === 6 && minor >= 2);
+			} else {
+				this._pxatSupported = true;
+			}
+		} catch {
+			this._pxatSupported = true;
+		}
+
+		return this._pxatSupported;
+	}
+
+	/**
+	 * Build the `SET` expiry option for an absolute `expires`. Prefers the skew-immune absolute
+	 * `PXAT`; falls back to a relative `PX` (remaining ms) for servers older than 6.2.
+	 * @param expires - absolute expiry as Unix ms since epoch
+	 * @param usePxat - whether the server supports PXAT (from {@link supportsPxat})
+	 */
+	private expiryOptions(expires: number, usePxat: boolean): { PXAT: number } | { PX: number } {
+		return usePxat ? { PXAT: expires } : { PX: Math.max(0, expires - Date.now()) };
+	}
+
+	/**
+	 * Resolve the `SET` expiry option for a single write, detecting PXAT support as needed.
+	 * @param client - the Redis client/cluster/sentinel connection
+	 * @param expires - absolute expiry as Unix ms since epoch
+	 */
+	private async buildExpiryOptions(
+		client: RedisClientConnectionType,
+		expires: number,
+	): Promise<{ PXAT: number } | { PX: number }> {
+		return this.expiryOptions(expires, await this.supportsPxat(client));
+	}
+
+	/**
 	 * Set a key value pair in the store. Expiry is an absolute Unix timestamp in milliseconds.
 	 * @param {string} key - the key to set
 	 * @param {string} value - the value to set
@@ -372,7 +429,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			key = this.createKeyPrefix(key, this._namespace);
 
 			if (typeof expires === "number") {
-				await client.set(key, value, { PXAT: expires });
+				await client.set(key, value, await this.buildExpiryOptions(client, expires));
 			} else {
 				await client.set(key, value);
 			}
@@ -417,13 +474,14 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				await Promise.all(
 					Array.from(slotMap.entries(), async ([slot, slotEntries]) => {
 						const client = await this.getSlotMaster(slot);
+						const usePxat = await this.supportsPxat(client);
 						const multi = client.multi();
 						for (const {
 							entry: { key, value, expires },
 						} of slotEntries) {
 							const prefixedKey = this.createKeyPrefix(key, this._namespace);
 							if (typeof expires === "number") {
-								multi.set(prefixedKey, value as string, { PXAT: expires });
+								multi.set(prefixedKey, value as string, this.expiryOptions(expires, usePxat));
 							} else {
 								multi.set(prefixedKey, value as string);
 							}
@@ -437,11 +495,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			} else {
 				// Non-cluster mode can use a single multi
 				const client = (await this.getClient()) as RedisClientType;
+				const usePxat = await this.supportsPxat(client);
 				const multi = client.multi();
 				for (const { key, value, expires } of entries) {
 					const prefixedKey = this.createKeyPrefix(key, this._namespace);
 					if (typeof expires === "number") {
-						multi.set(prefixedKey, value as string, { PXAT: expires });
+						multi.set(prefixedKey, value as string, this.expiryOptions(expires, usePxat));
 					} else {
 						multi.set(prefixedKey, value as string);
 					}

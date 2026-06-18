@@ -66,6 +66,14 @@ npm install --save @keyv/memcache
 
 This package does not support compression. If you need compression, please use the `@keyv/redis` or another service package instead.
 
+## Expiration Granularity
+
+Expiry is enforced server-side by Memcached's `exptime`, which is **second-granular**. TTLs are accepted in milliseconds and rounded up to whole seconds, so a value can be returned for up to ~1 second past a sub-second (or just-elapsed) deadline before Memcached evicts it. Keyv does not filter expired reads by default (`checkExpired` defaults to `false`, trusting the store). If you need millisecond-precise expiry on Memcached, enable it on the Keyv instance:
+
+```js
+const keyv = new Keyv({ store: new KeyvMemcache('localhost:11211'), checkExpired: true });
+```
+
 ## Quick Start with createKeyv
 
 The `createKeyv` helper creates a `Keyv` instance with a Memcache store in a single call:

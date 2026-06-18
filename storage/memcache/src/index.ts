@@ -129,8 +129,10 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		try {
 			const raw = await this.client.get(this.formatKey(key));
-			// The server evicts expired keys via the exptime set on write, so a
-			// returned value is always live. null/undefined means a cache miss.
+			// Expiry is enforced server-side by the exptime set on write. memcached's exptime is
+			// second-granular, so a value may be returned up to ~1s past a sub-second/just-elapsed
+			// deadline; enable Keyv's `checkExpired` for millisecond-precise expiry. null/undefined
+			// is a cache miss.
 			return (raw ?? undefined) as KeyvStorageGetResult<Value>;
 		} catch (error) {
 			this.emit("error", error);
@@ -229,8 +231,8 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	public async has(key: string): Promise<boolean> {
 		try {
 			const raw = await this.client.get(this.formatKey(key));
-			// The server evicts expired keys via the exptime set on write, so any
-			// non-null/undefined value returned here is live.
+			// Existence is determined server-side via the exptime set on write, which is
+			// second-granular (see get() for the sub-second caveat).
 			return raw !== undefined && raw !== null;
 		} catch {
 			/* v8 ignore next -- @preserve */

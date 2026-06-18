@@ -547,3 +547,83 @@ describe("KeyvBridgeAdapter - v5 Adapter Compatibility", () => {
 		expect(iteratorSpy).toHaveBeenCalledWith(undefined);
 	});
 });
+
+describe("KeyvBridgeAdapter - namespace-managing store", () => {
+	// Simulates a legacy full adapter that scopes its own keys by `namespace` (like the
+	// first-party storage adapters do), including a namespace-scoped clear() and NO iterator().
+	function createNamespacingStore() {
+		const map = new Map<string, unknown>();
+		const nsKey = (key: string) => (store.namespace ? `${store.namespace}::${key}` : key);
+		const store = {
+			namespace: undefined as string | undefined,
+			async get(key: string) {
+				return map.get(nsKey(key));
+			},
+			async set(key: string, value: unknown, _ttl?: number) {
+				map.set(nsKey(key), value);
+			},
+			async delete(key: string) {
+				return map.delete(nsKey(key));
+			},
+			async clear() {
+				const prefix = store.namespace ? `${store.namespace}::` : "";
+				for (const k of [...map.keys()]) {
+					if (k.startsWith(prefix)) {
+						map.delete(k);
+					}
+				}
+			},
+			async has(key: string) {
+				return map.has(nsKey(key));
+			},
+			async hasMany(keys: string[]) {
+				return keys.map((key) => map.has(nsKey(key)));
+			},
+			async getMany(keys: string[]) {
+				return keys.map((key) => map.get(nsKey(key)));
+			},
+			async setMany(entries: Array<{ key: string; value: unknown; ttl?: number }>) {
+				for (const entry of entries) {
+					map.set(nsKey(entry.key), entry.value);
+				}
+				return entries.map(() => true);
+			},
+			async deleteMany(keys: string[]) {
+				return keys.map((key) => map.delete(nsKey(key)));
+			},
+			_map: map,
+		};
+		return store;
+	}
+
+	test("propagates namespace and does not double-prefix keys", async () => {
+		const store = createNamespacingStore();
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "a" });
+		// The bridge hands its namespace to the store instead of prefixing keys itself.
+		expect(store.namespace).toBe("a");
+		await bridge.set("k", "v");
+		expect(store._map.has("a::k")).toBe(true); // store's own namespacing
+		expect(store._map.has("a:k")).toBe(false); // NOT bridge-prefixed
+		expect(await bridge.get("k")).toBe("v");
+	});
+
+	test("scopes clear() to the namespace instead of wiping the whole backend", async () => {
+		const store = createNamespacingStore();
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "a" });
+		await bridge.set("k", "v");
+		// Another namespace's data living in the same backend.
+		store._map.set("b::other", "keep");
+
+		await bridge.clear();
+
+		expect(store._map.has("a::k")).toBe(false); // our namespace cleared
+		expect(store._map.has("b::other")).toBe(true); // other namespace preserved
+	});
+
+	test("setter re-propagates the namespace to the store", () => {
+		const store = createNamespacingStore();
+		const bridge = new KeyvBridgeAdapter(store);
+		bridge.namespace = "x";
+		expect(store.namespace).toBe("x");
+	});
+});

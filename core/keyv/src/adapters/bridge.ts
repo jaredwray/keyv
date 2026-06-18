@@ -29,6 +29,8 @@ export type KeyvBridgeAdapterOptions = {
 export type KeyvBridgeStore = {
 	/** Store configuration/options (e.g. dialect, url) */
 	opts?: any;
+	/** Namespace the store scopes its keys under, when it manages its own namespacing. */
+	namespace?: string;
 	/** Retrieves a value by key */
 	get(key: string): Promise<any>;
 	/** Sets a value with a key and optional TTL */
@@ -87,6 +89,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	private _namespace?: string;
 	private _keySeparator = ":";
 	private readonly _capabilities: KeyvStorageCapability;
+	/**
+	 * Whether the wrapped store manages its own namespace (exposes a `namespace` property).
+	 * When true the bridge propagates its namespace to the store and does not prefix keys,
+	 * so the store's native, namespace-scoped operations (notably `clear()`) are used directly.
+	 */
+	private readonly _storeHandlesNamespace: boolean;
 
 	/**
 	 * Creates a new KeyvBridgeAdapter instance.
@@ -97,6 +105,14 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		super({ throwOnHookError: false });
 		this._store = store;
 
+		// Detect optional methods at construction time
+		this._capabilities = detectKeyvStorage(store);
+		// Only a full storage adapter (keyvStorage) that exposes a `namespace` manages its own
+		// namespacing. asyncMap/map-like stores — even if they expose `namespace` — stay on the
+		// bridge's key-prefixing path so a single shared store can host multiple namespaces.
+		this._storeHandlesNamespace =
+			this._capabilities.store === "keyvStorage" && "namespace" in store;
+
 		if (options?.keySeparator) {
 			this._keySeparator = options.keySeparator;
 		}
@@ -105,8 +121,10 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 			this._namespace = options.namespace;
 		}
 
-		// Detect optional methods at construction time
-		this._capabilities = detectKeyvStorage(store);
+		// Hand our namespace to a store that scopes its own keys.
+		if (this._storeHandlesNamespace) {
+			this._store.namespace = this._namespace;
+		}
 
 		// Forward error events from the underlying store
 		if (typeof store.on === "function") {
@@ -159,10 +177,14 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Sets the namespace.
+	 * Sets the namespace. When the wrapped store manages its own namespace, the value is
+	 * propagated to it so its native scoped operations stay in sync.
 	 */
 	public set namespace(namespace: string | undefined) {
 		this._namespace = namespace;
+		if (this._storeHandlesNamespace) {
+			this._store.namespace = namespace;
+		}
 	}
 
 	/**
@@ -172,6 +194,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns The prefixed key if namespace is provided, otherwise the original key
 	 */
 	public getKeyPrefix(key: string, namespace?: string) {
+		// When the wrapped store manages its own namespace, the bridge must not also prefix
+		// keys — that would double-namespace. The store applies the namespace itself.
+		if (this._storeHandlesNamespace) {
+			return key;
+		}
+
 		if (namespace) {
 			return `${namespace}${this._keySeparator}${key}`;
 		}
@@ -385,6 +413,13 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * entire store is cleared.
 	 */
 	public async clear(): Promise<void> {
+		// A store that manages its own namespace scopes clear() to the namespace the bridge
+		// propagated to it, so delegate directly rather than risk an unscoped wipe of the backend.
+		if (this._namespace && this._storeHandlesNamespace) {
+			await this._store.clear();
+			return;
+		}
+
 		if (!this._namespace || !this._capabilities.methods.iterator.exists) {
 			await this._store.clear();
 			return;
@@ -419,7 +454,10 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const namespace = this._namespace;
-		const prefix = namespace ? `${namespace}${this._keySeparator}` : undefined;
+		// A namespace-managing store already scopes its iterator, so the bridge must not also
+		// filter/strip a prefix it never applied.
+		const prefix =
+			namespace && !this._storeHandlesNamespace ? `${namespace}${this._keySeparator}` : undefined;
 
 		/* v8 ignore next -- @preserve */
 		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {
