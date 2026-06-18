@@ -65,17 +65,25 @@ describe("Keyv", async () => {
 describe("ttl", () => {
 	test("Keyv passes ttl info to stores", async () => {
 		expect.assertions(1);
-		const store = new Map();
-		const storeSet = store.set;
-		// @ts-expect-error
-		store.set = (key, value, ttl) => {
-			expect(ttl).toBe(100);
+		// Freeze time: the storage boundary now carries an absolute `expires`, and the memory
+		// adapter derives the underlay ttl as `expires - Date.now()`. Without a frozen clock the
+		// ~sub-ms elapsed between computing `expires` and deriving the ttl yields 99 instead of 100.
+		tk.freeze(Date.now());
+		try {
+			const store = new Map();
+			const storeSet = store.set;
 			// @ts-expect-error
-			storeSet.call(store, key, value, ttl);
-		};
+			store.set = (key, value, ttl) => {
+				expect(ttl).toBe(100);
+				// @ts-expect-error
+				storeSet.call(store, key, value, ttl);
+			};
 
-		const keyv = new Keyv({ store });
-		await keyv.set("foo", "bar", 100);
+			const keyv = new Keyv({ store });
+			await keyv.set("foo", "bar", 100);
+		} finally {
+			tk.reset();
+		}
 	});
 
 	test("Keyv respects default ttl option", async () => {
