@@ -12,7 +12,7 @@ const store = () => new KeyvMysql({ uri, iterationLimit: 2 });
 
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
-storageTestSuite(test, store, { ttl: false });
+storageTestSuite(test, store);
 
 beforeEach(async () => {
 	const keyv = store();
@@ -138,8 +138,9 @@ describe("has and hasMany", () => {
 	test("has returns false and deletes an expired key", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
-		await keyv.set(key, expiredValue);
+		const pastExpires = Date.now() - 1000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
+		await keyv.set(key, expiredValue, pastExpires);
 		expect(await keyv.has(key)).toBe(false);
 		// The expired key should have been deleted.
 		expect(await keyv.get(key)).toBeUndefined();
@@ -150,11 +151,13 @@ describe("has and hasMany", () => {
 		const expiredKey1 = faker.string.alphanumeric(10);
 		const expiredKey2 = faker.string.alphanumeric(10);
 		const validKey = faker.string.alphanumeric(10);
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
-		const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
-		await keyv.set(expiredKey1, expiredValue);
-		await keyv.set(expiredKey2, expiredValue);
-		await keyv.set(validKey, validValue);
+		const pastExpires = Date.now() - 1000;
+		const futureExpires = Date.now() + 60_000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
+		const validValue = JSON.stringify({ value: "fresh", expires: futureExpires });
+		await keyv.set(expiredKey1, expiredValue, pastExpires);
+		await keyv.set(expiredKey2, expiredValue, pastExpires);
+		await keyv.set(validKey, validValue, futureExpires);
 		const result = await keyv.hasMany([expiredKey1, expiredKey2, validKey]);
 		expect(result).toStrictEqual([false, false, true]);
 		// The expired keys should have been deleted.
@@ -225,8 +228,8 @@ describe("clearExpired", () => {
 		const expired = JSON.stringify({ value: "old", expires: 1 });
 		const valid = JSON.stringify({ value: "new", expires: 9999999999999 });
 		const noExpiry = JSON.stringify({ value: "forever" });
-		await keyv.set(expiredKey, expired);
-		await keyv.set(validKey, valid);
+		await keyv.set(expiredKey, expired, 1);
+		await keyv.set(validKey, valid, 9999999999999);
 		await keyv.set(noExpiryKey, noExpiry);
 		await keyv.clearExpired();
 		expect(await keyv.get(expiredKey)).toBeUndefined();
@@ -238,25 +241,25 @@ describe("clearExpired", () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		const valid = JSON.stringify({ value: "bar", expires: 9999999999999 });
-		await keyv.set(key, valid);
+		await keyv.set(key, valid, 9999999999999);
 		await keyv.clearExpired();
 		expect(await keyv.get(key)).toBe(valid);
 	});
 });
 
 describe("expires column", () => {
-	test("set extracts and stores expires from the value", async () => {
+	test("set stores the expires passed as the third argument", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		const valueWithExpires = JSON.stringify({ value: "bar", expires: 9999999999999 });
-		await keyv.set(key, valueWithExpires);
+		await keyv.set(key, valueWithExpires, 9999999999999);
 		const rows = await keyv.query<mysql.RowDataPacket[]>(
 			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
 		);
 		expect(Number(rows[0].expires)).toBe(9999999999999);
 	});
 
-	test("set stores null expires when the value has no expires field", async () => {
+	test("set stores null expires when no expires is passed", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, "plain string value");
@@ -269,24 +272,24 @@ describe("expires column", () => {
 	test("set updates the expires column on upsert", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, JSON.stringify({ value: "bar", expires: 1000 }));
+		await keyv.set(key, JSON.stringify({ value: "bar", expires: 1000 }), 1000);
 		const rows1 = await keyv.query<mysql.RowDataPacket[]>(
 			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
 		);
 		expect(Number(rows1[0].expires)).toBe(1000);
-		await keyv.set(key, JSON.stringify({ value: "bar", expires: 2000 }));
+		await keyv.set(key, JSON.stringify({ value: "bar", expires: 2000 }), 2000);
 		const rows2 = await keyv.query<mysql.RowDataPacket[]>(
 			`SELECT expires FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
 		);
 		expect(Number(rows2[0].expires)).toBe(2000);
 	});
 
-	test("setMany extracts and stores expires for each entry", async () => {
+	test("setMany stores expires for each entry", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		await keyv.setMany([
-			{ key: key1, value: JSON.stringify({ value: "a", expires: 5000 }) },
+			{ key: key1, value: JSON.stringify({ value: "a", expires: 5000 }), expires: 5000 },
 			{ key: key2, value: JSON.stringify({ value: "b" }) },
 		]);
 		const rows = await keyv.query<mysql.RowDataPacket[]>(
@@ -298,7 +301,7 @@ describe("expires column", () => {
 		expect(row2?.expires).toBeNull();
 	});
 
-	test("set stores null expires when the value is a number", async () => {
+	test("set stores null expires when the value is a number and no expires is passed", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, 42);
@@ -308,7 +311,7 @@ describe("expires column", () => {
 		expect(rows[0].expires).toBeNull();
 	});
 
-	test("set stores null expires when the value is null", async () => {
+	test("set stores null expires when the value is null and no expires is passed", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, null);
@@ -332,6 +335,28 @@ describe("expires column", () => {
 		const now = Date.now();
 		expect(expires).toBeGreaterThan(now);
 		expect(expires).toBeLessThanOrEqual(now + 60_000 + 1000);
+	});
+
+	// Regression: before v6 the adapter recovered `expires` by JSON.parsing the stored
+	// value, which silently failed for compressed/encrypted/msgpackr/superjson output and
+	// left the expires column NULL. The contract now passes expires directly.
+	test("populates the expires column for non-JSON encoded values so expiry still works", async () => {
+		const store = new KeyvMysql({ uri, iterationLimit: 2 });
+		const serialization = {
+			stringify: (data: unknown) => `RAW:${JSON.stringify(data)}`,
+			parse: <T>(data: string): T => JSON.parse(String(data).slice(4)) as T,
+		};
+		const keyv = new Keyv({ store, serialization });
+		const key = faker.string.uuid();
+		await keyv.set(key, "value", 100);
+		expect(await keyv.get(key)).toBe("value");
+		await new Promise((resolve) => {
+			setTimeout(resolve, 200);
+		});
+		expect(await keyv.get(key)).toBeUndefined();
+		await store.clearExpired();
+		expect(await store.has(key)).toBe(false);
+		await keyv.disconnect();
 	});
 });
 

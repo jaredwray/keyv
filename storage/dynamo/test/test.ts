@@ -144,7 +144,7 @@ describe("expiration", () => {
 		const value = faker.lorem.sentence();
 
 		const beforeSet = Date.now();
-		await store.set(key, value, 1000);
+		await store.set(key, value, Date.now() + 1000);
 		const afterSet = Date.now();
 
 		const result = await store.client.get({
@@ -177,8 +177,8 @@ describe("expiration", () => {
 	it("should return false from has for an expired key", async (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		const key = faker.string.uuid();
-		// Set with a TTL of 0ms so it expires immediately (expiresAt will be ~now+1s)
-		await store.set(key, faker.lorem.word(), 0);
+		// Set with an absolute expiry of now so it expires immediately (expiresAt will be ~now+1s)
+		await store.set(key, faker.lorem.word(), Date.now());
 		// Manually overwrite with an already-expired expiresAt
 		await store.client.put({
 			TableName: store.tableName,
@@ -212,14 +212,14 @@ describe("expiration", () => {
 });
 
 describe("batch operations", () => {
-	it("should set many entries with per-entry ttl", async (t) => {
+	it("should set many entries with per-entry expires", async (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		const key1 = faker.string.uuid();
 		const key2 = faker.string.uuid();
 		const value1 = faker.lorem.word();
 		const value2 = faker.lorem.word();
 		const result = await store.setMany([
-			{ key: key1, value: value1, ttl: 5000 },
+			{ key: key1, value: value1, expires: Date.now() + 5000 },
 			{ key: key2, value: value2 },
 		]);
 		t.expect(result).toEqual([true, true]);

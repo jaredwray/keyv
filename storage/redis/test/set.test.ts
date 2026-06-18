@@ -70,15 +70,15 @@ describe("set", () => {
 		expect(didError).toBe(true);
 	});
 
-	test("should set a value with ttl", async () => {
+	test("should set a value with expires", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
-			ttl: 100, // 100 milliseconds
+			expires: Date.now() + 100, // 100 milliseconds from now
 		};
 
-		await keyvRedis.set(data.key, data.value, data.ttl);
+		await keyvRedis.set(data.key, data.value, data.expires);
 
 		const result = await keyvRedis.get(data.key);
 
@@ -157,10 +157,10 @@ describe("set", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
-	test("should be able to set a ttl", async () => {
+	test("should be able to set an expires", async () => {
 		const keyvRedis = new KeyvRedis();
 		const key = faker.string.uuid();
-		await keyvRedis.set(key, faker.lorem.word(), 100);
+		await keyvRedis.set(key, faker.lorem.word(), Date.now() + 100);
 		await delay(300);
 		const value = await keyvRedis.get(key);
 		expect(value).toBeUndefined();
@@ -177,7 +177,7 @@ describe("set", () => {
 		await keyvRedis.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
-			{ key: key3, value: faker.lorem.word(), ttl: 100 },
+			{ key: key3, value: faker.lorem.word(), expires: Date.now() + 100 },
 		]);
 		const value = await keyvRedis.get(key1);
 		expect(value).toBe(val1);

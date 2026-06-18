@@ -311,7 +311,15 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const cap = detectKeyvStorage(store);
 
 		if (cap.store === "keyvStorage") {
-			return store as KeyvStorageAdapter;
+			const adapter = store as KeyvStorageAdapter;
+			// v6 adapters declare `capabilities.expires` and receive the absolute `expires`
+			// directly. Legacy relative-`ttl` adapters (no such capability) are wrapped by the
+			// bridge, which converts the absolute `expires` back to a ttl before delegating.
+			if (adapter.capabilities?.expires) {
+				return adapter;
+			}
+
+			return new KeyvBridgeAdapter(store as KeyvBridgeStore);
 		}
 
 		if (cap.store === "mapLike") {
@@ -610,7 +618,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 		try {
 			encodedValue = await this.encode(formattedValue);
-			result = await this._store.set(data.key, encodedValue, data.ttl);
+			result = await this._store.set(data.key, encodedValue, expires);
 		} catch (error) {
 			result = false;
 			this.emit(KeyvEvents.ERROR, error);
@@ -664,7 +672,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 					const formattedValue = { value, expires };
 					const encodedValue = await this.encode(formattedValue);
-					return { key, value: encodedValue, ttl };
+					return { key, value: encodedValue, expires };
 				}),
 			);
 			// biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
@@ -711,13 +719,16 @@ export class Keyv<GenericValue = any> extends Hookified {
 		const data = { key, value };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
-		const ttl = ttlFromExpires(data.value.expires);
+		// `expires` is the canonical value passed to the store; `ttl` is derived
+		// only for the public AFTER_SET_RAW hook payload below.
+		const expires = data.value.expires;
+		const ttl = ttlFromExpires(expires);
 
 		let result = true;
 
 		try {
 			const encodedValue = await this.encode(data.value);
-			const storeResult = await this._store.set(data.key, encodedValue, ttl);
+			const storeResult = await this._store.set(data.key, encodedValue, expires);
 
 			if (typeof storeResult === "boolean") {
 				result = storeResult;
@@ -763,9 +774,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 		try {
 			const rawEntries = await Promise.all(
 				entries.map(async ({ key, value }) => {
-					const ttl = ttlFromExpires(value.expires);
 					const encodedValue = await this.encode(value);
-					return { key, value: encodedValue, ttl };
+					return { key, value: encodedValue, expires: value.expires };
 				}),
 			);
 			const storeResult = await this._store.setMany(rawEntries);

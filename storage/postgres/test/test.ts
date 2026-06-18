@@ -10,7 +10,9 @@ const store = () => new KeyvPostgres({ uri: postgresUri, iterationLimit: 2 });
 
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
-storageTestSuite(test, store, { ttl: false });
+// The v6 contract passes an absolute `expires` directly, so the adapter now handles
+// storage-level expiry (previously skipped because expiry was parsed from the value).
+storageTestSuite(test, store);
 
 beforeEach(async () => {
 	const keyv = store();
@@ -257,8 +259,9 @@ describe("has and hasMany", () => {
 	test("has returns false and deletes an expired key", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
-		await keyv.set(key, expiredValue);
+		const pastExpires = Date.now() - 1000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
+		await keyv.set(key, expiredValue, pastExpires);
 		expect(await keyv.has(key)).toBe(false);
 		// The expired key should have been deleted.
 		expect(await keyv.get(key)).toBeUndefined();
@@ -289,11 +292,13 @@ describe("has and hasMany", () => {
 		const expiredKey1 = faker.string.alphanumeric(10);
 		const expiredKey2 = faker.string.alphanumeric(10);
 		const validKey = faker.string.alphanumeric(10);
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
-		const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
-		await keyv.set(expiredKey1, expiredValue);
-		await keyv.set(expiredKey2, expiredValue);
-		await keyv.set(validKey, validValue);
+		const pastExpires = Date.now() - 1000;
+		const futureExpires = Date.now() + 60_000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
+		const validValue = JSON.stringify({ value: "fresh", expires: futureExpires });
+		await keyv.set(expiredKey1, expiredValue, pastExpires);
+		await keyv.set(expiredKey2, expiredValue, pastExpires);
+		await keyv.set(validKey, validValue, futureExpires);
 		const result = await keyv.hasMany([expiredKey1, expiredKey2, validKey]);
 		expect(result).toStrictEqual([false, false, true]);
 		// The expired keys should have been deleted.
@@ -319,8 +324,8 @@ describe("clearExpired", () => {
 		const futureExpires = Date.now() + 60_000;
 		const validValue = JSON.stringify({ value: "fresh", expires: futureExpires });
 		const noExpiryValue = JSON.stringify({ value: "forever" });
-		await keyv.set(expiredKey, JSON.stringify({ value: "old", expires: pastExpires }));
-		await keyv.set(validKey, validValue);
+		await keyv.set(expiredKey, JSON.stringify({ value: "old", expires: pastExpires }), pastExpires);
+		await keyv.set(validKey, validValue, futureExpires);
 		await keyv.set(noExpiryKey, noExpiryValue);
 
 		await keyv.clearExpired();
@@ -333,25 +338,49 @@ describe("clearExpired", () => {
 	test("is a no-op when no entries are expired", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
-		const value = JSON.stringify({ value: "ok", expires: Date.now() + 60_000 });
-		await keyv.set(key, value);
+		const futureExpires = Date.now() + 60_000;
+		const value = JSON.stringify({ value: "ok", expires: futureExpires });
+		await keyv.set(key, value, futureExpires);
 
 		await keyv.clearExpired();
 
 		expect(await keyv.get(key)).toBe(value);
 	});
+
+	// Regression: before v6 the adapter recovered `expires` by JSON.parsing the stored
+	// value, which silently failed for compressed/encrypted/msgpackr/superjson output and
+	// left the expires column NULL. The contract now passes expires directly.
+	test("populates the expires column for non-JSON encoded values so expiry still works", async () => {
+		const store = new KeyvPostgres({ uri: postgresUri });
+		const serialization = {
+			stringify: (data: unknown) => `RAW:${JSON.stringify(data)}`,
+			parse: <T>(data: string): T => JSON.parse(String(data).slice(4)) as T,
+		};
+		const keyv = new Keyv({ store, serialization });
+		const key = faker.string.uuid();
+		await keyv.set(key, "value", 100);
+		expect(await keyv.get(key)).toBe("value");
+		await new Promise((resolve) => {
+			setTimeout(resolve, 200);
+		});
+		expect(await keyv.get(key)).toBeUndefined();
+		await store.clearExpired();
+		expect(await store.has(key)).toBe(false);
+		await keyv.disconnect();
+	});
 });
 
 describe("expires column", () => {
-	test("set extracts and stores expires from the value", async () => {
+	test("set stores the provided expires alongside the value", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
-		const value = JSON.stringify({ value: "test-value", expires: Date.now() + 60_000 });
-		await keyv.set(key, value);
+		const futureExpires = Date.now() + 60_000;
+		const value = JSON.stringify({ value: "test-value", expires: futureExpires });
+		await keyv.set(key, value, futureExpires);
 		expect(await keyv.get(key)).toBe(value);
 	});
 
-	test("set stores null expires when the value has no expires field", async () => {
+	test("set stores null expires when no expires is provided", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
 		const value = JSON.stringify({ value: "no-ttl-value" });
@@ -362,23 +391,27 @@ describe("expires column", () => {
 	test("set updates the expires column on upsert", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
-		const value2 = JSON.stringify({ value: "v2", expires: Date.now() + 120_000 });
-		await keyv.set(key, JSON.stringify({ value: "v1", expires: Date.now() + 60_000 }));
-		await keyv.set(key, value2);
+		const firstExpires = Date.now() + 60_000;
+		const secondExpires = Date.now() + 120_000;
+		const value2 = JSON.stringify({ value: "v2", expires: secondExpires });
+		await keyv.set(key, JSON.stringify({ value: "v1", expires: firstExpires }), firstExpires);
+		await keyv.set(key, value2, secondExpires);
 		expect(await keyv.get(key)).toBe(value2);
 	});
 
-	test("setMany extracts and stores expires for each entry", async () => {
+	test("setMany stores the provided expires for each entry", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		const key3 = faker.string.alphanumeric(10);
-		const value1 = JSON.stringify({ value: "v1", expires: Date.now() + 60_000 });
-		const value2 = JSON.stringify({ value: "v2", expires: Date.now() + 120_000 });
+		const expires1 = Date.now() + 60_000;
+		const expires2 = Date.now() + 120_000;
+		const value1 = JSON.stringify({ value: "v1", expires: expires1 });
+		const value2 = JSON.stringify({ value: "v2", expires: expires2 });
 		const value3 = JSON.stringify({ value: "v3" });
 		await keyv.setMany([
-			{ key: key1, value: value1 },
-			{ key: key2, value: value2 },
+			{ key: key1, value: value1, expires: expires1 },
+			{ key: key2, value: value2, expires: expires2 },
 			{ key: key3, value: value3 },
 		]);
 		expect(await keyv.get(key1)).toBe(value1);
@@ -426,9 +459,11 @@ describe("clearExpiredInterval", () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri, clearExpiredInterval: 100 });
 		const expiredKey = faker.string.alphanumeric(10);
 		const validKey = faker.string.alphanumeric(10);
-		const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
-		await keyv.set(expiredKey, JSON.stringify({ value: "old", expires: Date.now() - 60_000 }));
-		await keyv.set(validKey, validValue);
+		const pastExpires = Date.now() - 60_000;
+		const futureExpires = Date.now() + 60_000;
+		const validValue = JSON.stringify({ value: "fresh", expires: futureExpires });
+		await keyv.set(expiredKey, JSON.stringify({ value: "old", expires: pastExpires }), pastExpires);
+		await keyv.set(validKey, validValue, futureExpires);
 
 		// Wait for the interval to fire.
 		await new Promise((resolve) => {

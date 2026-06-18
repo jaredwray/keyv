@@ -24,11 +24,11 @@ describe("set", () => {
 		await keyv.disconnect();
 	});
 
-	test("should expire a value after its ttl", async () => {
+	test("should expire a value after its expiry", async () => {
 		const keyv = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await keyv.set(key, value, 100);
+		await keyv.set(key, value, Date.now() + 100);
 		expect(await keyv.get(key)).toBe(value);
 		await delay(200);
 		expect(await keyv.get(key)).toBe(undefined);
@@ -63,11 +63,11 @@ describe("setMany", () => {
 		await keyv.disconnect();
 	});
 
-	test("should expire values with a ttl", async () => {
+	test("should expire values with an expiry", async () => {
 		const keyv = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await keyv.setMany([{ key, value, ttl: 100 }]);
+		await keyv.setMany([{ key, value, expires: Date.now() + 100 }]);
 		expect(await keyv.get(key)).toBe(value);
 		await delay(200);
 		expect(await keyv.get(key)).toBe(undefined);

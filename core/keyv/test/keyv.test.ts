@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import Keyv, { KeyvMemoryAdapter, KeyvSanitize } from "../src/index.js";
+import Keyv, { KeyvBridgeAdapter, KeyvMemoryAdapter, KeyvSanitize } from "../src/index.js";
 import { KeyvStats } from "../src/stats.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
@@ -900,5 +900,72 @@ describe("decodeWithExpire", () => {
 		const result = await keyv.decodeWithExpire("key", objectData);
 		expect(result[0]?.value).toBe("test-value");
 		expect(mockCompression.decompress).not.toHaveBeenCalled();
+	});
+});
+
+describe("storage adapter expiry negotiation", () => {
+	const createFullStorageAdapter = (capabilities?: { expires?: boolean }) => {
+		const calls: Array<{ key: string; arg?: number }> = [];
+		return {
+			namespace: undefined as string | undefined,
+			capabilities,
+			calls,
+			async get() {
+				return undefined;
+			},
+			async set(key: string, _value: unknown, arg?: number) {
+				calls.push({ key, arg });
+				return true;
+			},
+			async setMany() {
+				return [];
+			},
+			async delete() {
+				return true;
+			},
+			async deleteMany() {
+				return [];
+			},
+			async clear() {},
+			async has() {
+				return false;
+			},
+			async hasMany() {
+				return [];
+			},
+			async getMany() {
+				return [];
+			},
+			on() {},
+		};
+	};
+
+	test("uses a v6 adapter (capabilities.expires) directly", () => {
+		const keyv = new Keyv();
+		const adapter = createFullStorageAdapter({ expires: true });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		expect(keyv.resolveStore(adapter as any)).toBe(adapter);
+	});
+
+	test("wraps a legacy ttl adapter (no capabilities) in the bridge", () => {
+		const keyv = new Keyv();
+		const adapter = createFullStorageAdapter();
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		expect(keyv.resolveStore(adapter as any)).toBeInstanceOf(KeyvBridgeAdapter);
+	});
+
+	test("passes absolute expires to a v6 adapter but a relative ttl to a legacy adapter", async () => {
+		const v6 = createFullStorageAdapter({ expires: true });
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		await new Keyv({ store: v6 as any }).set("k", "v", 1000);
+		// An absolute ms-since-epoch timestamp is far larger than any relative ttl.
+		expect(v6.calls[0].arg).toBeGreaterThan(1e12);
+
+		const legacy = createFullStorageAdapter();
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		await new Keyv({ store: legacy as any }).set("k", "v", 1000);
+		// The bridge converts the absolute expires back to a relative ttl (~1000ms).
+		expect(legacy.calls[0].arg).toBeGreaterThan(500);
+		expect(legacy.calls[0].arg).toBeLessThanOrEqual(1000);
 	});
 });

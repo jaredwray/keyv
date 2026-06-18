@@ -59,6 +59,13 @@ export type KeyvStorageCapability = {
 	compatible: boolean;
 	store: "mapLike" | "keyvStorage" | "asyncMap" | "none";
 	methods: KeyvStorageMethods;
+	/**
+	 * Whether the adapter implements the v6 storage contract — it accepts an absolute
+	 * `expires` timestamp (ms since epoch) on `set`/`setMany`. Adapters that omit this
+	 * (legacy relative-`ttl` adapters) are wrapped by `KeyvBridgeAdapter`, which converts
+	 * the absolute `expires` back to a relative ttl before delegating.
+	 */
+	expires?: boolean;
 };
 
 // --- Compression adapter ---
@@ -264,6 +271,24 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 	}
 
 	return { compatible: false, store: "none", methods };
+}
+
+/**
+ * Build the capability descriptor for a v6 storage adapter: the structurally detected
+ * methods plus `expires: true`, declaring that the adapter accepts an absolute `expires`
+ * timestamp on `set`/`setMany`. First-party adapters expose this from their `capabilities`
+ * getter so Keyv uses them directly instead of bridging.
+ * @param adapter - The storage adapter to describe (typically `this`).
+ * @returns A {@link KeyvStorageCapability} with `expires` set to `true`.
+ * @example
+ * ```typescript
+ * public get capabilities(): KeyvStorageCapability {
+ *   return keyvStorageCapability(this);
+ * }
+ * ```
+ */
+export function keyvStorageCapability(adapter: object): KeyvStorageCapability {
+	return { ...detectKeyvStorage(adapter), expires: true };
 }
 
 /**

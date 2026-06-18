@@ -172,12 +172,15 @@ describe("KeyvBridgeAdapter - Core Operations (minimal store)", () => {
 		expect(await bridge.get("nullkey")).toBeUndefined();
 	});
 
-	test("should pass ttl to store set", async () => {
+	test("should convert absolute expires to a relative ttl for the wrapped store", async () => {
 		const setSpy = vi.fn().mockResolvedValue(undefined);
 		const store: KeyvBridgeStore = { get: vi.fn(), set: setSpy, delete: vi.fn(), clear: vi.fn() };
 		const bridge = new KeyvBridgeAdapter(store);
-		await bridge.set("key", "value", 5000);
-		expect(setSpy).toHaveBeenCalledWith("key", "value", 5000);
+		await bridge.set("key", "value", Date.now() + 5000);
+		expect(setSpy).toHaveBeenCalledWith("key", "value", expect.any(Number));
+		const passedTtl = setSpy.mock.calls[0][2] as number;
+		expect(passedTtl).toBeGreaterThan(4000);
+		expect(passedTtl).toBeLessThanOrEqual(5000);
 	});
 });
 

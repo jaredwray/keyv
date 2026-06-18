@@ -1,6 +1,11 @@
 import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
+import Keyv, {
+	type KeyvStorageAdapter,
+	type KeyvStorageEntry,
+	type KeyvStorageGetResult,
+	keyvStorageCapability,
+} from "keyv";
 import {
 	GridFSBucket,
 	MongoBulkWriteError,
@@ -15,6 +20,11 @@ import type { KeyvMongoConnect, KeyvMongoOptions } from "./types.js";
  * Provides a persistent key-value store using MongoDB as the backend.
  */
 export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	/**
 	 * The MongoDB connection URI.
 	 * @default 'mongodb://127.0.0.1:27017'
@@ -343,13 +353,13 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * Set a value in the store.
 	 * @param key - The key to set.
 	 * @param value - The value to store.
-	 * @param ttl - Time to live in milliseconds. If specified, the key will expire after this duration.
+	 * @param expires - Absolute expiry as Unix ms since epoch. If specified, the key will expire at this time.
 	 * @returns `true` if the value was set, `false` if an error occurred.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		try {
-			const expiresAt = typeof ttl === "number" && ttl > 0 ? new Date(Date.now() + ttl) : null;
+			const expiresAt = typeof expires === "number" ? new Date(expires) : null;
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
 			const client = await this.connect;
@@ -394,26 +404,26 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * Set multiple values in the store at once. In standard mode, uses a single `bulkWrite` operation.
 	 * In GridFS mode, each entry is set individually in parallel.
 	 * @template Value - The type of the stored values.
-	 * @param entries - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds.
+	 * @param entries - Array of entries to set. Each entry has a `key`, `value`, and optional `expires` (absolute Unix ms).
 	 * @returns Array of booleans (one per entry) indicating which writes succeeded, in input order.
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return [];
 		}
 
 		if (this._useGridFS) {
 			const settled = await Promise.allSettled(
-				entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl)),
+				entries.map(async ({ key, value, expires }) => this.set(key, value, expires)),
 			);
 			return settled.map((result) => (result.status === "fulfilled" ? result.value : false));
 		}
 
 		const client = await this.connect;
 		const ns = this.getNamespaceValue();
-		const operations = entries.map(({ key, value, ttl }) => {
+		const operations = entries.map(({ key, value, expires }) => {
 			const strippedKey = this.removeKeyPrefix(key);
-			const expiresAt = typeof ttl === "number" && ttl > 0 ? new Date(Date.now() + ttl) : null;
+			const expiresAt = typeof expires === "number" ? new Date(expires) : null;
 			return {
 				updateOne: {
 					filter: { key: { $eq: strippedKey }, namespace: { $eq: ns } },

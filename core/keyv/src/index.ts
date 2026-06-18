@@ -23,6 +23,7 @@ export {
 	detectKeyvEncryption,
 	detectKeyvSerialization,
 	detectKeyvStorage,
+	keyvStorageCapability,
 } from "./capabilities.js";
 export { jsonSerializer, KeyvJsonSerializer } from "./json-serializer.js";
 export { Keyv, Keyv as default } from "./keyv.js";
@@ -44,6 +45,7 @@ export type {
 	KeyvEntry,
 	KeyvMapAny,
 	KeyvOptions,
+	KeyvStorageEntry,
 	KeyvValue,
 } from "./types/keyv.js";
 export { KeyvEvents, KeyvHooks } from "./types/keyv.js";

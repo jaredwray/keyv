@@ -3,7 +3,8 @@ import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import { Keyv } from "../keyv.js";
 import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
-import { type KeyvEntry, KeyvEvents } from "../types/keyv.js";
+import { KeyvEvents, type KeyvStorageEntry } from "../types/keyv.js";
+import { ttlFromExpires } from "../utils.js";
 
 /**
  * Internal wrapper for values stored in the memory adapter.
@@ -102,10 +103,11 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the detected capabilities of the underlying store.
+	 * Gets the capabilities of the underlying store, with `expires: true` to declare that
+	 * this adapter accepts an absolute `expires` timestamp (the v6 storage contract).
 	 */
 	public get capabilities(): KeyvStorageCapability {
-		return this._capabilities;
+		return { ...this._capabilities, expires: true };
 	}
 
 	/**
@@ -202,35 +204,36 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stores a value in the store with an optional TTL.
+	 * Stores a value in the store with an optional absolute expiry.
 	 * @param key - The key to store the value under
 	 * @param value - The value to store
-	 * @param ttl - Optional time-to-live in milliseconds
+	 * @param expires - Optional absolute expiry as Unix ms since epoch
 	 * @returns Always returns true indicating success
 	 */
-	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		const entry: MemoryEntry = {
 			value,
-			expires: ttl ? Date.now() + ttl : undefined,
+			expires: typeof expires === "number" ? expires : undefined,
 		};
-		this._store.set(keyPrefix, entry, ttl);
+		// A Map/LRU underlay (e.g. QuickLRU) expects a relative duration, so derive it here.
+		this._store.set(keyPrefix, entry, ttlFromExpires(expires));
 		return true;
 	}
 
 	/**
 	 * Stores multiple entries in the store at once.
-	 * @param entries - Array of entries containing key, value, and optional TTL
+	 * @param entries - Array of entries containing key, value, and optional absolute `expires`
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		const results: boolean[] = [];
 		for (const entry of entries) {
 			const keyPrefix = this.getKeyPrefix(entry.key, this._namespace);
 			const memEntry: MemoryEntry = {
 				value: entry.value,
-				expires: entry.ttl ? Date.now() + entry.ttl : undefined,
+				expires: typeof entry.expires === "number" ? entry.expires : undefined,
 			};
-			this._store.set(keyPrefix, memEntry, entry.ttl);
+			this._store.set(keyPrefix, memEntry, ttlFromExpires(entry.expires));
 			results.push(true);
 		}
 

@@ -9,7 +9,9 @@ const store = () => new KeyvSqlite({ uri: sqliteUri, busyTimeout: 3000 });
 
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
-storageTestSuite(test, store, { ttl: false });
+// The v6 contract passes an absolute `expires` directly, so the adapter now handles
+// storage-level expiry (previously skipped because expiry was parsed from the value).
+storageTestSuite(test, store);
 
 beforeEach(async () => {
 	const keyv = store();
@@ -251,11 +253,13 @@ describe("getMany", () => {
 		const expiredKey1 = faker.string.uuid();
 		const expiredKey2 = faker.string.uuid();
 		const validKey = faker.string.uuid();
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
-		const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
-		await keyv.set(expiredKey1, expiredValue);
-		await keyv.set(expiredKey2, expiredValue);
-		await keyv.set(validKey, validValue);
+		const pastExpires = Date.now() - 1000;
+		const futureExpires = Date.now() + 60_000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
+		const validValue = JSON.stringify({ value: "fresh", expires: futureExpires });
+		await keyv.set(expiredKey1, expiredValue, pastExpires);
+		await keyv.set(expiredKey2, expiredValue, pastExpires);
+		await keyv.set(validKey, validValue, futureExpires);
 		const result = await keyv.getMany([expiredKey1, expiredKey2, validKey]);
 		expect(result[0]).toBeUndefined();
 		expect(result[1]).toBeUndefined();
@@ -304,8 +308,9 @@ describe("has and hasMany", () => {
 	test("has returns false and deletes an expired key", async () => {
 		const keyv = store();
 		const key = faker.string.uuid();
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
-		await keyv.set(key, expiredValue);
+		const pastExpires = Date.now() - 1000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
+		await keyv.set(key, expiredValue, pastExpires);
 		expect(await keyv.has(key)).toBe(false);
 		// The expired key should have been deleted.
 		expect(await keyv.get(key)).toBeUndefined();
@@ -316,11 +321,13 @@ describe("has and hasMany", () => {
 		const expiredKey1 = faker.string.uuid();
 		const expiredKey2 = faker.string.uuid();
 		const validKey = faker.string.uuid();
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
-		const validValue = JSON.stringify({ value: "fresh", expires: Date.now() + 60_000 });
-		await keyv.set(expiredKey1, expiredValue);
-		await keyv.set(expiredKey2, expiredValue);
-		await keyv.set(validKey, validValue);
+		const pastExpires = Date.now() - 1000;
+		const futureExpires = Date.now() + 60_000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
+		const validValue = JSON.stringify({ value: "fresh", expires: futureExpires });
+		await keyv.set(expiredKey1, expiredValue, pastExpires);
+		await keyv.set(expiredKey2, expiredValue, pastExpires);
+		await keyv.set(validKey, validValue, futureExpires);
 		const result = await keyv.hasMany([expiredKey1, expiredKey2, validKey]);
 		expect(result).toStrictEqual([false, false, true]);
 		// The expired keys should have been deleted.
@@ -366,11 +373,12 @@ describe("delete and deleteMany", () => {
 describe("clearExpired", () => {
 	test("removes expired entries and keeps valid ones", async () => {
 		const keyv = store();
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
+		const pastExpires = Date.now() - 1000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
 		const validValue = JSON.stringify({ value: "current", expires: null });
 		const expiredKey = faker.string.uuid();
 		const validKey = faker.string.uuid();
-		await keyv.set(expiredKey, expiredValue);
+		await keyv.set(expiredKey, expiredValue, pastExpires);
 		await keyv.set(validKey, validValue);
 		// has() already filters expired entries.
 		expect(await keyv.has(expiredKey)).toBe(false);
@@ -380,13 +388,37 @@ describe("clearExpired", () => {
 		expect(await keyv.has(validKey)).toBe(true);
 	});
 
-	test("handles object values with an expires field without serialization", async () => {
+	test("stores non-string object values with an explicit expires", async () => {
 		const keyv = store();
-		const objValue = { value: faker.lorem.word(), expires: Date.now() + 60_000 };
+		const futureExpires = Date.now() + 60_000;
+		const objValue = { value: faker.lorem.word(), expires: futureExpires };
 		const objKey = faker.string.uuid();
 		// biome-ignore lint/suspicious/noExplicitAny: testing the non-string value path
-		await keyv.set(objKey, objValue as any);
+		await keyv.set(objKey, objValue as any, futureExpires);
 		expect(await keyv.has(objKey)).toBe(true);
+	});
+
+	// Regression: before v6 the adapter recovered `expires` by JSON.parsing the stored
+	// value, which silently failed for compressed/encrypted/msgpackr/superjson output and
+	// left the expires column NULL. The contract now passes expires directly.
+	test("populates the expires column for non-JSON encoded values so expiry still works", async () => {
+		const store = new KeyvSqlite({ uri: sqliteUri, busyTimeout: 3000 });
+		const serialization = {
+			stringify: (data: unknown) => `RAW:${JSON.stringify(data)}`,
+			parse: <T>(data: string): T => JSON.parse(String(data).slice(4)) as T,
+		};
+		const keyv = new Keyv({ store, serialization });
+		const key = faker.string.uuid();
+		await keyv.set(key, "value", 100);
+		expect(await keyv.get(key)).toBe("value");
+		await new Promise((resolve) => {
+			setTimeout(resolve, 200);
+		});
+		// checkExpired defaults to false, so expiry is driven by the store's expires column.
+		expect(await keyv.get(key)).toBeUndefined();
+		await store.clearExpired();
+		expect(await store.has(key)).toBe(false);
+		await keyv.disconnect();
 	});
 });
 
@@ -398,9 +430,10 @@ describe("clearExpiredInterval", () => {
 			clearExpiredInterval: 100,
 		});
 		await keyv.clear();
-		const expiredValue = JSON.stringify({ value: "old", expires: Date.now() - 1000 });
+		const pastExpires = Date.now() - 1000;
+		const expiredValue = JSON.stringify({ value: "old", expires: pastExpires });
 		const autoExpiredKey = faker.string.uuid();
-		await keyv.set(autoExpiredKey, expiredValue);
+		await keyv.set(autoExpiredKey, expiredValue, pastExpires);
 		// has() already filters expired entries.
 		expect(await keyv.has(autoExpiredKey)).toBe(false);
 		// Wait for the cleanup timer to fire (which deletes the row entirely).
@@ -719,8 +752,9 @@ describe("schema migration", () => {
 		const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
 		expect(await keyv.get("k1")).toBe("v1");
 		// Expires-related features should work.
-		const expiredValue = JSON.stringify({ value: "temp", expires: Date.now() - 1000 });
-		await keyv.set("expiring", expiredValue);
+		const pastExpires = Date.now() - 1000;
+		const expiredValue = JSON.stringify({ value: "temp", expires: pastExpires });
+		await keyv.set("expiring", expiredValue, pastExpires);
 		await keyv.clearExpired();
 		expect(await keyv.has("expiring")).toBe(false);
 		await keyv.disconnect();

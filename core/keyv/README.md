@@ -412,6 +412,32 @@ const keyv = new Keyv({ store: lru });
 
 View the complete list of third-party storage adapters and learn how to build your own at https://keyv.org/docs/third-party-storage-adapters/
 
+## Storage Adapter Contract (v6)
+
+> The public API above is unchanged — `keyv.set(key, value, ttl)` still takes a relative TTL in milliseconds. The change below only affects authors of custom **storage adapters**.
+
+As of v6, Keyv passes an **absolute `expires`** timestamp (Unix ms since epoch) to a storage adapter's write methods instead of a relative TTL. Keyv computes `expires` once, so adapters never need to derive or parse it:
+
+```ts
+import { keyvStorageCapability } from 'keyv';
+
+type KeyvStorageEntry<Value> = { key: string; value: Value; expires?: number };
+
+class MyAdapter {
+  // Declare support for the absolute-`expires` contract:
+  get capabilities() {
+    return keyvStorageCapability(this); // -> { ...detected, expires: true }
+  }
+
+  // `expires` is absolute Unix ms; `undefined` means no expiry; `<= Date.now()` means already expired.
+  async set(key: string, value: unknown, expires?: number): Promise<boolean> { /* ... */ }
+  async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> { /* ... */ }
+  // ...get, delete, clear, has, getMany, deleteMany, hasMany, etc.
+}
+```
+
+A v6 adapter declares `capabilities.expires === true` (the `keyvStorageCapability(this)` helper sets it for you). Keyv then passes the absolute `expires` to it directly. Any **legacy** storage adapter that does *not* declare `capabilities.expires` is treated as a relative-TTL adapter and transparently wrapped by [`KeyvBridgeAdapter`](#third-party-storage-adapters), which converts the absolute `expires` back to a TTL (`Math.max(0, expires - Date.now())`) before delegating — so existing third-party adapters keep working unchanged. Stores that expose absolute-expiry primitives (e.g. Redis `PXAT`) use `expires` directly. Map-like stores wrapped via `new Keyv({ store: new Map() })` are unaffected.
+
 # Using BigMap to Scale
 
 ## Understanding JavaScript Map Limitations

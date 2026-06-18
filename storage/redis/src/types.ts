@@ -79,9 +79,9 @@ export type KeyvRedisEntry<T> = {
 	 */
 	value: T;
 	/**
-	 * Time to live in milliseconds.
+	 * Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 */
-	ttl?: number;
+	expires?: number;
 };
 
 export enum RedisErrorMessages {

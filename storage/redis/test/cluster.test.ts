@@ -482,7 +482,7 @@ describe("KeyvRedis Cluster", () => {
 			await keyvRedis.disconnect();
 		});
 
-		test("setMany with TTL should work with cluster mode", async () => {
+		test("setMany with expires should work with cluster mode", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 
@@ -490,7 +490,7 @@ describe("KeyvRedis Cluster", () => {
 			const entries = Array.from({ length: 3 }, () => ({
 				key: faker.string.uuid(),
 				value: faker.lorem.word(),
-				ttl: 5000,
+				expires: Date.now() + 5000,
 			}));
 
 			// Should not throw CROSSSLOT error

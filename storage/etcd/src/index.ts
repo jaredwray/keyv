@@ -1,5 +1,10 @@
 import { Hookified } from "hookified";
-import { Keyv, type KeyvEntry, type KeyvStorageGetResult } from "keyv";
+import {
+	Keyv,
+	type KeyvStorageEntry,
+	type KeyvStorageGetResult,
+	keyvStorageCapability,
+} from "keyv";
 import { EtcdClient, type Lease } from "./client.js";
 import type { ClearOutput, DeleteOutput, GetOutput, HasOutput } from "./types.js";
 
@@ -31,6 +36,11 @@ export type KeyvEtcdOptions = {
  */
 // biome-ignore lint/suspicious/noExplicitAny: any is allowed
 export class KeyvEtcd<GenericValue = any> extends Hookified {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	private _client!: EtcdClient;
 	private _lease?: Lease;
 	private _url = "127.0.0.1:2379";
@@ -248,6 +258,8 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 				return undefined;
 			}
 
+			// etcd leases are second-granular (and revoked lazily), so do a precise
+			// client-side expiry check from the stored `expires` metadata as well.
 			const { value, expired } = this.unwrapValue<GenericValue>(raw);
 			if (expired) {
 				await this.delete(key);
@@ -282,25 +294,33 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	}
 
 	/**
-	 * Stores a value in the etcd server. If a default TTL is configured, the value is stored with an etcd lease.
+	 * Stores a value in the etcd server. If an absolute `expires` is provided, the value is
+	 * stored with an etcd lease computed from the remaining duration; otherwise the configured
+	 * default TTL lease (if any) is used. etcd leases are second-granular, so the remaining
+	 * duration is clamped to a minimum of one second.
 	 * @param key - The key to store
 	 * @param value - The value to store
-	 * @param ttl - Optional TTL in milliseconds. Converted to seconds for the etcd lease.
+	 * @param expires - Optional absolute expiry as Unix ms since epoch. `undefined` means no expiry.
 	 * @returns `true` if the value was stored, `false` if the write failed.
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		try {
-			const target =
-				typeof ttl === "number"
-					? this._client.lease(Math.max(ttl / 1000, 1), {
-							autoKeepAlive: false,
-						})
-					: this._ttl
-						? this._lease
-						: this._client;
+			const leaseSec =
+				expires === undefined
+					? typeof this._ttl === "number"
+						? this._ttl / 1000
+						: undefined
+					: Math.max((expires - Date.now()) / 1000, 1);
 
-			await target?.put(this.formatKey(key)).value(this.wrapValue(value, ttl));
+			const target =
+				leaseSec === undefined
+					? this._client
+					: expires === undefined
+						? this._lease
+						: this._client.lease(leaseSec, { autoKeepAlive: false });
+
+			await target?.put(this.formatKey(key)).value(this.wrapValue(value, expires));
 			return true;
 		} catch (error) {
 			this.emit("error", error);
@@ -309,13 +329,55 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	}
 
 	/**
+	 * Wraps an (already-encoded) value with its absolute `expires` so reads can apply a precise,
+	 * millisecond-accurate expiry check independent of etcd's coarser, lazily-revoked leases.
+	 * The expiry comes from the `expires` parameter — the encoded value is never parsed.
+	 * @param value - The encoded value to store.
+	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
+	 * @returns A JSON envelope string `{ v, e }`.
+	 */
+	private wrapValue(value: unknown, expires?: number): string {
+		return JSON.stringify({ v: value, e: typeof expires === "number" ? expires : null });
+	}
+
+	/**
+	 * Unwraps a stored value, reporting whether it has expired. Values not written in the
+	 * `{ v, e }` envelope (e.g. written directly to etcd) are returned as-is and never expired.
+	 * @param raw - The raw value read back from etcd.
+	 * @returns The unwrapped `value` and an `expired` flag.
+	 */
+	private unwrapValue<T>(raw: unknown): { value: T | undefined; expired: boolean } {
+		/* v8 ignore next 3 -- @preserve */
+		if (raw === null || raw === undefined) {
+			return { value: undefined, expired: false };
+		}
+
+		try {
+			const parsed = JSON.parse(raw as string) as { v: T; e: number | null };
+			if (parsed.v === undefined) {
+				// Not our envelope format — return as-is.
+				return { value: raw as T, expired: false };
+			}
+
+			if (parsed.e !== null && Date.now() > parsed.e) {
+				return { value: undefined, expired: true };
+			}
+
+			return { value: parsed.v, expired: false };
+		} catch {
+			// Not valid JSON — return as-is.
+			return { value: raw as T, expired: false };
+		}
+	}
+
+	/**
 	 * Stores multiple values in the etcd server.
 	 * @template Value - The type of the values being stored.
-	 * @param entries - An array of objects containing key, value, and optional ttl
+	 * @param entries - An array of `{ key, value, expires? }` entries, where `expires` is an absolute Unix ms timestamp.
 	 * @returns An array of booleans, one per entry, indicating which writes succeeded.
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
-		const promises = entries.map(async ({ key, value, ttl }) => this.set(key, value, ttl));
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
+		const promises = entries.map(async ({ key, value, expires }) => this.set(key, value, expires));
 		const results = await Promise.allSettled(promises);
 		const boolResults: boolean[] = [];
 		for (const result of results) {
@@ -391,7 +453,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * be passed in — it uses the namespace configured on the adapter.
 	 * @yields `[key, value]` pairs as an async generator.
 	 */
-	public async *iterator() {
+	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
 		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
 		const iterator = await this._client.getAll().prefix(prefix).keys();
 
@@ -403,14 +465,14 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 					continue;
 				}
 
-				const { value, expired } = this.unwrapValue(raw);
+				const { value, expired } = this.unwrapValue<string>(raw);
 				if (expired) {
 					await this._client.delete().key(key);
 					continue;
 				}
 
 				const unprefixedKey = this.removeKeyPrefix(key, this._namespace);
-				yield [unprefixedKey, value];
+				yield [unprefixedKey, value as string];
 				/* v8 ignore start -- @preserve */
 			} catch (error) {
 				this.emit("error", error);
@@ -466,48 +528,6 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 			this.emit("error", error);
 		}
 		/* v8 ignore stop -- @preserve */
-	}
-
-	/**
-	 * Wraps a value with expiry metadata for storage.
-	 * @param value - The value to wrap
-	 * @param ttl - Optional TTL in milliseconds used to compute the absolute expiry timestamp.
-	 * @returns A JSON string envelope containing the value and its expiry.
-	 */
-	private wrapValue(value: unknown, ttl?: number): string {
-		const expires = typeof ttl === "number" ? Date.now() + ttl : null;
-		return JSON.stringify({ v: value, e: expires });
-	}
-
-	/**
-	 * Unwraps a stored value, checking expiry metadata.
-	 * Handles legacy data (stored without envelope) gracefully.
-	 * @template T - The expected type of the stored value.
-	 * @param raw - The raw stored payload to unwrap.
-	 * @returns An object with the unwrapped `value` and an `expired` flag.
-	 */
-	private unwrapValue<T>(raw: unknown): { value: T | undefined; expired: boolean } {
-		/* v8 ignore next -- @preserve */
-		if (raw === null || raw === undefined) {
-			return { value: undefined, expired: false };
-		}
-
-		try {
-			const parsed = JSON.parse(raw as string) as { v: T; e: number | null };
-			if (parsed.v === undefined) {
-				// Not our envelope format — legacy data
-				return { value: raw as T, expired: false };
-			}
-
-			if (parsed.e !== null && Date.now() > parsed.e) {
-				return { value: undefined, expired: true };
-			}
-
-			return { value: parsed.v, expired: false };
-		} catch {
-			// Not valid JSON — legacy data, return as-is
-			return { value: raw as T, expired: false };
-		}
 	}
 }
 

@@ -2,8 +2,8 @@
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
-import { type KeyvEntry, KeyvEvents } from "../types/keyv.js";
-import { isDataExpired } from "../utils.js";
+import { KeyvEvents, type KeyvStorageEntry } from "../types/keyv.js";
+import { isDataExpired, ttlFromExpires } from "../utils.js";
 
 /**
  * Configuration options for KeyvBridgeAdapter.
@@ -129,10 +129,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the detected capabilities of the underlying store.
+	 * Gets the capabilities of the underlying store, with `expires: true` to declare that
+	 * the bridge accepts an absolute `expires` timestamp (which it converts to a ttl for the
+	 * wrapped legacy store).
 	 */
 	public get capabilities(): KeyvStorageCapability {
-		return this._capabilities;
+		return { ...this._capabilities, expires: true };
 	}
 
 	/**
@@ -255,15 +257,18 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stores a value in the store with an optional TTL.
+	 * Stores a value in the store with an optional absolute expiry.
+	 * The wrapped store's `set(key, value, ttl?)` expects a relative duration, so the
+	 * absolute `expires` is converted to a remaining ttl (`undefined` when already expired
+	 * or absent); expiry of stored values is still enforced via the embedded envelope on read.
 	 * @param key - The key to store the value under
 	 * @param value - The value to store
-	 * @param ttl - Optional time-to-live in milliseconds
+	 * @param expires - Optional absolute expiry as Unix ms since epoch
 	 * @returns Always returns true indicating success
 	 */
-	public async set(key: string, value: any, ttl?: number): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const result = await this._store.set(keyPrefix, value, ttl);
+		const result = await this._store.set(keyPrefix, value, ttlFromExpires(expires));
 		if (typeof result === "boolean") {
 			return result;
 		}
@@ -274,13 +279,14 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Stores multiple entries in the store at once.
 	 * Delegates to the store's native setMany if available, otherwise loops over set.
-	 * @param entries - Array of entries containing key, value, and optional TTL
+	 * @param entries - Array of entries containing key, value, and optional absolute `expires`
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (this._capabilities.methods.setMany.exists) {
 			const prefixedEntries = entries.map((entry) => ({
-				...entry,
 				key: this.getKeyPrefix(entry.key, this._namespace),
+				value: entry.value,
+				ttl: ttlFromExpires(entry.expires),
 			}));
 			await this._store.setMany?.(prefixedEntries);
 			return entries.map(() => true);
@@ -288,7 +294,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 
 		const results: boolean[] = [];
 		for (const entry of entries) {
-			await this.set(entry.key, entry.value, entry.ttl);
+			await this.set(entry.key, entry.value, entry.expires);
 			results.push(true);
 		}
 

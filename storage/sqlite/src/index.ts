@@ -1,5 +1,10 @@
 import { Hookified } from "hookified";
-import Keyv, { type KeyvEntry, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
+import Keyv, {
+	type KeyvStorageAdapter,
+	type KeyvStorageEntry,
+	type KeyvStorageGetResult,
+	keyvStorageCapability,
+} from "keyv";
 import { resolveDriver } from "./drivers/index.js";
 import type { SqliteDriver, SqliteDriverName } from "./drivers/types.js";
 import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
@@ -49,6 +54,11 @@ function escapeIdentifier(identifier: string): string {
  * ```
  */
 export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
+	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
 	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
 
@@ -505,23 +515,22 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Sets a key-value pair. Uses an upsert operation via `ON CONFLICT` to
-	 * insert a new entry or update an existing one atomically. Automatically
-	 * extracts the `expires` timestamp from the serialized value if present.
+	 * insert a new entry or update an existing one atomically.
 	 * @param {string} key - The key to set. If a namespace is set, the namespace prefix is stripped before storing.
-	 * @param {any} value - The value to store. May be a serialized JSON string containing an `expires` timestamp.
+	 * @param {any} value - The value to store.
+	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns {Promise<boolean>} `true` on success, or `false` if an error occurred (an `error` event is also emitted).
 	 */
 	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any): Promise<boolean> {
+	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		try {
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
-			const expires = this.getExpiresFromValue(value);
 			const upsert = `INSERT INTO ${this.getCleanTableName()} (key, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, strippedKey, value, ns, expires);
+			await this.query(upsert, strippedKey, value, ns, expires ?? null);
 			return true;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
@@ -536,11 +545,11 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * More efficient than calling {@link set} in a loop for bulk operations. Entries are batched
 	 * (249 per batch) to stay within SQLite's 999 bind-parameter limit; each batch is atomic.
 	 * @template Value - The type of the stored values.
-	 * @param {KeyvEntry<Value>[]} entries - An array of `{ key, value }` entry objects to store.
+	 * @param {KeyvStorageEntry<Value>[]} entries - An array of `{ key, value, expires? }` entry objects to store.
 	 * @returns {Promise<boolean[] | undefined>} An array of per-entry success booleans in input order.
 	 *   Entries in a failed batch are `false` (an `error` event is emitted for that batch).
 	 */
-	public async setMany<Value>(entries: KeyvEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
 			return entries.map(() => true);
 		}
@@ -557,11 +566,10 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			// biome-ignore lint/suspicious/noExplicitAny: type format
 			const params: any[] = [];
 
-			for (const { key, value } of batch) {
+			for (const { key, value, expires } of batch) {
 				const strippedKey = this.removeKeyPrefix(key);
-				const expires = this.getExpiresFromValue(value);
 				placeholders.push("(?, ?, ?, ?)");
-				params.push(strippedKey, value, ns, expires);
+				params.push(strippedKey, value, ns, expires ?? null);
 			}
 
 			const upsert = `INSERT INTO ${this.getCleanTableName()} (key, value, namespace, expires)
@@ -826,37 +834,6 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 */
 	private getNamespaceValue(): string {
 		return this._namespace ?? "";
-	}
-
-	/**
-	 * Extracts the `expires` timestamp from a serialized value.
-	 *
-	 * The Keyv core serializes data as JSON like `{"value":"...","expires":1234567890}`.
-	 * This method parses that JSON (or inspects the object directly if the value
-	 * is not a string) and returns the `expires` field if present.
-	 *
-	 * @param {any} value - The serialized value string or object to inspect.
-	 * @returns {number | null} The expires timestamp as a number, or `null` if not present or not parseable.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	private getExpiresFromValue(value: any): number | null {
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		let data: any;
-		if (typeof value === "string") {
-			try {
-				data = JSON.parse(value);
-			} catch {
-				return null;
-			}
-		} else {
-			data = value;
-		}
-
-		if (data && typeof data === "object" && typeof data.expires === "number") {
-			return data.expires;
-		}
-
-		return null;
 	}
 
 	/**

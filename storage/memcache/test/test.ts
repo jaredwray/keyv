@@ -90,17 +90,12 @@ describe("get", () => {
 		expect(await keyvMemcache.get(faker.string.uuid())).toBeUndefined();
 	});
 
-	test("handles legacy non-JSON data", async () => {
+	test("returns the raw value the server stores", async () => {
 		const key = faker.string.uuid();
-		// Write a raw string directly, bypassing the value envelope.
-		await keyvMemcache.client.set(keyvMemcache.formatKey(key), "raw-legacy");
-		expect(await keyvMemcache.get(key)).toBe("raw-legacy");
-	});
-
-	test("handles legacy JSON without the value envelope", async () => {
-		const key = faker.string.uuid();
-		const value = JSON.stringify({ foo: "bar" });
-		await keyvMemcache.client.set(keyvMemcache.formatKey(key), value);
+		const value = faker.lorem.word();
+		// The adapter stores the value verbatim, with no envelope wrapping.
+		await keyvMemcache.set(key, value);
+		expect(await keyvMemcache.client.get(keyvMemcache.formatKey(key))).toBe(value);
 		expect(await keyvMemcache.get(key)).toBe(value);
 	});
 });
@@ -286,15 +281,17 @@ describe("ttl and expiration", () => {
 
 	test("get returns undefined for a sub-second expired key", async () => {
 		const key = faker.string.uuid();
-		await keyvMemcache.set(key, faker.lorem.word(), 1);
-		await delay(50);
+		// Direct adapter set takes an absolute expiry (Unix ms). A 1s window is the
+		// smallest memcache exptime, so this evicts within ~1s.
+		await keyvMemcache.set(key, faker.lorem.word(), Date.now() + 1000);
+		await delay(1500);
 		expect(await keyvMemcache.get(key)).toBeUndefined();
 	});
 
 	test("has returns false for a sub-second expired key", async () => {
 		const key = faker.string.uuid();
-		await keyvMemcache.set(key, faker.lorem.word(), 1);
-		await delay(50);
+		await keyvMemcache.set(key, faker.lorem.word(), Date.now() + 1000);
+		await delay(1500);
 		expect(await keyvMemcache.has(key)).toBe(false);
 	});
 
@@ -437,4 +434,5 @@ const store = () => keyvMemcache;
 keyvApiTests(test, Keyv, store);
 keyvValueTests(test, Keyv, store);
 // Memcached does not support key enumeration, so the iterator suite is disabled.
-storageTestSuite(test, store, { iterator: false });
+// Memcached `exptime` has 1-second granularity, so use second-scale expiry deadlines.
+storageTestSuite(test, store, { iterator: false, ttlGranularity: "seconds" });
