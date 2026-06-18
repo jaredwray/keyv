@@ -35,6 +35,17 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 		t.expect(await s.get(key)).toBe(missingValue);
 	});
 
+	test("set(key, value, expires) with an already-elapsed deadline does not persist", async (t) => {
+		const s = store();
+		const key = faker.string.alphanumeric(10);
+		// An absolute expiry already in the past can reach an adapter via setRaw or write
+		// latency. The write must be accepted (not rejected, e.g. Redis `PX 0`) and the entry
+		// must not survive as a live, never-expiring value.
+		await s.set(key, faker.lorem.word(), expiresIn(-ttl));
+		await delay(expiryDelay);
+		t.expect(await s.get(key)).toBe(missingValue);
+	});
+
 	test("has(key) returns false for expired key", async (t) => {
 		const s = store();
 		const key = faker.string.alphanumeric(10);

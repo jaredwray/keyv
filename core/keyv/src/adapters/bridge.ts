@@ -286,9 +286,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Stores a value in the store with an optional absolute expiry.
-	 * The wrapped store's `set(key, value, ttl?)` expects a relative duration, so the
-	 * absolute `expires` is converted to a remaining ttl (`undefined` when already expired
-	 * or absent); expiry of stored values is still enforced via the embedded envelope on read.
+	 * The wrapped store's `set(key, value, ttl?)` expects a relative duration, so the absolute
+	 * `expires` is converted to a remaining ttl (`undefined` when already expired or absent).
+	 * The value is passed through unchanged — the bridge does not wrap it in an envelope — so
+	 * expiry is enforced by the wrapped legacy store's own ttl handling. (The read-side
+	 * {@link isDataExpired} check only fires when a caller stores a raw `{ value, expires }`
+	 * object directly; when Keyv core drives the bridge the value arrives already encoded.)
 	 * @param key - The key to store the value under
 	 * @param value - The value to store
 	 * @param expires - Optional absolute expiry as Unix ms since epoch
@@ -296,6 +299,15 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
+		// `ttlFromExpires` returns undefined for both "no expiry" and "already expired", so an
+		// elapsed deadline would otherwise be stored with no ttl and persist forever (the bridge
+		// embeds no envelope to expire it on read). Delete instead, so a past `expires` yields an
+		// absent key — consistent with how the native adapters treat an already-expired write.
+		if (typeof expires === "number" && expires <= Date.now()) {
+			await this._store.delete(keyPrefix);
+			return true;
+		}
+
 		const result = await this._store.set(keyPrefix, value, ttlFromExpires(expires));
 		if (typeof result === "boolean") {
 			return result;
@@ -311,12 +323,28 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (this._capabilities.methods.setMany.exists) {
-			const prefixedEntries = entries.map((entry) => ({
-				key: this.getKeyPrefix(entry.key, this._namespace),
-				value: entry.value,
-				ttl: ttlFromExpires(entry.expires),
-			}));
-			await this._store.setMany?.(prefixedEntries);
+			const now = Date.now();
+			const isExpired = (entry: KeyvStorageEntry<Value>) =>
+				typeof entry.expires === "number" && entry.expires <= now;
+			// Already-expired entries must not persist (see `set`); batch the live ones and
+			// delete the elapsed ones rather than writing them with no ttl.
+			const live = entries.filter((entry) => !isExpired(entry));
+			if (live.length > 0) {
+				await this._store.setMany?.(
+					live.map((entry) => ({
+						key: this.getKeyPrefix(entry.key, this._namespace),
+						value: entry.value,
+						ttl: ttlFromExpires(entry.expires),
+					})),
+				);
+			}
+
+			for (const entry of entries) {
+				if (isExpired(entry)) {
+					await this._store.delete(this.getKeyPrefix(entry.key, this._namespace));
+				}
+			}
+
 			return entries.map(() => true);
 		}
 

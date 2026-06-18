@@ -112,6 +112,33 @@ describe("set", () => {
 		setSpy.mockRestore();
 	});
 
+	test("should not send PX 0 on the PX fallback for an already-expired write", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		// Force the pre-6.2 fallback path; an absolute expiry already in the past must floor to
+		// PX >= 1, not PX 0 (which Redis rejects as an invalid expire time).
+		(keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported = false;
+		const setSpy = vi.spyOn(keyvRedis.client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		let didError = false;
+		try {
+			await keyvRedis.set(key, faker.lorem.word(), Date.now() - 1000);
+		} catch {
+			didError = true;
+		}
+		expect(didError).toBe(false);
+
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		const options = call?.[2] as Record<string, number>;
+		expect(options).toHaveProperty("PX");
+		expect(options.PX).toBeGreaterThanOrEqual(1);
+		// PX is floored to 1ms, so the key expires almost immediately rather than living forever.
+		await delay(50);
+		expect(await keyvRedis.get(key)).toBeUndefined();
+
+		setSpy.mockRestore();
+	});
+
 	test("should assume PXAT support when INFO omits the redis_version", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		const client = await keyvRedis.getClient();

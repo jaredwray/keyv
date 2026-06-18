@@ -400,7 +400,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @param usePxat - whether the server supports PXAT (from {@link supportsPxat})
 	 */
 	private expiryOptions(expires: number, usePxat: boolean): { PXAT: number } | { PX: number } {
-		return usePxat ? { PXAT: expires } : { PX: Math.max(0, expires - Date.now()) };
+		// Redis rejects `SET ... PX 0` ("invalid expire time"), so floor the relative fallback at
+		// 1ms for an already-elapsed deadline — the key is written and reaped almost immediately,
+		// matching how an absolute PXAT in the past behaves (and the memcache exptime floor).
+		return usePxat ? { PXAT: expires } : { PX: Math.max(1, expires - Date.now()) };
 	}
 
 	/**

@@ -202,6 +202,17 @@ describe("KeyvBridgeAdapter - TTL / Expiration", () => {
 		store._map.set(key3, { value: "permanent" });
 		expect(await bridge.get(key3)).toEqual({ value: "permanent" });
 	});
+
+	test("should delete rather than persist a write with an already-elapsed expires", async () => {
+		const store = createFullStore();
+		const bridge = new KeyvBridgeAdapter(store);
+		await bridge.set("k", "live");
+		expect(store._map.has("k")).toBe(true);
+		// An elapsed deadline must remove the key, not store it forever with no ttl.
+		expect(await bridge.set("k", "stale", Date.now() - 1000)).toBe(true);
+		expect(store._map.has("k")).toBe(false);
+		expect(await bridge.get("k")).toBeUndefined();
+	});
 });
 
 describe("KeyvBridgeAdapter - Fallback Methods (minimal store)", () => {
@@ -333,6 +344,35 @@ describe("KeyvBridgeAdapter - Native Delegation (full store)", () => {
 		expect(nsSetManySpy).toHaveBeenCalledWith([{ key: "ns:key1", value: "value1" }]);
 		await nsBridge.deleteMany(["key1", "key2"]);
 		expect(nsDeleteManySpy).toHaveBeenCalledWith(["ns:key1", "ns:key2"]);
+	});
+
+	test("setMany should batch only live entries and delete already-expired ones", async () => {
+		const store = createFullStore();
+		const setManySpy = vi.spyOn(store, "setMany");
+		const bridge = new KeyvBridgeAdapter(store);
+
+		// Seed a key that the expired entry in the batch should remove.
+		await bridge.set("gone", "old");
+		const result = await bridge.setMany([
+			{ key: "live", value: "v1", expires: Date.now() + 60_000 },
+			{ key: "gone", value: "v2", expires: Date.now() - 1000 },
+		]);
+		expect(result).toEqual([true, true]);
+		// Only the live entry is batched into the native setMany.
+		expect(setManySpy).toHaveBeenCalledWith([
+			{ key: "live", value: "v1", ttl: expect.any(Number) },
+		]);
+		expect(store._map.has("live")).toBe(true);
+		expect(store._map.has("gone")).toBe(false);
+
+		// An all-expired batch skips the native setMany entirely.
+		setManySpy.mockClear();
+		await bridge.set("p", "present");
+		expect(await bridge.setMany([{ key: "p", value: "x", expires: Date.now() - 1 }])).toEqual([
+			true,
+		]);
+		expect(setManySpy).not.toHaveBeenCalled();
+		expect(store._map.has("p")).toBe(false);
 	});
 });
 
