@@ -306,12 +306,15 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	// biome-ignore lint/suspicious/noExplicitAny: type format
 	public async set(key: string, value: any, expires?: number): Promise<boolean> {
 		try {
+			// etcd leases are second-granular, so round the duration UP. The lease is only a
+			// server-side GC backstop (precise expiry is enforced client-side via the stored
+			// `expires`); rounding up ensures the key is never reaped before its real deadline.
 			const leaseSec =
 				expires === undefined
 					? typeof this._ttl === "number"
-						? this._ttl / 1000
+						? Math.ceil(this._ttl / 1000)
 						: undefined
-					: Math.max((expires - Date.now()) / 1000, 1);
+					: Math.max(Math.ceil((expires - Date.now()) / 1000), 1);
 
 			const target =
 				leaseSec === undefined

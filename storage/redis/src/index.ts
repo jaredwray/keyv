@@ -371,7 +371,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		try {
 			key = this.createKeyPrefix(key, this._namespace);
 
-			if (expires !== undefined) {
+			if (typeof expires === "number") {
 				await client.set(key, value, { PXAT: expires });
 			} else {
 				await client.set(key, value);
@@ -422,7 +422,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 							entry: { key, value, expires },
 						} of slotEntries) {
 							const prefixedKey = this.createKeyPrefix(key, this._namespace);
-							if (expires !== undefined) {
+							if (typeof expires === "number") {
 								multi.set(prefixedKey, value as string, { PXAT: expires });
 							} else {
 								multi.set(prefixedKey, value as string);
@@ -440,7 +440,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				const multi = client.multi();
 				for (const { key, value, expires } of entries) {
 					const prefixedKey = this.createKeyPrefix(key, this._namespace);
-					if (expires !== undefined) {
+					if (typeof expires === "number") {
 						multi.set(prefixedKey, value as string, { PXAT: expires });
 					} else {
 						multi.set(prefixedKey, value as string);
