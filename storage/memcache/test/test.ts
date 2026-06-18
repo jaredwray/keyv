@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import { faker } from "@faker-js/faker";
 import { delay, keyvApiTests, keyvValueTests, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvMemcache, { createKeyv } from "../src/index.js";
 
 // Handle all the tests with listeners.
@@ -159,6 +159,23 @@ describe("set and setMany", () => {
 		await delay(2000);
 
 		expect(await keyv.get(key1)).toBeUndefined();
+	});
+
+	test("encodes a far-future expires as an absolute exptime (>30 day rule)", async () => {
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+		// memcached treats exptime > 2,592,000s as an absolute Unix timestamp in seconds, so an
+		// expiry more than 30 days out must be sent as Math.ceil(expires / 1000), not a relative delta.
+		const expires = Date.now() + 40 * 24 * 60 * 60 * 1000; // 40 days from now
+		const setSpy = vi.spyOn(keyvMemcache.client, "set");
+
+		await keyvMemcache.set(key, value, expires);
+
+		const call = setSpy.mock.calls.find((c) => c[0] === keyvMemcache.formatKey(key));
+		expect(call?.[2]).toBe(Math.ceil(expires / 1000));
+		expect(await keyvMemcache.get(key)).toBe(value);
+
+		setSpy.mockRestore();
 	});
 });
 

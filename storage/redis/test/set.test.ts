@@ -112,6 +112,45 @@ describe("set", () => {
 		setSpy.mockRestore();
 	});
 
+	test("should assume PXAT support when INFO omits the redis_version", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		const client = await keyvRedis.getClient();
+		// INFO without a redis_version line → detection can't parse a version, defaults to PXAT.
+		const infoSpy = vi
+			.spyOn(client, "info")
+			.mockResolvedValue("# Server\r\nredis_mode:standalone\r\n");
+		const setSpy = vi.spyOn(client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		await keyvRedis.set(key, faker.lorem.word(), Date.now() + 1000);
+
+		expect((keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported).toBe(true);
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		expect(call?.[2] as Record<string, number>).toHaveProperty("PXAT");
+
+		infoSpy.mockRestore();
+		setSpy.mockRestore();
+		await keyvRedis.disconnect();
+	});
+
+	test("should assume PXAT support when INFO throws", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		const client = await keyvRedis.getClient();
+		const infoSpy = vi.spyOn(client, "info").mockRejectedValue(new Error("INFO unavailable"));
+		const setSpy = vi.spyOn(client, "set");
+
+		const key = faker.string.alphanumeric(10);
+		await keyvRedis.set(key, faker.lorem.word(), Date.now() + 1000);
+
+		expect((keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported).toBe(true);
+		const call = setSpy.mock.calls.find((c) => c[0] === key);
+		expect(call?.[2] as Record<string, number>).toHaveProperty("PXAT");
+
+		infoSpy.mockRestore();
+		setSpy.mockRestore();
+		await keyvRedis.disconnect();
+	});
+
 	test("should throw on redis client set error when throwOnErrors is true", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 

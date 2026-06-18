@@ -63,7 +63,11 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 		this.namespace = allOptions.namespace;
 
 		const { namespace: _namespace, ...memcacheOptions } = allOptions;
-		this.client = new Memcache(memcacheOptions);
+		// The memcache client rejects any exptime above `maxExpiration` (default 30 days). Since
+		// `set` converts a far-future absolute `expires` into a memcached absolute Unix-timestamp
+		// exptime (the >30-day rule), raise the ceiling to the 32-bit wire maximum (~year 2106) so
+		// those writes are permitted instead of throwing. A user-supplied value still wins.
+		this.client = new Memcache({ maxExpiration: 4_294_967_295, ...memcacheOptions });
 
 		// Surface asynchronous client errors (connection drops, timeouts, retry exhaustion)
 		// to listeners on the adapter. The client emits `(nodeId, error)`, so pick the Error,

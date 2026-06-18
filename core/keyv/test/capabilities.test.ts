@@ -5,6 +5,7 @@ import {
 	detectKeyvEncryption,
 	detectKeyvSerialization,
 	detectKeyvStorage,
+	keyvStorageCapability,
 } from "../src/capabilities.js";
 import { Keyv } from "../src/index.js";
 
@@ -262,6 +263,31 @@ describe("capabilities", () => {
 			expect(result.methods.set.methodType).toBe("sync");
 			expect(result.methods.delete.methodType).toBe("async");
 			expect(result.methods.clear.methodType).toBe("sync");
+		});
+	});
+
+	describe("keyvStorageCapability", () => {
+		test("should return detected methods with the v6 expires contract flag", () => {
+			const adapter = {
+				get: async () => {},
+				set: async () => {},
+				delete: async () => {},
+				clear: async () => {},
+				has: async () => true,
+				getMany: async () => [],
+				setMany: async () => {},
+				deleteMany: async () => true,
+				hasMany: async () => [],
+				disconnect: async () => {},
+				iterator: async function* () {
+					yield ["key", "value"];
+				},
+			};
+			const result = keyvStorageCapability(adapter);
+			expect(result.expires).toBe(true);
+			expect(result.store).toBe("keyvStorage");
+			expect(result.methods.get.exists).toBe(true);
+			expect(result.methods.set.exists).toBe(true);
 		});
 	});
 
