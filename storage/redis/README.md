@@ -11,7 +11,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 # Features
 * Built on top of [@redis/client](https://npmjs.com/package/@redis/client).
-* TTL is handled directly by Redis.
+* TTL is handled directly by Redis via absolute `PXAT` expiry, with an automatic relative `PX` fallback for servers older than 6.2 (see [Expiration and TTL](#expiration-and-ttl)).
 * Supports Redis Clusters.
 * Url connection string support or pass in your Redis Options
 * Easily add in your own Redis client.
@@ -32,6 +32,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Fixing Double Prefixing of Keys](#fixing-double-prefixing-of-keys)
 * [Using Generic Types](#using-generic-types)
 * [Performance Considerations](#performance-considerations)
+* [Expiration and TTL](#expiration-and-ttl)
 * [High Memory Usage on Redis Server](#high-memory-usage-on-redis-server)
 * [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts)
 * [Using Cacheable with Redis](#using-cacheable-with-redis)
@@ -312,6 +313,21 @@ With namespaces being prefix based it is critical to understand some of the perf
 * `setMany`, `getMany`, `deleteMany` - These methods are more efficient than their singular counterparts. These will be used by default in the `Keyv` library such as when using `keyv.delete(string[])` it will use `deleteMany()`.
 
 If you want to see even better performance please see the [Using Cacheable with Redis](#using-cacheable-with-redis) section as it has non-blocking and in-memory primary caching that goes along well with this library and Keyv.
+
+# Expiration and TTL
+
+Keyv hands this adapter an **absolute** expiry — a Unix timestamp in milliseconds — computed once on the Keyv host. The adapter writes it to Redis with `SET ... PXAT`, the absolute-expiry option. Because the deadline is absolute, it is immune to clock skew and to any latency between Keyv computing the expiry and Redis receiving the command: a key set to expire at `T` expires at `T` no matter how long the write takes to arrive.
+
+`PXAT` was added in **Redis 6.2**. For older servers the adapter automatically falls back to the relative `PX` option (the remaining lifetime in milliseconds):
+
+* On the **first** expiring write, the adapter runs `INFO server` once, parses `redis_version`, and caches whether the server is 6.2+. Every later write reuses that cached answer, so detection costs one `INFO` round-trip per connection, not per write.
+* **6.2 or newer** → the write uses `PXAT: expires` (absolute).
+* **Older than 6.2** → the write uses `PX: max(0, expires - Date.now())` (relative, computed at write time). An expiry already in the past becomes `PX: 0`.
+* If the version **cannot be determined** — for example a cluster where `INFO` isn't directly available, or a transient error reading it — the adapter assumes `PXAT` is supported, since such deployments are overwhelmingly modern. The cached result means it won't keep retrying `INFO` on every write.
+
+The same detection and fallback apply to `setMany`, including the per-hash-slot grouping used in cluster mode. No configuration is required; you always call `keyv.set(key, value, ttl)` with a relative millisecond `ttl` (or rely on the `ttl` option) and the adapter chooses the correct Redis option for your server.
+
+The relative `PX` fallback re-derives the remaining lifetime store-side, so on pre-6.2 servers a large write-to-Redis latency could in theory shorten the effective TTL by that latency. On 6.2+ (`PXAT`) there is no such window. If you need the skew-immune absolute behaviour, run Redis 6.2 or later.
 
 # High Memory Usage on Redis Server
 
