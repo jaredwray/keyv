@@ -36,6 +36,7 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [.clear()](#clear)
   - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
+- [Expiration and TTL](#expiration-and-ttl)
 - [Clustering](#clustering)
 - [License](#license)
 
@@ -309,6 +310,12 @@ Disconnects from the Valkey server.
 ```js
 await store.disconnect();
 ```
+
+## Expiration and TTL
+
+Keyv hands this adapter an **absolute** expiry — a Unix timestamp in milliseconds — computed once on the Keyv host. The adapter writes it with `SET ... PXAT`, the absolute-expiry option, so the deadline is immune to clock skew and to any latency between Keyv computing the expiry and Valkey receiving the command. The same applies to `setMany`, including the per-hash-slot grouping used in cluster mode.
+
+Unlike the [Redis adapter](https://github.com/jaredwray/keyv/tree/main/storage/redis#expiration-and-ttl), there is **no relative `PX` fallback** and none is needed: `PXAT` was added in Redis 6.2, and every Valkey release is forked from Redis 7.2+, so absolute expiry is always available. You always call `keyv.set(key, value, ttl)` with a relative millisecond `ttl` (or rely on the `ttl` option); the adapter converts it to the absolute `PXAT` deadline for you.
 
 ## Clustering
 
