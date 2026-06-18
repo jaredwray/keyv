@@ -439,7 +439,7 @@ class MyAdapter {
 
 A v6 adapter declares `capabilities.expires === true` (the `keyvStorageCapability(this)` helper sets it for you). Keyv then passes the absolute `expires` to it directly — this takes precedence over structural detection, so an adapter whose methods aren't written with `async` is still used directly rather than bridged. Any **legacy** storage adapter that does *not* declare `capabilities.expires` is treated as a relative-TTL adapter and transparently wrapped by [`KeyvBridgeAdapter`](#built-in-adapters-memory-and-bridge), which converts the absolute `expires` back to a relative TTL before delegating (and deletes outright when the deadline has already elapsed) — so existing third-party adapters keep working unchanged. Stores that expose absolute-expiry primitives (e.g. Redis `PXAT`) use `expires` directly. Map-like stores wrapped via `new Keyv({ store: new Map() })` are unaffected.
 
-> **Adapters are the expiry authority.** Declaring `capabilities.expires === true` is a two-way contract: because Keyv core does not filter expired reads by default (`checkExpired` is off), a v6 adapter must enforce expiry itself — `get`/`getMany`/`has` must not return a key past its deadline, whether via a native mechanism (key expiry, TTL index, lease) or a client-side check. Run `@keyv/test-suite`'s `storageTtlTests` against your adapter to verify it.
+> **Adapters should enforce expiry — and Keyv double-checks by default.** Declaring `capabilities.expires === true` means a v6 adapter should enforce expiry itself — ideally via a native mechanism (key expiry, TTL index, lease) so the backend reclaims space, and/or a client-side check on read. On top of that, Keyv core filters expired reads at its own layer by default ([`checkExpired`](#checkexpired) is `true`), using the absolute `expires` in the serialized envelope, so `get`/`getMany`/`has` never surface a key past its deadline even on backends whose native expiry is coarse or lazily swept (e.g. Memcached, DynamoDB). Run `@keyv/test-suite`'s `storageTtlTests` against your adapter to verify its own expiry behaviour.
 
 # Built-in Adapters: Memory and Bridge
 
@@ -822,9 +822,9 @@ Encryption adapter used to encrypt and decrypt stored values. See [Encryption](#
 ## options.checkExpired
 
 Type: `Boolean`<br />
-Default: `false`
+Default: `true`
 
-When `true`, Keyv checks expiry at its own layer on `get`/`getMany`/`has`/`hasMany` instead of trusting the storage adapter. See [.checkExpired](#checkexpired) for details.
+When `true` (default), Keyv checks expiry at its own layer on `get`/`getMany`/`has`/`hasMany` in addition to the storage adapter. Set to `false` to trust the storage adapter alone. See [.checkExpired](#checkexpired) for details.
 
 # Keyv Instance
 
@@ -1062,13 +1062,20 @@ console.log(keyv.encryption); // the encryption adapter
 ## .checkExpired
 
 Type: `Boolean`<br />
-Default: `false`
+Default: `true`
 
-A read-only property (configured via the `checkExpired` constructor option). When `true`, Keyv checks expiry at its own layer on `get`, `getMany`, `has`, and `hasMany`, deleting any expired entries it encounters. When `false` (default) it trusts the storage adapter to handle expiry.
+A read-only property (configured via the `checkExpired` constructor option). When `true` (the default), Keyv checks expiry at its own layer on `get`, `getMany`, `has`, and `hasMany`, deleting any expired entries it encounters. It does this using the absolute `expires` stored in the serialized envelope, so reads stay **millisecond-precise regardless of the adapter**.
+
+This defaults to `true` because some backends can return entries that are already logically expired: Memcached's `exptime` is **second-granular** (a value can linger up to ~1s past a sub-second deadline), and DynamoDB's native TTL is a **background sweep that can lag by hours** before it deletes expired items. Trusting the backend alone would surface those stale reads; the Keyv-layer check closes that gap.
+
+Set it to `false` to trust the storage adapter to handle expiry on its own. That skips the extra decode + expiry check on every read (and lets `has`/`hasMany` use the adapter's native existence check), at the cost of backend-granularity expiry.
 
 ```js
-const keyv = new Keyv({ checkExpired: true });
-console.log(keyv.checkExpired); // true
+const keyv = new Keyv();
+console.log(keyv.checkExpired); // true (default)
+
+const trusting = new Keyv({ checkExpired: false });
+console.log(trusting.checkExpired); // false
 ```
 
 ## .throwOnErrors

@@ -75,7 +75,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		this.setTtl(mergedOptions.ttl);
-		this._checkExpired = mergedOptions.checkExpired ?? false;
+		this._checkExpired = mergedOptions.checkExpired ?? true;
 	}
 
 	// --- Properties ---
@@ -124,8 +124,10 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * When true, Keyv checks expiry at its layer on get/getMany/has/hasMany.
+	 * Defaults to true so reads stay millisecond-precise even on adapters whose
+	 * native expiry is coarse or lazily swept (e.g. Memcached, DynamoDB).
 	 */
-	private _checkExpired = false;
+	private _checkExpired = true;
 
 	/**
 	 * Get the current storage adapter.
@@ -288,7 +290,8 @@ export class Keyv<GenericValue = any> extends Hookified {
 
 	/**
 	 * Get whether Keyv checks expiry at its own layer on get/getMany/has/hasMany.
-	 * When false (default), it trusts the storage adapter to handle expiry.
+	 * When true (default), expired entries are filtered (and deleted) by Keyv regardless of
+	 * the adapter. Set to false to trust the storage adapter to handle expiry on its own.
 	 * @returns {boolean} `true` if Keyv checks expiry at its layer.
 	 */
 	public get checkExpired(): boolean {

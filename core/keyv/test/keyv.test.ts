@@ -343,20 +343,22 @@ describe("has", () => {
 
 	test("should delegate to store.has when store is not KeyvMemoryAdapter", async () => {
 		const store = createStore();
-		const keyv = new Keyv({ store });
+		// checkExpired off so has() uses the adapter's native has() rather than the get() path.
+		const keyv = new Keyv({ store, checkExpired: false });
 		await keyv.set("foo", "bar");
 		expect(await keyv.has("foo")).toBe(true);
 		expect(await keyv.has("nonexistent")).toBe(false);
 	});
 
 	test("should handle error on store has and hasMany", async () => {
-		const keyv = new Keyv({ store: new Map() });
+		// checkExpired off so has()/hasMany() exercise the native store.has/hasMany error path.
+		const keyv = new Keyv({ store: new Map(), checkExpired: false });
 		keyv.store.has = vi.fn().mockRejectedValue(new Error("store has error"));
 		const errorHandler = vi.fn();
 		keyv.on("error", errorHandler);
 		expect(await keyv.has("foo")).toBe(false);
 
-		const keyv2 = new Keyv({ store: new Map() });
+		const keyv2 = new Keyv({ store: new Map(), checkExpired: false });
 		keyv2.store.hasMany = vi.fn().mockRejectedValue(new Error("store hasMany error"));
 		const errorHandler2 = vi.fn();
 		keyv2.on("error", errorHandler2);
@@ -648,9 +650,9 @@ describe("iterator", () => {
 });
 
 describe("checkExpired", () => {
-	test("checkExpired getter defaults to false and can be set to true", () => {
-		expect(new Keyv().checkExpired).toBe(false);
-		expect(new Keyv({ checkExpired: true }).checkExpired).toBe(true);
+	test("checkExpired getter defaults to true and can be set to false", () => {
+		expect(new Keyv().checkExpired).toBe(true);
+		expect(new Keyv({ checkExpired: false }).checkExpired).toBe(false);
 	});
 
 	test("get/getMany/getRaw/getManyRaw return undefined for expired keys", async () => {

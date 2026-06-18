@@ -407,14 +407,15 @@ describe("clearExpired", () => {
 			stringify: (data: unknown) => `RAW:${JSON.stringify(data)}`,
 			parse: <T>(data: string): T => JSON.parse(String(data).slice(4)) as T,
 		};
-		const keyv = new Keyv({ store, serialization });
+		// Opt out of Keyv-layer expiry so this test isolates the store's own expires column.
+		const keyv = new Keyv({ store, serialization, checkExpired: false });
 		const key = faker.string.uuid();
 		await keyv.set(key, "value", 100);
 		expect(await keyv.get(key)).toBe("value");
 		await new Promise((resolve) => {
 			setTimeout(resolve, 200);
 		});
-		// checkExpired defaults to false, so expiry is driven by the store's expires column.
+		// With checkExpired off, expiry is driven entirely by the store's expires column.
 		expect(await keyv.get(key)).toBeUndefined();
 		await store.clearExpired();
 		expect(await store.has(key)).toBe(false);
