@@ -695,6 +695,48 @@ describe("checkExpired", () => {
 	});
 });
 
+describe("checkExpired: false (trust the adapter)", () => {
+	// With checkExpired off, get/getMany/getRaw/getManyRaw take the non-decodeWithExpire path
+	// that simply deserializes the stored value and trusts the adapter for expiry.
+	test("get and getRaw decode the stored value without the expiry check", async () => {
+		const keyv = new Keyv({ checkExpired: false });
+		await keyv.set("foo", "bar");
+
+		expect(await keyv.get("foo")).toBe("bar");
+		expect(await keyv.get("missing")).toBeUndefined();
+
+		expect(await keyv.getRaw("foo")).toMatchObject({ value: "bar" });
+		expect(await keyv.getRaw("missing")).toBeUndefined();
+	});
+
+	test("getMany and getManyRaw decode without the expiry check", async () => {
+		const keyv = new Keyv({ checkExpired: false });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2");
+
+		expect(await keyv.getMany(["a", "b", "missing"])).toEqual(["1", "2", undefined]);
+
+		const raw = await keyv.getManyRaw(["a", "missing"]);
+		expect(raw[0]).toMatchObject({ value: "1" });
+		expect(raw[1]).toBeUndefined();
+	});
+
+	test("passes raw object values through when serialization is disabled", async () => {
+		// serialization:false stores the { value, expires } envelope as a raw object, so the
+		// non-string branch of the decode path is exercised.
+		const keyv = new Keyv({ checkExpired: false, serialization: false });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2");
+
+		expect(await keyv.get("a")).toBe("1");
+		expect(await keyv.getMany(["a", "b", "missing"])).toEqual(["1", "2", undefined]);
+
+		const raw = await keyv.getManyRaw(["a", "missing"]);
+		expect(raw[0]).toMatchObject({ value: "1" });
+		expect(raw[1]).toBeUndefined();
+	});
+});
+
 describe("throwErrors", () => {
 	const throwingStore = new Map();
 	throwingStore.get = () => {
