@@ -219,9 +219,13 @@ export type KeyvOptions = {
 	 */
 	encryption?: KeyvEncryptionAdapter;
 	/**
-	 * When true, Keyv checks expiry on get/getMany/has/hasMany at its layer.
-	 * When false (default), trusts the storage adapter to handle expiry.
-	 * @default false
+	 * When true (default), Keyv checks expiry on get/getMany/has/hasMany at its own layer,
+	 * filtering (and deleting) expired entries using the absolute `expires` stored in the
+	 * serialized envelope. This keeps reads millisecond-precise even on adapters whose native
+	 * expiry is coarse or lazily swept (e.g. Memcached's second-granular exptime, DynamoDB's
+	 * background TTL sweep that can lag for hours). Set to false to trust the storage adapter
+	 * to handle expiry on its own (skips the extra decode + expiry check on reads).
+	 * @default true
 	 */
 	checkExpired?: boolean;
 };

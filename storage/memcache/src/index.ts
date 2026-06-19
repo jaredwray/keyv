@@ -135,8 +135,8 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 			const raw = await this.client.get(this.formatKey(key));
 			// Expiry is enforced server-side by the exptime set on write. memcached's exptime is
 			// second-granular, so a value may be returned up to ~1s past a sub-second/just-elapsed
-			// deadline; enable Keyv's `checkExpired` for millisecond-precise expiry. null/undefined
-			// is a cache miss.
+			// deadline; Keyv's `checkExpired` (on by default) re-filters for millisecond-precise
+			// expiry. null/undefined is a cache miss.
 			return (raw ?? undefined) as KeyvStorageGetResult<Value>;
 		} catch (error) {
 			this.emit("error", error);

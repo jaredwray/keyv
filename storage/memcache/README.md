@@ -68,10 +68,10 @@ This package does not support compression. If you need compression, please use t
 
 ## Expiration Granularity
 
-Expiry is enforced server-side by Memcached's `exptime`, which is **second-granular**. TTLs are accepted in milliseconds and rounded up to whole seconds, so a value can be returned for up to ~1 second past a sub-second (or just-elapsed) deadline before Memcached evicts it. Keyv does not filter expired reads by default (`checkExpired` defaults to `false`, trusting the store). If you need millisecond-precise expiry on Memcached, enable it on the Keyv instance:
+Expiry is enforced server-side by Memcached's `exptime`, which is **second-granular**. TTLs are accepted in milliseconds and rounded up to whole seconds, so Memcached itself can return a value for up to ~1 second past a sub-second (or just-elapsed) deadline before it evicts it. Keyv filters expired reads at its own layer by default (`checkExpired` defaults to `true`), using the absolute `expires` stored with the value, so reads are millisecond-precise out of the box even though Memcached's eviction is coarser. If you prefer to trust Memcached's `exptime` alone (and skip the extra decode on reads), opt out:
 
 ```js
-const keyv = new Keyv({ store: new KeyvMemcache('localhost:11211'), checkExpired: true });
+const keyv = new Keyv({ store: new KeyvMemcache('localhost:11211'), checkExpired: false });
 ```
 
 ## Quick Start with createKeyv

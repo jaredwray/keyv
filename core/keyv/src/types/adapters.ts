@@ -50,9 +50,11 @@ export type KeyvStorageAdapter = {
 	 * on `set`/`setMany`. Full storage adapters that omit it are treated as legacy relative-`ttl`
 	 * adapters and wrapped by `KeyvBridgeAdapter`, which converts `expires` back to a ttl.
 	 *
-	 * Declaring `expires: true` also obliges the adapter to enforce expiry on read: Keyv core
-	 * does not filter expired entries by default, so `get`/`getMany`/`has` must not return a key
-	 * past its deadline. See {@link KeyvStorageCapability.expires}.
+	 * Declaring `expires: true` means the adapter should enforce expiry on read so `get`/`getMany`/
+	 * `has` do not return a key past its deadline (ideally backed by a native mechanism that also
+	 * reclaims space). Keyv core additionally filters expired reads by default (`checkExpired` is
+	 * on), as a safety net for backends with coarse or lazily-swept native expiry. See
+	 * {@link KeyvStorageCapability.expires}.
 	 */
 	capabilities?: KeyvStorageCapability;
 	/** Retrieves a value by key. */

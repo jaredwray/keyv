@@ -343,20 +343,22 @@ describe("has", () => {
 
 	test("should delegate to store.has when store is not KeyvMemoryAdapter", async () => {
 		const store = createStore();
-		const keyv = new Keyv({ store });
+		// checkExpired off so has() uses the adapter's native has() rather than the get() path.
+		const keyv = new Keyv({ store, checkExpired: false });
 		await keyv.set("foo", "bar");
 		expect(await keyv.has("foo")).toBe(true);
 		expect(await keyv.has("nonexistent")).toBe(false);
 	});
 
 	test("should handle error on store has and hasMany", async () => {
-		const keyv = new Keyv({ store: new Map() });
+		// checkExpired off so has()/hasMany() exercise the native store.has/hasMany error path.
+		const keyv = new Keyv({ store: new Map(), checkExpired: false });
 		keyv.store.has = vi.fn().mockRejectedValue(new Error("store has error"));
 		const errorHandler = vi.fn();
 		keyv.on("error", errorHandler);
 		expect(await keyv.has("foo")).toBe(false);
 
-		const keyv2 = new Keyv({ store: new Map() });
+		const keyv2 = new Keyv({ store: new Map(), checkExpired: false });
 		keyv2.store.hasMany = vi.fn().mockRejectedValue(new Error("store hasMany error"));
 		const errorHandler2 = vi.fn();
 		keyv2.on("error", errorHandler2);
@@ -648,9 +650,9 @@ describe("iterator", () => {
 });
 
 describe("checkExpired", () => {
-	test("checkExpired getter defaults to false and can be set to true", () => {
-		expect(new Keyv().checkExpired).toBe(false);
-		expect(new Keyv({ checkExpired: true }).checkExpired).toBe(true);
+	test("checkExpired getter defaults to true and can be set to false", () => {
+		expect(new Keyv().checkExpired).toBe(true);
+		expect(new Keyv({ checkExpired: false }).checkExpired).toBe(false);
 	});
 
 	test("get/getMany/getRaw/getManyRaw return undefined for expired keys", async () => {
@@ -690,6 +692,48 @@ describe("checkExpired", () => {
 		await keyv.set("baz", "qux");
 		await delay(10);
 		expect(await keyv.has(["exp2", "baz"])).toEqual([false, true]);
+	});
+});
+
+describe("checkExpired: false (trust the adapter)", () => {
+	// With checkExpired off, get/getMany/getRaw/getManyRaw take the non-decodeWithExpire path
+	// that simply deserializes the stored value and trusts the adapter for expiry.
+	test("get and getRaw decode the stored value without the expiry check", async () => {
+		const keyv = new Keyv({ checkExpired: false });
+		await keyv.set("foo", "bar");
+
+		expect(await keyv.get("foo")).toBe("bar");
+		expect(await keyv.get("missing")).toBeUndefined();
+
+		expect(await keyv.getRaw("foo")).toMatchObject({ value: "bar" });
+		expect(await keyv.getRaw("missing")).toBeUndefined();
+	});
+
+	test("getMany and getManyRaw decode without the expiry check", async () => {
+		const keyv = new Keyv({ checkExpired: false });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2");
+
+		expect(await keyv.getMany(["a", "b", "missing"])).toEqual(["1", "2", undefined]);
+
+		const raw = await keyv.getManyRaw(["a", "missing"]);
+		expect(raw[0]).toMatchObject({ value: "1" });
+		expect(raw[1]).toBeUndefined();
+	});
+
+	test("passes raw object values through when serialization is disabled", async () => {
+		// serialization:false stores the { value, expires } envelope as a raw object, so the
+		// non-string branch of the decode path is exercised.
+		const keyv = new Keyv({ checkExpired: false, serialization: false });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2");
+
+		expect(await keyv.get("a")).toBe("1");
+		expect(await keyv.getMany(["a", "b", "missing"])).toEqual(["1", "2", undefined]);
+
+		const raw = await keyv.getManyRaw(["a", "missing"]);
+		expect(raw[0]).toMatchObject({ value: "1" });
+		expect(raw[1]).toBeUndefined();
 	});
 });
 
@@ -1049,5 +1093,44 @@ describe("storage adapter expiry negotiation", () => {
 		const raw = await keyv.getManyRaw(["a", "c"]);
 		expect(raw[0]).toMatchObject({ value: "1" });
 		expect(raw[1]).toBeUndefined();
+	});
+
+	test("hasMany/has(array) fall back to single gets when a directly-used adapter lacks getMany (checkExpired default)", async () => {
+		const map = new Map<string, unknown>();
+		const adapter = {
+			capabilities: { expires: true },
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+				return true;
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+			async has(key: string) {
+				return map.has(key);
+			},
+			async deleteMany(keys: string[]) {
+				return keys.map((key) => map.delete(key));
+			},
+			on() {},
+			// intentionally no getMany/hasMany — checkExpired defaults to true, so hasMany() takes
+			// the getMany path and must fall back to single gets rather than returning all-false.
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		const keyv = new Keyv({ store: adapter as any });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2", 1);
+		await delay(10);
+
+		// "b" is expired, "c" never existed; "a" is live.
+		expect(await keyv.hasMany(["a", "b", "c"])).toEqual([true, false, false]);
+		// has() with an array delegates to hasMany().
+		expect(await keyv.has(["a", "c"])).toEqual([true, false]);
 	});
 });
