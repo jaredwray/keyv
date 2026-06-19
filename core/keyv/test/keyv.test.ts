@@ -1052,4 +1052,43 @@ describe("storage adapter expiry negotiation", () => {
 		expect(raw[0]).toMatchObject({ value: "1" });
 		expect(raw[1]).toBeUndefined();
 	});
+
+	test("hasMany/has(array) fall back to single gets when a directly-used adapter lacks getMany (checkExpired default)", async () => {
+		const map = new Map<string, unknown>();
+		const adapter = {
+			capabilities: { expires: true },
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+				return true;
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+			async has(key: string) {
+				return map.has(key);
+			},
+			async deleteMany(keys: string[]) {
+				return keys.map((key) => map.delete(key));
+			},
+			on() {},
+			// intentionally no getMany/hasMany — checkExpired defaults to true, so hasMany() takes
+			// the getMany path and must fall back to single gets rather than returning all-false.
+		};
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		const keyv = new Keyv({ store: adapter as any });
+		await keyv.set("a", "1");
+		await keyv.set("b", "2", 1);
+		await delay(10);
+
+		// "b" is expired, "c" never existed; "a" is live.
+		expect(await keyv.hasMany(["a", "b", "c"])).toEqual([true, false, false]);
+		// has() with an array delegates to hasMany().
+		expect(await keyv.has(["a", "c"])).toEqual([true, false]);
+	});
 });

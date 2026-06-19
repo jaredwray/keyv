@@ -957,7 +957,9 @@ export class Keyv<GenericValue = any> extends Hookified {
 		let results: boolean[] = [];
 		try {
 			if (this._checkExpired) {
-				const rawData = await this._store.getMany(keys);
+				// Use storeGetMany (not this._store.getMany directly): a directly-used v6 adapter is
+				// not structurally required to implement getMany, and this branch is now the default.
+				const rawData = await this.storeGetMany(keys);
 				const deserialized = await this.decodeWithExpire(keys, rawData as unknown[]);
 				results = deserialized.map((row) => row !== undefined);
 			} else {
