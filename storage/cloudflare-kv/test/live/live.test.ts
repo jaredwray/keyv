@@ -41,6 +41,22 @@ describe.skipIf(!hasCredentials)("Cloudflare KV live integration (REST)", () => 
 		expect(await store.has(key)).toBe(false);
 	});
 
+	it("handles batch set, get, has, and delete", async () => {
+		const key1 = faker.string.uuid();
+		const key2 = faker.string.uuid();
+		const missing = faker.string.uuid();
+
+		expect(
+			await store.setMany([
+				{ key: key1, value: "one" },
+				{ key: key2, value: "two" },
+			]),
+		).toEqual([true, true]);
+		expect(await store.getMany([key1, key2, missing])).toEqual(["one", "two", undefined]);
+		expect(await store.hasMany([key1, key2, missing])).toEqual([true, true, false]);
+		expect(await store.deleteMany([key1, key2])).toEqual([true, true]);
+	});
+
 	it("stores a value with a TTL and serves it before expiry", async () => {
 		const key = faker.string.uuid();
 		const value = faker.lorem.word();
