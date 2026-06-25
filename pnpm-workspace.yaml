@@ -9,7 +9,9 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   msgpackr-extract: true
+  sharp: false
   sqlite3: true
+  workerd: true
 # 4 days minimum release age
 minimumReleaseAge: 5760
 # keep @types/node within the Node major from .nvmrc across all packages,

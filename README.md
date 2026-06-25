@@ -56,7 +56,7 @@ compression/      Compression adapters
   compress-lz4/
 storage/          Storage adapters
   redis/  postgres/  mysql/  mongo/  sqlite/
-  memcache/  etcd/  valkey/  dynamo/
+  memcache/  etcd/  valkey/  dynamo/  cloudflare-kv/
 website/          Documentation website (keyv.org)
 ```
 
@@ -67,6 +67,7 @@ website/          Documentation website (keyv.org)
 * [bigmap](https://github.com/jaredwray/keyv/tree/main/core/bigmap) - Scalable in-memory Map
 
 ## Storage Adapters
+* [cloudflare-kv](https://github.com/jaredwray/keyv/tree/main/storage/cloudflare-kv) - Cloudflare Workers KV storage adapter
 * [dynamo](https://github.com/jaredwray/keyv/tree/main/storage/dynamo) - DynamoDB storage adapter
 * [etcd](https://github.com/jaredwray/keyv/tree/main/storage/etcd) - Etcd storage adapter
 * [memcache](https://github.com/jaredwray/keyv/tree/main/storage/memcache) - Memcache storage adapter
