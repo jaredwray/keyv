@@ -245,8 +245,8 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Stores a value in Cloudflare KV. The value is wrapped in a JSON envelope together with its
-	 * absolute expiry. For TTLs of at least 60 seconds, a native KV `expiration` is also set so KV
-	 * reclaims the entry on its own.
+	 * absolute expiry. For TTLs longer than 60 seconds, a native KV `expirationTtl` is also set so KV
+	 * reclaims the entry on its own; shorter TTLs rely solely on the client-side expiry check.
 	 * @param key - The key to store
 	 * @param value - The value to store
 	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
@@ -258,9 +258,16 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 			const putOptions: CloudflareKVPutOptions = {};
 
 			if (typeof expires === "number") {
-				const ttlSeconds = Math.ceil((expires - Date.now()) / 1000);
-				if (ttlSeconds >= this._minimumNativeExpirationSeconds) {
-					putOptions.expiration = Math.ceil(expires / 1000);
+				// Cloudflare rejects native expirations under 60s in the future. Derive the TTL from
+				// the raw millisecond delta with `Math.floor` and require it to be strictly greater
+				// than the minimum, so the smallest value we ever send is 61s — a safety margin that
+				// survives request latency and clock skew. We use the relative `expirationTtl` (which
+				// KV evaluates against its own clock) rather than an absolute timestamp, so a slow
+				// host clock can't push the deadline below the minimum. Client-side expiry still
+				// enforces the exact deadline on read regardless.
+				const ttlSeconds = Math.floor((expires - Date.now()) / 1000);
+				if (ttlSeconds > this._minimumNativeExpirationSeconds) {
+					putOptions.expirationTtl = ttlSeconds;
 				}
 			}
 

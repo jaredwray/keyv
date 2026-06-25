@@ -226,17 +226,20 @@ describe("expiration", () => {
 		expect(await s.get(key)).toBeUndefined();
 	});
 
-	it("should attach a native expiration for long TTLs", async () => {
+	it("should attach a native expirationTtl for long TTLs", async () => {
 		const s = fakeStore();
 		const key = faker.string.uuid();
 		const putSpy = vi.spyOn(s.client, "put");
-		const expires = Date.now() + 5 * 60 * 1000;
-		await s.set(key, "value", expires);
+		await s.set(key, "value", Date.now() + 5 * 60 * 1000);
 		expect(putSpy).toHaveBeenCalledWith(
 			s.formatKey(key),
 			expect.any(String),
-			expect.objectContaining({ expiration: Math.ceil(expires / 1000) }),
+			expect.objectContaining({ expirationTtl: expect.any(Number) }),
 		);
+		const options = putSpy.mock.calls[0][2] as { expirationTtl: number };
+		// Never below Cloudflare's 60s minimum, even after the floor + safety margin.
+		expect(options.expirationTtl).toBeGreaterThan(60);
+		expect(options.expirationTtl).toBeLessThanOrEqual(300);
 	});
 
 	it("should not attach a native expiration for short TTLs", async () => {
@@ -244,6 +247,16 @@ describe("expiration", () => {
 		const key = faker.string.uuid();
 		const putSpy = vi.spyOn(s.client, "put");
 		await s.set(key, "value", Date.now() + 1000);
+		expect(putSpy).toHaveBeenCalledWith(s.formatKey(key), expect.any(String), {});
+	});
+
+	it("should not attach a native expiration at exactly the 60s minimum", async () => {
+		const s = fakeStore();
+		const key = faker.string.uuid();
+		const putSpy = vi.spyOn(s.client, "put");
+		// A 60s TTL floors to 60, which is not strictly greater than the minimum, so it is
+		// served by client-side expiry only — never sent to KV where latency could reject it.
+		expect(await s.set(key, "value", Date.now() + 60_000)).toBe(true);
 		expect(putSpy).toHaveBeenCalledWith(s.formatKey(key), expect.any(String), {});
 	});
 });

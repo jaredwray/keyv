@@ -13,7 +13,7 @@ Use [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) as a Keyv sto
 ## Features
 
 - Works with a native Worker KV **binding** (`env.MY_KV`) or with **REST API** credentials from plain Node.js
-- Millisecond-precise TTLs enforced client-side, with a native KV `expiration` set for longer TTLs so Cloudflare reclaims space on its own
+- Millisecond-precise TTLs enforced client-side, with a native KV `expirationTtl` set for longer TTLs so Cloudflare reclaims space on its own
 - Namespace support for key isolation across multiple Keyv instances
 - `setMany`, `getMany`, `deleteMany`, and `hasMany` batch operations
 - Async `iterator` support with namespace-aware filtering and automatic pagination
@@ -167,9 +167,9 @@ Cloudflare KV stores strings, so each value is persisted as a small JSON envelop
 ```
 
 Because KV's native expiry has a 60-second minimum, this adapter also enforces expiry on every
-read using the stored `expires` timestamp. For TTLs of 60 seconds or longer it additionally passes
-a native KV `expiration`, so Cloudflare reclaims the entry on its own while short TTLs remain
-millisecond-precise.
+read using the stored `expires` timestamp. For TTLs longer than 60 seconds it additionally passes a
+native KV `expirationTtl`, so Cloudflare reclaims the entry on its own while shorter TTLs remain
+millisecond-precise via the client-side check.
 
 ## Options
 
