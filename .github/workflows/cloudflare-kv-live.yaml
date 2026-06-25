@@ -1,9 +1,9 @@
 name: cloudflare-kv-live
 
 # Integration test for @keyv/cloudflare-kv against the REAL Cloudflare KV REST API.
-# It runs on demand and on a weekly schedule so we notice if Cloudflare changes the API our
-# local Miniflare/bridge emulation stands in for. The test self-skips when the secrets below are
-# absent, so it never fails on forks or when secrets are not configured.
+# It runs when the package changes (pull requests and pushes to main) so we notice if Cloudflare
+# changes the API our local Miniflare/bridge emulation stands in for. The test self-skips when the
+# secrets below are absent, so it never fails on forks or when secrets are not configured.
 #
 # Required repository secrets:
 #   CLOUDFLARE_ACCOUNT_ID       - the Cloudflare account ID that owns the KV namespace
@@ -12,8 +12,15 @@ name: cloudflare-kv-live
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 6 * * 1" # 06:00 UTC every Monday
+  push:
+    branches: [main]
+    paths:
+      - "storage/cloudflare-kv/**"
+      - ".github/workflows/cloudflare-kv-live.yaml"
+  pull_request:
+    paths:
+      - "storage/cloudflare-kv/**"
+      - ".github/workflows/cloudflare-kv-live.yaml"
 
 permissions:
   contents: read
