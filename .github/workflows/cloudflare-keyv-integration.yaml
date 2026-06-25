@@ -1,4 +1,4 @@
-name: cloudflare-kv-live
+name: cloudflare-keyv-integration
 
 # Integration test for @keyv/cloudflare-kv against the REAL Cloudflare KV REST API.
 # It runs when the package changes (pull requests and pushes to main) so we notice if Cloudflare
@@ -16,20 +16,20 @@ on:
     branches: [main]
     paths:
       - "storage/cloudflare-kv/**"
-      - ".github/workflows/cloudflare-kv-live.yaml"
+      - ".github/workflows/cloudflare-keyv-integration.yaml"
   pull_request:
     paths:
       - "storage/cloudflare-kv/**"
-      - ".github/workflows/cloudflare-kv-live.yaml"
+      - ".github/workflows/cloudflare-keyv-integration.yaml"
 
 permissions:
   contents: read
 
 jobs:
-  live:
+  integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    name: cloudflare-kv-live
+    name: cloudflare-keyv-integration
     steps:
       - uses: actions/checkout@v6
 

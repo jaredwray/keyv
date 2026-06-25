@@ -4,7 +4,7 @@ import KeyvCloudflareKV from "../../src/index.js";
 
 // Live integration test against the real Cloudflare KV REST API. It is skipped unless all three
 // credentials are present, so it is a no-op locally and on forks. The scheduled
-// `cloudflare-kv-live` GitHub workflow provides them from repository secrets.
+// `cloudflare-keyv-integration` GitHub workflow provides them from repository secrets.
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const namespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
 const apiToken = process.env.CLOUDFLARE_API_TOKEN;

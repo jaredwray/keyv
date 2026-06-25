@@ -177,7 +177,7 @@ The test suite runs against a **real local Cloudflare KV**, not in-memory stubs:
   real local storage rather than mocked `fetch` responses.
 
 This local server emulates Cloudflare's live REST environment. We keep it in sync with the
-Cloudflare API and additionally run a scheduled **live integration test** (the `cloudflare-kv-live`
+Cloudflare API and additionally run a **live integration test** (the `cloudflare-keyv-integration`
 GitHub workflow) against the real Cloudflare KV API, so we notice if the live behavior ever drifts
 from the emulation. That workflow requires the `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
 and `CLOUDFLARE_API_TOKEN` repository secrets and self-skips when they are absent.
