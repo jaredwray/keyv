@@ -25,6 +25,7 @@
     "lint:ci": "biome check --error-on-warnings",
     "test": "pnpm lint && vitest run --coverage",
     "test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+    "test:live": "vitest run --config vitest.live.config.ts",
     "clean": "rimraf ./node_modules ./coverage ./dist"
   },
   "repository": {

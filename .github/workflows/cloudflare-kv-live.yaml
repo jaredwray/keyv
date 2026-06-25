@@ -1,0 +1,52 @@
+name: cloudflare-kv-live
+
+# Integration test for @keyv/cloudflare-kv against the REAL Cloudflare KV REST API.
+# It runs on demand and on a weekly schedule so we notice if Cloudflare changes the API our
+# local Miniflare/bridge emulation stands in for. The test self-skips when the secrets below are
+# absent, so it never fails on forks or when secrets are not configured.
+#
+# Required repository secrets:
+#   CLOUDFLARE_ACCOUNT_ID       - the Cloudflare account ID that owns the KV namespace
+#   CLOUDFLARE_KV_NAMESPACE_ID  - the KV namespace ID (not the binding name)
+#   CLOUDFLARE_API_TOKEN        - an API token with the "Workers KV Storage" Edit permission
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # 06:00 UTC every Monday
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: cloudflare-kv-live
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Approve Builds
+        run: pnpm approve-builds
+
+      - name: Build Keyv
+        run: pnpm build:keyv
+
+      - name: Run Live Integration Tests
+        working-directory: storage/cloudflare-kv
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_KV_NAMESPACE_ID: ${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm test:live

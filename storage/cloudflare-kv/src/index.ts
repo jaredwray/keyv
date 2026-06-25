@@ -7,6 +7,7 @@ import {
 	keyvStorageCapability,
 } from "keyv";
 import {
+	type CloudflareKVMetadata,
 	type CloudflareKVNamespace,
 	type CloudflareKVPutOptions,
 	CloudflareKVRestClient,
@@ -15,17 +16,13 @@ import {
 export type {
 	CloudflareKVListOptions,
 	CloudflareKVListResult,
+	CloudflareKVMetadata,
 	CloudflareKVNamespace,
 	CloudflareKVPutOptions,
 	CloudflareKVRestClientOptions,
+	CloudflareKVValueWithMetadata,
 } from "./rest-client.js";
 export { CloudflareKVRestClient } from "./rest-client.js";
-
-/** The internal value envelope persisted to KV: the raw value plus an optional absolute expiry. */
-type CloudflareKVEnvelope = {
-	value: unknown;
-	expires?: number;
-};
 
 /**
  * Configuration for {@link KeyvCloudflareKV}. Provide **either** a `kvNamespace` binding (a native
@@ -33,24 +30,36 @@ type CloudflareKVEnvelope = {
  * `namespaceId`, `apiToken`).
  */
 export type KeyvCloudflareKVOptions = {
+	/**
+	 * Which transport the adapter uses to talk to Cloudflare KV:
+	 * - `"bind"` (default) — a native KV binding (a Worker `env.MY_KV` or a Miniflare namespace).
+	 * - `"rest"` — the Cloudflare REST API, for use from any Node.js process.
+	 *
+	 * When omitted it is inferred from the options (a binding implies `"bind"`, REST credentials
+	 * imply `"rest"`), defaulting to `"bind"`.
+	 */
+	mode?: KeyvCloudflareKVMode;
 	/** Key prefix used to isolate entries belonging to this instance. */
 	namespace?: string;
 	/** Separator placed between the namespace and key. Defaults to `":"`. */
 	keyPrefixSeparator?: string;
 	/**
 	 * A Cloudflare KV binding (the object exposed as `env.MY_KV` in a Worker, or the result of
-	 * Miniflare's `getKVNamespace`). When provided, REST credentials are ignored.
+	 * Miniflare's `getKVNamespace`). Used by `"bind"` mode.
 	 */
 	kvNamespace?: CloudflareKVNamespace;
-	/** Cloudflare account ID. Required for REST mode. */
+	/** Cloudflare account ID. Required for `"rest"` mode. */
 	accountId?: string;
-	/** KV namespace ID (not the binding name). Required for REST mode. */
+	/** KV namespace ID (not the binding name). Required for `"rest"` mode. */
 	namespaceId?: string;
-	/** Cloudflare API token with Workers KV read/write permission. Required for REST mode. */
+	/** Cloudflare API token with Workers KV read/write permission. Required for `"rest"` mode. */
 	apiToken?: string;
 	/** Override the REST base URL. Defaults to `https://api.cloudflare.com/client/v4`. */
 	url?: string;
 };
+
+/** Transport used by {@link KeyvCloudflareKV}: a native binding (`"bind"`) or the REST API (`"rest"`). */
+export type KeyvCloudflareKVMode = "bind" | "rest";
 
 /**
  * Type guard that detects whether a value satisfies the {@link CloudflareKVNamespace} shape
@@ -72,10 +81,11 @@ function isKVNamespace(value: unknown): value is CloudflareKVNamespace {
 /**
  * A Keyv storage adapter backed by [Cloudflare Workers KV](https://developers.cloudflare.com/kv/).
  *
- * Cloudflare KV stores strings, so each value is persisted as a small JSON envelope
- * (`{ value, expires }`). Because KV's native expiry has a 60-second minimum, expiry is also
- * enforced client-side on every read, giving millisecond-precise TTLs while still handing KV a
- * native `expiration` for longer TTLs so it can reclaim space on its own.
+ * Keyv handles value serialization, so the adapter stores the (already-serialized) value string in
+ * KV as-is — no JSON wrapping in the adapter layer. The absolute expiry is kept in KV metadata and
+ * enforced client-side on every read, giving millisecond-precise TTLs despite KV's 60-second native
+ * minimum, while still handing KV a native `expirationTtl` for longer TTLs so it can reclaim space
+ * on its own.
  */
 export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
@@ -86,6 +96,7 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	private _namespace?: string;
 	private _keyPrefixSeparator = ":";
 	private _client: CloudflareKVNamespace;
+	private _mode: KeyvCloudflareKVMode;
 	/** Cloudflare rejects native expirations less than 60s in the future. */
 	private _minimumNativeExpirationSeconds = 60;
 	/** Number of keys deleted concurrently per batch in `clear()`. */
@@ -99,8 +110,10 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	constructor(options: KeyvCloudflareKVOptions | CloudflareKVNamespace) {
 		super({ throwOnEmptyListeners: false });
 
+		// A binding passed directly is always "bind" mode.
 		if (isKVNamespace(options)) {
 			this._client = options;
+			this._mode = "bind";
 			return;
 		}
 
@@ -114,20 +127,29 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 			this._keyPrefixSeparator = opts.keyPrefixSeparator;
 		}
 
-		if (isKVNamespace(opts.kvNamespace)) {
-			this._client = opts.kvNamespace;
-		} else if (opts.accountId || opts.namespaceId || opts.apiToken) {
+		// Resolve the mode: honor an explicit choice, otherwise infer from what was supplied and
+		// fall back to "bind".
+		const hasBinding = isKVNamespace(opts.kvNamespace);
+		const hasCredentials = Boolean(opts.accountId || opts.namespaceId || opts.apiToken);
+		this._mode = opts.mode ?? (hasBinding ? "bind" : hasCredentials ? "rest" : "bind");
+
+		if (this._mode === "rest") {
 			this._client = new CloudflareKVRestClient({
 				accountId: opts.accountId as string,
 				namespaceId: opts.namespaceId as string,
 				apiToken: opts.apiToken as string,
 				url: opts.url,
 			});
-		} else {
+			return;
+		}
+
+		if (!hasBinding) {
 			throw new Error(
-				"KeyvCloudflareKV requires either a 'kvNamespace' binding or 'accountId', 'namespaceId', and 'apiToken' REST credentials.",
+				"KeyvCloudflareKV 'bind' mode requires a 'kvNamespace' binding. For a Node.js process without a binding, use mode: 'rest' with 'accountId', 'namespaceId', and 'apiToken'.",
 			);
 		}
+
+		this._client = opts.kvNamespace as CloudflareKVNamespace;
 	}
 
 	/**
@@ -144,6 +166,14 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	 */
 	public set client(value: CloudflareKVNamespace) {
 		this._client = value;
+	}
+
+	/**
+	 * Gets the transport mode in use: `"bind"` (native KV binding) or `"rest"` (REST API).
+	 * @returns The resolved {@link KeyvCloudflareKVMode}.
+	 */
+	public get mode(): KeyvCloudflareKVMode {
+		return this._mode;
 	}
 
 	/**
@@ -244,20 +274,23 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stores a value in Cloudflare KV. The value is wrapped in a JSON envelope together with its
-	 * absolute expiry. For TTLs longer than 60 seconds, a native KV `expirationTtl` is also set so KV
-	 * reclaims the entry on its own; shorter TTLs rely solely on the client-side expiry check.
+	 * Stores a value in Cloudflare KV. Keyv handles serialization, so the adapter writes the
+	 * (already-serialized) value string directly. The absolute expiry is stored in KV metadata; for
+	 * TTLs longer than 60 seconds a native KV `expirationTtl` is also set so KV reclaims the entry on
+	 * its own, while shorter TTLs rely solely on the client-side expiry check.
 	 * @param key - The key to store
-	 * @param value - The value to store
+	 * @param value - The value to store (a serialized string when used through Keyv)
 	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns `true` if the value was stored, `false` if the write failed.
 	 */
 	public async set(key: string, value: unknown, expires?: number): Promise<boolean> {
 		try {
-			const envelope: CloudflareKVEnvelope = { value, expires };
 			const putOptions: CloudflareKVPutOptions = {};
 
 			if (typeof expires === "number") {
+				// Keep the precise deadline in metadata so reads can enforce it client-side.
+				putOptions.metadata = { e: expires };
+
 				// Cloudflare rejects native expirations under 60s in the future. Derive the TTL from
 				// the raw millisecond delta with `Math.floor` and require it to be strictly greater
 				// than the minimum, so the smallest value we ever send is 61s — a safety margin that
@@ -271,7 +304,7 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			await this._client.put(this.formatKey(key), JSON.stringify(envelope), putOptions);
+			await this._client.put(this.formatKey(key), this.toStoredValue(value), putOptions);
 			return true;
 		} catch (error) {
 			this.emit("error", error);
@@ -299,19 +332,18 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		const formatted = this.formatKey(key);
 		try {
-			const raw = await this._client.get(formatted);
-			if (raw === null) {
+			const { value, metadata } = await this._client.getWithMetadata(formatted);
+			if (value === null) {
 				return undefined as KeyvStorageGetResult<Value>;
 			}
 
-			const envelope = this.parseEnvelope(raw);
-			if (this.isExpired(envelope)) {
+			if (this.isExpired(metadata)) {
 				// We already fetched the value, so delete directly to avoid a redundant read.
 				await this._client.delete(formatted);
 				return undefined as KeyvStorageGetResult<Value>;
 			}
 
-			return envelope.value as KeyvStorageGetResult<Value>;
+			return value as KeyvStorageGetResult<Value>;
 		} catch (error) {
 			this.emit("error", error);
 			return undefined as KeyvStorageGetResult<Value>;
@@ -368,12 +400,12 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	public async has(key: string): Promise<boolean> {
 		const formatted = this.formatKey(key);
 		try {
-			const raw = await this._client.get(formatted);
-			if (raw === null) {
+			const { value, metadata } = await this._client.getWithMetadata(formatted);
+			if (value === null) {
 				return false;
 			}
 
-			if (this.isExpired(this.parseEnvelope(raw))) {
+			if (this.isExpired(metadata)) {
 				// We already fetched the value, so delete directly to avoid a redundant read.
 				await this._client.delete(formatted);
 				return false;
@@ -407,16 +439,16 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 			// unbounded number of concurrent deletes (which can exhaust sockets or hit KV
 			// rate limits for large namespaces).
 			let batch: string[] = [];
-			for await (const name of this.listKeys(prefix)) {
-				batch.push(name);
+			for await (const entry of this.listKeys(prefix)) {
+				batch.push(entry.name);
 				if (batch.length >= this._clearBatchSize) {
-					await Promise.all(batch.map((entry) => this._client.delete(entry)));
+					await Promise.all(batch.map((name) => this._client.delete(name)));
 					batch = [];
 				}
 			}
 
 			if (batch.length > 0) {
-				await Promise.all(batch.map((entry) => this._client.delete(entry)));
+				await Promise.all(batch.map((name) => this._client.delete(name)));
 			}
 		} catch (error) {
 			this.emit("error", error);
@@ -435,21 +467,21 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	> {
 		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
 
-		for await (const name of this.listKeys(prefix)) {
-			const raw = await this._client.get(name);
-			/* v8 ignore next 3 -- @preserve concurrent deletion race */
-			if (raw === null) {
-				continue;
-			}
-
-			const envelope = this.parseEnvelope(raw);
+		for await (const entry of this.listKeys(prefix)) {
+			// The listing already carries metadata, so expired keys are skipped without a read.
 			/* v8 ignore next 4 -- @preserve native-expiry races are hard to hit deterministically */
-			if (this.isExpired(envelope)) {
-				await this._client.delete(name);
+			if (this.isExpired(entry.metadata ?? null)) {
+				await this._client.delete(entry.name);
 				continue;
 			}
 
-			yield [this.removeKeyPrefix(name, this._namespace), envelope.value as Awaited<Value>];
+			const value = await this._client.get(entry.name);
+			/* v8 ignore next 3 -- @preserve concurrent deletion race */
+			if (value === null) {
+				continue;
+			}
+
+			yield [this.removeKeyPrefix(entry.name, this._namespace), value as Awaited<Value>];
 		}
 	}
 
@@ -463,17 +495,20 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Lists every key name matching a prefix, transparently following pagination cursors.
+	 * Lists every key matching a prefix, transparently following pagination cursors. Each yielded
+	 * entry carries the key name and its metadata sidecar (when KV returns it in the listing).
 	 * @param prefix - The key prefix to filter by (empty string lists everything).
-	 * @yields Each matching key name.
+	 * @yields Each matching key entry.
 	 */
-	private async *listKeys(prefix: string): AsyncGenerator<string> {
+	private async *listKeys(
+		prefix: string,
+	): AsyncGenerator<{ name: string; metadata?: CloudflareKVMetadata | null }> {
 		let cursor: string | undefined;
 
 		do {
 			const result = await this._client.list({ prefix: prefix || undefined, cursor });
 			for (const entry of result.keys) {
-				yield entry.name;
+				yield entry;
 			}
 
 			cursor = result.list_complete ? undefined : result.cursor;
@@ -481,32 +516,23 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Parses a stored envelope. Falls back gracefully for values that were not written by this
-	 * adapter (raw JSON or a plain string).
-	 * @param raw - The raw string read from KV.
-	 * @returns The decoded {@link CloudflareKVEnvelope}.
+	 * Coerces a value into the string KV stores. Values arrive already serialized when used through
+	 * Keyv; a non-string passed to the adapter directly is coerced with `String`.
+	 * @param value - The value to store.
+	 * @returns The string to persist.
 	 */
-	private parseEnvelope(raw: string): CloudflareKVEnvelope {
-		try {
-			const parsed = JSON.parse(raw) as unknown;
-			if (parsed && typeof parsed === "object" && "value" in parsed) {
-				return parsed as CloudflareKVEnvelope;
-			}
-
-			return { value: parsed };
-		} catch {
-			return { value: raw };
-		}
+	private toStoredValue(value: unknown): string {
+		return typeof value === "string" ? value : String(value);
 	}
 
 	/**
-	 * Determines whether an envelope has passed its absolute expiry.
-	 * @param envelope - The decoded envelope.
+	 * Determines whether a metadata sidecar marks an entry as past its absolute expiry.
+	 * @param metadata - The metadata read from KV (or `null` when none was stored).
 	 * @param now - Reference timestamp in ms. Defaults to `Date.now()`.
 	 * @returns `true` if the entry has expired, `false` otherwise.
 	 */
-	private isExpired(envelope: CloudflareKVEnvelope, now: number = Date.now()): boolean {
-		return typeof envelope.expires === "number" && envelope.expires <= now;
+	private isExpired(metadata: CloudflareKVMetadata | null, now: number = Date.now()): boolean {
+		return typeof metadata?.e === "number" && metadata.e <= now;
 	}
 }
 

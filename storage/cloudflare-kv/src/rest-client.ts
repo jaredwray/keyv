@@ -1,4 +1,14 @@
 /**
+ * Sidecar metadata stored alongside each KV value. Keyv serializes the value itself, so the adapter
+ * keeps only the absolute expiry here (`e`, Unix ms) to enforce TTLs client-side without touching
+ * the stored value.
+ */
+export type CloudflareKVMetadata = {
+	/** Absolute expiry as a Unix timestamp in milliseconds. */
+	e?: number;
+};
+
+/**
  * Minimal subset of the Cloudflare Workers
  * [`KVNamespace`](https://developers.cloudflare.com/kv/api/) binding interface used by this
  * adapter. The native Worker binding and the Miniflare local binding both satisfy this shape,
@@ -8,7 +18,9 @@
 export type CloudflareKVNamespace = {
 	/** Reads the string value for a key, or `null` if it does not exist. */
 	get(key: string): Promise<string | null>;
-	/** Writes a string value for a key, with optional absolute/relative native expiry. */
+	/** Reads the value and its metadata sidecar for a key. */
+	getWithMetadata(key: string): Promise<CloudflareKVValueWithMetadata>;
+	/** Writes a string value for a key, with optional native expiry and metadata. */
 	put(key: string, value: string, options?: CloudflareKVPutOptions): Promise<void>;
 	/** Deletes a key. Resolves whether or not the key existed. */
 	delete(key: string): Promise<void>;
@@ -16,12 +28,22 @@ export type CloudflareKVNamespace = {
 	list(options?: CloudflareKVListOptions): Promise<CloudflareKVListResult>;
 };
 
-/** Native expiry options accepted by `KVNamespace.put`. */
+/** Result of a `getWithMetadata` call. */
+export type CloudflareKVValueWithMetadata = {
+	/** The stored value, or `null` if the key does not exist. */
+	value: string | null;
+	/** The metadata sidecar, or `null` if none was stored. */
+	metadata: CloudflareKVMetadata | null;
+};
+
+/** Native expiry and metadata options accepted by `KVNamespace.put`. */
 export type CloudflareKVPutOptions = {
 	/** Absolute expiry as a Unix timestamp in seconds. Must be at least 60s in the future. */
 	expiration?: number;
 	/** Relative expiry in seconds from now. Must be at least 60. */
 	expirationTtl?: number;
+	/** Arbitrary metadata stored alongside the value (the adapter uses it for client-side expiry). */
+	metadata?: CloudflareKVMetadata;
 };
 
 /** Options accepted by `KVNamespace.list`. */
@@ -37,7 +59,7 @@ export type CloudflareKVListOptions = {
 /** Result of a `KVNamespace.list` call. */
 export type CloudflareKVListResult = {
 	/** The keys in this page. */
-	keys: Array<{ name: string; expiration?: number }>;
+	keys: Array<{ name: string; expiration?: number; metadata?: CloudflareKVMetadata | null }>;
 	/** `true` when there are no further pages. */
 	list_complete: boolean;
 	/** Cursor to pass to the next `list` call when `list_complete` is `false`. */
@@ -110,6 +132,32 @@ export class CloudflareKVRestClient implements CloudflareKVNamespace {
 		return response.text();
 	}
 
+	public async getWithMetadata(key: string): Promise<CloudflareKVValueWithMetadata> {
+		const value = await this.get(key);
+		if (value === null) {
+			return { value: null, metadata: null };
+		}
+
+		const response = await fetch(`${this.namespaceUrl}/metadata/${encodeURIComponent(key)}`, {
+			method: "GET",
+			headers: this.authHeaders,
+		});
+
+		if (response.status === 404) {
+			return { value, metadata: null };
+		}
+
+		if (!response.ok) {
+			throw new Error(
+				`Cloudflare KV metadata get failed: ${response.status} ${await response.text()}`,
+			);
+		}
+
+		const body = (await response.json()) as { result?: CloudflareKVMetadata | null };
+		/* v8 ignore next -- @preserve defensive: a 200 metadata response always carries a result */
+		return { value, metadata: body.result ?? null };
+	}
+
 	public async put(key: string, value: string, options?: CloudflareKVPutOptions): Promise<void> {
 		const url = new URL(`${this.namespaceUrl}/values/${encodeURIComponent(key)}`);
 		if (typeof options?.expiration === "number") {
@@ -120,12 +168,20 @@ export class CloudflareKVRestClient implements CloudflareKVNamespace {
 			url.searchParams.set("expiration_ttl", String(options.expirationTtl));
 		}
 
-		const response = await fetch(url, {
-			method: "PUT",
-			headers: { ...this.authHeaders, "Content-Type": "text/plain" },
-			body: value,
-		});
+		// Metadata must be sent as a multipart form; plain values use a text body.
+		let body: BodyInit;
+		const headers: Record<string, string> = { ...this.authHeaders };
+		if (options?.metadata) {
+			const form = new FormData();
+			form.append("value", value);
+			form.append("metadata", JSON.stringify(options.metadata));
+			body = form;
+		} else {
+			body = value;
+			headers["Content-Type"] = "text/plain";
+		}
 
+		const response = await fetch(url, { method: "PUT", headers, body });
 		if (!response.ok) {
 			throw new Error(`Cloudflare KV put failed: ${response.status} ${await response.text()}`);
 		}
@@ -163,12 +219,13 @@ export class CloudflareKVRestClient implements CloudflareKVNamespace {
 		}
 
 		const body = (await response.json()) as {
-			result: Array<{ name: string; expiration?: number }>;
+			result: Array<{ name: string; expiration?: number; metadata?: CloudflareKVMetadata | null }>;
 			result_info?: { cursor?: string };
 		};
 
 		const cursor = body.result_info?.cursor;
 		return {
+			/* v8 ignore next -- @preserve defensive: a 200 list response always carries a result array */
 			keys: body.result ?? [],
 			// The REST API omits/empties the cursor when the listing is exhausted.
 			list_complete: !cursor,

@@ -8,11 +8,14 @@
 [![npm](https://img.shields.io/npm/v/@keyv/cloudflare-kv.svg)](https://www.npmjs.com/package/@keyv/cloudflare-kv)
 [![npm](https://img.shields.io/npm/dm/@keyv/cloudflare-kv)](https://npmjs.com/package/@keyv/cloudflare-kv)
 
-Use [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) as a Keyv storage backend — either through a native KV **binding** (inside a Worker or in tests via [Miniflare](https://developers.cloudflare.com/workers/testing/miniflare/)) or through the Cloudflare **REST API** from any Node.js process.
+Use [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) as a Keyv storage backend in one of two **modes**:
+
+- **`bind`** (default) — a native KV **binding**, the object exposed as `env.MY_KV` inside a Cloudflare Worker (or a [Miniflare](https://developers.cloudflare.com/workers/testing/miniflare/) namespace in tests). Use this when your code runs inside the Workers runtime.
+- **`rest`** — the Cloudflare **REST API**, authenticated with account credentials. Use this from any plain Node.js process (a server, a job, a CLI) that can't get a Worker binding.
 
 ## Features
 
-- Works with a native Worker KV **binding** (`env.MY_KV`) or with **REST API** credentials from plain Node.js
+- Two transport modes — `bind` (native binding, default) and `rest` (REST API) — selectable via the `mode` option
 - Millisecond-precise TTLs enforced client-side, with a native KV `expirationTtl` set for longer TTLs so Cloudflare reclaims space on its own
 - Namespace support for key isolation across multiple Keyv instances
 - `setMany`, `getMany`, `deleteMany`, and `hasMany` batch operations
@@ -49,6 +52,7 @@ import { createKeyv } from '@keyv/cloudflare-kv';
 
 // REST mode (from any Node.js process)
 const keyv = createKeyv({
+  mode: 'rest',
   accountId: process.env.CF_ACCOUNT_ID,
   namespaceId: process.env.CF_KV_NAMESPACE_ID,
   apiToken: process.env.CF_API_TOKEN,
@@ -77,6 +81,7 @@ import KeyvCloudflareKV from '@keyv/cloudflare-kv';
 
 export default {
   async fetch(request, env) {
+    // `bind` is the default mode; passing a binding is all you need.
     const store = new KeyvCloudflareKV({ kvNamespace: env.MY_KV });
     const keyv = new Keyv(store, { useKeyPrefix: false });
 
@@ -94,14 +99,15 @@ const store = new KeyvCloudflareKV(env.MY_KV);
 
 ## Usage with the REST API
 
-From a regular Node.js server, authenticate with a Cloudflare API token that has the
-`Workers KV Storage` read/write permission:
+From a regular Node.js server, set `mode: 'rest'` and authenticate with a Cloudflare API token that
+has the `Workers KV Storage` Edit permission:
 
 ```js
 import Keyv from 'keyv';
 import KeyvCloudflareKV from '@keyv/cloudflare-kv';
 
 const store = new KeyvCloudflareKV({
+  mode: 'rest',
   accountId: 'your-account-id',
   namespaceId: 'your-kv-namespace-id',
   apiToken: 'your-api-token',
@@ -112,6 +118,9 @@ const keyv = new Keyv(store, { useKeyPrefix: false });
 await keyv.set('foo', 'bar');
 const value = await keyv.get('foo'); // 'bar'
 ```
+
+> `mode` defaults to `'bind'`. If you omit it, the adapter infers `'rest'` when you pass REST
+> credentials and `'bind'` when you pass a binding — but setting it explicitly is recommended.
 
 ## Usage with Namespaces
 
@@ -158,35 +167,60 @@ console.log(await store.get('foo')); // 'bar'
 await mf.dispose();
 ```
 
+### How this package is tested
+
+The test suite runs against a **real local Cloudflare KV**, not in-memory stubs:
+
+- **`bind` mode** is tested directly against a Miniflare KV namespace.
+- **`rest` mode** is tested end-to-end against a small local HTTP server that implements the
+  Cloudflare KV REST API on top of that *same* Miniflare namespace — so the REST client exercises
+  real local storage rather than mocked `fetch` responses.
+
+This local server emulates Cloudflare's live REST environment. We keep it in sync with the
+Cloudflare API and additionally run a scheduled **live integration test** (the `cloudflare-kv-live`
+GitHub workflow) against the real Cloudflare KV API, so we notice if the live behavior ever drifts
+from the emulation. That workflow requires the `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
+and `CLOUDFLARE_API_TOKEN` repository secrets and self-skips when they are absent.
+
 ## How Values Are Stored
 
-Cloudflare KV stores strings, so each value is persisted as a small JSON envelope:
+Keyv owns serialization, so the adapter stores the **already-serialized value string directly** —
+it does not wrap values in its own JSON envelope. The absolute expiry is stored in Cloudflare KV
+**metadata** (`{ e: <unix-ms> }`) rather than mixed into the value.
 
-```json
-{ "value": <your-value>, "expires": <unix-ms-or-undefined> }
-```
+Because KV's native expiry has a 60-second minimum, the adapter enforces expiry on every read using
+that metadata, so TTLs are millisecond-precise. For TTLs longer than 60 seconds it additionally
+passes a native KV `expirationTtl`, so Cloudflare reclaims the entry on its own.
 
-Because KV's native expiry has a 60-second minimum, this adapter also enforces expiry on every
-read using the stored `expires` timestamp. For TTLs longer than 60 seconds it additionally passes a
-native KV `expirationTtl`, so Cloudflare reclaims the entry on its own while shorter TTLs remain
-millisecond-precise via the client-side check.
+> When used directly (not through Keyv), the adapter expects string values, since KV only stores
+> strings. A non-string passed directly is coerced with `String()`. Wrap the adapter in a `Keyv`
+> instance to store arbitrary values.
 
 ## Options
 
-Provide **either** a `kvNamespace` binding **or** REST credentials (`accountId`, `namespaceId`,
-`apiToken`).
+For **`bind`** mode provide a `kvNamespace` binding; for **`rest`** mode provide `accountId`,
+`namespaceId`, and `apiToken`.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `kvNamespace` | `KVNamespace` | — | A Cloudflare KV binding (Worker binding or Miniflare namespace). |
-| `accountId` | `string` | — | Cloudflare account ID (REST mode). |
-| `namespaceId` | `string` | — | KV namespace ID — not the binding name (REST mode). |
-| `apiToken` | `string` | — | Cloudflare API token with Workers KV read/write permission (REST mode). |
-| `url` | `string` | `https://api.cloudflare.com/client/v4` | Override the REST base URL. |
+| `mode` | `'bind' \| 'rest'` | `'bind'` | Transport to use. Inferred from the other options when omitted. |
+| `kvNamespace` | `KVNamespace` | — | A Cloudflare KV binding (Worker binding or Miniflare namespace). Used by `bind` mode. |
+| `accountId` | `string` | — | Cloudflare account ID (`rest` mode). |
+| `namespaceId` | `string` | — | KV namespace ID — not the binding name (`rest` mode). |
+| `apiToken` | `string` | — | Cloudflare API token with Workers KV Edit permission (`rest` mode). |
+| `url` | `string` | `https://api.cloudflare.com/client/v4` | Override the REST base URL (`rest` mode). |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation. |
 | `keyPrefixSeparator` | `string` | `':'` | Separator placed between the namespace and key. |
 
 ## Properties
+
+### .mode
+
+The resolved transport mode in use. Read-only.
+
+| Type | Default |
+|---|---|
+| `'bind' \| 'rest'` | `'bind'` |
 
 ### .client
 
