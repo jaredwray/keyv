@@ -1,0 +1,75 @@
+{
+  "name": "@keyv/cloudflare-kv",
+  "version": "6.0.0-beta.4",
+  "description": "Cloudflare Workers KV storage adapter for Keyv",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepublishOnly": "pnpm build",
+    "lint": "biome check --write --error-on-warnings",
+    "lint:ci": "biome check --error-on-warnings",
+    "test": "pnpm lint && vitest run --coverage",
+    "test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+    "clean": "rimraf ./node_modules ./coverage ./dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/keyv.git"
+  },
+  "keywords": [
+    "cloudflare",
+    "cloudflare-kv",
+    "workers-kv",
+    "kv",
+    "edge",
+    "keyv",
+    "storage",
+    "adapter",
+    "key",
+    "value",
+    "store",
+    "cache",
+    "ttl"
+  ],
+  "author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/keyv/issues"
+  },
+  "homepage": "https://github.com/jaredwray/keyv",
+  "dependencies": {
+    "hookified": "^3.0.0"
+  },
+  "devDependencies": {
+    "@keyv/test-suite": "workspace:^",
+    "miniflare": "^4.20260101.0"
+  },
+  "peerDependencies": {
+    "keyv": "workspace:^"
+  },
+  "tsd": {
+    "directory": "test"
+  },
+  "engines": {
+    "node": ">= 22.18.0"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ]
+}

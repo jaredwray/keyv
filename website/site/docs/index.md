@@ -32,6 +32,8 @@ npm install --save @keyv/sqlite
 npm install --save @keyv/postgres
 npm install --save @keyv/mysql
 npm install --save @keyv/etcd
+npm install --save @keyv/dynamo
+npm install --save @keyv/cloudflare-kv
 ```
 
 > **Note**: You can also use [third-party storage adapters](/docs/third-party-storage-adapters/)
