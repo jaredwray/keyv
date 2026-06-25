@@ -169,9 +169,10 @@ async function startBridge(kv: CloudflareKVNamespace): Promise<Bridge> {
 
 			res.writeHead(404);
 			res.end("not found");
-		} catch (error) {
+		} catch {
+			// Don't leak error/stack details into the response.
 			res.writeHead(500);
-			res.end(String(error));
+			res.end("internal error");
 		}
 	});
 
