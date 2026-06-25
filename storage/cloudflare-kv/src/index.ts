@@ -88,6 +88,8 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	private _client: CloudflareKVNamespace;
 	/** Cloudflare rejects native expirations less than 60s in the future. */
 	private _minimumNativeExpirationSeconds = 60;
+	/** Number of keys deleted concurrently per batch in `clear()`. */
+	private _clearBatchSize = 100;
 
 	/**
 	 * Creates a new KeyvCloudflareKV adapter.
@@ -175,6 +177,23 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	 */
 	public set keyPrefixSeparator(value: string) {
 		this._keyPrefixSeparator = value;
+	}
+
+	/**
+	 * Gets the number of keys deleted concurrently per batch during {@link clear}.
+	 * @default 100
+	 * @returns The clear batch size.
+	 */
+	public get clearBatchSize(): number {
+		return this._clearBatchSize;
+	}
+
+	/**
+	 * Sets the number of keys deleted concurrently per batch during {@link clear}.
+	 * @param value - The batch size (must be greater than 0).
+	 */
+	public set clearBatchSize(value: number) {
+		this._clearBatchSize = value;
 	}
 
 	/**
@@ -271,15 +290,17 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	 * @returns The stored value, or `undefined` if the key does not exist or has expired.
 	 */
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
+		const formatted = this.formatKey(key);
 		try {
-			const raw = await this._client.get(this.formatKey(key));
+			const raw = await this._client.get(formatted);
 			if (raw === null) {
 				return undefined as KeyvStorageGetResult<Value>;
 			}
 
 			const envelope = this.parseEnvelope(raw);
 			if (this.isExpired(envelope)) {
-				await this.delete(key);
+				// We already fetched the value, so delete directly to avoid a redundant read.
+				await this._client.delete(formatted);
 				return undefined as KeyvStorageGetResult<Value>;
 			}
 
@@ -338,14 +359,16 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	 * @returns `true` if the key exists and is not expired, `false` otherwise.
 	 */
 	public async has(key: string): Promise<boolean> {
+		const formatted = this.formatKey(key);
 		try {
-			const raw = await this._client.get(this.formatKey(key));
+			const raw = await this._client.get(formatted);
 			if (raw === null) {
 				return false;
 			}
 
 			if (this.isExpired(this.parseEnvelope(raw))) {
-				await this.delete(key);
+				// We already fetched the value, so delete directly to avoid a redundant read.
+				await this._client.delete(formatted);
 				return false;
 			}
 
@@ -373,12 +396,21 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	public async clear(): Promise<void> {
 		try {
 			const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
-			const names: string[] = [];
+			// Delete in bounded batches so we never buffer every key in memory or fire an
+			// unbounded number of concurrent deletes (which can exhaust sockets or hit KV
+			// rate limits for large namespaces).
+			let batch: string[] = [];
 			for await (const name of this.listKeys(prefix)) {
-				names.push(name);
+				batch.push(name);
+				if (batch.length >= this._clearBatchSize) {
+					await Promise.all(batch.map((entry) => this._client.delete(entry)));
+					batch = [];
+				}
 			}
 
-			await Promise.all(names.map((name) => this._client.delete(name)));
+			if (batch.length > 0) {
+				await Promise.all(batch.map((entry) => this._client.delete(entry)));
+			}
 		} catch (error) {
 			this.emit("error", error);
 		}

@@ -262,6 +262,22 @@ describe("clear and iterator", () => {
 		expect(await plain.get(plainKey)).toBe("plain-value");
 	});
 
+	it("should clear keys in batches", async () => {
+		const s = fakeStore();
+		s.clearBatchSize = 2;
+		expect(s.clearBatchSize).toBe(2);
+		const keys = ["a", "b", "c", "d", "e"];
+		for (const key of keys) {
+			await s.set(key, "value");
+		}
+		const deleteSpy = vi.spyOn(s.client, "delete");
+		await s.clear();
+		expect(deleteSpy).toHaveBeenCalledTimes(keys.length);
+		for (const key of keys) {
+			expect(await s.get(key)).toBeUndefined();
+		}
+	});
+
 	it("should iterate over all entries with no namespace", async () => {
 		const s = store();
 		const key1 = faker.string.uuid();
