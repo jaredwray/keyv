@@ -58,7 +58,7 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^",
-    "miniflare": "^4.20260101.0"
+    "miniflare": "^4.20260625.0"
   },
   "peerDependencies": {
     "keyv": "workspace:^"
