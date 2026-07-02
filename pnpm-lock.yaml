@@ -409,8 +409,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
       memcache:
-        specifier: ^1.7.0
-        version: 1.7.0
+        specifier: ^1.8.0
+        version: 1.8.0
     devDependencies:
       '@keyv/compress-gzip':
         specifier: workspace:^
@@ -3299,8 +3299,9 @@ packages:
   mdurl@2.0.0:
     resolution: {integrity: sha512-Lf+9+2r+Tdp5wXDXC4PcIBjTDtq4UKjCPMQhKIuzpJNW0b96kVqSwW0bT7FhRSfmAiFYgP+SCRvdrDozfh0U5w==}
 
-  memcache@1.7.0:
-    resolution: {integrity: sha512-rGmUvvjb1gavZWldGT/EsouB8Z+GFgxbwZ7CeEsvi9YRphA8jdOWE6tvbTC22AOSBvce8AXu0L92q13djNH/2g==}
+  memcache@1.8.0:
+    resolution: {integrity: sha512-7/Er0dGDPK6BBf/Gmmw/hLfq1+6l9FUt91PNfufNmHXOJgWJjEIglhplKMaZDJuhNVtIBn/Ab+CwCNxX+bYkIg==}
+    engines: {node: '>=22', pnpm: '>=11'}
 
   memory-pager@1.5.0:
     resolution: {integrity: sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg==}
@@ -7063,10 +7064,10 @@ snapshots:
 
   mdurl@2.0.0: {}
 
-  memcache@1.7.0:
+  memcache@1.8.0:
     dependencies:
       hashery: 2.0.0
-      hookified: 2.2.0
+      hookified: 3.0.0
 
   memory-pager@1.5.0: {}
 
