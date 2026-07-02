@@ -428,8 +428,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
       mongodb:
-        specifier: ^7.2.0
-        version: 7.2.0
+        specifier: ^7.4.0
+        version: 7.4.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.1
@@ -3482,8 +3482,8 @@ packages:
     resolution: {integrity: sha512-irhhjRVLE20hbkRl4zpAYLnDMM+zIZnp0IDB9akAFFUZp/3XdOfwwddc7y6cNvF2WCEtfTYRwYbIfYa2kVY0og==}
     engines: {node: '>=20.19.0'}
 
-  mongodb@7.2.0:
-    resolution: {integrity: sha512-F/2+BMZtLVhY30ioZp0dAmZ+IRZMBqI+nrv6t5+9/1AIwCa8sMRC3jBf81lpxMhnZgqq8CoUD503Z1oZWq1/sw==}
+  mongodb@7.4.0:
+    resolution: {integrity: sha512-giySkkdYiwoBFo/oCc8nzov3xOYZ/sB8OpAYk5GINRLEjVw0LDsm8xgQL0XMTyU4extQlDZjhdUr1ZEwKFaazw==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@aws-sdk/credential-providers': ^3.806.0
@@ -7427,7 +7427,7 @@ snapshots:
       '@types/whatwg-url': 13.0.0
       whatwg-url: 14.2.0
 
-  mongodb@7.2.0:
+  mongodb@7.4.0:
     dependencies:
       '@mongodb-js/saslprep': 1.3.1
       bson: 7.2.0
