@@ -48,7 +48,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hashery": "^2.0.0",
+		"hashery": "^3.0.0",
 		"hookified": "^3.0.1"
 	},
 	"devDependencies": {
