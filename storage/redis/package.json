@@ -51,7 +51,7 @@
 	"dependencies": {
 		"@redis/client": "^6.0.1",
 		"cluster-key-slot": "^1.1.2",
-		"hookified": "^3.0.0"
+		"hookified": "^3.0.1"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
