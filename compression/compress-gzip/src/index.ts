@@ -17,7 +17,7 @@ export class KeyvGzip implements KeyvCompressionAdapter {
 
 	async decompress(value: string): Promise<string> {
 		const buffer = Buffer.from(value, "base64");
-		return inflate(buffer, { ...this._options, to: "string" });
+		return inflate(buffer, { ...this._options, toText: true });
 	}
 }
 
