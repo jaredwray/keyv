@@ -54,7 +54,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "hookified": "^3.0.0"
+    "hookified": "^3.0.1"
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^",
