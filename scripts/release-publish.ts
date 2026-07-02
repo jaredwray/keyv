@@ -86,7 +86,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 // Monorepo root, resolved relative to this file (scripts/ lives one level down).
 const rootDir = path.resolve(import.meta.dirname, "..");
