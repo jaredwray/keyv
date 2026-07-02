@@ -52,7 +52,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"better-sqlite3": "^12.10.0",
+		"better-sqlite3": "^12.11.1",
 		"hookified": "^3.0.0"
 	},
 	"peerDependencies": {
