@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 30
     name: Node 24
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
