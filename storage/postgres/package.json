@@ -52,7 +52,7 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"hookified": "^3.0.0",
-		"pg": "^8.21.0"
+		"pg": "^8.22.0"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
