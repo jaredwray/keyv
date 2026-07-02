@@ -28,17 +28,17 @@
     "test:scripts": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
-    "@faker-js/faker": "^10.4.0",
+    "@biomejs/biome": "^2.5.1",
+    "@faker-js/faker": "^10.5.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.13.1",
-    "@vitest/coverage-v8": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.9",
     "js-yaml": "^4.2.0",
     "rimraf": "^6.1.3",
     "tsd": "^0.33.0",
     "tsdown": "^0.22.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   }
 }

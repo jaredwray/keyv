@@ -54,12 +54,12 @@
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^",
-    "@biomejs/biome": "^2.4.16",
-    "@vitest/coverage-v8": "^4.1.8",
+    "@biomejs/biome": "^2.5.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "rimraf": "^6.1.3",
     "tsd": "^0.33.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "tsd": {
     "directory": "test"
