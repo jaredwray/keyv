@@ -126,8 +126,8 @@ importers:
   core/bigmap:
     dependencies:
       hashery:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^3.0.0
+        version: 3.0.0
       hookified:
         specifier: ^3.0.1
         version: 3.0.1
@@ -6453,7 +6453,7 @@ snapshots:
 
   hashery@3.0.0:
     dependencies:
-      hookified: 3.0.0
+      hookified: 3.0.1
 
   hasown@2.0.2:
     dependencies:
