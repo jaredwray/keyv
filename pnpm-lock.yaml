@@ -185,8 +185,8 @@ importers:
         specifier: ^3.3.0
         version: 3.3.0
       keyv-file:
-        specifier: ^5.3.3
-        version: 5.3.3
+        specifier: ^5.3.5
+        version: 5.3.5
       lru.min:
         specifier: ^1.1.4
         version: 1.1.4
@@ -3156,8 +3156,8 @@ packages:
   keyv-anyredis@3.3.0:
     resolution: {integrity: sha512-cNfhLZs0ADo/0G8Ke1G3bcw6rhwuTaiU6Za86fyFK8PQtii45MH0VrZ+k09iIQO8AFeEdb2hPA8uiKOQUHVmCA==}
 
-  keyv-file@5.3.3:
-    resolution: {integrity: sha512-uCFUhiVYf+BcA6DP4smhnRLOR4yzUUA15yJSk4/rP5oAPnF3MpfajejwvSV8l+okm+EGiW4IHP3gn+xahpvZcQ==}
+  keyv-file@5.3.5:
+    resolution: {integrity: sha512-0JFTTi55d1HdhIrSOnPngUw0fyHLn3BHqoLJ8TyGKM/fQfuZsz8HkcFxpl6YzU2mj1ZfRF/6BXlSqOpyfXYAmw==}
 
   keyv@5.6.0:
     resolution: {integrity: sha512-CYDD3SOtsHtyXeEORYRx2qBtpDJFjRTGXUtmNEMGyzYOKj1TE3tycdlho7kA1Ufx9OYWZzg52QFBGALTirzDSw==}
@@ -6815,7 +6815,7 @@ snapshots:
 
   keyv-anyredis@3.3.0: {}
 
-  keyv-file@5.3.3:
+  keyv-file@5.3.5:
     dependencies:
       '@keyv/serialize': 1.1.1
       tslib: 1.14.1

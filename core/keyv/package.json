@@ -67,7 +67,7 @@
 		"@vitest/coverage-v8": "^4.1.9",
 		"happy-dom": "^20.10.6",
 		"keyv-anyredis": "^3.3.0",
-		"keyv-file": "^5.3.3",
+		"keyv-file": "^5.3.5",
 		"lru.min": "^1.1.4",
 		"quick-lru": "^7.0.0",
 		"rimraf": "^6.1.3",
