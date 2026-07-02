@@ -50,8 +50,8 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1063.0",
-    "@aws-sdk/lib-dynamodb": "^3.1063.0",
+    "@aws-sdk/client-dynamodb": "^3.1075.0",
+    "@aws-sdk/lib-dynamodb": "^3.1075.0",
     "hookified": "^3.0.0"
   },
   "devDependencies": {
