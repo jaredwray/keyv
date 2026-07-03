@@ -912,7 +912,7 @@ export default class KeyvRedis<T>
 				TypeMapping
 			>;
 			const mainNode = cluster.slots[slot].master;
-			return (await cluster.nodeClient(mainNode)) as RedisClientType;
+			return cluster.nodeClient(mainNode) as RedisClientType;
 		}
 
 		return connection as RedisClientType;
