@@ -7,12 +7,15 @@
   "author": "Jared Wray <me@jaredwray.com>",
   "license": "MIT",
   "private": true,
-  "packageManager": "pnpm@10.34.4",
+  "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b",
   "scripts": {
     "build:keyv:serialize": "pnpm recursive --filter=@keyv/serialize run build",
     "build:keyv": "pnpm recursive --filter=keyv run build",
     "build": "pnpm build:keyv:serialize && pnpm build:keyv && pnpm recursive --filter '!keyv' --filter '!@keyv/serialize' run build",
     "test": "pnpm -r --workspace-concurrency 1 test:ci",
+    "test:release": "vitest run scripts/release.test.mjs",
+    "release": "node scripts/release.mjs",
+    "release:dry": "node scripts/release.mjs --dry-run",
     "test:services:start": "chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh",
     "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
     "website:build": "pnpm recursive --filter @keyv/website run website:build",
@@ -27,14 +30,5 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.9"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "protobufjs",
-      "sqlite3",
-      "sqlite325h",
-      "unrs-resolver"
-    ]
   }
 }

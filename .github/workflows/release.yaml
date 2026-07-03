@@ -1,0 +1,150 @@
+name: release
+
+# Publishes v5-branch workspace packages to npm whose manually-set version is
+# ahead of the registry. Versions are never bumped here — a human bumps each
+# package's `version` (typically via a release PR); publishing a GitHub
+# release then triggers this workflow, which figures out what actually needs
+# publishing and publishes it in dependency order under the right dist-tag.
+# See scripts/release.mjs for the decision logic, including the MAJOR CEILING:
+# nothing at or above 6.0.0 (including pre-releases) can ever be published
+# from the v5 branch — v6 is released from `main`.
+#
+# Authentication uses OIDC trusted publishing (tokenless) with provenance:
+#   - `id-token: write` lets GitHub mint the OIDC token pnpm exchanges for a
+#     short-lived npm credential and uses to sign the provenance attestation.
+#   - Each package needs a "Trusted Publisher" on npmjs.com pointing at repo
+#     `jaredwray/keyv` + workflow `release.yaml` (+ environment `release`).
+#     This file shares its name with main's release workflow on purpose, so
+#     one trusted-publisher configuration covers both release lines.
+#   - This workflow is fully tokenless: no NPM_TOKEN secret anywhere. A
+#     brand-new package's first-ever publish (which OIDC cannot do) needs a
+#     one-time manual `pnpm publish`.
+
+on:
+  # Manual runs — default to a dry run that prints the publish plan and
+  # validates packaging without publishing anything. Dispatching from any ref
+  # other than the v5 branch is forced to a dry run.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — compute and print the publish plan without publishing"
+        type: boolean
+        default: true
+  # Publishing a GitHub release (from a tag cut on the v5 line, where this
+  # workflow file lives) publishes the bumped packages to npm for real.
+  release:
+    types: [published]
+
+# Never run two releases at once; let an in-flight publish finish rather than
+# cancelling it half-way through the package set.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: Build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Dependencies
+        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
+        # (same as tests.yaml) rather than using --frozen-lockfile.
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Start Services
+        run: pnpm test:services:start
+
+      - name: Install Dependencies
+        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
+        # (same as tests.yaml) rather than using --frozen-lockfile.
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test Packages
+        run: pnpm test
+
+  publish:
+    needs: [build, test]
+    runs-on: ubuntu-latest # provenance/OIDC require a cloud-hosted runner
+    timeout-minutes: 20
+    name: Publish
+    environment: release
+    # OIDC trusted publishing: GitHub mints a short-lived OIDC token that pnpm
+    # exchanges with npm for a one-time publish credential. No NPM_TOKEN.
+    permissions:
+      contents: read
+      id-token: write # required for OIDC trusted publishing + provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # This job only reads the repo (it never pushes), so don't leave the
+          # GITHUB_TOKEN in .git/config for later steps to read.
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org' # writes the .npmrc the registry expects
+
+      - name: Install Dependencies
+        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
+        # (same as tests.yaml) rather than using --frozen-lockfile.
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      # Verify the release decision logic (major ceiling, dist-tag model,
+      # backwards guards) before any publish runs.
+      - name: Verify release logic
+        run: pnpm test:release
+
+      # A published GitHub release publishes for real (the script's own guards
+      # still apply: the < 6.0.0 major ceiling, skip-already-published, and
+      # never moving a dist-tag backwards). A manual run honors its dry_run
+      # input, and is forced to a dry run from any ref other than the v5
+      # branch so branch versions can't be pushed to npm.
+      - name: Release
+        run: node scripts/release.mjs ${{ (github.event_name == 'workflow_dispatch' && (inputs.dry_run || github.ref != 'refs/heads/v5')) && '--dry-run' || '' }}
