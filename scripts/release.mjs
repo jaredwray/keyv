@@ -30,7 +30,9 @@
  *      IGNORED_PACKAGES) — these are never published to npm.
  *   3. Refuse the whole run if any package version crosses the major ceiling.
  *   4. For each remaining package, fetch its document from the npm registry:
- *        - 404            → the package has never been published   → publish
+ *        - 404            → never published → REFUSED (a first publish cannot
+ *          authenticate via OIDC trusted publishing — bootstrap it manually
+ *          once with `pnpm publish`, then re-run)
  *        - version listed → this exact version is already on npm    → skip
  *        - version absent → a newer (manually-set) version is ready → publish
  *   5. The full plan — including each package's dist-tag — is computed before
@@ -321,12 +323,19 @@ export function computeTag(version, distTags = {}) {
  */
 export function resolvePlanAction(pkg, doc) {
 	if (doc === null) {
-		const plan = computeTag(pkg.version, {});
-		if (plan.error) {
-			return { ...pkg, registryVersion: null, tag: null, action: "error", reason: plan.error };
-		}
-
-		return { ...pkg, registryVersion: null, tag: plan.tag, action: "publish", reason: "not yet on npm" };
+		// A first-ever publish cannot authenticate via OIDC trusted publishing
+		// (the trusted-publisher config lives on an existing package), so a
+		// brand-new package would only fail mid-run — after its dependencies
+		// already published. Refuse at plan time instead: bootstrap the
+		// package manually once (`pnpm publish`), then re-run.
+		return {
+			...pkg,
+			registryVersion: null,
+			tag: null,
+			action: "error",
+			reason:
+				"never published — a first-time publish cannot use OIDC trusted publishing; publish it manually once, then re-run",
+		};
 	}
 
 	const distTags = doc["dist-tags"] ?? {};
@@ -539,7 +548,21 @@ function writeOutputs(published) {
 
 /** Publish a single package with pnpm under exactly one dist-tag. Returns true on success. */
 function publishPackage(entry, { dryRun }) {
-	const args = ["--filter", entry.name, "publish", "--tag", entry.tag, "--access", "public", "--no-git-checks"];
+	// --registry pins the publish to the SAME registry the plan was computed
+	// against, so an NPM_CONFIG_REGISTRY override can never produce a plan
+	// from one registry and a publish to another.
+	const args = [
+		"--filter",
+		entry.name,
+		"publish",
+		"--registry",
+		REGISTRY,
+		"--tag",
+		entry.tag,
+		"--access",
+		"public",
+		"--no-git-checks",
+	];
 
 	// Provenance attestations require the CI OIDC token (npm trusted
 	// publishing), so the flag is only meaningful for a real publish — and

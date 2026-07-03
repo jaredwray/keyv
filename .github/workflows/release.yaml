@@ -18,7 +18,8 @@ name: release
 #     one trusted-publisher configuration covers both release lines.
 #   - This workflow is fully tokenless: no NPM_TOKEN secret anywhere. A
 #     brand-new package's first-ever publish (which OIDC cannot do) needs a
-#     one-time manual `pnpm publish`.
+#     one-time manual `pnpm publish` — the release script refuses such
+#     packages at plan time rather than failing mid-run.
 
 on:
   # Manual runs — default to a dry run that prints the publish plan and
@@ -118,6 +119,9 @@ jobs:
           # This job only reads the repo (it never pushes), so don't leave the
           # GITHUB_TOKEN in .git/config for later steps to read.
           persist-credentials: false
+          # Full history for all refs so the v5-ancestry guard below can
+          # verify that a release tag actually sits on the v5 line.
+          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -127,6 +131,21 @@ jobs:
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org' # writes the .npmrc the registry expects
+
+      # A GitHub release can be cut from any tag. Only tags whose commit is on
+      # the v5 branch may publish from this workflow — a tag on some other
+      # branch that happens to carry this file must not release its versions.
+      # (Manual workflow_dispatch runs are already forced to dry-run from any
+      # ref other than v5 by the Release step below.)
+      - name: Verify the release tag is on the v5 line
+        if: github.event_name == 'release'
+        run: |
+          if git merge-base --is-ancestor "$GITHUB_SHA" "origin/v5"; then
+            echo "Release commit $GITHUB_SHA is on the v5 line."
+          else
+            echo "::error::Release tag commit $GITHUB_SHA is not on the v5 branch — refusing to publish."
+            exit 1
+          fi
 
       - name: Install Dependencies
         # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh

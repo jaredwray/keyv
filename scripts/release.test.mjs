@@ -152,12 +152,11 @@ describe("computeTag", () => {
 describe("resolvePlanAction", () => {
 	const pkg = (name, version) => ({ name, version, path: `/repo/packages/${name}` });
 
-	it("publishes a never-published package to latest", () => {
-		expect(resolvePlanAction(pkg("@keyv/new", "1.0.0"), null)).toMatchObject({
-			action: "publish",
-			tag: "latest",
-			registryVersion: null,
-		});
+	it("refuses a never-published package — a first publish cannot use OIDC trusted publishing", () => {
+		const entry = resolvePlanAction(pkg("@keyv/new", "1.0.0"), null);
+		expect(entry.action).toBe("error");
+		expect(entry.reason).toMatch(/never published/);
+		expect(resolvePlanAction(pkg("@keyv/new", "1.0.0-beta.1"), null).action).toBe("error");
 	});
 
 	it("skips a version that is already on the registry", () => {
