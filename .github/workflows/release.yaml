@@ -2,12 +2,19 @@ name: release
 
 # Publishes v5-branch workspace packages to npm whose manually-set version is
 # ahead of the registry. Versions are never bumped here — a human bumps each
-# package's `version` (typically via a release PR); publishing a GitHub
-# release then triggers this workflow, which figures out what actually needs
+# package's `version` (typically via a release PR), then runs this workflow
+# MANUALLY from the v5 branch, which figures out what actually needs
 # publishing and publishes it in dependency order under the right dist-tag.
 # See scripts/release.mjs for the decision logic, including the MAJOR CEILING:
 # nothing at or above 6.0.0 (including pre-releases) can ever be published
 # from the v5 branch — v6 is released from `main`.
+#
+# How to run it (manual, workflow_dispatch only):
+#   Actions tab → "release" → "Run workflow" → set "Use workflow from" to the
+#   `v5` branch → leave "Dry run" checked to preview the plan, or uncheck it to
+#   publish for real → "Run workflow". The workflow definition on the branch
+#   you pick is the one that runs; a real publish only happens from `v5` (any
+#   other ref is forced to a dry run below).
 #
 # Authentication uses OIDC trusted publishing (tokenless) with provenance:
 #   - `id-token: write` lets GitHub mint the OIDC token pnpm exchanges for a
@@ -22,19 +29,16 @@ name: release
 #     packages at plan time rather than failing mid-run.
 
 on:
-  # Manual runs — default to a dry run that prints the publish plan and
-  # validates packaging without publishing anything. Dispatching from any ref
-  # other than the v5 branch is forced to a dry run.
+  # Manual runs ONLY — there is deliberately no `release`/`push` trigger, so a
+  # publish never happens automatically. Defaults to a dry run that prints the
+  # publish plan and validates packaging without publishing anything.
+  # Dispatching from any ref other than the v5 branch is forced to a dry run.
   workflow_dispatch:
     inputs:
       dry_run:
         description: "Dry run — compute and print the publish plan without publishing"
         type: boolean
         default: true
-  # Publishing a GitHub release (from a tag cut on the v5 line, where this
-  # workflow file lives) publishes the bumped packages to npm for real.
-  release:
-    types: [published]
 
 # Never run two releases at once; let an in-flight publish finish rather than
 # cancelling it half-way through the package set.
@@ -119,9 +123,6 @@ jobs:
           # This job only reads the repo (it never pushes), so don't leave the
           # GITHUB_TOKEN in .git/config for later steps to read.
           persist-credentials: false
-          # Full history for all refs so the v5-ancestry guard below can
-          # verify that a release tag actually sits on the v5 line.
-          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -131,21 +132,6 @@ jobs:
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org' # writes the .npmrc the registry expects
-
-      # A GitHub release can be cut from any tag. Only tags whose commit is on
-      # the v5 branch may publish from this workflow — a tag on some other
-      # branch that happens to carry this file must not release its versions.
-      # (Manual workflow_dispatch runs are already forced to dry-run from any
-      # ref other than v5 by the Release step below.)
-      - name: Verify the release tag is on the v5 line
-        if: github.event_name == 'release'
-        run: |
-          if git merge-base --is-ancestor "$GITHUB_SHA" "origin/v5"; then
-            echo "Release commit $GITHUB_SHA is on the v5 line."
-          else
-            echo "::error::Release tag commit $GITHUB_SHA is not on the v5 branch — refusing to publish."
-            exit 1
-          fi
 
       - name: Install Dependencies
         # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
@@ -160,10 +146,11 @@ jobs:
       - name: Verify release logic
         run: pnpm test:release
 
-      # A published GitHub release publishes for real (the script's own guards
-      # still apply: the < 6.0.0 major ceiling, skip-already-published, and
-      # never moving a dist-tag backwards). A manual run honors its dry_run
-      # input, and is forced to a dry run from any ref other than the v5
-      # branch so branch versions can't be pushed to npm.
+      # Honors the dry_run input, and is forced to a dry run from any ref other
+      # than the v5 branch so branch versions can't be pushed to npm. A real
+      # publish therefore requires dispatching from v5 with dry_run unchecked.
+      # The script's own guards still apply on top: the < 6.0.0 major ceiling,
+      # skip-already-published, refuse first-time (non-OIDC) publishes, and
+      # never move a dist-tag backwards.
       - name: Release
-        run: node scripts/release.mjs ${{ (github.event_name == 'workflow_dispatch' && (inputs.dry_run || github.ref != 'refs/heads/v5')) && '--dry-run' || '' }}
+        run: node scripts/release.mjs ${{ (inputs.dry_run || github.ref != 'refs/heads/v5') && '--dry-run' || '' }}
