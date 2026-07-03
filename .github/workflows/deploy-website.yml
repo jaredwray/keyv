@@ -15,11 +15,11 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     # Test
     - name: Use Node.js 22
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: 22
 
@@ -36,7 +36,7 @@ jobs:
       run: pnpm website:build
 
     - name: Publish to Cloudflare Pages
-      uses: cloudflare/wrangler-action@v3
+      uses: cloudflare/wrangler-action@v4
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         command: pages deploy packages/website/dist --project-name=keyv --branch=main
