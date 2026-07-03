@@ -31,15 +31,15 @@ import {
 } from "./types.js";
 
 export {
+	defaultReconnectStrategy,
+	type KeyvRedisEntry,
 	type KeyvRedisOptions,
 	type KeyvRedisPropertyOptions,
-	type KeyvRedisEntry,
-	RedisErrorMessages,
-	defaultReconnectStrategy,
+	type RedisClientConnectionType,
 	type RedisConnectionClientType,
 	type RedisConnectionClusterType,
 	type RedisConnectionSentinelType,
-	type RedisClientConnectionType,
+	RedisErrorMessages,
 };
 
 export default class KeyvRedis<T>
