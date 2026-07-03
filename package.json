@@ -7,6 +7,7 @@
   "author": "Jared Wray <me@jaredwray.com>",
   "license": "MIT",
   "private": true,
+  "packageManager": "pnpm@10.34.4",
   "scripts": {
     "build:keyv:serialize": "pnpm recursive --filter=@keyv/serialize run build",
     "build:keyv": "pnpm recursive --filter=keyv run build",
