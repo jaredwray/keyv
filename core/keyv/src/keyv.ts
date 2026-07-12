@@ -1213,6 +1213,13 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * construction time no `warn` event listener can have been attached yet.
 	 */
 	private warnDeprecatedOptions(options: KeyvOptions): void {
+		// A deprecation notice must never break construction, so bail out in restricted
+		// runtimes (sandboxes, minimal embedded engines) where `console` or `console.warn`
+		// may be stripped or undefined.
+		if (typeof console === "undefined" || typeof console.warn !== "function") {
+			return;
+		}
+
 		const record = options as Record<string, unknown>;
 		for (const [option, message] of deprecatedOptionMessages) {
 			if (record[option] !== undefined) {

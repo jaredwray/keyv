@@ -286,6 +286,17 @@ describe("deprecated options", () => {
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
+
+	test("does not throw when console.warn is unavailable (restricted runtime)", () => {
+		// Simulate an environment where console.warn has been stripped.
+		const originalWarn = console.warn;
+		(console as { warn?: unknown }).warn = undefined;
+		try {
+			expect(() => new Keyv({ serialize: JSON.stringify } as unknown as KeyvOptions)).not.toThrow();
+		} finally {
+			console.warn = originalWarn;
+		}
+	});
 });
 
 describe("compression", () => {
