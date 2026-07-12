@@ -27,6 +27,7 @@ import {
 	calculateExpires,
 	deleteExpiredKeys,
 	deprecatedHookAliases,
+	deprecatedOptionMessages,
 	isDataExpired,
 	resolveTtl,
 	ttlFromExpires,
@@ -63,6 +64,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 		});
 
 		this.deprecatedHooks = buildDeprecatedHooks();
+		this.warnDeprecatedOptions(mergedOptions);
 		this._compression = mergedOptions.compression;
 		this._encryption = mergedOptions.encryption;
 		this.initSerialization(mergedOptions);
@@ -1201,6 +1203,22 @@ export class Keyv<GenericValue = any> extends Hookified {
 		}
 
 		return merged;
+	}
+
+	/**
+	 * Warns about constructor options that were removed in Keyv v6 (see
+	 * {@link deprecatedOptionMessages}). Without this, passing a removed option such as the
+	 * old `serialize`/`deserialize` is silently ignored, which looks like the option simply
+	 * "not working" rather than no longer existing. A `console.warn` is used because at
+	 * construction time no `warn` event listener can have been attached yet.
+	 */
+	private warnDeprecatedOptions(options: KeyvOptions): void {
+		const record = options as Record<string, unknown>;
+		for (const [option, message] of deprecatedOptionMessages) {
+			if (record[option] !== undefined) {
+				console.warn(`[keyv] ${message}`);
+			}
+		}
 	}
 
 	/**

@@ -1,6 +1,11 @@
 import { faker } from "@faker-js/faker";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import Keyv, { KeyvBridgeAdapter, KeyvMemoryAdapter, KeyvSanitize } from "../src/index.js";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import Keyv, {
+	KeyvBridgeAdapter,
+	KeyvMemoryAdapter,
+	type KeyvOptions,
+	KeyvSanitize,
+} from "../src/index.js";
 import { KeyvStats } from "../src/stats.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
 
@@ -218,6 +223,68 @@ describe("serialization", () => {
 			},
 		});
 		expect(await keyv3.decode("anything")).toBeUndefined();
+	});
+});
+
+describe("deprecated options", () => {
+	let warnSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		warnSpy.mockRestore();
+	});
+
+	test("warns when the removed 'serialize' option is passed but still round-trips", async () => {
+		const store = new Map();
+		const keyv = new Keyv({ store, serialize: JSON.stringify } as unknown as KeyvOptions);
+
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		const message = String(warnSpy.mock.calls[0][0]);
+		expect(message).toContain("serialize");
+		expect(message).toContain("serialization");
+
+		// The removed option is ignored, but the built-in serializer keeps get/set working.
+		await keyv.set("foo", { a: 1 });
+		expect(await keyv.get("foo")).toStrictEqual({ a: 1 });
+	});
+
+	test("warns when the removed 'deserialize' option is passed", () => {
+		// eslint-disable-next-line no-new
+		new Keyv({ deserialize: JSON.parse } as unknown as KeyvOptions);
+
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(String(warnSpy.mock.calls[0][0])).toContain("deserialize");
+	});
+
+	test("warns once per removed option when several are passed together", () => {
+		// eslint-disable-next-line no-new
+		new Keyv({
+			serialize: JSON.stringify,
+			deserialize: JSON.parse,
+		} as unknown as KeyvOptions);
+
+		expect(warnSpy).toHaveBeenCalledTimes(2);
+	});
+
+	test("does not warn for supported options or the v6 'serialization' adapter", () => {
+		const serialization = {
+			stringify: (data: unknown) => JSON.stringify(data),
+			parse: <T>(data: string) => JSON.parse(data) as T,
+		};
+		// eslint-disable-next-line no-new
+		new Keyv({ store: new Map(), serialization, ttl: 100 });
+
+		expect(warnSpy).not.toHaveBeenCalled();
+	});
+
+	test("does not warn when a removed option is explicitly undefined", () => {
+		// eslint-disable-next-line no-new
+		new Keyv({ serialize: undefined } as unknown as KeyvOptions);
+
+		expect(warnSpy).not.toHaveBeenCalled();
 	});
 });
 

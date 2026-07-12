@@ -135,3 +135,22 @@ export function buildDeprecatedHooks(): Map<string, string> {
 		["postDeleteMany", "Use KeyvHooks.AFTER_DELETE_MANY ('after:deleteMany') instead"],
 	]);
 }
+
+/**
+ * Constructor options that were removed in Keyv v6, mapped to migration guidance.
+ * These are surfaced as a console warning at construction so that passing one is no
+ * longer a silent no-op. The old `serialize`/`deserialize` functions were replaced by
+ * a single `serialization` adapter exposing `stringify`/`parse`; because the built-in
+ * serializer already behaves like `JSON.stringify`/`JSON.parse`, a dropped `serialize`
+ * option produces identical output and looks like it "isn't working".
+ */
+export const deprecatedOptionMessages = new Map<string, string>([
+	[
+		"serialize",
+		"The 'serialize' option was removed in Keyv v6 and is being ignored. Use the 'serialization' option instead (an adapter with 'stringify' and 'parse' methods, e.g. KeyvJsonSerializer).",
+	],
+	[
+		"deserialize",
+		"The 'deserialize' option was removed in Keyv v6 and is being ignored. Use the 'serialization' option instead (an adapter with 'stringify' and 'parse' methods, e.g. KeyvJsonSerializer).",
+	],
+]);
