@@ -18,6 +18,12 @@ const _serialize = (data: any, escapeColonStrings: boolean = true): string => {
 		return JSON.stringify(`:base64:${data.toString("base64")}`);
 	}
 
+	// Plain Uint8Array (e.g. output of compression libraries such as pako)
+	// must be stored as base64 too, not as an index-keyed byte object.
+	if (data instanceof Uint8Array) {
+		return JSON.stringify(`:base64:${Buffer.from(data).toString("base64")}`);
+	}
+
 	if (data?.toJSON) {
 		// biome-ignore lint/suspicious/noExplicitAny: allowed
 		data = data.toJSON() as unknown as Record<string, any>;
