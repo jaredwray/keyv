@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { defaultDeserialize, defaultSerialize } from "@keyv/serialize";
 import { deflate, inflate } from "pako";
 import type { Options, Serialize } from "./types.js";
@@ -12,7 +13,9 @@ export class KeyvGzip {
 	}
 
 	async compress(value: pako.Data | string, options?: Options) {
-		return deflate(value, options || this.opts);
+		// Wrap in a Buffer so serialization stores the compressed bytes as a
+		// compact `:base64:` string instead of an index-keyed byte object.
+		return Buffer.from(deflate(value, options || this.opts));
 	}
 
 	async decompress(value: pako.Data, options?: Options) {

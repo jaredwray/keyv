@@ -69,6 +69,29 @@ describe("Serialize package tests", () => {
 		expect(result).toBe(expectedResult);
 	});
 
+	it("defaultSerialize converts Uint8Array to base64 JSON string", () => {
+		const bytes = new Uint8Array([1, 2, 3, 250]);
+		const expectedResult = JSON.stringify(
+			`:base64:${Buffer.from(bytes).toString("base64")}`,
+		);
+		const result = defaultSerialize(bytes);
+		expect(result).toBe(expectedResult);
+
+		const deserialized = defaultDeserialize<Buffer>(result);
+		expect(Buffer.isBuffer(deserialized)).toBe(true);
+		expect([...deserialized]).toEqual([1, 2, 3, 250]);
+	});
+
+	it("defaultSerialize converts nested Uint8Array to base64 JSON string", () => {
+		const bytes = new Uint8Array([120, 156, 21, 137]);
+		const serialized = defaultSerialize({ value: bytes, expires: null });
+		expect(serialized).toContain(":base64:");
+		expect(serialized).not.toContain('"0"');
+
+		const deserialized = defaultDeserialize<{ value: Buffer }>(serialized);
+		expect([...deserialized.value]).toEqual([120, 156, 21, 137]);
+	});
+
 	it("serialization toJSON is called on object", () => {
 		const serialized = defaultSerialize({ value: { toJSON: () => "foo" } });
 		const deserialized = defaultDeserialize<{ value: string }>(serialized);
