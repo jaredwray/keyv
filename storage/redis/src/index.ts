@@ -1,4 +1,3 @@
-// biome-ignore-all lint/suspicious/noExplicitAny: redis
 import {
 	createClient,
 	createCluster,
@@ -17,7 +16,12 @@ import {
 } from "@redis/client";
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
-import { type KeyvStorageAdapter, type KeyvStorageEntry, keyvStorageCapability } from "keyv";
+import {
+	type KeyvAny,
+	type KeyvStorageAdapter,
+	type KeyvStorageEntry,
+	keyvStorageCapability,
+} from "keyv";
 import {
 	defaultReconnectStrategy,
 	type KeyvRedisEntry,
@@ -125,7 +129,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 					url: connect,
 					socket,
 				}) as RedisClientType;
-			} else if ((connect as any).connect !== undefined) {
+			} else if ((connect as KeyvAny).connect !== undefined) {
 				if (this.isClientSentinel(connect as RedisClientConnectionType)) {
 					this._client = connect as RedisConnectionSentinelType;
 				} else if (this.isClientCluster(connect as RedisClientConnectionType)) {
@@ -134,9 +138,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 					this._client = connect as RedisClientType;
 				}
 			} else if (connect instanceof Object) {
-				if ((connect as any).sentinelRootNodes !== undefined) {
+				if ((connect as KeyvAny).sentinelRootNodes !== undefined) {
 					this._client = createSentinel(connect as RedisSentinelOptions) as RedisSentinelType;
-				} else if ((connect as any).rootNodes === undefined) {
+				} else if ((connect as KeyvAny).rootNodes === undefined) {
 					this._client = createClient(connect as RedisClientOptions) as RedisClientType;
 				} else {
 					this._client = createCluster(connect as RedisClusterOptions);
@@ -933,7 +937,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * Get many keys. If the instance is a cluster, it will do multiple MGET calls
 	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
 	 */
-	private async mget<T = any>(keys: string[]): Promise<Array<T | undefined>> {
+	private async mget<T = KeyvAny>(keys: string[]): Promise<Array<T | undefined>> {
 		const valueMap = new Map<string, string | undefined>();
 
 		if (this.isCluster()) {
@@ -1030,7 +1034,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @returns {boolean} - true if the client is a cluster client, false if not
 	 */
 	private isClientCluster(client: RedisClientConnectionType): boolean {
-		return (client as any).slots !== undefined;
+		return (client as KeyvAny).slots !== undefined;
 	}
 
 	/**
@@ -1039,7 +1043,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @returns {boolean} - true if the client is a sentinel client, false if not
 	 */
 	private isClientSentinel(client: RedisClientConnectionType): boolean {
-		return (client as any).getSentinelNode !== undefined;
+		return (client as KeyvAny).getSentinelNode !== undefined;
 	}
 
 	/**

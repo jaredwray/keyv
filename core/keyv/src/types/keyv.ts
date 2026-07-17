@@ -7,10 +7,23 @@ import type {
 } from "./adapters.js";
 
 /**
+ * A permissive `any` type used at Keyv's dynamic boundaries — untyped store
+ * values, parameterized query arguments, and other places where the concrete
+ * type is intentionally open. Centralizing it keeps the `noExplicitAny`
+ * suppression in one place instead of scattered across the codebase.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: values can be any type for parameterized queries
+export type KeyvAny = any;
+
+/**
+ * The array counterpart to {@link KeyvAny} (i.e. `any[]`).
+ */
+export type KeyvAnyArray = KeyvAny[];
+
+/**
  * A Map or any Map-like object. Used as a flexible input type for stores.
  */
-// biome-ignore lint/suspicious/noExplicitAny: type format
-export type KeyvMapAny = Map<any, any> | any;
+export type KeyvMapAny = Map<KeyvAny, KeyvAny> | KeyvAny;
 
 /**
  * The envelope structure used to store values in Keyv.
@@ -130,8 +143,7 @@ export enum KeyvHooks {
  * Represents a key-value entry with an optional TTL, used for the public
  * batch API `Keyv.setMany`.
  */
-// biome-ignore lint/suspicious/noExplicitAny: type format
-export type KeyvEntry<Value = any> = {
+export type KeyvEntry<Value = KeyvAny> = {
 	/**
 	 * Key to set.
 	 */
@@ -152,8 +164,7 @@ export type KeyvEntry<Value = any> = {
  * `expires` once and passes these to a storage adapter's `setMany`, so adapters
  * never derive expiry themselves.
  */
-// biome-ignore lint/suspicious/noExplicitAny: type format
-export type KeyvStorageEntry<Value = any> = {
+export type KeyvStorageEntry<Value = KeyvAny> = {
 	/** Key to set. */
 	key: string;
 	/** Value to set (already encoded by Keyv core). */
@@ -180,8 +191,7 @@ export type KeyvOptions = {
 	 * The storage adapter instance to be used by Keyv.
 	 * @default new Map() - in-memory store
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	store?: KeyvStorageAdapter | Map<any, any> | any;
+	store?: KeyvStorageAdapter | Map<KeyvAny, KeyvAny> | KeyvAny;
 	/**
 	 * Default TTL in milliseconds. Can be overridden by specifying a TTL on `.set()`.
 	 * @default undefined
@@ -191,8 +201,7 @@ export type KeyvOptions = {
 	 * Enable compression option
 	 * @default undefined
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	compression?: KeyvCompressionAdapter | any;
+	compression?: KeyvCompressionAdapter | KeyvAny;
 	/**
 	 * Enable or disable statistics (default is false)
 	 * @default false

@@ -1,6 +1,7 @@
 import type { ConnectionOptions } from "node:tls";
 import { Hookified } from "hookified";
 import Keyv, {
+	type KeyvAny,
 	type KeyvStorageAdapter,
 	type KeyvStorageEntry,
 	type KeyvStorageGetResult,
@@ -147,8 +148,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			});
 		/* v8 ignore stop */
 
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		this.query = async (sqlString: string, values?: any) => {
+		this.query = async (sqlString: string, values?: KeyvAny) => {
 			const query = await this._connected;
 			return query(sqlString, values);
 		};
@@ -382,8 +382,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns A promise resolving to `true` on success, or `false` if an error occurred (an
 	 * `error` event is also emitted).
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
 			const strippedKey = this.removeKeyPrefix(key);
 			const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
@@ -664,8 +663,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	private async connect() {
 		const conn = pool(this._uri, { ...this._poolConfig, ssl: this._ssl });
-		// biome-ignore lint/suspicious/noExplicitAny: type format
-		return async (sql: string, values?: any) => {
+		return async (sql: string, values?: KeyvAny) => {
 			const data = await conn.query(sql, values);
 			return data.rows;
 		};

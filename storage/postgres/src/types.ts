@@ -1,4 +1,5 @@
 import type { ConnectionOptions } from "node:tls";
+import type { KeyvAny, KeyvAnyArray } from "keyv";
 import type { PoolConfig } from "pg";
 
 export type KeyvPostgresOptions = {
@@ -13,5 +14,4 @@ export type KeyvPostgresOptions = {
 	clearExpiredInterval?: number;
 } & PoolConfig;
 
-// biome-ignore lint/suspicious/noExplicitAny: values can be any type for parameterized queries
-export type Query = (sqlString: string, values?: any) => Promise<any[]>;
+export type Query = (sqlString: string, values?: KeyvAny) => Promise<KeyvAnyArray>;

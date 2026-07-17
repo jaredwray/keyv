@@ -1,11 +1,11 @@
+import type { KeyvAny } from "keyv";
 import type { Db } from "../types.js";
 import { createQueryFn, shouldApplyWal } from "./driver-utils.js";
 import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 
 async function createNodeSqliteConnection(options: SqliteDriverConnectOptions): Promise<Db> {
 	// Dynamic import — only available on Node.js 22.5+ with --experimental-sqlite
-	// biome-ignore lint/suspicious/noExplicitAny: node:sqlite types may not be available
-	const { DatabaseSync } = (await import("node:sqlite")) as any;
+	const { DatabaseSync } = (await import("node:sqlite")) as KeyvAny;
 	const db = new DatabaseSync(options.filename);
 
 	if (options.busyTimeout) {

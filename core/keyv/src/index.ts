@@ -42,6 +42,8 @@ export type {
 } from "./types/adapters.js";
 export type {
 	DeserializedData,
+	KeyvAny,
+	KeyvAnyArray,
 	KeyvEntry,
 	KeyvMapAny,
 	KeyvOptions,

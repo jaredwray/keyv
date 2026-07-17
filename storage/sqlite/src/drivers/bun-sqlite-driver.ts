@@ -1,4 +1,5 @@
 /* v8 ignore start -- @preserve: bun:sqlite only available in Bun runtime */
+import type { KeyvAny } from "keyv";
 import type { Db } from "../types.js";
 import { createQueryFn, shouldApplyWal } from "./driver-utils.js";
 import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
@@ -6,8 +7,7 @@ import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 async function createBunSqliteConnection(options: SqliteDriverConnectOptions): Promise<Db> {
 	// Dynamic import — only available in Bun runtime
 	// @ts-expect-error: bun:sqlite types may not be available
-	// biome-ignore lint/suspicious/noExplicitAny: bun:sqlite types may not be available
-	const { Database } = (await import("bun:sqlite")) as any;
+	const { Database } = (await import("bun:sqlite")) as KeyvAny;
 	const db = new Database(options.filename);
 
 	if (options.busyTimeout) {

@@ -2,6 +2,7 @@ import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
 import Redis, { type Cluster } from "iovalkey";
 import Keyv, {
+	type KeyvAny,
 	type KeyvStorageAdapter,
 	type KeyvStorageEntry,
 	type KeyvStorageGetResult,
@@ -42,15 +43,13 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * Typed as `any` internally to avoid cascading type assertions from iovalkey's
 	 * return types. The public `client` getter/setter exposes the proper `Redis | Cluster` type.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: iovalkey method return types require flexible internal typing
-	private _client: any;
+	private _client: KeyvAny;
 
 	/**
 	 * Tracks the client instance whose events have already been wired up so that
 	 * repeated initialization does not attach duplicate listeners.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: matches the internal client typing
-	private _eventsWiredClient: any;
+	private _eventsWiredClient: KeyvAny;
 
 	/**
 	 * Stable reference to the `error` listener so it can be removed from a client
@@ -254,8 +253,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<boolean>} `true` if the value was stored, `false` if the value was
 	 *   `undefined` or an error occurred while storing.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		if (value === undefined) {
 			return false;
 		}
@@ -263,8 +261,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 		try {
 			key = this.getKeyName(key);
 
-			// biome-ignore lint/suspicious/noExplicitAny: type format
-			const set = async (redis: any) => {
+			const set = async (redis: KeyvAny) => {
 				if (typeof expires === "number") {
 					await redis.set(key, value, "PXAT", expires);
 				} else {
@@ -312,8 +309,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 
 		const resolvedEntries: Array<{
 			k: string;
-			// biome-ignore lint/suspicious/noExplicitAny: type format
-			value: any;
+			value: KeyvAny;
 			expires?: number;
 			originalIndex: number;
 		}> = [];
@@ -397,8 +393,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	public async delete(key: string): Promise<boolean> {
 		key = this.getKeyName(key);
 		let items = 0;
-		// biome-ignore lint/suspicious/noExplicitAny: allowed
-		const unlink = async (redis: any) => redis.unlink(key);
+		const unlink = async (redis: KeyvAny) => redis.unlink(key);
 
 		if (this._useSets) {
 			const trx = this._client.multi();
@@ -455,8 +450,7 @@ class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 
 				const results = await trx.exec();
 				for (const [index, result] of results.entries()) {
-					// biome-ignore lint/suspicious/noExplicitAny: type format
-					const r = result as any;
+					const r = result as KeyvAny;
 					resultMap.set(slotKeys[index], r[0] === null && r[1] > 0);
 				}
 			}),
