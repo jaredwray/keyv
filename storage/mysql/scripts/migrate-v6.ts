@@ -80,73 +80,105 @@ async function migrate(options: {
 	const connection = await pool.getConnection();
 
 	try {
-		// Schema migrations run outside the transaction so they persist
-		// even when the data migration is a no-op or a dry run.
-		try {
-			await connection.query(
-				`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
-			);
-		} catch (error) {
-			if ((error as { errno?: number }).errno !== 1060) {
-				throw error;
-			}
-		}
-
-		const [keyColumns] = await connection.query(
+		const [existingKeyColumns] = await connection.query(
 			`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
 		);
-		if (
-			(keyColumns as mysql.RowDataPacket[]).some((column) =>
-				!String(column.Type).toLowerCase().startsWith("varbinary("),
-			)
-		) {
-			// Convert text to UTF-8 first, then preserve those exact bytes in VARBINARY.
-			await connection.query(
-				`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARCHAR(${keyLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, MODIFY COLUMN namespace VARCHAR(${namespaceLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
-			);
-			await connection.query(
-				`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARBINARY(${keyByteLength}) NOT NULL, MODIFY COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
-			);
-		}
+		let hasNamespaceColumn = (existingKeyColumns as mysql.RowDataPacket[]).some(
+			(column) => column.Field === "namespace",
+		);
 
-		try {
-			await connection.query(`ALTER TABLE ${tableEsc} DROP PRIMARY KEY`);
-		} catch (error) {
-			if ((error as { errno?: number }).errno !== 1091) {
-				throw error;
+		if (!dryRun) {
+			// Schema migrations run outside the transaction so they persist even when
+			// the data migration is a no-op.
+			if (!hasNamespaceColumn) {
+				await connection.query(
+					`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+				);
+				hasNamespaceColumn = true;
 			}
-		}
 
-		const indexName = `\`${(table + "_key_namespace_idx").replace(/`/g, "``")}\``;
-		try {
-			await connection.query(
-				`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (id, namespace)`,
+			const [keyColumns] = await connection.query(
+				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
 			);
-		} catch (error) {
-			if ((error as { errno?: number }).errno !== 1061) {
-				throw error;
+			if (
+				(keyColumns as mysql.RowDataPacket[]).some((column) =>
+					!String(column.Type).toLowerCase().startsWith("varbinary("),
+				)
+			) {
+				// Convert text to UTF-8 first, then preserve those exact bytes in VARBINARY.
+				await connection.query(
+					`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARCHAR(${keyLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, MODIFY COLUMN namespace VARCHAR(${namespaceLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
+				);
+				await connection.query(
+					`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARBINARY(${keyByteLength}) NOT NULL, MODIFY COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+				);
 			}
-		}
 
-		// Migration: add expires column
-		try {
-			await connection.query(
-				`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`,
-			);
-		} catch (error) {
-			if ((error as { errno?: number }).errno !== 1060) {
-				throw error;
+			try {
+				await connection.query(`ALTER TABLE ${tableEsc} DROP PRIMARY KEY`);
+			} catch (error) {
+				if ((error as { errno?: number }).errno !== 1091) {
+					throw error;
+				}
 			}
-		}
 
-		const expiresIndexName = `\`${(table + "_expires_idx").replace(/`/g, "``")}\``;
-		try {
-			await connection.query(
-				`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`,
+			const indexNameValue = `${table}_key_namespace_idx`;
+			const indexName = `\`${indexNameValue.replace(/`/g, "``")}\``;
+			const [indexRowsResult] = await connection.query(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexNameValue]),
 			);
-		} catch (error) {
-			if ((error as { errno?: number }).errno !== 1061) {
-				throw error;
+			const indexRows = indexRowsResult as mysql.RowDataPacket[];
+			const indexColumns = [...indexRows]
+				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+				.map((row) => String(row.Column_name));
+			const hasNamespaceFirstUniqueIndex =
+				indexColumns.length === 2 &&
+				indexColumns[0] === "namespace" &&
+				indexColumns[1] === "id" &&
+				indexRows.every((row) => Number(row.Non_unique) === 0);
+
+			if (!hasNamespaceFirstUniqueIndex) {
+				if (indexRows.length > 0) {
+					try {
+						await connection.query(`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}`);
+					} catch (error) {
+						if ((error as { errno?: number }).errno !== 1091) {
+							throw error;
+						}
+					}
+				}
+
+				try {
+					await connection.query(
+						`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`,
+					);
+				} catch (error) {
+					if ((error as { errno?: number }).errno !== 1061) {
+						throw error;
+					}
+				}
+			}
+
+			// Migration: add expires column
+			try {
+				await connection.query(
+					`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`,
+				);
+			} catch (error) {
+				if ((error as { errno?: number }).errno !== 1060) {
+					throw error;
+				}
+			}
+
+			const expiresIndexName = `\`${(table + "_expires_idx").replace(/`/g, "``")}\``;
+			try {
+				await connection.query(
+					`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`,
+				);
+			} catch (error) {
+				if ((error as { errno?: number }).errno !== 1061) {
+					throw error;
+				}
 			}
 		}
 
@@ -156,7 +188,7 @@ async function migrate(options: {
 				CONVERT(SUBSTRING_INDEX(id, ':', 1) USING utf8mb4) AS new_namespace,
 				CONVERT(SUBSTRING(id, LOCATE(':', id) + 1) USING utf8mb4) AS new_key
 			FROM ${tableEsc}
-			WHERE namespace = '' AND id LIKE '%:%'`,
+			WHERE ${hasNamespaceColumn ? "namespace = '' AND " : ""}id LIKE '%:%'`,
 		);
 
 		const preview = rows as Array<{

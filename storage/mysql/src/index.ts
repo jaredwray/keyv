@@ -24,8 +24,19 @@ function escapeIdentifier(identifier: string): string {
 		.join(".");
 }
 
-/** Encodes a key or namespace as byte-exact UTF-8 for VARBINARY storage. */
-function encodeKeyPart(value: string): Buffer {
+/** Validates and encodes a key or namespace as byte-exact UTF-8 for VARBINARY storage. */
+function encodeKeyPart(
+	value: string,
+	maximumLength: number,
+	optionName: "keyLength" | "namespaceLength",
+): Buffer {
+	const characterLength = Array.from(value).length;
+	if (characterLength > maximumLength) {
+		throw new RangeError(
+			`Value has ${characterLength} characters, exceeding the configured ${optionName} of ${maximumLength}`,
+		);
+	}
+
 	return Buffer.from(value, "utf8");
 }
 
@@ -62,13 +73,13 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	private _table = "keyv";
 
 	/**
-	 * The maximum key size in UTF-8 characters for the key column.
+	 * The maximum key size in Unicode code points for the key column.
 	 * @default 255
 	 */
 	private _keyLength = 255;
 
 	/**
-	 * The maximum namespace size in UTF-8 characters for the namespace column.
+	 * The maximum namespace size in Unicode code points for the namespace column.
 	 * @default 255
 	 */
 	private _namespaceLength = 255;
@@ -147,7 +158,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the maximum key size in UTF-8 characters for the key column.
+	 * Get the maximum key size in Unicode code points for the key column.
 	 * @default 255
 	 */
 	public get keyLength(): number {
@@ -155,14 +166,14 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the maximum key size (VARCHAR length) for the key column.
+	 * Set the maximum key size in Unicode code points for the key column.
 	 */
 	public set keyLength(value: number) {
 		this._keyLength = value;
 	}
 
 	/**
-	 * Get the maximum namespace size in UTF-8 characters for the namespace column.
+	 * Get the maximum namespace size in Unicode code points for the namespace column.
 	 * @default 255
 	 */
 	public get namespaceLength(): number {
@@ -170,7 +181,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the maximum namespace length (VARCHAR length) for the namespace column.
+	 * Set the maximum namespace size in Unicode code points for the namespace column.
 	 */
 	public set namespaceLength(value: number) {
 		this._namespaceLength = value;
@@ -268,11 +279,12 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		};
 
 		const tableEsc = escapeIdentifier(this._table);
-		const indexName = `\`${(`${this._table}_key_namespace_idx`).replace(/`/g, "``")}\``;
+		const indexNameValue = `${this._table}_key_namespace_idx`;
+		const indexName = `\`${indexNameValue.replace(/`/g, "``")}\``;
 		const expiresIndexName = `\`${(`${this._table}_expires_idx`).replace(/`/g, "``")}\``;
 		const keyByteLength = this._keyLength * 4;
 		const namespaceByteLength = this._namespaceLength * 4;
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARBINARY(${keyByteLength}) NOT NULL, value TEXT, namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (id, namespace), INDEX ${expiresIndexName} (expires))`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARBINARY(${keyByteLength}) NOT NULL, value TEXT, namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (namespace, id), INDEX ${expiresIndexName} (expires))`;
 
 		/* v8 ignore next -- @preserve */
 		const connected = connection().then(async (query) => {
@@ -315,13 +327,38 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			// Migration: create composite unique index
-			try {
-				await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (id, namespace)`);
-			} catch (error) {
-				// Error 1061 = Duplicate key name - index already exists, safe to ignore
-				if ((error as { errno?: number }).errno !== 1061) {
-					throw error;
+			// Migration: make namespace the leftmost column of the composite unique index.
+			const indexRows = (await query(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexNameValue]),
+			)) as mysql.RowDataPacket[];
+			const indexColumns = [...indexRows]
+				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+				.map((row) => String(row.Column_name));
+			const hasNamespaceFirstUniqueIndex =
+				indexColumns.length === 2 &&
+				indexColumns[0] === "namespace" &&
+				indexColumns[1] === "id" &&
+				indexRows.every((row) => Number(row.Non_unique) === 0);
+
+			if (!hasNamespaceFirstUniqueIndex) {
+				if (indexRows.length > 0) {
+					try {
+						await query(`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}`);
+					} catch (error) {
+						// Error 1091 = another adapter already replaced the index.
+						if ((error as { errno?: number }).errno !== 1091) {
+							throw error;
+						}
+					}
+				}
+
+				try {
+					await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`);
+				} catch (error) {
+					// Error 1061 = another adapter already created the index.
+					if ((error as { errno?: number }).errno !== 1061) {
+						throw error;
+					}
 				}
 			}
 
@@ -384,7 +421,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT value, expires FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const select = mysql.format(sql, [encodeKeyPart(key), encodeKeyPart(ns)]);
+		const select = mysql.format(sql, [this.encodeKey(key), this.encodeNamespace(ns)]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
@@ -414,7 +451,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT CONVERT(id USING utf8mb4) AS id, value, expires FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-		const select = mysql.format(sql, [keys.map(encodeKeyPart), encodeKeyPart(ns)]);
+		const select = mysql.format(sql, [
+			keys.map((key) => this.encodeKey(key)),
+			this.encodeNamespace(ns),
+		]);
 
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 
@@ -453,9 +493,9 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			VALUES(?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE value=?, expires=?;`;
 			const insert = [
-				encodeKeyPart(key),
+				this.encodeKey(key),
 				value,
-				encodeKeyPart(ns),
+				this.encodeNamespace(ns),
 				expires ?? null,
 				value,
 				expires ?? null,
@@ -484,9 +524,9 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		try {
 			const ns = this.getNamespaceValue();
 			const values = entries.map(({ key, value, expires }) => [
-				encodeKeyPart(key),
+				this.encodeKey(key),
 				value,
-				encodeKeyPart(ns),
+				this.encodeNamespace(ns),
 				expires ?? null,
 			]);
 			const placeholders = values.map(() => "(?, ?, ?, ?)").join(", ");
@@ -511,7 +551,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	public async delete(key: string) {
 		const ns = this.getNamespaceValue();
 		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const del = mysql.format(sql, [encodeKeyPart(key), encodeKeyPart(ns)]);
+		const del = mysql.format(sql, [this.encodeKey(key), this.encodeNamespace(ns)]);
 		const result = await this.query<mysql.ResultSetHeader>(del);
 		return result.affectedRows > 0;
 	}
@@ -538,7 +578,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	public async clear() {
 		const ns = this.getNamespaceValue();
 		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE namespace = ?`;
-		const del = mysql.format(sql, [encodeKeyPart(ns)]);
+		const del = mysql.format(sql, [this.encodeNamespace(ns)]);
 
 		await this.query(del);
 	}
@@ -559,13 +599,13 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 				// First batch: no cursor constraint
 				sql = mysql.format(
 					`SELECT CONVERT(id USING utf8mb4) AS id, value, expires FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
-					[encodeKeyPart(namespaceValue), Date.now(), limit],
+					[this.encodeNamespace(namespaceValue), Date.now(), limit],
 				);
 			} else {
 				// Subsequent batches: use keyset pagination
 				sql = mysql.format(
 					`SELECT CONVERT(id USING utf8mb4) AS id, value, expires FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND id > ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
-					[encodeKeyPart(namespaceValue), encodeKeyPart(lastKey), Date.now(), limit],
+					[this.encodeNamespace(namespaceValue), this.encodeKey(lastKey), Date.now(), limit],
 				);
 			}
 
@@ -597,7 +637,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT expires FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const select = mysql.format(sql, [encodeKeyPart(key), encodeKeyPart(ns)]);
+		const select = mysql.format(sql, [this.encodeKey(key), this.encodeNamespace(ns)]);
 		const rows: mysql.RowDataPacket = await this.query(select);
 		if (rows.length === 0) {
 			return false;
@@ -624,7 +664,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT CONVERT(id USING utf8mb4) AS id, expires FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-		const select = mysql.format(sql, [keys.map(encodeKeyPart), encodeKeyPart(ns)]);
+		const select = mysql.format(sql, [
+			keys.map((key) => this.encodeKey(key)),
+			this.encodeNamespace(ns),
+		]);
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 
 		const validKeys = new Set<string>();
@@ -680,6 +723,16 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		return this._namespace ?? "";
 	}
 
+	/** Validates the configured character limit and encodes a key for storage. */
+	private encodeKey(key: string): Buffer {
+		return encodeKeyPart(key, this._keyLength, "keyLength");
+	}
+
+	/** Validates the configured character limit and encodes a namespace for storage. */
+	private encodeNamespace(namespace: string): Buffer {
+		return encodeKeyPart(namespace, this._namespaceLength, "namespaceLength");
+	}
+
 	/** Deletes rows that were already expired at the time of a preceding read. */
 	private async deleteExpiredKeys(
 		keys: string[],
@@ -687,7 +740,11 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		expiresAt: number,
 	): Promise<void> {
 		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND expires IS NOT NULL AND expires <= ?`;
-		const del = mysql.format(sql, [keys.map(encodeKeyPart), encodeKeyPart(namespace), expiresAt]);
+		const del = mysql.format(sql, [
+			keys.map((key) => this.encodeKey(key)),
+			this.encodeNamespace(namespace),
+			expiresAt,
+		]);
 		await this.query(del);
 	}
 
