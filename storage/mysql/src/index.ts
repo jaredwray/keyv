@@ -445,7 +445,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
 			VALUES ${placeholders}
 			ON DUPLICATE KEY UPDATE value=VALUES(value), expires=VALUES(expires);`;
-			const upsert = mysql.format(sql, flatValues);
+			const upsert = mysql.format(sql, flatValues as mysql.SqlValue[]);
 			await this.query(upsert);
 			return entries.map(() => true);
 		} catch (error) {
@@ -728,4 +728,4 @@ export const createKeyv = (options?: KeyvMysqlOptions | string) =>
 	new Keyv({ store: new KeyvMysql(options) });
 
 export default KeyvMysql;
-export type { KeyvMysqlOptions } from "./types";
+export type { KeyvMysqlOptions } from "./types.js";
