@@ -2,9 +2,9 @@ import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type mysql from "mysql2";
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import KeyvMysql, { createKeyv } from "../src/index.js";
-import { parseConnectionString } from "../src/pool.js";
+import { endPool, parseConnectionString } from "../src/pool.js";
 
 const uri = "mysql://root@localhost:3306/keyv_test";
 
@@ -17,6 +17,10 @@ storageTestSuite(test, store);
 beforeEach(async () => {
 	const keyv = store();
 	await keyv.clear();
+});
+
+afterAll(async () => {
+	await endPool();
 });
 
 describe("constructor", () => {
@@ -633,6 +637,41 @@ describe("disconnect", () => {
 		expect(await keyv.get(key)).toBeUndefined();
 		await keyv.disconnect();
 		await expect(keyv.get(key)).rejects.toBeDefined();
+	});
+
+	test("does not close a pool that is still used by another adapter", async () => {
+		const first = new KeyvMysql({ uri, connectionLimit: 3 });
+		const second = new KeyvMysql({ uri, connectionLimit: 3 });
+		const key = faker.string.alphanumeric(10);
+		await second.set(key, "value");
+
+		await first.disconnect();
+		await first.disconnect();
+
+		await expect(first.get(key)).rejects.toThrow("MySQL adapter is disconnected");
+		expect(await second.get(key)).toBe("value");
+		await second.disconnect();
+
+		const replacement = new KeyvMysql({ uri, connectionLimit: 3 });
+		expect(await replacement.get(key)).toBe("value");
+		await replacement.disconnect();
+	});
+
+	test("does not share a pool when connection options differ", async () => {
+		const valid = new KeyvMysql({ uri, connectionLimit: 4 });
+		const invalid = new KeyvMysql({
+			uri,
+			connectionLimit: 4,
+			user: "keyv_invalid_user",
+			password: "invalid-password",
+		});
+
+		try {
+			expect(await valid.get(faker.string.alphanumeric(10))).toBeUndefined();
+			await expect(invalid.get(faker.string.alphanumeric(10))).rejects.toThrow();
+		} finally {
+			await Promise.all([valid.disconnect(), invalid.disconnect()]);
+		}
 	});
 });
 

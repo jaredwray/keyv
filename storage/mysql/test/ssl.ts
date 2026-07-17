@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { faker } from "@faker-js/faker";
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import KeyvMysql from "../src/index.js";
 import { endPool } from "../src/pool.js";
 
@@ -21,17 +21,14 @@ beforeEach(async () => {
 	await keyv.clear();
 });
 
+afterEach(async () => {
+	await endPool();
+});
+
 describe("ssl", () => {
 	test("rejects when ssl is required but not provided", async () => {
-		// The shared pool is cached by uri, so reset it to force a fresh
-		// non-ssl connection (and reset again afterwards for the ssl tests).
-		endPool();
-		try {
-			const keyv = new KeyvMysql({ uri });
-			await expect(keyv.get(faker.string.alphanumeric(10))).rejects.toThrow();
-		} finally {
-			endPool();
-		}
+		const keyv = new KeyvMysql({ uri });
+		await expect(keyv.get(faker.string.alphanumeric(10))).rejects.toThrow();
 	});
 
 	test("sets and gets a value over an ssl connection", async () => {
