@@ -1,6 +1,7 @@
 import { Hookified } from "hookified";
 import {
 	Keyv,
+	type KeyvAny,
 	type KeyvStorageEntry,
 	type KeyvStorageGetResult,
 	keyvStorageCapability,
@@ -34,8 +35,7 @@ export type KeyvEtcdOptions = {
  * const keyv = new Keyv({ store });
  * ```
  */
-// biome-ignore lint/suspicious/noExplicitAny: any is allowed
-export class KeyvEtcd<GenericValue = any> extends Hookified {
+export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
 	public get capabilities() {
 		return keyvStorageCapability(this);
@@ -303,8 +303,7 @@ export class KeyvEtcd<GenericValue = any> extends Hookified {
 	 * @param expires - Optional absolute expiry as Unix ms since epoch. `undefined` means no expiry.
 	 * @returns `true` if the value was stored, `false` if the write failed.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
 			// etcd leases are second-granular, so round the duration UP. The lease is only a
 			// server-side GC backstop (precise expiry is enforced client-side via the stored

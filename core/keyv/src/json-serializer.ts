@@ -1,4 +1,5 @@
 import type { KeyvSerializationAdapter } from "./types/adapters.js";
+import type { KeyvAny } from "./types/keyv.js";
 
 type BufferLike = Uint8Array & {
 	toString(encoding?: string): string;
@@ -56,8 +57,7 @@ function isBinaryValue(value: unknown): value is Uint8Array {
  * Pre-process a value tree, converting Buffer and BigInt to tagged strings
  * before JSON.stringify can call toJSON() on them.
  */
-// biome-ignore lint/suspicious/noExplicitAny: needed for recursive traversal
-function prepare(value: any): any {
+function prepare(value: KeyvAny): KeyvAny {
 	if (value === null || value === undefined) {
 		return value;
 	}
@@ -84,8 +84,7 @@ function prepare(value: any): any {
 			return prepare(value.toJSON());
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: needed for object rebuild
-		const result: Record<string, any> = {};
+		const result: Record<string, KeyvAny> = {};
 		for (const key of Object.keys(value)) {
 			if (value[key] !== undefined) {
 				result[key] = prepare(value[key]);

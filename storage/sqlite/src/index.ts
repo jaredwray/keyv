@@ -1,5 +1,7 @@
 import { Hookified } from "hookified";
 import Keyv, {
+	type KeyvAny,
+	type KeyvAnyArray,
 	type KeyvStorageAdapter,
 	type KeyvStorageEntry,
 	type KeyvStorageGetResult,
@@ -521,8 +523,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns {Promise<boolean>} `true` on success, or `false` if an error occurred (an `error` event is also emitted).
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
@@ -563,8 +564,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		for (let i = 0; i < entries.length; i += batchSize) {
 			const batch = entries.slice(i, i + batchSize);
 			const placeholders: string[] = [];
-			// biome-ignore lint/suspicious/noExplicitAny: type format
-			const params: any[] = [];
+			const params: KeyvAnyArray = [];
 
 			for (const { key, value, expires } of batch) {
 				const strippedKey = this.removeKeyPrefix(key);
@@ -732,8 +732,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 			try {
 				let select: string;
-				// biome-ignore lint/suspicious/noExplicitAny: type format
-				let params: any[];
+				let params: KeyvAnyArray;
 
 				if (lastKey !== null) {
 					select = `SELECT * FROM ${this.getCleanTableName()} WHERE namespace = ? AND key > ? AND (expires IS NULL OR expires > ?) ORDER BY key LIMIT ?`;

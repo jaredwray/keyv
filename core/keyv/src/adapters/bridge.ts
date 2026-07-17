@@ -1,8 +1,12 @@
-// biome-ignore-all lint/suspicious/noExplicitAny: bridge adapter accepts any store
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
-import { KeyvEvents, type KeyvStorageEntry } from "../types/keyv.js";
+import {
+	type KeyvAny,
+	type KeyvAnyArray,
+	KeyvEvents,
+	type KeyvStorageEntry,
+} from "../types/keyv.js";
 import { isDataExpired, ttlFromExpires } from "../utils.js";
 
 /**
@@ -28,13 +32,13 @@ export type KeyvBridgeAdapterOptions = {
  */
 export type KeyvBridgeStore = {
 	/** Store configuration/options (e.g. dialect, url) */
-	opts?: any;
+	opts?: KeyvAny;
 	/** Namespace the store scopes its keys under, when it manages its own namespacing. */
 	namespace?: string;
 	/** Retrieves a value by key */
-	get(key: string): Promise<any>;
+	get(key: string): Promise<KeyvAny>;
 	/** Sets a value with a key and optional TTL */
-	set(key: string, value: any, ttl?: number): Promise<any>;
+	set(key: string, value: KeyvAny, ttl?: number): Promise<KeyvAny>;
 	/** Deletes a key from the store */
 	delete(key: string): Promise<boolean>;
 	/** Clears all entries from the store */
@@ -44,17 +48,17 @@ export type KeyvBridgeStore = {
 	/** Checks if multiple keys exist in the store */
 	hasMany?(keys: string[]): Promise<boolean[]>;
 	/** Retrieves multiple values by keys */
-	getMany?(keys: string[]): Promise<any[]>;
+	getMany?(keys: string[]): Promise<KeyvAnyArray>;
 	/** Sets multiple entries at once */
-	setMany?(entries: any[]): Promise<any>;
+	setMany?(entries: KeyvAnyArray): Promise<KeyvAny>;
 	/** Deletes multiple keys at once */
 	deleteMany?(keys: string[]): Promise<boolean | boolean[]>;
 	/** Iterates over all entries, optionally filtered by namespace */
-	iterator?(namespace?: string): AsyncGenerator<any>;
+	iterator?(namespace?: string): AsyncGenerator<KeyvAny>;
 	/** Disconnects from the store */
 	disconnect?(): Promise<void>;
 	/** Subscribe to events (e.g. error events from v5 adapters) */
-	on?(event: string, listener: (...args: any[]) => void): any;
+	on?(event: string, listener: (...args: KeyvAnyArray) => void): KeyvAny;
 };
 
 /**
@@ -128,7 +132,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 
 		// Forward error events from the underlying store
 		if (typeof store.on === "function") {
-			store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
+			store.on(KeyvEvents.ERROR, (error: KeyvAny) => this.emit(KeyvEvents.ERROR, error));
 		}
 	}
 
@@ -297,7 +301,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param expires - Optional absolute expiry as Unix ms since epoch
 	 * @returns Always returns true indicating success
 	 */
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		// `ttlFromExpires` returns undefined for both "no expiry" and "already expired", so an
 		// elapsed deadline would otherwise be stored with no ttl and persist forever (the bridge

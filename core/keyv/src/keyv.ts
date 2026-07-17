@@ -14,6 +14,8 @@ import type {
 	KeyvStorageGetResult,
 } from "./types/adapters.js";
 import {
+	type KeyvAny,
+	type KeyvAnyArray,
 	type KeyvEntry,
 	KeyvEvents,
 	KeyvHooks,
@@ -32,8 +34,7 @@ import {
 	ttlFromExpires,
 } from "./utils.js";
 
-// biome-ignore lint/suspicious/noExplicitAny: type format
-export class Keyv<GenericValue = any> extends Hookified {
+export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	/**
 	 * Keyv Constructor
 	 * @param {KeyvStorageAdapter | KeyvOptions | Map<any, any> | any} store  to be provided or just the options
@@ -313,8 +314,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * @param {unknown} store The store to resolve.
 	 * @returns {KeyvStorageAdapter} A fully-compliant storage adapter.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: accepts any store type
-	public resolveStore(store: any): KeyvStorageAdapter {
+	public resolveStore(store: KeyvAny): KeyvStorageAdapter {
 		// A v6 adapter explicitly declaring the absolute-`expires` contract is authoritative and
 		// used directly, even when structural detection would classify it as `asyncMap` (e.g. its
 		// methods return promises without the `async` keyword). Without this it would be bridged
@@ -356,8 +356,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	public setStore(store: KeyvStorageAdapter | KeyvMapAny): void {
 		this._store = this.resolveStore(store);
 		if (typeof this._store.on === "function") {
-			// biome-ignore lint/suspicious/noExplicitAny: type format
-			this._store.on(KeyvEvents.ERROR, (error: any) => this.emit(KeyvEvents.ERROR, error));
+			this._store.on(KeyvEvents.ERROR, (error: KeyvAny) => this.emit(KeyvEvents.ERROR, error));
 		}
 
 		this._store.namespace = this._namespace;
@@ -1020,8 +1019,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * filters out expired entries, and deletes them from the store.
 	 * @returns {AsyncGenerator<Array<string | unknown>, void>} An async generator yielding `[key, value]` pairs.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: iterator yields vary by store
-	public async *iterator(): AsyncGenerator<[string, any], void> {
+	public async *iterator(): AsyncGenerator<[string, KeyvAny], void> {
 		/* v8 ignore next 3 -- @preserve */
 		if (this._store.iterator === undefined) {
 			return;
@@ -1145,11 +1143,7 @@ export class Keyv<GenericValue = any> extends Hookified {
 	 * Fires a hook under its new name and also under the deprecated alias (if any),
 	 * so that integrations still subscribing to the old PRE_/POST_ names keep working.
 	 */
-	private async hookWithDeprecated(
-		event: string,
-		// biome-ignore lint/suspicious/noExplicitAny: hook data varies
-		...args: any[]
-	): Promise<void> {
+	private async hookWithDeprecated(event: string, ...args: KeyvAnyArray): Promise<void> {
 		await this.hook(event, ...args);
 		const deprecated = deprecatedHookAliases.get(event);
 		if (deprecated && this.getHooks(deprecated)?.length) {

@@ -1,6 +1,8 @@
 import { Buffer } from "node:buffer";
 import { Hookified } from "hookified";
 import Keyv, {
+	type KeyvAny,
+	type KeyvAnyArray,
 	type KeyvStorageAdapter,
 	type KeyvStorageEntry,
 	type KeyvStorageGetResult,
@@ -331,8 +333,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 		const now = new Date();
 		const validMap = new Map<string, KeyvStorageGetResult<Value>>();
-		// biome-ignore lint/suspicious/noExplicitAny: MongoDB ObjectId type
-		const expiredIds: any[] = [];
+		const expiredIds: KeyvAnyArray = [];
 
 		for await (const doc of cursor) {
 			if (doc.expiresAt && new Date(doc.expiresAt as Date) <= now) {
@@ -356,8 +357,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @param expires - Absolute expiry as Unix ms since epoch. If specified, the key will expire at this time.
 	 * @returns `true` if the value was set, `false` if an error occurred.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
 			const expiresAt = typeof expires === "number" ? new Date(expires) : null;
 			const strippedKey = this.removeKeyPrefix(key);

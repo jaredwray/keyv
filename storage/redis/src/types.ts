@@ -1,4 +1,3 @@
-// biome-ignore-all lint/suspicious/noExplicitAny: redis
 import type {
 	RedisClientType,
 	RedisClusterType,
