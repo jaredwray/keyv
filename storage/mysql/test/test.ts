@@ -196,6 +196,63 @@ describe("has and hasMany", () => {
 	});
 });
 
+describe("expired read cleanup", () => {
+	const cases: Array<{
+		name: string;
+		read: (keyv: KeyvMysql, key: string) => Promise<unknown>;
+		expected: unknown;
+	}> = [
+		{
+			name: "get",
+			read: async (keyv, key) => keyv.get(key),
+			expected: undefined,
+		},
+		{
+			name: "getMany",
+			read: async (keyv, key) => keyv.getMany([key]),
+			expected: [undefined],
+		},
+		{
+			name: "has",
+			read: async (keyv, key) => keyv.has(key),
+			expected: false,
+		},
+		{
+			name: "hasMany",
+			read: async (keyv, key) => keyv.hasMany([key]),
+			expected: [false],
+		},
+	];
+
+	for (const testCase of cases) {
+		test(`${testCase.name} does not delete a concurrent fresh write`, async () => {
+			const namespace = faker.string.uuid();
+			const key = faker.string.alphanumeric(10);
+			const reader = new KeyvMysql(uri);
+			const writer = new KeyvMysql(uri);
+			reader.namespace = namespace;
+			writer.namespace = namespace;
+			await writer.set(key, "expired", Date.now() - 1000);
+
+			const originalQuery = reader.query;
+			let refreshed = false;
+			reader.query = (async <T>(sqlString: string) => {
+				if (!refreshed && sqlString.startsWith("DELETE FROM")) {
+					refreshed = true;
+					expect(await writer.set(key, "fresh", Date.now() + 60_000)).toBe(true);
+				}
+
+				return originalQuery<T>(sqlString);
+			}) as typeof reader.query;
+
+			expect(await testCase.read(reader, key)).toEqual(testCase.expected);
+			expect(refreshed).toBe(true);
+			expect(await writer.get(key)).toBe("fresh");
+			await writer.delete(key);
+		});
+	}
+});
+
 describe("SQL injection prevention", () => {
 	test("has prevents a DROP TABLE injection", async () => {
 		const keyv = new KeyvMysql(uri);
