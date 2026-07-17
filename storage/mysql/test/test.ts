@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import type mysql from "mysql2";
+import mysql from "mysql2";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvMysqlAdapter, { createKeyv, type KeyvMysqlOptions } from "../src/index.js";
 import { parseConnectionString } from "../src/pool.js";
@@ -398,7 +398,7 @@ describe("expires column", () => {
 			{ key: key2, value: JSON.stringify({ value: "b" }) },
 		]);
 		const rows = await keyv.query<mysql.RowDataPacket[]>(
-			`SELECT id, expires FROM \`keyv\` WHERE id IN ('${key1}', '${key2}') AND namespace = ''`,
+			`SELECT CONVERT(id USING utf8mb4) AS id, expires FROM \`keyv\` WHERE id IN ('${key1}', '${key2}') AND namespace = ''`,
 		);
 		const row1 = rows.find((r) => r.id === key1);
 		const row2 = rows.find((r) => r.id === key2);
@@ -480,6 +480,101 @@ describe("intervalExpiration", () => {
 		await delay(2500);
 		expect(await keyv.get(key1)).toBeUndefined();
 		expect(await keyv.get(key2)).toBe(val2);
+	});
+});
+
+describe("byte-exact keys and namespaces", () => {
+	test("distinguishes case, accents, Unicode normalization, and trailing spaces", async () => {
+		const keyv = new KeyvMysql(uri);
+		keyv.namespace = faker.string.uuid();
+		const entries = [
+			{ key: "AuditKey", value: "uppercase" },
+			{ key: "auditkey", value: "lowercase" },
+			{ key: "accent-cafe", value: "plain" },
+			{ key: "accent-café", value: "accented" },
+			{ key: "normalized-é", value: "composed" },
+			{ key: "normalized-e\u0301", value: "decomposed" },
+			{ key: "trailing-space", value: "without-space" },
+			{ key: "trailing-space ", value: "with-space" },
+		];
+
+		expect(await keyv.setMany(entries)).toEqual(entries.map(() => true));
+		expect(await keyv.getMany(entries.map(({ key }) => key))).toEqual(
+			entries.map(({ value }) => value),
+		);
+		expect(await keyv.hasMany(entries.map(({ key }) => key))).toEqual(entries.map(() => true));
+
+		const iterated = new Map<string, string>();
+		for await (const [key, value] of keyv.iterator()) {
+			iterated.set(key, value);
+		}
+
+		for (const { key, value } of entries) {
+			expect(iterated.get(key)).toBe(value);
+		}
+
+		await keyv.clear();
+	});
+
+	test("applies byte-exact comparisons to namespaces", async () => {
+		const keyv = new KeyvMysql(uri);
+		const suffix = faker.string.alphanumeric(10);
+		const key = faker.string.alphanumeric(10);
+		const namespaces = [
+			`AuditNS-${suffix}`,
+			`auditns-${suffix}`,
+			`cafe-${suffix}`,
+			`café-${suffix}`,
+			`normalized-é-${suffix}`,
+			`normalized-e\u0301-${suffix}`,
+			`trailing-${suffix}`,
+			`trailing-${suffix} `,
+		];
+
+		for (const [index, namespace] of namespaces.entries()) {
+			keyv.namespace = namespace;
+			expect(await keyv.set(key, `value-${index}`)).toBe(true);
+		}
+
+		for (const [index, namespace] of namespaces.entries()) {
+			keyv.namespace = namespace;
+			expect(await keyv.get(key)).toBe(`value-${index}`);
+			await keyv.clear();
+		}
+	});
+
+	test("converts existing VARCHAR key columns to UTF-8 VARBINARY", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_binary_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexEsc = `\`${table}_key_namespace_idx\``;
+		const legacyKey = "Legacy-é ";
+
+		try {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${tableEsc} (id, value, namespace) VALUES (?, ?, ?)`, [
+					legacyKey,
+					"legacy-value",
+					"",
+				]),
+			);
+
+			const migrated = new KeyvMysql({ uri, table });
+			expect(await migrated.get(legacyKey)).toBe("legacy-value");
+			const columns = await migrated.query<mysql.RowDataPacket[]>(
+				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+			);
+			expect(columns).toHaveLength(2);
+			for (const column of columns) {
+				expect(String(column.Type).toLowerCase()).toBe("varbinary(1020)");
+			}
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
 	});
 });
 

@@ -71,8 +71,10 @@ async function migrate(options: {
 	namespaceLength: number;
 	dryRun: boolean;
 }): Promise<void> {
-	const { uri, table, namespaceLength, dryRun } = options;
+	const { uri, table, keyLength, namespaceLength, dryRun } = options;
 	const tableEsc = escapeIdentifier(table);
+	const keyByteLength = keyLength * 4;
+	const namespaceByteLength = namespaceLength * 4;
 
 	const pool = mysql.createPool(uri);
 	const connection = await pool.getConnection();
@@ -82,12 +84,29 @@ async function migrate(options: {
 		// even when the data migration is a no-op or a dry run.
 		try {
 			await connection.query(
-				`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARCHAR(${Number(namespaceLength)}) NOT NULL DEFAULT ''`,
+				`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
 			);
 		} catch (error) {
 			if ((error as { errno?: number }).errno !== 1060) {
 				throw error;
 			}
+		}
+
+		const [keyColumns] = await connection.query(
+			`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+		);
+		if (
+			(keyColumns as mysql.RowDataPacket[]).some((column) =>
+				!String(column.Type).toLowerCase().startsWith("varbinary("),
+			)
+		) {
+			// Convert text to UTF-8 first, then preserve those exact bytes in VARBINARY.
+			await connection.query(
+				`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARCHAR(${keyLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, MODIFY COLUMN namespace VARCHAR(${namespaceLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
+			);
+			await connection.query(
+				`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARBINARY(${keyByteLength}) NOT NULL, MODIFY COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+			);
 		}
 
 		try {
@@ -133,9 +152,9 @@ async function migrate(options: {
 
 		// Preview what will be migrated
 		const [rows] = await connection.query(
-			`SELECT id AS old_key,
-				SUBSTRING_INDEX(id, ':', 1) AS new_namespace,
-				SUBSTRING(id, LOCATE(':', id) + 1) AS new_key
+			`SELECT CONVERT(id USING utf8mb4) AS old_key,
+				CONVERT(SUBSTRING_INDEX(id, ':', 1) USING utf8mb4) AS new_namespace,
+				CONVERT(SUBSTRING(id, LOCATE(':', id) + 1) USING utf8mb4) AS new_key
 			FROM ${tableEsc}
 			WHERE namespace = '' AND id LIKE '%:%'`,
 		);
