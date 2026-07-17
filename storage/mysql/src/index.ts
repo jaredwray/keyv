@@ -6,8 +6,8 @@ import Keyv, {
 	type KeyvStorageGetResult,
 	keyvStorageCapability,
 } from "keyv";
-import mysql, { type ConnectionOptions } from "mysql2";
-import { endPool, pool } from "./pool.js";
+import mysql, { type PoolOptions } from "mysql2";
+import { createPool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
 
 /**
@@ -87,9 +87,24 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	private _namespace?: string;
 
 	/**
-	 * Additional mysql2 ConnectionOptions passed through to the connection pool.
+	 * Additional mysql2 PoolOptions passed through to the connection pool.
 	 */
-	private _mysqlOptions: ConnectionOptions = {};
+	private _mysqlOptions: PoolOptions = {};
+
+	/** The connection pool owned by this adapter. */
+	private _pool?: ReturnType<typeof createPool>;
+
+	/** Whether this adapter has started closing its connection pool. */
+	private _disconnected = false;
+
+	/** The in-flight or completed connection pool shutdown. */
+	private _disconnectPromise?: Promise<void>;
+
+	/** The adapter's asynchronous schema initialization. */
+	private _connected?: Promise<unknown>;
+
+	/** Queries that started before a disconnect was requested. */
+	private readonly _pendingQueries = new Set<Promise<unknown>>();
 
 	/**
 	 * Query function for executing SQL statements against the MySQL database.
@@ -239,9 +254,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const connection = async () => {
-			const conn = pool(this._uri, this._mysqlOptions);
+			const connectionPool = createPool(this._uri, this._mysqlOptions);
+			this._pool = connectionPool;
 			return async (sql: string) => {
-				const data = await conn.query(sql);
+				const data = await connectionPool.query(sql);
 				return data[0];
 			};
 		};
@@ -317,14 +333,23 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		});
 
 		// Prevent an unhandled rejection when an instance is constructed but never
-		// queried (e.g. the shared pool is closed by another instance before the
-		// table-creation queries finish). Real query failures still surface to
-		// callers because `this.query` awaits the same `connected` promise below.
+		// queried. Real query failures still surface to callers because `this.query`
+		// awaits the same `connected` promise below.
 		connected.catch(() => {});
+		this._connected = connected;
 
-		this.query = async <T>(sqlString: string): QueryType<T> => {
-			const query = await connected;
-			return query(sqlString) as QueryType<T>;
+		this.query = <T>(sqlString: string): QueryType<T> => {
+			if (this._disconnected) {
+				return Promise.reject(new Error("MySQL adapter is disconnected")) as QueryType<T>;
+			}
+
+			const operation = connected.then((query) => query(sqlString));
+			this._pendingQueries.add(operation);
+			void operation.then(
+				() => this._pendingQueries.delete(operation),
+				() => this._pendingQueries.delete(operation),
+			);
+			return operation as QueryType<T>;
 		};
 	}
 
@@ -622,11 +647,22 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Disconnects from the MySQL database and closes the connection pool.
+	 * Disconnects this adapter and closes its connection pool.
 	 * @returns Promise that resolves when disconnected
 	 */
-	public async disconnect() {
-		endPool();
+	public disconnect(): Promise<void> {
+		this._disconnected = true;
+		this._disconnectPromise ??= (async () => {
+			const pending = [...this._pendingQueries];
+			if (this._connected) {
+				pending.push(this._connected);
+			}
+
+			await Promise.allSettled(pending);
+			await this._pool?.end();
+			this._pool = undefined;
+		})();
+		return this._disconnectPromise;
 	}
 
 	/**
@@ -650,11 +686,11 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Extracts mysql2 ConnectionOptions from the full options object.
-	 * Only binds known ConnectionOptions properties to the result.
+	 * Extracts mysql2 PoolOptions from the full options object.
+	 * Only binds known PoolOptions properties to the result.
 	 */
-	private generateMySqlOptions(options: KeyvMysqlOptions): ConnectionOptions {
-		const connectionOptionsKeys: Array<keyof ConnectionOptions> = [
+	private generateMySqlOptions(options: KeyvMysqlOptions): PoolOptions {
+		const connectionOptionsKeys: Array<keyof PoolOptions> = [
 			"authPlugins",
 			"authSwitchHandler",
 			"bigNumberStrings",
@@ -693,6 +729,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			"pool",
 			"port",
 			"queueLimit",
+			"resetOnRelease",
 			"queryFormat",
 			"rowsAsArray",
 			"socketPath",
@@ -708,7 +745,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			"waitForConnections",
 		];
 
-		const mysqlOptions: ConnectionOptions = {};
+		const mysqlOptions: PoolOptions = {};
 		for (const key of connectionOptionsKeys) {
 			if (key in options) {
 				(mysqlOptions as KeyvAny)[key] = (options as KeyvAny)[key];

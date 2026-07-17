@@ -1,7 +1,4 @@
-import mysql, { type Pool } from "mysql2";
-
-let mysqlPool: Pool | undefined;
-let globalUri: string | undefined;
+import mysql, { type PoolOptions } from "mysql2";
 
 export const parseConnectionString = (connectionString: string) => {
 	// Handle # character as URL breaks when it is present
@@ -30,23 +27,8 @@ export const parseConnectionString = (connectionString: string) => {
 	return poolOptions;
 };
 
-export const pool = (uri: string, options = {}) => {
-	if (globalUri !== uri) {
-		mysqlPool = undefined;
-		globalUri = uri;
-	}
-
+/** Creates a new mysql2 connection pool for a single adapter instance. */
+export const createPool = (uri: string, options: PoolOptions = {}) => {
 	const connectObject = parseConnectionString(uri);
-	const poolOptions = { ...connectObject, ...options };
-
-	mysqlPool ??= mysql.createPool(poolOptions);
-	return mysqlPool.promise();
-};
-
-export const endPool = () => {
-	if (mysqlPool) {
-		mysqlPool.end();
-	}
-
-	globalUri = undefined;
+	return mysql.createPool({ ...connectObject, ...options }).promise();
 };

@@ -2,11 +2,19 @@ import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type mysql from "mysql2";
-import { beforeEach, describe, expect, test } from "vitest";
-import KeyvMysql, { createKeyv } from "../src/index.js";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import KeyvMysqlAdapter, { createKeyv, type KeyvMysqlOptions } from "../src/index.js";
 import { parseConnectionString } from "../src/pool.js";
 
 const uri = "mysql://root@localhost:3306/keyv_test";
+const mysqlAdapters = new Set<KeyvMysqlAdapter>();
+
+class KeyvMysql extends KeyvMysqlAdapter {
+	constructor(options?: KeyvMysqlOptions | string) {
+		super(options);
+		mysqlAdapters.add(this);
+	}
+}
 
 const store = () => new KeyvMysql({ uri, iterationLimit: 2 });
 
@@ -17,6 +25,12 @@ storageTestSuite(test, store);
 beforeEach(async () => {
 	const keyv = store();
 	await keyv.clear();
+});
+
+afterEach(async () => {
+	const adapters = [...mysqlAdapters];
+	mysqlAdapters.clear();
+	await Promise.all(adapters.map(async (adapter) => adapter.disconnect()));
 });
 
 describe("constructor", () => {
@@ -631,8 +645,57 @@ describe("disconnect", () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		expect(await keyv.get(key)).toBeUndefined();
-		await keyv.disconnect();
+		const disconnecting = keyv.disconnect();
+		expect(keyv.disconnect()).toBe(disconnecting);
+		await disconnecting;
 		await expect(keyv.get(key)).rejects.toBeDefined();
+	});
+
+	test("waits for queries that started before disconnect", async () => {
+		const keyv = new KeyvMysql(uri);
+		const key = faker.string.alphanumeric(10);
+		const writing = keyv.set(key, "value");
+
+		await keyv.disconnect();
+		await expect(writing).resolves.toBe(true);
+
+		const reader = new KeyvMysql(uri);
+		expect(await reader.get(key)).toBe("value");
+	});
+
+	test("does not affect another adapter when disconnected", async () => {
+		const first = new KeyvMysql({ uri, connectionLimit: 3 });
+		const second = new KeyvMysql({ uri, connectionLimit: 3 });
+		const key = faker.string.alphanumeric(10);
+		await second.set(key, "value");
+
+		await first.disconnect();
+		await first.disconnect();
+
+		await expect(first.get(key)).rejects.toThrow("MySQL adapter is disconnected");
+		expect(await second.get(key)).toBe("value");
+		await second.disconnect();
+
+		const replacement = new KeyvMysql({ uri, connectionLimit: 3 });
+		expect(await replacement.get(key)).toBe("value");
+		await replacement.disconnect();
+	});
+
+	test("does not share a pool when connection options differ", async () => {
+		const valid = new KeyvMysql({ uri, connectionLimit: 4 });
+		const invalid = new KeyvMysql({
+			uri,
+			connectionLimit: 4,
+			user: "keyv_invalid_user",
+			password: "invalid-password",
+		});
+
+		try {
+			expect(await valid.get(faker.string.alphanumeric(10))).toBeUndefined();
+			await expect(invalid.get(faker.string.alphanumeric(10))).rejects.toThrow();
+		} finally {
+			await Promise.all([valid.disconnect(), invalid.disconnect()]);
+		}
 	});
 });
 
@@ -711,6 +774,7 @@ describe("createKeyv", () => {
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value);
 		expect(await keyv.get(key)).toBe(value);
+		await keyv.disconnect();
 	});
 
 	test("returns a Keyv instance from an options object", async () => {
@@ -720,5 +784,6 @@ describe("createKeyv", () => {
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value);
 		expect(await keyv.get(key)).toBe(value);
+		await keyv.disconnect();
 	});
 });

@@ -1,4 +1,4 @@
-import type { ConnectionOptions } from "mysql2";
+import type { PoolOptions } from "mysql2";
 
 export type KeyvMysqlOptions = {
 	uri?: string;
@@ -7,4 +7,4 @@ export type KeyvMysqlOptions = {
 	namespaceLength?: number;
 	intervalExpiration?: number;
 	iterationLimit?: number;
-} & ConnectionOptions;
+} & PoolOptions;
