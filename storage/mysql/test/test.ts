@@ -645,8 +645,22 @@ describe("disconnect", () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		expect(await keyv.get(key)).toBeUndefined();
-		await keyv.disconnect();
+		const disconnecting = keyv.disconnect();
+		expect(keyv.disconnect()).toBe(disconnecting);
+		await disconnecting;
 		await expect(keyv.get(key)).rejects.toBeDefined();
+	});
+
+	test("waits for queries that started before disconnect", async () => {
+		const keyv = new KeyvMysql(uri);
+		const key = faker.string.alphanumeric(10);
+		const writing = keyv.set(key, "value");
+
+		await keyv.disconnect();
+		await expect(writing).resolves.toBe(true);
+
+		const reader = new KeyvMysql(uri);
+		expect(await reader.get(key)).toBe("value");
 	});
 
 	test("does not affect another adapter when disconnected", async () => {

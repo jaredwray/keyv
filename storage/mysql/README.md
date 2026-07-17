@@ -37,6 +37,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.clearExpired()](#clearexpired)
   - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
+- [Connection Pooling](#connection-pooling)
 - [SSL](#ssl)
 - [License](#license)
 
@@ -170,7 +171,7 @@ The migration script also populates the new `expires` column from existing JSON 
 
 ## Constructor Options
 
-`KeyvMysql` accepts a connection URI string or an options object. The options object accepts the following properties along with any [`ConnectionOptions`](https://sidorares.github.io/node-mysql2/docs/documentation/connections) from the `mysql2` library (e.g. `host`, `port`, `user`, `password`, `database`):
+`KeyvMysql` accepts a connection URI string or an options object. The options object accepts the following properties along with any [`PoolOptions`](https://sidorares.github.io/node-mysql2/docs) from the `mysql2` library (e.g. `host`, `port`, `user`, `password`, `database`, `connectionLimit`):
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -396,10 +397,32 @@ for await (const [key, value] of keyvMysql.iterator()) {
 
 ### .disconnect()
 
-Disconnects from the MySQL database and closes the connection pool.
+Stops the adapter from accepting new queries, waits for queries that have already started, and closes the adapter's connection pool. Repeated calls are safe and wait for the same shutdown.
 
 ```js
 await keyvMysql.disconnect();
+```
+
+## Connection Pooling
+
+Each `KeyvMysql` adapter creates and owns one `mysql2` connection pool. Pools are not shared implicitly between adapter instances, even when those adapters use the same URI and connection options. This keeps connection configuration and shutdown isolated: disconnecting one adapter does not affect another adapter.
+
+Pool options such as `connectionLimit`, `maxIdle`, `idleTimeout`, and `queueLimit` are passed through to `mysql2` and apply separately to each adapter. If an application creates multiple adapters, account for the combined number of database connections.
+
+Call `disconnect()` when an adapter is no longer needed, especially for short-lived instances:
+
+```js
+const store = new KeyvMysql({
+  uri: 'mysql://user:pass@localhost:3306/dbname',
+  connectionLimit: 10,
+});
+const keyv = new Keyv({ store });
+
+try {
+  await keyv.set('foo', 'bar');
+} finally {
+  await keyv.disconnect();
+}
 ```
 
 ## SSL

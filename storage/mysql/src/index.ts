@@ -94,8 +94,17 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	/** The connection pool owned by this adapter. */
 	private _pool?: ReturnType<typeof createPool>;
 
-	/** Whether this adapter has released its connection pool lease. */
+	/** Whether this adapter has started closing its connection pool. */
 	private _disconnected = false;
+
+	/** The in-flight or completed connection pool shutdown. */
+	private _disconnectPromise?: Promise<void>;
+
+	/** The adapter's asynchronous schema initialization. */
+	private _connected?: Promise<unknown>;
+
+	/** Queries that started before a disconnect was requested. */
+	private readonly _pendingQueries = new Set<Promise<unknown>>();
 
 	/**
 	 * Query function for executing SQL statements against the MySQL database.
@@ -248,10 +257,6 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			const connectionPool = createPool(this._uri, this._mysqlOptions);
 			this._pool = connectionPool;
 			return async (sql: string) => {
-				if (this._disconnected) {
-					throw new Error("MySQL adapter is disconnected");
-				}
-
 				const data = await connectionPool.query(sql);
 				return data[0];
 			};
@@ -331,14 +336,20 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		// queried. Real query failures still surface to callers because `this.query`
 		// awaits the same `connected` promise below.
 		connected.catch(() => {});
+		this._connected = connected;
 
-		this.query = async <T>(sqlString: string): QueryType<T> => {
+		this.query = <T>(sqlString: string): QueryType<T> => {
 			if (this._disconnected) {
-				throw new Error("MySQL adapter is disconnected");
+				return Promise.reject(new Error("MySQL adapter is disconnected")) as QueryType<T>;
 			}
 
-			const query = await connected;
-			return query(sqlString) as QueryType<T>;
+			const operation = connected.then((query) => query(sqlString));
+			this._pendingQueries.add(operation);
+			void operation.then(
+				() => this._pendingQueries.delete(operation),
+				() => this._pendingQueries.delete(operation),
+			);
+			return operation as QueryType<T>;
 		};
 	}
 
@@ -639,14 +650,19 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * Disconnects this adapter and closes its connection pool.
 	 * @returns Promise that resolves when disconnected
 	 */
-	public async disconnect(): Promise<void> {
-		if (this._disconnected) {
-			return;
-		}
-
+	public disconnect(): Promise<void> {
 		this._disconnected = true;
-		await this._pool?.end();
-		this._pool = undefined;
+		this._disconnectPromise ??= (async () => {
+			const pending = [...this._pendingQueries];
+			if (this._connected) {
+				pending.push(this._connected);
+			}
+
+			await Promise.allSettled(pending);
+			await this._pool?.end();
+			this._pool = undefined;
+		})();
+		return this._disconnectPromise;
 	}
 
 	/**
