@@ -13,6 +13,9 @@
 
 import mysql from "mysql2/promise";
 
+const UTF8_MAX_BYTES_PER_CODE_POINT = 4;
+const MYSQL_MAX_COMPOSITE_INDEX_BYTES = 3072;
+
 function escapeIdentifier(identifier: string): string {
 	return identifier
 		.split(".")
@@ -73,8 +76,14 @@ async function migrate(options: {
 }): Promise<void> {
 	const { uri, table, keyLength, namespaceLength, dryRun } = options;
 	const tableEsc = escapeIdentifier(table);
-	const keyByteLength = keyLength * 4;
-	const namespaceByteLength = namespaceLength * 4;
+	const keyByteLength = keyLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+	const namespaceByteLength = namespaceLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+	const configuredIndexByteLength = keyByteLength + namespaceByteLength;
+	if (configuredIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+		throw new RangeError(
+			`keyLength and namespaceLength require ${configuredIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
+		);
+	}
 
 	const pool = mysql.createPool(uri);
 	const connection = await pool.getConnection();
@@ -83,34 +92,112 @@ async function migrate(options: {
 		const [existingKeyColumns] = await connection.query(
 			`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
 		);
-		let hasNamespaceColumn = (existingKeyColumns as mysql.RowDataPacket[]).some(
+		const existingColumns = existingKeyColumns as mysql.RowDataPacket[];
+		let hasNamespaceColumn = existingColumns.some(
 			(column) => column.Field === "namespace",
 		);
 
 		if (!dryRun) {
 			// Schema migrations run outside the transaction so they persist even when
 			// the data migration is a no-op.
-			if (!hasNamespaceColumn) {
-				await connection.query(
-					`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+			const existingIdColumn = existingColumns.find((column) => column.Field === "id");
+			const existingNamespaceColumn = existingColumns.find(
+				(column) => column.Field === "namespace",
+			);
+			if (!existingIdColumn) {
+				throw new Error(`Table ${table} does not have an id column`);
+			}
+
+			const getColumnLength = (column: mysql.RowDataPacket): number => {
+				const match = /\((\d+)\)/.exec(String(column.Type));
+				if (!match) {
+					throw new Error(`Cannot determine the width of ${String(column.Field)}`);
+				}
+
+				return Number(match[1]);
+			};
+			const getTargetByteLength = (column: mysql.RowDataPacket): number => {
+				const columnLength = getColumnLength(column);
+				return String(column.Type).toLowerCase().startsWith("varbinary(")
+					? columnLength
+					: columnLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+			};
+			const existingTargetIndexByteLength =
+				getTargetByteLength(existingIdColumn) +
+				(existingNamespaceColumn
+					? getTargetByteLength(existingNamespaceColumn)
+					: namespaceByteLength);
+			if (existingTargetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+				throw new RangeError(
+					`Existing key columns require ${existingTargetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
 				);
+			}
+
+			if (!hasNamespaceColumn) {
+				try {
+					await connection.query(
+						`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+					);
+				} catch (error) {
+					if ((error as { errno?: number }).errno !== 1060) {
+						throw error;
+					}
+				}
 				hasNamespaceColumn = true;
 			}
 
-			const [keyColumns] = await connection.query(
+			const [keyColumnsResult] = await connection.query(
 				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
 			);
-			if (
-				(keyColumns as mysql.RowDataPacket[]).some((column) =>
-					!String(column.Type).toLowerCase().startsWith("varbinary("),
-				)
-			) {
+			const keyColumns = keyColumnsResult as mysql.RowDataPacket[];
+			const idColumn = keyColumns.find((column) => column.Field === "id");
+			const namespaceColumn = keyColumns.find((column) => column.Field === "namespace");
+			if (!idColumn || !namespaceColumn) {
+				throw new Error(`Table ${table} must have id and namespace columns`);
+			}
+			const targetIndexByteLength =
+				getTargetByteLength(idColumn) + getTargetByteLength(namespaceColumn);
+			if (targetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+				throw new RangeError(
+					`Existing key columns require ${targetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
+				);
+			}
+
+			const idNeedsMigration = !String(idColumn.Type)
+				.toLowerCase()
+				.startsWith("varbinary(");
+			const namespaceNeedsMigration = !String(namespaceColumn.Type)
+				.toLowerCase()
+				.startsWith("varbinary(");
+			if (idNeedsMigration || namespaceNeedsMigration) {
+				const modifyVarcharParts: string[] = [];
+				const modifyVarbinaryParts: string[] = [];
+				if (idNeedsMigration) {
+					const idCharacterLength = getColumnLength(idColumn);
+					modifyVarcharParts.push(
+						`MODIFY COLUMN id VARCHAR(${idCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL`,
+					);
+					modifyVarbinaryParts.push(
+						`MODIFY COLUMN id VARBINARY(${idCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL`,
+					);
+				}
+
+				if (namespaceNeedsMigration) {
+					const namespaceCharacterLength = getColumnLength(namespaceColumn);
+					modifyVarcharParts.push(
+						`MODIFY COLUMN namespace VARCHAR(${namespaceCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
+					);
+					modifyVarbinaryParts.push(
+						`MODIFY COLUMN namespace VARBINARY(${namespaceCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL DEFAULT ''`,
+					);
+				}
+
 				// Convert text to UTF-8 first, then preserve those exact bytes in VARBINARY.
 				await connection.query(
-					`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARCHAR(${keyLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, MODIFY COLUMN namespace VARCHAR(${namespaceLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
+					`ALTER TABLE ${tableEsc} ${modifyVarcharParts.join(", ")}`,
 				);
 				await connection.query(
-					`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARBINARY(${keyByteLength}) NOT NULL, MODIFY COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+					`ALTER TABLE ${tableEsc} ${modifyVarbinaryParts.join(", ")}`,
 				);
 			}
 
@@ -139,22 +226,18 @@ async function migrate(options: {
 
 			if (!hasNamespaceFirstUniqueIndex) {
 				if (indexRows.length > 0) {
+					await connection.query(
+						`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}, ADD UNIQUE INDEX ${indexName} (namespace, id)`,
+					);
+				} else {
 					try {
-						await connection.query(`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}`);
+						await connection.query(
+							`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`,
+						);
 					} catch (error) {
-						if ((error as { errno?: number }).errno !== 1091) {
+						if ((error as { errno?: number }).errno !== 1061) {
 							throw error;
 						}
-					}
-				}
-
-				try {
-					await connection.query(
-						`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`,
-					);
-				} catch (error) {
-					if ((error as { errno?: number }).errno !== 1061) {
-						throw error;
 					}
 				}
 			}

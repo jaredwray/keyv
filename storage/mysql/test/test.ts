@@ -79,6 +79,12 @@ describe("constructor", () => {
 		expect(keyv.iterationLimit).toBe(50);
 	});
 
+	test("rejects key column lengths that exceed MySQL's composite index limit", () => {
+		expect(() => new KeyvMysql({ uri, keyLength: 512, namespaceLength: 512 })).toThrow(
+			"3072-byte composite index limit",
+		);
+	});
+
 	test("sets the uri when a string is passed", () => {
 		const keyv = new KeyvMysql(uri);
 		expect(keyv.uri).toBe(uri);
@@ -91,9 +97,13 @@ describe("constructor", () => {
 		expect(keyv.uri).toBe("mysql://otherhost");
 		keyv.table = "updated_table";
 		expect(keyv.table).toBe("updated_table");
-		keyv.keyLength = 1024;
-		expect(keyv.keyLength).toBe(1024);
+		keyv.keyLength = 512;
+		expect(keyv.keyLength).toBe(512);
 		keyv.namespaceLength = 128;
+		expect(keyv.namespaceLength).toBe(128);
+		expect(() => {
+			keyv.namespaceLength = 257;
+		}).toThrow("3072-byte composite index limit");
 		expect(keyv.namespaceLength).toBe(128);
 		keyv.iterationLimit = 100;
 		expect(keyv.iterationLimit).toBe(100);
@@ -524,7 +534,26 @@ describe("v6 migration", () => {
 		}
 	});
 
-	test("replaces a legacy composite index with a namespace-first unique index", async () => {
+	test("rejects configured key widths above MySQL's index limit", async () => {
+		await expect(
+			execFileAsync(
+				process.execPath,
+				[
+					"scripts/migrate-v6.ts",
+					"--uri",
+					uri,
+					"--keyLength",
+					"512",
+					"--namespaceLength",
+					"512",
+					"--dry-run",
+				],
+				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			),
+		).rejects.toMatchObject({ stderr: expect.stringContaining("3072-byte composite index limit") });
+	});
+
+	test("preserves widths while migrating one column and replacing the legacy index", async () => {
 		const admin = new KeyvMysql(uri);
 		const table = `keyv_index_migration_${faker.string.alphanumeric(12)}`;
 		const tableEsc = `\`${table}\``;
@@ -534,7 +563,7 @@ describe("v6 migration", () => {
 		try {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 			await admin.query(
-				`CREATE TABLE ${tableEsc} (id VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
+				`CREATE TABLE ${tableEsc} (id VARCHAR(512) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
 			);
 			await admin.query(
 				mysql.format(`INSERT INTO ${tableEsc} (id, value, namespace) VALUES (?, ?, '')`, [
@@ -547,6 +576,46 @@ describe("v6 migration", () => {
 				process.execPath,
 				["scripts/migrate-v6.ts", "--uri", uri, "--table", table],
 				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			);
+
+			const columns = await admin.query<mysql.RowDataPacket[]>(
+				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+			);
+			expect(
+				Object.fromEntries(
+					columns.map((column) => [column.Field, String(column.Type).toLowerCase()]),
+				),
+			).toEqual({ id: "varbinary(2048)", namespace: "varbinary(1020)" });
+
+			const indexes = await admin.query<mysql.RowDataPacket[]>(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
+			);
+			const indexColumns = [...indexes]
+				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+				.map((row) => row.Column_name);
+			expect(indexColumns).toEqual(["namespace", "id"]);
+			expect(indexes.every((row) => Number(row.Non_unique) === 0)).toBe(true);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("atomically reorders a legacy index during concurrent initialization", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_concurrent_index_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexName = `${table}_key_namespace_idx`;
+		const indexEsc = `\`${indexName}\``;
+
+		try {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
+			);
+
+			const adapters = Array.from({ length: 3 }, () => new KeyvMysql({ uri, table }));
+			await Promise.all(
+				adapters.map(async (adapter) => adapter.query<mysql.RowDataPacket[]>("SELECT 1")),
 			);
 
 			const indexes = await admin.query<mysql.RowDataPacket[]>(
@@ -678,36 +747,43 @@ describe("byte-exact keys and namespaces", () => {
 		}
 	});
 
-	test("converts existing VARCHAR key columns to UTF-8 VARBINARY", async () => {
+	test("migrates only text columns and preserves their existing widths", async () => {
 		const admin = new KeyvMysql(uri);
 		const table = `keyv_binary_${faker.string.alphanumeric(12)}`;
 		const tableEsc = `\`${table}\``;
 		const indexName = `${table}_key_namespace_idx`;
 		const indexEsc = `\`${indexName}\``;
 		const legacyKey = "Legacy-é ";
+		const legacyNamespace = "n".repeat(300);
 
 		try {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 			await admin.query(
-				`CREATE TABLE ${tableEsc}(id VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARCHAR(512) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
 			);
 			await admin.query(
 				mysql.format(`INSERT INTO ${tableEsc} (id, value, namespace) VALUES (?, ?, ?)`, [
 					legacyKey,
 					"legacy-value",
-					"",
+					legacyNamespace,
 				]),
 			);
 
 			const migrated = new KeyvMysql({ uri, table });
-			expect(await migrated.get(legacyKey)).toBe("legacy-value");
 			const columns = await migrated.query<mysql.RowDataPacket[]>(
 				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
 			);
-			expect(columns).toHaveLength(2);
-			for (const column of columns) {
-				expect(String(column.Type).toLowerCase()).toBe("varbinary(1020)");
-			}
+			expect(
+				Object.fromEntries(
+					columns.map((column) => [column.Field, String(column.Type).toLowerCase()]),
+				),
+			).toEqual({ id: "varbinary(1020)", namespace: "varbinary(2048)" });
+			const rows = await migrated.query<mysql.RowDataPacket[]>(
+				`SELECT CONVERT(id USING utf8mb4) AS id, CONVERT(namespace USING utf8mb4) AS namespace, value FROM ${tableEsc}`,
+			);
+			expect(rows).toMatchObject([
+				{ id: legacyKey, namespace: legacyNamespace, value: "legacy-value" },
+			]);
 
 			const indexes = await migrated.query<mysql.RowDataPacket[]>(
 				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),

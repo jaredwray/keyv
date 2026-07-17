@@ -10,6 +10,9 @@ import mysql, { type PoolOptions } from "mysql2";
 import { createPool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
 
+const UTF8_MAX_BYTES_PER_CODE_POINT = 4;
+const MYSQL_MAX_COMPOSITE_INDEX_BYTES = 3072;
+
 /**
  * Escapes a MySQL identifier (table/column name) to prevent SQL injection.
  * Handles database-qualified names like "mydb.table" by escaping each segment.
@@ -22,6 +25,16 @@ function escapeIdentifier(identifier: string): string {
 		.split(".")
 		.map((segment) => `\`${segment.replace(/`/g, "``")}\``)
 		.join(".");
+}
+
+/** Ensures the configured key columns fit within MySQL's composite-index limit. */
+function validateCompositeIndexLength(keyLength: number, namespaceLength: number): void {
+	const indexByteLength = (keyLength + namespaceLength) * UTF8_MAX_BYTES_PER_CODE_POINT;
+	if (indexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+		throw new RangeError(
+			`keyLength and namespaceLength require ${indexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
+		);
+	}
 }
 
 /** Validates and encodes a key or namespace as byte-exact UTF-8 for VARBINARY storage. */
@@ -169,6 +182,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * Set the maximum key size in Unicode code points for the key column.
 	 */
 	public set keyLength(value: number) {
+		validateCompositeIndexLength(value, this._namespaceLength);
 		this._keyLength = value;
 	}
 
@@ -184,6 +198,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * Set the maximum namespace size in Unicode code points for the namespace column.
 	 */
 	public set namespaceLength(value: number) {
+		validateCompositeIndexLength(this._keyLength, value);
 		this._namespaceLength = value;
 	}
 
@@ -269,6 +284,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			this._mysqlOptions = this.generateMySqlOptions(options);
 		}
 
+		validateCompositeIndexLength(this._keyLength, this._namespaceLength);
+
 		const connection = async () => {
 			const connectionPool = createPool(this._uri, this._mysqlOptions);
 			this._pool = connectionPool;
@@ -282,39 +299,110 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const indexNameValue = `${this._table}_key_namespace_idx`;
 		const indexName = `\`${indexNameValue.replace(/`/g, "``")}\``;
 		const expiresIndexName = `\`${(`${this._table}_expires_idx`).replace(/`/g, "``")}\``;
-		const keyByteLength = this._keyLength * 4;
-		const namespaceByteLength = this._namespaceLength * 4;
+		const keyByteLength = this._keyLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+		const namespaceByteLength = this._namespaceLength * UTF8_MAX_BYTES_PER_CODE_POINT;
 		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARBINARY(${keyByteLength}) NOT NULL, value TEXT, namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (namespace, id), INDEX ${expiresIndexName} (expires))`;
 
 		/* v8 ignore next -- @preserve */
 		const connected = connection().then(async (query) => {
 			await query(createTable);
 
-			// Migration for existing tables: add namespace column
-			try {
-				await query(
-					`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+			const existingKeyColumns = (await query(
+				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+			)) as mysql.RowDataPacket[];
+			const existingIdColumn = existingKeyColumns.find((column) => column.Field === "id");
+			const existingNamespaceColumn = existingKeyColumns.find(
+				(column) => column.Field === "namespace",
+			);
+			if (!existingIdColumn) {
+				throw new Error(`Table ${this._table} does not have an id column`);
+			}
+
+			const getColumnLength = (column: mysql.RowDataPacket): number => {
+				const match = /\((\d+)\)/.exec(String(column.Type));
+				if (!match) {
+					throw new Error(`Cannot determine the width of ${String(column.Field)}`);
+				}
+
+				return Number(match[1]);
+			};
+			const getTargetByteLength = (column: mysql.RowDataPacket): number => {
+				const columnLength = getColumnLength(column);
+				return String(column.Type).toLowerCase().startsWith("varbinary(")
+					? columnLength
+					: columnLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+			};
+			const existingTargetIndexByteLength =
+				getTargetByteLength(existingIdColumn) +
+				(existingNamespaceColumn
+					? getTargetByteLength(existingNamespaceColumn)
+					: namespaceByteLength);
+			if (existingTargetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+				throw new RangeError(
+					`Existing key columns require ${existingTargetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
 				);
-			} catch (error) {
-				// Error 1060 = Duplicate column name - column already exists, safe to ignore
-				if ((error as { errno?: number }).errno !== 1060) {
-					throw error;
+			}
+
+			// Migration for existing tables: add namespace column.
+			if (!existingNamespaceColumn) {
+				try {
+					await query(
+						`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+					);
+				} catch (error) {
+					// Error 1060 = another adapter already added the column.
+					if ((error as { errno?: number }).errno !== 1060) {
+						throw error;
+					}
 				}
 			}
 
-			// Migrate collation-sensitive VARCHAR keys to byte-exact UTF-8 VARBINARY.
+			// Migrate each text column independently, preserving its existing character width.
 			const keyColumns = (await query(
 				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
 			)) as mysql.RowDataPacket[];
-			if (
-				keyColumns.some((column) => !String(column.Type).toLowerCase().startsWith("varbinary("))
-			) {
-				await query(
-					`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARCHAR(${this._keyLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, MODIFY COLUMN namespace VARCHAR(${this._namespaceLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
+			const idColumn = keyColumns.find((column) => column.Field === "id");
+			const namespaceColumn = keyColumns.find((column) => column.Field === "namespace");
+			if (!idColumn || !namespaceColumn) {
+				throw new Error(`Table ${this._table} must have id and namespace columns`);
+			}
+			const targetIndexByteLength =
+				getTargetByteLength(idColumn) + getTargetByteLength(namespaceColumn);
+			if (targetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+				throw new RangeError(
+					`Existing key columns require ${targetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
 				);
-				await query(
-					`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARBINARY(${keyByteLength}) NOT NULL, MODIFY COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
-				);
+			}
+
+			const idNeedsMigration = !String(idColumn.Type).toLowerCase().startsWith("varbinary(");
+			const namespaceNeedsMigration = !String(namespaceColumn.Type)
+				.toLowerCase()
+				.startsWith("varbinary(");
+			if (idNeedsMigration || namespaceNeedsMigration) {
+				const modifyVarcharParts: string[] = [];
+				const modifyVarbinaryParts: string[] = [];
+				if (idNeedsMigration) {
+					const idCharacterLength = getColumnLength(idColumn);
+					modifyVarcharParts.push(
+						`MODIFY COLUMN id VARCHAR(${idCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL`,
+					);
+					modifyVarbinaryParts.push(
+						`MODIFY COLUMN id VARBINARY(${idCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL`,
+					);
+				}
+
+				if (namespaceNeedsMigration) {
+					const namespaceCharacterLength = getColumnLength(namespaceColumn);
+					modifyVarcharParts.push(
+						`MODIFY COLUMN namespace VARCHAR(${namespaceCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
+					);
+					modifyVarbinaryParts.push(
+						`MODIFY COLUMN namespace VARBINARY(${namespaceCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL DEFAULT ''`,
+					);
+				}
+
+				await query(`ALTER TABLE ${tableEsc} ${modifyVarcharParts.join(", ")}`);
+				await query(`ALTER TABLE ${tableEsc} ${modifyVarbinaryParts.join(", ")}`);
 			}
 
 			// Migration: drop old primary key (id alone)
@@ -342,22 +430,17 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 			if (!hasNamespaceFirstUniqueIndex) {
 				if (indexRows.length > 0) {
+					await query(
+						`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}, ADD UNIQUE INDEX ${indexName} (namespace, id)`,
+					);
+				} else {
 					try {
-						await query(`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}`);
+						await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`);
 					} catch (error) {
-						// Error 1091 = another adapter already replaced the index.
-						if ((error as { errno?: number }).errno !== 1091) {
+						// Error 1061 = another adapter already created the index.
+						if ((error as { errno?: number }).errno !== 1061) {
 							throw error;
 						}
-					}
-				}
-
-				try {
-					await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`);
-				} catch (error) {
-					// Error 1061 = another adapter already created the index.
-					if ((error as { errno?: number }).errno !== 1061) {
-						throw error;
 					}
 				}
 			}
