@@ -2,11 +2,19 @@ import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type mysql from "mysql2";
-import { afterAll, beforeEach, describe, expect, test } from "vitest";
-import KeyvMysql, { createKeyv } from "../src/index.js";
-import { endPool, parseConnectionString } from "../src/pool.js";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import KeyvMysqlAdapter, { createKeyv, type KeyvMysqlOptions } from "../src/index.js";
+import { parseConnectionString } from "../src/pool.js";
 
 const uri = "mysql://root@localhost:3306/keyv_test";
+const mysqlAdapters = new Set<KeyvMysqlAdapter>();
+
+class KeyvMysql extends KeyvMysqlAdapter {
+	constructor(options?: KeyvMysqlOptions | string) {
+		super(options);
+		mysqlAdapters.add(this);
+	}
+}
 
 const store = () => new KeyvMysql({ uri, iterationLimit: 2 });
 
@@ -19,8 +27,10 @@ beforeEach(async () => {
 	await keyv.clear();
 });
 
-afterAll(async () => {
-	await endPool();
+afterEach(async () => {
+	const adapters = [...mysqlAdapters];
+	mysqlAdapters.clear();
+	await Promise.all(adapters.map(async (adapter) => adapter.disconnect()));
 });
 
 describe("constructor", () => {
@@ -639,7 +649,7 @@ describe("disconnect", () => {
 		await expect(keyv.get(key)).rejects.toBeDefined();
 	});
 
-	test("does not close a pool that is still used by another adapter", async () => {
+	test("does not affect another adapter when disconnected", async () => {
 		const first = new KeyvMysql({ uri, connectionLimit: 3 });
 		const second = new KeyvMysql({ uri, connectionLimit: 3 });
 		const key = faker.string.alphanumeric(10);
@@ -750,6 +760,7 @@ describe("createKeyv", () => {
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value);
 		expect(await keyv.get(key)).toBe(value);
+		await keyv.disconnect();
 	});
 
 	test("returns a Keyv instance from an options object", async () => {
@@ -759,5 +770,6 @@ describe("createKeyv", () => {
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value);
 		expect(await keyv.get(key)).toBe(value);
+		await keyv.disconnect();
 	});
 });

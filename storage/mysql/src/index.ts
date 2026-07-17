@@ -7,7 +7,7 @@ import Keyv, {
 	keyvStorageCapability,
 } from "keyv";
 import mysql, { type PoolOptions } from "mysql2";
-import { type PoolLease, pool } from "./pool.js";
+import { createPool } from "./pool.js";
 import type { KeyvMysqlOptions } from "./types.js";
 
 /**
@@ -91,8 +91,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	private _mysqlOptions: PoolOptions = {};
 
-	/** The reference-counted connection pool lease owned by this adapter. */
-	private _poolLease?: PoolLease;
+	/** The connection pool owned by this adapter. */
+	private _pool?: ReturnType<typeof createPool>;
 
 	/** Whether this adapter has released its connection pool lease. */
 	private _disconnected = false;
@@ -245,14 +245,14 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const connection = async () => {
-			const lease = pool(this._uri, this._mysqlOptions);
-			this._poolLease = lease;
+			const connectionPool = createPool(this._uri, this._mysqlOptions);
+			this._pool = connectionPool;
 			return async (sql: string) => {
 				if (this._disconnected) {
 					throw new Error("MySQL adapter is disconnected");
 				}
 
-				const data = await lease.connection.query(sql);
+				const data = await connectionPool.query(sql);
 				return data[0];
 			};
 		};
@@ -328,9 +328,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		});
 
 		// Prevent an unhandled rejection when an instance is constructed but never
-		// queried (e.g. the shared pool is closed by another instance before the
-		// table-creation queries finish). Real query failures still surface to
-		// callers because `this.query` awaits the same `connected` promise below.
+		// queried. Real query failures still surface to callers because `this.query`
+		// awaits the same `connected` promise below.
 		connected.catch(() => {});
 
 		this.query = async <T>(sqlString: string): QueryType<T> => {
@@ -637,7 +636,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Disconnects this adapter and releases its connection pool lease.
+	 * Disconnects this adapter and closes its connection pool.
 	 * @returns Promise that resolves when disconnected
 	 */
 	public async disconnect(): Promise<void> {
@@ -646,7 +645,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		this._disconnected = true;
-		await this._poolLease?.release();
+		await this._pool?.end();
+		this._pool = undefined;
 	}
 
 	/**

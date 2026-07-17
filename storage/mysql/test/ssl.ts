@@ -2,10 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { faker } from "@faker-js/faker";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import KeyvMysql from "../src/index.js";
-import { endPool } from "../src/pool.js";
+import KeyvMysqlAdapter, { type KeyvMysqlOptions } from "../src/index.js";
 
 const uri = "mysql://root@localhost:3307/keyv_test";
+const mysqlAdapters = new Set<KeyvMysqlAdapter>();
+
+class KeyvMysql extends KeyvMysqlAdapter {
+	constructor(options?: KeyvMysqlOptions | string) {
+		super(options);
+		mysqlAdapters.add(this);
+	}
+}
 
 const options = {
 	ssl: {
@@ -22,7 +29,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-	await endPool();
+	const adapters = [...mysqlAdapters];
+	mysqlAdapters.clear();
+	await Promise.all(adapters.map(async (adapter) => adapter.disconnect()));
 });
 
 describe("ssl", () => {
