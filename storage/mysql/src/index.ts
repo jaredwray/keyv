@@ -101,7 +101,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	private _disconnectPromise?: Promise<void>;
 
 	/** The adapter's asynchronous schema initialization. */
-	private _connected?: Promise<unknown>;
+	private _connected!: Promise<unknown>;
 
 	/** Queries that started before a disconnect was requested. */
 	private readonly _pendingQueries = new Set<Promise<unknown>>();
@@ -359,11 +359,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @returns The stored value or undefined if not found
 	 */
 	public async get<Value>(key: string) {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKey, ns]);
+		const select = mysql.format(sql, [key, ns]);
 
 		const rows: mysql.RowDataPacket = await this.query(select);
 		const row = rows[0];
@@ -373,7 +372,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
 			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-			await this.query(mysql.format(delSql, [strippedKey, ns]));
+			await this.query(mysql.format(delSql, [key, ns]));
 			return undefined as KeyvStorageGetResult<Value>;
 		}
 
@@ -391,11 +390,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			return [];
 		}
 
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKeys, ns]);
+		const select = mysql.format(sql, [keys, ns]);
 
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 
@@ -415,7 +413,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		// Coerce missing keys and SQL NULL values to undefined so the adapter never returns null.
-		return strippedKeys.map(
+		return keys.map(
 			(key) => (validMap.get(key) ?? undefined) as KeyvStorageGetResult<Value | undefined>,
 		);
 	}
@@ -430,12 +428,11 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
-			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
 			const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE value=?, expires=?;`;
-			const insert = [strippedKey, value, ns, expires ?? null, value, expires ?? null];
+			const insert = [key, value, ns, expires ?? null, value, expires ?? null];
 			const upsert = mysql.format(sql, insert);
 			await this.query(upsert);
 			return true;
@@ -454,17 +451,12 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return entries.map(() => true);
+			return [];
 		}
 
 		try {
 			const ns = this.getNamespaceValue();
-			const values = entries.map(({ key, value, expires }) => [
-				this.removeKeyPrefix(key),
-				value,
-				ns,
-				expires ?? null,
-			]);
+			const values = entries.map(({ key, value, expires }) => [key, value, ns, expires ?? null]);
 			const placeholders = values.map(() => "(?, ?, ?, ?)").join(", ");
 			const flatValues = values.flat();
 			const sql = `INSERT INTO ${escapeIdentifier(this._table)} (id, value, namespace, expires)
@@ -485,22 +477,11 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @returns True if the key existed and was deleted, false if the key did not exist
 	 */
 	public async delete(key: string) {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
-		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKey, ns]);
-		const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const del = mysql.format(delSql, [strippedKey, ns]);
-
-		const rows: mysql.RowDataPacket = await this.query(select);
-		const row = rows[0];
-
-		if (row === undefined) {
-			return false;
-		}
-
-		await this.query(del);
-		return true;
+		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
+		const del = mysql.format(sql, [key, ns]);
+		const result = await this.query<mysql.ResultSetHeader>(del);
+		return result.affectedRows > 0;
 	}
 
 	/**
@@ -581,11 +562,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @returns True if the key exists, false otherwise
 	 */
 	public async has(key: string) {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT expires FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKey, ns]);
+		const select = mysql.format(sql, [key, ns]);
 		const rows: mysql.RowDataPacket = await this.query(select);
 		if (rows.length === 0) {
 			return false;
@@ -593,7 +573,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
 			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-			await this.query(mysql.format(delSql, [strippedKey, ns]));
+			await this.query(mysql.format(delSql, [key, ns]));
 			return false;
 		}
 
@@ -610,11 +590,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			return [];
 		}
 
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const sql = `SELECT id, expires FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-		const select = mysql.format(sql, [strippedKeys, ns]);
+		const select = mysql.format(sql, [keys, ns]);
 		const rows: mysql.RowDataPacket[] = await this.query(select);
 
 		const validKeys = new Set<string>();
@@ -632,7 +611,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			await this.query(mysql.format(delSql, [expiredKeys, ns]));
 		}
 
-		return strippedKeys.map((key) => validKeys.has(key));
+		return keys.map((key) => validKeys.has(key));
 	}
 
 	/**
@@ -654,27 +633,13 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		this._disconnected = true;
 		this._disconnectPromise ??= (async () => {
 			const pending = [...this._pendingQueries];
-			if (this._connected) {
-				pending.push(this._connected);
-			}
+			pending.push(this._connected);
 
 			await Promise.allSettled(pending);
 			await this._pool?.end();
 			this._pool = undefined;
 		})();
 		return this._disconnectPromise;
-	}
-
-	/**
-	 * Strips the namespace prefix from a key that was added by the Keyv core.
-	 * For example, if namespace is "ns" and key is "ns:foo", returns "foo".
-	 */
-	private removeKeyPrefix(key: string): string {
-		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
-			return key.slice(this._namespace.length + 1);
-		}
-
-		return key;
 	}
 
 	/**

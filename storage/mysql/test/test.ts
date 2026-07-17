@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type mysql from "mysql2";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvMysqlAdapter, { createKeyv, type KeyvMysqlOptions } from "../src/index.js";
 import { parseConnectionString } from "../src/pool.js";
 
@@ -34,6 +34,22 @@ afterEach(async () => {
 });
 
 describe("constructor", () => {
+	test("uses the default uri when no options are provided", () => {
+		const keyv = new KeyvMysql();
+		expect(keyv.uri).toBe("mysql://localhost");
+	});
+
+	test("accepts mysql connection options without a uri", async () => {
+		const keyv = new KeyvMysql({
+			host: "localhost",
+			port: 3306,
+			user: "root",
+			database: "keyv_test",
+		});
+		expect(keyv.uri).toBe("mysql://localhost");
+		expect(await keyv.get(faker.string.alphanumeric(10))).toBeUndefined();
+	});
+
 	test("sets default properties", () => {
 		const keyv = new KeyvMysql(uri);
 		expect(keyv.uri).toBe(uri);
@@ -226,6 +242,24 @@ describe("SQL injection prevention", () => {
 	});
 });
 
+describe("delete", () => {
+	test("uses one DELETE query and returns whether a row was affected", async () => {
+		const keyv = new KeyvMysql(uri);
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, "value");
+		const query = vi.spyOn(keyv, "query");
+
+		expect(await keyv.delete(key)).toBe(true);
+		expect(query).toHaveBeenCalledOnce();
+		expect(query.mock.calls[0][0]).toMatch(/^DELETE FROM/);
+
+		query.mockClear();
+		expect(await keyv.delete(key)).toBe(false);
+		expect(query).toHaveBeenCalledOnce();
+		expect(query.mock.calls[0][0]).toMatch(/^DELETE FROM/);
+	});
+});
+
 describe("clear", () => {
 	test("returns undefined with the default namespace", async () => {
 		const keyv = new KeyvMysql(uri);
@@ -393,6 +427,44 @@ describe("intervalExpiration", () => {
 });
 
 describe("namespace", () => {
+	test("does not collapse keys that begin with the namespace", async () => {
+		const namespace = "ns";
+		const mysql = new KeyvMysql(uri);
+		const keyv = new Keyv({ store: mysql, namespace });
+
+		await keyv.set("foo", "plain");
+		await keyv.set(`${namespace}:foo`, "prefixed");
+
+		expect(await keyv.get("foo")).toBe("plain");
+		expect(await keyv.get(`${namespace}:foo`)).toBe("prefixed");
+	});
+
+	test("preserves namespace-like prefixes in bulk operations and iteration", async () => {
+		const namespace = "ns";
+		const keyv = new KeyvMysql(uri);
+		keyv.namespace = namespace;
+		const keys = ["foo", `${namespace}:foo`];
+
+		expect(
+			await keyv.setMany([
+				{ key: keys[0], value: "plain" },
+				{ key: keys[1], value: "prefixed" },
+			]),
+		).toEqual([true, true]);
+		expect(await keyv.getMany(keys)).toEqual(["plain", "prefixed"]);
+		expect(await keyv.hasMany(keys)).toEqual([true, true]);
+
+		const entries = new Map<string, string>();
+		for await (const [key, value] of keyv.iterator()) {
+			entries.set(key, value);
+		}
+
+		expect(entries.get(keys[0])).toBe("plain");
+		expect(entries.get(keys[1])).toBe("prefixed");
+		expect(await keyv.deleteMany(keys)).toEqual([true, true]);
+		expect(await keyv.hasMany(keys)).toEqual([false, false]);
+	});
+
 	test("stores the same key independently across namespaces", async () => {
 		const ns1 = faker.string.alphanumeric(8);
 		const ns2 = faker.string.alphanumeric(8);
@@ -572,6 +644,20 @@ describe("namespace", () => {
 });
 
 describe("iterator", () => {
+	test("uses the default batch size when iterationLimit is zero", async () => {
+		const keyv = new KeyvMysql({ uri, iterationLimit: 0 });
+		const key = faker.string.alphanumeric(10);
+		await keyv.clear();
+		await keyv.set(key, "value");
+
+		const entries = new Map<string, string>();
+		for await (const [entryKey, value] of keyv.iterator()) {
+			entries.set(entryKey, value);
+		}
+
+		expect(entries.get(key)).toBe("value");
+	});
+
 	test("iterates over the default namespace", async () => {
 		const keyv = new KeyvMysql(uri);
 		await keyv.clear();
