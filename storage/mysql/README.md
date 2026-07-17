@@ -102,7 +102,7 @@ The adapter automatically adds the `namespace` column and creates the appropriat
 
 #### `keySize` renamed to `keyLength`
 
-The `keySize` option and property has been renamed to `keyLength` for consistency with the migration script and to better reflect that it controls VARCHAR column length.
+The `keySize` option and property has been renamed to `keyLength` for consistency with the migration script and to better reflect that it controls key length.
 
 ```js
 // v5
@@ -177,8 +177,8 @@ The migration script also populates the new `expires` column from existing JSON 
 | --- | --- | --- | --- |
 | `uri` | `string` | `'mysql://localhost'` | MySQL connection URI |
 | `table` | `string` | `'keyv'` | Table name for key-value storage |
-| `keyLength` | `number` | `255` | Maximum key length (VARCHAR length) |
-| `namespaceLength` | `number` | `255` | Maximum namespace column length (VARCHAR length) |
+| `keyLength` | `number` | `255` | Maximum key length in UTF-8 characters |
+| `namespaceLength` | `number` | `255` | Maximum namespace length in UTF-8 characters |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
 
@@ -213,7 +213,7 @@ store.table = 'cache';
 
 ### keyLength
 
-Get or set the maximum key length (VARCHAR length) for the key column.
+Get or set the maximum key length in UTF-8 characters.
 
 - Type: `number`
 - Default: `255`
@@ -225,7 +225,7 @@ console.log(store.keyLength); // 512
 
 ### namespaceLength
 
-Get or set the maximum namespace length (VARCHAR length) for the namespace column.
+Get or set the maximum namespace length in UTF-8 characters.
 
 - Type: `number`
 - Default: `255`
@@ -275,6 +275,8 @@ console.log(store.namespace); // 'my-namespace'
 ## Namespace Support
 
 The MySQL adapter supports native namespace scoping. When a namespace is set, keys are stored in a dedicated `namespace` column rather than being embedded in the key name. This provides efficient filtering and proper isolation between namespaces.
+
+Keys and namespaces are stored as exact UTF-8 bytes. Comparisons therefore preserve case, accents, Unicode normalization, and trailing spaces regardless of the database's default collation. For example, `AuditKey` and `auditkey`, composed and decomposed forms of `é`, and `key` and `key ` are all distinct. Existing `VARCHAR` key columns are converted automatically when the adapter initializes.
 
 ```js
 import Keyv from 'keyv';
