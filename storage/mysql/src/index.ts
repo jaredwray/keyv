@@ -371,8 +371,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
-			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-			await this.query(mysql.format(delSql, [key, ns]));
+			await this.deleteExpiredKeys([key], ns, now);
 			return undefined as KeyvStorageGetResult<Value>;
 		}
 
@@ -408,8 +407,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		if (expiredKeys.length > 0) {
-			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-			await this.query(mysql.format(delSql, [expiredKeys, ns]));
+			await this.deleteExpiredKeys(expiredKeys, ns, now);
 		}
 
 		// Coerce missing keys and SQL NULL values to undefined so the adapter never returns null.
@@ -572,8 +570,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
-			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-			await this.query(mysql.format(delSql, [key, ns]));
+			await this.deleteExpiredKeys([key], ns, now);
 			return false;
 		}
 
@@ -607,8 +604,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		}
 
 		if (expiredKeys.length > 0) {
-			const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ?`;
-			await this.query(mysql.format(delSql, [expiredKeys, ns]));
+			await this.deleteExpiredKeys(expiredKeys, ns, now);
 		}
 
 		return keys.map((key) => validKeys.has(key));
@@ -648,6 +644,17 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	private getNamespaceValue(): string {
 		return this._namespace ?? "";
+	}
+
+	/** Deletes rows that were already expired at the time of a preceding read. */
+	private async deleteExpiredKeys(
+		keys: string[],
+		namespace: string,
+		expiresAt: number,
+	): Promise<void> {
+		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id IN (?) AND namespace = ? AND expires IS NOT NULL AND expires <= ?`;
+		const del = mysql.format(sql, [keys, namespace, expiresAt]);
+		await this.query(del);
 	}
 
 	/**
