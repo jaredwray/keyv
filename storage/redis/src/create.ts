@@ -1,6 +1,5 @@
-// biome-ignore-all lint/suspicious/noExplicitAny: redis
 import type { RedisClientOptions, RedisClientType } from "@redis/client";
-import { Keyv } from "keyv";
+import { Keyv, type KeyvAny } from "keyv";
 import KeyvRedis from "./index.js";
 import type { KeyvRedisOptions } from "./types.js";
 
@@ -67,7 +66,7 @@ export function createKeyvNonBlocking(
 ): Keyv {
 	const keyv = createKeyv(connect, options);
 
-	const keyvStore = keyv.store as KeyvRedis<any>;
+	const keyvStore = keyv.store as KeyvRedis<KeyvAny>;
 
 	keyvStore.throwOnConnectError = false;
 	keyvStore.throwOnErrors = false;

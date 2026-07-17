@@ -1,9 +1,13 @@
-// biome-ignore-all lint/suspicious/noExplicitAny: map type
 import { Hookified } from "hookified";
 import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
 import { Keyv } from "../keyv.js";
 import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
-import { KeyvEvents, type KeyvStorageEntry } from "../types/keyv.js";
+import {
+	type KeyvAny,
+	type KeyvAnyArray,
+	KeyvEvents,
+	type KeyvStorageEntry,
+} from "../types/keyv.js";
 import { ttlFromExpires } from "../utils.js";
 
 /**
@@ -38,9 +42,9 @@ export type KeyvMemoryAdapterOptions = {
  */
 export type KeyvMapType = {
 	/** Retrieves a value by key */
-	get: (key: string) => any;
+	get: (key: string) => KeyvAny;
 	/** Sets a value with a key. Additional parameters (like TTL) vary by implementation. */
-	set: (key: string, value: any, ...args: any[]) => any;
+	set: (key: string, value: KeyvAny, ...args: KeyvAnyArray) => KeyvAny;
 	/** Deletes a key from the store */
 	delete: (key: string) => boolean;
 	/** Clears all entries from the store */
@@ -210,7 +214,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @param expires - Optional absolute expiry as Unix ms since epoch
 	 * @returns Always returns true indicating success
 	 */
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
 		const entry: MemoryEntry = {
 			value,
@@ -256,14 +260,14 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * NOTE: if there is no `keys()` then we just do a full clear.
 	 */
 	public async clear(): Promise<void> {
-		if (!this._namespace || typeof (this._store as Map<any, any>).keys !== "function") {
+		if (!this._namespace || typeof (this._store as Map<KeyvAny, KeyvAny>).keys !== "function") {
 			this._store.clear();
 			return;
 		}
 
 		const prefix = `${this._namespace}${this._keySeparator}`;
 		const keysToDelete: string[] = [];
-		for (const key of (this._store as Map<any, any>).keys()) {
+		for (const key of (this._store as Map<KeyvAny, KeyvAny>).keys()) {
 			if (key.startsWith(prefix)) {
 				keysToDelete.push(key);
 			}
@@ -367,13 +371,13 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		void
 	> {
 		// Check if store supports iteration
-		if (typeof (this._store as Map<any, any>).entries !== "function") {
+		if (typeof (this._store as Map<KeyvAny, KeyvAny>).entries !== "function") {
 			return;
 		}
 
 		const namespace = this._namespace;
 
-		for (const [key, raw] of (this._store as Map<any, any>).entries()) {
+		for (const [key, raw] of (this._store as Map<KeyvAny, KeyvAny>).entries()) {
 			// Filter by namespace if set
 			if (namespace) {
 				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {

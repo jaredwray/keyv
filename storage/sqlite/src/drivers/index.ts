@@ -1,3 +1,4 @@
+import type { KeyvAny } from "keyv";
 import type { SqliteDriver, SqliteDriverName } from "./types.js";
 
 async function loadDriver(name: SqliteDriverName): Promise<SqliteDriver> {
@@ -29,8 +30,7 @@ async function loadDriver(name: SqliteDriverName): Promise<SqliteDriver> {
 	}
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: Bun global detection
-declare const Bun: any;
+declare const Bun: KeyvAny;
 
 /**
  * Resolves which SQLite driver to use.

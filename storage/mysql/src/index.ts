@@ -1,5 +1,6 @@
 import { Hookified } from "hookified";
 import Keyv, {
+	type KeyvAny,
 	type KeyvStorageAdapter,
 	type KeyvStorageEntry,
 	type KeyvStorageGetResult,
@@ -402,8 +403,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns Promise that resolves when the operation completes
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: type format
-	public async set(key: string, value: any, expires?: number): Promise<boolean> {
+	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
 			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
@@ -711,8 +711,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		const mysqlOptions: ConnectionOptions = {};
 		for (const key of connectionOptionsKeys) {
 			if (key in options) {
-				// biome-ignore lint/suspicious/noExplicitAny: dynamically copying known keys
-				(mysqlOptions as any)[key] = (options as any)[key];
+				(mysqlOptions as KeyvAny)[key] = (options as KeyvAny)[key];
 			}
 		}
 

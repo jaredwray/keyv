@@ -1,5 +1,5 @@
 import { Hookified, type HookifiedOptions } from "hookified";
-import { Keyv } from "keyv";
+import { Keyv, type KeyvAny } from "keyv";
 
 /**
  * A subset of the native `Map` interface that {@link BigMap} implements.
@@ -10,11 +10,7 @@ export type MapInterface<K, V> = {
 	readonly size: number;
 	clear(): void;
 	delete(key: K): boolean;
-	forEach(
-		callbackfn: (value: V, key: K, map: MapInterface<K, V>) => void,
-		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
-		thisArg?: any,
-	): void;
+	forEach(callbackfn: (value: V, key: K, map: MapInterface<K, V>) => void, thisArg?: KeyvAny): void;
 	entries(): IterableIterator<[K, V]>;
 	keys(): IterableIterator<K>;
 	values(): IterableIterator<V>;
@@ -327,10 +323,8 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 	 * @returns {void}
 	 */
 	public forEach(
-		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
-		callbackfn: (this: any, value: V, key: K, map: Map<K, V>) => void,
-		// biome-ignore lint/suspicious/noExplicitAny: MapInterface
-		thisArg?: any,
+		callbackfn: (this: KeyvAny, value: V, key: K, map: Map<K, V>) => void,
+		thisArg?: KeyvAny,
 	): void {
 		for (const store of this._store) {
 			for (const [key, value] of store) {

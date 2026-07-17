@@ -1,8 +1,7 @@
-import type { KeyvStorageAdapter } from "keyv";
+import type { KeyvAny, KeyvAnyArray, KeyvStorageAdapter } from "keyv";
 
 /** Factory function that returns a Keyv-compatible store instance. Used by Keyv-wrapper test suites. */
-// biome-ignore lint/suspicious/noExplicitAny: type format
-export type KeyvStoreFn = () => KeyvStorageAdapter | any;
+export type KeyvStoreFn = () => KeyvStorageAdapter | KeyvAny;
 
 /**
  * A test registration function compatible with vitest's `it` or `test`.
@@ -10,8 +9,7 @@ export type KeyvStoreFn = () => KeyvStorageAdapter | any;
  */
 export type TestFunction = (
 	name: string,
-	// biome-ignore lint/suspicious/noExplicitAny: minimal vitest context type
-	fn: (context: { expect: (...args: any[]) => any }) => void | Promise<void>,
+	fn: (context: { expect: (...args: KeyvAnyArray) => KeyvAny }) => void | Promise<void>,
 ) => void;
 
 /** Factory function that returns a {@link KeyvStorageAdapter} instance. Used by storage-level test suites. */
