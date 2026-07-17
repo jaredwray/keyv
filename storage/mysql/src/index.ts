@@ -478,20 +478,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async delete(key: string) {
 		const ns = this.getNamespaceValue();
-		const sql = `SELECT * FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const select = mysql.format(sql, [key, ns]);
-		const delSql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const del = mysql.format(delSql, [key, ns]);
-
-		const rows: mysql.RowDataPacket = await this.query(select);
-		const row = rows[0];
-
-		if (row === undefined) {
-			return false;
-		}
-
-		await this.query(del);
-		return true;
+		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
+		const del = mysql.format(sql, [key, ns]);
+		const result = await this.query<mysql.ResultSetHeader>(del);
+		return result.affectedRows > 0;
 	}
 
 	/**

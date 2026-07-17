@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
 import type mysql from "mysql2";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvMysqlAdapter, { createKeyv, type KeyvMysqlOptions } from "../src/index.js";
 import { parseConnectionString } from "../src/pool.js";
 
@@ -223,6 +223,24 @@ describe("SQL injection prevention", () => {
 	test("has prevents a UNION-based injection", async () => {
 		const keyv = new KeyvMysql(uri);
 		expect(await keyv.has("' UNION SELECT 1 --")).toBe(false);
+	});
+});
+
+describe("delete", () => {
+	test("uses one DELETE query and returns whether a row was affected", async () => {
+		const keyv = new KeyvMysql(uri);
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, "value");
+		const query = vi.spyOn(keyv, "query");
+
+		expect(await keyv.delete(key)).toBe(true);
+		expect(query).toHaveBeenCalledOnce();
+		expect(query.mock.calls[0][0]).toMatch(/^DELETE FROM/);
+
+		query.mockClear();
+		expect(await keyv.delete(key)).toBe(false);
+		expect(query).toHaveBeenCalledOnce();
+		expect(query.mock.calls[0][0]).toMatch(/^DELETE FROM/);
 	});
 });
 
