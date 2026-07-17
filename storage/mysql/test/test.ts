@@ -393,6 +393,44 @@ describe("intervalExpiration", () => {
 });
 
 describe("namespace", () => {
+	test("does not collapse keys that begin with the namespace", async () => {
+		const namespace = "ns";
+		const mysql = new KeyvMysql(uri);
+		const keyv = new Keyv({ store: mysql, namespace });
+
+		await keyv.set("foo", "plain");
+		await keyv.set(`${namespace}:foo`, "prefixed");
+
+		expect(await keyv.get("foo")).toBe("plain");
+		expect(await keyv.get(`${namespace}:foo`)).toBe("prefixed");
+	});
+
+	test("preserves namespace-like prefixes in bulk operations and iteration", async () => {
+		const namespace = "ns";
+		const keyv = new KeyvMysql(uri);
+		keyv.namespace = namespace;
+		const keys = ["foo", `${namespace}:foo`];
+
+		expect(
+			await keyv.setMany([
+				{ key: keys[0], value: "plain" },
+				{ key: keys[1], value: "prefixed" },
+			]),
+		).toEqual([true, true]);
+		expect(await keyv.getMany(keys)).toEqual(["plain", "prefixed"]);
+		expect(await keyv.hasMany(keys)).toEqual([true, true]);
+
+		const entries = new Map<string, string>();
+		for await (const [key, value] of keyv.iterator()) {
+			entries.set(key, value);
+		}
+
+		expect(entries.get(keys[0])).toBe("plain");
+		expect(entries.get(keys[1])).toBe("prefixed");
+		expect(await keyv.deleteMany(keys)).toEqual([true, true]);
+		expect(await keyv.hasMany(keys)).toEqual([false, false]);
+	});
+
 	test("stores the same key independently across namespaces", async () => {
 		const ns1 = faker.string.alphanumeric(8);
 		const ns2 = faker.string.alphanumeric(8);
