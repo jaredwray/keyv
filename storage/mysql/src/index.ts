@@ -101,7 +101,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	private _disconnectPromise?: Promise<void>;
 
 	/** The adapter's asynchronous schema initialization. */
-	private _connected?: Promise<unknown>;
+	private _connected!: Promise<unknown>;
 
 	/** Queries that started before a disconnect was requested. */
 	private readonly _pendingQueries = new Set<Promise<unknown>>();
@@ -451,7 +451,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return entries.map(() => true);
+			return [];
 		}
 
 		try {
@@ -633,9 +633,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		this._disconnected = true;
 		this._disconnectPromise ??= (async () => {
 			const pending = [...this._pendingQueries];
-			if (this._connected) {
-				pending.push(this._connected);
-			}
+			pending.push(this._connected);
 
 			await Promise.allSettled(pending);
 			await this._pool?.end();

@@ -34,6 +34,22 @@ afterEach(async () => {
 });
 
 describe("constructor", () => {
+	test("uses the default uri when no options are provided", () => {
+		const keyv = new KeyvMysql();
+		expect(keyv.uri).toBe("mysql://localhost");
+	});
+
+	test("accepts mysql connection options without a uri", async () => {
+		const keyv = new KeyvMysql({
+			host: "localhost",
+			port: 3306,
+			user: "root",
+			database: "keyv_test",
+		});
+		expect(keyv.uri).toBe("mysql://localhost");
+		expect(await keyv.get(faker.string.alphanumeric(10))).toBeUndefined();
+	});
+
 	test("sets default properties", () => {
 		const keyv = new KeyvMysql(uri);
 		expect(keyv.uri).toBe(uri);
@@ -628,6 +644,20 @@ describe("namespace", () => {
 });
 
 describe("iterator", () => {
+	test("uses the default batch size when iterationLimit is zero", async () => {
+		const keyv = new KeyvMysql({ uri, iterationLimit: 0 });
+		const key = faker.string.alphanumeric(10);
+		await keyv.clear();
+		await keyv.set(key, "value");
+
+		const entries = new Map<string, string>();
+		for await (const [entryKey, value] of keyv.iterator()) {
+			entries.set(entryKey, value);
+		}
+
+		expect(entries.get(key)).toBe("value");
+	});
+
 	test("iterates over the default namespace", async () => {
 		const keyv = new KeyvMysql(uri);
 		await keyv.clear();
