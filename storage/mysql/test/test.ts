@@ -162,6 +162,18 @@ describe("runtime configuration", () => {
 		await keyv.useTable(keyv.table);
 	});
 
+	test("does not reuse destination PoolOptions when reconnecting with only a uri", async () => {
+		const keyv = new KeyvMysql({
+			uri,
+			user: "keyv_invalid_user",
+			password: "invalid-password",
+			database: "invalid-database",
+		});
+
+		await keyv.reconnect("mysql://root@127.0.0.1:3306/keyv_test");
+		expect(await keyv.get(faker.string.alphanumeric(10))).toBeUndefined();
+	});
+
 	test("initializes a table before switching and retains the current table on failure", async () => {
 		const admin = new KeyvMysql(uri);
 		const keyv = new KeyvMysql(uri);
@@ -279,6 +291,35 @@ describe("runtime configuration", () => {
 			);
 			await disconnecting;
 		}
+	});
+
+	test("keeps a queued reconnect disconnected when disconnect starts first", async () => {
+		const keyv = new KeyvMysql(uri);
+		await keyv.query("SELECT 1");
+		let releaseTableInitialization = () => {};
+		const blockedTableInitialization = new Promise<void>((resolve) => {
+			releaseTableInitialization = resolve;
+		});
+		const internals = keyv as unknown as {
+			initializeTable: (...arguments_: unknown[]) => Promise<void>;
+		};
+		const initializeTable = vi
+			.spyOn(internals, "initializeTable")
+			.mockImplementationOnce(async () => blockedTableInitialization);
+		const changingTable = keyv.useTable(`keyv_blocked_${faker.string.alphanumeric(12)}`);
+		await vi.waitFor(() => {
+			expect(initializeTable).toHaveBeenCalledOnce();
+		});
+
+		const reconnecting = keyv.reconnect("mysql://root@127.0.0.1:3306/keyv_test");
+		const disconnecting = keyv.disconnect();
+		releaseTableInitialization();
+		await expect(changingTable).rejects.toThrow("disconnected while changing tables");
+		await expect(reconnecting).rejects.toThrow("disconnected while reconnecting");
+		await disconnecting;
+		await expect(keyv.get(faker.string.alphanumeric(10))).rejects.toThrow(
+			"MySQL adapter is disconnected",
+		);
 	});
 
 	test("migrates legacy tables and rejects incompatible physical widths", async () => {
