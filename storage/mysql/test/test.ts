@@ -480,19 +480,58 @@ describe("expires column", () => {
 
 describe("intervalExpiration", () => {
 	test("deletes expired keys on the configured schedule", async () => {
-		const keyvMysql = new KeyvMysql({ uri, intervalExpiration: 1 });
-		const keyv = new Keyv({ store: keyvMysql });
-		const key1 = faker.string.alphanumeric(10);
-		const val1 = faker.string.alphanumeric(10);
-		const key2 = faker.string.alphanumeric(10);
-		const val2 = faker.string.alphanumeric(10);
-		// key1 has a 2s ttl; key2 has no ttl (infinite).
-		await keyv.set(key1, val1, 2000);
-		await keyv.set(key2, val2);
-		expect(await keyv.get(key1)).toBe(val1);
-		await delay(2500);
-		expect(await keyv.get(key1)).toBeUndefined();
-		expect(await keyv.get(key2)).toBe(val2);
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_timer_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const keyvMysql = new KeyvMysql({ uri, table, intervalExpiration: 0.05 });
+		const expiredKey = faker.string.alphanumeric(10);
+		const persistentKey = faker.string.alphanumeric(10);
+
+		try {
+			await keyvMysql.set(expiredKey, "expired", Date.now() - 1000);
+			await keyvMysql.set(persistentKey, "persistent");
+
+			await delay(250);
+
+			const rows = await keyvMysql.query<mysql.RowDataPacket[]>(
+				mysql.format(
+					`SELECT CONVERT(id USING utf8mb4) AS id FROM ${tableEsc} WHERE id IN (?, ?) AND namespace = ''`,
+					[expiredKey, persistentKey],
+				),
+			);
+			expect(rows.map((row) => row.id)).toEqual([persistentKey]);
+		} finally {
+			await keyvMysql.disconnect();
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("unrefs, restarts, disables, and disconnects the application timer", async () => {
+		const keyv = new KeyvMysql({ uri, intervalExpiration: 60 });
+		const getTimer = () =>
+			(
+				keyv as unknown as {
+					_clearExpiredTimer?: ReturnType<typeof setInterval>;
+				}
+			)._clearExpiredTimer;
+
+		const firstTimer = getTimer();
+		expect(firstTimer).toBeDefined();
+		expect(firstTimer?.hasRef()).toBe(false);
+
+		keyv.intervalExpiration = 30;
+		const secondTimer = getTimer();
+		expect(secondTimer).toBeDefined();
+		expect(secondTimer).not.toBe(firstTimer);
+		expect(secondTimer?.hasRef()).toBe(false);
+
+		keyv.intervalExpiration = undefined;
+		expect(getTimer()).toBeUndefined();
+
+		keyv.intervalExpiration = 30;
+		expect(getTimer()).toBeDefined();
+		await keyv.disconnect();
+		expect(getTimer()).toBeUndefined();
 	});
 });
 
