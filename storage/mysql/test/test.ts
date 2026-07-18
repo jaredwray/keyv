@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
@@ -7,6 +9,7 @@ import KeyvMysqlAdapter, { createKeyv, type KeyvMysqlOptions } from "../src/inde
 import { parseConnectionString } from "../src/pool.js";
 
 const uri = "mysql://root@localhost:3306/keyv_test";
+const execFileAsync = promisify(execFile);
 const mysqlAdapters = new Set<KeyvMysqlAdapter>();
 
 class KeyvMysql extends KeyvMysqlAdapter {
@@ -76,6 +79,12 @@ describe("constructor", () => {
 		expect(keyv.iterationLimit).toBe(50);
 	});
 
+	test("rejects key column lengths that exceed MySQL's composite index limit", () => {
+		expect(() => new KeyvMysql({ uri, keyLength: 512, namespaceLength: 512 })).toThrow(
+			"3072-byte composite index limit",
+		);
+	});
+
 	test("sets the uri when a string is passed", () => {
 		const keyv = new KeyvMysql(uri);
 		expect(keyv.uri).toBe(uri);
@@ -88,9 +97,13 @@ describe("constructor", () => {
 		expect(keyv.uri).toBe("mysql://otherhost");
 		keyv.table = "updated_table";
 		expect(keyv.table).toBe("updated_table");
-		keyv.keyLength = 1024;
-		expect(keyv.keyLength).toBe(1024);
+		keyv.keyLength = 512;
+		expect(keyv.keyLength).toBe(512);
 		keyv.namespaceLength = 128;
+		expect(keyv.namespaceLength).toBe(128);
+		expect(() => {
+			keyv.namespaceLength = 257;
+		}).toThrow("3072-byte composite index limit");
 		expect(keyv.namespaceLength).toBe(128);
 		keyv.iterationLimit = 100;
 		expect(keyv.iterationLimit).toBe(100);
@@ -483,6 +496,197 @@ describe("intervalExpiration", () => {
 	});
 });
 
+describe("v6 migration", () => {
+	test("dry-run previews a legacy table without modifying its schema", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_dry_run_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+
+		try {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+			await admin.query(
+				`CREATE TABLE ${tableEsc} (id VARCHAR(255) NOT NULL PRIMARY KEY, value TEXT)`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${tableEsc} (id, value) VALUES (?, ?)`, [
+					"legacy:key",
+					"legacy-value",
+				]),
+			);
+
+			const schemaBefore = await admin.query<mysql.RowDataPacket[]>(
+				`SHOW CREATE TABLE ${tableEsc}`,
+			);
+			const { stdout } = await execFileAsync(
+				process.execPath,
+				["scripts/migrate-v6.ts", "--uri", uri, "--table", table, "--dry-run"],
+				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			);
+			const schemaAfter = await admin.query<mysql.RowDataPacket[]>(`SHOW CREATE TABLE ${tableEsc}`);
+
+			expect(stdout).toContain('"legacy:key" -> id="key", namespace="legacy"');
+			expect(stdout).toContain("Dry run — no changes made.");
+			expect(schemaAfter[0]["Create Table"]).toBe(schemaBefore[0]["Create Table"]);
+			const rows = await admin.query<mysql.RowDataPacket[]>(`SELECT id, value FROM ${tableEsc}`);
+			expect(rows).toMatchObject([{ id: "legacy:key", value: "legacy-value" }]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("rejects configured key widths above MySQL's index limit", async () => {
+		await expect(
+			execFileAsync(
+				process.execPath,
+				[
+					"scripts/migrate-v6.ts",
+					"--uri",
+					uri,
+					"--keyLength",
+					"512",
+					"--namespaceLength",
+					"512",
+					"--dry-run",
+				],
+				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			),
+		).rejects.toMatchObject({ stderr: expect.stringContaining("3072-byte composite index limit") });
+	});
+
+	test("preserves widths while migrating one column and replacing the legacy index", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_index_migration_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexName = `${table}_key_namespace_idx`;
+		const indexEsc = `\`${indexName}\``;
+
+		try {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+			await admin.query(
+				`CREATE TABLE ${tableEsc} (id VARCHAR(512) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${tableEsc} (id, value, namespace) VALUES (?, ?, '')`, [
+					"legacy:key",
+					"legacy-value",
+				]),
+			);
+
+			await execFileAsync(
+				process.execPath,
+				["scripts/migrate-v6.ts", "--uri", uri, "--table", table],
+				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			);
+
+			const columns = await admin.query<mysql.RowDataPacket[]>(
+				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+			);
+			expect(
+				Object.fromEntries(
+					columns.map((column) => [column.Field, String(column.Type).toLowerCase()]),
+				),
+			).toEqual({ id: "varbinary(2048)", namespace: "varbinary(1020)" });
+
+			const indexes = await admin.query<mysql.RowDataPacket[]>(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
+			);
+			const indexColumns = [...indexes]
+				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+				.map((row) => row.Column_name);
+			expect(indexColumns).toEqual(["namespace", "id"]);
+			expect(indexes.every((row) => Number(row.Non_unique) === 0)).toBe(true);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("atomically reorders a legacy index during concurrent initialization", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_concurrent_index_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexName = `${table}_key_namespace_idx`;
+		const indexEsc = `\`${indexName}\``;
+
+		try {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
+			);
+
+			const adapters = Array.from({ length: 3 }, () => new KeyvMysql({ uri, table }));
+			await Promise.all(
+				adapters.map(async (adapter) => adapter.query<mysql.RowDataPacket[]>("SELECT 1")),
+			);
+
+			const indexes = await admin.query<mysql.RowDataPacket[]>(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
+			);
+			const indexColumns = [...indexes]
+				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+				.map((row) => row.Column_name);
+			expect(indexColumns).toEqual(["namespace", "id"]);
+			expect(indexes.every((row) => Number(row.Non_unique) === 0)).toBe(true);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+});
+
+describe("configured character limits", () => {
+	test("rejects ASCII keys longer than keyLength before querying MySQL", async () => {
+		const keyv = new KeyvMysql({ uri, keyLength: 4 });
+		const onError = vi.fn();
+		keyv.on("error", onError);
+
+		expect(await keyv.set("abcd", "at-limit")).toBe(true);
+		const query = vi.spyOn(keyv, "query");
+		expect(await keyv.set("abcde", "over-limit")).toBe(false);
+		expect(query).not.toHaveBeenCalled();
+		expect(onError).toHaveBeenCalledWith(expect.any(RangeError));
+		expect(onError.mock.calls[0][0].message).toContain("keyLength of 4");
+
+		await expect(keyv.get("abcde")).rejects.toThrow(RangeError);
+		expect(query).not.toHaveBeenCalled();
+		query.mockRestore();
+		expect(await keyv.delete("abcd")).toBe(true);
+	});
+
+	test("counts Unicode code points rather than UTF-16 units", async () => {
+		const keyv = new KeyvMysql({ uri, keyLength: 2 });
+		keyv.on("error", () => {});
+		const atLimit = "😀é";
+		const overLimit = `${atLimit}a`;
+
+		expect(atLimit.length).toBe(3);
+		expect(Array.from(atLimit)).toHaveLength(2);
+		expect(await keyv.set(atLimit, "at-limit")).toBe(true);
+		expect(await keyv.get(atLimit)).toBe("at-limit");
+		expect(await keyv.set(overLimit, "over-limit")).toBe(false);
+		await expect(keyv.has(overLimit)).rejects.toThrow("keyLength of 2");
+		expect(await keyv.delete(atLimit)).toBe(true);
+	});
+
+	test("enforces namespaceLength before encoding", async () => {
+		const keyv = new KeyvMysql({ uri, namespaceLength: 2 });
+		const onError = vi.fn();
+		keyv.on("error", onError);
+		keyv.namespace = "😀é";
+
+		expect(await keyv.set("key", "at-limit")).toBe(true);
+		expect(await keyv.get("key")).toBe("at-limit");
+		await keyv.clear();
+
+		keyv.namespace = "😀éa";
+		const query = vi.spyOn(keyv, "query");
+		expect(await keyv.set("key", "over-limit")).toBe(false);
+		expect(query).not.toHaveBeenCalled();
+		expect(onError.mock.calls[0][0]).toBeInstanceOf(RangeError);
+		expect(onError.mock.calls[0][0].message).toContain("namespaceLength of 2");
+		await expect(keyv.clear()).rejects.toThrow("namespaceLength of 2");
+		expect(query).not.toHaveBeenCalled();
+	});
+});
+
 describe("byte-exact keys and namespaces", () => {
 	test("distinguishes case, accents, Unicode normalization, and trailing spaces", async () => {
 		const keyv = new KeyvMysql(uri);
@@ -543,35 +747,52 @@ describe("byte-exact keys and namespaces", () => {
 		}
 	});
 
-	test("converts existing VARCHAR key columns to UTF-8 VARBINARY", async () => {
+	test("migrates only text columns and preserves their existing widths", async () => {
 		const admin = new KeyvMysql(uri);
 		const table = `keyv_binary_${faker.string.alphanumeric(12)}`;
 		const tableEsc = `\`${table}\``;
-		const indexEsc = `\`${table}_key_namespace_idx\``;
+		const indexName = `${table}_key_namespace_idx`;
+		const indexEsc = `\`${indexName}\``;
 		const legacyKey = "Legacy-é ";
+		const legacyNamespace = "n".repeat(300);
 
 		try {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 			await admin.query(
-				`CREATE TABLE ${tableEsc}(id VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARCHAR(512) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (id, namespace))`,
 			);
 			await admin.query(
 				mysql.format(`INSERT INTO ${tableEsc} (id, value, namespace) VALUES (?, ?, ?)`, [
 					legacyKey,
 					"legacy-value",
-					"",
+					legacyNamespace,
 				]),
 			);
 
 			const migrated = new KeyvMysql({ uri, table });
-			expect(await migrated.get(legacyKey)).toBe("legacy-value");
 			const columns = await migrated.query<mysql.RowDataPacket[]>(
 				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
 			);
-			expect(columns).toHaveLength(2);
-			for (const column of columns) {
-				expect(String(column.Type).toLowerCase()).toBe("varbinary(1020)");
-			}
+			expect(
+				Object.fromEntries(
+					columns.map((column) => [column.Field, String(column.Type).toLowerCase()]),
+				),
+			).toEqual({ id: "varbinary(1020)", namespace: "varbinary(2048)" });
+			const rows = await migrated.query<mysql.RowDataPacket[]>(
+				`SELECT CONVERT(id USING utf8mb4) AS id, CONVERT(namespace USING utf8mb4) AS namespace, value FROM ${tableEsc}`,
+			);
+			expect(rows).toMatchObject([
+				{ id: legacyKey, namespace: legacyNamespace, value: "legacy-value" },
+			]);
+
+			const indexes = await migrated.query<mysql.RowDataPacket[]>(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
+			);
+			const indexColumns = [...indexes]
+				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+				.map((row) => row.Column_name);
+			expect(indexColumns).toEqual(["namespace", "id"]);
+			expect(indexes.every((row) => Number(row.Non_unique) === 0)).toBe(true);
 		} finally {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 		}

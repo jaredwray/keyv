@@ -147,6 +147,8 @@ Preview the changes first with `--dry-run`:
 npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --dry-run
 ```
 
+Dry-run mode only reads schema metadata and previews affected rows; it does not modify the schema or data.
+
 Run the migration:
 
 ```shell
@@ -157,7 +159,7 @@ You can also specify a custom table and column lengths:
 
 ```shell
 npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --table cache
-npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --keyLength 512 --namespaceLength 512
+npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --keyLength 512 --namespaceLength 256
 ```
 
 The migration runs inside a transaction and will roll back automatically if anything fails.
@@ -177,10 +179,12 @@ The migration script also populates the new `expires` column from existing JSON 
 | --- | --- | --- | --- |
 | `uri` | `string` | `'mysql://localhost'` | MySQL connection URI |
 | `table` | `string` | `'keyv'` | Table name for key-value storage |
-| `keyLength` | `number` | `255` | Maximum key length in UTF-8 characters |
-| `namespaceLength` | `number` | `255` | Maximum namespace length in UTF-8 characters |
+| `keyLength` | `number` | `255` | Maximum key length in Unicode code points |
+| `namespaceLength` | `number` | `255` | Maximum namespace length in Unicode code points |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
+
+Because MySQL limits an InnoDB composite index to 3072 bytes and each Unicode code point may require four UTF-8 bytes, `keyLength + namespaceLength` must not exceed 768. The constructor, property setters, and migration script reject larger combinations before changing the schema.
 
 ## Properties
 
@@ -213,7 +217,7 @@ store.table = 'cache';
 
 ### keyLength
 
-Get or set the maximum key length in UTF-8 characters.
+Get or set the maximum key length in Unicode code points. The limit is validated before the key is UTF-8 encoded for storage.
 
 - Type: `number`
 - Default: `255`
@@ -225,7 +229,7 @@ console.log(store.keyLength); // 512
 
 ### namespaceLength
 
-Get or set the maximum namespace length in UTF-8 characters.
+Get or set the maximum namespace length in Unicode code points. The limit is validated before the namespace is UTF-8 encoded for storage.
 
 - Type: `number`
 - Default: `255`
@@ -276,7 +280,9 @@ console.log(store.namespace); // 'my-namespace'
 
 The MySQL adapter supports native namespace scoping. When a namespace is set, keys are stored in a dedicated `namespace` column rather than being embedded in the key name. This provides efficient filtering and proper isolation between namespaces.
 
-Keys and namespaces are stored as exact UTF-8 bytes. Comparisons therefore preserve case, accents, Unicode normalization, and trailing spaces regardless of the database's default collation. For example, `AuditKey` and `auditkey`, composed and decomposed forms of `é`, and `key` and `key ` are all distinct. Existing `VARCHAR` key columns are converted automatically when the adapter initializes.
+Keys and namespaces are stored as exact UTF-8 bytes. Comparisons therefore preserve case, accents, Unicode normalization, and trailing spaces regardless of the database's default collation. For example, `AuditKey` and `auditkey`, composed and decomposed forms of `é`, and `key` and `key ` are all distinct. Existing text key columns are converted independently when the adapter initializes, preserving each column's existing character width.
+
+The unique composite index is ordered as `(namespace, id)`, allowing MySQL to use the same index for exact key lookups, namespace clears, and namespace-scoped iteration. Existing `(id, namespace)` indexes created by earlier v6 prereleases are replaced atomically.
 
 ```js
 import Keyv from 'keyv';
