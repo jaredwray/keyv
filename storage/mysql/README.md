@@ -253,7 +253,7 @@ console.log(store.iterationLimit); // 50
 
 ### intervalExpiration
 
-Get or set the interval in seconds for automatic expiration cleanup. When set to a value greater than 0, the adapter starts an unref'd application timer that periodically deletes expired entries. Changing the value restarts the timer, while `0` or `undefined` disables it. The timer is stopped by `disconnect()` and does not require MySQL `EVENT` or global-variable privileges.
+Get or set the interval in seconds for automatic expiration cleanup. When set to a value greater than 0, the adapter starts an unref'd application timer that periodically deletes expired entries. Changing the value restarts the timer, while `0` or `undefined` disables it. Cleanup runs never overlap, and changing the interval after `disconnect()` does not restart the timer. Values above `2147483.647` seconds are rejected because they exceed Node.js's maximum timer delay. The timer is stopped by `disconnect()` and does not require MySQL `EVENT` or global-variable privileges.
 
 - Type: `number | undefined`
 - Default: `undefined` (disabled)

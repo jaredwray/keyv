@@ -12,6 +12,7 @@ import type { KeyvMysqlOptions } from "./types.js";
 
 const UTF8_MAX_BYTES_PER_CODE_POINT = 4;
 const MYSQL_MAX_COMPOSITE_INDEX_BYTES = 3072;
+const MAX_TIMER_DELAY_MILLISECONDS = 2_147_483_647;
 
 /**
  * Escapes a MySQL identifier (table/column name) to prevent SQL injection.
@@ -33,6 +34,19 @@ function validateCompositeIndexLength(keyLength: number, namespaceLength: number
 	if (indexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
 		throw new RangeError(
 			`keyLength and namespaceLength require ${indexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
+		);
+	}
+}
+
+/** Ensures a positive cleanup interval fits within Node.js's timer delay limit. */
+function validateIntervalExpiration(value: number | undefined): void {
+	if (
+		value !== undefined &&
+		value > 0 &&
+		(!Number.isFinite(value) || value * 1000 > MAX_TIMER_DELAY_MILLISECONDS)
+	) {
+		throw new RangeError(
+			`intervalExpiration must not exceed ${MAX_TIMER_DELAY_MILLISECONDS / 1000} seconds`,
 		);
 	}
 }
@@ -106,6 +120,9 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 	/** The unref'd timer used for automatic expired-entry cleanup. */
 	private _clearExpiredTimer?: ReturnType<typeof setInterval>;
+
+	/** Whether an automatic expired-entry cleanup is currently running. */
+	private _clearExpiredRunning = false;
 
 	/**
 	 * The number of rows to fetch per iteration batch.
@@ -218,6 +235,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * Set the interval in seconds for application-level cleanup of expired entries.
 	 */
 	public set intervalExpiration(value: number | undefined) {
+		validateIntervalExpiration(value);
 		this._intervalExpiration = value;
 		this.startClearExpiredTimer();
 	}
@@ -278,6 +296,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			}
 
 			if (options.intervalExpiration !== undefined) {
+				validateIntervalExpiration(options.intervalExpiration);
 				this._intervalExpiration = options.intervalExpiration;
 			}
 
@@ -818,13 +837,24 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	/** Starts or restarts the unref'd application-level expiration cleanup timer. */
 	private startClearExpiredTimer(): void {
 		this.stopClearExpiredTimer();
+		if (this._disconnected) {
+			return;
+		}
+
 		if (this._intervalExpiration !== undefined && this._intervalExpiration > 0) {
 			this._clearExpiredTimer = setInterval(async () => {
+				if (this._clearExpiredRunning) {
+					return;
+				}
+
+				this._clearExpiredRunning = true;
 				try {
 					await this.clearExpired();
 				} catch (error) {
 					/* v8 ignore next -- @preserve */
 					this.emit("error", error);
+				} finally {
+					this._clearExpiredRunning = false;
 				}
 			}, this._intervalExpiration * 1000);
 			this._clearExpiredTimer.unref();

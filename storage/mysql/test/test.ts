@@ -532,6 +532,49 @@ describe("intervalExpiration", () => {
 		expect(getTimer()).toBeDefined();
 		await keyv.disconnect();
 		expect(getTimer()).toBeUndefined();
+
+		keyv.intervalExpiration = 30;
+		expect(getTimer()).toBeUndefined();
+	});
+
+	test("rejects cleanup intervals that exceed the Node.js timer limit", () => {
+		expect(
+			() =>
+				new KeyvMysql({
+					uri,
+					intervalExpiration: 2_147_483.648,
+				}),
+		).toThrow("intervalExpiration must not exceed 2147483.647 seconds");
+
+		const keyv = new KeyvMysql({ uri, intervalExpiration: 60 });
+		expect(() => {
+			keyv.intervalExpiration = Number.POSITIVE_INFINITY;
+		}).toThrow("intervalExpiration must not exceed 2147483.647 seconds");
+		expect(keyv.intervalExpiration).toBe(60);
+	});
+
+	test("does not overlap automatic cleanup runs", async () => {
+		const keyv = new KeyvMysql({ uri });
+		let releaseCleanup = () => {};
+		const blockedCleanup = new Promise<void>((resolve) => {
+			releaseCleanup = resolve;
+		});
+		const clearExpired = vi
+			.spyOn(keyv, "clearExpired")
+			.mockImplementation(async () => blockedCleanup);
+
+		try {
+			keyv.intervalExpiration = 0.01;
+			await vi.waitFor(() => {
+				expect(clearExpired).toHaveBeenCalledTimes(1);
+			});
+			await delay(50);
+			expect(clearExpired).toHaveBeenCalledTimes(1);
+		} finally {
+			keyv.intervalExpiration = undefined;
+			releaseCleanup();
+			await keyv.disconnect();
+		}
 	});
 });
 
