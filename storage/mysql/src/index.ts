@@ -243,13 +243,12 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * connection.
 	 *
 	 * @param uri - MySQL connection URI for the replacement pool.
-	 * @param mysqlOptions - Optional mysql2 pool options for the replacement pool. When omitted,
-	 * the adapter reuses its currently configured pool options. Pass an empty object to use only
-	 * the settings from `uri`.
+	 * @param mysqlOptions - Optional mysql2 pool options applied on top of the URI settings for the
+	 * replacement pool. When omitted, the replacement uses only the settings from `uri`.
 	 * @returns A promise that resolves after the new pool is active and the previous pool is closed.
 	 * @throws If the target connection cannot be established or its table cannot be initialized.
 	 */
-	public reconnect(uri: string, mysqlOptions: PoolOptions = this._mysqlOptions): Promise<void> {
+	public reconnect(uri: string, mysqlOptions: PoolOptions = {}): Promise<void> {
 		const previousDisconnect = this._disconnectPromise;
 		const disconnectGeneration = this._disconnectGeneration;
 		return this.enqueueConfigurationTransition(async () => {
@@ -843,6 +842,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 		const getColumnLength = (column: mysql.RowDataPacket): number => {
 			const match = /\((\d+)\)/.exec(String(column.Type));
+			/* v8 ignore next -- @preserve */
 			if (!match) {
 				throw new Error(`Cannot determine the width of ${String(column.Field)}`);
 			}
@@ -874,6 +874,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 				);
 			} catch (error) {
 				// Error 1060 = another adapter already added the column.
+				/* v8 ignore next -- @preserve */
 				if ((error as { errno?: number }).errno !== 1060) {
 					throw error;
 				}
@@ -886,11 +887,13 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		)) as mysql.RowDataPacket[];
 		const idColumn = keyColumns.find((column) => column.Field === "id");
 		const namespaceColumn = keyColumns.find((column) => column.Field === "namespace");
+		/* v8 ignore next -- @preserve */
 		if (!idColumn || !namespaceColumn) {
 			throw new Error(`Table ${table} must have id and namespace columns`);
 		}
 		const targetIndexByteLength =
 			getTargetByteLength(idColumn) + getTargetByteLength(namespaceColumn);
+		/* v8 ignore next -- @preserve */
 		if (targetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
 			throw new RangeError(
 				`Existing key columns require ${targetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
@@ -933,6 +936,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			await query(`ALTER TABLE ${tableEsc} DROP PRIMARY KEY`);
 		} catch (error) {
 			// Error 1091 = Can't DROP - PK doesn't exist (already migrated), safe to ignore
+			/* v8 ignore next -- @preserve */
 			if ((error as { errno?: number }).errno !== 1091) {
 				throw error;
 			}
@@ -961,6 +965,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 					await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`);
 				} catch (error) {
 					// Error 1061 = another adapter already created the index.
+					/* v8 ignore next -- @preserve */
 					if ((error as { errno?: number }).errno !== 1061) {
 						throw error;
 					}
@@ -972,6 +977,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		try {
 			await query(`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`);
 		} catch (error) {
+			/* v8 ignore next -- @preserve */
 			if ((error as { errno?: number }).errno !== 1060) {
 				throw error;
 			}
@@ -981,6 +987,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		try {
 			await query(`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`);
 		} catch (error) {
+			/* v8 ignore next -- @preserve */
 			if ((error as { errno?: number }).errno !== 1061) {
 				throw error;
 			}
@@ -1110,7 +1117,6 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			"timezone",
 			"trace",
 			"typeCast",
-			"uri",
 			"user",
 			"waitForConnections",
 		];

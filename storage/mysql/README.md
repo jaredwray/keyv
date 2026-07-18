@@ -313,7 +313,7 @@ Creates a replacement mysql2 pool, initializes the currently configured table on
 Calling `reconnect()` after `disconnect()` reactivates the adapter and restarts automatic expiration cleanup when `intervalExpiration` is configured.
 
 - `uri` *(string)* - MySQL connection URI for the replacement pool.
-- `mysqlOptions` *(PoolOptions, optional)* - Replacement mysql2 pool options. When omitted, the current pool options are reused. Pass `{}` to use only the URI settings.
+- `mysqlOptions` *(PoolOptions, optional)* - Replacement mysql2 pool options applied on top of the URI settings. When omitted, the replacement uses only the URI.
 - Returns: `Promise<void>`
 
 ```js

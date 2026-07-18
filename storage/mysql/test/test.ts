@@ -83,6 +83,12 @@ describe("constructor", () => {
 		expect(() => new KeyvMysql({ uri, keyLength: 512, namespaceLength: 512 })).toThrow(
 			"3072-byte composite index limit",
 		);
+		expect(() => new KeyvMysql({ uri, keyLength: 0 })).toThrow(
+			"keyLength must be a positive safe integer",
+		);
+		expect(() => new KeyvMysql({ uri, namespaceLength: 1.5 })).toThrow(
+			"namespaceLength must be a positive safe integer",
+		);
 	});
 
 	test("sets the uri when a string is passed", () => {
@@ -240,6 +246,78 @@ describe("runtime configuration", () => {
 		await expect(keyv.resizeKeyColumns({ keyLength: 256 })).rejects.toThrow(
 			"MySQL adapter is disconnected",
 		);
+	});
+
+	test("does not publish connection or table changes interrupted by disconnect", async () => {
+		for (const change of ["connection", "table"] as const) {
+			const keyv = new KeyvMysql(uri);
+			await keyv.query("SELECT 1");
+			let releaseInitialization = () => {};
+			const blockedInitialization = new Promise<void>((resolve) => {
+				releaseInitialization = resolve;
+			});
+			const internals = keyv as unknown as {
+				initializeTable: (...arguments_: unknown[]) => Promise<void>;
+			};
+			const initializeTable = vi
+				.spyOn(internals, "initializeTable")
+				.mockImplementationOnce(async () => blockedInitialization);
+			const changing =
+				change === "connection"
+					? keyv.reconnect("mysql://root@127.0.0.1:3306/keyv_test")
+					: keyv.useTable(`keyv_interrupted_${faker.string.alphanumeric(12)}`);
+
+			await vi.waitFor(() => {
+				expect(initializeTable).toHaveBeenCalledOnce();
+			});
+			const disconnecting = keyv.disconnect();
+			releaseInitialization();
+			await expect(changing).rejects.toThrow(
+				change === "connection"
+					? "disconnected while reconnecting"
+					: "disconnected while changing tables",
+			);
+			await disconnecting;
+		}
+	});
+
+	test("migrates legacy tables and rejects incompatible physical widths", async () => {
+		const admin = new KeyvMysql(uri);
+		const keyv = new KeyvMysql(uri);
+		const legacyTable = `keyv_legacy_${faker.string.alphanumeric(12)}`;
+		const wideTable = `keyv_wide_${faker.string.alphanumeric(12)}`;
+		const legacyTableEsc = `\`${legacyTable}\``;
+		const wideTableEsc = `\`${wideTable}\``;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${legacyTableEsc} (id VARCHAR(16) NOT NULL PRIMARY KEY, value TEXT)`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${legacyTableEsc} (id, value) VALUES (?, ?)`, [
+					"legacy-key",
+					"legacy-value",
+				]),
+			);
+			await keyv.useTable(legacyTable);
+			expect(await keyv.get("legacy-key")).toBe("legacy-value");
+			const columns = await keyv.query<mysql.RowDataPacket[]>(
+				`SHOW COLUMNS FROM ${legacyTableEsc} WHERE Field IN ('id', 'namespace', 'expires')`,
+			);
+			expect(columns.map((column) => column.Field)).toEqual(["id", "namespace", "expires"]);
+
+			await admin.query(
+				`CREATE TABLE ${wideTableEsc} (id VARBINARY(2048) NOT NULL, value TEXT, namespace VARBINARY(2048) NOT NULL DEFAULT '')`,
+			);
+			await expect(keyv.useTable(wideTable)).rejects.toThrow(
+				"Existing key columns require 4096 index bytes",
+			);
+			expect(keyv.table).toBe(legacyTable);
+		} finally {
+			await keyv.disconnect();
+			await admin.query(`DROP TABLE IF EXISTS ${legacyTableEsc}`);
+			await admin.query(`DROP TABLE IF EXISTS ${wideTableEsc}`);
+		}
 	});
 });
 
