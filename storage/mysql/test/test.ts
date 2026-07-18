@@ -112,6 +112,137 @@ describe("constructor", () => {
 	});
 });
 
+describe("runtime configuration", () => {
+	test("reconnects with a replacement pool and can reactivate after disconnect", async () => {
+		const keyv = new KeyvMysql({ uri, connectionLimit: 1, intervalExpiration: 60 });
+		const key = faker.string.alphanumeric(10);
+		const internals = keyv as unknown as {
+			_pool?: unknown;
+			_clearExpiredTimer?: ReturnType<typeof setInterval>;
+		};
+		await keyv.set(key, "value");
+		const previousPool = internals._pool;
+
+		const alternateUri = "mysql://root@127.0.0.1:3306/keyv_test";
+		await keyv.reconnect(alternateUri, { connectionLimit: 2 });
+		expect(keyv.uri).toBe(alternateUri);
+		expect(internals._pool).not.toBe(previousPool);
+		expect(await keyv.get(key)).toBe("value");
+
+		await keyv.disconnect();
+		expect(internals._clearExpiredTimer).toBeUndefined();
+		await keyv.reconnect(uri);
+		expect(keyv.uri).toBe(uri);
+		expect(internals._clearExpiredTimer).toBeDefined();
+		expect(await keyv.get(key)).toBe("value");
+	});
+
+	test("keeps the current pool when reconnect preparation fails", async () => {
+		const keyv = new KeyvMysql(uri);
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, "value");
+
+		await expect(
+			keyv.reconnect(uri, {
+				user: "keyv_invalid_user",
+				password: "invalid-password",
+				connectTimeout: 500,
+			}),
+		).rejects.toThrow();
+		expect(keyv.uri).toBe(uri);
+		expect(await keyv.get(key)).toBe("value");
+
+		// A rejected transition must not prevent the next configuration request.
+		await keyv.useTable(keyv.table);
+	});
+
+	test("initializes a table before switching and retains the current table on failure", async () => {
+		const admin = new KeyvMysql(uri);
+		const keyv = new KeyvMysql(uri);
+		const table = `keyv_runtime_${faker.string.alphanumeric(12)}`;
+		const invalidTable = `keyv_invalid_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const invalidTableEsc = `\`${invalidTable}\``;
+		const originalKey = faker.string.alphanumeric(10);
+		const targetKey = faker.string.alphanumeric(10);
+
+		try {
+			await keyv.set(originalKey, "original");
+			await keyv.useTable(table);
+			expect(keyv.table).toBe(table);
+			expect(await keyv.get(originalKey)).toBeUndefined();
+			await keyv.set(targetKey, "target");
+
+			await admin.query(`CREATE TABLE ${invalidTableEsc} (wrong_column INT)`);
+			await expect(keyv.useTable(invalidTable)).rejects.toThrow(
+				`Table ${invalidTable} does not have an id column`,
+			);
+			expect(keyv.table).toBe(table);
+			expect(await keyv.get(targetKey)).toBe("target");
+
+			await keyv.useTable("keyv");
+			expect(await keyv.get(originalKey)).toBe("original");
+		} finally {
+			await keyv.disconnect();
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+			await admin.query(`DROP TABLE IF EXISTS ${invalidTableEsc}`);
+		}
+	});
+
+	test("resizes key columns and rejects limits that exclude stored data", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_resize_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const keyv = new KeyvMysql({ uri, table, keyLength: 6, namespaceLength: 6 });
+
+		try {
+			await keyv.set("123456", "key");
+			await expect(keyv.resizeKeyColumns({ keyLength: 5 })).rejects.toThrow(
+				"the table contains a 6-character key",
+			);
+			expect(keyv.keyLength).toBe(6);
+			await keyv.delete("123456");
+
+			keyv.namespace = "abcdef";
+			await keyv.set("a", "namespace");
+			await expect(keyv.resizeKeyColumns({ namespaceLength: 5 })).rejects.toThrow(
+				"the table contains a 6-character namespace",
+			);
+			expect(keyv.namespaceLength).toBe(6);
+			await keyv.clear();
+			keyv.namespace = undefined;
+
+			await keyv.resizeKeyColumns({ keyLength: 4, namespaceLength: 4 });
+			expect(keyv.keyLength).toBe(4);
+			expect(keyv.namespaceLength).toBe(4);
+			const columns = await keyv.query<mysql.RowDataPacket[]>(
+				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+			);
+			expect(Object.fromEntries(columns.map((column) => [column.Field, column.Type]))).toEqual({
+				id: "varbinary(16)",
+				namespace: "varbinary(16)",
+			});
+
+			await keyv.resizeKeyColumns({});
+			await expect(keyv.resizeKeyColumns({ keyLength: 768, namespaceLength: 1 })).rejects.toThrow(
+				"3072-byte composite index limit",
+			);
+		} finally {
+			await keyv.disconnect();
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("rejects table and column changes after disconnect", async () => {
+		const keyv = new KeyvMysql(uri);
+		await keyv.disconnect();
+		await expect(keyv.useTable("other_table")).rejects.toThrow("MySQL adapter is disconnected");
+		await expect(keyv.resizeKeyColumns({ keyLength: 256 })).rejects.toThrow(
+			"MySQL adapter is disconnected",
+		);
+	});
+});
+
 describe("get", () => {
 	test("returns undefined for a missing key", async () => {
 		const keyv = new KeyvMysql(uri);

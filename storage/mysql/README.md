@@ -184,17 +184,17 @@ The migration script also populates the new `expires` column from existing JSON 
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for application-level expiration cleanup |
 
-Because MySQL limits an InnoDB composite index to 3072 bytes and each Unicode code point may require four UTF-8 bytes, `keyLength + namespaceLength` must not exceed 768. The constructor and migration script reject larger combinations before changing the schema.
+Because MySQL limits an InnoDB composite index to 3072 bytes and each Unicode code point may require four UTF-8 bytes, `keyLength + namespaceLength` must not exceed 768. The constructor, `resizeKeyColumns()`, and migration script reject larger combinations before changing the schema.
 
 ## Properties
 
-Construction-only configuration is exposed through read-only properties. `uri`, `table`, `keyLength`, and `namespaceLength` cannot be changed after construction because doing so would require reconnecting or migrating the initialized schema. Create a new adapter instance to use different values.
+Connection and schema configuration is exposed through getter-only properties. `uri`, `table`, `keyLength`, and `namespaceLength` cannot be assigned directly because changing them requires asynchronous connection or schema work. Use the awaited `reconnect()`, `useTable()`, and `resizeKeyColumns()` methods instead.
 
 `iterationLimit`, `intervalExpiration`, and `namespace` remain mutable because their setters update live adapter behavior.
 
 ### uri
 
-Get the MySQL connection URI selected at construction. This property is read-only.
+Get the active MySQL connection URI. This property is getter-only; use `reconnect()` to change it.
 
 - Type: `string`
 - Default: `'mysql://localhost'`
@@ -206,7 +206,7 @@ console.log(store.uri); // 'mysql://user:pass@localhost:3306/dbname'
 
 ### table
 
-Get the table name selected and initialized at construction. This property is read-only.
+Get the active table name. This property is getter-only; use `useTable()` to change it.
 
 - Type: `string`
 - Default: `'keyv'`
@@ -218,7 +218,7 @@ console.log(store.table); // 'keyv'
 
 ### keyLength
 
-Get the maximum key length in Unicode code points configured at construction. This property is read-only because it determines the initialized schema.
+Get the active maximum key length in Unicode code points. This property is getter-only because it determines the initialized schema; use `resizeKeyColumns()` to change it.
 
 - Type: `number`
 - Default: `255`
@@ -230,7 +230,7 @@ console.log(store.keyLength); // 512
 
 ### namespaceLength
 
-Get the maximum namespace length in Unicode code points configured at construction. This property is read-only because it determines the initialized schema.
+Get the active maximum namespace length in Unicode code points. This property is getter-only because it determines the initialized schema; use `resizeKeyColumns()` to change it.
 
 - Type: `number`
 - Default: `255`
@@ -303,6 +303,54 @@ await keyvA.clear(); // Only clears 'cache-a' entries
 ```
 
 ## Methods
+
+Runtime configuration methods are serialized with one another. Always await them before starting operations that must use the new configuration. `useTable()` and `resizeKeyColumns()` perform schema work and should be run while application writes are paused for a deterministic cutover.
+
+### .reconnect(uri, mysqlOptions?)
+
+Creates a replacement mysql2 pool, initializes the currently configured table on it, and switches the adapter only after preparation succeeds. The previous pool remains active during preparation and is closed after its already-started queries settle. If preparation fails, the adapter keeps using the previous connection.
+
+Calling `reconnect()` after `disconnect()` reactivates the adapter and restarts automatic expiration cleanup when `intervalExpiration` is configured.
+
+- `uri` *(string)* - MySQL connection URI for the replacement pool.
+- `mysqlOptions` *(PoolOptions, optional)* - Replacement mysql2 pool options. When omitted, the current pool options are reused. Pass `{}` to use only the URI settings.
+- Returns: `Promise<void>`
+
+```js
+await keyvMysql.reconnect('mysql://user:pass@replica.example.com:3306/cache', {
+  connectionLimit: 20
+});
+console.log(keyvMysql.uri); // the replica URI
+```
+
+### .useTable(table)
+
+Creates or migrates the target table using the same initialization performed by the constructor, then makes it active. The previous table remains active if initialization fails. This method does not copy, move, or delete data from the previous table.
+
+- `table` *(string)* - Target table name. Database-qualified names such as `database.cache` are supported.
+- Returns: `Promise<void>`
+
+```js
+await keyvMysql.useTable('sessions');
+console.log(keyvMysql.table); // 'sessions'
+```
+
+### .resizeKeyColumns(options)
+
+Changes the logical character limits and resizes both `VARBINARY` columns in one `ALTER TABLE` operation. Omitted values keep their current limits. Before changing the schema, the adapter validates MySQL's composite-index limit and scans existing UTF-8 keys and namespaces. A narrowing change is rejected if stored data exceeds the requested limit, leaving the schema and active limits unchanged.
+
+- `options.keyLength` *(number, optional)* - New maximum key length in Unicode code points.
+- `options.namespaceLength` *(number, optional)* - New maximum namespace length in Unicode code points.
+- Returns: `Promise<void>`
+
+```js
+await keyvMysql.resizeKeyColumns({
+  keyLength: 384,
+  namespaceLength: 128
+});
+console.log(keyvMysql.keyLength); // 384
+console.log(keyvMysql.namespaceLength); // 128
+```
 
 ### .get(key)
 

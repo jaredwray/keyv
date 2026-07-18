@@ -179,7 +179,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	public query: <T>(sqlString: string) => QueryType<T>;
 
 	/**
-	 * Get the MySQL connection URI configured at construction.
+	 * Get the active MySQL connection URI. Use {@link reconnect} to change it asynchronously.
 	 * @default 'mysql://localhost'
 	 */
 	public get uri(): string {
@@ -187,7 +187,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the table name configured at construction.
+	 * Get the active table name. Use {@link useTable} to change it asynchronously.
 	 * @default 'keyv'
 	 */
 	public get table(): string {
@@ -195,7 +195,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the maximum key size configured at construction.
+	 * Get the active maximum key size. Use {@link resizeKeyColumns} to change it asynchronously.
 	 * @default 255
 	 */
 	public get keyLength(): number {
@@ -203,7 +203,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the maximum namespace size configured at construction.
+	 * Get the active maximum namespace size. Use {@link resizeKeyColumns} to change it asynchronously.
 	 * @default 255
 	 */
 	public get namespaceLength(): number {
