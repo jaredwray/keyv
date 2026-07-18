@@ -251,22 +251,17 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public reconnect(uri: string, mysqlOptions: PoolOptions = this._mysqlOptions): Promise<void> {
 		const previousDisconnect = this._disconnectPromise;
+		const disconnectGeneration = this._disconnectGeneration;
 		return this.enqueueConfigurationTransition(async () => {
 			if (previousDisconnect) {
 				await previousDisconnect;
 			}
 
-			const disconnectGeneration = this._disconnectGeneration;
 			const nextMysqlOptions = { ...mysqlOptions };
 			const nextPool = createPool(uri, nextMysqlOptions);
 			const nextQuery = this.createPoolQuery(nextPool);
 			try {
-				await this.initializeTable(
-					nextQuery,
-					this._table,
-					this._keyLength,
-					this._namespaceLength,
-				);
+				await this.initializeTable(nextQuery, this._table, this._keyLength, this._namespaceLength);
 			} catch (error) {
 				await nextPool.end();
 				throw error;
@@ -797,6 +792,201 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		return this._disconnectPromise;
 	}
 
+	/** Serializes a configuration change after all previously requested changes. */
+	private enqueueConfigurationTransition(operation: () => Promise<void>): Promise<void> {
+		const transition = this._configurationTransition.then(operation, operation);
+		this._configurationTransition = transition.catch(() => {});
+		return transition;
+	}
+
+	/** Throws when an operation requires an active connection after disconnect. */
+	private assertConnected(): void {
+		if (this._disconnected) {
+			throw new Error("MySQL adapter is disconnected");
+		}
+	}
+
+	/** Creates a SQL execution function bound to one connection pool. */
+	private createPoolQuery(pool: ConnectionPool): SqlQuery {
+		return async (sql: string) => {
+			const data = await pool.query(sql);
+			return data[0];
+		};
+	}
+
+	/** Creates or migrates a table without changing the adapter's published configuration. */
+	private async initializeTable(
+		query: SqlQuery,
+		table: string,
+		keyLength: number,
+		namespaceLength: number,
+	): Promise<void> {
+		const tableEsc = escapeIdentifier(table);
+		const indexNameValue = `${table}_key_namespace_idx`;
+		const indexName = `\`${indexNameValue.replace(/`/g, "``")}\``;
+		const expiresIndexName = `\`${(`${table}_expires_idx`).replace(/`/g, "``")}\``;
+		const keyByteLength = keyLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+		const namespaceByteLength = namespaceLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARBINARY(${keyByteLength}) NOT NULL, value TEXT, namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (namespace, id), INDEX ${expiresIndexName} (expires))`;
+		await query(createTable);
+
+		const existingKeyColumns = (await query(
+			`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+		)) as mysql.RowDataPacket[];
+		const existingIdColumn = existingKeyColumns.find((column) => column.Field === "id");
+		const existingNamespaceColumn = existingKeyColumns.find(
+			(column) => column.Field === "namespace",
+		);
+		if (!existingIdColumn) {
+			throw new Error(`Table ${table} does not have an id column`);
+		}
+
+		const getColumnLength = (column: mysql.RowDataPacket): number => {
+			const match = /\((\d+)\)/.exec(String(column.Type));
+			if (!match) {
+				throw new Error(`Cannot determine the width of ${String(column.Field)}`);
+			}
+
+			return Number(match[1]);
+		};
+		const getTargetByteLength = (column: mysql.RowDataPacket): number => {
+			const columnLength = getColumnLength(column);
+			return String(column.Type).toLowerCase().startsWith("varbinary(")
+				? columnLength
+				: columnLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+		};
+		const existingTargetIndexByteLength =
+			getTargetByteLength(existingIdColumn) +
+			(existingNamespaceColumn
+				? getTargetByteLength(existingNamespaceColumn)
+				: namespaceByteLength);
+		if (existingTargetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+			throw new RangeError(
+				`Existing key columns require ${existingTargetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
+			);
+		}
+
+		// Migration for existing tables: add namespace column.
+		if (!existingNamespaceColumn) {
+			try {
+				await query(
+					`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+				);
+			} catch (error) {
+				// Error 1060 = another adapter already added the column.
+				if ((error as { errno?: number }).errno !== 1060) {
+					throw error;
+				}
+			}
+		}
+
+		// Migrate each text column independently, preserving its existing character width.
+		const keyColumns = (await query(
+			`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
+		)) as mysql.RowDataPacket[];
+		const idColumn = keyColumns.find((column) => column.Field === "id");
+		const namespaceColumn = keyColumns.find((column) => column.Field === "namespace");
+		if (!idColumn || !namespaceColumn) {
+			throw new Error(`Table ${table} must have id and namespace columns`);
+		}
+		const targetIndexByteLength =
+			getTargetByteLength(idColumn) + getTargetByteLength(namespaceColumn);
+		if (targetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
+			throw new RangeError(
+				`Existing key columns require ${targetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
+			);
+		}
+
+		const idNeedsMigration = !String(idColumn.Type).toLowerCase().startsWith("varbinary(");
+		const namespaceNeedsMigration = !String(namespaceColumn.Type)
+			.toLowerCase()
+			.startsWith("varbinary(");
+		if (idNeedsMigration || namespaceNeedsMigration) {
+			const modifyVarcharParts: string[] = [];
+			const modifyVarbinaryParts: string[] = [];
+			if (idNeedsMigration) {
+				const idCharacterLength = getColumnLength(idColumn);
+				modifyVarcharParts.push(
+					`MODIFY COLUMN id VARCHAR(${idCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL`,
+				);
+				modifyVarbinaryParts.push(
+					`MODIFY COLUMN id VARBINARY(${idCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL`,
+				);
+			}
+
+			if (namespaceNeedsMigration) {
+				const namespaceCharacterLength = getColumnLength(namespaceColumn);
+				modifyVarcharParts.push(
+					`MODIFY COLUMN namespace VARCHAR(${namespaceCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
+				);
+				modifyVarbinaryParts.push(
+					`MODIFY COLUMN namespace VARBINARY(${namespaceCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL DEFAULT ''`,
+				);
+			}
+
+			await query(`ALTER TABLE ${tableEsc} ${modifyVarcharParts.join(", ")}`);
+			await query(`ALTER TABLE ${tableEsc} ${modifyVarbinaryParts.join(", ")}`);
+		}
+
+		// Migration: drop old primary key (id alone)
+		try {
+			await query(`ALTER TABLE ${tableEsc} DROP PRIMARY KEY`);
+		} catch (error) {
+			// Error 1091 = Can't DROP - PK doesn't exist (already migrated), safe to ignore
+			if ((error as { errno?: number }).errno !== 1091) {
+				throw error;
+			}
+		}
+
+		// Migration: make namespace the leftmost column of the composite unique index.
+		const indexRows = (await query(
+			mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexNameValue]),
+		)) as mysql.RowDataPacket[];
+		const indexColumns = [...indexRows]
+			.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+			.map((row) => String(row.Column_name));
+		const hasNamespaceFirstUniqueIndex =
+			indexColumns.length === 2 &&
+			indexColumns[0] === "namespace" &&
+			indexColumns[1] === "id" &&
+			indexRows.every((row) => Number(row.Non_unique) === 0);
+
+		if (!hasNamespaceFirstUniqueIndex) {
+			if (indexRows.length > 0) {
+				await query(
+					`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}, ADD UNIQUE INDEX ${indexName} (namespace, id)`,
+				);
+			} else {
+				try {
+					await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`);
+				} catch (error) {
+					// Error 1061 = another adapter already created the index.
+					if ((error as { errno?: number }).errno !== 1061) {
+						throw error;
+					}
+				}
+			}
+		}
+
+		// Migration: add expires column
+		try {
+			await query(`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`);
+		} catch (error) {
+			if ((error as { errno?: number }).errno !== 1060) {
+				throw error;
+			}
+		}
+
+		// Migration: create expires index
+		try {
+			await query(`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`);
+		} catch (error) {
+			if ((error as { errno?: number }).errno !== 1061) {
+				throw error;
+			}
+		}
+	}
+
 	/**
 	 * Returns the namespace value for SQL parameters.
 	 * Returns empty string when no namespace is set.
@@ -945,4 +1135,4 @@ export const createKeyv = (options?: KeyvMysqlOptions | string) =>
 	new Keyv({ store: new KeyvMysql(options) });
 
 export default KeyvMysql;
-export type { KeyvMysqlOptions } from "./types.js";
+export type { KeyvMysqlKeyColumnOptions, KeyvMysqlOptions } from "./types.js";
