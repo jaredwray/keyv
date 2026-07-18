@@ -74,7 +74,7 @@ const keyv = createKeyv({ uri: 'mysql://user:pass@localhost:3306/dbname', table:
 ```
 
 You can specify a custom table with the `table` option and the primary key length with `keyLength`.
-If you want to use native MySQL scheduler to delete expired keys, you can specify `intervalExpiration` in seconds.
+To delete expired keys periodically in the background, specify `intervalExpiration` in seconds.
 
 e.g:
 
@@ -118,7 +118,7 @@ store.keyLength; // 512
 
 #### Native TTL support with `expires` column
 
-v6 adds an `expires BIGINT` column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the `expires` timestamp from the serialized value and stores it in the column. The `intervalExpiration` event scheduler now queries this column directly instead of extracting from JSON, which is significantly more efficient.
+v6 adds an `expires BIGINT` column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the `expires` timestamp from the serialized value and stores it in the column. The `intervalExpiration` application timer queries this column directly instead of extracting from JSON, which is significantly more efficient.
 
 The schema migration is automatic on connect — existing tables get the column and index added automatically.
 
@@ -182,7 +182,7 @@ The migration script also populates the new `expires` column from existing JSON 
 | `keyLength` | `number` | `255` | Maximum key length in Unicode code points |
 | `namespaceLength` | `number` | `255` | Maximum namespace length in Unicode code points |
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
-| `intervalExpiration` | `number` | `undefined` | Interval in seconds for automatic expiration cleanup via MySQL event scheduler |
+| `intervalExpiration` | `number` | `undefined` | Interval in seconds for application-level expiration cleanup |
 
 Because MySQL limits an InnoDB composite index to 3072 bytes and each Unicode code point may require four UTF-8 bytes, `keyLength + namespaceLength` must not exceed 768. The constructor, property setters, and migration script reject larger combinations before changing the schema.
 
@@ -253,7 +253,7 @@ console.log(store.iterationLimit); // 50
 
 ### intervalExpiration
 
-Get or set the interval in seconds for automatic expiration cleanup via the MySQL event scheduler. When set to a value greater than 0, the adapter creates a MySQL scheduled event that periodically deletes expired entries.
+Get or set the interval in seconds for automatic expiration cleanup. When set to a value greater than 0, the adapter starts an unref'd application timer that periodically deletes expired entries. Changing the value restarts the timer, while `0` or `undefined` disables it. Cleanup runs never overlap, and changing the interval after `disconnect()` does not restart the timer. Values above `2147483.647` seconds are rejected because they exceed Node.js's maximum timer delay. The timer is stopped by `disconnect()` and does not require MySQL `EVENT` or global-variable privileges.
 
 - Type: `number | undefined`
 - Default: `undefined` (disabled)
@@ -262,6 +262,8 @@ Get or set the interval in seconds for automatic expiration cleanup via the MySQ
 const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname', intervalExpiration: 60 });
 console.log(store.intervalExpiration); // 60
 ```
+
+Earlier v6 prereleases created a schema event named `keyv_delete_expired_keys`. The adapter no longer creates, changes, or drops server events. If that legacy event exists, a database administrator can remove it once with `DROP EVENT IF EXISTS keyv_delete_expired_keys`.
 
 ### namespace
 

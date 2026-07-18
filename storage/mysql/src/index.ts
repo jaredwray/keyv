@@ -12,6 +12,7 @@ import type { KeyvMysqlOptions } from "./types.js";
 
 const UTF8_MAX_BYTES_PER_CODE_POINT = 4;
 const MYSQL_MAX_COMPOSITE_INDEX_BYTES = 3072;
+const MAX_TIMER_DELAY_MILLISECONDS = 2_147_483_647;
 
 /**
  * Escapes a MySQL identifier (table/column name) to prevent SQL injection.
@@ -33,6 +34,19 @@ function validateCompositeIndexLength(keyLength: number, namespaceLength: number
 	if (indexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
 		throw new RangeError(
 			`keyLength and namespaceLength require ${indexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
+		);
+	}
+}
+
+/** Ensures a positive cleanup interval fits within Node.js's timer delay limit. */
+function validateIntervalExpiration(value: number | undefined): void {
+	if (
+		value !== undefined &&
+		value > 0 &&
+		(!Number.isFinite(value) || value * 1000 > MAX_TIMER_DELAY_MILLISECONDS)
+	) {
+		throw new RangeError(
+			`intervalExpiration must not exceed ${MAX_TIMER_DELAY_MILLISECONDS / 1000} seconds`,
 		);
 	}
 }
@@ -98,11 +112,17 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	private _namespaceLength = 255;
 
 	/**
-	 * The interval in seconds for MySQL event scheduler cleanup of expired entries.
+	 * The interval in seconds for application-level cleanup of expired entries.
 	 * A value of undefined or 0 disables the automatic cleanup.
 	 * @default undefined
 	 */
 	private _intervalExpiration?: number;
+
+	/** The unref'd timer used for automatic expired-entry cleanup. */
+	private _clearExpiredTimer?: ReturnType<typeof setInterval>;
+
+	/** Whether an automatic expired-entry cleanup is currently running. */
+	private _clearExpiredRunning = false;
 
 	/**
 	 * The number of rows to fetch per iteration batch.
@@ -203,7 +223,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the interval in seconds for MySQL event scheduler cleanup of expired entries.
+	 * Get the interval in seconds for application-level cleanup of expired entries.
 	 * A value of undefined or 0 disables the automatic cleanup.
 	 * @default undefined
 	 */
@@ -212,10 +232,12 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the interval in seconds for MySQL event scheduler cleanup of expired entries.
+	 * Set the interval in seconds for application-level cleanup of expired entries.
 	 */
 	public set intervalExpiration(value: number | undefined) {
+		validateIntervalExpiration(value);
 		this._intervalExpiration = value;
+		this.startClearExpiredTimer();
 	}
 
 	/**
@@ -274,6 +296,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			}
 
 			if (options.intervalExpiration !== undefined) {
+				validateIntervalExpiration(options.intervalExpiration);
 				this._intervalExpiration = options.intervalExpiration;
 			}
 
@@ -463,14 +486,6 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			if (this._intervalExpiration !== undefined && this._intervalExpiration > 0) {
-				await query("SET GLOBAL event_scheduler = ON;");
-				await query("DROP EVENT IF EXISTS keyv_delete_expired_keys;");
-				await query(`CREATE EVENT IF NOT EXISTS keyv_delete_expired_keys ON SCHEDULE EVERY ${this._intervalExpiration} SECOND
-					DO DELETE FROM ${tableEsc}
-					WHERE expires BETWEEN 1 AND UNIX_TIMESTAMP(NOW(3)) * 1000;`);
-			}
-
 			return query;
 		});
 
@@ -493,6 +508,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			);
 			return operation as QueryType<T>;
 		};
+
+		this.startClearExpiredTimer();
 	}
 
 	/**
@@ -786,6 +803,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * @returns Promise that resolves when disconnected
 	 */
 	public disconnect(): Promise<void> {
+		this.stopClearExpiredTimer();
 		this._disconnected = true;
 		this._disconnectPromise ??= (async () => {
 			const pending = [...this._pendingQueries];
@@ -814,6 +832,41 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	/** Validates the configured character limit and encodes a namespace for storage. */
 	private encodeNamespace(namespace: string): Buffer {
 		return encodeKeyPart(namespace, this._namespaceLength, "namespaceLength");
+	}
+
+	/** Starts or restarts the unref'd application-level expiration cleanup timer. */
+	private startClearExpiredTimer(): void {
+		this.stopClearExpiredTimer();
+		if (this._disconnected) {
+			return;
+		}
+
+		if (this._intervalExpiration !== undefined && this._intervalExpiration > 0) {
+			this._clearExpiredTimer = setInterval(async () => {
+				if (this._clearExpiredRunning) {
+					return;
+				}
+
+				this._clearExpiredRunning = true;
+				try {
+					await this.clearExpired();
+				} catch (error) {
+					/* v8 ignore next -- @preserve */
+					this.emit("error", error);
+				} finally {
+					this._clearExpiredRunning = false;
+				}
+			}, this._intervalExpiration * 1000);
+			this._clearExpiredTimer.unref();
+		}
+	}
+
+	/** Stops the application-level expiration cleanup timer. */
+	private stopClearExpiredTimer(): void {
+		if (this._clearExpiredTimer) {
+			clearInterval(this._clearExpiredTimer);
+			this._clearExpiredTimer = undefined;
+		}
 	}
 
 	/** Deletes rows that were already expired at the time of a preceding read. */
