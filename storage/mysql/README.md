@@ -184,15 +184,17 @@ The migration script also populates the new `expires` column from existing JSON 
 | `iterationLimit` | `number` | `10` | Number of rows fetched per batch during iteration |
 | `intervalExpiration` | `number` | `undefined` | Interval in seconds for application-level expiration cleanup |
 
-Because MySQL limits an InnoDB composite index to 3072 bytes and each Unicode code point may require four UTF-8 bytes, `keyLength + namespaceLength` must not exceed 768. The constructor, property setters, and migration script reject larger combinations before changing the schema.
+Because MySQL limits an InnoDB composite index to 3072 bytes and each Unicode code point may require four UTF-8 bytes, `keyLength + namespaceLength` must not exceed 768. The constructor and migration script reject larger combinations before changing the schema.
 
 ## Properties
 
-All configuration options are exposed as properties with getters and setters on the `KeyvMysql` instance. You can read or update them after construction.
+Construction-only configuration is exposed through read-only properties. `uri`, `table`, `keyLength`, and `namespaceLength` cannot be changed after construction because doing so would require reconnecting or migrating the initialized schema. Create a new adapter instance to use different values.
+
+`iterationLimit`, `intervalExpiration`, and `namespace` remain mutable because their setters update live adapter behavior.
 
 ### uri
 
-Get or set the MySQL connection URI.
+Get the MySQL connection URI selected at construction. This property is read-only.
 
 - Type: `string`
 - Default: `'mysql://localhost'`
@@ -204,7 +206,7 @@ console.log(store.uri); // 'mysql://user:pass@localhost:3306/dbname'
 
 ### table
 
-Get or set the table name used for storage.
+Get the table name selected and initialized at construction. This property is read-only.
 
 - Type: `string`
 - Default: `'keyv'`
@@ -212,12 +214,11 @@ Get or set the table name used for storage.
 ```js
 const store = new KeyvMysql({ uri: 'mysql://user:pass@localhost:3306/dbname' });
 console.log(store.table); // 'keyv'
-store.table = 'cache';
 ```
 
 ### keyLength
 
-Get or set the maximum key length in Unicode code points. The limit is validated before the key is UTF-8 encoded for storage.
+Get the maximum key length in Unicode code points configured at construction. This property is read-only because it determines the initialized schema.
 
 - Type: `number`
 - Default: `255`
@@ -229,7 +230,7 @@ console.log(store.keyLength); // 512
 
 ### namespaceLength
 
-Get or set the maximum namespace length in Unicode code points. The limit is validated before the namespace is UTF-8 encoded for storage.
+Get the maximum namespace length in Unicode code points configured at construction. This property is read-only because it determines the initialized schema.
 
 - Type: `number`
 - Default: `255`

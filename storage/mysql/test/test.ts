@@ -91,20 +91,16 @@ describe("constructor", () => {
 		expect(keyv.table).toBe("keyv");
 	});
 
-	test("updates properties via setters", () => {
+	test("exposes construction-only properties as read-only accessors", () => {
+		for (const property of ["uri", "table", "keyLength", "namespaceLength"]) {
+			const descriptor = Object.getOwnPropertyDescriptor(KeyvMysqlAdapter.prototype, property);
+			expect(descriptor?.get).toBeTypeOf("function");
+			expect(descriptor?.set).toBeUndefined();
+		}
+	});
+
+	test("updates live properties via setters", () => {
 		const keyv = new KeyvMysql(uri);
-		keyv.uri = "mysql://otherhost";
-		expect(keyv.uri).toBe("mysql://otherhost");
-		keyv.table = "updated_table";
-		expect(keyv.table).toBe("updated_table");
-		keyv.keyLength = 512;
-		expect(keyv.keyLength).toBe(512);
-		keyv.namespaceLength = 128;
-		expect(keyv.namespaceLength).toBe(128);
-		expect(() => {
-			keyv.namespaceLength = 257;
-		}).toThrow("3072-byte composite index limit");
-		expect(keyv.namespaceLength).toBe(128);
 		keyv.iterationLimit = 100;
 		expect(keyv.iterationLimit).toBe(100);
 		keyv.intervalExpiration = 30;

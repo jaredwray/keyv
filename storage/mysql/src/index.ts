@@ -8,7 +8,7 @@ import Keyv, {
 } from "keyv";
 import mysql, { type PoolOptions } from "mysql2";
 import { createPool } from "./pool.js";
-import type { KeyvMysqlOptions } from "./types.js";
+import type { KeyvMysqlKeyColumnOptions, KeyvMysqlOptions } from "./types.js";
 
 const UTF8_MAX_BYTES_PER_CODE_POINT = 4;
 const MYSQL_MAX_COMPOSITE_INDEX_BYTES = 3072;
@@ -30,6 +30,15 @@ function escapeIdentifier(identifier: string): string {
 
 /** Ensures the configured key columns fit within MySQL's composite-index limit. */
 function validateCompositeIndexLength(keyLength: number, namespaceLength: number): void {
+	for (const [name, value] of [
+		["keyLength", keyLength],
+		["namespaceLength", namespaceLength],
+	] as const) {
+		if (!Number.isSafeInteger(value) || value <= 0) {
+			throw new RangeError(`${name} must be a positive safe integer`);
+		}
+	}
+
 	const indexByteLength = (keyLength + namespaceLength) * UTF8_MAX_BYTES_PER_CODE_POINT;
 	if (indexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
 		throw new RangeError(
@@ -77,6 +86,9 @@ type QueryType<T> = Promise<
 		: never
 >;
 
+type ConnectionPool = ReturnType<typeof createPool>;
+type SqlQuery = (sql: string) => Promise<unknown>;
+
 /**
  * MySQL storage adapter for Keyv.
  * Provides a persistent key-value store using MySQL as the backend.
@@ -91,25 +103,25 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 * The MySQL connection URI.
 	 * @default 'mysql://localhost'
 	 */
-	private _uri = "mysql://localhost";
+	private _uri: string = "mysql://localhost";
 
 	/**
 	 * The table name used for storage.
 	 * @default 'keyv'
 	 */
-	private _table = "keyv";
+	private _table: string = "keyv";
 
 	/**
 	 * The maximum key size in Unicode code points for the key column.
 	 * @default 255
 	 */
-	private _keyLength = 255;
+	private _keyLength: number = 255;
 
 	/**
 	 * The maximum namespace size in Unicode code points for the namespace column.
 	 * @default 255
 	 */
-	private _namespaceLength = 255;
+	private _namespaceLength: number = 255;
 
 	/**
 	 * The interval in seconds for application-level cleanup of expired entries.
@@ -141,16 +153,22 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	private _mysqlOptions: PoolOptions = {};
 
 	/** The connection pool owned by this adapter. */
-	private _pool?: ReturnType<typeof createPool>;
+	private _pool?: ConnectionPool;
 
 	/** Whether this adapter has started closing its connection pool. */
 	private _disconnected = false;
+
+	/** Increments whenever a connected adapter begins disconnecting. */
+	private _disconnectGeneration = 0;
 
 	/** The in-flight or completed connection pool shutdown. */
 	private _disconnectPromise?: Promise<void>;
 
 	/** The adapter's asynchronous schema initialization. */
-	private _connected!: Promise<unknown>;
+	private _connected!: Promise<SqlQuery>;
+
+	/** Serializes asynchronous connection and schema configuration changes. */
+	private _configurationTransition: Promise<void> = Promise.resolve();
 
 	/** Queries that started before a disconnect was requested. */
 	private readonly _pendingQueries = new Set<Promise<unknown>>();
@@ -161,7 +179,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	public query: <T>(sqlString: string) => QueryType<T>;
 
 	/**
-	 * Get the MySQL connection URI.
+	 * Get the MySQL connection URI configured at construction.
 	 * @default 'mysql://localhost'
 	 */
 	public get uri(): string {
@@ -169,14 +187,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the MySQL connection URI.
-	 */
-	public set uri(value: string) {
-		this._uri = value;
-	}
-
-	/**
-	 * Get the table name used for storage.
+	 * Get the table name configured at construction.
 	 * @default 'keyv'
 	 */
 	public get table(): string {
@@ -184,14 +195,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the table name used for storage.
-	 */
-	public set table(value: string) {
-		this._table = value;
-	}
-
-	/**
-	 * Get the maximum key size in Unicode code points for the key column.
+	 * Get the maximum key size configured at construction.
 	 * @default 255
 	 */
 	public get keyLength(): number {
@@ -199,27 +203,11 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the maximum key size in Unicode code points for the key column.
-	 */
-	public set keyLength(value: number) {
-		validateCompositeIndexLength(value, this._namespaceLength);
-		this._keyLength = value;
-	}
-
-	/**
-	 * Get the maximum namespace size in Unicode code points for the namespace column.
+	 * Get the maximum namespace size configured at construction.
 	 * @default 255
 	 */
 	public get namespaceLength(): number {
 		return this._namespaceLength;
-	}
-
-	/**
-	 * Set the maximum namespace size in Unicode code points for the namespace column.
-	 */
-	public set namespaceLength(value: number) {
-		validateCompositeIndexLength(this._keyLength, value);
-		this._namespaceLength = value;
 	}
 
 	/**
@@ -238,6 +226,165 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		validateIntervalExpiration(value);
 		this._intervalExpiration = value;
 		this.startClearExpiredTimer();
+	}
+
+	/**
+	 * Replaces this adapter's MySQL connection pool and initializes the currently configured table
+	 * on the target connection before switching live operations to it.
+	 *
+	 * The existing pool remains active while the target connection and schema are prepared. If
+	 * preparation fails, the target pool is closed and the adapter continues using its previous
+	 * connection. Once the switch succeeds, queries that started on the previous pool are allowed
+	 * to settle before that pool is closed. Calling this method after {@link disconnect} reconnects
+	 * the adapter and restarts automatic expiration cleanup when configured.
+	 *
+	 * Runtime configuration changes are serialized with {@link useTable} and
+	 * {@link resizeKeyColumns}. Await this method before starting operations that must use the new
+	 * connection.
+	 *
+	 * @param uri - MySQL connection URI for the replacement pool.
+	 * @param mysqlOptions - Optional mysql2 pool options for the replacement pool. When omitted,
+	 * the adapter reuses its currently configured pool options. Pass an empty object to use only
+	 * the settings from `uri`.
+	 * @returns A promise that resolves after the new pool is active and the previous pool is closed.
+	 * @throws If the target connection cannot be established or its table cannot be initialized.
+	 */
+	public reconnect(uri: string, mysqlOptions: PoolOptions = this._mysqlOptions): Promise<void> {
+		const previousDisconnect = this._disconnectPromise;
+		return this.enqueueConfigurationTransition(async () => {
+			if (previousDisconnect) {
+				await previousDisconnect;
+			}
+
+			const disconnectGeneration = this._disconnectGeneration;
+			const nextMysqlOptions = { ...mysqlOptions };
+			const nextPool = createPool(uri, nextMysqlOptions);
+			const nextQuery = this.createPoolQuery(nextPool);
+			try {
+				await this.initializeTable(
+					nextQuery,
+					this._table,
+					this._keyLength,
+					this._namespaceLength,
+				);
+			} catch (error) {
+				await nextPool.end();
+				throw error;
+			}
+
+			if (disconnectGeneration !== this._disconnectGeneration) {
+				await nextPool.end();
+				throw new Error("MySQL adapter was disconnected while reconnecting");
+			}
+
+			const previousPool = this._pool;
+			const previousConnected = this._connected;
+			const previousQueries = [...this._pendingQueries];
+			this._uri = uri;
+			this._mysqlOptions = nextMysqlOptions;
+			this._pool = nextPool;
+			this._connected = Promise.resolve(nextQuery);
+			this._disconnected = false;
+			this._disconnectPromise = undefined;
+			this.startClearExpiredTimer();
+
+			await Promise.allSettled([...previousQueries, previousConnected]);
+			if (previousPool && previousPool !== nextPool) {
+				await previousPool.end();
+			}
+		});
+	}
+
+	/**
+	 * Initializes a table on the current connection and then makes it the live storage table.
+	 *
+	 * The target table receives the same schema creation and v6 migration checks used during
+	 * construction. The current table remains active until initialization succeeds, and its data
+	 * is not copied, moved, or deleted. If initialization fails, {@link table} remains unchanged.
+	 *
+	 * Runtime configuration changes are serialized with {@link reconnect} and
+	 * {@link resizeKeyColumns}. Await this method before starting operations that must use the new
+	 * table. For a deterministic cutover, do not run data operations concurrently with it.
+	 *
+	 * @param table - Target table name. Database-qualified names such as `database.cache` are
+	 * supported and safely escaped.
+	 * @returns A promise that resolves once the target table is initialized and active.
+	 * @throws If the adapter is disconnected or the target table cannot be created or migrated.
+	 */
+	public useTable(table: string): Promise<void> {
+		return this.enqueueConfigurationTransition(async () => {
+			this.assertConnected();
+			if (table === this._table) {
+				return;
+			}
+
+			const disconnectGeneration = this._disconnectGeneration;
+			const query = await this._connected;
+			await this.initializeTable(query, table, this._keyLength, this._namespaceLength);
+			if (disconnectGeneration !== this._disconnectGeneration) {
+				throw new Error("MySQL adapter was disconnected while changing tables");
+			}
+
+			this._table = table;
+		});
+	}
+
+	/**
+	 * Changes the configured key and namespace character limits and resizes the live table's
+	 * `VARBINARY` columns in one schema operation.
+	 *
+	 * Omitted limits retain their current values. Before changing the schema, the method validates
+	 * MySQL's 3072-byte composite-index limit and scans existing rows using UTF-8 character counts.
+	 * A narrowing change is rejected when any stored key or namespace exceeds the requested limit,
+	 * leaving both the schema and the adapter configuration unchanged.
+	 *
+	 * Runtime configuration changes are serialized with {@link reconnect} and {@link useTable}.
+	 * Schema changes can take metadata locks and scan the table, so run this method during a
+	 * maintenance window and await it before resuming data operations.
+	 *
+	 * @param options - New character limits. At least one of `keyLength` or `namespaceLength` may be
+	 * supplied; omitted values keep their current limit.
+	 * @returns A promise that resolves after the columns and live validation limits are updated.
+	 * @throws If a limit is invalid, the composite index would exceed MySQL's limit, an existing row
+	 * exceeds a requested limit, the adapter is disconnected, or MySQL rejects the schema change.
+	 */
+	public resizeKeyColumns(options: KeyvMysqlKeyColumnOptions): Promise<void> {
+		return this.enqueueConfigurationTransition(async () => {
+			this.assertConnected();
+			const keyLength = options.keyLength ?? this._keyLength;
+			const namespaceLength = options.namespaceLength ?? this._namespaceLength;
+			validateCompositeIndexLength(keyLength, namespaceLength);
+			if (keyLength === this._keyLength && namespaceLength === this._namespaceLength) {
+				return;
+			}
+
+			const query = await this._connected;
+			const tableEsc = escapeIdentifier(this._table);
+			const lengthRows = (await query(
+				`SELECT MAX(CHAR_LENGTH(CONVERT(id USING utf8mb4))) AS keyLength, MAX(CHAR_LENGTH(CONVERT(namespace USING utf8mb4))) AS namespaceLength FROM ${tableEsc}`,
+			)) as mysql.RowDataPacket[];
+			const storedKeyLength = Number(lengthRows[0]?.keyLength ?? 0);
+			const storedNamespaceLength = Number(lengthRows[0]?.namespaceLength ?? 0);
+			if (storedKeyLength > keyLength) {
+				throw new RangeError(
+					`Cannot reduce keyLength to ${keyLength}; the table contains a ${storedKeyLength}-character key`,
+				);
+			}
+
+			if (storedNamespaceLength > namespaceLength) {
+				throw new RangeError(
+					`Cannot reduce namespaceLength to ${namespaceLength}; the table contains a ${storedNamespaceLength}-character namespace`,
+				);
+			}
+
+			const keyByteLength = keyLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+			const namespaceByteLength = namespaceLength * UTF8_MAX_BYTES_PER_CODE_POINT;
+			await query(
+				`ALTER TABLE ${tableEsc} MODIFY COLUMN id VARBINARY(${keyByteLength}) NOT NULL, MODIFY COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
+			);
+			this._keyLength = keyLength;
+			this._namespaceLength = namespaceLength;
+		});
 	}
 
 	/**
@@ -309,185 +456,15 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 
 		validateCompositeIndexLength(this._keyLength, this._namespaceLength);
 
-		const connection = async () => {
-			const connectionPool = createPool(this._uri, this._mysqlOptions);
-			this._pool = connectionPool;
-			return async (sql: string) => {
-				const data = await connectionPool.query(sql);
-				return data[0];
-			};
-		};
-
-		const tableEsc = escapeIdentifier(this._table);
-		const indexNameValue = `${this._table}_key_namespace_idx`;
-		const indexName = `\`${indexNameValue.replace(/`/g, "``")}\``;
-		const expiresIndexName = `\`${(`${this._table}_expires_idx`).replace(/`/g, "``")}\``;
-		const keyByteLength = this._keyLength * UTF8_MAX_BYTES_PER_CODE_POINT;
-		const namespaceByteLength = this._namespaceLength * UTF8_MAX_BYTES_PER_CODE_POINT;
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARBINARY(${keyByteLength}) NOT NULL, value TEXT, namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (namespace, id), INDEX ${expiresIndexName} (expires))`;
-
-		/* v8 ignore next -- @preserve */
-		const connected = connection().then(async (query) => {
-			await query(createTable);
-
-			const existingKeyColumns = (await query(
-				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
-			)) as mysql.RowDataPacket[];
-			const existingIdColumn = existingKeyColumns.find((column) => column.Field === "id");
-			const existingNamespaceColumn = existingKeyColumns.find(
-				(column) => column.Field === "namespace",
-			);
-			if (!existingIdColumn) {
-				throw new Error(`Table ${this._table} does not have an id column`);
-			}
-
-			const getColumnLength = (column: mysql.RowDataPacket): number => {
-				const match = /\((\d+)\)/.exec(String(column.Type));
-				if (!match) {
-					throw new Error(`Cannot determine the width of ${String(column.Field)}`);
-				}
-
-				return Number(match[1]);
-			};
-			const getTargetByteLength = (column: mysql.RowDataPacket): number => {
-				const columnLength = getColumnLength(column);
-				return String(column.Type).toLowerCase().startsWith("varbinary(")
-					? columnLength
-					: columnLength * UTF8_MAX_BYTES_PER_CODE_POINT;
-			};
-			const existingTargetIndexByteLength =
-				getTargetByteLength(existingIdColumn) +
-				(existingNamespaceColumn
-					? getTargetByteLength(existingNamespaceColumn)
-					: namespaceByteLength);
-			if (existingTargetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
-				throw new RangeError(
-					`Existing key columns require ${existingTargetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
-				);
-			}
-
-			// Migration for existing tables: add namespace column.
-			if (!existingNamespaceColumn) {
-				try {
-					await query(
-						`ALTER TABLE ${tableEsc} ADD COLUMN namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT ''`,
-					);
-				} catch (error) {
-					// Error 1060 = another adapter already added the column.
-					if ((error as { errno?: number }).errno !== 1060) {
-						throw error;
-					}
-				}
-			}
-
-			// Migrate each text column independently, preserving its existing character width.
-			const keyColumns = (await query(
-				`SHOW COLUMNS FROM ${tableEsc} WHERE Field IN ('id', 'namespace')`,
-			)) as mysql.RowDataPacket[];
-			const idColumn = keyColumns.find((column) => column.Field === "id");
-			const namespaceColumn = keyColumns.find((column) => column.Field === "namespace");
-			if (!idColumn || !namespaceColumn) {
-				throw new Error(`Table ${this._table} must have id and namespace columns`);
-			}
-			const targetIndexByteLength =
-				getTargetByteLength(idColumn) + getTargetByteLength(namespaceColumn);
-			if (targetIndexByteLength > MYSQL_MAX_COMPOSITE_INDEX_BYTES) {
-				throw new RangeError(
-					`Existing key columns require ${targetIndexByteLength} index bytes, exceeding MySQL's ${MYSQL_MAX_COMPOSITE_INDEX_BYTES}-byte composite index limit`,
-				);
-			}
-
-			const idNeedsMigration = !String(idColumn.Type).toLowerCase().startsWith("varbinary(");
-			const namespaceNeedsMigration = !String(namespaceColumn.Type)
-				.toLowerCase()
-				.startsWith("varbinary(");
-			if (idNeedsMigration || namespaceNeedsMigration) {
-				const modifyVarcharParts: string[] = [];
-				const modifyVarbinaryParts: string[] = [];
-				if (idNeedsMigration) {
-					const idCharacterLength = getColumnLength(idColumn);
-					modifyVarcharParts.push(
-						`MODIFY COLUMN id VARCHAR(${idCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL`,
-					);
-					modifyVarbinaryParts.push(
-						`MODIFY COLUMN id VARBINARY(${idCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL`,
-					);
-				}
-
-				if (namespaceNeedsMigration) {
-					const namespaceCharacterLength = getColumnLength(namespaceColumn);
-					modifyVarcharParts.push(
-						`MODIFY COLUMN namespace VARCHAR(${namespaceCharacterLength}) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL DEFAULT ''`,
-					);
-					modifyVarbinaryParts.push(
-						`MODIFY COLUMN namespace VARBINARY(${namespaceCharacterLength * UTF8_MAX_BYTES_PER_CODE_POINT}) NOT NULL DEFAULT ''`,
-					);
-				}
-
-				await query(`ALTER TABLE ${tableEsc} ${modifyVarcharParts.join(", ")}`);
-				await query(`ALTER TABLE ${tableEsc} ${modifyVarbinaryParts.join(", ")}`);
-			}
-
-			// Migration: drop old primary key (id alone)
-			try {
-				await query(`ALTER TABLE ${tableEsc} DROP PRIMARY KEY`);
-			} catch (error) {
-				// Error 1091 = Can't DROP - PK doesn't exist (already migrated), safe to ignore
-				if ((error as { errno?: number }).errno !== 1091) {
-					throw error;
-				}
-			}
-
-			// Migration: make namespace the leftmost column of the composite unique index.
-			const indexRows = (await query(
-				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexNameValue]),
-			)) as mysql.RowDataPacket[];
-			const indexColumns = [...indexRows]
-				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-				.map((row) => String(row.Column_name));
-			const hasNamespaceFirstUniqueIndex =
-				indexColumns.length === 2 &&
-				indexColumns[0] === "namespace" &&
-				indexColumns[1] === "id" &&
-				indexRows.every((row) => Number(row.Non_unique) === 0);
-
-			if (!hasNamespaceFirstUniqueIndex) {
-				if (indexRows.length > 0) {
-					await query(
-						`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}, ADD UNIQUE INDEX ${indexName} (namespace, id)`,
-					);
-				} else {
-					try {
-						await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`);
-					} catch (error) {
-						// Error 1061 = another adapter already created the index.
-						if ((error as { errno?: number }).errno !== 1061) {
-							throw error;
-						}
-					}
-				}
-			}
-
-			// Migration: add expires column
-			try {
-				await query(`ALTER TABLE ${tableEsc} ADD COLUMN expires BIGINT UNSIGNED DEFAULT NULL`);
-			} catch (error) {
-				if ((error as { errno?: number }).errno !== 1060) {
-					throw error;
-				}
-			}
-
-			// Migration: create expires index
-			try {
-				await query(`CREATE INDEX ${expiresIndexName} ON ${tableEsc} (expires)`);
-			} catch (error) {
-				if ((error as { errno?: number }).errno !== 1061) {
-					throw error;
-				}
-			}
-
-			return query;
-		});
+		const connectionPool = createPool(this._uri, this._mysqlOptions);
+		this._pool = connectionPool;
+		const query = this.createPoolQuery(connectionPool);
+		const connected = this.initializeTable(
+			query,
+			this._table,
+			this._keyLength,
+			this._namespaceLength,
+		).then(() => query);
 
 		// Prevent an unhandled rejection when an instance is constructed but never
 		// queried. Real query failures still surface to callers because `this.query`
@@ -500,7 +477,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 				return Promise.reject(new Error("MySQL adapter is disconnected")) as QueryType<T>;
 			}
 
-			const operation = connected.then((query) => query(sqlString));
+			const operation = this._connected.then((query) => query(sqlString));
 			this._pendingQueries.add(operation);
 			void operation.then(
 				() => this._pendingQueries.delete(operation),
@@ -804,10 +781,14 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	 */
 	public disconnect(): Promise<void> {
 		this.stopClearExpiredTimer();
+		if (!this._disconnected) {
+			this._disconnectGeneration++;
+		}
+
 		this._disconnected = true;
 		this._disconnectPromise ??= (async () => {
 			const pending = [...this._pendingQueries];
-			pending.push(this._connected);
+			pending.push(this._connected, this._configurationTransition);
 
 			await Promise.allSettled(pending);
 			await this._pool?.end();
