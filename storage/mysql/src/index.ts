@@ -15,9 +15,7 @@ const MYSQL_MAX_COMPOSITE_INDEX_BYTES = 3072;
 const MAX_TIMER_DELAY_MILLISECONDS = 2_147_483_647;
 
 /**
- * Escapes a MySQL identifier (table/column name) to prevent SQL injection.
- * Handles database-qualified names like "mydb.table" by escaping each segment.
- * Uses backtick escaping as per MySQL standards.
+ * Escapes a possibly database-qualified MySQL identifier.
  * @returns {string} The safely escaped MySQL identifier.
  */
 function escapeIdentifier(identifier: string): string {
@@ -101,7 +99,6 @@ type SqlQuery = (sql: string) => Promise<unknown>;
 
 /**
  * MySQL storage adapter for Keyv.
- * Provides a persistent key-value store using MySQL as the backend.
  */
 export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	/**
@@ -148,12 +145,12 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	private _iterationLimit = 10;
 
 	/**
-	 * The namespace used to prefix keys for multi-tenant separation.
+	 * The namespace used to scope storage operations.
 	 */
 	private _namespace?: string;
 
 	/**
-	 * Additional mysql2 PoolOptions passed through to the connection pool.
+	 * Additional mysql2 options for the connection pool.
 	 */
 	private _mysqlOptions: PoolOptions = {};
 
@@ -251,18 +248,18 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 		this.startClearExpiredTimer();
 	}
 
-	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
+	/** Declares support for absolute expiration timestamps. */
 	public get capabilities() {
 		return keyvStorageCapability(this);
 	}
 
 	/**
-	 * Query function for executing SQL statements against the MySQL database.
+	 * Executes SQL statements against the active MySQL connection.
 	 */
 	public query: <T>(sqlString: string) => QueryType<T>;
 
 	/**
-	 * Get the active MySQL connection URI. Use {@link reconnect} to change it asynchronously.
+	 * The active MySQL connection URI.
 	 * @default 'mysql://localhost'
 	 */
 	public get uri(): string {
@@ -270,7 +267,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the active table name. Use {@link useTable} to change it asynchronously.
+	 * The active storage table.
 	 * @default 'keyv'
 	 */
 	public get table(): string {
@@ -278,7 +275,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the active maximum key size. Use {@link resizeKeyColumns} to change it asynchronously.
+	 * The maximum key length in Unicode code points.
 	 * @default 255
 	 */
 	public get keyLength(): number {
@@ -286,7 +283,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the active maximum namespace size. Use {@link resizeKeyColumns} to change it asynchronously.
+	 * The maximum namespace length in Unicode code points.
 	 * @default 255
 	 */
 	public get namespaceLength(): number {
@@ -294,8 +291,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the interval in seconds for application-level cleanup of expired entries.
-	 * A value of undefined or 0 disables the automatic cleanup.
+	 * The automatic expiration cleanup interval in seconds.
+	 * `undefined` or `0` disables cleanup.
 	 * @default undefined
 	 */
 	public get intervalExpiration(): number | undefined {
@@ -303,7 +300,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the interval in seconds for application-level cleanup of expired entries.
+	 * Updates the automatic expiration cleanup interval.
 	 */
 	public set intervalExpiration(value: number | undefined) {
 		validateIntervalExpiration(value);
@@ -312,7 +309,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Get the number of rows to fetch per iteration batch.
+	 * The number of rows fetched per iterator batch.
 	 * @default 10
 	 */
 	public get iterationLimit(): number {
@@ -320,45 +317,32 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Set the number of rows to fetch per iteration batch.
+	 * Updates the number of rows fetched per iterator batch.
 	 */
 	public set iterationLimit(value: number) {
 		this._iterationLimit = value;
 	}
 
 	/**
-	 * Get the namespace for the adapter. If undefined, no namespace prefix is applied.
+	 * The namespace used to scope storage operations.
 	 */
 	public get namespace(): string | undefined {
 		return this._namespace;
 	}
 
 	/**
-	 * Set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+	 * Updates the namespace used to scope storage operations.
 	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
 	}
 
 	/**
-	 * Replaces this adapter's MySQL connection pool and initializes the currently configured table
-	 * on the target connection before switching live operations to it.
-	 *
-	 * The existing pool remains active while the target connection and schema are prepared. If
-	 * preparation fails, the target pool is closed and the adapter continues using its previous
-	 * connection. Once the switch succeeds, queries that started on the previous pool are allowed
-	 * to settle before that pool is closed. Calling this method after {@link disconnect} reconnects
-	 * the adapter and restarts automatic expiration cleanup when configured.
-	 *
-	 * Runtime configuration changes are serialized with {@link useTable} and
-	 * {@link resizeKeyColumns}. Await this method before starting operations that must use the new
-	 * connection.
-	 *
-	 * @param uri - MySQL connection URI for the replacement pool.
-	 * @param mysqlOptions - Optional mysql2 pool options applied on top of the URI settings for the
-	 * replacement pool. When omitted, the replacement uses only the settings from `uri`.
-	 * @returns {Promise<void>} A promise that resolves after the new pool is active and the previous pool is closed.
-	 * @throws If the target connection cannot be established or its table cannot be initialized.
+	 * Switches the adapter to a new MySQL connection pool.
+	 * @param uri - Connection URI for the new pool.
+	 * @param mysqlOptions - mysql2 options for the new pool.
+	 * @returns {Promise<void>} Resolves when the new pool is active.
+	 * @throws If the connection or table initialization fails.
 	 */
 	public reconnect(uri: string, mysqlOptions: PoolOptions = {}): Promise<void> {
 		const previousDisconnect = this._disconnectPromise;
@@ -402,20 +386,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Initializes a table on the current connection and then makes it the live storage table.
-	 *
-	 * The target table receives the same schema creation and v6 migration checks used during
-	 * construction. The current table remains active until initialization succeeds, and its data
-	 * is not copied, moved, or deleted. If initialization fails, {@link table} remains unchanged.
-	 *
-	 * Runtime configuration changes are serialized with {@link reconnect} and
-	 * {@link resizeKeyColumns}. Await this method before starting operations that must use the new
-	 * table. For a deterministic cutover, do not run data operations concurrently with it.
-	 *
-	 * @param table - Target table name. Database-qualified names such as `database.cache` are
-	 * supported and safely escaped.
-	 * @returns {Promise<void>} A promise that resolves once the target table is initialized and active.
-	 * @throws If the adapter is disconnected or the target table cannot be created or migrated.
+	 * Initializes and switches to a storage table on the active connection.
+	 * @param table - Table name, optionally database-qualified.
+	 * @returns {Promise<void>} Resolves when the table is active.
+	 * @throws If the adapter is disconnected or table initialization fails.
 	 */
 	public useTable(table: string): Promise<void> {
 		return this.enqueueConfigurationTransition(async () => {
@@ -436,23 +410,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Changes the configured key and namespace character limits and resizes the live table's
-	 * `VARBINARY` columns in one schema operation.
-	 *
-	 * Omitted limits retain their current values. Before changing the schema, the method validates
-	 * MySQL's 3072-byte composite-index limit and scans existing rows using UTF-8 character counts.
-	 * A narrowing change is rejected when any stored key or namespace exceeds the requested limit,
-	 * leaving both the schema and the adapter configuration unchanged.
-	 *
-	 * Runtime configuration changes are serialized with {@link reconnect} and {@link useTable}.
-	 * Schema changes can take metadata locks and scan the table, so run this method during a
-	 * maintenance window and await it before resuming data operations.
-	 *
-	 * @param options - New character limits. At least one of `keyLength` or `namespaceLength` may be
-	 * supplied; omitted values keep their current limit.
-	 * @returns {Promise<void>} A promise that resolves after the columns and live validation limits are updated.
-	 * @throws If a limit is invalid, the composite index would exceed MySQL's limit, an existing row
-	 * exceeds a requested limit, the adapter is disconnected, or MySQL rejects the schema change.
+	 * Updates the key and namespace limits and resizes their table columns.
+	 * @param options - New character limits; omitted values remain unchanged.
+	 * @returns {Promise<void>} Resolves when the new limits are active.
+	 * @throws If a limit is invalid, would truncate data, or the schema update fails.
 	 */
 	public resizeKeyColumns(options: KeyvMysqlKeyColumnOptions): Promise<void> {
 		return this.enqueueConfigurationTransition(async () => {
@@ -494,7 +455,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Retrieves a value from the store by key.
+	 * Gets a value by key.
 	 * @param key - The key to retrieve
 	 * @returns {Promise<KeyvStorageGetResult<Value>>} The stored value or `undefined` if not found.
 	 */
@@ -520,7 +481,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Retrieves multiple values from the store by their keys.
+	 * Gets values by key.
 	 * @param keys - Array of keys to retrieve
 	 * @returns {Promise<Array<KeyvStorageGetResult<Value | undefined>>>} The stored values in input
 	 * order, with `undefined` for missing keys.
@@ -561,8 +522,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Sets a value in the store for the given key.
-	 * If the key already exists, it will be updated.
+	 * Sets a value by key.
 	 * @param key - The key to set
 	 * @param value - The value to store
 	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
@@ -594,7 +554,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Sets multiple key-value pairs at once.
+	 * Sets multiple entries.
 	 * @param entries - Array of `{ key, value, expires? }` entry objects. `expires` is absolute Unix ms.
 	 * @returns {Promise<boolean[] | undefined>} Per-entry success values in input order.
 	 */
@@ -626,7 +586,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key-value pair from the store.
+	 * Deletes an entry by key.
 	 * @param key - The key to delete
 	 * @returns {Promise<boolean>} `true` if the key existed and was deleted; otherwise, `false`.
 	 */
@@ -639,7 +599,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple key-value pairs from the store.
+	 * Deletes entries by key.
 	 * @param key - Array of keys to delete
 	 * @returns {Promise<boolean[]>} Per-key deletion results in input order.
 	 */
@@ -653,8 +613,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Clears all entries from the store.
-	 * If a namespace is set, only entries within that namespace are cleared.
+	 * Deletes all entries in the current namespace.
 	 * @returns {Promise<void>} Resolves once the matching entries have been deleted.
 	 */
 	public async clear() {
@@ -666,8 +625,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Returns an async iterator for iterating over all key-value pairs in the store.
-	 * Uses keyset pagination (cursor-based) to handle concurrent deletions without skipping entries.
+	 * Iterates over unexpired entries in the current namespace.
 	 * @returns {AsyncGenerator<[string, string], void, unknown>} An async generator of `[key, value]`
 	 * tuples.
 	 * @yields {[string, string]} A key-value tuple.
@@ -713,7 +671,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Checks if a key exists in the store.
+	 * Checks whether a key exists.
 	 * @param key - The key to check
 	 * @returns {Promise<boolean>} `true` if the key exists; otherwise, `false`.
 	 */
@@ -736,7 +694,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Checks whether multiple keys exist in the store.
+	 * Checks whether keys exist.
 	 * @param keys - Array of keys to check
 	 * @returns {Promise<boolean[]>} Existence results in input order.
 	 */
@@ -772,8 +730,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes all expired entries from the store.
-	 * Removes rows where the expires column is set and the timestamp is in the past.
+	 * Deletes expired entries.
 	 * @returns {Promise<void>} Resolves once expired entries have been deleted.
 	 */
 	public async clearExpired(): Promise<void> {
@@ -783,7 +740,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Disconnects this adapter and closes its connection pool.
+	 * Closes the connection pool.
 	 * @returns {Promise<void>} Resolves once the connection pool has been closed.
 	 */
 	public disconnect(): Promise<void> {
@@ -805,7 +762,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Serializes a configuration change after all previously requested changes.
+	 * Queues a configuration change.
 	 * @returns {Promise<void>} The queued configuration transition.
 	 */
 	private enqueueConfigurationTransition(operation: () => Promise<void>): Promise<void> {
@@ -815,7 +772,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Throws when an operation requires an active connection after disconnect.
+	 * Verifies that the adapter is connected.
 	 * @returns {void}
 	 */
 	private assertConnected(): void {
@@ -825,7 +782,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Creates a SQL execution function bound to one connection pool.
+	 * Creates a query function for a connection pool.
 	 * @returns {SqlQuery} A query function bound to the supplied pool.
 	 */
 	private createPoolQuery(pool: ConnectionPool): SqlQuery {
@@ -836,7 +793,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Creates or migrates a table without changing the adapter's published configuration.
+	 * Ensures a table has the required schema.
 	 * @returns {Promise<void>} Resolves once the table is ready for adapter operations.
 	 */
 	private async initializeTable(
@@ -1022,8 +979,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Returns the namespace value for SQL parameters.
-	 * Returns empty string when no namespace is set.
+	 * Gets the namespace used in SQL parameters.
 	 * @returns {string} The configured namespace or an empty string.
 	 */
 	private getNamespaceValue(): string {
@@ -1031,7 +987,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Validates the configured character limit and encodes a key for storage.
+	 * Validates and encodes a key.
 	 * @returns {Buffer} The UTF-8 encoded key.
 	 */
 	private encodeKey(key: string): Buffer {
@@ -1039,7 +995,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Validates the configured character limit and encodes a namespace for storage.
+	 * Validates and encodes a namespace.
 	 * @returns {Buffer} The UTF-8 encoded namespace.
 	 */
 	private encodeNamespace(namespace: string): Buffer {
@@ -1047,7 +1003,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Starts or restarts the unref'd application-level expiration cleanup timer.
+	 * Starts the expiration cleanup timer.
 	 * @returns {void}
 	 */
 	private startClearExpiredTimer(): void {
@@ -1077,7 +1033,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stops the application-level expiration cleanup timer.
+	 * Stops the expiration cleanup timer.
 	 * @returns {void}
 	 */
 	private stopClearExpiredTimer(): void {
@@ -1088,7 +1044,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes rows that were already expired at the time of a preceding read.
+	 * Deletes keys that expired before a read completed.
 	 * @returns {Promise<void>} Resolves once the expired rows have been deleted.
 	 */
 	private async deleteExpiredKeys(
@@ -1106,8 +1062,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Extracts mysql2 PoolOptions from the full options object.
-	 * Only binds known PoolOptions properties to the result.
+	 * Extracts mysql2 pool options.
 	 * @returns {PoolOptions} The mysql2-specific connection pool options.
 	 */
 	private generateMySqlOptions(options: KeyvMysqlOptions): PoolOptions {
@@ -1177,7 +1132,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 }
 
 /**
- * Helper function to create a Keyv instance with KeyvMysql as the storage adapter.
+ * Creates a Keyv instance backed by MySQL.
  * @param options - Optional {@link KeyvMysqlOptions} configuration object or connection URI string.
  * @returns {Keyv} A new Keyv instance backed by MySQL.
  */
