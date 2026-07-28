@@ -28,6 +28,7 @@ Any storage adapter that follows the `KeyvStoreAdapter` interface will work seam
 | [keyv-momento](https://github.com/momentohq/node-keyv-adaptor/) | Momento storage adapter for Keyv |
 | [keyv-mssql](https://github.com/pmorgan3/keyv-mssql) | Microsoft SQL Server adapter for Keyv |
 | [keyv-null](https://www.npmjs.com/package/keyv-null) | Null storage adapter for Keyv |
+| [keyv-s3fifo](https://github.com/BJS-kr/fast-s3-fifo-cache) | S3-FIFO storage adapter for Keyv |
 | [keyv-upstash](https://github.com/mahdavipanah/keyv-upstash) | Upstash Redis adapter for Keyv |
 | [quick-lru](https://github.com/sindresorhus/quick-lru) | Simple "Least Recently Used" (LRU) cache |
 
