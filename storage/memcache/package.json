@@ -50,7 +50,7 @@
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
 		"hookified": "^3.0.1",
-		"memcache": "^1.8.0"
+		"memcache": "^1.9.0"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
