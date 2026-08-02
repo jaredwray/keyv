@@ -123,8 +123,8 @@ importers:
   core/bigmap:
     dependencies:
       hashery:
-        specifier: ^3.0.0
-        version: 3.0.0
+        specifier: ^3.0.1
+        version: 3.0.1
       hookified:
         specifier: ^3.0.2
         version: 3.0.2
@@ -2970,6 +2970,10 @@ packages:
 
   hashery@3.0.0:
     resolution: {integrity: sha512-0Qf1UYWmzQ7IgJbciYmxfbH3TXGR8CJQx7syxue+XptHPXYiEO1lmkYQen2PBWLikgei0kwylMZHoUmP8G96lg==}
+    engines: {node: '>=22.18'}
+
+  hashery@3.0.1:
+    resolution: {integrity: sha512-jfLVt3/SEkJzW/OCSK7Bxdl+FpXYDpEE84QOU4wzKRpO7rNoafNK718Z71GPQR/ozfQmKxXS++MhbrL/eKaTow==}
     engines: {node: '>=22.18'}
 
   hasown@2.0.2:
@@ -6504,6 +6508,10 @@ snapshots:
       hookified: 2.2.0
 
   hashery@3.0.0:
+    dependencies:
+      hookified: 3.0.2
+
+  hashery@3.0.1:
     dependencies:
       hookified: 3.0.2
 
