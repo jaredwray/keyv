@@ -55,7 +55,7 @@
 	"dependencies": {
 		"cluster-key-slot": "^1.1.0",
 		"hookified": "^3.0.1",
-		"iovalkey": "^0.3.3"
+		"iovalkey": "^0.4.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.6",
