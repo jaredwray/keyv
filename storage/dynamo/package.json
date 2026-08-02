@@ -52,7 +52,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1097.0",
     "@aws-sdk/lib-dynamodb": "^3.1097.0",
-    "hookified": "^3.0.1"
+    "hookified": "^3.0.2"
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^"
