@@ -406,8 +406,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
       memcache:
-        specifier: ^1.8.0
-        version: 1.8.0
+        specifier: ^1.9.0
+        version: 1.9.0
     devDependencies:
       '@keyv/compress-gzip':
         specifier: workspace:^
@@ -3066,10 +3066,6 @@ packages:
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
 
-  hookified@3.0.0:
-    resolution: {integrity: sha512-x+jzDjd9CWxdgl6u/K4pjnvw7PZx6ZSpiPGAV43uXlJiJy7r2jIEUxxU1Cv7+rwy1GK5Qt5S+Jp7n81DpcUvTA==}
-    engines: {node: '>=22.18.0'}
-
   hookified@3.0.1:
     resolution: {integrity: sha512-mtpUIV7U9reosQ16+OHWBd0Ca07fs1ryChQjBPuUMZnrRdLTCW+kEfkTcFudkaevp3gVe5H9FxDCBxYIdO+QQA==}
     engines: {node: '>=22.18.0'}
@@ -3456,9 +3452,9 @@ packages:
   mdurl@2.0.0:
     resolution: {integrity: sha512-Lf+9+2r+Tdp5wXDXC4PcIBjTDtq4UKjCPMQhKIuzpJNW0b96kVqSwW0bT7FhRSfmAiFYgP+SCRvdrDozfh0U5w==}
 
-  memcache@1.8.0:
-    resolution: {integrity: sha512-7/Er0dGDPK6BBf/Gmmw/hLfq1+6l9FUt91PNfufNmHXOJgWJjEIglhplKMaZDJuhNVtIBn/Ab+CwCNxX+bYkIg==}
-    engines: {node: '>=22', pnpm: '>=11'}
+  memcache@1.9.0:
+    resolution: {integrity: sha512-tysDsbWZjQDrxKU3absG6nl1AWlf1+V1+3yA/jSTMSUWtToqx6KY9psqlBIly45F46DVBT/P2YBhpA2pu1LU9Q==}
+    engines: {node: '>=22.19.0', pnpm: '>=11'}
 
   memory-pager@1.5.0:
     resolution: {integrity: sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg==}
@@ -6762,8 +6758,6 @@ snapshots:
 
   hookified@2.2.0: {}
 
-  hookified@3.0.0: {}
-
   hookified@3.0.1: {}
 
   hosted-git-info@2.8.9: {}
@@ -7255,10 +7249,10 @@ snapshots:
 
   mdurl@2.0.0: {}
 
-  memcache@1.8.0:
+  memcache@1.9.0:
     dependencies:
-      hashery: 2.0.0
-      hookified: 3.0.0
+      hashery: 3.0.0
+      hookified: 3.0.1
 
   memory-pager@1.5.0: {}
 
