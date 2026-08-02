@@ -126,8 +126,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../keyv
@@ -163,8 +163,8 @@ importers:
   core/keyv:
     dependencies:
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.6
@@ -352,8 +352,8 @@ importers:
   storage/cloudflare-kv:
     dependencies:
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -374,8 +374,8 @@ importers:
         specifier: ^3.1097.0
         version: 3.1097.0(@aws-sdk/client-dynamodb@3.1097.0)
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -387,8 +387,8 @@ importers:
   storage/etcd:
     dependencies:
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -400,8 +400,8 @@ importers:
   storage/memcache:
     dependencies:
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -419,8 +419,8 @@ importers:
   storage/mongo:
     dependencies:
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -453,8 +453,8 @@ importers:
   storage/mysql:
     dependencies:
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       mysql2:
         specifier: ^3.23.2
         version: 3.23.2(@types/node@24.13.1)
@@ -490,8 +490,8 @@ importers:
   storage/postgres:
     dependencies:
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -533,8 +533,8 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -552,8 +552,8 @@ importers:
         specifier: ^13.0.2
         version: 13.0.2
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -580,8 +580,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.2
       hookified:
-        specifier: ^3.0.1
-        version: 3.0.1
+        specifier: ^3.0.2
+        version: 3.0.2
       iovalkey:
         specifier: ^0.4.0
         version: 0.4.0(supports-color@10.2.2)
@@ -3031,8 +3031,8 @@ packages:
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
 
-  hookified@3.0.1:
-    resolution: {integrity: sha512-mtpUIV7U9reosQ16+OHWBd0Ca07fs1ryChQjBPuUMZnrRdLTCW+kEfkTcFudkaevp3gVe5H9FxDCBxYIdO+QQA==}
+  hookified@3.0.2:
+    resolution: {integrity: sha512-FpIcRHpFlW7yh68lmL0h1/Vodv77TogpHlt4qqakE/0RyQMjgNxs53acH9NJPeyRZutP7GnlqiyqRNejV8/lHQ==}
     engines: {node: '>=22.18.0'}
 
   hosted-git-info@2.8.9:
@@ -6505,7 +6505,7 @@ snapshots:
 
   hashery@3.0.0:
     dependencies:
-      hookified: 3.0.1
+      hookified: 3.0.2
 
   hasown@2.0.2:
     dependencies:
@@ -6627,7 +6627,7 @@ snapshots:
 
   hookified@2.2.0: {}
 
-  hookified@3.0.1: {}
+  hookified@3.0.2: {}
 
   hosted-git-info@2.8.9: {}
 
@@ -7117,7 +7117,7 @@ snapshots:
   memcache@1.9.0:
     dependencies:
       hashery: 3.0.0
-      hookified: 3.0.1
+      hookified: 3.0.2
 
   memory-pager@1.5.0: {}
 
