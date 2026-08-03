@@ -1,5 +1,6 @@
 import { Hookified } from "hookified";
 import {
+	jsonSerializer,
 	Keyv,
 	type KeyvAny,
 	type KeyvStorageEntry,
@@ -336,10 +337,10 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 * The expiry comes from the `expires` parameter — the encoded value is never parsed.
 	 * @param value - The encoded value to store.
 	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
-	 * @returns A JSON envelope string `{ v, e }`.
+	 * @returns A Keyv-serialized envelope string `{ v, e }`.
 	 */
 	private wrapValue(value: unknown, expires?: number): string {
-		return JSON.stringify({ v: value, e: typeof expires === "number" ? expires : null });
+		return jsonSerializer.stringify({ v: value, e: typeof expires === "number" ? expires : null });
 	}
 
 	/**
@@ -355,17 +356,22 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		try {
-			const parsed = JSON.parse(raw as string) as { v: T; e: number | null };
-			if (parsed.v === undefined) {
+			const parsed = jsonSerializer.parse<unknown>(raw as string);
+			if (parsed === null || typeof parsed !== "object") {
+				return { value: raw as T, expired: false };
+			}
+
+			const envelope = parsed as { v: T; e: number | null };
+			if (envelope.v === undefined) {
 				// Not our envelope format — return as-is.
 				return { value: raw as T, expired: false };
 			}
 
-			if (parsed.e !== null && Date.now() > parsed.e) {
+			if (envelope.e !== null && Date.now() > envelope.e) {
 				return { value: undefined, expired: true };
 			}
 
-			return { value: parsed.v, expired: false };
+			return { value: envelope.v, expired: false };
 		} catch {
 			// Not valid JSON — return as-is.
 			return { value: raw as T, expired: false };

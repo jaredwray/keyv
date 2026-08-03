@@ -200,6 +200,19 @@ describe("get, set, and delete", () => {
 		const result = await store.get(key);
 		t.expect(result).toBe("raw-value");
 	});
+
+	it("should use Keyv's default serializer for the value envelope", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const key = faker.string.uuid();
+		const value = {
+			bigint: BigInt("9223372036854775807"),
+			buffer: Buffer.from("keyv-etcd"),
+			markerLikeString: ":bigint:123",
+		};
+
+		t.expect(await store.set(key, value)).toBe(true);
+		t.expect(await store.get(key)).toEqual(value);
+	});
 });
 
 describe("ttl and expiration", () => {
@@ -261,6 +274,14 @@ describe("ttl and expiration", () => {
 		// client) must be returned verbatim and never treated as expired.
 		await store.client.put(store.formatKey(key)).value(JSON.stringify({ foo: "bar" }));
 		t.expect(await store.get(key)).toBe(JSON.stringify({ foo: "bar" }));
+		t.expect(await store.has(key)).toBe(true);
+	});
+
+	it("should return JSON null written directly to etcd as-is", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const key = faker.string.uuid();
+		await store.client.put(store.formatKey(key)).value("null");
+		t.expect(await store.get(key)).toBe("null");
 		t.expect(await store.has(key)).toBe(true);
 	});
 
