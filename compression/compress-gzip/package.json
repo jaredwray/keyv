@@ -50,7 +50,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "pako": "^3.0.0"
+    "pako": "^3.0.1"
   },
   "peerDependencies": {
     "keyv": "workspace:^"
