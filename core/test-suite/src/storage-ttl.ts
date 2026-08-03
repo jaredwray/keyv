@@ -20,27 +20,14 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 
 	const missingValue = options?.missingValue;
 	const seconds = options?.ttlGranularity === "seconds";
-	// The absolute `expires` deadline is captured (as `Date.now() + ttl`) before the write
-	// runs, so the write and the immediate read-back both have to complete within `ttl` for
-	// the entry to still be live. Keep `ttl` comfortably larger than a single write+read
-	// against a store under CI load (coverage instrumentation, lock contention, networked
-	// backends) so the entry has not already expired by the time it is first read.
-	//
-	// Both millisecond-path values must stay strictly sub-second (expiryDelay < 1000ms). A
-	// backend that only honors whole-second TTLs rounds these deadlines up to ~1s, so waiting
-	// a full second before the expiry check would let its key expire and hide that mismatch.
-	// Staying under a second keeps the millisecond suite failing for such backends, which is
-	// the signal for them to opt into `ttlGranularity: "seconds"`.
+	// Deadline is captured before the write, so keep `ttl` well above one warm write+read.
+	// Keep the ms path sub-second (expiryDelay < 1000ms) so second-only backends still fail it.
 	const ttl = seconds ? 1000 : 300;
 	const expiryDelay = seconds ? 3000 : 600;
 	// The storage contract takes an absolute expiry (ms since epoch), not a relative ttl.
 	const expiresIn = (ms: number) => Date.now() + ms;
 
-	// Establish the store's connection before the TTL deadline is captured. The first
-	// operation on a fresh store pays for connection setup (cold connect, auth, schema
-	// check, initial lock acquisition); counting that latency against the short `ttl` is
-	// the main reason these tests were flaky — the entry could expire before the immediate
-	// read-back, surfacing as "expected <value>, received undefined".
+	// Warm the connection before the deadline so cold-connect latency isn't charged to `ttl`.
 	const warmStore = async (): Promise<ReturnType<StorageFn>> => {
 		const s = store();
 		await s.get(faker.string.alphanumeric(10));
