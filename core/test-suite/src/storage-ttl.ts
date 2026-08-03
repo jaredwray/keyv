@@ -20,13 +20,29 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 
 	const missingValue = options?.missingValue;
 	const seconds = options?.ttlGranularity === "seconds";
-	const ttl = seconds ? 1000 : 100;
-	const expiryDelay = seconds ? 3000 : 200;
+	// The absolute `expires` deadline is captured (as `Date.now() + ttl`) before the write
+	// runs, so the write and the immediate read-back both have to complete within `ttl` for
+	// the entry to still be live. Keep `ttl` comfortably larger than a single write+read
+	// against a store under CI load (coverage instrumentation, lock contention, networked
+	// backends) so the entry has not already expired by the time it is first read.
+	const ttl = seconds ? 1000 : 500;
+	const expiryDelay = seconds ? 3000 : 1000;
 	// The storage contract takes an absolute expiry (ms since epoch), not a relative ttl.
 	const expiresIn = (ms: number) => Date.now() + ms;
 
-	test("set(key, value, expires) expires after the deadline", async (t) => {
+	// Establish the store's connection before the TTL deadline is captured. The first
+	// operation on a fresh store pays for connection setup (cold connect, auth, schema
+	// check, initial lock acquisition); counting that latency against the short `ttl` is
+	// the main reason these tests were flaky — the entry could expire before the immediate
+	// read-back, surfacing as "expected <value>, received undefined".
+	const warmStore = async (): Promise<ReturnType<StorageFn>> => {
 		const s = store();
+		await s.get(faker.string.alphanumeric(10));
+		return s;
+	};
+
+	test("set(key, value, expires) expires after the deadline", async (t) => {
+		const s = await warmStore();
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.word();
 		await s.set(key, value, expiresIn(ttl));
@@ -55,7 +71,7 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 	});
 
 	test("setMany with per-entry expires expires individual entries", async (t) => {
-		const s = store();
+		const s = await warmStore();
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		const val1 = faker.lorem.word();
