@@ -20,13 +20,22 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 
 	const missingValue = options?.missingValue;
 	const seconds = options?.ttlGranularity === "seconds";
-	const ttl = seconds ? 1000 : 100;
-	const expiryDelay = seconds ? 3000 : 200;
+	// Deadline is captured before the write, so keep `ttl` well above one warm write+read.
+	// Keep the ms path sub-second (expiryDelay < 1000ms) so second-only backends still fail it.
+	const ttl = seconds ? 1000 : 300;
+	const expiryDelay = seconds ? 3000 : 600;
 	// The storage contract takes an absolute expiry (ms since epoch), not a relative ttl.
 	const expiresIn = (ms: number) => Date.now() + ms;
 
-	test("set(key, value, expires) expires after the deadline", async (t) => {
+	// Warm the connection before the deadline so cold-connect latency isn't charged to `ttl`.
+	const warmStore = async (): Promise<ReturnType<StorageFn>> => {
 		const s = store();
+		await s.get(faker.string.alphanumeric(10));
+		return s;
+	};
+
+	test("set(key, value, expires) expires after the deadline", async (t) => {
+		const s = await warmStore();
 		const key = faker.string.alphanumeric(10);
 		const value = faker.lorem.word();
 		await s.set(key, value, expiresIn(ttl));
@@ -55,7 +64,7 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 	});
 
 	test("setMany with per-entry expires expires individual entries", async (t) => {
-		const s = store();
+		const s = await warmStore();
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		const val1 = faker.lorem.word();
