@@ -52,7 +52,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"lz4-napi": "^2.9.0"
+		"lz4-napi": "^2.9.1"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
