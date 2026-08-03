@@ -1,5 +1,6 @@
 import { Hookified } from "hookified";
 import {
+	jsonSerializer,
 	Keyv,
 	type KeyvAny,
 	type KeyvStorageEntry,
@@ -336,10 +337,10 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 * The expiry comes from the `expires` parameter — the encoded value is never parsed.
 	 * @param value - The encoded value to store.
 	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
-	 * @returns A JSON envelope string `{ v, e }`.
+	 * @returns A Keyv-serialized envelope string `{ v, e }`.
 	 */
 	private wrapValue(value: unknown, expires?: number): string {
-		return JSON.stringify({ v: value, e: typeof expires === "number" ? expires : null });
+		return jsonSerializer.stringify({ v: value, e: typeof expires === "number" ? expires : null });
 	}
 
 	/**
@@ -355,7 +356,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		try {
-			const parsed = JSON.parse(raw as string) as { v: T; e: number | null };
+			const parsed = jsonSerializer.parse<{ v: T; e: number | null }>(raw as string);
 			if (parsed.v === undefined) {
 				// Not our envelope format — return as-is.
 				return { value: raw as T, expired: false };

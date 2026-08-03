@@ -200,6 +200,19 @@ describe("get, set, and delete", () => {
 		const result = await store.get(key);
 		t.expect(result).toBe("raw-value");
 	});
+
+	it("should use Keyv's default serializer for the value envelope", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const key = faker.string.uuid();
+		const value = {
+			bigint: BigInt("9223372036854775807"),
+			buffer: Buffer.from("keyv-etcd"),
+			markerLikeString: ":bigint:123",
+		};
+
+		t.expect(await store.set(key, value)).toBe(true);
+		t.expect(await store.get(key)).toEqual(value);
+	});
 });
 
 describe("ttl and expiration", () => {
