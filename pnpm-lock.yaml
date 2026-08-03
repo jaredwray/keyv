@@ -212,8 +212,8 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
       bignumber.js:
-        specifier: ^11.1.4
-        version: 11.1.4
+        specifier: ^11.1.5
+        version: 11.1.5
       json-bigint:
         specifier: ^1.0.0
         version: 1.0.0
@@ -2472,8 +2472,8 @@ packages:
     resolution: {integrity: sha512-jW6oufeDhXZaiX9Lw5A+oerVClx4iFrI6uDj1zu7SqUAjak9vbJvA0NEcKLNxHiQHb6kYCoFzzXYV0YOauhV3g==}
     engines: {node: '>=22'}
 
-  bignumber.js@11.1.4:
-    resolution: {integrity: sha512-AJ9dSeaUGj2xu7tEwmdqb51dqdb633xo4njI9K8ZFfcLrNr0XN8/EPkkZUNaF9fkCblGt2zVwZymesUdGynEkQ==}
+  bignumber.js@11.1.5:
+    resolution: {integrity: sha512-6WmzCNtUnfKpbozq+hOgWaZMMzORmYBwF1xZScyoIX3QRYWeKTtxxwDOW5tIz7C9BdjkIYHGTcelCLkXg0mndw==}
 
   bignumber.js@9.3.1:
     resolution: {integrity: sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ==}
@@ -5975,7 +5975,7 @@ snapshots:
     dependencies:
       node-addon-api: 8.9.0
 
-  bignumber.js@11.1.4: {}
+  bignumber.js@11.1.5: {}
 
   bignumber.js@9.3.1: {}
 

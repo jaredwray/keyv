@@ -57,7 +57,7 @@
 	"dependencies": {
 		"@faker-js/faker": "^10.5.0",
 		"@vitest/coverage-v8": "^4.1.10",
-		"bignumber.js": "^11.1.4",
+		"bignumber.js": "^11.1.5",
 		"json-bigint": "^1.0.0",
 		"timekeeper": "^2.3.1",
 		"vitest": "^4.1.10"
