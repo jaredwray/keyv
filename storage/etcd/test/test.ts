@@ -277,6 +277,14 @@ describe("ttl and expiration", () => {
 		t.expect(await store.has(key)).toBe(true);
 	});
 
+	it("should return JSON null written directly to etcd as-is", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const key = faker.string.uuid();
+		await store.client.put(store.formatKey(key)).value("null");
+		t.expect(await store.get(key)).toBe("null");
+		t.expect(await store.has(key)).toBe(true);
+	});
+
 	it("should cache the granted lease id across concurrent puts", async (t) => {
 		const store = new KeyvEtcd(etcdUrl, { ttl: 5000 });
 		const sharedLease = store.lease;

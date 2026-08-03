@@ -356,17 +356,22 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		try {
-			const parsed = jsonSerializer.parse<{ v: T; e: number | null }>(raw as string);
-			if (parsed.v === undefined) {
+			const parsed = jsonSerializer.parse<unknown>(raw as string);
+			if (parsed === null || typeof parsed !== "object") {
+				return { value: raw as T, expired: false };
+			}
+
+			const envelope = parsed as { v: T; e: number | null };
+			if (envelope.v === undefined) {
 				// Not our envelope format — return as-is.
 				return { value: raw as T, expired: false };
 			}
 
-			if (parsed.e !== null && Date.now() > parsed.e) {
+			if (envelope.e !== null && Date.now() > envelope.e) {
 				return { value: undefined, expired: true };
 			}
 
-			return { value: parsed.v, expired: false };
+			return { value: envelope.v, expired: false };
 		} catch {
 			// Not valid JSON — return as-is.
 			return { value: raw as T, expired: false };
