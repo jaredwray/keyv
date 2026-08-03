@@ -25,8 +25,14 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 	// the entry to still be live. Keep `ttl` comfortably larger than a single write+read
 	// against a store under CI load (coverage instrumentation, lock contention, networked
 	// backends) so the entry has not already expired by the time it is first read.
-	const ttl = seconds ? 1000 : 500;
-	const expiryDelay = seconds ? 3000 : 1000;
+	//
+	// Both millisecond-path values must stay strictly sub-second (expiryDelay < 1000ms). A
+	// backend that only honors whole-second TTLs rounds these deadlines up to ~1s, so waiting
+	// a full second before the expiry check would let its key expire and hide that mismatch.
+	// Staying under a second keeps the millisecond suite failing for such backends, which is
+	// the signal for them to opt into `ttlGranularity: "seconds"`.
+	const ttl = seconds ? 1000 : 300;
+	const expiryDelay = seconds ? 3000 : 600;
 	// The storage contract takes an absolute expiry (ms since epoch), not a relative ttl.
 	const expiresIn = (ms: number) => Date.now() + ms;
 

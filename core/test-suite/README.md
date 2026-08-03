@@ -78,7 +78,7 @@ storageTestSuite(it, store);
 
 ### TTL Granularity
 
-By default the TTL tests use sub-second TTL values (100ms TTL with a 200ms expiry wait). Storage backends such as etcd (leases) and DynamoDB only support TTLs at second-level resolution, so they can't honor sub-second TTLs. For those adapters, set `ttlGranularity: 'seconds'` and the TTL tests will use second-scale values instead (1 second TTL with a 3 second expiry wait):
+By default the TTL tests use sub-second TTL values (300ms TTL with a 600ms expiry wait). Storage backends such as etcd (leases) and DynamoDB only support TTLs at second-level resolution, so they can't honor sub-second TTLs. For those adapters, set `ttlGranularity: 'seconds'` and the TTL tests will use second-scale values instead (1 second TTL with a 3 second expiry wait):
 
 ```js
 import { it } from 'vitest';
