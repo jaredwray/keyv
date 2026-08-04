@@ -1,12 +1,15 @@
 {
   "name": "@keyv/mono-repo",
-  "version": "6.0.0-rc.1",
+  "version": "6.0.0",
   "type": "module",
   "description": "Keyv Mono Repo",
   "repository": "https://github.com/jaredwray/keyv.git",
   "author": "Jared Wray <me@jaredwray.com>",
   "license": "MIT",
   "private": true,
+  "releaseConfig": {
+    "latestMajor": 6
+  },
   "packageManager": "pnpm@11.18.0+sha512.33d83c77da82f49fba836925c6f1b841181ec3132b670639bd012f7075f5c7cf634c5f870147c19aae7478fac01df09d8892e880454896edd23ee9b33757563c",
   "engines": {
     "node": ">= 22.19.0"

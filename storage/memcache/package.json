@@ -1,6 +1,6 @@
 {
 	"name": "@keyv/memcache",
-	"version": "6.0.0-rc.1",
+	"version": "6.0.0",
 	"description": "Memcache storage adapter for Keyv",
 	"type": "module",
 	"main": "./dist/index.mjs",

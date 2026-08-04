@@ -20,9 +20,9 @@
  *   5.4.2  + LATEST_MAJOR=6        v5-lts           no
  *   6.0.0  + LATEST_MAJOR=6        latest           YES
  *
- * `LATEST_MAJOR` is the single source of truth for "which major is the current
- * stable line". It lives as a GitHub Actions repository variable so every
- * branch agrees on it; flipping it from 5 to 6 is the entire v6 GA cutover.
+ * `releaseConfig.latestMajor` in the root package.json is the tracked source of
+ * truth for the current stable line. `LATEST_MAJOR` remains an environment
+ * fallback for maintenance branches that do not define the tracked setting.
  *
  * Users still install older lines with plain semver ranges — `keyv@5`, `keyv@4`
  * — which npm resolves to the newest stable of that major automatically. The
@@ -58,8 +58,8 @@
  *
  * ## Inputs (environment variables)
  *
- * - LATEST_MAJOR        Major number that owns `latest` (e.g. "5"). Required
- *                       only for stable releases; pre-releases ignore it.
+ * - LATEST_MAJOR        Fallback major number that owns `latest` (e.g. "5").
+ *                       The root release config takes precedence when present.
  * - DRY_RUN             "true" to print the plan and exit without publishing.
  *                       (The CLI flag `--dry-run` does the same locally.)
  * - GITHUB_STEP_SUMMARY If set (in CI), the plan table is appended to the job
@@ -94,6 +94,14 @@ const rootDir = path.resolve(import.meta.dirname, "..");
 // ---------------------------------------------------------------------------
 // Pure helpers (unit-tested in release-publish.test.ts — no side effects).
 // ---------------------------------------------------------------------------
+
+export function resolveLatestMajor(
+	configuredLatestMajor: number | undefined,
+	environmentLatestMajor: string | undefined,
+): number | undefined {
+	const value = configuredLatestMajor ?? environmentLatestMajor;
+	return value === undefined || value === "" ? undefined : Number(value);
+}
 
 export type ParsedVersion = {
 	major: number;
@@ -399,12 +407,13 @@ function main(): void {
 	// --- Step 1: inputs ---
 	// DRY_RUN comes from the workflow input on manual runs; it's empty on real
 	// `release` events, so those publish for real. `--dry-run` is the local
-	// equivalent. LATEST_MAJOR is left undefined when unset/empty so that
-	// computeDistTag can require it only for stable releases.
+	// equivalent. The tracked root config overrides the workflow environment;
+	// both may be absent for pre-releases, which do not require a stable major.
 	const dryRun = process.env.DRY_RUN === "true" || process.argv.includes("--dry-run");
-	const latestMajorRaw = process.env.LATEST_MAJOR;
-	const latestMajor =
-		latestMajorRaw === undefined || latestMajorRaw === "" ? undefined : Number(latestMajorRaw);
+	const rootPackage = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8")) as {
+		releaseConfig?: { latestMajor?: number };
+	};
+	const latestMajor = resolveLatestMajor(rootPackage.releaseConfig?.latestMajor, process.env.LATEST_MAJOR);
 
 	// The release version is the synced keyv core version (all packages share it).
 	const releaseVersion = (

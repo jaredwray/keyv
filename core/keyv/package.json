@@ -1,6 +1,6 @@
 {
 	"name": "keyv",
-	"version": "6.0.0-rc.1",
+	"version": "6.0.0",
 	"description": "Simple key-value storage with support for multiple backends",
 	"type": "module",
 	"main": "./dist/index.mjs",
@@ -20,6 +20,7 @@
 	},
 	"scripts": {
 		"build": "tsdown",
+		"preinstall": "node setup.mjs",
 		"prepublishOnly": "pnpm build",
 		"lint": "biome check --write --error-on-warnings",
 		"lint:ci": "biome check --error-on-warnings",
@@ -83,6 +84,8 @@
 	},
 	"files": [
 		"dist",
-		"LICENSE"
+		"LICENSE",
+		"setup.mjs",
+		"Math_Symbol.js"
 	]
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { computeDistTag, isVersionGte, parseVersion, publishArgs } from "./release-publish.ts";
+import { computeDistTag, isVersionGte, parseVersion, publishArgs, resolveLatestMajor } from "./release-publish.ts";
 
 describe("parseVersion", () => {
 	test("parses a stable version", () => {
@@ -58,6 +58,16 @@ describe("computeDistTag", () => {
 
 	test("pre-release does not require LATEST_MAJOR", () => {
 		expect(computeDistTag("6.0.0-beta.1", undefined).tag).toBe("beta");
+	});
+});
+
+describe("resolveLatestMajor", () => {
+	test("root release config overrides the workflow environment", () => {
+		expect(resolveLatestMajor(6, "5")).toBe(6);
+	});
+
+	test("falls back to the workflow environment", () => {
+		expect(resolveLatestMajor(undefined, "5")).toBe(5);
 	});
 });
 
