@@ -41,6 +41,9 @@ build/Release
 node_modules
 jspm_packages
 
+# Staged npm pack output (created by scripts/release-publish.ts)
+packed
+
 # Optional npm cache directory
 .npm
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { computeDistTag, isVersionGte, parseVersion, publishArgs } from "./release-publish.ts";
+import { computeDistTag, isVersionGte, packArgs, packedTarballFor, parseVersion, publishArgs } from "./release-publish.ts";
 
 describe("parseVersion", () => {
 	test("parses a stable version", () => {
@@ -83,33 +83,43 @@ describe("isVersionGte (downgrade guard)", () => {
 	});
 });
 
+describe("packedTarballFor / packArgs", () => {
+	test("flattens scoped names into a ./packed tarball path", () => {
+		expect(packedTarballFor("keyv")).toBe("./packed/keyv.tgz");
+		expect(packedTarballFor("@keyv/redis")).toBe("./packed/keyv-redis.tgz");
+	});
+
+	test("packs a workspace package to that tarball path", () => {
+		expect(packArgs("keyv")).toEqual(["--filter", "keyv", "pack", "--out", "./packed/keyv.tgz"]);
+	});
+});
+
 describe("publishArgs", () => {
-	test("builds the exact pnpm publish command for a package + tag", () => {
-		expect(publishArgs("keyv", "beta")).toEqual([
-			"--filter",
-			"keyv",
+	test("builds the exact pnpm stage publish command for a tarball + tag", () => {
+		expect(publishArgs("./packed/keyv.tgz", "beta")).toEqual([
+			"stage",
 			"publish",
+			"./packed/keyv.tgz",
 			"--tag",
 			"beta",
 			"--no-git-checks",
 			"--access",
 			"public",
 			"--provenance",
-			"--loglevel=verbose",
 		]);
 	});
 
-	test("uses the given package name and tag", () => {
-		expect(`pnpm ${publishArgs("@keyv/redis", "v5-lts").join(" ")}`).toBe(
-			"pnpm --filter @keyv/redis publish --tag v5-lts --no-git-checks --access public --provenance --loglevel=verbose",
+	test("uses the given tarball and tag", () => {
+		expect(`pnpm ${publishArgs("./packed/keyv-redis.tgz", "v5-lts").join(" ")}`).toBe(
+			"pnpm stage publish ./packed/keyv-redis.tgz --tag v5-lts --no-git-checks --access public --provenance",
 		);
 	});
 
-	// Release-blocking guard: the workflow runs these tests before publishing,
+	// Release-blocking guard: the workflow runs these tests before staging,
 	// so removing --provenance from publishArgs fails the release. Provenance
-	// attestation is required for every package published from this repo.
+	// attestation is required for every package staged from this repo.
 	test("always includes --provenance (required for npm provenance attestation)", () => {
-		expect(publishArgs("keyv", "latest")).toContain("--provenance");
-		expect(publishArgs("@keyv/redis", "beta")).toContain("--provenance");
+		expect(publishArgs("./packed/keyv.tgz", "latest")).toContain("--provenance");
+		expect(publishArgs("./packed/keyv-redis.tgz", "beta")).toContain("--provenance");
 	});
 });

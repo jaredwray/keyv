@@ -45,6 +45,41 @@ jobs:
       - name: Build
         run: pnpm build
 
+  aikido-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: aikido-gate
+    permissions:
+      contents: read
+    steps:
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.0"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install Aikido CI client
+        # zizmor: ignore[adhoc-packages] pinned Aikido CI client for the release gate
+        run: sfw npm install --global @aikidosec/ci-api-client@1.0.17
+
+      # Fails on new SAST/IaC/secrets findings. The API key comes from Aikido's
+      # Continuous Integration settings — it grants no publish authority.
+      - name: Run Aikido release scan
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+          AIKIDO_CLIENT_API_KEY: ${{ secrets.AIKIDO_CLIENT_API_KEY }}
+        run: >
+          aikido-api-client scan-release
+          "$REPO_NAME" "$GITHUB_SHA"
+          --apikey "$AIKIDO_CLIENT_API_KEY"
+          --fail-on-sast-scan --fail-on-iac-scan --fail-on-secrets-scan
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -83,21 +118,22 @@ jobs:
         run: pnpm test
 
   publish:
-    needs: [build, test]
+    needs: [build, test, aikido-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     name: publish
     environment: release
     # OIDC trusted publishing: GitHub mints a short-lived OIDC token that pnpm
-    # exchanges with npm for a one-time publish credential. No NPM_TOKEN needed.
+    # exchanges with npm for a one-time stage credential. No NPM_TOKEN needed.
+    # The trusted publisher must be configured stage-only on npmjs.com.
     permissions:
       contents: read
       id-token: write
     env:
-      # Provenance is generated automatically when publishing via OIDC; setting
+      # Provenance is generated automatically when staging via OIDC; setting
       # this makes it explicit and fails closed if OIDC ever isn't available.
-      # release-publish.ts also passes --provenance on every publish, and the
-      # "Verify release-tag logic" step fails the release if that flag is
+      # release-publish.ts also passes --provenance on every stage publish, and
+      # the "Verify release-tag logic" step fails the release if that flag is
       # ever removed from the script.
       NPM_CONFIG_PROVENANCE: "true"
     steps:
@@ -128,17 +164,17 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # Verify the dist-tag logic before any publish runs.
+      # Verify the dist-tag logic before any stage publish runs.
       - name: Verify release-tag logic
         run: pnpm test:scripts
 
       # Computes the dist-tag from the released version (pre-release -> beta;
       # stable current major -> latest; stable old major -> v{major}-lts),
       # skips versions already on the registry, guards `latest` from moving
-      # backwards, then publishes each package at its own version under that
-      # tag. `release` events ignore dry_run (inputs is empty) and publish for
-      # real; manual runs default to dry_run=true. Uses OIDC only — no token.
-      - name: Publish (compute dist-tag, skip unchanged, guard latest)
+      # backwards, then packs and stages each package under that tag.
+      # `release` events ignore dry_run (inputs is empty) and stage for real;
+      # manual runs default to dry_run=true. Uses OIDC only — no token.
+      - name: Stage publish (compute dist-tag, skip unchanged, guard latest)
         env:
           LATEST_MAJOR: 5 # Version 5 is the LTS at this time
           DRY_RUN: ${{ inputs.dry_run }}
