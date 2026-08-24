@@ -27,3 +27,4 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - The lockfile is committed. There is no Dependabot config; dependency updates go through reviewed PRs.
 - Workflows do not use `pull_request_target` and do not store npm tokens (OIDC trusted publishing).
 - Published packages set `repository.url` to this repo so provenance can map back.
+- Socket reviews every pull request that changes dependencies.

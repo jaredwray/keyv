@@ -5,12 +5,12 @@ Tracking against https://github.com/jaredwray/agentic/blob/main/skills/security/
 Profile: npm library · public
 
 ## 1. Security docs
-- [ ] `SECURITY.md` present — contact info + "How this repository is secured" summary (PR #2053 pending)
-- [ ] `DEFENSE_IN_DEPTH.md` present (this file) (PR #2053 pending)
+- [x] `SECURITY.md` present — contact info + "How this repository is secured" summary — PR #2053
+- [x] `DEFENSE_IN_DEPTH.md` present (this file) — PR #2053
 
 ## 2. CODEOWNERS and cloud bootstrap
 - [ ] `.github/CODEOWNERS` covers `/.github/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names
-- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile)
+- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) (PR #2054 pending)
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified 2026-08-24
@@ -44,7 +44,7 @@ Profile: npm library · public
 ## 6. Security tooling
 - [ ] Aikido runs on every build
 - [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release`
-- [ ] Socket reviews every PR that changes dependencies
+- [x] Socket reviews every PR that changes dependencies — verified 2026-08-24 (PR #2053: Socket Security Pull Request Alerts and Project Report)
 
 ## 7. Repository lockdown
 
