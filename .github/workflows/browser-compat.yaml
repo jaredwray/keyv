@@ -27,7 +27,7 @@ jobs:
           node-version: '24'
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build Keyv
         run: pnpm build:keyv

@@ -42,10 +42,7 @@ jobs:
           node-version: "24"
 
       - name: Install Dependencies
-        run: pnpm install
-
-      - name: Approve Builds
-        run: pnpm approve-builds
+        run: pnpm install --frozen-lockfile
 
       - name: Build Keyv
         run: pnpm build:keyv

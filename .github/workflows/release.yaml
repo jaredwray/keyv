@@ -30,10 +30,7 @@ jobs:
           node-version: '24'
 
       - name: Install Dependencies
-        run: pnpm install
-
-      - name: Approve Builds
-        run: pnpm approve-builds
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -57,10 +54,7 @@ jobs:
         run: pnpm test:services:start
 
       - name: Install Dependencies
-        run: pnpm install
-
-      - name: Approve Builds
-        run: pnpm approve-builds
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -99,7 +93,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build

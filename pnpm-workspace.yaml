@@ -12,8 +12,15 @@ allowBuilds:
   sharp: false
   sqlite3: true
   workerd: true
-# 4 days minimum release age
-minimumReleaseAge: 5760
+# 7 days minimum release age (minutes). Fail closed if publish time is missing
+# or the only matching version is too new.
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+trustPolicy: no-downgrade
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
+blockExoticSubdeps: true
 # keep @types/node within the Node major from .nvmrc across all packages,
 # including transitive resolutions (e.g. @types/pg, @types/ws, vitest peers)
 overrides:
