@@ -24,7 +24,8 @@ This repository follows the [defense-in-depth](https://github.com/jaredwray/agen
 hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_DEPTH.md). Measures currently in place:
 
 - pnpm is pinned via `packageManager` (`pnpm@11.18.0`).
-- The lockfile is committed. There is no Dependabot config; dependency updates go through reviewed PRs.
+- Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`.
+- The lockfile is committed and CI installs with `--frozen-lockfile`. There is no Dependabot config; dependency updates go through reviewed PRs.
 - Workflows do not use `pull_request_target` and do not store npm tokens (OIDC trusted publishing).
 - Published packages set `repository.url` to this repo so provenance can map back.
 - Socket reviews every pull request that changes dependencies.
