@@ -30,5 +30,5 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - Workflows do not use `pull_request_target` and do not store npm tokens (OIDC trusted publishing).
 - The release workflow packs each package and stages it with `pnpm stage publish` after an Aikido `scan-release` gate. A maintainer still has to promote the staged version.
 - Published packages set `repository.url` to this repo so provenance can map back.
-- Socket reviews every pull request that changes dependencies.
+- Socket reviews every pull request that changes dependencies; Aikido scans every build.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
