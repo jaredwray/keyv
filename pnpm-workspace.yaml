@@ -12,9 +12,21 @@ allowBuilds:
   sharp: false
   sqlite3: true
   workerd: true
-# 4 days minimum release age
-minimumReleaseAge: 5760
+# 7 days minimum release age (minutes). Fail closed if publish time is missing
+# or the only matching version is too new.
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+trustPolicy: no-downgrade
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
+blockExoticSubdeps: true
 # keep @types/node within the Node major from .nvmrc across all packages,
-# including transitive resolutions (e.g. @types/pg, @types/ws, vitest peers)
+# including transitive resolutions (e.g. @types/pg, @types/ws, vitest peers).
+# writr@6.1.2 and semver@5.7.2 fail trustPolicy: no-downgrade (no provenance;
+# later versions of the same packages have attestations). Pin to versions that
+# already meet the gate — do not exclude first-party packages.
 overrides:
   "@types/node": ^24.13.1
+  writr: 6.1.5
+  semver@5.7.2: 7.7.3
