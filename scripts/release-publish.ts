@@ -32,13 +32,15 @@
  * `6.x`, never a tag. See website/site/docs/versioning.md for the user-facing
  * explanation.
  *
- * ## Why everything is a single `publish --tag` (no `npm dist-tag add`)
+ * ## Why everything is a single `stage publish --tag` (no `npm dist-tag add`)
  *
  * The release workflow authenticates to npm with OIDC trusted publishing (no
- * long-lived NPM_TOKEN). OIDC authorizes the `publish` command only — it does
- * NOT authorize `npm dist-tag add` (npm/cli#8547). So this script never calls
- * `dist-tag add`; it applies exactly one tag per package via `publish --tag`,
- * which keeps the pipeline token-free.
+ * long-lived NPM_TOKEN). CI packs each package and runs `pnpm stage publish`
+ * so the version lands in npm's staging queue, not live on the registry. A
+ * maintainer promotes the staged artifact with 2FA. OIDC authorizes the
+ * publish/stage command only — it does NOT authorize `npm dist-tag add`
+ * (npm/cli#8547). So this script never calls `dist-tag add`; it applies
+ * exactly one tag per package via `stage publish --tag`.
  *
  * ## Safety properties
  *
@@ -129,7 +131,7 @@ export function parseVersion(version: string): ParsedVersion {
 }
 
 export type DistTagPlan = {
-	/** The single tag passed to `pnpm publish --tag`. */
+	/** The single tag passed to `pnpm stage publish --tag`. */
 	tag: string;
 	/** Whether this release moves the `latest` tag (triggers the downgrade guard). */
 	setsLatest: boolean;
@@ -337,40 +339,60 @@ function currentLatest(name: string): string | undefined {
 }
 
 /**
- * The exact `pnpm` argument list used to publish a package — the single source
- * of truth so the same command is both printed and executed. Flags:
- * `--no-git-checks` (the release commit may be detached/tagged in CI),
+ * Relative tarball path for a workspace package (`./` prefix required so
+ * `pnpm stage publish` treats it as a local path). Scoped names are flattened
+ * (`@keyv/redis` -> `keyv-redis`).
+ */
+export function packedTarballFor(name: string): string {
+	return `./packed/${name.replace(/^@/, "").replaceAll("/", "-")}.tgz`;
+}
+
+/**
+ * Pack a workspace package to a known tarball path under `./packed/`.
+ */
+export function packArgs(name: string): string[] {
+	return ["--filter", name, "pack", "--out", packedTarballFor(name)];
+}
+
+/**
+ * The exact `pnpm` argument list used to stage a packed tarball — the single
+ * source of truth so the same command is both printed and executed. Flags:
+ * `--no-git-checks` (git-checks run even for a tarball and fail on a detached
+ * release-tag checkout and on the untracked pack output),
  * `--access public` (required for the scoped `@keyv/*` packages),
  * `--provenance` (REQUIRED: generates the npm provenance attestation from the
- * CI OIDC context so every published package is verifiably built here; it
+ * CI OIDC context so every staged package is verifiably built here; it
  * fails closed when no OIDC context is available, and release-publish.test.ts
- * asserts the flag is always present), and verbose logging to aid debugging
- * during the rollout.
+ * asserts the flag is always present).
  */
-export function publishArgs(name: string, tag: string): string[] {
+export function publishArgs(tarball: string, tag: string): string[] {
 	return [
-		"--filter",
-		name,
+		"stage",
 		"publish",
+		tarball,
 		"--tag",
 		tag,
 		"--no-git-checks",
 		"--access",
 		"public",
 		"--provenance",
-		"--loglevel=verbose",
 	];
 }
 
 /**
- * Publish a single workspace package under exactly one dist-tag. Echoes the
- * exact `pnpm` command first, then runs it inheriting stdio so npm's output
- * streams to the job log. Throws if the publish fails (caught by the caller).
+ * Pack a workspace package, then stage the tarball under exactly one dist-tag.
+ * Echoes the exact `pnpm` commands first, then runs them inheriting stdio so
+ * npm's output streams to the job log. Throws if pack or stage fails.
  */
 function publishPackage(name: string, tag: string): void {
-	const args = publishArgs(name, tag);
+	fs.mkdirSync(path.join(rootDir, "packed"), { recursive: true });
+	const pack = packArgs(name);
+	console.log(`  $ pnpm ${pack.join(" ")}`);
+	execFileSync("pnpm", pack, { cwd: rootDir, stdio: "inherit" });
+
+	const args = publishArgs(packedTarballFor(name), tag);
 	console.log(`  $ pnpm ${args.join(" ")}`);
-	execFileSync("pnpm", args, { stdio: "inherit" });
+	execFileSync("pnpm", args, { cwd: rootDir, stdio: "inherit" });
 }
 
 function appendSummary(markdown: string): void {
@@ -420,7 +442,7 @@ function main(): void {
 
 	console.log(`\nRelease version: ${releaseVersion}`);
 	console.log(`Dist-tag (keyv): ${releasePlan.tag}  (${releasePlan.reason})`);
-	console.log(`Mode:            ${dryRun ? "DRY RUN — nothing will be published" : "PUBLISH"}\n`);
+	console.log(`Mode:            ${dryRun ? "DRY RUN — nothing will be staged" : "STAGE"}\n`);
 
 	// --- Step 3: discover packages ---
 	const packages = getPublishablePackages();
@@ -462,7 +484,7 @@ function main(): void {
 	const nameWidth = Math.max(7, ...rows.map((r) => r.name.length));
 	console.log("Publish plan:");
 	for (const r of rows) {
-		const mark = r.action === "publish" ? "PUBLISH" : "skip (already published)";
+		const mark = r.action === "publish" ? "STAGE" : "skip (already published)";
 		console.log(`  ${r.name.padEnd(nameWidth)}  ${r.version.padEnd(16)}  → ${r.tag.padEnd(8)}  [${mark}]`);
 	}
 
@@ -511,28 +533,29 @@ function main(): void {
 		if (ordered.length > 0) {
 			console.log("Commands that would run (in order):");
 			for (const r of ordered) {
-				console.log(`  $ pnpm ${publishArgs(r.name, r.tag).join(" ")}`);
+				console.log(`  $ pnpm ${packArgs(r.name).join(" ")}`);
+				console.log(`  $ pnpm ${publishArgs(packedTarballFor(r.name), r.tag).join(" ")}`);
 			}
 			console.log("");
 		}
-		console.log("Dry run complete — nothing published.");
+		console.log("Dry run complete — nothing staged.");
 		return;
 	}
 
 	if (ordered.length === 0) {
-		console.log("Nothing to publish — all versions already on the registry.");
+		console.log("Nothing to stage — all versions already on the registry.");
 		return;
 	}
 
 	const failures: string[] = [];
 	for (const r of ordered) {
-		console.log(`\nPublishing ${r.name}@${r.version} → ${r.tag}`);
+		console.log(`\nStaging ${r.name}@${r.version} → ${r.tag}`);
 		try {
 			publishPackage(r.name, r.tag);
 		} catch (error) {
-			console.error(`✖ Failed to publish ${r.name}@${r.version}: ${(error as Error).message}`);
+			console.error(`✖ Failed to stage ${r.name}@${r.version}: ${(error as Error).message}`);
 			if (r.name === "keyv") {
-				console.error("✖ Aborting: core `keyv` failed to publish, so its dependents will not be published.");
+				console.error("✖ Aborting: core `keyv` failed to stage, so its dependents will not be staged.");
 				process.exit(1);
 			}
 			failures.push(`${r.name}@${r.version}`);
@@ -540,11 +563,11 @@ function main(): void {
 	}
 
 	if (failures.length > 0) {
-		console.error(`\n✖ ${failures.length} package(s) failed to publish: ${failures.join(", ")}`);
+		console.error(`\n✖ ${failures.length} package(s) failed to stage: ${failures.join(", ")}`);
 		process.exit(1);
 	}
 
-	console.log(`\n✓ Published ${toPublish.length} package(s).`);
+	console.log(`\n✓ Staged ${toPublish.length} package(s).`);
 }
 
 // Only run when executed directly (e.g. `pnpm tsx scripts/release-publish.ts`),

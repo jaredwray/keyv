@@ -26,7 +26,9 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - pnpm is pinned via `packageManager` (`pnpm@11.18.0`).
 - Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`.
 - The lockfile is committed and CI installs with `--frozen-lockfile`. There is no Dependabot config; dependency updates go through reviewed PRs.
+- CI runs with read-only permissions (only the release job gets `id-token: write`); every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install` / `npm install`; workflows are security-linted with zizmor on every PR.
 - Workflows do not use `pull_request_target` and do not store npm tokens (OIDC trusted publishing).
+- The release workflow packs each package and stages it with `pnpm stage publish` after an Aikido `scan-release` gate. A maintainer still has to promote the staged version.
 - Published packages set `repository.url` to this repo so provenance can map back.
 - Socket reviews every pull request that changes dependencies.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
