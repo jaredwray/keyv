@@ -1,0 +1,5 @@
+{
+  "name": "Node.js",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:latest",
+  "postCreateCommand": "bash ./scripts/setup-cloud-environment.sh"
+}
