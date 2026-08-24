@@ -14,11 +14,11 @@ Profile: npm library · public
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified 2026-08-24
-- [ ] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` (PR pending)
-- [ ] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` (PR pending)
-- [ ] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (PR pending)
-- [ ] `blockExoticSubdeps: true` (PR pending)
-- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` (PR pending)
+- [ ] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` (PR #2055 pending)
+- [ ] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` (PR #2055 pending)
+- [ ] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (PR #2055 pending)
+- [ ] `blockExoticSubdeps: true` (PR #2055 pending)
+- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` (PR #2055 pending)
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified 2026-08-24
 
 ## 4. GitHub Actions
