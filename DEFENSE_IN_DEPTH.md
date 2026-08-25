@@ -34,11 +34,11 @@ Profile: npm library · public
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified 2026-08-24
 
 ## 5. npm publishing — npm libraries only
-- [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
+- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual) — verified 2026-08-25
 - [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2057
-- [ ] Maintainer promotes staged versions with 2FA (manual)
-- [ ] Drydock connected — staged releases reviewed before promotion (manual)
-- [ ] No direct publish rights: package requires 2FA and disallows tokens (manual)
+- [x] Maintainer promotes staged versions with 2FA (manual) — verified 2026-08-25
+- [x] Drydock connected — staged releases reviewed before promotion (manual) — verified 2026-08-25
+- [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified 2026-08-25
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified 2026-08-24
 
 ## 6. Security tooling
