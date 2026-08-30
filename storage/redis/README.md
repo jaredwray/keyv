@@ -25,6 +25,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 
 # Table of Contents
 * [Usage](#usage)
+* [Migrating from v5 to v6](#migrating-from-v5-to-v6)
 * [Migrating from v4 to v5](#migrating-from-v4-to-v5)
 * [Using the createKeyv function](#using-the-createkeyv-function)
 * [Using the createKeyvNonBlocking function](#using-the-createkeyvnonblocking-function)
@@ -103,10 +104,19 @@ Or you can create a new Redis instance and pass it in with `KeyvOptions` such as
 import Keyv from 'keyv';
 import KeyvRedis, { createClient } from '@keyv/redis';
 
-const redis = createClient('redis://user:pass@localhost:6379');
+const redis = createClient({ url: 'redis://user:pass@localhost:6379' });
 const keyvRedis = new KeyvRedis(redis);
 const keyv = new Keyv({ store: keyvRedis});
 ```
+
+# Migrating from v5 to v6
+
+`@keyv/redis` v6 tracks Keyv's shared version. The adapter already implemented the v6 storage contract (`capabilities.expires`); these are the redis-specific things to know:
+
+* **`@redis/client` is now v6.** `createClient`, `createCluster`, and `createSentinel` are still exported from this package. `createClient` takes a `RedisClientOptions` object (`{ url: 'redis://...' }`), not a URI string.
+* **Adapters receive absolute `expires`, not relative `ttl`.** When you call `keyv.set(key, value, 1000)`, Keyv converts that millisecond ttl to a Unix-ms deadline and passes it to the adapter. Direct adapter calls should pass `expires` (`Date.now() + ttl`), not a relative ttl.
+* **Keyv no longer prefixes keys.** Namespacing lives on the adapter (`namespace` + `keyPrefixSeparator`, default `::`). You do not need `useKeyPrefix: false` — that option was removed from Keyv.
+* **`createKeyv` accepts cluster and sentinel options** the same way the `KeyvRedis` constructor does.
 
 # Migrating from v4 to v5
 
@@ -194,7 +204,7 @@ keyv.store.namespace = 'my-namespace';
 
 # Using the `createKeyv` function
 
-The `createKeyv` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store. It automatically sets the `useKeyPrefix` option to `false`. Here is an example of how to use it:
+The `createKeyv` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store. It applies `namespace` on both Keyv and the adapter so keys are prefixed once. Here is an example of how to use it:
 
 ```js
 import { createKeyv } from '@keyv/redis';
@@ -233,9 +243,9 @@ You can set a namespace for your keys. This is useful if you want to manage your
 import Keyv from 'keyv';
 import KeyvRedis, { createClient } from '@keyv/redis';
 
-const redis = createClient('redis://user:pass@localhost:6379');
+const redis = createClient({ url: 'redis://user:pass@localhost:6379' });
 const keyvRedis = new KeyvRedis(redis);
-const keyv = new Keyv({ store: keyvRedis, namespace: 'my-namespace', useKeyPrefix: false });
+const keyv = new Keyv({ store: keyvRedis, namespace: 'my-namespace' });
 ```
 
 To make this easier, you can use the `createKeyv` function which will automatically set the `namespace` option to the `KeyvRedis` instance:
@@ -245,7 +255,7 @@ import { createKeyv } from '@keyv/redis';
 const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
 ```
 
-This will prefix all keys with `my-namespace:` and will also set `useKeyPrefix` to `false`. This is done to avoid double prefixing of keys as we transition out of the legacy behavior in Keyv. You can also set the namespace after the fact:
+This will prefix all keys with `my-namespace::` (the default `keyPrefixSeparator` is `::`). You can also set the namespace after the fact:
 
 ```js
 keyv.namespace = 'my-namespace';
@@ -255,21 +265,23 @@ NOTE: If you plan to do many clears or deletes, it is recommended to read the [P
 
 # Fixing Double Prefixing of Keys
 
-If you are using `Keyv` with `@keyv/redis` as the storage adapter, you may notice that keys are being prefixed twice. This is because `Keyv` has a default prefixing behavior that is applied to all keys. To fix this, you can set the `useKeyPrefix` option to `false` when creating the `Keyv` instance:
+In v6, Keyv does not prefix keys. The Redis adapter owns namespacing, so this:
 
 ```js
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'), { useKeyPrefix: false });
+const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379'), { namespace: 'my-namespace' });
 ```
 
-To make this easier, you can use the `createKeyv` function which will automatically set the `useKeyPrefix` option to `false`:
+stores keys as `my-namespace::key`. `createKeyv` does the same wiring for you:
 
 ```js
 import { createKeyv } from '@keyv/redis';
-const keyv = createKeyv('redis://user:pass@localhost:6379');
+const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
 ```
+
+If you are upgrading from v5, drop `useKeyPrefix` — it no longer exists. Do not also set Redis client's `keyPrefix`; use the adapter `namespace` instead so `SCAN`/`clear`/`iterator` stay in sync.
 
 ## Using Generic Types
 
@@ -280,12 +292,12 @@ import Keyv from 'keyv';
 import KeyvRedis, { createClient } from '@keyv/redis';
 
 
-type User {
+type User = {
   id: number
   name: string
 }
 
-const redis = createClient('redis://user:pass@localhost:6379');
+const redis = createClient({ url: 'redis://user:pass@localhost:6379' });
 
 const keyvRedis = new KeyvRedis<User>(redis);
 const keyv = new Keyv({ store: keyvRedis });
@@ -322,7 +334,7 @@ Keyv hands this adapter an **absolute** expiry — a Unix timestamp in milliseco
 
 * On the **first** expiring write, the adapter runs `INFO server` once, parses `redis_version`, and caches whether the server is 6.2+. Every later write reuses that cached answer, so detection costs one `INFO` round-trip per connection, not per write.
 * **6.2 or newer** → the write uses `PXAT: expires` (absolute).
-* **Older than 6.2** → the write uses `PX: max(0, expires - Date.now())` (relative, computed at write time). An expiry already in the past becomes `PX: 0`.
+* **Older than 6.2** → the write uses `PX: max(1, expires - Date.now())` (relative, computed at write time). An expiry already in the past becomes `PX: 1` because Redis rejects `SET ... PX 0`.
 * If the version **cannot be determined** — for example a cluster where `INFO` isn't directly available, or a transient error reading it — the adapter assumes `PXAT` is supported, since such deployments are overwhelmingly modern. The cached result means it won't keep retrying `INFO` on every write.
 
 The same detection and fallback apply to `setMany`, including the per-hash-slot grouping used in cluster mode. No configuration is required; you always call `keyv.set(key, value, ttl)` with a relative millisecond `ttl` (or rely on the `ttl` option) and the adapter chooses the correct Redis option for your server.
@@ -338,7 +350,7 @@ If you are deleting or clearing a large number of keys you can disable this by s
 ```js
 const keyv = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { useUnlink: false }));
 // Or
-keyv.useUnlink = false;
+keyv.store.useUnlink = false;
 ```
 
 # Gracefully Handling Errors and Timeouts
@@ -513,8 +525,8 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 ## Methods
 * **constructor([connection], [options])** - Create a new `KeyvRedis` instance. See [Keyv Redis Options](#keyv-redis-options).
 * **getClient()** - Get the connected Redis client. Connects first if the client is not already connected.
-* **set(key, value, [ttl])** - Set a key. `ttl` is in milliseconds. Returns `boolean`.
-* **setMany(entries)** - Set multiple keys using `KeyvEntry<Value>` objects (`{ key: string, value: Value, ttl?: number }`) via `MULTI/EXEC` transactions. Returns `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
+* **set(key, value, [expires])** - Set a key. `expires` is an absolute Unix timestamp in milliseconds. Returns `boolean`. When used through Keyv, pass a relative millisecond `ttl` to `keyv.set` — Keyv converts it to `expires` for you.
+* **setMany(entries)** - Set multiple keys using `KeyvStorageEntry` objects (`{ key: string, value: Value, expires?: number }`) via `MULTI/EXEC` transactions. Returns `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
 * **get(key)** - Get a key. Returns the value or `undefined` if the key does not exist.
 * **getMany(keys)** - Get multiple keys. Returns an array of values where each entry is the value or `undefined` if the key does not exist.
 * **has(key)** - Check if a key exists. Returns `boolean`.
@@ -548,7 +560,7 @@ redisClient.on('reconnecting', () => {
   console.log('Redis client reconnecting');
 });
 
-redisClient.on('end', () => {
+redisClient.on('disconnect', () => {
   console.log('Redis client disconnected');
 });
 ```
@@ -739,4 +751,4 @@ You can learn more about caching in NestJS in the [official documentation](https
 
 # License
 
-[MIT © Jared Wray](LISCENCE)
+[MIT © Jared Wray](LICENSE)
