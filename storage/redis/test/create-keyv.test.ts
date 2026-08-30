@@ -34,6 +34,15 @@ describe("createKeyv", () => {
 		expect(keyv.store).toBeInstanceOf(KeyvRedis);
 		expect(keyv.namespace).toBe(namespace);
 		expect(keyv.store.namespace).toBe(namespace);
+		expect(keyv.throwOnErrors).toBe(true);
+	});
+
+	test("should create a cluster-backed Keyv instance from cluster options", () => {
+		const keyv = createKeyv({
+			rootNodes: [{ url: "redis://localhost:7001" }],
+		});
+		expect(keyv.store).toBeInstanceOf(KeyvRedis);
+		expect(keyv.store.isCluster()).toBe(true);
 	});
 });
 

@@ -1,9 +1,12 @@
 import type {
+	RedisClientOptions,
 	RedisClientType,
+	RedisClusterOptions,
 	RedisClusterType,
 	RedisFunctions,
 	RedisModules,
 	RedisScripts,
+	RedisSentinelOptions,
 	RedisSentinelType,
 	RespVersions,
 	TypeMapping,
@@ -120,3 +123,14 @@ export type RedisClientConnectionType =
 	| RedisConnectionClientType
 	| RedisConnectionClusterType
 	| RedisConnectionSentinelType;
+
+/**
+ * Accepted first argument to the KeyvRedis constructor and `createKeyv`: a URI string,
+ * client/cluster/sentinel options object, or an already-created connection.
+ */
+export type KeyvRedisConnect =
+	| string
+	| RedisClientOptions
+	| RedisClusterOptions
+	| RedisSentinelOptions
+	| RedisClientConnectionType;

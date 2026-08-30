@@ -24,6 +24,7 @@ import {
 } from "keyv";
 import {
 	defaultReconnectStrategy,
+	type KeyvRedisConnect,
 	type KeyvRedisEntry,
 	type KeyvRedisOptions,
 	type KeyvRedisPropertyOptions,
@@ -36,6 +37,7 @@ import {
 
 export {
 	defaultReconnectStrategy,
+	type KeyvRedisConnect,
 	type KeyvRedisEntry,
 	type KeyvRedisOptions,
 	type KeyvRedisPropertyOptions,
@@ -103,19 +105,39 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	private _eventsWiredClient: RedisClientConnectionType | undefined;
 
 	/**
+	 * Stable `error` listener so it can be removed when the underlying client is replaced.
+	 */
+	private readonly _errorHandler = (error: Error) => {
+		this.emit("error", error);
+	};
+
+	/**
+	 * Stable `connect` listener so it can be removed when the underlying client is replaced.
+	 */
+	private readonly _connectHandler = () => {
+		this.emit("connect", this._client);
+	};
+
+	/**
+	 * Stable `disconnect` listener so it can be removed when the underlying client is replaced.
+	 */
+	private readonly _disconnectHandler = () => {
+		this.emit("disconnect", this._client);
+	};
+
+	/**
+	 * Stable `reconnecting` listener so it can be removed when the underlying client is replaced.
+	 */
+	private readonly _reconnectingHandler = (reconnectInfo: unknown) => {
+		this.emit("reconnecting", reconnectInfo);
+	};
+
+	/**
 	 * KeyvRedis constructor.
-	 * @param {string | RedisClientOptions | RedisClientType} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
+	 * @param {KeyvRedisConnect} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
 	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
 	 */
-	constructor(
-		connect?:
-			| string
-			| RedisClientOptions
-			| RedisClusterOptions
-			| RedisSentinelOptions
-			| RedisClientConnectionType,
-		options?: KeyvRedisOptions,
-	) {
+	constructor(connect?: KeyvRedisConnect, options?: KeyvRedisOptions) {
 		super({ throwOnEmptyListeners: false });
 
 		// Build the socket reconnect strategy
@@ -164,11 +186,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Set the Redis client, cluster, or sentinel connection. This will re-wire the event listeners.
+	 * Set the Redis client, cluster, or sentinel connection. This will re-wire the event listeners
+	 * and reset PXAT capability detection so the new server is introspected on the next expiring write.
 	 * @param {RedisClientConnectionType} value - The Redis client connection to use.
 	 */
 	public set client(value: RedisClientConnectionType) {
 		this._client = value;
+		this._pxatSupported = undefined;
 		this.initClient();
 	}
 
@@ -342,10 +366,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			if (this._connectionTimeout === undefined) {
 				await this._client.connect();
 			} else {
-				await Promise.race([
-					this._client.connect(),
-					this.createTimeoutPromise(this._connectionTimeout),
-				]);
+				await this.raceWithTimeout(this._client.connect(), this._connectionTimeout);
 			}
 		} catch (error) {
 			this.emit("error", error);
@@ -521,15 +542,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			return results;
 		} catch (error) {
 			this.emit("error", error);
-			// Re-throw connection errors if throwOnConnectError is true
-			/* v8 ignore next -- @preserve */
-			if (
-				this._throwOnConnectError &&
-				(error as Error).message === RedisErrorMessages.RedisClientNotConnectedThrown
-			) {
-				throw error;
-			}
-			if (this._throwOnErrors) {
+			if (this.shouldRethrow(error)) {
 				throw error;
 			}
 
@@ -603,15 +616,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			}
 		} catch (error) {
 			this.emit("error", error);
-			// Re-throw connection errors if throwOnConnectError is true
-			/* v8 ignore next -- @preserve */
-			if (
-				this._throwOnConnectError &&
-				(error as Error).message === RedisErrorMessages.RedisClientNotConnectedThrown
-			) {
-				throw error;
-			}
-			if (this._throwOnErrors) {
+			if (this.shouldRethrow(error)) {
 				throw error;
 			}
 
@@ -661,10 +666,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			const values = await this.mget<U>(keys);
 
 			return values;
-			/* c8 ignore next 5 */
 		} catch (error) {
 			this.emit("error", error);
-			if (this._throwOnErrors) {
+			if (this.shouldRethrow(error)) {
 				throw error;
 			}
 
@@ -750,14 +754,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			return prefixedKeys.map((key) => resultMap.get(key) ?? false);
 		} catch (error) {
 			this.emit("error", error);
-			// Re-throw connection errors if throwOnConnectError is true
-			if (
-				this._throwOnConnectError &&
-				(error as Error).message === RedisErrorMessages.RedisClientNotConnectedThrown
-			) {
-				throw error;
-			}
-			if (this._throwOnErrors) {
+			if (this.shouldRethrow(error)) {
 				throw error;
 			}
 
@@ -799,7 +796,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 */
 	public getKeyWithoutPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return key.replace(`${namespace}${this._keyPrefixSeparator}`, "");
+			const prefix = `${namespace}${this._keyPrefixSeparator}`;
+			if (key.startsWith(prefix)) {
+				return key.slice(prefix.length);
+			}
 		}
 
 		return key;
@@ -858,6 +858,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			do {
 				const result = await client.scan(cursor, {
 					MATCH: match,
+					COUNT: this._clearBatchSize,
 					TYPE: "string",
 				});
 				cursor = result.cursor.toString();
@@ -928,8 +929,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				}),
 			);
 		} catch (error) {
-			/* v8 ignore next -- @preserve */
 			this.emit("error", error);
+			if (this.shouldRethrow(error)) {
+				throw error;
+			}
 		}
 	}
 
@@ -1090,48 +1093,68 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Wire up the client events (error, connect, disconnect, reconnecting) to be re-emitted on this instance.
-	 * Listeners are only attached once per client instance to avoid duplicates.
+	 * Listeners are only attached once per client instance to avoid duplicates. When the client is replaced,
+	 * listeners are removed from the previous client so events from a discarded connection are not re-emitted.
 	 */
 	private initClient(): void {
-		// Only wire up listeners once per client instance so that repeated calls
-		// (for example on reconnect via getClient) do not accumulate duplicate listeners.
 		if (this._eventsWiredClient === this._client) {
 			return;
 		}
 
+		if (this._eventsWiredClient) {
+			this._eventsWiredClient.removeListener("error", this._errorHandler);
+			this._eventsWiredClient.removeListener("connect", this._connectHandler);
+			this._eventsWiredClient.removeListener("disconnect", this._disconnectHandler);
+			this._eventsWiredClient.removeListener("reconnecting", this._reconnectingHandler);
+		}
+
 		this._eventsWiredClient = this._client;
 
-		this._client.on("error", (error) => {
-			this.emit("error", error);
-		});
-
-		this._client.on("connect", () => {
-			this.emit("connect", this._client);
-		});
-
+		this._client.on("error", this._errorHandler);
+		this._client.on("connect", this._connectHandler);
 		/* v8 ignore next -- @preserve */
-		this._client.on("disconnect", () => {
-			this.emit("disconnect", this._client);
-		});
-
+		this._client.on("disconnect", this._disconnectHandler);
 		/* v8 ignore next -- @preserve */
-		this._client.on("reconnecting", (reconnectInfo) => {
-			this.emit("reconnecting", reconnectInfo);
-		});
+		this._client.on("reconnecting", this._reconnectingHandler);
 	}
 
 	/**
-	 * Create a promise that rejects after the provided timeout. Used to race against the connection.
-	 * @param {number} timeoutMs - the timeout in milliseconds before the promise rejects
-	 * @returns {Promise<never>} - a promise that always rejects once the timeout elapses
+	 * Whether an operation error should be re-thrown after being emitted. Connection failures
+	 * honor `throwOnConnectError`; all other failures honor `throwOnErrors`.
 	 */
-	private async createTimeoutPromise(timeoutMs: number): Promise<never> {
-		return new Promise<never>((_, reject) =>
-			setTimeout(() => {
-				/* v8 ignore next 3 -- @preserve */
-				reject(new Error(`Redis timed out after ${timeoutMs}ms`));
-			}, timeoutMs),
-		);
+	private shouldRethrow(error: unknown): boolean {
+		if (
+			this._throwOnConnectError &&
+			error instanceof Error &&
+			error.message === RedisErrorMessages.RedisClientNotConnectedThrown
+		) {
+			return true;
+		}
+
+		return this._throwOnErrors;
+	}
+
+	/**
+	 * Race a promise against a timeout, always clearing the timer so a successful connect
+	 * does not leave a dangling rejection.
+	 * @param {Promise<T>} promise - the promise to race
+	 * @param {number} timeoutMs - the timeout in milliseconds before the race rejects
+	 * @returns {Promise<T>} - the original promise result, or a timeout rejection
+	 */
+	private async raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
+		try {
+			const timeout = new Promise<never>((_, reject) => {
+				timeoutId = setTimeout(() => {
+					reject(new Error(`Redis timed out after ${timeoutMs}ms`));
+				}, timeoutMs);
+			});
+			return await Promise.race([promise, timeout]);
+		} finally {
+			if (timeoutId !== undefined) {
+				clearTimeout(timeoutId);
+			}
+		}
 	}
 }
 

@@ -66,6 +66,33 @@ describe("events", () => {
 		expect(keyvRedis.client.listenerCount("connect")).toBe(1);
 	});
 
+	test("should remove listeners from the previous client when replaced", () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		const oldClient = keyvRedis.client;
+		const newClient = createClient({ url: redisUri }) as RedisClientType;
+
+		expect(oldClient.listenerCount("error")).toBe(1);
+		expect(oldClient.listenerCount("connect")).toBe(1);
+
+		keyvRedis.client = newClient;
+
+		expect(oldClient.listenerCount("error")).toBe(0);
+		expect(oldClient.listenerCount("connect")).toBe(0);
+		expect(oldClient.listenerCount("disconnect")).toBe(0);
+		expect(oldClient.listenerCount("reconnecting")).toBe(0);
+		expect(newClient.listenerCount("error")).toBe(1);
+		expect(newClient.listenerCount("connect")).toBe(1);
+	});
+
+	test("should reset PXAT detection when the client is replaced", () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		(keyvRedis as unknown as { _pxatSupported: boolean })._pxatSupported = false;
+
+		keyvRedis.client = createClient({ url: redisUri }) as RedisClientType;
+
+		expect((keyvRedis as unknown as { _pxatSupported?: boolean })._pxatSupported).toBeUndefined();
+	});
+
 	test("should emit an error event when clearBatchSize is set to an invalid value", () => {
 		const keyvRedis = new KeyvRedis(redisUri);
 		let received = "";

@@ -2,9 +2,10 @@ import process from "node:process";
 import { faker } from "@faker-js/faker";
 import { delay } from "@keyv/test-suite";
 import { describe, expect, test, vi } from "vitest";
-import KeyvRedis from "../src/index.js";
+import KeyvRedis, { RedisErrorMessages } from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
+const redisBadUri = process.env.REDIS_BAD_URI ?? "redis://localhost:6378";
 
 describe("get", () => {
 	test("should get many values", async () => {
@@ -159,5 +160,37 @@ describe("get", () => {
 		const values = await keyvRedis.getMany([]);
 		expect(values).toEqual([]);
 		await keyvRedis.disconnect();
+	});
+
+	test("should throw on getMany connection error when throwOnConnectError is true", async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri, {
+			throwOnConnectError: true,
+			connectionTimeout: 500,
+		});
+		keyvRedis.on("error", () => {});
+
+		let didError = false;
+		try {
+			await keyvRedis.getMany([faker.string.alphanumeric(10), faker.string.alphanumeric(10)]);
+		} catch (error) {
+			didError = true;
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
+		}
+
+		expect(didError).toBe(true);
+	});
+
+	test("should not throw on getMany connection error when throwOnConnectError is false", async () => {
+		const keyvRedis = new KeyvRedis(redisBadUri, {
+			throwOnConnectError: false,
+			connectionTimeout: 500,
+		});
+		keyvRedis.on("error", () => {});
+
+		const result = await keyvRedis.getMany([
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+		]);
+		expect(result).toEqual([undefined, undefined]);
 	});
 });

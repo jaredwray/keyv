@@ -18,6 +18,13 @@ describe("Namespace", () => {
 		const testKey = faker.string.uuid();
 		const key = keyvRedis.createKeyPrefix(testKey, "ns2");
 		expect(key).toBe(`ns2::${testKey}`);
+		expect(keyvRedis.getKeyWithoutPrefix(key, "ns2")).toBe(testKey);
+	});
+
+	test("getKeyWithoutPrefix only strips a leading namespace prefix", () => {
+		const keyvRedis = new KeyvRedis();
+		const key = "ns1::hello::ns1::world";
+		expect(keyvRedis.getKeyWithoutPrefix(key, "ns1")).toBe("hello::ns1::world");
 	});
 
 	test("if no namespace on key prefix and no default namespace", async () => {

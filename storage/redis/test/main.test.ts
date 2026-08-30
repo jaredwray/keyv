@@ -2,7 +2,7 @@ import process from "node:process";
 import { faker } from "@faker-js/faker";
 import { createClient, type RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
-import KeyvRedis, { createKeyv } from "../src/index.js";
+import KeyvRedis, { createKeyv, RedisErrorMessages } from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 
@@ -219,5 +219,24 @@ describe("KeyvRedis Methods", () => {
 		keyvRedis.namespace = "ns1";
 		await keyvRedis.clear();
 		await keyvRedis.disconnect();
+	});
+
+	test("should throw on clear connection error when throwOnConnectError is true", async () => {
+		const redisBadUri = process.env.REDIS_BAD_URI ?? "redis://localhost:6378";
+		const keyvRedis = new KeyvRedis(redisBadUri, {
+			throwOnConnectError: true,
+			connectionTimeout: 500,
+		});
+		keyvRedis.on("error", () => {});
+
+		let didError = false;
+		try {
+			await keyvRedis.clear();
+		} catch (error) {
+			didError = true;
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
+		}
+
+		expect(didError).toBe(true);
 	});
 });
