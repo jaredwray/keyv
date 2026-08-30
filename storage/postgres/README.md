@@ -29,7 +29,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
   - [clearExpiredInterval](#clearexpiredinterval)
   - [namespace](#namespace)
 - [Methods](#methods)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
@@ -98,9 +98,9 @@ The adapter now extends [Hookified](https://hookified.org) instead of a custom E
 
 ### Native TTL support with `expires` column
 
-v6 adds an `expires BIGINT` column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the `expires` timestamp from the serialized value and stores it in the column. A partial index is created on the `expires` column for efficient cleanup queries.
+v6 adds an `expires BIGINT` column to the table. Keyv core converts a relative TTL into an absolute Unix-ms timestamp and passes it to `set`/`setMany`; the adapter stores that timestamp in the column. It does **not** parse expiry out of the serialized value. A partial index is created on `expires` for efficient cleanup queries.
 
-The schema migration is automatic on connect — existing tables get the column added via `ADD COLUMN IF NOT EXISTS`.
+The schema migration is automatic on connect — existing tables get the column added via `ADD COLUMN IF NOT EXISTS`. Legacy rows still need the [migration script](#running-the-migration-script) so namespaced keys and existing JSON `expires` values are rewritten.
 
 ### `clearExpired()` method
 
@@ -146,32 +146,38 @@ The iterator now uses cursor-based (keyset) pagination instead of `OFFSET`. This
 
 ## Running the migration script
 
-If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script is located at `scripts/migrate-v6.ts` in the `@keyv/postgres` package.
+If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script ships in the npm package at `scripts/migrate-v6.ts` (Node.js 22.19+ can run it directly via type stripping).
 
-Preview the changes first with `--dry-run`:
+Preview the changes first with `--dry-run`. Dry-run mode only reads schema metadata and previews affected rows; it does not modify the schema or data:
 
 ```shell
-npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --dry-run
+node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --dry-run
 ```
 
 Run the migration:
 
 ```shell
-npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname
+node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname
 ```
 
 You can also specify a custom table, schema, and column lengths:
 
 ```shell
-npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --table cache --schema keyv
-npx tsx scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --keyLength 512 --namespaceLength 512
+node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --table cache --schema keyv
+node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --keyLength 512 --namespaceLength 512
 ```
 
-The migration runs inside a transaction and will roll back automatically if anything fails.
+From a clone of this repo you can run `node scripts/migrate-v6.ts` in `storage/postgres` with the same flags.
+
+The data rewrite runs inside a transaction and will roll back automatically if it fails.
 
 **Important notes:**
-- The script only migrates rows where `namespace IS NULL`. Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
+- Dry-run does not add columns, drop the legacy primary key, or rewrite rows.
+- The script drops the legacy single-column primary key on `key` **before** rewriting rows. That is required so two namespaces can share the same unprefixed key (for example `ns1:foo` and `ns2:foo` both become `key=foo` with different `namespace` values).
+- After the data rewrite it creates the unique `(key, COALESCE(namespace, ''))` index and the partial `expires` index, matching what the adapter creates on connect.
+- The script only migrates rows where `namespace IS NULL` (or all colon-prefixed keys if the column does not exist yet). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
 - Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
+- The `expires` column is populated from legacy JSON envelopes (`{"value":...,"expires":...}`). Non-JSON values (compressed, encrypted, custom serializers) are left with `expires` NULL; new writes from Keyv v6 store expiry in the column directly.
 
 # Constructor Options
 
@@ -191,7 +197,7 @@ The migration runs inside a transaction and will roll back automatically if anyt
 
 # Properties
 
-All configuration options are exposed as properties with getters and setters on the `KeyvPostgres` instance. You can read or update them after construction.
+All configuration options are exposed as properties with getters and setters on the `KeyvPostgres` instance. `namespace`, `iterationLimit`, and `clearExpiredInterval` take effect immediately. `uri` and `ssl` are applied when the connection pool is created (constructor); changing them later does not reconnect. `table`, `schema`, `keyLength`, `namespaceLength`, and `useUnloggedTable` are used to create/migrate the table at construction — changing `table`/`schema` afterward retargets subsequent queries but does not create the new table.
 
 ## uri
 
@@ -324,28 +330,30 @@ console.log(store.namespace); // 'my-namespace'
 
 # Methods
 
-## .set(key, value, ttl?)
+## .set(key, value, expires?)
 
 Set a key-value pair. Returns `true` on success, `false` on failure.
 
 - `key` *(string)* - The key to set.
 - `value` *(any)* - The value to store.
-- `ttl` *(number, optional)* - Time to live in milliseconds.
+- `expires` *(number, optional)* - Absolute expiry as Unix milliseconds since epoch. `undefined` means no expiry. A value `<= Date.now()` is already expired.
 - Returns: `Promise<boolean>`
 
+When you call `keyv.set(key, value, ttl)` on a Keyv instance, core converts the relative TTL into this absolute `expires` timestamp before it reaches the adapter. Do not pass a relative TTL to `KeyvPostgres#set` directly.
+
 ```js
-await keyv.set('foo', 'bar');
-await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
+await store.set('foo', 'bar');
+await store.set('foo', 'bar', Date.now() + 5000); // expires in 5 seconds
 ```
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once using a single atomic PostgreSQL `INSERT ... UNNEST ... ON CONFLICT` statement. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
+Set multiple key-value pairs at once using a single atomic PostgreSQL `INSERT ... UNNEST ... ON CONFLICT` statement. Each entry is a `KeyvStorageEntry<Value>` object (`{ key: string, value: Value, expires?: number }`), where `expires` is an absolute Unix-ms timestamp and `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
 
 ```js
-const results = await keyv.setMany([
+const results = await store.setMany([
   { key: 'foo', value: 'bar' },
-  { key: 'baz', value: 'qux' },
+  { key: 'baz', value: 'qux', expires: Date.now() + 5000 },
 ]); // [true, true]
 ```
 
@@ -458,6 +466,8 @@ The adapter automatically uses the default settings on the `pg` package for conn
 const keyv = new Keyv({ store: new KeyvPostgres({ uri: 'postgresql://user:pass@localhost:5432/dbname', max: 20 }) });
 ```
 
+Adapters that share the same URI and pool options reuse a single `pg.Pool`. `disconnect()` releases this instance's reference; the underlying pool is closed only when the last adapter using it disconnects.
+
 # SSL/TLS Connections
 
 You can configure SSL/TLS connections by passing the `ssl` option. This is passed directly to the underlying `pg` driver.
@@ -490,4 +500,4 @@ pnpm test
 
 # License
 
-[MIT © Jared Wray](LISCENCE)
+[MIT © Jared Wray](LICENSE)
