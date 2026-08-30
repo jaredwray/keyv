@@ -20,7 +20,7 @@ async function createReadyCluster(): Promise<Cluster> {
 describe("cluster", () => {
 	test("should setMany without CROSSSLOT errors", { retry: 3 }, async () => {
 		const cluster = await createReadyCluster();
-		const keyv = new KeyvValkey(cluster);
+		const store = new KeyvValkey(cluster);
 
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
@@ -31,21 +31,21 @@ describe("cluster", () => {
 		const val3 = faker.string.alphanumeric(10);
 		const val4 = faker.string.alphanumeric(10);
 
-		await keyv.setMany([
+		await store.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
 			{ key: key3, value: val3 },
 			{ key: key4, value: val4 },
 		]);
 
-		expect(await keyv.getMany([key1, key2, key3, key4])).toEqual([val1, val2, val3, val4]);
+		expect(await store.getMany([key1, key2, key3, key4])).toEqual([val1, val2, val3, val4]);
 
-		await keyv.disconnect();
+		await store.disconnect();
 	});
 
 	test("should getMany without CROSSSLOT errors", { retry: 3 }, async () => {
 		const cluster = await createReadyCluster();
-		const keyv = new KeyvValkey(cluster);
+		const store = new KeyvValkey(cluster);
 
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
@@ -54,18 +54,20 @@ describe("cluster", () => {
 		const val2 = faker.string.alphanumeric(10);
 		const val3 = faker.string.alphanumeric(10);
 
-		await keyv.set(key1, val1);
-		await keyv.set(key2, val2);
-		await keyv.set(key3, val3);
+		await store.set(key1, val1);
+		await store.set(key2, val2);
+		await store.set(key3, val3);
 
-		expect(await keyv.getMany([key1, key2, key3])).toEqual([val1, val2, val3]);
+		const values = await store.getMany([key1, key2, key3]);
+		expect(values).toEqual([val1, val2, val3]);
+		expect(values.every((value) => value !== null)).toBe(true);
 
-		await keyv.disconnect();
+		await store.disconnect();
 	});
 
 	test("should deleteMany without CROSSSLOT errors", { retry: 3 }, async () => {
 		const cluster = await createReadyCluster();
-		const keyv = new KeyvValkey(cluster);
+		const store = new KeyvValkey(cluster);
 
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
@@ -74,21 +76,21 @@ describe("cluster", () => {
 		const val2 = faker.string.alphanumeric(10);
 		const val3 = faker.string.alphanumeric(10);
 
-		await keyv.set(key1, val1);
-		await keyv.set(key2, val2);
-		await keyv.set(key3, val3);
+		await store.set(key1, val1);
+		await store.set(key2, val2);
+		await store.set(key3, val3);
 
-		expect(await keyv.deleteMany([key1, key2, key3])).toEqual([true, true, true]);
-		expect(await keyv.get(key1)).toBe(undefined);
-		expect(await keyv.get(key2)).toBe(undefined);
-		expect(await keyv.get(key3)).toBe(undefined);
+		expect(await store.deleteMany([key1, key2, key3])).toEqual([true, true, true]);
+		expect(await store.get(key1)).toBeUndefined();
+		expect(await store.get(key2)).toBeUndefined();
+		expect(await store.get(key3)).toBeUndefined();
 
-		await keyv.disconnect();
+		await store.disconnect();
 	});
 
 	test("should hasMany without CROSSSLOT errors", { retry: 3 }, async () => {
 		const cluster = await createReadyCluster();
-		const keyv = new KeyvValkey(cluster);
+		const store = new KeyvValkey(cluster);
 
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
@@ -96,11 +98,11 @@ describe("cluster", () => {
 		const val1 = faker.string.alphanumeric(10);
 		const val2 = faker.string.alphanumeric(10);
 
-		await keyv.set(key1, val1);
-		await keyv.set(key2, val2);
+		await store.set(key1, val1);
+		await store.set(key2, val2);
 
-		expect(await keyv.hasMany([key1, key2, key3])).toEqual([true, true, false]);
+		expect(await store.hasMany([key1, key2, key3])).toEqual([true, true, false]);
 
-		await keyv.disconnect();
+		await store.disconnect();
 	});
 });

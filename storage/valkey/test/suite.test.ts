@@ -14,6 +14,7 @@ afterAll(async () => {
 	await keyv.disconnect();
 });
 
+// The shared suite registers tests via the provided function; vitest's `it` is required here.
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
-storageTestSuite(it, store, { batch: false });
+storageTestSuite(it, store);

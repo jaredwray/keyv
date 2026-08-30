@@ -8,126 +8,126 @@ const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
 
 describe("set", () => {
 	test("should set and return a stored value", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		expect(await keyv.set(key, value)).toBe(true);
-		expect(await keyv.get(key)).toBe(value);
-		await keyv.disconnect();
+		expect(await store.set(key, value)).toBe(true);
+		expect(await store.get(key)).toBe(value);
+		await store.disconnect();
 	});
 
 	test("should return false when setting an undefined value", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
-		expect(await keyv.set(key, undefined)).toBe(false);
-		expect(await keyv.get(key)).toBe(undefined);
-		await keyv.disconnect();
+		expect(await store.set(key, undefined)).toBe(false);
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
 	});
 
 	test("should expire a value after its expiry", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await keyv.set(key, value, Date.now() + 100);
-		expect(await keyv.get(key)).toBe(value);
+		await store.set(key, value, Date.now() + 100);
+		expect(await store.get(key)).toBe(value);
 		await delay(200);
-		expect(await keyv.get(key)).toBe(undefined);
-		await keyv.disconnect();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
 	});
 
 	test("should set a value when useSets is false", async () => {
-		const keyv = new KeyvValkey(valkeyUri, { useSets: false });
+		const store = new KeyvValkey(valkeyUri, { useSets: false });
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await keyv.set(key, value);
-		expect(await keyv.get(key)).toBe(value);
-		await keyv.disconnect();
+		await store.set(key, value);
+		expect(await store.get(key)).toBe(value);
+		await store.disconnect();
 	});
 });
 
 describe("setMany", () => {
 	test("should set multiple values", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		const key3 = faker.string.alphanumeric(10);
 		const val1 = faker.string.alphanumeric(10);
 		const val2 = faker.string.alphanumeric(10);
 		const val3 = faker.string.alphanumeric(10);
-		await keyv.setMany([
+		await store.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: val2 },
 			{ key: key3, value: val3 },
 		]);
-		expect(await keyv.getMany([key1, key2, key3])).toEqual([val1, val2, val3]);
-		await keyv.disconnect();
+		expect(await store.getMany([key1, key2, key3])).toEqual([val1, val2, val3]);
+		await store.disconnect();
 	});
 
 	test("should expire values with an expiry", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await keyv.setMany([{ key, value, expires: Date.now() + 100 }]);
-		expect(await keyv.get(key)).toBe(value);
+		await store.setMany([{ key, value, expires: Date.now() + 100 }]);
+		expect(await store.get(key)).toBe(value);
 		await delay(200);
-		expect(await keyv.get(key)).toBe(undefined);
-		await keyv.disconnect();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
 	});
 
 	test("should not error on an empty array", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
-		expect(await keyv.setMany([])).toEqual([]);
-		await keyv.disconnect();
+		const store = new KeyvValkey(valkeyUri);
+		expect(await store.setMany([])).toEqual([]);
+		await store.disconnect();
 	});
 
 	test("should skip undefined values", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		const val1 = faker.string.alphanumeric(10);
-		await keyv.setMany([
+		await store.setMany([
 			{ key: key1, value: val1 },
 			{ key: key2, value: undefined },
 		]);
-		expect(await keyv.get(key1)).toBe(val1);
-		expect(await keyv.get(key2)).toBe(undefined);
-		await keyv.disconnect();
+		expect(await store.get(key1)).toBe(val1);
+		expect(await store.get(key2)).toBeUndefined();
+		await store.disconnect();
 	});
 
 	test("should not error when all values are undefined", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
-		await keyv.setMany([
+		await store.setMany([
 			{ key: key1, value: undefined },
 			{ key: key2, value: undefined },
 		]);
-		expect(await keyv.get(key1)).toBe(undefined);
-		expect(await keyv.get(key2)).toBe(undefined);
-		await keyv.disconnect();
+		expect(await store.get(key1)).toBeUndefined();
+		expect(await store.get(key2)).toBeUndefined();
+		await store.disconnect();
 	});
 
 	test("should return false entries when the transaction throws", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		let emittedError = false;
-		keyv.on("error", () => {
+		store.on("error", () => {
 			emittedError = true;
 		});
 		// biome-ignore lint/complexity/useLiteralKeys: accessing private property to mock the client
-		const client = keyv["_client"];
+		const client = store["_client"];
 		const originalMulti = client.multi.bind(client);
 		client.multi = () => {
-			throw new Error("multi failure");
+			throw new Error(faker.lorem.sentence());
 		};
 
-		const result = await keyv.setMany([
-			{ key: faker.string.alphanumeric(10), value: "val1" },
-			{ key: faker.string.alphanumeric(10), value: "val2" },
+		const result = await store.setMany([
+			{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10) },
+			{ key: faker.string.alphanumeric(10), value: faker.string.alphanumeric(10) },
 		]);
 		expect(result).toEqual([false, false]);
 		expect(emittedError).toBe(true);
 
 		client.multi = originalMulti;
-		await keyv.disconnect();
+		await store.disconnect();
 	});
 });

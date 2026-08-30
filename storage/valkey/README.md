@@ -17,12 +17,14 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
 
 - [Install](#install)
 - [Usage](#usage)
+- [Using the createKeyv function](#using-the-createkeyv-function)
 - [Migrating to v6](#migrating-to-v6)
 - [Constructor Options](#constructor-options)
 - [Properties](#properties)
+  - [capabilities](#capabilities)
   - [namespace](#namespace)
   - [useSets](#usesets)
-  - [useRedisSets (deprecated)](#useredisSets-deprecated)
+  - [useRedisSets (deprecated)](#useredissets-deprecated)
   - [client](#client)
 - [Methods](#methods)
   - [.get(key)](#getkey)
@@ -36,17 +38,18 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
   - [.clear()](#clear)
   - [.iterator()](#iterator)
   - [.disconnect()](#disconnect)
+- [Events](#events)
 - [Expiration and TTL](#expiration-and-ttl)
 - [Clustering](#clustering)
 - [License](#license)
 
-# Install
+## Install
 
 ```shell
 npm install --save keyv @keyv/valkey
 ```
 
-# Usage
+## Usage
 
 This is using the helper `createKeyv` function to create a Keyv instance with the Valkey storage adapter:
 
@@ -101,6 +104,21 @@ const cluster = new Redis.Cluster([{ host: '127.0.0.1', port: 7001 }]);
 const keyvValkey = new KeyvValkey(cluster);
 const keyv = new Keyv({ store: keyvValkey });
 ```
+
+## Using the createKeyv function
+
+`createKeyv` is a convenience factory that returns a `Keyv` instance with the Valkey adapter already wired. The namespace is taken from the adapter so it is preserved whether it was passed in the connect options object or the second argument.
+
+```js
+import {createKeyv} from '@keyv/valkey';
+
+const keyv = createKeyv('redis://localhost:6379', { namespace: 'my-app' });
+console.log(keyv.namespace); // 'my-app'
+console.log(keyv.store.namespace); // 'my-app'
+```
+
+If no connect argument is provided, the default URI is `redis://localhost:6379`.
+
 ## Migrating to v6
 
 ### Breaking changes
@@ -149,19 +167,34 @@ When `useSets` is enabled, all keys (both data keys and the SET tracking key) no
 
 The `clear()` method automatically detects and cleans up legacy `namespace:`-prefixed SET keys, so no manual migration is needed.
 
+#### Missing values are `undefined`, never `null`
+
+`get()`, `getMany()`, and `iterator()` return `undefined` for missing keys. They never return `null`.
+
 ## Constructor Options
 
 `KeyvValkey` accepts a connection URI string, an options object, or an existing iovalkey `Redis`/`Cluster` instance. The options object accepts the following properties along with any [`RedisOptions`](https://github.com/valkey-io/iovalkey#connect-to-valkey) from the `iovalkey` library:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `uri` | `string` | `undefined` | Valkey connection URI |
+| `uri` | `string` | `undefined` | Valkey connection URI (`redis://` or `valkey://`) |
 | `useSets` | `boolean` | `false` | Whether to use sets for namespace key management |
 | `namespace` | `string` | `undefined` | Namespace used to prefix keys for multi-tenant isolation |
 
 ## Properties
 
 All configuration options are exposed as properties with getters and setters on the `KeyvValkey` instance. You can read or update them after construction.
+
+### capabilities
+
+Read-only capability descriptor for the v6 storage contract. `capabilities.expires` is `true`, which means `set()` / `setMany()` accept an absolute Unix-ms `expires` timestamp.
+
+- Type: `KeyvStorageCapability`
+
+```js
+const store = new KeyvValkey('redis://localhost:6379');
+console.log(store.capabilities.expires); // true
+```
 
 ### namespace
 
@@ -192,7 +225,7 @@ console.log(store.useSets); // true
 
 When `useSets` is enabled, all keys use the `sets:` prefix (e.g., `sets:myns:mykey`) to isolate them from non-useSets keys. The SET tracking key is stored at `sets:<namespace>`.
 
-When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS` command) to find and delete keys, which may be slower on very large databases.
+When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS` command) to find and delete keys, which may be slower on very large databases. With no namespace this matches every key in the current database.
 
 ### useRedisSets (deprecated)
 
@@ -200,7 +233,7 @@ Deprecated alias for `useSets`. Use `useSets` instead.
 
 ### client
 
-Get or set the underlying iovalkey `Redis` or `Cluster` client instance.
+Get or set the underlying iovalkey `Redis` or `Cluster` client instance. Replacing the client re-wires Hookified event listeners on the new instance and removes them from the previous one.
 
 - Type: `Redis | Cluster`
 
@@ -218,7 +251,7 @@ store.client = new Redis('redis://localhost:6380');
 
 ### .get(key)
 
-Returns the value for the given key. Returns `undefined` if the key does not exist.
+Returns the value for the given key. Returns `undefined` if the key does not exist. Never returns `null`.
 
 ```js
 const value = await store.get('foo');
@@ -226,7 +259,7 @@ const value = await store.get('foo');
 
 ### .getMany(keys)
 
-Returns an array of values for the given keys. Returns `undefined` for any key that does not exist.
+Returns an array of values for the given keys. Returns `undefined` for any key that does not exist. Never returns `null` entries. In cluster mode, keys are grouped by hash slot and fetched with per-slot `MGET`.
 
 ```js
 const values = await store.getMany(['foo', 'bar']);
@@ -235,6 +268,8 @@ const values = await store.getMany(['foo', 'bar']);
 ### .set(key, value, expires?)
 
 Sets a value for the given key with an optional absolute `expires` (Unix ms since epoch). The adapter writes it via `PXAT`. Through Keyv (`keyv.set(key, value, ttl)`) you still pass a relative TTL in milliseconds — Keyv converts it to `expires` for you.
+
+Returns `true` if the value was stored, or `false` if `value` is `undefined` or the write failed (the failure is also emitted as an `error` event).
 
 ```js
 await store.set('foo', 'bar');
@@ -262,7 +297,7 @@ const deleted = await store.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store in a single batch operation. Returns a `boolean[]` indicating whether each key was deleted.
+Deletes multiple key-value pairs from the store. Each key is deleted individually (cluster-safe; not a single `MULTI` batch). Returns a `boolean[]` indicating whether each key was deleted.
 
 ```js
 const results = await store.deleteMany(['foo', 'bar']); // [true, true]
@@ -278,7 +313,7 @@ const exists = await store.has('foo');
 
 ### .hasMany(keys)
 
-Checks if multiple keys exist in the store in a single batch operation. Returns an array of booleans.
+Checks if multiple keys exist in the store in a single batch operation. In cluster mode, keys are grouped by hash slot. Returns an array of booleans.
 
 ```js
 const results = await store.hasMany(['foo', 'bar', 'baz']);
@@ -287,7 +322,7 @@ const results = await store.hasMany(['foo', 'bar', 'baz']);
 
 ### .clear()
 
-Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared.
+Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
 
 ```js
 await store.clear();
@@ -295,7 +330,7 @@ await store.clear();
 
 ### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance. Missing values are yielded as `undefined`, never `null`.
 
 ```js
 for await (const [key, value] of store.iterator()) {
@@ -305,17 +340,50 @@ for await (const [key, value] of store.iterator()) {
 
 ### .disconnect()
 
-Disconnects from the Valkey server.
+Disconnects from the Valkey server. Subsequent operations on this adapter will throw.
 
 ```js
 await store.disconnect();
 ```
 
+## Events
+
+`KeyvValkey` extends [Hookified](https://hookified.org), so you can use `on`, `once`, `off`, and `emit`. The adapter re-emits the following events from the underlying iovalkey client:
+
+| Event | Source | Payload |
+| --- | --- | --- |
+| `error` | client `error` | The `Error` from the client |
+| `connect` | client `connect` | The iovalkey client instance |
+| `reconnecting` | client `reconnecting` | Arguments from the client (e.g. delay) |
+| `disconnect` | client `close` | The iovalkey client instance |
+
+```js
+const store = new KeyvValkey('redis://localhost:6379');
+
+store.on('error', (error) => {
+  console.error(error);
+});
+
+store.on('connect', (client) => {
+  console.log('connected', client);
+});
+
+store.on('reconnecting', () => {
+  console.log('reconnecting');
+});
+
+store.on('disconnect', () => {
+  console.log('disconnected');
+});
+```
+
+Replacing `store.client` removes listeners from the previous client and attaches them to the new one, so events are not duplicated or leaked.
+
 ## Expiration and TTL
 
 Keyv hands this adapter an **absolute** expiry — a Unix timestamp in milliseconds — computed once on the Keyv host. The adapter writes it with `SET ... PXAT`, the absolute-expiry option, so the deadline is immune to clock skew and to any latency between Keyv computing the expiry and Valkey receiving the command. The same applies to `setMany`, including the per-hash-slot grouping used in cluster mode.
 
-Unlike the [Redis adapter](https://github.com/jaredwray/keyv/tree/main/storage/redis#expiration-and-ttl), there is **no relative `PX` fallback** and none is needed: `PXAT` was added in Redis 6.2, and every Valkey release is forked from Redis 7.2+, so absolute expiry is always available. You always call `keyv.set(key, value, ttl)` with a relative millisecond `ttl` (or rely on the `ttl` option); the adapter converts it to the absolute `PXAT` deadline for you.
+Unlike the [Redis adapter](https://github.com/jaredwray/keyv/tree/main/storage/redis#expiration-and-ttl), there is **no relative `PX` fallback** and none is needed: `PXAT` was added in Redis 6.2, and every Valkey release is forked from Redis 7.2+, so absolute expiry is always available. You always call `keyv.set(key, value, ttl)` with a relative millisecond `ttl` (or rely on the `ttl` option); Keyv converts it to the absolute `PXAT` deadline for you.
 
 ## Clustering
 
@@ -333,14 +401,17 @@ const cluster = new Redis.Cluster([
 const store = new KeyvValkey(cluster);
 ```
 
-Batch methods (`getMany`, `setMany`, `deleteMany`, `hasMany`) automatically group keys by hash slot and run separate transactions per slot group. This avoids `CROSSSLOT` errors without any extra configuration.
+`getMany`, `setMany`, and `hasMany` automatically group keys by hash slot and run separate commands per slot group. This avoids `CROSSSLOT` errors without any extra configuration.
+
+`deleteMany` deletes each key individually, which is also cluster-safe.
 
 Single-key methods (`get`, `set`, `delete`, `has`) work automatically in cluster mode — iovalkey routes each command to the correct node.
 
 ### Cluster gotchas
 
-- **`clear()` with `useSets: false` (the default)** uses the `KEYS` command, which only scans the node that receives the command. In cluster mode this may miss keys on other nodes. Set `useSets: true` if you need reliable `clear()` across all cluster nodes.
+- **`clear()` with `useSets: false` (the default)** uses the `KEYS` command, which only scans the node that receives the command. In cluster mode this may miss keys on other nodes.
 - **`iterator()` in cluster mode** uses `SCAN`, which only iterates keys on the node the command is routed to. It may not return all keys across the cluster.
+- **`useSets: true` is not cluster-safe.** Tracking set members and data keys hash to different slots, so `SET` + `SADD` in a `MULTI` transaction (and bulk `UNLINK` of tracked keys on `clear()`) can raise `CROSSSLOT`. Prefer the default `useSets: false` on a cluster.
 
 ## License
 
