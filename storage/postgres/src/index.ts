@@ -22,6 +22,26 @@ function escapeIdentifier(identifier: string): string {
 }
 
 /**
+ * Concurrent schema init can race on `CREATE INDEX IF NOT EXISTS`. These SQLSTATEs
+ * mean the object already exists and are safe to ignore.
+ * 23505 = unique_violation, 42P07 = duplicate_table, 42710 = duplicate_object.
+ */
+const ignorableInitErrorCodes = new Set(["23505", "42P07", "42710"]);
+
+/**
+ * Returns true when `expires` is a finite timestamp at or before `now`.
+ * PostgreSQL `BIGINT` values may arrive as a string; coerce before comparing.
+ */
+function isExpired(expires: unknown, now: number): boolean {
+	if (expires === null || expires === undefined) {
+		return false;
+	}
+
+	const timestamp = Number(expires);
+	return Number.isFinite(timestamp) && timestamp <= now;
+}
+
+/**
  * PostgreSQL storage adapter for Keyv.
  * Uses the `pg` library for connection pooling and parameterized queries.
  */
@@ -99,6 +119,9 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * The timer reference for the automatic expired-entry cleanup interval.
 	 */
 	private _clearExpiredTimer?: ReturnType<typeof setInterval>;
+
+	/** Whether an automatic expired-entry cleanup is currently running. */
+	private _clearExpiredRunning = false;
 
 	/**
 	 * Additional PoolConfig properties passed through to the pg connection pool.
@@ -326,7 +349,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
-		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+		if (isExpired(row.expires, now)) {
 			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
 			await this.query(del, [strippedKey, ns]);
 			return undefined;
@@ -355,7 +378,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		const validMap = new Map<string, KeyvStorageGetResult<Value>>();
 		const expiredKeys: string[] = [];
 		for (const row of rows) {
-			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+			if (isExpired(row.expires, now)) {
 				expiredKeys.push(row.key as string);
 			} else {
 				validMap.set(row.key as string, row.value as KeyvStorageGetResult<Value>);
@@ -408,6 +431,10 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * is atomic, all entries succeed (`true`) or all fail (`false`); on failure an `error` event is emitted.
 	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
+		if (entries.length === 0) {
+			return [];
+		}
+
 		try {
 			const keys = [];
 			const values = [];
@@ -443,13 +470,22 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the store at once.
+	 * Deletes multiple keys from the store at once using a single
+	 * `DELETE ... WHERE key = ANY($1) RETURNING key` statement.
 	 * @param keys - An array of keys to delete.
 	 * @returns An array of booleans indicating whether each key was successfully deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		const results = await Promise.all(keys.map(async (key) => this.delete(key)));
-		return results;
+		if (keys.length === 0) {
+			return [];
+		}
+
+		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
+		const ns = this.getNamespaceValue();
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING key`;
+		const rows = await this.query(del, [strippedKeys, ns]);
+		const deletedKeys = new Set(rows.map((row) => row.key as string));
+		return strippedKeys.map((key) => deletedKeys.has(key));
 	}
 
 	/**
@@ -473,7 +509,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns A promise that resolves once expired entries have been deleted.
 	 */
 	public async clearExpired(): Promise<void> {
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE expires IS NOT NULL AND expires < $1`;
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE expires IS NOT NULL AND expires <= $1`;
 		await this.query(del, [Date.now()]);
 	}
 
@@ -568,7 +604,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			return false;
 		}
 
-		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
+		if (isExpired(rows[0].expires, now)) {
 			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
 			await this.query(del, [strippedKey, ns]);
 			return false;
@@ -592,7 +628,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		const validKeys = new Set<string>();
 		const expiredKeys: string[] = [];
 		for (const row of rows) {
-			if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+			if (isExpired(row.expires, now)) {
 				expiredKeys.push(row.key as string);
 			} else {
 				validKeys.add(row.key as string);
@@ -646,10 +682,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			await query(createIndex);
 			await query(createExpiresIndex);
 		} catch (error) {
-			// 23505 = unique_violation: safe to ignore when concurrent instances
-			// race to create the same index (the index already exists).
 			/* v8 ignore next -- @preserve */
-			if ((error as DatabaseError).code !== "23505") {
+			if (!ignorableInitErrorCodes.has((error as DatabaseError).code ?? "")) {
 				this.emit("error", error);
 			}
 		}
@@ -696,11 +730,18 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		this.stopClearExpiredTimer();
 		if (this._clearExpiredInterval > 0) {
 			this._clearExpiredTimer = setInterval(async () => {
+				if (this._clearExpiredRunning) {
+					return;
+				}
+
+				this._clearExpiredRunning = true;
 				try {
 					await this.clearExpired();
 				} catch (error) {
 					/* v8 ignore next -- @preserve */
 					this.emit("error", error);
+				} finally {
+					this._clearExpiredRunning = false;
 				}
 			}, this._clearExpiredInterval);
 			this._clearExpiredTimer.unref();
