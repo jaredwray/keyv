@@ -111,6 +111,23 @@ describe("driver selection", () => {
 		await store.disconnect();
 	});
 
+	test("accepts explicit driver: 'node:sqlite'", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: "node:sqlite",
+		});
+		await store.ready;
+		expect(store.driverName).toBe("node:sqlite");
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await store.set(key, val);
+		expect(await store.get(key)).toBe(val);
+		expect(await store.has(key)).toBe(true);
+		expect(await store.delete(key)).toBe(true);
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
 	test("throws for invalid driver name", async () => {
 		const store = new KeyvSqlite({
 			uri: "sqlite://:memory:",
@@ -443,6 +460,23 @@ describe("sqlite3 helper driver", () => {
 		const val = faker.lorem.word();
 		await store.set(key, val);
 		expect(await store.get(key)).toBe(val);
+		await store.disconnect();
+	});
+
+	test("continues serving queries after a statement error", async () => {
+		const store = new KeyvSqlite({
+			uri: "sqlite://:memory:",
+			driver: createSqlite3Driver(sqlite3),
+		});
+		const key = faker.string.uuid();
+		const val = faker.lorem.word();
+		await store.set(key, val);
+		await expect(store.query("THIS IS NOT SQL")).rejects.toThrow();
+		expect(await store.get(key)).toBe(val);
+		const nextKey = faker.string.uuid();
+		const nextVal = faker.lorem.word();
+		await store.set(nextKey, nextVal);
+		expect(await store.get(nextKey)).toBe(nextVal);
 		await store.disconnect();
 	});
 });

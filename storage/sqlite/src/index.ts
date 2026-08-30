@@ -128,6 +128,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/** The timer reference for the automatic expired-entry cleanup interval. */
 	private _clearExpiredTimer?: ReturnType<typeof setInterval>;
 
+	/** Guards overlapping `clearExpired()` runs from the interval timer. */
+	private _clearExpiredRunning = false;
+
 	/** The resolved driver name, populated after connection. */
 	private _resolvedDriverName?: string;
 
@@ -165,35 +168,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 		const connected: Promise<Db> = this.createConnection()
 			.then(async (database) => {
-				// Check if table exists and needs migration
-				const tableInfo = await database.query(`PRAGMA table_info(${this.getCleanTableName()})`);
-
-				if (tableInfo.length === 0) {
-					// Table doesn't exist — create with new schema
-					await database.query(createTable);
-				} else {
-					// Table exists — check if migration is needed
-					const columnNames = (tableInfo as Array<{ name: string }>).map((c) => c.name);
-					if (!columnNames.includes("namespace")) {
-						// Old schema detected — migrate by recreating table
-						// Old keys are stored as "namespace:actualKey" (e.g. "keyv:foo").
-						// Split them so the new schema stores key and namespace separately.
-						const oldTable = escapeIdentifier(`${this._table}_migration_old`);
-						const newTable = this.getCleanTableName();
-						await database.query(`ALTER TABLE ${newTable} RENAME TO ${oldTable}`);
-						await database.query(createTable);
-						await database.query(
-							`INSERT OR IGNORE INTO ${newTable} (key, value, namespace) SELECT CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, INSTR(key, ':') + 1) ELSE key END, value, CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, 1, INSTR(key, ':') - 1) ELSE '' END FROM ${oldTable}`,
-						);
-						await database.query(`DROP TABLE ${oldTable}`);
-					} else if (!columnNames.includes("expires")) {
-						// Has namespace but missing expires — add column
-						await database.query(
-							`ALTER TABLE ${this.getCleanTableName()} ADD COLUMN expires BIGINT DEFAULT NULL`,
-						);
-					}
-				}
-
+				await this.ensureSchema(database, createTable);
 				await database.query(createExpiresIndex);
 				return database as Db;
 			})
@@ -286,6 +261,8 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Set the table name used for storage.
 	 * The name is sanitized to prevent SQL injection.
+	 * Changing this after construction does not create or migrate the new table;
+	 * it only changes which table subsequent queries target.
 	 * @param {string} value - The table name to use.
 	 */
 	public set table(value: string) {
@@ -303,6 +280,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Set the maximum key length (VARCHAR length) for the key column.
+	 * Changing this after construction does not alter an existing table's column definition.
 	 * @param {number} value - The maximum key length.
 	 */
 	public set keySize(value: number) {
@@ -329,6 +307,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Set the maximum namespace length (VARCHAR length) for the namespace column.
+	 * Changing this after construction does not alter an existing table's column definition.
 	 * @param {number} value - The maximum namespace length.
 	 */
 	public set namespaceLength(value: number) {
@@ -795,6 +774,100 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
+	 * Creates the storage table if needed and migrates pre-v6 schemas.
+	 *
+	 * Recovers a leftover `{table}_migration_old` table from an interrupted v6
+	 * migration, then either creates the table, rebuilds it to add `namespace`,
+	 * or `ALTER`s in the `expires` column.
+	 */
+	private async ensureSchema(database: Db, createTable: string): Promise<void> {
+		await this.recoverIncompleteMigration(database, createTable);
+
+		const tableInfo = await database.query(`PRAGMA table_info(${this.getCleanTableName()})`);
+		if (tableInfo.length === 0) {
+			await database.query(createTable);
+			return;
+		}
+
+		const columnNames = (tableInfo as Array<{ name: string }>).map((c) => c.name);
+		if (!columnNames.includes("namespace")) {
+			await this.migrateLegacySchema(database, createTable);
+			return;
+		}
+
+		if (!columnNames.includes("expires")) {
+			await database.query(
+				`ALTER TABLE ${this.getCleanTableName()} ADD COLUMN expires BIGINT DEFAULT NULL`,
+			);
+		}
+	}
+
+	/**
+	 * Completes a migration that was interrupted after the old table was renamed
+	 * to `{table}_migration_old`. Copies remaining rows into the v6 table and
+	 * drops the leftover. No-op when that table does not exist.
+	 */
+	private async recoverIncompleteMigration(database: Db, createTable: string): Promise<void> {
+		const oldTableName = `${this._table}_migration_old`;
+		const leftover = await database.query(
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+			oldTableName,
+		);
+		if (leftover.length === 0) {
+			return;
+		}
+
+		const oldTable = escapeIdentifier(oldTableName);
+		await this.runInTransaction(database, async () => {
+			const tableInfo = await database.query(`PRAGMA table_info(${this.getCleanTableName()})`);
+			if (tableInfo.length === 0) {
+				await database.query(createTable);
+			}
+
+			await database.query(this.getLegacyMigrationInsertSql(oldTable));
+			await database.query(`DROP TABLE ${oldTable}`);
+		});
+	}
+
+	/**
+	 * Rebuilds a pre-v6 table (no `namespace` column) inside a transaction.
+	 * Prefixed keys like `myns:mykey` are split into `key` + `namespace`.
+	 */
+	private async migrateLegacySchema(database: Db, createTable: string): Promise<void> {
+		const oldTable = escapeIdentifier(`${this._table}_migration_old`);
+		const newTable = this.getCleanTableName();
+		await this.runInTransaction(database, async () => {
+			await database.query(`ALTER TABLE ${newTable} RENAME TO ${oldTable}`);
+			await database.query(createTable);
+			await database.query(this.getLegacyMigrationInsertSql(oldTable));
+			await database.query(`DROP TABLE ${oldTable}`);
+		});
+	}
+
+	/**
+	 * Runs `work` inside a SQLite transaction, rolling back on failure.
+	 */
+	private async runInTransaction(database: Db, work: () => Promise<void>): Promise<void> {
+		await database.query("BEGIN");
+		try {
+			await work();
+			await database.query("COMMIT");
+		} catch (error) {
+			await database.query("ROLLBACK").catch(() => undefined);
+			throw error;
+		}
+	}
+
+	/**
+	 * Copies rows from a pre-v6 table, splitting `namespace:key` prefixes on the
+	 * first colon. Keys with no colon stay in the default (empty) namespace.
+	 */
+	private getLegacyMigrationInsertSql(oldTable: string): string {
+		const newTable = this.getCleanTableName();
+		return `INSERT OR IGNORE INTO ${newTable} (key, value, namespace) SELECT CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, INSTR(key, ':') + 1) ELSE key END, value, CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, 1, INSTR(key, ':') - 1) ELSE '' END FROM ${oldTable}`;
+	}
+
+	/**
 	 * Creates a new SQLite database connection using the resolved driver.
 	 * The driver handles busy timeout, WAL mode, and connection setup.
 	 * @returns {Promise<Db>} An object with `query` and `close` functions for database operations.
@@ -844,11 +917,18 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		this.stopClearExpiredTimer();
 		if (this._clearExpiredInterval > 0) {
 			this._clearExpiredTimer = setInterval(async () => {
+				if (this._clearExpiredRunning) {
+					return;
+				}
+
+				this._clearExpiredRunning = true;
 				try {
 					await this.clearExpired();
 				} catch (error) {
 					/* v8 ignore next -- @preserve */
 					this.emit("error", error);
+				} finally {
+					this._clearExpiredRunning = false;
 				}
 			}, this._clearExpiredInterval);
 			this._clearExpiredTimer.unref();

@@ -287,6 +287,26 @@ describe("set and setMany", () => {
 		expect(await keyv.get(key2)).toBe(val2);
 	});
 
+	test("setMany and getMany batch past SQLite bind-parameter limits", async () => {
+		const keyv = store();
+		const entries = Array.from({ length: 250 }, (_, i) => ({
+			key: `batch-key-${i}`,
+			value: `v${i}`,
+		}));
+		const results = await keyv.setMany(entries);
+		expect(results).toHaveLength(250);
+		expect(results?.every(Boolean)).toBe(true);
+
+		const keys = entries.map((entry) => entry.key);
+		keys.push("batch-missing");
+		const values = await keyv.getMany(keys);
+		expect(values).toHaveLength(251);
+		expect(values[0]).toBe("v0");
+		expect(values[249]).toBe("v249");
+		expect(values[250]).toBeUndefined();
+		await keyv.deleteMany(keys);
+	});
+
 	test("setMany emits an error and returns false entries on query error", async () => {
 		const keyv = new KeyvSqlite("sqlite://:memory:");
 		let emittedError = false;
@@ -727,6 +747,131 @@ describe("schema migration", () => {
 		await keyv.set("newkey", "newval");
 		expect(await keyv.get("newkey")).toBe("newval");
 		await keyv.disconnect();
+
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+	});
+
+	test("splits v5 namespaced keys into key and namespace columns", async () => {
+		const dbPath = "test/testdb-migration-ns.sqlite";
+		const fs = await import("node:fs");
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+
+		const Database = (await import("better-sqlite3")).default;
+		const db = new Database(dbPath);
+		db.exec("CREATE TABLE keyv(key VARCHAR(255) PRIMARY KEY, value TEXT)");
+		db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run("keyv:foo", "bar");
+		db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run("app:user:123", "nested");
+		db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run("plain", "noprefix");
+		db.close();
+
+		const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
+		expect(await keyv.get("plain")).toBe("noprefix");
+
+		keyv.namespace = "keyv";
+		expect(await keyv.get("keyv:foo")).toBe("bar");
+
+		keyv.namespace = "app";
+		expect(await keyv.get("app:user:123")).toBe("nested");
+		await keyv.disconnect();
+
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+	});
+
+	test("recovers a leftover _migration_old table from an interrupted migration", async () => {
+		const dbPath = "test/testdb-migration-leftover.sqlite";
+		const fs = await import("node:fs");
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+
+		const Database = (await import("better-sqlite3")).default;
+		const db = new Database(dbPath);
+		// Simulate a crash after RENAME + CREATE but before INSERT/DROP.
+		db.exec("CREATE TABLE keyv_migration_old(key VARCHAR(255) PRIMARY KEY, value TEXT)");
+		db.prepare("INSERT INTO keyv_migration_old (key, value) VALUES (?, ?)").run(
+			"ns:legacy",
+			"kept",
+		);
+		db.exec(
+			"CREATE TABLE keyv(key VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', expires BIGINT DEFAULT NULL, UNIQUE(key, namespace))",
+		);
+		db.close();
+
+		const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
+		keyv.namespace = "ns";
+		expect(await keyv.get("ns:legacy")).toBe("kept");
+
+		const leftover = (await keyv.query(
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'keyv_migration_old'",
+		)) as unknown[];
+		expect(leftover).toHaveLength(0);
+		await keyv.disconnect();
+
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+	});
+
+	test("recovers leftover migration data when the new table is missing", async () => {
+		const dbPath = "test/testdb-migration-leftover-missing.sqlite";
+		const fs = await import("node:fs");
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+
+		const Database = (await import("better-sqlite3")).default;
+		const db = new Database(dbPath);
+		// Simulate a crash after RENAME but before CREATE.
+		db.exec("CREATE TABLE keyv_migration_old(key VARCHAR(255) PRIMARY KEY, value TEXT)");
+		db.prepare("INSERT INTO keyv_migration_old (key, value) VALUES (?, ?)").run("oldkey", "oldval");
+		db.close();
+
+		const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
+		expect(await keyv.get("oldkey")).toBe("oldval");
+		const leftover = (await keyv.query(
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'keyv_migration_old'",
+		)) as unknown[];
+		expect(leftover).toHaveLength(0);
+		await keyv.disconnect();
+
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+	});
+
+	test("rolls back leftover recovery when the copy fails", async () => {
+		const dbPath = "test/testdb-migration-rollback.sqlite";
+		const fs = await import("node:fs");
+		try {
+			fs.unlinkSync(dbPath);
+		} catch {}
+
+		const Database = (await import("better-sqlite3")).default;
+		const db = new Database(dbPath);
+		db.exec("CREATE TABLE keyv_migration_old(notkey TEXT)");
+		db.exec("INSERT INTO keyv_migration_old (notkey) VALUES ('x')");
+		db.exec(
+			"CREATE TABLE keyv(key VARCHAR(255) NOT NULL, value TEXT, namespace VARCHAR(255) NOT NULL DEFAULT '', expires BIGINT DEFAULT NULL, UNIQUE(key, namespace))",
+		);
+		db.close();
+
+		const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
+		await expect(keyv.ready).rejects.toThrow();
+
+		const leftoverDb = new Database(dbPath);
+		const leftover = leftoverDb
+			.prepare(
+				"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'keyv_migration_old'",
+			)
+			.all();
+		expect(leftover).toHaveLength(1);
+		leftoverDb.close();
 
 		try {
 			fs.unlinkSync(dbPath);

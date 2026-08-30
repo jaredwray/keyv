@@ -75,6 +75,6 @@ export async function resolveDriver(
 
 	/* v8 ignore next 3 -- @preserve */
 	throw new Error(
-		"No SQLite driver found. Use Node.js 22.13+ (built-in node:sqlite) or install better-sqlite3: npm install better-sqlite3",
+		"No SQLite driver found. Use Node.js 22.13+ (built-in node:sqlite, still experimental) or install better-sqlite3: npm install better-sqlite3",
 	);
 }

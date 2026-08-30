@@ -7,7 +7,7 @@ function createBetterSqlite3Connection(options: SqliteDriverConnectOptions): Db 
 	const db = new Database(options.filename);
 
 	if (options.busyTimeout) {
-		db.pragma(`busy_timeout = ${options.busyTimeout}`);
+		db.pragma(`busy_timeout = ${Number(options.busyTimeout)}`);
 	}
 
 	if (shouldApplyWal(options.filename, options.wal)) {

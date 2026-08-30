@@ -71,30 +71,26 @@ export function createSqlite3Driver(sqlite3: Sqlite3ModuleLike): SqliteDriver {
 				await execAsync("PRAGMA journal_mode = WAL");
 			}
 
-			// Serial queue to ensure statement ordering
+			// Serial queue so statements stay ordered. A failed query must not
+			// poison the queue or leave later callers hanging.
 			let queue = Promise.resolve();
 
 			const query = async (sqlString: string, ...parameter: unknown[]) => {
 				const safeParams = coerceParams(parameter);
 				const trimmed = sqlString.trimStart().toUpperCase();
+				const task = queue.then(async () => {
+					if (isReturningQuery(trimmed)) {
+						return allAsync(sqlString, safeParams);
+					}
 
-				const result = new Promise<unknown[]>((resolve, reject) => {
-					queue = queue.then(async () => {
-						try {
-							if (isReturningQuery(trimmed)) {
-								resolve(await allAsync(sqlString, safeParams));
-							} else {
-								await runAsync(sqlString, safeParams);
-								resolve([]);
-							}
-						} catch (error) {
-							/* v8 ignore next -- @preserve: error path */
-							reject(error);
-						}
-					});
+					await runAsync(sqlString, safeParams);
+					return [];
 				});
-
-				return result;
+				queue = task.then(
+					() => undefined,
+					() => undefined,
+				);
+				return task;
 			};
 
 			const close = async () => closeAsync();

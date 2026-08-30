@@ -104,11 +104,11 @@ const keyv = createKeyv({
 
 | Driver | Package | Runtime | Type |
 | --- | --- | --- | --- |
-| `better-sqlite3` | `better-sqlite3` | Node.js | Synchronous (fallback) |
-| `node:sqlite` | Built-in | Node.js 22.13+ | Synchronous |
+| `better-sqlite3` | `better-sqlite3` | Node.js | Synchronous (bundled fallback) |
+| `node:sqlite` | Built-in | Node.js 22.13+ | Synchronous (auto-detected default; still experimental) |
 | `bun:sqlite` | Built-in | Bun | Synchronous |
 
-The built-in runtime drivers are preferred: on Node.js 22.13+ the built-in `node:sqlite` driver is used (available behind the `--experimental-sqlite` flag from 22.5), and on Bun the native `bun:sqlite` driver is used. `better-sqlite3` is included as a direct dependency and used as a fallback when a built-in driver is unavailable, or explicitly via `driver: 'better-sqlite3'`. If you still need to use `sqlite3` then go to the [using sqlite3](#using-sqlite3).
+The built-in runtime drivers are preferred: on Node.js 22.13+ the built-in `node:sqlite` driver is used (unflagged since 22.13, still experimental — [Stability 1.1](https://nodejs.org/api/sqlite.html)), and on Bun the native `bun:sqlite` driver is used. `better-sqlite3` is included as a direct dependency and used as a fallback when a built-in driver is unavailable, or explicitly via `driver: 'better-sqlite3'`. If you still need to use `sqlite3` then go to the [using sqlite3](#using-sqlite3).
 
 ## Selecting a specific driver
 
@@ -223,6 +223,8 @@ In v5, namespaces were stored as key prefixes in the `key` column (e.g. `key="my
 
 The adapter automatically detects old schemas and migrates existing data on connect — no manual migration steps are needed. During migration, prefixed keys like `myns:mykey` are split into `key="mykey"` and `namespace="myns"`.
 
+**Colon caveat:** migration splits on the **first** colon. That is correct for v5 namespaced keys (`namespace:actualKey`, including keys that themselves contain colons). It is incorrect for v5 data stored **without** a namespace where the key itself contains a colon (e.g. `http://example.com` becomes `namespace="http"`, `key="//example.com"`). If you stored colon-containing keys without a namespace, migrate those rows yourself before upgrading.
+
 ### Hookified integration
 
 The adapter now extends [Hookified](https://hookified.org) instead of a custom EventEmitter. Events work the same (`on`, `emit`), but hooks are also available via the standard Hookified API.
@@ -231,7 +233,7 @@ The adapter now extends [Hookified](https://hookified.org) instead of a custom E
 
 ### Native TTL support with `expires` column
 
-v6 adds an `expires BIGINT` column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the `expires` timestamp from the serialized value and stores it in the column. A partial index is created on the `expires` column for efficient cleanup queries.
+v6 adds an `expires BIGINT` column to the table. Keyv core computes the absolute expiry and passes it to the adapter as the `expires` argument on `set` / `setMany` — the adapter stores that timestamp directly and does **not** parse the serialized value. A partial index is created on the `expires` column for efficient cleanup queries.
 
 The schema migration is automatic on connect — existing tables get the column added via `ALTER TABLE ... ADD COLUMN`.
 
@@ -275,7 +277,7 @@ const keyv = createKeyv('sqlite://path/to/database.sqlite');
 
 ### Multi-driver support
 
-v6 replaces the callback-based `sqlite3` package with `better-sqlite3` as the default driver and adds support for `node:sqlite` (Node.js 22.5+) and `bun:sqlite` (Bun). The driver is auto-detected or can be explicitly selected via the `driver` option. See [Multi-Driver Support](#multi-driver-support) for details.
+v6 prefers the built-in `node:sqlite` driver on Node.js 22.13+ (unflagged, still experimental) and `bun:sqlite` on Bun, with `better-sqlite3` bundled as the fallback (replacing the old callback-based `sqlite3` package). You can still select a driver explicitly via the `driver` option. See [Multi-Driver Support](#multi-driver-support) for details.
 
 ### Improved iterator
 
@@ -326,7 +328,7 @@ console.log(store.uri); // 'sqlite://path/to/database.sqlite'
 
 ## table
 
-Get or set the table name used for storage. The name is sanitized and escaped for safe use in SQL queries to prevent SQL injection.
+Get or set the table name used for storage. The name is sanitized and escaped for safe use in SQL queries to prevent SQL injection. Changing this after construction does not create or migrate the new table — it only changes which table subsequent queries target.
 
 - Type: `string`
 - Default: `'keyv'`
@@ -488,6 +490,8 @@ console.log(store.opts.db); // ':memory:'
 
 Set a key-value pair. Returns `true` on success, `false` on failure.
 
+When called through a `Keyv` instance, `ttl` is a **relative** duration in milliseconds. Keyv converts it to an absolute Unix-ms `expires` timestamp before calling the adapter. If you call `store.set()` directly, the third argument is that absolute `expires` timestamp (not a relative TTL).
+
 - `key` *(string)* - The key to set.
 - `value` *(any)* - The value to store.
 - `ttl` *(number, optional)* - Time to live in milliseconds.
@@ -500,7 +504,7 @@ await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a `boolean[]` with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return `false` while entries in successful batches return `true`. On batch failure, an `error` event is emitted.
+Set multiple key-value pairs at once. Through a `Keyv` instance each entry is a `KeyvEntry` (`{ key, value, ttl? }`) with a relative `ttl`. The adapter itself receives `KeyvStorageEntry` objects (`{ key, value, expires? }`) with an absolute `expires` timestamp. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a `boolean[]` with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return `false` while entries in successful batches return `true`. On batch failure, an `error` event is emitted.
 
 ```js
 const results = await keyv.setMany([
@@ -594,7 +598,7 @@ await store.disconnect();
 
 # Clearing Expired Keys
 
-When a key is stored with a TTL, the adapter records the expiration timestamp in the `expires` column. Keyv core enforces TTL automatically — expired keys return `undefined` from `get()` and `false` from `has()`, and are lazily deleted from the store when accessed via `get()`, `getMany()`, or iteration.
+When a key is stored with a TTL, the adapter records the expiration timestamp in the `expires` column. Keyv core enforces TTL automatically — expired keys return `undefined` from `get()` and `false` from `has()`, and are lazily deleted from the store when accessed via `get()`, `getMany()`, `has()`, or `hasMany()`. The iterator skips expired rows but does not delete them.
 
 However, expired rows that are never accessed again will remain in the database. The `clearExpired()` method and `clearExpiredInterval` option provide bulk cleanup to remove these stale rows efficiently via SQL, without needing to deserialize every row.
 
@@ -658,8 +662,8 @@ Simple `set` / `get` benchmarks comparing the built-in SQLite drivers plus an op
 | sqlite3 set / get   |  -74.7%   |       16K |      67µs |  ±1.25%  |       15K |
 <!-- BENCHMARK-RESULTS-END -->
 
-Note: we included `sqlite3` tests in this but by default we do not have it as a dependency as our fallback is `better-sqlite3` now. Please refor to [using sqlite3](#using-sqlite3) if you want to use it.
+Note: we included `sqlite3` tests in this but by default we do not have it as a dependency as our fallback is `better-sqlite3` now. Please refer to [using sqlite3](#using-sqlite3) if you want to use it.
 
 # License
 
-[MIT © Jared Wray](LICENCE)
+[MIT © Jared Wray](LICENSE)
