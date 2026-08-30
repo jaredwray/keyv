@@ -475,6 +475,32 @@ describe("clearExpiredInterval", () => {
 		expect(keyv.clearExpiredInterval).toBe(0);
 		await keyv.disconnect();
 	});
+
+	test("does not overlap automatic cleanup runs", async () => {
+		const keyv = store();
+		let releaseCleanup = () => {};
+		const blockedCleanup = new Promise<void>((resolve) => {
+			releaseCleanup = resolve;
+		});
+		const clearExpired = vi
+			.spyOn(keyv, "clearExpired")
+			.mockImplementation(async () => blockedCleanup);
+
+		try {
+			keyv.clearExpiredInterval = 20;
+			await vi.waitFor(() => {
+				expect(clearExpired).toHaveBeenCalledTimes(1);
+			});
+			await new Promise((resolve) => {
+				setTimeout(resolve, 80);
+			});
+			expect(clearExpired).toHaveBeenCalledTimes(1);
+		} finally {
+			keyv.clearExpiredInterval = 0;
+			releaseCleanup();
+			await keyv.disconnect();
+		}
+	});
 });
 
 describe("namespace", () => {
