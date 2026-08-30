@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, test } from "vitest";
 import KeyvPostgres from "../src/index.js";
-import { endAllPools } from "../src/pool.js";
+import { endPool } from "../src/pool.js";
 
 const postgresUri = "postgresql://postgres:postgres@localhost:5433/keyv_test";
 
@@ -16,7 +16,7 @@ beforeEach(async () => {
 
 describe("ssl", () => {
 	test("throws when ssl is not used", async () => {
-		await endAllPools();
+		await endPool(postgresUri);
 		try {
 			const keyv = new KeyvPostgres({ uri: postgresUri });
 			await keyv.get(faker.string.alphanumeric(10));
@@ -24,7 +24,7 @@ describe("ssl", () => {
 		} catch {
 			expect(true).toBeTruthy();
 		} finally {
-			await endAllPools();
+			await endPool(postgresUri);
 		}
 	});
 
@@ -56,7 +56,11 @@ describe("ssl", () => {
 	});
 
 	test("closes the connection on disconnect", async () => {
-		const keyv = store();
+		const keyv = new KeyvPostgres({
+			uri: postgresUri,
+			...options,
+			application_name: `ssl-disconnect-${faker.string.alphanumeric(8)}`,
+		});
 		const key = faker.string.alphanumeric(10);
 		expect(await keyv.get(key)).toBeUndefined();
 		await keyv.disconnect();

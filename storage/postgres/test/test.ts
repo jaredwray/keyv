@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvPostgres, { createKeyv } from "../src/index.js";
 
 const postgresUri = "postgresql://postgres:postgres@localhost:5432/keyv_test";
@@ -131,6 +131,15 @@ describe("get", () => {
 		expect(await keyv.get(key)).toBeDefined();
 	});
 
+	test("returns undefined and deletes an expired key", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const key = faker.string.alphanumeric(10);
+		const pastExpires = Date.now() - 1000;
+		await keyv.set(key, "old", pastExpires);
+		expect(await keyv.get(key)).toBeUndefined();
+		expect(await keyv.has(key)).toBe(false);
+	});
+
 	test("handles object values without an expires field", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
@@ -165,6 +174,18 @@ describe("getMany", () => {
 		const results = await keyv.getMany([key, faker.string.alphanumeric(10)]);
 		expect(results).toEqual([undefined, undefined]);
 		expect(results[0]).not.toBeNull();
+	});
+
+	test("returns undefined for expired keys and deletes them", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const expiredKey = faker.string.alphanumeric(10);
+		const validKey = faker.string.alphanumeric(10);
+		const pastExpires = Date.now() - 1000;
+		const futureExpires = Date.now() + 60_000;
+		await keyv.set(expiredKey, "old", pastExpires);
+		await keyv.set(validKey, "fresh", futureExpires);
+		expect(await keyv.getMany([expiredKey, validKey])).toEqual([undefined, "fresh"]);
+		expect(await keyv.has(expiredKey)).toBe(false);
 	});
 });
 
@@ -208,20 +229,26 @@ describe("set and setMany", () => {
 		expect(await keyv.get(key)).toBe("not-json-at-all");
 	});
 
+	test("setMany with no entries returns an empty array", async () => {
+		const keyv = new KeyvPostgres(postgresUri);
+		expect(await keyv.setMany([])).toEqual([]);
+	});
+
 	test("setMany emits an error and returns false entries on query error", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		let emittedError = false;
 		keyv.on("error", () => {
 			emittedError = true;
 		});
-		// Close the connection to force an error.
-		await keyv.disconnect();
+		// biome-ignore lint/suspicious/noExplicitAny: spy on private query
+		const query = vi.spyOn(keyv as any, "query").mockRejectedValue(new Error("query failed"));
 		const result = await keyv.setMany([
 			{ key: "key1", value: "val1" },
 			{ key: "key2", value: "val2" },
 		]);
 		expect(result).toEqual([false, false]);
 		expect(emittedError).toBe(true);
+		query.mockRestore();
 	});
 });
 
@@ -481,6 +508,31 @@ describe("clearExpiredInterval", () => {
 		// After disconnect the timer is stopped; verify no errors are thrown.
 		await keyv.disconnect();
 		expect(keyv.clearExpiredInterval).toBe(100);
+	});
+
+	test("does not overlap automatic cleanup runs", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		let releaseCleanup = () => {};
+		const blockedCleanup = new Promise<void>((resolve) => {
+			releaseCleanup = resolve;
+		});
+		const clearExpired = vi
+			.spyOn(keyv, "clearExpired")
+			.mockImplementation(async () => blockedCleanup);
+
+		try {
+			keyv.clearExpiredInterval = 50;
+			await vi.waitFor(() => {
+				expect(clearExpired).toHaveBeenCalledTimes(1);
+			});
+			await new Promise((resolve) => {
+				setTimeout(resolve, 120);
+			});
+			expect(clearExpired).toHaveBeenCalledTimes(1);
+		} finally {
+			keyv.clearExpiredInterval = 0;
+			releaseCleanup();
+		}
 	});
 });
 
@@ -761,6 +813,25 @@ describe("iterator", () => {
 
 		expect(keys).toContain(key);
 	});
+
+	test("skips expired entries", async () => {
+		const ns = faker.string.alphanumeric(8);
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		keyv.namespace = ns;
+		const validKey = faker.string.alphanumeric(10);
+		const expiredKey = faker.string.alphanumeric(10);
+		const validValue = faker.lorem.word();
+		await keyv.set(validKey, validValue, Date.now() + 60_000);
+		await keyv.set(expiredKey, faker.lorem.word(), Date.now() - 1000);
+
+		const collected = new Map<string, string>();
+		for await (const [key, value] of keyv.iterator()) {
+			collected.set(key, value);
+		}
+
+		expect(collected.get(validKey)).toBe(validValue);
+		expect(collected.has(expiredKey)).toBe(false);
+	});
 });
 
 describe("schema", () => {
@@ -823,13 +894,61 @@ describe("SQL injection prevention", () => {
 	});
 });
 
+describe("deleteMany", () => {
+	test("returns an empty array for no keys", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		expect(await keyv.deleteMany([])).toEqual([]);
+	});
+
+	test("returns per-key results for existing and missing keys", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		await keyv.set(key1, faker.lorem.word());
+		await keyv.set(key2, faker.lorem.word());
+		expect(await keyv.deleteMany([key1, faker.string.alphanumeric(10), key2])).toEqual([
+			true,
+			false,
+			true,
+		]);
+		expect(await keyv.has(key1)).toBe(false);
+		expect(await keyv.has(key2)).toBe(false);
+	});
+});
+
 describe("connection", () => {
 	test("closes the connection on disconnect", async () => {
-		const keyv = store();
+		const keyv = new KeyvPostgres({
+			uri: postgresUri,
+			application_name: `disconnect-${faker.string.alphanumeric(8)}`,
+		});
 		const key = faker.string.alphanumeric(10);
 		expect(await keyv.get(key)).toBeUndefined();
 		await keyv.disconnect();
 		await expect(keyv.get(key)).rejects.toBeDefined();
+	});
+
+	test("disconnect is a no-op when the pool is already closed", async () => {
+		const keyv = new KeyvPostgres({
+			uri: postgresUri,
+			application_name: `disconnect-twice-${faker.string.alphanumeric(8)}`,
+		});
+		await keyv.get(faker.string.alphanumeric(10));
+		await keyv.disconnect();
+		await keyv.disconnect();
+	});
+
+	test("keeps a shared pool open until the last adapter disconnects", async () => {
+		const applicationName = `shared-pool-${faker.string.alphanumeric(8)}`;
+		const first = new KeyvPostgres({ uri: postgresUri, application_name: applicationName });
+		const second = new KeyvPostgres({ uri: postgresUri, application_name: applicationName });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.lorem.word();
+		await first.set(key, value);
+		await first.disconnect();
+		expect(await second.get(key)).toBe(value);
+		await second.disconnect();
+		await expect(second.get(key)).rejects.toBeDefined();
 	});
 
 	test("emits an error when the connection fails", async () => {
