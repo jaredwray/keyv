@@ -64,7 +64,10 @@ async function copyStorageAdapters(basePath: string) {
 }
 
 async function copyTestSuite(basePath: string) {
-	const originalFileText = await fs.promises.readFile(`${basePath}/core/test-suite/README.md`, "utf8");
+	const originalFileText = await fs.promises.readFile(
+		`${basePath}/core/test-suite/README.md`,
+		"utf8",
+	);
 	let newFileText = "---\n";
 	newFileText += `title: 'Test Suite'\n`;
 	newFileText += `sidebarTitle: 'Test Suite'\n`;
