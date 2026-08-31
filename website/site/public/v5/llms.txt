@@ -1,0 +1,60 @@
+# Keyv
+
+Simple key-value storage with support for multiple backends
+
+- [Full LLM Content](https://keyv.org/v5/llms-full.txt)
+
+## Documentation
+- [Getting Started Guide](https://keyv.org/v5/docs/)
+- [v4 to v5 Migration](https://keyv.org/v5/docs/v4-to-v5/)
+- [Keyv API](https://keyv.org/v5/docs/keyv/)
+- [v5 to v6 Migration](https://keyv.org/v5/docs/v5-to-v6/)
+- [Versioning & Release Tags](https://keyv.org/v5/docs/versioning/)
+- [Third-Party Storage Adapters](https://keyv.org/v5/docs/third-party-storage-adapters/)
+- [Test Suite](https://keyv.org/v5/docs/test-suite/)
+- [@keyv/bigmap](https://keyv.org/v5/docs/storage-adapters/bigmap/)
+- [@keyv/cloudflare-kv](https://keyv.org/v5/docs/storage-adapters/cloudflare-kv/)
+- [@keyv/dynamo](https://keyv.org/v5/docs/storage-adapters/dynamo/)
+- [@keyv/etcd](https://keyv.org/v5/docs/storage-adapters/etcd/)
+- [@keyv/memcache](https://keyv.org/v5/docs/storage-adapters/memcache/)
+- [@keyv/mongo](https://keyv.org/v5/docs/storage-adapters/mongo/)
+- [@keyv/mysql](https://keyv.org/v5/docs/storage-adapters/mysql/)
+- [@keyv/postgres](https://keyv.org/v5/docs/storage-adapters/postgres/)
+- [@keyv/redis](https://keyv.org/v5/docs/storage-adapters/redis/)
+- [@keyv/sqlite](https://keyv.org/v5/docs/storage-adapters/sqlite/)
+- [@keyv/valkey](https://keyv.org/v5/docs/storage-adapters/valkey/)
+- [@keyv/compress-brotli](https://keyv.org/v5/docs/compression/compress-brotli/)
+- [@keyv/compress-gzip](https://keyv.org/v5/docs/compression/compress-gzip/)
+- [@keyv/compress-lz4](https://keyv.org/v5/docs/compression/compress-lz4/)
+- [How to Implement Caching with Express](https://keyv.org/v5/docs/caching/caching-express/)
+- [How to Implement Caching with Fastify](https://keyv.org/v5/docs/caching/caching-fastify/)
+- [How to Implement Caching in Javascript](https://keyv.org/v5/docs/caching/caching-javascript/)
+- [How to Implement Caching with Koa](https://keyv.org/v5/docs/caching/caching-koa/)
+- [Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide](https://keyv.org/v5/docs/caching/caching-nestjs/)
+- [Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide](https://keyv.org/v5/docs/caching/caching-node/)
+
+## API Reference
+- Not available.
+
+## Changelog
+- [Changelog](https://keyv.org/v5/changelog)
+- [v6.0.0-rc.1](https://keyv.org/v5/changelog/v6-0-0-rc-1) (August 3, 2026)
+- [v6.0.0-beta.4](https://keyv.org/v5/changelog/v6-0-0-beta-4) (June 18, 2026)
+- [v6.0.0-beta.3](https://keyv.org/v5/changelog/v6-0-0-beta-3) (June 11, 2026)
+- [v6.0.0-beta.1](https://keyv.org/v5/changelog/v6-0-0-beta-1) (April 1, 2026)
+- [v6.0.0-alpha.4](https://keyv.org/v5/changelog/v6-0-0-alpha-4) (March 27, 2026)
+- [v6.0.0-alpha.3](https://keyv.org/v5/changelog/v6-0-0-alpha-3) (March 22, 2026)
+- [v6.0.0-alpha.2](https://keyv.org/v5/changelog/v6-0-0-alpha-2) (March 4, 2026)
+- [6.0.0-alpha.1](https://keyv.org/v5/changelog/6-0-0-alpha-1) (February 26, 2026)
+- [2026-01-20](https://keyv.org/v5/changelog/2026-01-20) (January 21, 2026)
+- [2025-12-26](https://keyv.org/v5/changelog/2025-12-26) (December 26, 2025)
+- [2025-12-10](https://keyv.org/v5/changelog/2025-12-10) (December 10, 2025)
+- [2025-11-20](https://keyv.org/v5/changelog/2025-11-20) (November 21, 2025)
+- [2025-11-17](https://keyv.org/v5/changelog/2025-11-17) (November 18, 2025)
+- [2025-11-11](https://keyv.org/v5/changelog/2025-11-11) (November 11, 2025)
+- [2025-11-04](https://keyv.org/v5/changelog/2025-11-04) (November 4, 2025)
+- [2025-10-25](https://keyv.org/v5/changelog/2025-10-25) (October 25, 2025)
+- [2025-10-18](https://keyv.org/v5/changelog/2025-10-18) (October 18, 2025)
+- [2025-10-09](https://keyv.org/v5/changelog/2025-10-09) (October 10, 2025)
+- [2025-10-03](https://keyv.org/v5/changelog/2025-10-03) (October 3, 2025)
+- [2025-09-27](https://keyv.org/v5/changelog/2025-09-27) (September 27, 2025)

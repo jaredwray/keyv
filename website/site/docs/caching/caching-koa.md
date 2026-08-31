@@ -2,6 +2,7 @@
 title: 'How to Implement Caching with Koa'
 sidebarTitle: 'Caching with Koa'
 parent: 'Caching'
+order: 5
 ---
 
 # How to Implement Caching with Koa

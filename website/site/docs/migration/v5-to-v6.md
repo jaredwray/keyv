@@ -1,13 +1,15 @@
 ---
 title: 'v5 to v6 Migration'
-order: 3
+sidebarTitle: 'v5 to v6'
+parent: 'Migration'
+order: 2
 ---
 
-# Keyv v6 (In Progress)
+# Keyv v6
 
 We are pleased to announce Keyv v6 with major enhancements and some breaking changes. This guide will help you understand how to migrate from v5 to v6. For most users, the transition will be straightforward.
 
-**Important:** With the release of v6, Keyv v5 will move to maintenance mode. This means v5 will only receive security fixes and minor maintenance updates. We encourage all users to migrate to v6 to take advantage of the latest features and improvements. You can view the `v5` branch in the the mono repo.
+**Important:** With the release of v6, Keyv v5 is in maintenance mode. v5 only receives security fixes and minor maintenance updates. The previous documentation site is archived at [keyv.org/v5](/v5/). The `v5` branch remains in the monorepo.
 
 ## Table of Contents
 
@@ -42,11 +44,11 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 | Task | Status |
 |------|--------|
-| Remove `opts` property in Keyv and Storage Adapters | IN PROGRESS |
-| Add encryption adapters | NOT STARTED |
-| Browser compatibility | NOT STARTED |
-| Stats System to be Event Driven | NOT STARTED |
-| Test Suite Overhaul | NOT STARTED |
+| Remove `opts` property in Keyv and Storage Adapters | COMPLETED |
+| Add encryption adapters | COMPLETED |
+| Browser compatibility | COMPLETED |
+| Stats System to be Event Driven | COMPLETED |
+| Test Suite Overhaul | COMPLETED |
 | Refactor iterator implementation | COMPLETED |
 | Update `deleteMany` return type | COMPLETED |
 | Update `setMany` signature and return type | COMPLETED |
@@ -78,14 +80,17 @@ For most users, migrating from v5 to v6 involves a few key changes:
 
 1. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
 
-2. **Update serialization** - Replace `serialize`/`deserialize` options with the new `serialization` adapter:
+2. **Update serialization** - Replace `serialize`/`deserialize` options with the `serialization` adapter. v6 ships a built-in `KeyvJsonSerializer` (no extra package). For SuperJSON or MessagePack, install those packages:
    ```javascript
    // v5
    const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
 
-   // v6
-   import KeyvSerialize from '@keyv/serialize';
-   const keyv = new Keyv({ serialization: new KeyvSerialize() });
+   // v6 (default JSON serializer — Buffer + BigInt)
+   const keyv = new Keyv();
+
+   // v6 custom
+   import { superJsonSerializer } from '@keyv/serialize-superjson';
+   const keyv = new Keyv({ serialization: superJsonSerializer });
    ```
 
 3. **Update raw value access** - Replace `get(key, { raw: true })` with `getRaw(key)` and `getMany(keys, { raw: true })` with `getManyRaw(keys)`
@@ -165,9 +170,11 @@ const keyv = new Keyv({
 **v6 (after):**
 ```javascript
 import Keyv from 'keyv';
-import KeyvSerialize from '@keyv/serialize';
 
-const keyv = new Keyv({ serialization: new KeyvSerialize() });
+const keyv = new Keyv(); // KeyvJsonSerializer is the default
+// or
+import { superJsonSerializer } from '@keyv/serialize-superjson';
+const keyv = new Keyv({ serialization: superJsonSerializer });
 ```
 
 See [Serialization Adapters](#serialization-adapters) for more details.
@@ -602,25 +609,24 @@ const keyv = new Keyv({ store: new Map() });
 
 ### Serialization Adapters
 
-The default serialization module is `@keyv/serialize`, which uses the built-in `JSON` module. The property has been simplified to just `serialization`.
+The default serializer is the built-in `KeyvJsonSerializer`. The property is `serialization`.
 
 ```javascript
 import Keyv from 'keyv';
-import KeyvSerialize from '@keyv/serialize';
 
-const keyv = new Keyv({ serialization: new KeyvSerialize() });
+const keyv = new Keyv(); // default JSON serializer
 
-// You can also set it via the property
-keyv.serialization = new KeyvSerialize();
+import { superJsonSerializer } from '@keyv/serialize-superjson';
+keyv.serialization = superJsonSerializer;
 ```
 
 **Available Serialization Adapters:**
 
 | Package | Description |
 |---------|-------------|
-| `@keyv/serialize` | **Default** - Based on built-in `JSON` |
-| `@keyv/serialize-superjson` | Supports `BigInt`, `Date`, `Map`, `Set`, and more |
-| `@keyv/serialize-msgpackr` | High-performance binary serialization |
+| `KeyvJsonSerializer` (built-in) | **Default** — JSON plus `Buffer` and `BigInt` |
+| `@keyv/serialize-superjson` | `Date`, `Map`, `Set`, `RegExp`, `URL`, `Error`, `undefined` |
+| `@keyv/serialize-msgpackr` | High-performance binary MessagePack |
 
 #### Disabling Serialization
 
@@ -667,19 +673,15 @@ You can now add encryption to values with the following adapters:
 
 | Package | Description |
 |---------|-------------|
-| `@keyv/encryption` | Node.js built-in encryption (configurable) |
-| `@keyv/encryption-browser` | Browser-compatible encryption using `crypto-js` |
-| `@keyv/encryption-argon` | Modern, high-performance encryption for Node.js |
+| `@keyv/encrypt-node` | Node.js `crypto` (AES-GCM, ChaCha20-Poly1305, AES-CBC, …) |
+| `@keyv/encrypt-web` | Web Crypto API for browsers, Workers, and Deno |
 
 ```javascript
 import Keyv from 'keyv';
-import KeyvEncryption from '@keyv/encryption';
+import KeyvEncryptNode from '@keyv/encrypt-node';
 
-const encryption = new KeyvEncryption({ key: 'your_secret_key_here' });
+const encryption = new KeyvEncryptNode({ key: 'your_secret_key_here' });
 const keyv = new Keyv({ encryption });
-
-// Or set via property
-keyv.encryption = encryption;
 
 await keyv.set('sensitive', { password: 'secret' });
 ```
@@ -699,98 +701,35 @@ interface KeyvEncryption {
 
 ---
 
-### Native Hashing for Key and Namespace
-
-Keyv now supports native hashing when `key` or `namespace` is too long. By default, this is not enabled but if you set `keyLength` or `namespaceLength` and submit a key it will use hashing to keep the maximum length and not error out. This helps with many of the storage adapters such as `memcache`, `postgres`, `mysql`, `sqlite`, etc.
-
-```javascript
-import Keyv from 'keyv';
-
-const keyv = new Keyv({
-  keyLength: 255,
-  namespaceLenght: 255,
-});
-```
-
-You can even set what hash algorithm to use via the `hash` property as we use [hashery](https://npmjs.org/package/hashery).
-
-```javascript
-import Keyv from 'keyv';
-
-const keyv = new Keyv({
-  keyLength: 255,
-  namespaceLenght: 255,
-  hashAlgorithm: 'SHA-256'
-});
-
-// or via properties
-
-keyv.hash.defaultAlgorithm = 'DJB2';
-```
-
 ### New Identification Functions
 
-Keyv v6 provides new functions to help identify adapters and capabilities.
+Keyv v6 provides `detect*` helpers (these replaced the earlier `isKeyv` / `isKeyvStorage` names). See [Detect Capabilities](/docs/detect-capabilities/).
 
-#### `isKeyv`
-
-Detects if an object is a Keyv instance by checking for Keyv-specific methods and properties:
+#### `detectKeyv`
 
 ```javascript
-import Keyv, { isKeyv } from 'keyv';
+import Keyv, { detectKeyv } from 'keyv';
 
-const keyv = new Keyv();
-
-isKeyv(new Map());
-// { keyv: false, get: true, set: true, delete: true, clear: true, has: true,
-//   getMany: false, setMany: false, deleteMany: false, hasMany: false,
-//   disconnect: false, getRaw: false, getManyRaw: false, hooks: false,
-//   stats: false, iterator: false }
-
-isKeyv(keyv);
-// { keyv: true, get: true, set: true, delete: true, clear: true, has: true,
-//   getMany: true, setMany: true, deleteMany: true, hasMany: true,
-//   disconnect: true, getRaw: true, getManyRaw: true, hooks: true,
-//   stats: true, iterator: false }
+detectKeyv(new Keyv()).compatible; // true
+detectKeyv(new Map()).compatible;   // false
 ```
 
-The `keyv` property is `true` when the object has all core Keyv methods (`get`, `set`, `delete`, `clear`) plus `hooks` and `stats` properties.
-
-#### `isKeyvStorage`
-
-Detects if an object is a Keyv storage adapter by checking for required adapter methods:
+#### `detectKeyvStorage`
 
 ```javascript
-import { isKeyvStorage } from 'keyv';
+import { detectKeyvStorage } from 'keyv';
 
-isKeyvStorage(new Map());
-// { keyvStorage: false, get: true, set: true, delete: true, clear: true,
-//   has: true, getMany: false, setMany: false, deleteMany: false,
-//   hasMany: false, disconnect: false, iterator: false, namespace: false }
-
-isKeyvStorage(redisAdapter);
-// { keyvStorage: true, get: true, set: true, delete: true, clear: true,
-//   has: true, getMany: true, setMany: true, deleteMany: true,
-//   hasMany: true, disconnect: true, iterator: true, namespace: true }
+detectKeyvStorage(new Map()).store; // 'mapLike'
 ```
 
-The `keyvStorage` property is `true` when the object has all core storage adapter methods (`get`, `set`, `delete`, `clear`).
-
-#### Additional Capability Checks
-
-Keyv v6 also provides functions for checking compression, serialization, and encryption adapters:
+#### Compression, serialization, encryption
 
 ```javascript
-import { isKeyvCompression, isKeyvSerialization, isKeyvEncryption } from 'keyv';
+import { detectKeyvCompression, detectKeyvSerialization, detectKeyvEncryption } from 'keyv';
 
-isKeyvCompression(gzipAdapter);
-// { keyvCompression: true, compress: true, decompress: true }
-
-isKeyvSerialization(customSerializer);
-// { keyvSerialization: true, stringify: true, parse: true }
-
-isKeyvEncryption(aesAdapter);
-// { keyvEncryption: true, encrypt: true, decrypt: true }
+detectKeyvCompression(gzipAdapter).compatible;
+detectKeyvSerialization(JSON).compatible;
+detectKeyvEncryption(aesAdapter).compatible;
 ```
 
 ---

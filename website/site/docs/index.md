@@ -1,250 +1,144 @@
 ---
-title: 'Getting Started Guide'
+title: Getting Started
 order: 1
+description: Install Keyv, store a value in seconds, and learn who uses it and what it can do.
 ---
 
-# Getting Started Guide
+# Getting Started
 
-Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. It supports TTL based expiry, making it suitable as a cache or a persistent key-value store. Follow the steps below to get you up and running.
-
-## 1. Make a Project Directory
-Make a directory with your project in it.
-
-```sh
-mkdir keyv
-cd keyv
-```
-You’re now inside your project’s directory.
-
-## 2. Install keyv
-
-```sh
-npm install --save keyv
-```
-By default, everything is stored in memory; you can optionally also install a storage adapter; choose one from the following:
-
-```sh
-npm install --save @keyv/redis
-npm install --save @keyv/valkey
-npm install --save @keyv/memcache
-npm install --save @keyv/mongo
-npm install --save @keyv/sqlite
-npm install --save @keyv/postgres
-npm install --save @keyv/mysql
-npm install --save @keyv/etcd
-npm install --save @keyv/dynamo
-npm install --save @keyv/cloudflare-kv
-```
-
-> **Note**: You can also use [third-party storage adapters](/docs/third-party-storage-adapters/)
-
-
-## 3. Create a New Keyv Instance
-Pass your connection string if applicable. Keyv will automatically load the correct storage adapter. ////
-```js
-// example Keyv instance that uses sqlite storage adapter
-const keyv = new Keyv('sqlite://path/to/database.sqlite');
-```
-
-
-`Keyv` Parameters
-
-Parameter | Type | Required | Description
------------- | ------------- | ------------- | -------------
-uri | String | N | The connection string URI. Merged into the options object as options.uri. Default value: undefined
-options | Object | N | The options object is also passed through to the storage adapter. See the table below for a list of available options.
-
-`options` Parameters
-
-Parameter | Type | Required | Description
------------- | ------------- | ------------- | -------------
-namespace | String | N | Namespace for the current instance.  Default: 'keyv'
-ttl | Number | N | This is the default TTL, in milliseconds. It can be overridden by specifying a TTL on .set().  Default: undefined
-compression | @keyv/compress\-\<compression_package_name> | N | Compression package to use. See Compression for more details. Default: undefined.
-serialize | Function | N | A custom serialization function. Default: JSONB.stringify
-deserialize | Function | N | A custom deserialization function. Default: JSONB.parse
-store | Storage adapter instance | N | The storage adapter instance to be used by Keyv. Default: new Map()
-adapter | String | N | Specify an adapter to use. e.g 'redis' or 'mongodb'. Default: undefined
-
-### Example - Create an Instance of Keyv with a connection URI
-The following example shows how you would create and Instance of Keyv with a `mongodb` connection URI.
+Keyv is a small, Promise-based key-value store. Use it as an in-memory TTL cache or point it at Redis, SQLite, Postgres, MongoDB, and other backends through storage adapters. The application API stays the same when you change the store.
 
 ```js
-const Keyv = require('keyv');
+import Keyv from "keyv";
 
-const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname');
-
-// Handle DB connection errors
-keyv.on('error', err => console.log('Connection Error', err));
+const keyv = new Keyv();
+await keyv.set("user:1", { name: "Ada" }, 60_000);
+await keyv.get("user:1"); // { name: 'Ada' }
 ```
-### Example - Create an Instance of Keyv using a third-party storage adapter
 
-[`quick-lru`](https://github.com/sindresorhus/quick-lru) is a third-party module that implements the Map API.
+Keys are strings. Values can be any JSON-serializable type, plus `Buffer` and `BigInt` with the built-in serializer.
+
+## Quick Start
+
+Install the core package. By default everything lives in memory.
+
+```bash
+npm install keyv
+```
 
 ```js
-const Keyv = require('keyv');
-const QuickLRU = require('quick-lru');
+import Keyv from "keyv";
 
-const lru = new QuickLRU({ maxSize: 1000 });
-const keyv = new Keyv({ store: lru });
+const keyv = new Keyv();
 
-// Handle DB connection errors
-keyv.on('error', err => console.log('Connection Error', err));
+await keyv.set("foo", "bar");
+await keyv.get("foo"); // 'bar'
+await keyv.has("foo"); // true
+await keyv.delete("foo"); // true
 ```
 
-## 4. Create Some Key Value Pairs
+Add a storage adapter when you want the data to survive process restarts:
 
-Method: `set(key, value, [ttl])` - Set a value for a specified key.
-
-Parameter | Type | Required | Description
------------- | ------------- | ------------- | -------------
-key | String | Y | Unique identifier which is used to look up the value. Keys are persistent by default.
-value | Any  | Y | Data value associated with the key
-ttl | Number | N | Expiry time in milliseconds
-
-The following example code shows you how to create a key-value pair using the `set` method.
+```bash
+npm install @keyv/redis
+```
 
 ```js
+import Keyv from "keyv";
+import KeyvRedis from "@keyv/redis";
 
-const keyv = new Keyv('redis://user:pass@localhost:6379');
+const keyv = new Keyv(new KeyvRedis("redis://localhost:6379"));
+keyv.on("error", (error) => console.error("Keyv error", error));
 
-// set a key value pair that expires in 1000 milliseconds
-await keyv.set('foo', 'expires in 1 second', 1000); // true
-
-// set a key value pair that never expires
-await keyv.set('bar', 'never expires'); // true
+await keyv.set("session:abc", { userId: 42 }, 3_600_000);
 ```
 
-
-
-Method: `delete(key)` - Deletes an entry.
-
-Parameter | Type | Required | Description
------------- | ------------- | ------------- | -------------
-key | String | Y | Unique identifier which is used to look up the value. Returns `true `if the key existed, `false` if not.
-
-To delete a key value pair use the `delete(key)` method as shown below:
+You can also pass options as the first argument, or pass the adapter plus options:
 
 ```js
-// Delete the key value pair for the 'foo' key
-await keyv.delete('foo'); // true
+const keyv = new Keyv({
+	store: new KeyvRedis("redis://localhost:6379"),
+	namespace: "cache",
+	ttl: 60_000,
+});
 ```
 
+See [Options](/docs/options/) for the full constructor surface, and [Storage Adapters](/docs/storage-adapters/overview/) for every official backend.
 
-## 5. Advanced - Use Namespaces to Avoid Key Collisions
-You can namespace your Keyv instance to avoid key collisions and allow you to clear only a certain namespace while using the same database.
+## Who Uses Keyv
 
-The example code below creates two namespaces, 'users' and 'cache' and creates a key value pair using the key 'foo' in both namespaces, it also shows how to delete all values in a specified namespace.
+Keyv is the storage layer behind several widely used caching stacks in the Node.js ecosystem:
 
-```js
-const users = new Keyv('redis://user:pass@localhost:6379', { namespace: 'users' });
-const cache = new Keyv('redis://user:pass@localhost:6379', { namespace: 'cache' });
+| Project | How it uses Keyv |
+| --- | --- |
+| [Cacheable](https://cacheable.org) | Layered L1/L2 caching built on Keyv stores |
+| [cache-manager](https://www.npmjs.com/package/cache-manager) | Multi-store cache abstraction for services |
+| [NestJS](https://docs.nestjs.com/techniques/caching) | Caching via `@nestjs/cache-manager` |
+| **got / cacheable-request** | RFC-compliant HTTP response caching |
 
-// Set a key-value pair using the key 'foo' in both namespaces
-await users.set('foo', 'users'); // returns true
-await cache.set('foo', 'cache'); // returns true
+Thousands of npm packages depend on Keyv directly or through those libraries. If you are embedding Keyv inside your own module, expose a `cache` / `store` option and set a [namespace](/docs/namespaces/) so `.clear()` cannot wipe unrelated data.
 
-// Retrieve a Value
-await users.get('foo'); // returns 'users'
-await cache.get('foo'); // returns 'cache'
+## Features
 
-// Delete all values for the specified namespace
-await users.clear();
+### Storage adapters
+
+Official adapters wrap Redis, Valkey, MongoDB, SQLite, PostgreSQL, MySQL, Etcd, Memcache, DynamoDB, and Cloudflare KV. Pass any of them as `store`. See [Storage Adapters](/docs/storage-adapters/overview/).
+
+**Built-in adapters** ship in the `keyv` package:
+
+- **`KeyvMemoryAdapter`** — the default. Wraps `Map`, [`quick-lru`](https://github.com/sindresorhus/quick-lru), [`lru.min`](https://github.com/wellwelwel/lru.min), or any Map-like object. Adds namespacing, TTL, and batch methods. See [Using Map and LRU](/docs/using-map-and-lru/).
+- **`KeyvBridgeAdapter`** — wraps legacy async adapters and async Map-like stores so they work with the v6 contract. See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
+
+You can also bring [your own adapter](/docs/storage-adapters/overview/#build-your-own) or use a [third-party adapter](/docs/storage-adapters/third-party/).
+
+### Serialization
+
+The built-in `KeyvJsonSerializer` is on by default. It round-trips JSON types plus `Buffer` and `BigInt`. Official alternatives:
+
+- [`@keyv/serialize-superjson`](/docs/serialization/superjson/) — `Date`, `Map`, `Set`, `RegExp`, `URL`, `Error`
+- [`@keyv/serialize-msgpackr`](/docs/serialization/msgpackr/) — compact binary MessagePack
+
+Disable serialization for in-memory objects with `{ serialization: false }`. Compression and encryption require a serializer. See [Encode and Decode](/docs/encode-and-decode/).
+
+### Sanitization
+
+Enable `{ sanitize: true }` to strip SQL comments, Mongo operators, path traversal, and control characters from keys and namespaces. Harmless characters such as quotes pass through. See [Sanitization](/docs/sanitization/).
+
+### Encryption
+
+Pass a `KeyvEncryptionAdapter` (`encrypt` / `decrypt`) via the `encryption` option. Official packages:
+
+- [`@keyv/encrypt-node`](/docs/encryption/encrypt-node/) — Node.js `crypto` (AES-GCM, ChaCha20-Poly1305, …)
+- [`@keyv/encrypt-web`](/docs/encryption/encrypt-web/) — Web Crypto API for browsers, Workers, and Deno
+
+Encryption runs on the serialized (and optionally compressed) string. See [Encode and Decode](/docs/encode-and-decode/).
+
+### Everything else
+
+- **TTL** — default on the instance, override per `set()`
+- **Namespaces** — isolate keys that share a backend
+- **Hooks** — `before:*` / `after:*` on every operation
+- **Events, stats, and telemetry** — `error` events, `stat:hit` / `stat:miss`, and optional `eventLogger`
+- **Runtimes** — Node.js, Bun, and browsers
+
+## Type-safe Usage
+
+Pass a generic on the instance, or on individual `get` / `set` calls:
+
+```ts
+const numbers = new Keyv<number>();
+await numbers.set("count", 3);
+const value = await numbers.get("count"); // number | undefined
+
+const keyv = new Keyv();
+await keyv.set<string>("name", "Ada");
+const name = await keyv.get<string>("name");
 ```
 
-## 6. Advanced - Enable Compression
+## Next Steps
 
-Keyv supports both `gzip`, `brotli` and `lz4` methods of compression. Before you can enable compression, you will need to install the compression package:
-
-```sh
-npm install --save keyv @keyv/compress-gzip
-```
-
-### Example - Enable Gzip compression
-To enable compression, pass the `compression` option to the constructor.
-
-```js
-const KeyvGzip = require('@keyv/compress-gzip');
-const Keyv = require('keyv');
-
-const keyvGzip = new KeyvGzip();
-const keyv = new Keyv({ compression: KeyvGzip });
-```
-
-### Example - Enable Brotli compression
-
-```js
-import Keyv from 'keyv';
-import KeyvBrotli from '@keyv/compress-brotli';
-
-const keyvBrotli = new KeyvBrotli();
-const keyv = new Keyv({ compression: keyvBrotli });
-```
-
-### Example - Enable lz4 compression
-
-```js
-import Keyv from 'keyv';
-import KeyvLz4 from '@keyv/compress-lz4';
-
-const keyvLz4 = new KeyvLz4();
-const keyv = new Keyv({ compression: keyvLz4 });
-```
-
-You can also pass a custom compression function to the compression option. Custom compression functions must follow the pattern of the official compression adapter (see below for further information).
-
-### Want to build your own?
-
-Great! Keyv is designed to be easily extended. You can build your own compression adapter by following the pattern of the official compression adapters based on this interface:
-
-```js
-interface CompressionAdapter {
-	async compress(value: any, options?: any);
-	async decompress(value: any, options?: any);
-	async serialize(value: any);
-	async deserialize(value: any);
-}
-```
-
-#### Test your custom compression adapter
-In addition to the interface, you can test it with our compression test suite using `@keyv/test-suite`:
-
-```js
-const {keyvCompressionTests} = require('@keyv/test-suite');
-const KeyvGzip = require('@keyv/compress-gzip');
-
-keyvCompressionTests(test, new KeyvGzip());
-```
-
-## 7. Advanced - Extend your own Module with Keyv
-Keyv can be easily embedded into other modules to add cache support.
-- Caching will work in memory by default, and users can also install a Keyv storage adapter and pass in a connection string or any other storage that implements the Map API.
-- You should also set a namespace for your module to safely call `.clear()` without clearing unrelated app data.
-
->**Note**:
-> The recommended pattern is to expose a cache option in your module's options which is passed through to Keyv.
-
-### Example - Add Cache Support to a Module
-
-1. Install whichever storage adapter you will be using, `keyv-redis` in this example
-```sh
-npm install --save keyv-redis
-```
-2. Declare the Module with the cache controlled by a Keyv instance
-```js
-class AwesomeModule {
-	constructor(opts) {
-		this.cache = new Keyv({
-			uri: typeof opts.cache === 'string' && opts.cache,
-			store: typeof opts.cache !== 'string' && opts.cache,
-			namespace: 'awesome-module'  
-		});
-	}
-}
-```
-
-3. Create an Instance of the Module with caching support
-```js
-const AwesomeModule = require('awesome-module');
-const awesomeModule = new AwesomeModule({ cache: 'redis://localhost' });
-```
+- [Options](/docs/options/) and [Properties](/docs/properties/)
+- [Methods](/docs/methods/)
+- [Storage Adapters](/docs/storage-adapters/overview/)
+- [v5 → v6 Migration](/docs/migration/v5-to-v6/) if you are upgrading
+- Archived [v5 documentation](/v5/)

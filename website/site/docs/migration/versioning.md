@@ -1,6 +1,8 @@
 ---
 title: 'Versioning & Release Tags'
-order: 4
+sidebarTitle: 'Versioning'
+parent: 'Migration'
+order: 3
 ---
 
 # Versioning & Release Tags
@@ -95,4 +97,4 @@ Security is the one thing that can override "no changes on LTS", and we work har
 
 Some adapters take their driver as a peer dependency, so you control its version. On an LTS line we keep the supported peer range stable; support for a driver's new breaking major is added on the current development major, not backported.
 
-For the v5 → v6 changes themselves, see the [v5 to v6 Migration](/docs/v5-to-v6) guide.
+For the v5 → v6 changes themselves, see the [v5 to v6 Migration](/docs/migration/v5-to-v6/) guide. The v5 documentation site is archived at [keyv.org/v5](/v5/).

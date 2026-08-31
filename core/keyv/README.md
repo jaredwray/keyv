@@ -411,7 +411,7 @@ const lru = new QuickLRU({ maxSize: 1000 });
 const keyv = new Keyv({ store: lru });
 ```
 
-View the complete list of third-party storage adapters and learn how to build your own at https://keyv.org/docs/third-party-storage-adapters/
+View the complete list of third-party storage adapters and learn how to build your own at https://keyv.org/docs/storage-adapters/third-party/
 
 ## Storage Adapter Contract (v6)
 

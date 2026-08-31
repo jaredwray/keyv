@@ -2,6 +2,7 @@
 title: 'How to Implement Caching in Javascript'
 sidebarTitle: 'Caching in Javascript'
 parent: 'Caching'
+order: 1
 ---
 
 # How to Implement Caching in Javascript

@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - v5 to v6 Migration</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"v5 to v6 Migration","description":"","url":"https://keyv.org/v5/docs/v5-to-v6/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"1970-01-01","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">v5 to v6 Migration</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">v5 to v6 Migration</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <p>We are pleased to announce Keyv v6 with major enhancements and some breaking changes. This guide will help you understand how to migrate from v5 to v6. For most users, the transition will be straightforward.</p>
+<p><strong>Important:</strong> With the release of v6, Keyv v5 will move to maintenance mode. This means v5 will only receive security fixes and minor maintenance updates. We encourage all users to migrate to v6 to take advantage of the latest features and improvements. You can view the <code>v5</code> branch in the the mono repo.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#roadmap--progress">Roadmap & Progress</a></li>
+<li><a href="#quick-migration-guide">Quick Migration Guide</a></li>
+<li><a href="#breaking-changes">Breaking Changes</a>
+<ul>
+<li><a href="#namespace-overhaul">Namespace Overhaul</a></li>
+<li><a href="#opts-property-removed"><code>opts</code> Property Removed</a></li>
+<li><a href="#serialization-replaces-stringify-and-parse">Serialization Replaces <code>stringify</code> and <code>parse</code></a></li>
+<li><a href="#hookified-for-events-and-hooks">Hookified for Events and Hooks</a></li>
+<li><a href="#deletemany-returns-boolean"><code>deleteMany</code> Returns <code>boolean[]</code></a></li>
+<li><a href="#setmany-uses-keyventry-and-returns-boolean"><code>setMany</code> Uses <code>KeyvEntry[]</code> and Returns <code>boolean[]</code></a></li>
+<li><a href="#get-and-getmany-no-longer-support-raw"><code>get</code> and <code>getMany</code> No Longer Support Raw</a></li>
+<li><a href="#iterator-changes">Iterator Changes</a></li>
+<li><a href="#removed-ttlsupport-from-storage-adapters">Removed <code>.ttlSupport</code> from Storage Adapters</a></li>
+<li><a href="#storage-adapters-receive-absolute-expires-instead-of-relative-ttl">Storage Adapters Receive Absolute <code>expires</code> Instead of Relative <code>ttl</code></a></li>
+<li><a href="#returns-undefined-instead-of-null">Returns <code>undefined</code> Instead of <code>null</code></a></li>
+<li><a href="#compression-adapter-interface-change">Compression Adapter Interface Change</a></li>
+<li><a href="#keyvmemcache-moves-from-memjs-to-memcache"><code>@keyv/memcache</code> Moves from <code>memjs</code> to <code>memcache</code></a></li>
+</ul>
+</li>
+<li><a href="#new-features">New Features</a>
+<ul>
+<li><a href="#keyv-v6-versioning">Keyv v6 Versioning</a></li>
+<li><a href="#keyv-v5-maintenance-mode">Keyv v5 Maintenance Mode</a></li>
+<li><a href="#browser-compatibility">Browser Compatibility</a></li>
+<li><a href="#serialization-adapters">Serialization Adapters</a>
+<ul>
+<li><a href="#disabling-serialization">Disabling Serialization</a></li>
+<li><a href="#custom-serialization">Custom Serialization</a></li>
+</ul>
+</li>
+<li><a href="#encryption-adapters">Encryption Adapters</a>
+<ul>
+<li><a href="#custom-encryption">Custom Encryption</a></li>
+</ul>
+</li>
+<li><a href="#native-hashing-for-key-and-namespace">Native Hashing for Key and Namespace</a></li>
+<li><a href="#new-identification-functions">New Identification Functions</a>
+<ul>
+<li><a href="#iskeyv"><code>isKeyv</code></a></li>
+<li><a href="#iskeyvstorage"><code>isKeyvStorage</code></a></li>
+<li><a href="#additional-capability-checks">Additional Capability Checks</a></li>
+</ul>
+</li>
+<li><a href="#memory-adapter">Memory Adapter</a></li>
+</ul>
+</li>
+<li><a href="#getting-help">Getting Help</a></li>
+</ul>
+<h2 id="roadmap--progress">Roadmap & Progress</h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Remove <code>opts</code> property in Keyv and Storage Adapters</td>
+<td>IN PROGRESS</td>
+</tr>
+<tr>
+<td>Add encryption adapters</td>
+<td>NOT STARTED</td>
+</tr>
+<tr>
+<td>Browser compatibility</td>
+<td>NOT STARTED</td>
+</tr>
+<tr>
+<td>Stats System to be Event Driven</td>
+<td>NOT STARTED</td>
+</tr>
+<tr>
+<td>Test Suite Overhaul</td>
+<td>NOT STARTED</td>
+</tr>
+<tr>
+<td>Refactor iterator implementation</td>
+<td>COMPLETED</td>
+</tr>
+<tr>
+<td>Update <code>deleteMany</code> return type</td>
+<td>COMPLETED</td>
+</tr>
+<tr>
+<td>Update <code>setMany</code> signature and return type</td>
+<td>COMPLETED</td>
+</tr>
+<tr>
+<td>Add compression interface standardization</td>
+<td>COMPLETED</td>
+</tr>
+<tr>
+<td>Integrate Hookified library in Keyv</td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Keyv core does not do keyPrefixing</td>
+<td>COMPLETED</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/sqlite</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/dynamo</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/etcd</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/valkey</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Finalize namespace handling in storage adapters</td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Add <code>getRaw</code> and <code>getManyRaw</code> methods</td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Implement <code>KeyvMemoryAdapter</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Add serialization adapters</td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Migrate <code>@keyv/memcache</code> from <code>memjs</code> to <code>memcache</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/bigmap</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/mongo</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/mysql</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/postgres</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Update <code>@keyv/redis</code></td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Add GitHub Actions release workflow</td>
+<td>COMPLETE</td>
+</tr>
+<tr>
+<td>Storage adapters receive absolute <code>expires</code> instead of relative <code>ttl</code></td>
+<td>COMPLETE</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="quick-migration-guide">Quick Migration Guide</h2>
+<p>For most users, migrating from v5 to v6 involves a few key changes:</p>
+<ol>
+<li>
+<p><strong>Update property access</strong> - The <code>opts</code> property has been removed. Use direct property access instead (<code>keyv.namespace</code> instead of the old <code>keyv.opts.namespace</code>)</p>
+</li>
+<li>
+<p><strong>Update serialization</strong> - Replace <code>serialize</code>/<code>deserialize</code> options with the new <code>serialization</code> adapter:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-comment">// v5</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialize</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-property">stringify</span>, <span class="hljs-attr">deserialize</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-property">parse</span> });
+
+<span class="hljs-comment">// v6</span>
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSerialize</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/serialize'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSerialize</span>() });
+</code></pre>
+</li>
+<li>
+<p><strong>Update raw value access</strong> - Replace <code>get(key, { raw: true })</code> with <code>getRaw(key)</code> and <code>getMany(keys, { raw: true })</code> with <code>getManyRaw(keys)</code></p>
+</li>
+<li>
+<p><strong>Handle new return types</strong> - <code>deleteMany</code> and <code>setMany</code> now return <code>boolean[]</code> instead of a single <code>boolean</code></p>
+</li>
+</ol>
+<p>For detailed information on each change, see the sections below.</p>
+<hr>
+<h2 id="breaking-changes">Breaking Changes</h2>
+<h3 id="namespace-overhaul">Namespace Overhaul</h3>
+<p>We have finalized the transition (started in v5) to move all namespace handling to the storage adapters themselves. When you set the namespace on Keyv, it passes it directly to the storage adapter.</p>
+<p><strong>What changed:</strong></p>
+<ul>
+<li><code>useKeyPrefix</code> property has been removed</li>
+<li><code>keyPrefix</code> property has been removed</li>
+<li>Key prefixing is no longer done at the Keyv layer</li>
+</ul>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({
+  <span class="hljs-attr">namespace</span>: <span class="hljs-string">'myapp'</span>,
+  <span class="hljs-attr">useKeyPrefix</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">keyPrefix</span>: <span class="hljs-string">'prefix:'</span>
+});
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">namespace</span>: <span class="hljs-string">'myapp'</span> });
+<span class="hljs-comment">// Namespace is handled directly by the storage adapter</span>
+</code></pre>
+<p>For legacy storage adapters or <code>Map</code>-compatible stores, we have added <code>KeyvMemoryAdapter</code> which handles advanced features without overloading the main Keyv codebase. See <a href="#memory-adapter">Memory Adapter</a> for more details.</p>
+<hr>
+<h3 id="opts-property-removed"><code>opts</code> Property Removed</h3>
+<p>In Keyv v5, we began removing <code>opts</code> as a passed-around value. In v6, <code>opts</code> has been fully removed from the <code>KeyvStorageAdapter</code> interface and all storage adapters. The <code>dialect</code> property has also been removed. All properties are now directly part of the Keyv class and each storage adapter.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">opts</span>.<span class="hljs-property">namespace</span>);
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">namespace</span>);
+</code></pre>
+<hr>
+<h3 id="serialization-replaces-stringify-and-parse">Serialization Replaces <code>stringify</code> and <code>parse</code></h3>
+<p>The <code>stringify</code> and <code>parse</code> options have been replaced with the new <code>serialization</code> property that accepts a serialization adapter.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({
+  <span class="hljs-attr">serialize</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-property">stringify</span>,
+  <span class="hljs-attr">deserialize</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-property">parse</span>
+});
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSerialize</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/serialize'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSerialize</span>() });
+</code></pre>
+<p>See <a href="#serialization-adapters">Serialization Adapters</a> for more details.</p>
+<hr>
+<h3 id="hookified-for-events-and-hooks">Hookified for Events and Hooks</h3>
+<p>Keyv now extends <a href="https://hookified.org">Hookified</a> directly, replacing the custom <code>EventManager</code> and <code>HooksManager</code> classes. This unifies the event/hook system across Keyv and all storage adapters.</p>
+<p><strong>Breaking Changes:</strong></p>
+<ul>
+<li><code>keyv.hooks.addHandler(event, fn)</code> is replaced by <code>keyv.addHook(event, fn)</code></li>
+<li><code>keyv.hooks.removeHandler(event, fn)</code> is replaced by <code>keyv.removeHook({ event, handler: fn })</code></li>
+<li><code>keyv.hooks.handlers</code> is replaced by <code>keyv.hooks</code> (a <code>Map<string, IHook[]></code>)</li>
+<li>Hook names changed from <code>pre</code>/<code>post</code> to <code>before:</code>/<code>after:</code> convention</li>
+<li>The <code>emitErrors</code> option has been removed</li>
+<li><code>throwOnErrors</code> behavior changed: it now only throws when there are <strong>no</strong> error listeners registered (standard EventEmitter pattern). In v5, it would always re-throw after emitting.</li>
+</ul>
+<p><strong>Hook Name Migration:</strong></p>
+<table>
+<thead>
+<tr>
+<th>v5 Hook</th>
+<th>v6 Hook</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>KeyvHooks.PRE_SET</code> (<code>"preSet"</code>)</td>
+<td><code>KeyvHooks.BEFORE_SET</code> (<code>"before:set"</code>)</td>
+</tr>
+<tr>
+<td><code>KeyvHooks.POST_SET</code> (<code>"postSet"</code>)</td>
+<td><code>KeyvHooks.AFTER_SET</code> (<code>"after:set"</code>)</td>
+</tr>
+<tr>
+<td><code>KeyvHooks.PRE_GET</code> (<code>"preGet"</code>)</td>
+<td><code>KeyvHooks.BEFORE_GET</code> (<code>"before:get"</code>)</td>
+</tr>
+<tr>
+<td><code>KeyvHooks.POST_GET</code> (<code>"postGet"</code>)</td>
+<td><code>KeyvHooks.AFTER_GET</code> (<code>"after:get"</code>)</td>
+</tr>
+<tr>
+<td><code>KeyvHooks.PRE_DELETE</code> (<code>"preDelete"</code>)</td>
+<td><code>KeyvHooks.BEFORE_DELETE</code> (<code>"before:delete"</code>)</td>
+</tr>
+<tr>
+<td><code>KeyvHooks.POST_DELETE</code> (<code>"postDelete"</code>)</td>
+<td><code>KeyvHooks.AFTER_DELETE</code> (<code>"after:delete"</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The same pattern applies for <code>GET_MANY</code>, <code>GET_RAW</code>, <code>GET_MANY_RAW</code>, <code>SET_RAW</code>, <code>SET_MANY_RAW</code> hooks.</p>
+<p>The old <code>PRE_</code>/<code>POST_</code> enum values are deprecated but still work. Keyv will emit deprecation warnings when they are used.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, { <span class="hljs-title class_">KeyvHooks</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-property">hooks</span>.<span class="hljs-title function_">addHandler</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">PRE_SET</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Setting <span class="hljs-subst">${data.key}</span>`</span>);
+});
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, { <span class="hljs-title class_">KeyvHooks</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">addHook</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">BEFORE_SET</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Setting <span class="hljs-subst">${data.key}</span>`</span>);
+});
+</code></pre>
+<p><strong>Events:</strong>
+Events work the same as before, but now use Hookified internally:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function">(<span class="hljs-params">err</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">'Keyv error:'</span>, err);
+});
+
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'disconnect'</span>, <span class="hljs-function">() =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Disconnected'</span>);
+});
+</code></pre>
+<p><strong>Error Handling:</strong>
+The <code>throwOnErrors</code> option still works and defaults to <code>false</code>. When enabled, errors will throw if there are <strong>no</strong> error listeners registered (via hookified's <code>throwOnEmitError</code>). If you have an error listener, the error is passed to the listener instead of being thrown. This follows the standard Node.js EventEmitter pattern.</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">throwOnErrors</span>: <span class="hljs-literal">true</span> });
+
+<span class="hljs-comment">// Error will throw because there is no error listener</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'key'</span>); <span class="hljs-comment">// throws if the store errors</span>
+
+<span class="hljs-comment">// Error will NOT throw because there is a listener handling it</span>
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function">(<span class="hljs-params">err</span>) =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(err));
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'key'</span>); <span class="hljs-comment">// error passed to listener instead</span>
+</code></pre>
+<p>Additionally, <code>throwOnEmptyListeners</code> is now enabled by default. This means that if an error event is emitted with <strong>no</strong> error listeners registered, it will always throw — even without <code>throwOnErrors</code> enabled. This is the standard Node.js EventEmitter behavior for unhandled errors. To silently discard errors, register a no-op listener:</p>
+<pre><code class="hljs language-javascript">keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function">() =></span> {});
+</code></pre>
+<p>For more about Hookified, visit <a href="https://hookified.org">https://hookified.org</a>.</p>
+<hr>
+<h3 id="deletemany-returns-boolean"><code>deleteMany</code> Returns <code>boolean[]</code></h3>
+<p><code>deleteMany</code> now returns a <code>boolean[]</code> indicating the success of each deletion. The <code>StorageAdapter</code> interface has been updated accordingly.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">deleteMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>]);
+<span class="hljs-comment">// result was: boolean (true if all deleted)</span>
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">deleteMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>]);
+<span class="hljs-comment">// results: [true, true] - boolean for each key</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(results[<span class="hljs-number">0</span>]); <span class="hljs-comment">// true - key1 was deleted</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(results[<span class="hljs-number">1</span>]); <span class="hljs-comment">// true - key2 was deleted</span>
+</code></pre>
+<hr>
+<h3 id="setmany-uses-keyventry-and-returns-boolean"><code>setMany</code> Uses <code>KeyvEntry[]</code> and Returns <code>boolean[]</code></h3>
+<p><code>setMany</code> now uses the <code>KeyvEntry[]</code> type for input and returns <code>boolean[]</code> to indicate success for each entry.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setMany</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key1'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value1'</span> },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key2'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value2'</span> }
+]);
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+
+<span class="hljs-comment">// Using KeyvEntry[] type</span>
+<span class="hljs-keyword">const</span> entries = [
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key1'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value1'</span>, <span class="hljs-attr">ttl</span>: <span class="hljs-number">1000</span> },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key2'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value2'</span> }
+];
+
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setMany</span>(entries);
+<span class="hljs-comment">// results: [true, true] - boolean for each entry</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(results[<span class="hljs-number">0</span>]); <span class="hljs-comment">// true - key1 was set</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(results[<span class="hljs-number">1</span>]); <span class="hljs-comment">// true - key2 was set</span>
+</code></pre>
+<hr>
+<h3 id="get-and-getmany-no-longer-support-raw"><code>get</code> and <code>getMany</code> No Longer Support Raw</h3>
+<p>Since Keyv v5.5, we added <code>getRaw</code> and <code>getManyRaw</code> methods. In v6, raw support has been removed from <code>get</code> and <code>getMany</code>.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key'</span>, <span class="hljs-string">'value'</span>, <span class="hljs-number">1000</span>);
+
+<span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'key'</span>);
+<span class="hljs-keyword">const</span> rawValue = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'key'</span>, { <span class="hljs-attr">raw</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-comment">// rawValue: { value: 'value', expires: 1234567890 }</span>
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key'</span>, <span class="hljs-string">'value'</span>, <span class="hljs-number">1000</span>);
+
+<span class="hljs-comment">// Use get for the value</span>
+<span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'key'</span>);
+<span class="hljs-comment">// value: 'value'</span>
+
+<span class="hljs-comment">// Use getRaw for the raw format</span>
+<span class="hljs-keyword">const</span> rawValue = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getRaw</span>(<span class="hljs-string">'key'</span>);
+<span class="hljs-comment">// rawValue: { value: 'value', expires: 1234567890 }</span>
+
+<span class="hljs-comment">// For multiple keys</span>
+<span class="hljs-keyword">const</span> values = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>]);
+<span class="hljs-keyword">const</span> rawValues = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getManyRaw</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>]);
+</code></pre>
+<hr>
+<h3 id="iterator-changes">Iterator Changes</h3>
+<p>The iterator is now a proper class method instead of a dynamically assigned property. It no longer requires any arguments — namespace handling is automatic.</p>
+<p>Key changes:</p>
+<ul>
+<li><code>iterator()</code> is now a built-in async generator method, not an assignable property</li>
+<li>No arguments required (previously required <code>keyv.namespace</code>)</li>
+<li>Automatically handles Map stores, storage adapters with <code>iterator()</code>, and unsupported stores</li>
+<li>Expired entries are automatically filtered and deleted during iteration</li>
+<li>The <code>IteratorFunction</code> type has been removed</li>
+<li>If the store does not support iteration, an <code>error</code> event is emitted instead of throwing</li>
+</ul>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">for</span> <span class="hljs-title function_">await</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> keyv.<span class="hljs-title function_">iterator</span>(keyv.<span class="hljs-property">namespace</span>)) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">for</span> <span class="hljs-title function_">await</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> keyv.<span class="hljs-title function_">iterator</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<hr>
+<h3 id="removed-ttlsupport-from-storage-adapters">Removed <code>.ttlSupport</code> from Storage Adapters</h3>
+<p>The <code>ttlSupport</code> property has been removed from storage adapters. Keyv now automatically detects the storage adapter type and uses <code>KeyvMemoryAdapter</code> for adapters that don't natively support TTL.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdapter</span> {
+  ttlSupport = <span class="hljs-literal">false</span>;
+  <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-comment">// No need to specify ttlSupport</span>
+<span class="hljs-comment">// Keyv automatically handles TTL through KeyvMemoryAdapter if needed</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdapter</span> {
+  <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<hr>
+<h3 id="storage-adapters-receive-absolute-expires-instead-of-relative-ttl">Storage Adapters Receive Absolute <code>expires</code> Instead of Relative <code>ttl</code></h3>
+<blockquote>
+<p><strong>Most users do not need to do anything.</strong> The public Keyv API is unchanged — you still call <code>keyv.set(key, value, ttl)</code> with a <strong>relative</strong> TTL in milliseconds, and <code>KeyvOptions.ttl</code> is still relative. This change only affects authors of <strong>custom or third-party storage adapters</strong>.</p>
+</blockquote>
+<p>In v5, Keyv passed each storage adapter a <strong>relative</strong> <code>ttl</code> (milliseconds from now) on <code>set</code>/<code>setMany</code>, and adapters re-derived the absolute deadline themselves. Some adapters even recovered the expiry by parsing the already-encoded value (<code>JSON.parse</code>), which <strong>silently failed</strong> under compression, encryption, or a non-JSON serializer (<code>@keyv/serialize-msgpackr</code>, <code>@keyv/serialize-superjson</code>) — leaving the expiry unset so the entry never expired.</p>
+<p>In v6, Keyv computes the <strong>absolute</strong> expiry once and passes it across the storage boundary as <code>expires</code> (a Unix timestamp in milliseconds). Adapters store it directly and never parse the value to recover it.</p>
+<p><strong>The v6 storage-adapter contract:</strong></p>
+<ul>
+<li><strong><code>set(key, value, expires?)</code></strong> — <code>expires</code> is an absolute Unix timestamp in milliseconds. <code>undefined</code> means no expiry; a value <code><= Date.now()</code> is already expired.</li>
+<li><strong><code>setMany(entries)</code></strong> — each entry is a <code>KeyvStorageEntry</code> (<code>{ key, value, expires? }</code>) rather than the public <code>KeyvEntry</code> (<code>{ key, value, ttl? }</code>).</li>
+<li><strong>Declare support</strong> by exposing <code>capabilities.expires === true</code>. The <code>keyvStorageCapability(this)</code> helper builds the full capability descriptor for you.</li>
+</ul>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdapter</span> {
+  <span class="hljs-comment">// ttl is relative milliseconds, or undefined</span>
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">set</span>(<span class="hljs-params"><span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">ttl</span>?: <span class="hljs-built_in">number</span></span>) {
+    <span class="hljs-keyword">const</span> expires = <span class="hljs-keyword">typeof</span> ttl === <span class="hljs-string">'number'</span> ? <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + ttl : <span class="hljs-literal">undefined</span>;
+    <span class="hljs-comment">// ...persist value with expires...</span>
+  }
+
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">setMany</span>(<span class="hljs-params"><span class="hljs-attr">entries</span>: <span class="hljs-title class_">Array</span><{ key: <span class="hljs-built_in">string</span>; value: <span class="hljs-built_in">string</span>; ttl?: <span class="hljs-built_in">number</span> }></span>) {
+    <span class="hljs-comment">// ...derive expires from each ttl...</span>
+  }
+}
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { keyvStorageCapability, <span class="hljs-keyword">type</span> <span class="hljs-title class_">KeyvStorageAdapter</span>, <span class="hljs-keyword">type</span> <span class="hljs-title class_">KeyvStorageEntry</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdapter</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">KeyvStorageAdapter</span> {
+  <span class="hljs-comment">// Advertise the v6 absolute-expires contract.</span>
+  <span class="hljs-keyword">get</span> <span class="hljs-title function_">capabilities</span>() {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">keyvStorageCapability</span>(<span class="hljs-variable language_">this</span>);
+  }
+
+  <span class="hljs-comment">// expires is an absolute Unix ms timestamp, or undefined</span>
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">set</span>(<span class="hljs-params"><span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">expires</span>?: <span class="hljs-built_in">number</span></span>) {
+    <span class="hljs-comment">// ...persist value with expires directly — no Date.now() math, no parsing...</span>
+  }
+
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">setMany</span>(<span class="hljs-params"><span class="hljs-attr">entries</span>: <span class="hljs-title class_">KeyvStorageEntry</span>[]</span>) {
+    <span class="hljs-comment">// each entry already carries an absolute `expires`</span>
+  }
+}
+</code></pre>
+<p><strong>Backward compatibility — legacy adapters keep working.</strong> If an adapter does <strong>not</strong> advertise <code>capabilities.expires</code>, Keyv treats it as a v5-style adapter and automatically wraps it in <code>KeyvBridgeAdapter</code>, which converts the absolute <code>expires</code> back to a relative <code>ttl</code> before delegating to your <code>set</code>/<code>setMany</code>. So existing third-party adapters continue to function without code changes. Upgrading to the v6 contract is still recommended: it removes the bridge conversion and eliminates the silent-expiry bug described above.</p>
+<p><strong>Adapters should still enforce expiry — and Keyv double-checks by default.</strong> A v6 adapter should enforce expiry via a native server-side mechanism (e.g. Redis <code>PXAT</code>, a SQL <code>expires</code> column swept on read, a Mongo TTL index) so the backend reclaims space, and/or a client-side check on <code>get</code>. On top of that, Keyv core now filters expired reads itself by default (<code>checkExpired</code> defaults to <code>true</code>), using the absolute <code>expires</code> embedded in the serialized envelope. This is the safety net for backends whose native expiry is coarse or lazily swept — Memcached's second-granular <code>exptime</code>, or DynamoDB's background TTL sweep that can lag for hours — which would otherwise return logically-expired items. Users who want to trust the backend alone (and skip the extra decode on reads) can opt out with <code>checkExpired: false</code>.</p>
+<blockquote>
+<p><strong>Why this is better:</strong> the absolute <code>expires</code> is computed once on the Keyv host, so it is immune to clock skew and to latency between Keyv and the store; adapters never re-parse encoded values; and the silent-expiry bug under compression/encryption/alternate serializers is gone. See the per-adapter "Expiration and TTL" notes (for example, <a href="https://github.com/jaredwray/keyv/tree/main/storage/redis#expiration-and-ttl"><code>@keyv/redis</code></a>) for backend-specific details.</p>
+</blockquote>
+<hr>
+<h3 id="returns-undefined-instead-of-null">Returns <code>undefined</code> Instead of <code>null</code></h3>
+<p>Keyv now consistently returns <code>undefined</code> instead of <code>null</code> for missing values. Previously, some storage adapters returned <code>null</code>, which was passed through. Now we normalize to <code>undefined</code>.</p>
+<p><strong>v5 (before):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'nonexistent'</span>);
+<span class="hljs-comment">// value could be null or undefined depending on the adapter</span>
+</code></pre>
+<p><strong>v6 (after):</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'nonexistent'</span>);
+<span class="hljs-comment">// value is always undefined</span>
+</code></pre>
+<hr>
+<h3 id="compression-adapter-interface-change">Compression Adapter Interface Change</h3>
+<p>Compression adapters now use a simplified interface:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">KeyvCompression</span> {
+  <span class="hljs-attr">compress</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span></span>) =></span> <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">decompress</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span></span>) =></span> T;
+}
+</code></pre>
+<p><strong>Important:</strong> Compression requires <code>serialization</code> to be enabled (default) or values must be strings.</p>
+<p><strong>v6 usage:</strong></p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvGzip</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/compress-gzip'</span>;
+
+<span class="hljs-keyword">const</span> compression = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvGzip</span>();
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ compression });
+
+<span class="hljs-comment">// Serialization is enabled by default (@keyv/serialize)</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key'</span>, { <span class="hljs-attr">foo</span>: <span class="hljs-string">'bar'</span> });
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> Encryption and compression require string values. If your values are not strings, you must use <code>serialization</code>.</p>
+</blockquote>
+<hr>
+<h3 id="keyvmemcache-moves-from-memjs-to-memcache"><code>@keyv/memcache</code> Moves from <code>memjs</code> to <code>memcache</code></h3>
+<p>The <code>@keyv/memcache</code> package will switch its underlying Memcached client library from <a href="https://www.npmjs.com/package/memjs"><code>memjs</code></a> to <a href="https://www.npmjs.com/package/memcache"><code>memcache</code></a>.</p>
+<p><strong>Why the change:</strong></p>
+<ul>
+<li><code>memjs</code> uses the binary protocol and has not been actively maintained</li>
+<li><code>memcache</code> is actively maintained with a promise-based API and support for features such as consistent hashing, connection pooling, and hooks/events</li>
+</ul>
+<p><strong>What this means for you:</strong></p>
+<ul>
+<li>If you are using <code>@keyv/memcache</code> through Keyv with default settings, <strong>no changes are needed</strong> — the adapter API remains the same</li>
+<li>If you are passing <code>memjs</code>-specific client options through to the underlying client, you will need to update them to match the <code>memcache</code> client API</li>
+</ul>
+<hr>
+<h2 id="new-features">New Features</h2>
+<h3 id="keyv-v6-versioning">Keyv v6 Versioning</h3>
+<p>Starting with v6, all Keyv packages and adapters will use <strong>unified versioning</strong>. This means every package in the Keyv ecosystem will share the same version number and be released together.</p>
+<p><strong>What this means for you:</strong></p>
+<ul>
+<li>All <code>@keyv/*</code> packages will have the same version (e.g., <code>keyv@6.0.0</code>, <code>@keyv/redis@6.0.0</code>, <code>@keyv/sqlite@6.0.0</code>)</li>
+<li>When you upgrade Keyv, you can upgrade all adapters to the same version with confidence that they are compatible</li>
+<li>No more wondering which adapter version works with which Keyv version</li>
+</ul>
+<p><strong>Example of unified versions:</strong></p>
+<pre><code>keyv: 6.0.0
+@keyv/redis: 6.0.0
+@keyv/sqlite: 6.0.0
+@keyv/postgres: 6.0.0
+@keyv/serialize: 6.0.0
+@keyv/compress-gzip: 6.0.0
+</code></pre>
+<p>This approach is used by many popular projects:</p>
+<ul>
+<li><strong><a href="https://vitest.dev">Vitest</a></strong> - All packages in the Vitest monorepo share the same version</li>
+<li><strong><a href="https://babeljs.io">Babel</a></strong> - All <code>@babel/*</code> packages are versioned together</li>
+<li><strong><a href="https://jestjs.io">Jest</a></strong> - All Jest packages use unified versioning</li>
+<li><strong><a href="https://angular.io">Angular</a></strong> - All <code>@angular/*</code> packages share the same version</li>
+<li><strong><a href="https://vuejs.org">Vue</a></strong> - Vue and its companion packages are versioned together</li>
+</ul>
+<p>Unified versioning simplifies dependency management and ensures compatibility across the entire Keyv ecosystem.</p>
+<h3 id="keyv-v5-maintenance-mode">Keyv v5 Maintenance Mode</h3>
+<p>With the release of Keyv v6, Keyv v5 will move to maintenance mode. No major functionality will be added to Keyv v5. Only maintenance and security fixes will be applied going forward.</p>
+<p>We encourage all users to migrate to v6 to take advantage of the latest features and improvements. The <code>v5</code> branch will remain available in the mono repo for reference.</p>
+<hr>
+<h3 id="browser-compatibility">Browser Compatibility</h3>
+<p>Keyv v6 is now fully compatible with browser environments. You can use Keyv in frontend applications with appropriate storage adapters.</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-comment">// Works in the browser</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>() });
+</code></pre>
+<hr>
+<h3 id="serialization-adapters">Serialization Adapters</h3>
+<p>The default serialization module is <code>@keyv/serialize</code>, which uses the built-in <code>JSON</code> module. The property has been simplified to just <code>serialization</code>.</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSerialize</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/serialize'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSerialize</span>() });
+
+<span class="hljs-comment">// You can also set it via the property</span>
+keyv.<span class="hljs-property">serialization</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSerialize</span>();
+</code></pre>
+<p><strong>Available Serialization Adapters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@keyv/serialize</code></td>
+<td><strong>Default</strong> - Based on built-in <code>JSON</code></td>
+</tr>
+<tr>
+<td><code>@keyv/serialize-superjson</code></td>
+<td>Supports <code>BigInt</code>, <code>Date</code>, <code>Map</code>, <code>Set</code>, and more</td>
+</tr>
+<tr>
+<td><code>@keyv/serialize-msgpackr</code></td>
+<td>High-performance binary serialization</td>
+</tr>
+</tbody>
+</table>
+<h4 id="disabling-serialization">Disabling Serialization</h4>
+<p>For in-memory storage or when serialization isn't needed (and you're not using encryption/compression):</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>(), <span class="hljs-attr">serialization</span>: <span class="hljs-literal">false</span> });
+
+<span class="hljs-comment">// Or set via property</span>
+keyv.<span class="hljs-property">serialization</span> = <span class="hljs-literal">undefined</span>;
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> If you want to use encryption or compression, you must have serialization enabled.</p>
+</blockquote>
+<h4 id="custom-serialization">Custom Serialization</h4>
+<p>Create your own serialization adapter using the <code>KeyvSerialization</code> interface:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">KeyvSerialization</span> {
+  <span class="hljs-attr">parse</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span></span>) =></span> T;
+  <span class="hljs-attr">stringify</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">value</span>: <span class="hljs-built_in">unknown</span></span>) =></span> <span class="hljs-built_in">string</span>;
+}
+</code></pre>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> customSerializer = {
+  <span class="hljs-attr">stringify</span>: <span class="hljs-function">(<span class="hljs-params">value</span>) =></span> <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(value),
+  <span class="hljs-attr">parse</span>: <span class="hljs-function">(<span class="hljs-params">value</span>) =></span> <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(value)
+};
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: customSerializer });
+</code></pre>
+<hr>
+<h3 id="encryption-adapters">Encryption Adapters</h3>
+<p>You can now add encryption to values with the following adapters:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@keyv/encryption</code></td>
+<td>Node.js built-in encryption (configurable)</td>
+</tr>
+<tr>
+<td><code>@keyv/encryption-browser</code></td>
+<td>Browser-compatible encryption using <code>crypto-js</code></td>
+</tr>
+<tr>
+<td><code>@keyv/encryption-argon</code></td>
+<td>Modern, high-performance encryption for Node.js</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvEncryption</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/encryption'</span>;
+
+<span class="hljs-keyword">const</span> encryption = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvEncryption</span>({ <span class="hljs-attr">key</span>: <span class="hljs-string">'your_secret_key_here'</span> });
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ encryption });
+
+<span class="hljs-comment">// Or set via property</span>
+keyv.<span class="hljs-property">encryption</span> = encryption;
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'sensitive'</span>, { <span class="hljs-attr">password</span>: <span class="hljs-string">'secret'</span> });
+</code></pre>
+<h4 id="custom-encryption">Custom Encryption</h4>
+<p>Create your own encryption adapter using the <code>KeyvEncryption</code> interface:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">KeyvEncryption</span> {
+  <span class="hljs-attr">encrypt</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span></span>) =></span> <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">decrypt</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">value</span>: <span class="hljs-built_in">string</span></span>) =></span> T;
+}
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> Encryption requires string values. Use <code>serialization</code> (enabled by default) if your values are not strings.</p>
+</blockquote>
+<hr>
+<h3 id="native-hashing-for-key-and-namespace">Native Hashing for Key and Namespace</h3>
+<p>Keyv now supports native hashing when <code>key</code> or <code>namespace</code> is too long. By default, this is not enabled but if you set <code>keyLength</code> or <code>namespaceLength</code> and submit a key it will use hashing to keep the maximum length and not error out. This helps with many of the storage adapters such as <code>memcache</code>, <code>postgres</code>, <code>mysql</code>, <code>sqlite</code>, etc.</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({
+  <span class="hljs-attr">keyLength</span>: <span class="hljs-number">255</span>,
+  <span class="hljs-attr">namespaceLenght</span>: <span class="hljs-number">255</span>,
+});
+</code></pre>
+<p>You can even set what hash algorithm to use via the <code>hash</code> property as we use <a href="https://npmjs.org/package/hashery">hashery</a>.</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({
+  <span class="hljs-attr">keyLength</span>: <span class="hljs-number">255</span>,
+  <span class="hljs-attr">namespaceLenght</span>: <span class="hljs-number">255</span>,
+  <span class="hljs-attr">hashAlgorithm</span>: <span class="hljs-string">'SHA-256'</span>
+});
+
+<span class="hljs-comment">// or via properties</span>
+
+keyv.<span class="hljs-property">hash</span>.<span class="hljs-property">defaultAlgorithm</span> = <span class="hljs-string">'DJB2'</span>;
+</code></pre>
+<h3 id="new-identification-functions">New Identification Functions</h3>
+<p>Keyv v6 provides new functions to help identify adapters and capabilities.</p>
+<h4 id="iskeyv"><code>isKeyv</code></h4>
+<p>Detects if an object is a Keyv instance by checking for Keyv-specific methods and properties:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, { isKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+
+<span class="hljs-title function_">isKeyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>());
+<span class="hljs-comment">// { keyv: false, get: true, set: true, delete: true, clear: true, has: true,</span>
+<span class="hljs-comment">//   getMany: false, setMany: false, deleteMany: false, hasMany: false,</span>
+<span class="hljs-comment">//   disconnect: false, getRaw: false, getManyRaw: false, hooks: false,</span>
+<span class="hljs-comment">//   stats: false, iterator: false }</span>
+
+<span class="hljs-title function_">isKeyv</span>(keyv);
+<span class="hljs-comment">// { keyv: true, get: true, set: true, delete: true, clear: true, has: true,</span>
+<span class="hljs-comment">//   getMany: true, setMany: true, deleteMany: true, hasMany: true,</span>
+<span class="hljs-comment">//   disconnect: true, getRaw: true, getManyRaw: true, hooks: true,</span>
+<span class="hljs-comment">//   stats: true, iterator: false }</span>
+</code></pre>
+<p>The <code>keyv</code> property is <code>true</code> when the object has all core Keyv methods (<code>get</code>, <code>set</code>, <code>delete</code>, <code>clear</code>) plus <code>hooks</code> and <code>stats</code> properties.</p>
+<h4 id="iskeyvstorage"><code>isKeyvStorage</code></h4>
+<p>Detects if an object is a Keyv storage adapter by checking for required adapter methods:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> { isKeyvStorage } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-title function_">isKeyvStorage</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>());
+<span class="hljs-comment">// { keyvStorage: false, get: true, set: true, delete: true, clear: true,</span>
+<span class="hljs-comment">//   has: true, getMany: false, setMany: false, deleteMany: false,</span>
+<span class="hljs-comment">//   hasMany: false, disconnect: false, iterator: false, namespace: false }</span>
+
+<span class="hljs-title function_">isKeyvStorage</span>(redisAdapter);
+<span class="hljs-comment">// { keyvStorage: true, get: true, set: true, delete: true, clear: true,</span>
+<span class="hljs-comment">//   has: true, getMany: true, setMany: true, deleteMany: true,</span>
+<span class="hljs-comment">//   hasMany: true, disconnect: true, iterator: true, namespace: true }</span>
+</code></pre>
+<p>The <code>keyvStorage</code> property is <code>true</code> when the object has all core storage adapter methods (<code>get</code>, <code>set</code>, <code>delete</code>, <code>clear</code>).</p>
+<h4 id="additional-capability-checks">Additional Capability Checks</h4>
+<p>Keyv v6 also provides functions for checking compression, serialization, and encryption adapters:</p>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> { isKeyvCompression, isKeyvSerialization, isKeyvEncryption } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-title function_">isKeyvCompression</span>(gzipAdapter);
+<span class="hljs-comment">// { keyvCompression: true, compress: true, decompress: true }</span>
+
+<span class="hljs-title function_">isKeyvSerialization</span>(customSerializer);
+<span class="hljs-comment">// { keyvSerialization: true, stringify: true, parse: true }</span>
+
+<span class="hljs-title function_">isKeyvEncryption</span>(aesAdapter);
+<span class="hljs-comment">// { keyvEncryption: true, encrypt: true, decrypt: true }</span>
+</code></pre>
+<hr>
+<h3 id="memory-adapter">Memory Adapter</h3>
+<p>Keyv v6 includes <code>KeyvMemoryAdapter</code>, a wrapper class for storage types that don't conform to v6 storage adapter requirements (such as <code>Map</code>-compatible or legacy adapters).</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Handles namespacing using key prefixing</li>
+<li>Extends the adapter with v6 functions: <code>getMany</code>, <code>setMany</code>, <code>getRaw</code>, <code>getManyRaw</code></li>
+<li>Attempts iteration using various strategies</li>
+<li>Adds TTL support and handles expiration</li>
+</ul>
+<pre><code class="hljs language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-comment">// Map-compatible stores are automatically wrapped</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>() });
+
+<span class="hljs-comment">// Check if your adapter will use KeyvMemoryAdapter</span>
+<span class="hljs-keyword">const</span> capabilities = keyv.<span class="hljs-title function_">getStoreCapabilities</span>(yourStore);
+<span class="hljs-keyword">if</span> (capabilities.<span class="hljs-property">mapCompatible</span> && !capabilities.<span class="hljs-property">adapter</span>) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'This store will use KeyvMemoryAdapter'</span>);
+}
+</code></pre>
+<hr>
+<h2 id="getting-help">Getting Help</h2>
+<p>If you encounter issues during migration:</p>
+<ol>
+<li>Check the <a href="https://keyv.org">Keyv documentation</a></li>
+<li>Search <a href="https://github.com/jaredwray/keyv/issues">existing issues</a></li>
+<li>Open a <a href="https://github.com/jaredwray/keyv/issues/new">new issue</a> with details about your migration problem</li>
+</ol>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 1970-01-01</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

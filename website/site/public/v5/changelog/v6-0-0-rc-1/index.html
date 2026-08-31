@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - v6.0.0-rc.1</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"v6.0.0-rc.1","description":"<p>Promote 6.0 to release candidate: Cloudflare KV adapter, MySQL fixes, and a full dependency refresh.</p>\n<p><em>All published <code>@keyv/*</code> adapters release in lockstep at this version. <code>@keyv/website</code> is private and not published.</em></p>\n<ul>\n<li><strong>mysql:</strong> keys are now stored as <code>VARBINARY</code> (6e519b4, #2015; f579073, #2016)\r\nMigration: <code>@keyv/mysql</code> tables created under <code>6.0.0-beta.4</code> use the previous key column type. Recreate the keyv table, or <code>ALTER</code> the key column to <code>VARBINARY</code>, before upgrading.</li>\n</ul>","url":"https://keyv.org/v5/changelog/v6-0-0-rc-1/","publisher":{"@type":"Organization","name":"Keyv"},"datePublished":"2026-08-03"}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="content">
+    <main class="versions-container">
+      <div class="versions-content">
+        <div class="changelog-entry-nav">
+          <a href="/v5/changelog/">← Back to Changelog</a>
+        </div>
+        <div class="changelog-entry changelog-entry-single">
+          <div class="changelog-entry-header">
+            <h1 class="changelog-entry-title">v6.0.0-rc.1</h1>
+            <span class="changelog-tag changelog-tag-release">Release</span>
+          </div>
+          <span class="changelog-entry-date">August 3, 2026</span>
+          <div class="changelog-entry-body">
+            <h2 id="keyv-v600-rc1--2026-08-03">keyv v6.0.0-rc.1 — 2026-08-03</h2>
+<p>Promote 6.0 to release candidate: Cloudflare KV adapter, MySQL fixes, and a full dependency refresh.</p>
+<p><em>All published <code>@keyv/*</code> adapters release in lockstep at this version. <code>@keyv/website</code> is private and not published.</em></p>
+<h3 id="-breaking-changes">⚠ BREAKING CHANGES</h3>
+<ul>
+<li><strong>mysql:</strong> keys are now stored as <code>VARBINARY</code> (6e519b4, #2015; f579073, #2016)
+Migration: <code>@keyv/mysql</code> tables created under <code>6.0.0-beta.4</code> use the previous key column type. Recreate the keyv table, or <code>ALTER</code> the key column to <code>VARBINARY</code>, before upgrading.</li>
+<li><strong>keyv:</strong> <code>checkExpired</code> now defaults to <code>true</code> (f067213, #1984)
+Migration: expired keys are now checked and cleared by default. Pass <code>checkExpired: false</code> to restore the previous behavior.</li>
+<li><strong>keyv:</strong> removed the namespace <code>removeKeyPrefix</code> behavior for v6 (73fd79b, #2013)
+Migration: keys are no longer stripped of their namespace prefix on read. If you relied on the stripped form, read the full namespaced key.</li>
+</ul>
+<h3 id="features">Features</h3>
+<ul>
+<li>
+<p>add Cloudflare Workers KV storage adapter (e004467, #1985)</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">"@keyv/cloudflare-kv"</span>;
+
+<span class="hljs-comment">// REST mode — from any Node.js process</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>({
+  <span class="hljs-attr">mode</span>: <span class="hljs-string">"rest"</span>,
+  <span class="hljs-attr">accountId</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CF_ACCOUNT_ID</span>,
+  <span class="hljs-attr">namespaceId</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CF_KV_NAMESPACE_ID</span>,
+  <span class="hljs-attr">apiToken</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">CF_API_TOKEN</span>,
+});
+<span class="hljs-comment">// Or "bind" mode inside a Worker: createKeyv({ kvNamespace: env.MY_KV })</span>
+</code></pre>
+</li>
+<li>
+<p>mysql: move to async config changes (b775072, #2018)</p>
+</li>
+<li>
+<p>keyv: add the built-in adapters to the docs (2e03276, #1983)</p>
+</li>
+<li>
+<p>mysql: add docs (e07dc4c, #2019)</p>
+</li>
+</ul>
+<h3 id="bug-fixes">Bug Fixes</h3>
+<ul>
+<li>mysql: isolate pooled connection lifecycles (86b61c8, #2012)</li>
+<li>mysql: scheduled cleanup firing (97fa359, #2017)</li>
+<li>mysql: deleting expired keys sometimes fails (6e5aff2, #2014)</li>
+<li>mysql: resolve TypeScript errors (dc563b6, #2011)</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li>add keyv-s3fifo to third-party storage adapters (fb420e7, #2020)</li>
+</ul>
+<h3 id="internal">Internal</h3>
+<ul>
+<li>refactor: add <code>KeyvAny</code>/<code>KeyvAnyArray</code> types and replace explicit <code>any</code> (49ed583, #2010)</li>
+<li>34 dependency and tooling upgrades across the monorepo — highlights: TypeScript 6→7, pnpm 11.5→11.18, better-sqlite3 12→13 (N-API, drops <code>prebuild-install</code>), mongodb 7.4→7.5, mysql2 3.22→3.23, iovalkey 0.3→0.4, <code>@redis/client</code> 6.0→6.1, hookified 3.0.1→3.0.2, <code>actions/setup-node</code> v6→v7, and the Node engines floor raised to ≥ 22.19.0. Full inventory below.</li>
+</ul>
+<h3 id="contributors">Contributors</h3>
+<ul>
+<li>@jaredwray (47)</li>
+<li>@BJS-kr (1)</li>
+</ul>
+<h3 id="full-list-of-changes">Full List of Changes</h3>
+<ul>
+<li>keyv - feat: adding in the built in adapters to docs by @jaredwray in #1983</li>
+<li>keyv - fix: moving checkExpired to default to true by @jaredwray in #1984</li>
+<li>cloudflare-kv - feat: Add Cloudflare Workers KV storage adapter by @jaredwray in #1985</li>
+<li>mono - chore: upgrade code quality dependencies by @jaredwray in #1986</li>
+<li>mono - chore: upgrade TypeScript and build tooling by @jaredwray in #1987</li>
+<li>mono - chore: upgrade js-yaml to v5 (breaking) by @jaredwray in #1988</li>
+<li>keyv - chore: upgrade keyv-file by @jaredwray in #1989</li>
+<li>mono - chore: upgrade GitHub Actions (breaking) by @jaredwray in #1990</li>
+<li>dynamo - chore: upgrade AWS SDK dependencies by @jaredwray in #1991</li>
+<li>mongo - chore: upgrade mongodb by @jaredwray in #1992</li>
+<li>postgres - chore: upgrade pg by @jaredwray in #1993</li>
+<li>sqlite - chore: upgrade better-sqlite3 by @jaredwray in #1994</li>
+<li>redis - chore: upgrade @redis/client by @jaredwray in #1995</li>
+<li>memcache - chore: upgrade memcache by @jaredwray in #1996</li>
+<li>mono - chore: upgrade hookified by @jaredwray in #1997</li>
+<li>serialize - chore: upgrade msgpackr by @jaredwray in #1998</li>
+<li>test-suite - chore: upgrade bignumber.js by @jaredwray in #1999</li>
+<li>bigmap - chore: upgrade hashery (breaking) by @jaredwray in #2000</li>
+<li>compress-gzip - chore: upgrade pako (breaking) by @jaredwray in #2001</li>
+<li>mono - refactor: add KeyvAny/KeyvAnyArray types and replace explicit any by @jaredwray in #2010</li>
+<li>mysql - fix: resolve TypeScript errors by @jaredwray in #2011</li>
+<li>mysql - fix: isolate pooled connection lifecycles by @jaredwray in #2012</li>
+<li>fix: removing the namespace removeKeyPrefix with v6 by @jaredwray in #2013</li>
+<li>mysql - fix: deleting expired keys sometimes fail by @jaredwray in #2014</li>
+<li>mysql - fix: moving to VARBINARY for key by @jaredwray in #2015</li>
+<li>mysql - fix: moving to varbinary for key (fixes) by @jaredwray in #2016</li>
+<li>mysql - fix: scheduled cleanup firing by @jaredwray in #2017</li>
+<li>mysql - feat: moving to async config changes by @jaredwray in #2018</li>
+<li>mysql - feat: adding in docs by @jaredwray in #2019</li>
+<li>docs: add keyv-s3fifo to third-party storage adapters by @BJS-kr in #2020</li>
+<li>mono - chore: upgrade code quality dependencies by @jaredwray in #2021</li>
+<li>mono - chore: upgrade TypeScript and build tooling by @jaredwray in #2022</li>
+<li>mono - chore: upgrade pnpm to 11.18.0 by @jaredwray in #2023</li>
+<li>mono - chore: upgrade GitHub Actions by @jaredwray in #2024</li>
+<li>dynamo - chore: upgrade AWS SDK DynamoDB dependencies by @jaredwray in #2025</li>
+<li>redis - chore: upgrade @redis/client to 6.1.0 by @jaredwray in #2026</li>
+<li>mongo - chore: upgrade mongodb to 7.5.0 by @jaredwray in #2027</li>
+<li>mysql - chore: upgrade mysql2 to 3.23.2 by @jaredwray in #2028</li>
+<li>valkey - chore: upgrade iovalkey to 0.4.0 by @jaredwray in #2029</li>
+<li>memcache - chore: upgrade memcache to 1.9.0 by @jaredwray in #2030</li>
+<li>mono - chore: raise Node engines floor to 22.19.0 by @jaredwray in #2031</li>
+<li>sqlite - chore: upgrade better-sqlite3 to 13.0.2 by @jaredwray in #2032</li>
+<li>mono - chore: upgrade hookified to 3.0.2 by @jaredwray in #2033</li>
+<li>bigmap - chore: upgrade hashery to 3.0.1 by @jaredwray in #2034</li>
+<li>test-suite - chore: upgrade bignumber.js to 11.1.5 by @jaredwray in #2035</li>
+<li>mono - chore: upgrade lz4-napi to 2.9.1 by @jaredwray in #2036</li>
+<li>serialize - chore: upgrade msgpackr to 2.0.5 by @jaredwray in #2037</li>
+<li>compress - chore: upgrade pako to 3.0.1 by @jaredwray in #2038</li>
+</ul>
+<p><strong>Full diff:</strong> <a href="https://github.com/jaredwray/keyv/compare/v6.0.0">https://github.com/jaredwray/keyv/compare/v6.0.0</a>-beta.4...v6.0.0-rc.1</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-03</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

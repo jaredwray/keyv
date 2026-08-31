@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - @keyv/mongo</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"@keyv/mongo","description":"","url":"https://keyv.org/v5/docs/storage-adapters/mongo/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"2026-08-30","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">@keyv/mongo</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">@keyv/mongo</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <blockquote>
+<p>MongoDB storage adapter for Keyv</p>
+</blockquote>
+<p><a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg" alt="build"></a>
+<a href="https://codecov.io/gh/jaredwray/keyv"><img src="https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ" alt="codecov"></a>
+<a href="https://www.npmjs.com/package/@keyv/mongo"><img src="https://img.shields.io/npm/v/@keyv/mongo.svg" alt="npm"></a>
+<a href="https://npmjs.com/package/@keyv/mongo"><img src="https://img.shields.io/npm/dm/@keyv/mongo" alt="npm"></a></p>
+<p>MongoDB storage adapter for <a href="https://github.com/jaredwray/keyv">Keyv</a>.</p>
+<p>Uses TTL indexes to automatically remove expired documents. However <a href="https://docs.mongodb.com/manual/core/index-ttl/#timing-of-the-delete-operation">MongoDB doesn't guarantee data will be deleted immediately upon expiration</a>, so expiry dates are revalidated in Keyv.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#install">Install</a></li>
+<li><a href="#usage">Usage</a></li>
+<li><a href="#constructor-options">Constructor Options</a></li>
+<li><a href="#properties">Properties</a>
+<ul>
+<li><a href="#url">url</a></li>
+<li><a href="#collection">collection</a></li>
+<li><a href="#namespace">namespace</a></li>
+<li><a href="#usegridfs">useGridFS</a></li>
+<li><a href="#db">db</a></li>
+<li><a href="#readpreference">readPreference</a></li>
+</ul>
+</li>
+<li><a href="#methods">Methods</a>
+<ul>
+<li><a href="#set">set</a></li>
+<li><a href="#setmany">setMany</a></li>
+<li><a href="#get">get</a></li>
+<li><a href="#getmany">getMany</a></li>
+<li><a href="#has">has</a></li>
+<li><a href="#hasmany">hasMany</a></li>
+<li><a href="#delete">delete</a></li>
+<li><a href="#deletemany">deleteMany</a></li>
+<li><a href="#clear">clear</a></li>
+<li><a href="#iterator">iterator</a></li>
+<li><a href="#disconnect">disconnect</a></li>
+<li><a href="#clearexpired">clearExpired</a></li>
+<li><a href="#clearunusedfor">clearUnusedFor</a></li>
+</ul>
+</li>
+<li><a href="#migration-from-v3-to-v6">Migration from v3 to v6</a>
+<ul>
+<li><a href="#breaking-changes">Breaking Changes</a>
+<ul>
+<li><a href="#mongodb-driver-upgraded-to-v7">MongoDB Driver Upgraded to v7</a></li>
+<li><a href="#event-handling-eventemitter-replaced-with-hookified">Event Handling: EventEmitter Replaced with Hookified</a></li>
+<li><a href="#usegridfs-is-now-read-only"><code>useGridFS</code> is Now Read-Only</a></li>
+<li><a href="#ttlsupport-property-removed"><code>ttlSupport</code> Property Removed</a></li>
+<li><a href="#namespace-index-change">Namespace Index Change</a></li>
+<li><a href="#options-type-is-now-strongly-typed">Options Type is Now Strongly Typed</a></li>
+</ul>
+</li>
+<li><a href="#new-features">New Features</a>
+<ul>
+<li><a href="#createkeyv-helper-function"><code>createKeyv</code> Helper Function</a></li>
+<li><a href="#setmany-method"><code>setMany</code> Method</a></li>
+<li><a href="#hasmany-method"><code>hasMany</code> Method</a></li>
+<li><a href="#clearexpired-method"><code>clearExpired</code> Method</a></li>
+<li><a href="#clearunusedfor-method"><code>clearUnusedFor</code> Method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#license">License</a></li>
+</ul>
+<h2 id="install">Install</h2>
+<pre><code class="hljs language-shell">npm install --save keyv @keyv/mongo
+</code></pre>
+<h2 id="usage">Usage</h2>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMongo</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mongo'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>));
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, handleConnectionError);
+</code></pre>
+<p>You can specify the collection name, by default <code>'keyv'</code> is used.</p>
+<p>e.g:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>, { <span class="hljs-attr">collection</span>: <span class="hljs-string">'cache'</span> });
+</code></pre>
+<p>You can also use the <code>createKeyv</code> helper function to create a <code>Keyv</code> instance with <code>KeyvMongo</code> as the store:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mongo'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>);
+</code></pre>
+<h2 id="constructor-options">Constructor Options</h2>
+<p>The <code>KeyvMongo</code> constructor accepts a connection URI string or an options object:</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// With URI string</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>);
+
+<span class="hljs-comment">// With options object</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({
+  <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>,
+  <span class="hljs-attr">collection</span>: <span class="hljs-string">'cache'</span>,
+  <span class="hljs-attr">db</span>: <span class="hljs-string">'mydb'</span>,
+  <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">false</span>,
+});
+
+<span class="hljs-comment">// With URI string and additional options</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>, { <span class="hljs-attr">collection</span>: <span class="hljs-string">'cache'</span> });
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code></td>
+<td><code>string</code></td>
+<td><code>'mongodb://127.0.0.1:27017'</code></td>
+<td>MongoDB connection URI</td>
+</tr>
+<tr>
+<td><code>collection</code></td>
+<td><code>string</code></td>
+<td><code>'keyv'</code></td>
+<td>Collection name for storage</td>
+</tr>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string | undefined</code></td>
+<td><code>undefined</code></td>
+<td>Namespace prefix for keys</td>
+</tr>
+<tr>
+<td><code>useGridFS</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Whether to use GridFS for storing values</td>
+</tr>
+<tr>
+<td><code>db</code></td>
+<td><code>string | undefined</code></td>
+<td><code>undefined</code></td>
+<td>Database name</td>
+</tr>
+<tr>
+<td><code>readPreference</code></td>
+<td><code>ReadPreference | undefined</code></td>
+<td><code>undefined</code></td>
+<td>MongoDB read preference for GridFS operations</td>
+</tr>
+</tbody>
+</table>
+<p>Any additional options are passed through to the MongoDB driver as <code>MongoClientOptions</code>.</p>
+<h2 id="properties">Properties</h2>
+<p>Most configuration options are exposed as properties with getters and setters on the <code>KeyvMongo</code> instance. You can read or update them after construction. Some properties like <code>useGridFS</code> are read-only and can only be set via the constructor.</p>
+<h3 id="url">url</h3>
+<p>Get or set the MongoDB connection URI.</p>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: <code>'mongodb://127.0.0.1:27017'</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">url</span>); <span class="hljs-comment">// 'mongodb://user:pass@localhost:27017/dbname'</span>
+</code></pre>
+<h3 id="collection">collection</h3>
+<p>Get or set the collection name used for storage.</p>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: <code>'keyv'</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">collection</span>); <span class="hljs-comment">// 'keyv'</span>
+store.<span class="hljs-property">collection</span> = <span class="hljs-string">'cache'</span>;
+</code></pre>
+<h3 id="namespace">namespace</h3>
+<p>Get or set the namespace for the adapter. Used for key prefixing and scoping operations like <code>clear()</code>.</p>
+<ul>
+<li>Type: <code>string | undefined</code></li>
+<li>Default: <code>undefined</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span> });
+store.<span class="hljs-property">namespace</span> = <span class="hljs-string">'my-namespace'</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">namespace</span>); <span class="hljs-comment">// 'my-namespace'</span>
+</code></pre>
+<h3 id="usegridfs">useGridFS</h3>
+<p>Get whether GridFS is used for storing values. When enabled, values are stored using MongoDB's GridFS specification, which is useful for storing large files. This property is read-only and can only be set via the constructor, because the connection shape differs between GridFS and standard modes.</p>
+<ul>
+<li>Type: <code>boolean</code></li>
+<li>Default: <code>false</code></li>
+<li>Read-only (set via constructor only)</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>, <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">useGridFS</span>); <span class="hljs-comment">// true</span>
+</code></pre>
+<h3 id="db">db</h3>
+<p>Get or set the database name for the MongoDB connection.</p>
+<ul>
+<li>Type: <code>string | undefined</code></li>
+<li>Default: <code>undefined</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://user:pass@localhost:27017'</span>, <span class="hljs-attr">db</span>: <span class="hljs-string">'mydb'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">db</span>); <span class="hljs-comment">// 'mydb'</span>
+</code></pre>
+<h3 id="readpreference">readPreference</h3>
+<p>Get or set the MongoDB read preference for GridFS operations.</p>
+<ul>
+<li>Type: <code>ReadPreference | undefined</code></li>
+<li>Default: <code>undefined</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">ReadPreference</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'mongodb'</span>;
+
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({
+  <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://user:pass@localhost:27017/dbname'</span>,
+  <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">readPreference</span>: <span class="hljs-title class_">ReadPreference</span>.<span class="hljs-property">SECONDARY</span>,
+});
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">readPreference</span>); <span class="hljs-comment">// ReadPreference.SECONDARY</span>
+</code></pre>
+<h2 id="methods">Methods</h2>
+<h3 id="set">set</h3>
+<p><code>set(key, value, ttl?)</code> - Set a value in the store.</p>
+<ul>
+<li><code>key</code> <em>(string)</em> - The key to set.</li>
+<li><code>value</code> <em>(any)</em> - The value to store.</li>
+<li><code>ttl</code> <em>(number, optional)</em> - Time to live in milliseconds. If specified, the key will expire after this duration.</li>
+<li>Returns: <code>Promise<boolean></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>, <span class="hljs-number">5000</span>); <span class="hljs-comment">// expires in 5 seconds</span>
+</code></pre>
+<h3 id="setmany">setMany</h3>
+<p><code>setMany(entries)</code> - Set multiple values in the store at once.</p>
+<ul>
+<li><code>entries</code> <em>(KeyvEntry[])</em> - Array of entries to set. Each entry has a <code>key</code>, <code>value</code>, and optional <code>ttl</code> in milliseconds. <code>Value</code> is inferred from the entries provided.</li>
+<li>Returns: <code>Promise<boolean[]></code> - An array of booleans indicating whether each entry was set successfully.</li>
+</ul>
+<p>In standard mode, uses a single unordered MongoDB <code>bulkWrite</code> operation for efficiency with per-entry error tracking — if individual writes fail, only those entries return <code>false</code>. In GridFS mode, each entry is set individually in parallel using <code>Promise.allSettled</code>, providing per-entry success tracking.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> store.<span class="hljs-title function_">setMany</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key1'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value1'</span> },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key2'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value2'</span>, <span class="hljs-attr">ttl</span>: <span class="hljs-number">5000</span> },
+]); <span class="hljs-comment">// [true, true]</span>
+</code></pre>
+<h3 id="get">get</h3>
+<p><code>get(key)</code> - Get a value from the store.</p>
+<ul>
+<li><code>key</code> <em>(string)</em> - The key to retrieve.</li>
+<li>Returns: <code>Promise<any></code> - The stored value, or <code>undefined</code> if the key does not exist.</li>
+</ul>
+<p>In GridFS mode, <code>get</code> also updates the <code>lastAccessed</code> timestamp on the file, which is used by <code>clearUnusedFor</code>.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(value); <span class="hljs-comment">// 'bar'</span>
+
+<span class="hljs-keyword">const</span> missing = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'nonexistent'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(missing); <span class="hljs-comment">// undefined</span>
+</code></pre>
+<h3 id="getmany">getMany</h3>
+<p><code>getMany(keys)</code> - Get multiple values from the store at once.</p>
+<ul>
+<li><code>keys</code> <em>(string[])</em> - Array of keys to retrieve.</li>
+<li>Returns: <code>Promise<Array<any>></code> - Array of values in the same order as the input keys. Missing keys return <code>undefined</code> at their position.</li>
+</ul>
+<p>In standard mode, uses a single MongoDB query with the <code>$in</code> operator for efficiency. In GridFS mode, each key is fetched individually.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">const</span> values = <span class="hljs-keyword">await</span> store.<span class="hljs-title function_">getMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>, <span class="hljs-string">'key3'</span>]);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(values); <span class="hljs-comment">// ['value1', 'value2', undefined]</span>
+</code></pre>
+<h3 id="has">has</h3>
+<p><code>has(key)</code> - Check if a key exists in the store.</p>
+<ul>
+<li><code>key</code> <em>(string)</em> - The key to check.</li>
+<li>Returns: <code>Promise<boolean></code> - <code>true</code> if the key exists, <code>false</code> otherwise.</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">has</span>(<span class="hljs-string">'foo'</span>)); <span class="hljs-comment">// true</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">has</span>(<span class="hljs-string">'nonexistent'</span>)); <span class="hljs-comment">// false</span>
+</code></pre>
+<h3 id="hasmany">hasMany</h3>
+<p><code>hasMany(keys)</code> - Check if multiple keys exist in the store at once.</p>
+<ul>
+<li><code>keys</code> <em>(string[])</em> - Array of keys to check.</li>
+<li>Returns: <code>Promise<boolean[]></code> - Array of booleans in the same order as the input keys.</li>
+</ul>
+<p>Uses a single MongoDB query with the <code>$in</code> operator for efficiency in both standard and GridFS modes.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> store.<span class="hljs-title function_">hasMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>, <span class="hljs-string">'key3'</span>]);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(results); <span class="hljs-comment">// [true, true, false]</span>
+</code></pre>
+<h3 id="delete">delete</h3>
+<p><code>delete(key)</code> - Delete a key from the store.</p>
+<ul>
+<li><code>key</code> <em>(string)</em> - The key to delete.</li>
+<li>Returns: <code>Promise<boolean></code> - <code>true</code> if the key was deleted, <code>false</code> if the key was not found.</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>)); <span class="hljs-comment">// true</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'nonexistent'</span>)); <span class="hljs-comment">// false</span>
+</code></pre>
+<h3 id="deletemany">deleteMany</h3>
+<p><code>deleteMany(keys)</code> - Delete multiple keys from the store at once.</p>
+<ul>
+<li><code>keys</code> <em>(string[])</em> - Array of keys to delete.</li>
+<li>Returns: <code>Promise<boolean[]></code> - An array of booleans indicating whether each key was deleted.</li>
+</ul>
+<p>Each key is deleted individually in parallel so that per-key success/failure information is preserved in the returned array.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> store.<span class="hljs-title function_">deleteMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>, <span class="hljs-string">'key3'</span>]); <span class="hljs-comment">// [true, true, false]</span>
+</code></pre>
+<h3 id="clear">clear</h3>
+<p><code>clear()</code> - Delete all keys in the current namespace.</p>
+<ul>
+<li>Returns: <code>Promise<void></code></li>
+</ul>
+<p>Only keys matching the current namespace are removed. If no namespace is set, all keys with an empty namespace are cleared.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store, <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-namespace'</span> });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">clear</span>(); <span class="hljs-comment">// removes all keys in 'my-namespace'</span>
+</code></pre>
+<h3 id="iterator">iterator</h3>
+<p><code>iterator()</code> - Iterate over all key-value pairs in the store. The iterator uses the namespace configured on the instance.</p>
+<ul>
+<li>Returns: <code>AsyncGenerator<[string, any]></code> - An async generator yielding <code>[key, value]</code> pairs.</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store, <span class="hljs-attr">namespace</span>: <span class="hljs-string">'ns'</span> });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+
+<span class="hljs-keyword">for</span> <span class="hljs-title function_">await</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> keyv.<span class="hljs-title function_">iterator</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value); <span class="hljs-comment">// 'key1' 'value1', 'key2' 'value2'</span>
+}
+</code></pre>
+<h3 id="disconnect">disconnect</h3>
+<p><code>disconnect()</code> - Close the MongoDB connection.</p>
+<ul>
+<li>Returns: <code>Promise<void></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store });
+
+<span class="hljs-comment">// ... use the store ...</span>
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">disconnect</span>();
+</code></pre>
+<h3 id="clearexpired">clearExpired</h3>
+<p><code>clearExpired()</code> - Remove all expired files from GridFS. This method only works in GridFS mode and is a no-op that returns <code>false</code> in standard mode.</p>
+<ul>
+<li>Returns: <code>Promise<boolean></code> - <code>true</code> if running in GridFS mode, <code>false</code> otherwise.</li>
+</ul>
+<p>This is useful for manual cleanup of expired GridFS files, since GridFS does not support MongoDB TTL indexes.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://localhost:27017'</span>, <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">true</span> });
+
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'temp'</span>, <span class="hljs-string">'data'</span>, <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + <span class="hljs-number">1000</span>); <span class="hljs-comment">// adapter takes an absolute expires (Unix ms); expires in ~1 second</span>
+
+<span class="hljs-comment">// After expiration...</span>
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">clearExpired</span>(); <span class="hljs-comment">// removes expired GridFS files</span>
+</code></pre>
+<h3 id="clearunusedfor">clearUnusedFor</h3>
+<p><code>clearUnusedFor(seconds)</code> - Remove all GridFS files that have not been accessed for the specified duration. This method only works in GridFS mode and is a no-op that returns <code>false</code> in standard mode.</p>
+<ul>
+<li><code>seconds</code> <em>(number)</em> - The number of seconds of inactivity after which files should be removed.</li>
+<li>Returns: <code>Promise<boolean></code> - <code>true</code> if running in GridFS mode, <code>false</code> otherwise.</li>
+</ul>
+<p>The <code>lastAccessed</code> timestamp is updated each time a file is read via <code>get</code>.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://localhost:27017'</span>, <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">true</span> });
+
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+
+<span class="hljs-comment">// Remove files not accessed in the last hour</span>
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">clearUnusedFor</span>(<span class="hljs-number">3600</span>);
+</code></pre>
+<h2 id="migration-from-v3-to-v6">Migration from v3 to v6</h2>
+<p><code>@keyv/mongo</code> is jumping from v3 to v6 because the entire Keyv monorepo is now unified under a single version number. This approach, similar to what other popular open source projects do, keeps all <code>@keyv/*</code> packages in sync and makes it easier to reason about compatibility across the ecosystem.</p>
+<h3 id="breaking-changes">Breaking Changes</h3>
+<h4 id="mongodb-driver-upgraded-to-v7">MongoDB Driver Upgraded to v7</h4>
+<p>The <code>mongodb</code> dependency has been upgraded from <code>^6.x</code> to <code>^7.0.0</code>. Review the <a href="https://github.com/mongodb/node-mongodb-native/releases/tag/v7.0.0">MongoDB Node.js Driver v7 release notes</a> for any breaking changes that may affect your application.</p>
+<h4 id="event-handling-eventemitter-replaced-with-hookified">Event Handling: EventEmitter Replaced with Hookified</h4>
+<p><code>KeyvMongo</code> no longer extends Node.js <code>EventEmitter</code>. It now extends <code>Hookified</code>, which provides hook-based event management.</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// v3 - EventEmitter</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+store.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-params">err</span> =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(err));
+
+<span class="hljs-comment">// v6 - Hookified (same usage for basic events)</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+store.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-params">err</span> =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(err));
+</code></pre>
+<p>For most use cases the <code>.on()</code> API is the same, but if you relied on EventEmitter-specific methods like <code>.listenerCount()</code>, <code>.rawListeners()</code>, or <code>.prependListener()</code>, check the <a href="https://github.com/jaredwray/hookified">Hookified documentation</a> for equivalents.</p>
+<h4 id="usegridfs-is-now-read-only"><code>useGridFS</code> is Now Read-Only</h4>
+<p>The <code>useGridFS</code> property can no longer be changed after construction. The connection shape differs between GridFS and standard modes, so this must be set at construction time.</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// v3 - Could change after instantiation</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+store.<span class="hljs-property">useGridFS</span> = <span class="hljs-literal">true</span>; <span class="hljs-comment">// worked in v3</span>
+
+<span class="hljs-comment">// v6 - Must set at construction</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://localhost:27017'</span>, <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">useGridFS</span>); <span class="hljs-comment">// true (read-only)</span>
+</code></pre>
+<h4 id="ttlsupport-property-removed"><code>ttlSupport</code> Property Removed</h4>
+<p>The <code>ttlSupport</code> property has been removed. If your code checks for TTL support on the adapter, remove those checks.</p>
+<h4 id="namespace-index-change">Namespace Index Change</h4>
+<p>The unique index on the underlying MongoDB collection has changed from <code>{ key: 1 }</code> to <code>{ key: 1, namespace: 1 }</code>. This allows the same key name to exist in different namespaces without conflicts. The old index is automatically dropped and replaced on first connection, so no manual migration is needed.</p>
+<h4 id="options-type-is-now-strongly-typed">Options Type is Now Strongly Typed</h4>
+<p>The constructor options no longer accept arbitrary keys via <code>[key: string]: unknown</code>. Options are now strictly typed with explicit properties. Any additional MongoDB driver options should be valid <code>MongoClientOptions</code> properties.</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// v3 - Accepted any properties</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://...'</span>, <span class="hljs-attr">customProp</span>: <span class="hljs-literal">true</span> }); <span class="hljs-comment">// no type error</span>
+
+<span class="hljs-comment">// v6 - Strictly typed</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://...'</span>, <span class="hljs-attr">collection</span>: <span class="hljs-string">'cache'</span> }); <span class="hljs-comment">// only known props + MongoClientOptions</span>
+</code></pre>
+<h3 id="new-features">New Features</h3>
+<h4 id="createkeyv-helper-function"><code>createKeyv</code> Helper Function</h4>
+<p>A new <code>createKeyv</code> helper simplifies creating a Keyv instance with the MongoDB adapter.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mongo'</span>;
+
+<span class="hljs-comment">// Before</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>(<span class="hljs-string">'mongodb://localhost:27017'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store, <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-ns'</span> });
+
+<span class="hljs-comment">// After</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://localhost:27017'</span>, <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-ns'</span> });
+</code></pre>
+<h4 id="setmany-method"><code>setMany</code> Method</h4>
+<p>Batch set multiple key-value pairs in a single operation using MongoDB <code>bulkWrite</code>.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> store.<span class="hljs-title function_">setMany</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key1'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value1'</span> },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key2'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value2'</span>, <span class="hljs-attr">ttl</span>: <span class="hljs-number">5000</span> },
+]);
+</code></pre>
+<h4 id="hasmany-method"><code>hasMany</code> Method</h4>
+<p>Check if multiple keys exist in a single query using the <code>$in</code> operator.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> store.<span class="hljs-title function_">hasMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>, <span class="hljs-string">'key3'</span>]);
+<span class="hljs-comment">// [true, true, false]</span>
+</code></pre>
+<h4 id="clearexpired-method"><code>clearExpired</code> Method</h4>
+<p>Manually remove expired files from GridFS storage.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://localhost:27017'</span>, <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">clearExpired</span>();
+</code></pre>
+<h4 id="clearunusedfor-method"><code>clearUnusedFor</code> Method</h4>
+<p>Remove GridFS files that have not been accessed for a specified duration.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMongo</span>({ <span class="hljs-attr">url</span>: <span class="hljs-string">'mongodb://localhost:27017'</span>, <span class="hljs-attr">useGridFS</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-keyword">await</span> store.<span class="hljs-title function_">clearUnusedFor</span>(<span class="hljs-number">3600</span>); <span class="hljs-comment">// remove files unused for 1 hour</span>
+</code></pre>
+<h2 id="license">License</h2>
+<p><a href="LICENSE">MIT © Jared Wray</a></p>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-30</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

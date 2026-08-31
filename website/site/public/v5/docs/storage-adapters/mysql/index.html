@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - @keyv/mysql</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"@keyv/mysql","description":"","url":"https://keyv.org/v5/docs/storage-adapters/mysql/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"2026-08-30","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">@keyv/mysql</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">@keyv/mysql</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <blockquote>
+<p>MySQL/MariaDB storage adapter for Keyv</p>
+</blockquote>
+<p><a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg" alt="build"></a>
+<a href="https://codecov.io/gh/jaredwray/keyv"><img src="https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ" alt="codecov"></a>
+<a href="https://www.npmjs.com/package/@keyv/mysql"><img src="https://img.shields.io/npm/v/@keyv/mysql.svg" alt="npm"></a>
+<a href="https://npmjs.com/package/@keyv/mysql"><img src="https://img.shields.io/npm/dm/@keyv/mysql" alt="npm"></a></p>
+<p>MySQL/MariaDB storage adapter for <a href="https://github.com/jaredwray/keyv">Keyv</a>.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#install">Install</a></li>
+<li><a href="#usage">Usage</a></li>
+<li><a href="#migrating-to-v6">Migrating to v6</a>
+<ul>
+<li><a href="#breaking-changes">Breaking changes</a>
+<ul>
+<li><a href="#native-namespace-support">Native namespace support</a></li>
+<li><a href="#keysize-renamed-to-keylength"><code>keySize</code> renamed to <code>keyLength</code></a></li>
+</ul>
+</li>
+<li><a href="#new-features">New features</a>
+<ul>
+<li><a href="#native-ttl-support-with-expires-column">Native TTL support with <code>expires</code> column</a></li>
+<li><a href="#clearexpired-method"><code>clearExpired()</code> method</a></li>
+<li><a href="#bulk-operations">Bulk operations</a></li>
+</ul>
+</li>
+<li><a href="#running-the-migration-script">Running the migration script</a></li>
+</ul>
+</li>
+<li><a href="#constructor-options">Constructor Options</a></li>
+<li><a href="#properties">Properties</a>
+<ul>
+<li><a href="#uri">uri</a></li>
+<li><a href="#table">table</a></li>
+<li><a href="#keylength">keyLength</a></li>
+<li><a href="#namespacelength">namespaceLength</a></li>
+<li><a href="#iterationlimit">iterationLimit</a></li>
+<li><a href="#intervalexpiration">intervalExpiration</a></li>
+<li><a href="#namespace">namespace</a></li>
+</ul>
+</li>
+<li><a href="#namespace-support">Namespace Support</a></li>
+<li><a href="#methods">Methods</a>
+<ul>
+<li><a href="#reconnecturi-mysqloptions">.reconnect(uri, mysqlOptions?)</a></li>
+<li><a href="#usetabletable">.useTable(table)</a></li>
+<li><a href="#resizekeycolumnsoptions">.resizeKeyColumns(options)</a></li>
+<li><a href="#getkey">.get(key)</a></li>
+<li><a href="#getmanykeys">.getMany(keys)</a></li>
+<li><a href="#setkey-value-ttl">.set(key, value, ttl?)</a></li>
+<li><a href="#setmanyentries">.setMany(entries)</a></li>
+<li><a href="#deletekey">.delete(key)</a></li>
+<li><a href="#deletemanykeys">.deleteMany(keys)</a></li>
+<li><a href="#clear">.clear()</a></li>
+<li><a href="#haskey">.has(key)</a></li>
+<li><a href="#hasmanykeys">.hasMany(keys)</a></li>
+<li><a href="#clearexpired">.clearExpired()</a></li>
+<li><a href="#iterator">.iterator()</a></li>
+<li><a href="#disconnect">.disconnect()</a></li>
+</ul>
+</li>
+<li><a href="#connection-pooling">Connection Pooling</a></li>
+<li><a href="#ssl">SSL</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+<h2 id="install">Install</h2>
+<pre><code class="hljs language-shell">npm install --save keyv @keyv/mysql
+</code></pre>
+<h2 id="usage">Usage</h2>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMysql</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mysql'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>(<span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>));
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, handleConnectionError);
+</code></pre>
+<p>You can also use the <code>createKeyv</code> helper function to create a <code>Keyv</code> instance with <code>KeyvMysql</code> as the store:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mysql'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>);
+</code></pre>
+<p>Or with an options object:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mysql'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>, <span class="hljs-attr">table</span>: <span class="hljs-string">'cache'</span>, <span class="hljs-attr">keyLength</span>: <span class="hljs-number">512</span> });
+</code></pre>
+<p>You can specify a custom table with the <code>table</code> option and the primary key length with <code>keyLength</code>.
+To delete expired keys periodically in the background, specify <code>intervalExpiration</code> in seconds.</p>
+<p>e.g:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMysql</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mysql'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>,
+  <span class="hljs-attr">table</span>: <span class="hljs-string">'cache'</span>,
+  <span class="hljs-attr">keyLength</span>: <span class="hljs-number">255</span>,
+  <span class="hljs-attr">intervalExpiration</span>: <span class="hljs-number">60</span>
+}));
+</code></pre>
+<h2 id="migrating-to-v6">Migrating to v6</h2>
+<h3 id="breaking-changes">Breaking changes</h3>
+<h4 id="native-namespace-support">Native namespace support</h4>
+<p>In v5, namespaces were stored as key prefixes in the <code>id</code> column (e.g. <code>id="myns:mykey"</code> with <code>namespace=''</code>). In v6, the namespace is stored in a dedicated <code>namespace</code> column (e.g. <code>id="mykey"</code>, <code>namespace="myns"</code>). This enables more efficient queries and proper namespace isolation.</p>
+<p>The adapter automatically adds the <code>namespace</code> column and creates the appropriate index when it connects, so no manual schema changes are needed for new installations.</p>
+<h4 id="keysize-renamed-to-keylength"><code>keySize</code> renamed to <code>keyLength</code></h4>
+<p>The <code>keySize</code> option and property has been renamed to <code>keyLength</code> for consistency with the migration script and to better reflect that it controls key length.</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// v5</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ uri, <span class="hljs-attr">keySize</span>: <span class="hljs-number">512</span> });
+store.<span class="hljs-property">keySize</span>; <span class="hljs-comment">// 512</span>
+
+<span class="hljs-comment">// v6</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ uri, <span class="hljs-attr">keyLength</span>: <span class="hljs-number">512</span> });
+store.<span class="hljs-property">keyLength</span>; <span class="hljs-comment">// 512</span>
+</code></pre>
+<h3 id="new-features">New features</h3>
+<h4 id="native-ttl-support-with-expires-column">Native TTL support with <code>expires</code> column</h4>
+<p>v6 adds an <code>expires BIGINT</code> column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the <code>expires</code> timestamp from the serialized value and stores it in the column. The <code>intervalExpiration</code> application timer queries this column directly instead of extracting from JSON, which is significantly more efficient.</p>
+<p>The schema migration is automatic on connect — existing tables get the column and index added automatically.</p>
+<h4 id="clearexpired-method"><code>clearExpired()</code> method</h4>
+<p>A new utility method that deletes all rows where the <code>expires</code> column is set and the timestamp is in the past:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">clearExpired</span>();
+</code></pre>
+<h4 id="bulk-operations">Bulk operations</h4>
+<p>v6 adds new methods for efficient multi-key operations:</p>
+<ul>
+<li><code>.setMany(entries)</code> — bulk upsert using <code>ON DUPLICATE KEY UPDATE</code></li>
+<li><code>.hasMany(keys)</code> — bulk existence check</li>
+</ul>
+<h3 id="running-the-migration-script">Running the migration script</h3>
+<p>If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new <code>namespace</code> column. The script is located at <code>scripts/migrate-v6.ts</code> in the <code>@keyv/mysql</code> package.</p>
+<p>Preview the changes first with <code>--dry-run</code>:</p>
+<pre><code class="hljs language-shell">npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --dry-run
+</code></pre>
+<p>Dry-run mode only reads schema metadata and previews affected rows; it does not modify the schema or data.</p>
+<p>Run the migration:</p>
+<pre><code class="hljs language-shell">npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname
+</code></pre>
+<p>You can also specify a custom table and column lengths:</p>
+<pre><code class="hljs language-shell">npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --table cache
+npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --keyLength 512 --namespaceLength 256
+</code></pre>
+<p>The migration runs inside a transaction and will roll back automatically if anything fails.</p>
+<p>The migration script also populates the new <code>expires</code> column from existing JSON values in the <code>value</code> column.</p>
+<p><strong>Important notes:</strong></p>
+<ul>
+<li>The script only migrates namespace rows where <code>namespace = ''</code> (the default). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.</li>
+<li>Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.</li>
+<li>The <code>expires</code> column is populated by extracting <code>value->'$.expires'</code> from existing JSON values.</li>
+</ul>
+<h2 id="constructor-options">Constructor Options</h2>
+<p><code>KeyvMysql</code> accepts a connection URI string or an options object. The options object accepts the following properties along with any <a href="https://sidorares.github.io/node-mysql2/docs"><code>PoolOptions</code></a> from the <code>mysql2</code> library (e.g. <code>host</code>, <code>port</code>, <code>user</code>, <code>password</code>, <code>database</code>, <code>connectionLimit</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uri</code></td>
+<td><code>string</code></td>
+<td><code>'mysql://localhost'</code></td>
+<td>MySQL connection URI</td>
+</tr>
+<tr>
+<td><code>table</code></td>
+<td><code>string</code></td>
+<td><code>'keyv'</code></td>
+<td>Table name for key-value storage</td>
+</tr>
+<tr>
+<td><code>keyLength</code></td>
+<td><code>number</code></td>
+<td><code>255</code></td>
+<td>Maximum key length in Unicode code points</td>
+</tr>
+<tr>
+<td><code>namespaceLength</code></td>
+<td><code>number</code></td>
+<td><code>255</code></td>
+<td>Maximum namespace length in Unicode code points</td>
+</tr>
+<tr>
+<td><code>iterationLimit</code></td>
+<td><code>number</code></td>
+<td><code>10</code></td>
+<td>Number of rows fetched per batch during iteration</td>
+</tr>
+<tr>
+<td><code>intervalExpiration</code></td>
+<td><code>number</code></td>
+<td><code>undefined</code></td>
+<td>Interval in seconds for application-level expiration cleanup</td>
+</tr>
+</tbody>
+</table>
+<p>Because MySQL limits an InnoDB composite index to 3072 bytes and each Unicode code point may require four UTF-8 bytes, <code>keyLength + namespaceLength</code> must not exceed 768. The constructor, <code>resizeKeyColumns()</code>, and migration script reject larger combinations before changing the schema.</p>
+<h2 id="properties">Properties</h2>
+<p>Connection and schema configuration is exposed through getter-only properties. <code>uri</code>, <code>table</code>, <code>keyLength</code>, and <code>namespaceLength</code> cannot be assigned directly because changing them requires asynchronous connection or schema work. Use the awaited <code>reconnect()</code>, <code>useTable()</code>, and <code>resizeKeyColumns()</code> methods instead.</p>
+<p><code>iterationLimit</code>, <code>intervalExpiration</code>, and <code>namespace</code> remain mutable because their setters update live adapter behavior.</p>
+<h3 id="uri">uri</h3>
+<p>Get the active MySQL connection URI. This property is getter-only; use <code>reconnect()</code> to change it.</p>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: <code>'mysql://localhost'</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">uri</span>); <span class="hljs-comment">// 'mysql://user:pass@localhost:3306/dbname'</span>
+</code></pre>
+<h3 id="table">table</h3>
+<p>Get the active table name. This property is getter-only; use <code>useTable()</code> to change it.</p>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: <code>'keyv'</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">table</span>); <span class="hljs-comment">// 'keyv'</span>
+</code></pre>
+<h3 id="keylength">keyLength</h3>
+<p>Get the active maximum key length in Unicode code points. This property is getter-only because it determines the initialized schema; use <code>resizeKeyColumns()</code> to change it.</p>
+<ul>
+<li>Type: <code>number</code></li>
+<li>Default: <code>255</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>, <span class="hljs-attr">keyLength</span>: <span class="hljs-number">512</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">keyLength</span>); <span class="hljs-comment">// 512</span>
+</code></pre>
+<h3 id="namespacelength">namespaceLength</h3>
+<p>Get the active maximum namespace length in Unicode code points. This property is getter-only because it determines the initialized schema; use <code>resizeKeyColumns()</code> to change it.</p>
+<ul>
+<li>Type: <code>number</code></li>
+<li>Default: <code>255</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>, <span class="hljs-attr">namespaceLength</span>: <span class="hljs-number">512</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">namespaceLength</span>); <span class="hljs-comment">// 512</span>
+</code></pre>
+<h3 id="iterationlimit">iterationLimit</h3>
+<p>Get or set the number of rows to fetch per iteration batch.</p>
+<ul>
+<li>Type: <code>number</code></li>
+<li>Default: <code>10</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>, <span class="hljs-attr">iterationLimit</span>: <span class="hljs-number">50</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">iterationLimit</span>); <span class="hljs-comment">// 50</span>
+</code></pre>
+<h3 id="intervalexpiration">intervalExpiration</h3>
+<p>Get or set the interval in seconds for automatic expiration cleanup. When set to a value greater than 0, the adapter starts an unref'd application timer that periodically deletes expired entries. Changing the value restarts the timer, while <code>0</code> or <code>undefined</code> disables it. Cleanup runs never overlap, and changing the interval after <code>disconnect()</code> does not restart the timer. Values above <code>2147483.647</code> seconds are rejected because they exceed Node.js's maximum timer delay. The timer is stopped by <code>disconnect()</code> and does not require MySQL <code>EVENT</code> or global-variable privileges.</p>
+<ul>
+<li>Type: <code>number | undefined</code></li>
+<li>Default: <code>undefined</code> (disabled)</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>, <span class="hljs-attr">intervalExpiration</span>: <span class="hljs-number">60</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">intervalExpiration</span>); <span class="hljs-comment">// 60</span>
+</code></pre>
+<p>Earlier v6 prereleases created a schema event named <code>keyv_delete_expired_keys</code>. The adapter no longer creates, changes, or drops server events. If that legacy event exists, a database administrator can remove it once with <code>DROP EVENT IF EXISTS keyv_delete_expired_keys</code>.</p>
+<h3 id="namespace">namespace</h3>
+<p>Get or set the namespace for the adapter. Used for key prefixing and scoping operations like <code>clear()</code>.</p>
+<ul>
+<li>Type: <code>string | undefined</code></li>
+<li>Default: <code>undefined</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span> });
+store.<span class="hljs-property">namespace</span> = <span class="hljs-string">'my-namespace'</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">namespace</span>); <span class="hljs-comment">// 'my-namespace'</span>
+</code></pre>
+<h2 id="namespace-support">Namespace Support</h2>
+<p>The MySQL adapter supports native namespace scoping. When a namespace is set, keys are stored in a dedicated <code>namespace</code> column rather than being embedded in the key name. This provides efficient filtering and proper isolation between namespaces.</p>
+<p>Keys and namespaces are stored as exact UTF-8 bytes. Comparisons therefore preserve case, accents, Unicode normalization, and trailing spaces regardless of the database's default collation. For example, <code>AuditKey</code> and <code>auditkey</code>, composed and decomposed forms of <code>é</code>, and <code>key</code> and <code>key </code> are all distinct. Existing text key columns are converted independently when the adapter initializes, preserving each column's existing character width.</p>
+<p>The unique composite index is ordered as <code>(namespace, id)</code>, allowing MySQL to use the same index for exact key lookups, namespace clears, and namespace-scoped iteration. Existing <code>(id, namespace)</code> indexes created by earlier v6 prereleases are replaced atomically.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMysql</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mysql'</span>;
+
+<span class="hljs-keyword">const</span> keyvA = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>(uri), <span class="hljs-attr">namespace</span>: <span class="hljs-string">'cache-a'</span> });
+<span class="hljs-keyword">const</span> keyvB = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>(uri), <span class="hljs-attr">namespace</span>: <span class="hljs-string">'cache-b'</span> });
+
+<span class="hljs-comment">// These don't conflict despite having the same key name</span>
+<span class="hljs-keyword">await</span> keyvA.<span class="hljs-title function_">set</span>(<span class="hljs-string">'user:1'</span>, <span class="hljs-string">'Alice'</span>);
+<span class="hljs-keyword">await</span> keyvB.<span class="hljs-title function_">set</span>(<span class="hljs-string">'user:1'</span>, <span class="hljs-string">'Bob'</span>);
+
+<span class="hljs-comment">// clear() only affects the namespace it belongs to</span>
+<span class="hljs-keyword">await</span> keyvA.<span class="hljs-title function_">clear</span>(); <span class="hljs-comment">// Only clears 'cache-a' entries</span>
+</code></pre>
+<h2 id="methods">Methods</h2>
+<p>Runtime configuration methods are serialized with one another. Always await them before starting operations that must use the new configuration. <code>useTable()</code> and <code>resizeKeyColumns()</code> perform schema work and should be run while application writes are paused for a deterministic cutover.</p>
+<h3 id="reconnecturi-mysqloptions">.reconnect(uri, mysqlOptions?)</h3>
+<p>Creates a replacement mysql2 pool, initializes the currently configured table on it, and switches the adapter only after preparation succeeds. The previous pool remains active during preparation and is closed after its already-started queries settle. If preparation fails, the adapter keeps using the previous connection.</p>
+<p>Calling <code>reconnect()</code> after <code>disconnect()</code> reactivates the adapter and restarts automatic expiration cleanup when <code>intervalExpiration</code> is configured.</p>
+<ul>
+<li><code>uri</code> <em>(string)</em> - MySQL connection URI for the replacement pool.</li>
+<li><code>mysqlOptions</code> <em>(PoolOptions, optional)</em> - Replacement mysql2 pool options applied on top of the URI settings. When omitted, the replacement uses only the URI.</li>
+<li>Returns: <code>Promise<void></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">reconnect</span>(<span class="hljs-string">'mysql://user:pass@replica.example.com:3306/cache'</span>, {
+  <span class="hljs-attr">connectionLimit</span>: <span class="hljs-number">20</span>
+});
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyvMysql.<span class="hljs-property">uri</span>); <span class="hljs-comment">// the replica URI</span>
+</code></pre>
+<h3 id="usetabletable">.useTable(table)</h3>
+<p>Creates or migrates the target table using the same initialization performed by the constructor, then makes it active. The previous table remains active if initialization fails. This method does not copy, move, or delete data from the previous table.</p>
+<ul>
+<li><code>table</code> <em>(string)</em> - Target table name. Database-qualified names such as <code>database.cache</code> are supported.</li>
+<li>Returns: <code>Promise<void></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">useTable</span>(<span class="hljs-string">'sessions'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyvMysql.<span class="hljs-property">table</span>); <span class="hljs-comment">// 'sessions'</span>
+</code></pre>
+<h3 id="resizekeycolumnsoptions">.resizeKeyColumns(options)</h3>
+<p>Changes the logical character limits and resizes both <code>VARBINARY</code> columns in one <code>ALTER TABLE</code> operation. Omitted values keep their current limits. Before changing the schema, the adapter validates MySQL's composite-index limit and scans existing UTF-8 keys and namespaces. A narrowing change is rejected if stored data exceeds the requested limit, leaving the schema and active limits unchanged.</p>
+<ul>
+<li><code>options.keyLength</code> <em>(number, optional)</em> - New maximum key length in Unicode code points.</li>
+<li><code>options.namespaceLength</code> <em>(number, optional)</em> - New maximum namespace length in Unicode code points.</li>
+<li>Returns: <code>Promise<void></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">resizeKeyColumns</span>({
+  <span class="hljs-attr">keyLength</span>: <span class="hljs-number">384</span>,
+  <span class="hljs-attr">namespaceLength</span>: <span class="hljs-number">128</span>
+});
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyvMysql.<span class="hljs-property">keyLength</span>); <span class="hljs-comment">// 384</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyvMysql.<span class="hljs-property">namespaceLength</span>); <span class="hljs-comment">// 128</span>
+</code></pre>
+<h3 id="getkey">.get(key)</h3>
+<p>Returns the value for the given key. Returns <code>undefined</code> if the key does not exist.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>);
+</code></pre>
+<h3 id="getmanykeys">.getMany(keys)</h3>
+<p>Returns an array of values for the given keys. Returns <code>undefined</code> for any key that does not exist.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> values = <span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">getMany</span>([<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>]);
+</code></pre>
+<h3 id="setkey-value-ttl">.set(key, value, ttl?)</h3>
+<p>Sets a value for the given key. If the key already exists, it will be updated. Returns <code>true</code> on success, <code>false</code> on failure.</p>
+<ul>
+<li><code>key</code> <em>(string)</em> - The key to set.</li>
+<li><code>value</code> <em>(any)</em> - The value to store.</li>
+<li><code>ttl</code> <em>(number, optional)</em> - Time to live in milliseconds.</li>
+<li>Returns: <code>Promise<boolean></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>, <span class="hljs-number">5000</span>); <span class="hljs-comment">// expires in 5 seconds</span>
+</code></pre>
+<h3 id="setmanyentries">.setMany(entries)</h3>
+<p>Set multiple key-value pairs at once using a single atomic <code>INSERT ... ON DUPLICATE KEY UPDATE</code> statement. Each entry is a <code>KeyvEntry<Value></code> object (<code>{ key: string, value: Value, ttl?: number }</code>), where <code>Value</code> is inferred from the entries provided. Returns a <code>boolean[]</code> indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (<code>true</code>) or all fail (<code>false</code>) together. On failure, an <code>error</code> event is emitted.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">setMany</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'foo'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'bar'</span> },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'baz'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'qux'</span> },
+]); <span class="hljs-comment">// [true, true]</span>
+</code></pre>
+<h3 id="deletekey">.delete(key)</h3>
+<p>Deletes a key-value pair from the store. Returns <code>true</code> if the key existed and was deleted, <code>false</code> otherwise.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> deleted = <span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>);
+</code></pre>
+<h3 id="deletemanykeys">.deleteMany(keys)</h3>
+<p>Deletes multiple key-value pairs from the store. Returns a <code>boolean[]</code> indicating whether each key was deleted.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">deleteMany</span>([<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>]); <span class="hljs-comment">// [true, true]</span>
+</code></pre>
+<h3 id="clear">.clear()</h3>
+<p>Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">clear</span>();
+</code></pre>
+<h3 id="haskey">.has(key)</h3>
+<p>Returns <code>true</code> if the key exists in the store, <code>false</code> otherwise.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> exists = <span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">has</span>(<span class="hljs-string">'foo'</span>);
+</code></pre>
+<h3 id="hasmanykeys">.hasMany(keys)</h3>
+<p>Check if multiple keys exist. Returns an array of booleans in the same order as the input keys.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">set</span>(<span class="hljs-string">'baz'</span>, <span class="hljs-string">'qux'</span>);
+
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">hasMany</span>([<span class="hljs-string">'foo'</span>, <span class="hljs-string">'baz'</span>, <span class="hljs-string">'unknown'</span>]); <span class="hljs-comment">// [true, true, false]</span>
+</code></pre>
+<h3 id="clearexpired">.clearExpired()</h3>
+<p>Deletes all entries where the <code>expires</code> column is set and the timestamp is in the past. Useful for periodic cleanup of expired entries.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">clearExpired</span>();
+</code></pre>
+<h3 id="iterator">.iterator()</h3>
+<p>Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance. Uses keyset pagination to efficiently handle large datasets.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">for</span> <span class="hljs-title function_">await</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> keyvMysql.<span class="hljs-title function_">iterator</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<h3 id="disconnect">.disconnect()</h3>
+<p>Stops the adapter from accepting new queries, waits for queries that have already started, and closes the adapter's connection pool. Repeated calls are safe and wait for the same shutdown.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyvMysql.<span class="hljs-title function_">disconnect</span>();
+</code></pre>
+<h2 id="connection-pooling">Connection Pooling</h2>
+<p>Each <code>KeyvMysql</code> adapter creates and owns one <code>mysql2</code> connection pool. Pools are not shared implicitly between adapter instances, even when those adapters use the same URI and connection options. This keeps connection configuration and shutdown isolated: disconnecting one adapter does not affect another adapter.</p>
+<p>Pool options such as <code>connectionLimit</code>, <code>maxIdle</code>, <code>idleTimeout</code>, and <code>queueLimit</code> are passed through to <code>mysql2</code> and apply separately to each adapter. If an application creates multiple adapters, account for the combined number of database connections.</p>
+<p>Call <code>disconnect()</code> when an adapter is no longer needed, especially for short-lived instances:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>,
+  <span class="hljs-attr">connectionLimit</span>: <span class="hljs-number">10</span>,
+});
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store });
+
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+} <span class="hljs-keyword">finally</span> {
+  <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">disconnect</span>();
+}
+</code></pre>
+<h2 id="ssl">SSL</h2>
+<p>SSL options are passed through to <code>mysql2</code> as part of the options object. The constructor takes a single argument, so include the <code>uri</code> alongside the <code>ssl</code> configuration:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMysql</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/mysql'</span>;
+<span class="hljs-keyword">import</span> fs <span class="hljs-keyword">from</span> <span class="hljs-string">'fs'</span>;
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>;
+
+<span class="hljs-keyword">const</span> keyvMysql = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMysql</span>({
+	<span class="hljs-attr">uri</span>: <span class="hljs-string">'mysql://user:pass@localhost:3306/dbname'</span>,
+	<span class="hljs-attr">ssl</span>: {
+		<span class="hljs-attr">rejectUnauthorized</span>: <span class="hljs-literal">false</span>,
+		<span class="hljs-attr">ca</span>: fs.<span class="hljs-title function_">readFileSync</span>(path.<span class="hljs-title function_">join</span>(__dirname, <span class="hljs-string">'/certs/ca.pem'</span>)).<span class="hljs-title function_">toString</span>(),
+		<span class="hljs-attr">key</span>: fs.<span class="hljs-title function_">readFileSync</span>(path.<span class="hljs-title function_">join</span>(__dirname, <span class="hljs-string">'/certs/client-key.pem'</span>)).<span class="hljs-title function_">toString</span>(),
+		<span class="hljs-attr">cert</span>: fs.<span class="hljs-title function_">readFileSync</span>(path.<span class="hljs-title function_">join</span>(__dirname, <span class="hljs-string">'/certs/client-cert.pem'</span>)).<span class="hljs-title function_">toString</span>(),
+	},
+});
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvMysql });
+</code></pre>
+<h2 id="license">License</h2>
+<p><a href="LISCENCE">MIT © Jared Wray</a></p>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-30</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

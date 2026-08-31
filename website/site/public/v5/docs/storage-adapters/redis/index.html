@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - @keyv/redis</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"@keyv/redis","description":"","url":"https://keyv.org/v5/docs/storage-adapters/redis/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"2026-08-30","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">@keyv/redis</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">@keyv/redis</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <blockquote>
+<p>Redis storage adapter for Keyv</p>
+</blockquote>
+<p><a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg" alt="build"></a>
+<a href="https://codecov.io/gh/jaredwray/keyv"><img src="https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ" alt="codecov"></a>
+<a href="https://www.npmjs.com/package/@keyv/redis"><img src="https://img.shields.io/npm/v/@keyv/redis.svg" alt="npm"></a>
+<a href="https://npmjs.com/package/@keyv/redis"><img src="https://img.shields.io/npm/dm/@keyv/redis" alt="npm"></a></p>
+<p>Redis storage adapter for <a href="https://github.com/jaredwray/keyv">Keyv</a>.</p>
+<h1 id="features">Features</h1>
+<ul>
+<li>Built on top of <a href="https://npmjs.com/package/@redis/client">@redis/client</a>.</li>
+<li>TTL is handled directly by Redis via absolute <code>PXAT</code> expiry, with an automatic relative <code>PX</code> fallback for servers older than 6.2 (see <a href="#expiration-and-ttl">Expiration and TTL</a>).</li>
+<li>Supports Redis Clusters.</li>
+<li>Url connection string support or pass in your Redis Options</li>
+<li>Easily add in your own Redis client.</li>
+<li>Namespace support for key management.</li>
+<li>Unlink as default delete method for performance.</li>
+<li>Access to the Redis client for advanced use cases.</li>
+<li>Keyv and Redis Libraries are exported for advanced use cases.</li>
+<li><code>createKeyv</code> function for easy creation of Keyv instances.</li>
+<li>jsDoc comments for easy documentation.</li>
+<li>CJS / ESM and TypeScript supported out of the box.</li>
+</ul>
+<h1 id="table-of-contents">Table of Contents</h1>
+<ul>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#usage">Usage</a></li>
+<li><a href="#migrating-from-v4-to-v5">Migrating from v4 to v5</a></li>
+<li><a href="#keyv-redis-options">Keyv Redis Options</a></li>
+<li><a href="#using-the-createkeyv-function">Using the <code>createKeyv</code> function</a></li>
+<li><a href="#using-the-createkeyvnonblocking-function">Using the <code>createKeyvNonBlocking</code> function</a></li>
+<li><a href="#namespaces">Namespaces</a>
+<ul>
+<li><a href="#how-to-use-namespaces">How to use Namespaces</a></li>
+</ul>
+</li>
+<li><a href="#fixing-double-prefixing-of-keys">Fixing Double Prefixing of Keys</a>
+<ul>
+<li><a href="#using-generic-types">Using Generic Types</a></li>
+</ul>
+</li>
+<li><a href="#performance-considerations">Performance Considerations</a></li>
+<li><a href="#expiration-and-ttl">Expiration and TTL</a></li>
+<li><a href="#high-memory-usage-on-redis-server">High Memory Usage on Redis Server</a></li>
+<li><a href="#gracefully-handling-errors-and-timeouts">Gracefully Handling Errors and Timeouts</a></li>
+<li><a href="#using-cacheable-with-redis">Using Cacheable with Redis</a></li>
+<li><a href="#clustering">Clustering</a></li>
+<li><a href="#sentinel">Sentinel</a></li>
+<li><a href="#tls-support">TLS Support</a></li>
+<li><a href="#api">API</a>
+<ul>
+<li><a href="#properties">Properties</a></li>
+<li><a href="#methods">Methods</a></li>
+</ul>
+</li>
+<li><a href="#using-custom-redis-client-events">Using Custom Redis Client Events</a></li>
+<li><a href="#migrating-from-v3-to-v4">Migrating from v3 to v4</a></li>
+<li><a href="#about-redis-sets-and-its-support-in-v4">About Redis Sets and its Support in v4</a></li>
+<li><a href="#using-with-nestjs">Using with NestJS</a>
+<ul>
+<li>
+<ul>
+<li><a href="#1-install-dependencies">1. Install Dependencies</a></li>
+<li><a href="#2-create-a-cache-module">2. Create a Cache Module</a></li>
+<li><a href="#3-import-the-cache-module-in-appmodule">3. Import the Cache Module in AppModule</a></li>
+<li><a href="#4-create-the-cache-service">4. Create the Cache Service</a></li>
+<li><a href="#5-register-cacheservice-in-cachemodule">5. Register CacheService in CacheModule</a></li>
+<li><a href="#6-import-cachemodule-in-the-target-module-eg-taskmodule">6. Import CacheModule in the Target Module (e.g. TaskModule)</a></li>
+<li><a href="#7-using-the-cache-in-a-service">7. Using the Cache in a Service</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#license">License</a></li>
+</ul>
+<h1 id="installation">Installation</h1>
+<pre><code class="hljs language-bash">npm install --save keyv @keyv/redis
+</code></pre>
+<h1 id="usage">Usage</h1>
+<p>Here is a standard use case where we implement <code>Keyv</code> and <code>@keyv/redis</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>));
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, handleConnectionError);
+</code></pre>
+<p>Here is the same example but with the <code>Keyv</code> instance created with the <code>createKeyv</code> function:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+</code></pre>
+<p>You only have to import the <code>@keyv/redis</code> library if you are using the <code>createKeyv</code> function. 🎉 Otherwise, you can import <code>Keyv</code> and <code>@keyv/redis</code> independently.</p>
+<p>Here you can pass in the Redis options directly:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> uri = <span class="hljs-string">"redis://localhost:6379"</span>;
+
+<span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> please use the settings that you need to configure. Check out Keyv Redis Options section</span>
+<span class="hljs-keyword">const</span> options = {
+  <span class="hljs-attr">namespace</span>: <span class="hljs-string">"test"</span>,
+  <span class="hljs-attr">keyPrefixSeparator</span>: <span class="hljs-string">"->"</span>,
+  <span class="hljs-attr">clearBatchSize</span>: <span class="hljs-number">100</span>,
+  <span class="hljs-attr">useUnlink</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">noNamespaceAffectsAll</span>: <span class="hljs-literal">true</span>,
+};
+
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(uri, options);
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(keyvRedis);
+</code></pre>
+<p>Or you can create a new Redis instance and pass it in with <code>KeyvOptions</code> such as setting the <code>store</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span>, { createClient } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> redis = <span class="hljs-title function_">createClient</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(redis);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvRedis});
+</code></pre>
+<h1 id="migrating-from-v4-to-v5">Migrating from v4 to v5</h1>
+<p>The major change from v4 to v5 is that we are now using v5 of the <code>@redis/client</code> library which has a new API. This means that some methods have changed but it should be a drop-in replacement for most use cases.</p>
+<h1 id="keyv-redis-options">Keyv Redis Options</h1>
+<p>You can pass in options to the <code>KeyvRedis</code> constructor. Here are the available options:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">type</span> <span class="hljs-title class_">KeyvRedisOptions</span> = {
+	<span class="hljs-comment">/**
+	 * Namespace for the current instance.
+	 */</span>
+	<span class="hljs-attr">namespace</span>?: <span class="hljs-built_in">string</span>;
+	<span class="hljs-comment">/**
+	 * Separator to use between namespace and key.
+	 */</span>
+	<span class="hljs-attr">keyPrefixSeparator</span>?: <span class="hljs-built_in">string</span>;
+	<span class="hljs-comment">/**
+	 * Number of keys to delete in a single batch.
+	 */</span>
+	<span class="hljs-attr">clearBatchSize</span>?: <span class="hljs-built_in">number</span>;
+	<span class="hljs-comment">/**
+	 * Enable Unlink instead of using Del for clearing keys. This is more performant but may not be supported by all Redis versions.
+	 */</span>
+	<span class="hljs-attr">useUnlink</span>?: <span class="hljs-built_in">boolean</span>;
+
+	<span class="hljs-comment">/**
+	 * Whether to allow clearing all keys when no namespace is set.
+	 * If set to true and no namespace is set, iterate() will return all keys.
+	 * Defaults to `false`.
+	 */</span>
+	<span class="hljs-attr">noNamespaceAffectsAll</span>?: <span class="hljs-built_in">boolean</span>;
+
+	<span class="hljs-comment">/**
+	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
+	 * set to true so that it throws an error when trying to connect to the Redis server fails.
+	 */</span>
+	<span class="hljs-attr">throwOnConnectError</span>?: <span class="hljs-built_in">boolean</span>;
+
+	<span class="hljs-comment">/**
+	 * This is used to throw an error if at any point there is a failure. Use this if you want to
+	 * ensure that all operations are successful and you want to handle errors. By default, this is
+	 * set to false so that it does not throw an error on every operation and instead emits an error event
+	 * and returns no-op responses.
+	 * <span class="hljs-doctag">@default</span> <span class="hljs-variable">false</span>
+	 */</span>
+	<span class="hljs-attr">throwOnErrors</span>?: <span class="hljs-built_in">boolean</span>;
+
+	<span class="hljs-comment">/**
+	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
+	 * If set, it will throw an error if the connection does not succeed within the specified time.
+	 * <span class="hljs-doctag">@default</span> <span class="hljs-variable">undefined</span>
+	 */</span>
+	<span class="hljs-attr">connectionTimeout</span>?: <span class="hljs-built_in">number</span>;
+};
+</code></pre>
+<p>You can pass these options when creating a new <code>KeyvRedis</code> instance:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>, {
+  <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-namespace'</span>,
+  <span class="hljs-attr">keyPrefixSeparator</span>: <span class="hljs-string">':'</span>,
+  <span class="hljs-attr">clearBatchSize</span>: <span class="hljs-number">1000</span>,
+  <span class="hljs-attr">useUnlink</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">noNamespaceAffectsAll</span>: <span class="hljs-literal">false</span>,
+  <span class="hljs-attr">connectionTimeout</span>: <span class="hljs-number">200</span>
+});
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvRedis });
+</code></pre>
+<p>You can also set these options after the fact by using the <code>KeyvRedis</code> instance properties:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> {createKeyv} <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+keyv.<span class="hljs-property">store</span>.<span class="hljs-property">namespace</span> = <span class="hljs-string">'my-namespace'</span>;
+</code></pre>
+<h1 id="using-the-createkeyv-function">Using the <code>createKeyv</code> function</h1>
+<p>The <code>createKeyv</code> function is a convenience function that creates a new <code>Keyv</code> instance with the <code>@keyv/redis</code> store. It automatically sets the <code>useKeyPrefix</code> option to <code>false</code>. Here is an example of how to use it:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+</code></pre>
+<p>To use a namespace you can do it here and this will set Keyv up correctly to avoid the double namespace issue:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>, {<span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-namespace'</span>});
+</code></pre>
+<h1 id="using-the-createkeyvnonblocking-function">Using the <code>createKeyvNonBlocking</code> function</h1>
+<p>The <code>createKeyvNonBlocking</code> function is a convenience function that creates a new <code>Keyv</code> instance with the <code>@keyv/redis</code> store does what <code>createKeyv</code> does but also disables throwing errors, removes the offline queue redis functionality, and reconnect strategy so that when used as a secondary cache in libraries such as <a href="https://npmjs.org/package/cacheable">cacheable</a> it does not block the primary cache. This is useful when you want to use Redis as a secondary cache and do not want to block the primary cache on connection errors or timeouts when using <code>nonBlocking</code>. Here is an example of how to use it:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyvNonBlocking } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyvNonBlocking</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+</code></pre>
+<h1 id="namespaces">Namespaces</h1>
+<p>By default namespacing is turned off, this is done because it causes much more memory / performance usage for Redis.</p>
+<p>Redis does <strong>not</strong> treat colons (<code>:</code>) or namespaces as special—there are no hierarchical keys or namespace mechanics internally. The dramatic memory savings you see when removing prefixes like <code>namespace:</code> come from one thing: <strong>key length</strong>. Redis stores every key as a full string in memory, wrapped in an SDS structure and allocated by jemalloc. Longer keys (e.g., <code>namespace:key123</code>) fall into larger jemalloc size classes, require more bytes for the SDS header, and cause more fragmentation. Shorter keys (e.g., <code>key123</code>) fit into much smaller slabs, pack tightly, and result in far more stable and predictable memory usage.</p>
+<p>This means the colon is not the issue—<strong>the extra characters are.</strong> A key that goes from ~18 bytes to ~6 bytes can use <em>half the memory per key</em> once overhead, allocator classes, and fragmentation are considered. Multiply that by hundreds of thousands or millions of keys, and memory usage becomes significantly smaller and much more stable simply because the keys are shorter.</p>
+<h2 id="how-to-use-namespaces">How to use Namespaces</h2>
+<p>You can set a namespace for your keys. This is useful if you want to manage your keys in a more organized way. Here is an example of how to set a <code>namespace</code> with the <code>store</code> option:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span>, { createClient } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> redis = <span class="hljs-title function_">createClient</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(redis);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvRedis, <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-namespace'</span>, <span class="hljs-attr">useKeyPrefix</span>: <span class="hljs-literal">false</span> });
+</code></pre>
+<p>To make this easier, you can use the <code>createKeyv</code> function which will automatically set the <code>namespace</code> option to the <code>KeyvRedis</code> instance:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>, { <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-namespace'</span> });
+</code></pre>
+<p>This will prefix all keys with <code>my-namespace:</code> and will also set <code>useKeyPrefix</code> to <code>false</code>. This is done to avoid double prefixing of keys as we transition out of the legacy behavior in Keyv. You can also set the namespace after the fact:</p>
+<pre><code class="hljs language-js">keyv.<span class="hljs-property">namespace</span> = <span class="hljs-string">'my-namespace'</span>;
+</code></pre>
+<p>NOTE: If you plan to do many clears or deletes, it is recommended to read the <a href="#performance-considerations">Performance Considerations</a> section.</p>
+<h1 id="fixing-double-prefixing-of-keys">Fixing Double Prefixing of Keys</h1>
+<p>If you are using <code>Keyv</code> with <code>@keyv/redis</code> as the storage adapter, you may notice that keys are being prefixed twice. This is because <code>Keyv</code> has a default prefixing behavior that is applied to all keys. To fix this, you can set the <code>useKeyPrefix</code> option to <code>false</code> when creating the <code>Keyv</code> instance:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>), { <span class="hljs-attr">useKeyPrefix</span>: <span class="hljs-literal">false</span> });
+</code></pre>
+<p>To make this easier, you can use the <code>createKeyv</code> function which will automatically set the <code>useKeyPrefix</code> option to <code>false</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+</code></pre>
+<h2 id="using-generic-types">Using Generic Types</h2>
+<p>When initializing <code>KeyvRedis</code>, you can specify the type of the values you are storing and you can also specify types when calling methods:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span>, { createClient } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">User</span> {
+  <span class="hljs-attr">id</span>: <span class="hljs-built_in">number</span>
+  <span class="hljs-attr">name</span>: <span class="hljs-built_in">string</span>
+}
+
+<span class="hljs-keyword">const</span> redis = <span class="hljs-title function_">createClient</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span><<span class="hljs-title class_">User</span>>(redis);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvRedis });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">"user:1"</span>, { <span class="hljs-attr">id</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">"Alice"</span> })
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">"user:1"</span>)
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(user.<span class="hljs-property">name</span>) <span class="hljs-comment">// 'Alice'</span>
+
+<span class="hljs-comment">// specify types when calling methods</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> keyv.<span class="hljs-property">get</span><<span class="hljs-title class_">User</span>>(<span class="hljs-string">"user:1"</span>)
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(user.<span class="hljs-property">name</span>) <span class="hljs-comment">// 'Alice'</span>
+</code></pre>
+<h1 id="performance-considerations">Performance Considerations</h1>
+<p>With namespaces being prefix based it is critical to understand some of the performance considerations we have made:</p>
+<ul>
+<li>
+<p><code>clear()</code> - We use the <code>SCAN</code> command to iterate over keys. This is a non-blocking command that is more efficient than <code>KEYS</code>. In addition we are using <code>UNLINK</code> by default instead of <code>DEL</code>. Even with that if you are iterating over a large dataset it can still be slow. It is highly recommended to use the <code>namespace</code> option to limit the keys that are being cleared and if possible to not use the <code>clear()</code> method in high performance environments. If you don't set namespaces, you can enable <code>noNamespaceAffectsAll</code> to clear all keys using the <code>FLUSHDB</code> command which is faster and can be used in production environments.</p>
+</li>
+<li>
+<p><code>delete()</code> - By default we are now using <code>UNLINK</code> instead of <code>DEL</code> for deleting keys. This is a non-blocking command that is more efficient than <code>DEL</code>. If you are deleting a large number of keys it is recommended to use the <code>deleteMany()</code> method instead of <code>delete()</code>.</p>
+</li>
+<li>
+<p><code>clearBatchSize</code> - The <code>clearBatchSize</code> option is set to <code>1000</code> by default. This is because Redis has a limit of 1000 keys that can be deleted in a single batch. If no namespace is defined and noNamespaceAffectsAll is set to <code>true</code> this option will be ignored and the <code>FLUSHDB</code> command will be used instead.</p>
+</li>
+<li>
+<p><code>useUnlink</code> - This option is set to <code>true</code> by default. This is because <code>UNLINK</code> is a non-blocking command that is more efficient than <code>DEL</code>. If you are not using <code>UNLINK</code> and are doing a lot of deletes it is recommended to set this option to <code>true</code>.</p>
+</li>
+<li>
+<p><code>setMany</code>, <code>getMany</code>, <code>deleteMany</code> - These methods are more efficient than their singular counterparts. These will be used by default in the <code>Keyv</code> library such as when using <code>keyv.delete(string[])</code> it will use <code>deleteMany()</code>.</p>
+</li>
+</ul>
+<p>If you want to see even better performance please see the <a href="#using-cacheable-with-redis">Using Cacheable with Redis</a> section as it has non-blocking and in-memory primary caching that goes along well with this library and Keyv.</p>
+<h1 id="expiration-and-ttl">Expiration and TTL</h1>
+<p>Keyv hands this adapter an <strong>absolute</strong> expiry — a Unix timestamp in milliseconds — computed once on the Keyv host. The adapter writes it to Redis with <code>SET ... PXAT</code>, the absolute-expiry option. Because the deadline is absolute, it is immune to clock skew and to any latency between Keyv computing the expiry and Redis receiving the command: a key set to expire at <code>T</code> expires at <code>T</code> no matter how long the write takes to arrive.</p>
+<p><code>PXAT</code> was added in <strong>Redis 6.2</strong>. For older servers the adapter automatically falls back to the relative <code>PX</code> option (the remaining lifetime in milliseconds):</p>
+<ul>
+<li>On the <strong>first</strong> expiring write, the adapter runs <code>INFO server</code> once, parses <code>redis_version</code>, and caches whether the server is 6.2+. Every later write reuses that cached answer, so detection costs one <code>INFO</code> round-trip per connection, not per write.</li>
+<li><strong>6.2 or newer</strong> → the write uses <code>PXAT: expires</code> (absolute).</li>
+<li><strong>Older than 6.2</strong> → the write uses <code>PX: max(0, expires - Date.now())</code> (relative, computed at write time). An expiry already in the past becomes <code>PX: 0</code>.</li>
+<li>If the version <strong>cannot be determined</strong> — for example a cluster where <code>INFO</code> isn't directly available, or a transient error reading it — the adapter assumes <code>PXAT</code> is supported, since such deployments are overwhelmingly modern. The cached result means it won't keep retrying <code>INFO</code> on every write.</li>
+</ul>
+<p>The same detection and fallback apply to <code>setMany</code>, including the per-hash-slot grouping used in cluster mode. No configuration is required; you always call <code>keyv.set(key, value, ttl)</code> with a relative millisecond <code>ttl</code> (or rely on the <code>ttl</code> option) and the adapter chooses the correct Redis option for your server.</p>
+<p>The relative <code>PX</code> fallback re-derives the remaining lifetime store-side, so on pre-6.2 servers a large write-to-Redis latency could in theory shorten the effective TTL by that latency. On 6.2+ (<code>PXAT</code>) there is no such window. If you need the skew-immune absolute behaviour, run Redis 6.2 or later.</p>
+<h1 id="high-memory-usage-on-redis-server">High Memory Usage on Redis Server</h1>
+<p>This is because we are using <code>UNLINK</code> by default instead of <code>DEL</code>. This is a non-blocking command that is more efficient than <code>DEL</code> but will slowly remove the memory allocation.</p>
+<p>If you are deleting or clearing a large number of keys you can disable this by setting the <code>useUnlink</code> option to <code>false</code>. This will use <code>DEL</code> instead of <code>UNLINK</code> and should reduce the memory usage.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>, { <span class="hljs-attr">useUnlink</span>: <span class="hljs-literal">false</span> }));
+<span class="hljs-comment">// Or</span>
+keyv.<span class="hljs-property">useUnlink</span> = <span class="hljs-literal">false</span>;
+</code></pre>
+<h1 id="gracefully-handling-errors-and-timeouts">Gracefully Handling Errors and Timeouts</h1>
+<p>When using <code>@keyv/redis</code>, it is important to handle connection errors gracefully. You can do this by listening to the <code>error</code> event on the <code>KeyvRedis</code> instance. Here is an example of how to do that:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>));
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function">(<span class="hljs-params">error</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">'error'</span>, error);
+});
+</code></pre>
+<p>By default, the <code>KeyvRedis</code> instance will <code>throw an error</code> if the connection fails to connect. You can disable this behavior by setting the <code>throwOnConnectError</code> option to <code>false</code> when creating the <code>KeyvRedis</code> instance. If you want this to throw you will need to also set the Keyv instance to <code>throwOnErrors: true</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://bad-uri:1111'</span>, { <span class="hljs-attr">throwOnConnectError</span>: <span class="hljs-literal">false</span> }));
+keyv.<span class="hljs-property">throwOnErrors</span> = <span class="hljs-literal">true</span>; <span class="hljs-comment">// This will throw an error if the connection fails</span>
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key'</span>, <span class="hljs-string">'value'</span>); <span class="hljs-comment">// this will throw the connection error only.</span>
+</code></pre>
+<p>On <code>get</code>, <code>getMany</code>, <code>set</code>, <code>setMany</code>, <code>delete</code>, and <code>deleteMany</code>, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.</p>
+<p>If you want to handle connection errors, retries, and timeouts more gracefully, you can use the <code>throwOnErrors</code> option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:</p>
+<p>There is a default <code>Reconnect Strategy</code> if you pass in just a <code>uri</code> connection string we will automatically create a Redis client for you with the following reconnect strategy:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> defaultReconnectStrategy = (<span class="hljs-attr">attempts</span>: <span class="hljs-built_in">number</span>): <span class="hljs-built_in">number</span> | <span class="hljs-function"><span class="hljs-params">Error</span> =></span> {
+	<span class="hljs-comment">// Exponential backoff base: double each time, capped at 2s.</span>
+	<span class="hljs-comment">// Parentheses make it clear we do (2 ** attempts) first, then * 100</span>
+	<span class="hljs-keyword">const</span> backoff = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>((<span class="hljs-number">2</span> ** attempts) * <span class="hljs-number">100</span>, <span class="hljs-number">2000</span>);
+
+	<span class="hljs-comment">// Add random jitter of up to ±50ms to avoid thundering herds:</span>
+	<span class="hljs-keyword">const</span> jitter = (<span class="hljs-title class_">Math</span>.<span class="hljs-title function_">random</span>() - <span class="hljs-number">0.5</span>) * <span class="hljs-number">100</span>;
+
+	<span class="hljs-keyword">return</span> backoff + jitter;
+};
+</code></pre>
+<h1 id="using-cacheable-with-redis">Using Cacheable with Redis</h1>
+<p>If you are wanting to see even better performance with Redis, you can use <a href="https://npmjs.org/package/cacheable">Cacheable</a> which is a multi-layered cache library that has in-memory primary caching and non-blocking secondary caching. Here is an example of how to use it with Redis:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">Cacheable</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'cacheable'</span>;
+
+<span class="hljs-keyword">const</span> secondary = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+
+<span class="hljs-keyword">const</span> cache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Cacheable</span>( { secondary } );
+</code></pre>
+<p>For even higher performance you can set the <code>nonBlocking</code> option to <code>true</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> cache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Cacheable</span>( { secondary, <span class="hljs-attr">nonBlocking</span>: <span class="hljs-literal">true</span> } );
+</code></pre>
+<p>This will make it so that the secondary does not block the primary cache and will be very fast. 🚀</p>
+<h1 id="clustering">Clustering</h1>
+<p>If you are using a Redis Cluster, you can pass in the <code>redisOptions</code> directly. Here is an example of how to do that:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span>, { createCluster } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> cluster = <span class="hljs-title function_">createCluster</span>({
+    <span class="hljs-attr">rootNodes</span>: [
+      {
+        <span class="hljs-attr">url</span>: <span class="hljs-string">'redis://127.0.0.1:7000'</span>,
+      },
+      {
+        <span class="hljs-attr">url</span>: <span class="hljs-string">'redis://127.0.0.1:7001'</span>,
+      },
+      {
+        <span class="hljs-attr">url</span>: <span class="hljs-string">'redis://127.0.0.1:7002'</span>,
+      },
+    ],
+});
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(cluster) });
+</code></pre>
+<p>You can learn more about the <code>createCluster</code> function in the <a href="https://github.com/redis/node-redis/blob/master/docs/clustering.md">documentation</a> at <a href="https://github.com/redis/node-redis/tree/master/docs">https://github.com/redis/node-redis/tree/master/docs</a>.</p>
+<h1 id="sentinel">Sentinel</h1>
+<p>If you are using Sentinel to provide high availability for your Redis instances, you can pass in the sentinel options directly to the <code>KeyvRedis</code> constructor:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({
+  <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>({
+    <span class="hljs-attr">name</span>: <span class="hljs-string">'mymaster'</span>,
+    <span class="hljs-attr">sentinelRootNodes</span>: [
+      { <span class="hljs-attr">host</span>: <span class="hljs-string">'127.0.0.1'</span>, <span class="hljs-attr">port</span>: <span class="hljs-number">26379</span> },
+      { <span class="hljs-attr">host</span>: <span class="hljs-string">'127.0.0.1'</span>, <span class="hljs-attr">port</span>: <span class="hljs-number">26380</span> },
+      { <span class="hljs-attr">host</span>: <span class="hljs-string">'127.0.0.1'</span>, <span class="hljs-attr">port</span>: <span class="hljs-number">26381</span> },
+    ],
+  }),
+});
+</code></pre>
+<p>For TypeScript users, the <code>RedisSentinelOptions</code> type is exported from the package:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span>, { <span class="hljs-keyword">type</span> <span class="hljs-title class_">RedisSentinelOptions</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-attr">sentinelOptions</span>: <span class="hljs-title class_">RedisSentinelOptions</span> = {
+  <span class="hljs-attr">name</span>: <span class="hljs-string">'mymaster'</span>,
+  <span class="hljs-attr">sentinelRootNodes</span>: [
+    { <span class="hljs-attr">host</span>: <span class="hljs-string">'127.0.0.1'</span>, <span class="hljs-attr">port</span>: <span class="hljs-number">26379</span> },
+    { <span class="hljs-attr">host</span>: <span class="hljs-string">'127.0.0.1'</span>, <span class="hljs-attr">port</span>: <span class="hljs-number">26380</span> },
+    { <span class="hljs-attr">host</span>: <span class="hljs-string">'127.0.0.1'</span>, <span class="hljs-attr">port</span>: <span class="hljs-number">26381</span> },
+  ],
+};
+
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(sentinelOptions);
+</code></pre>
+<p>You can learn more about Sentinel configuration in the <a href="https://github.com/redis/node-redis/blob/master/docs/sentinel.md">documentation</a> at <a href="https://github.com/redis/node-redis/tree/master/docs">https://github.com/redis/node-redis/tree/master/docs</a>.</p>
+<h1 id="tls-support">TLS Support</h1>
+<p>Here is an example of how to use TLS using the <code>redisOptions</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> tlsOptions = {
+    <span class="hljs-attr">socket</span>: {
+      <span class="hljs-attr">host</span>: <span class="hljs-string">'localhost'</span>,
+      <span class="hljs-attr">port</span>: <span class="hljs-number">6379</span>,
+      <span class="hljs-attr">tls</span>: <span class="hljs-literal">true</span>,  <span class="hljs-comment">// Enable TLS connection</span>
+      <span class="hljs-attr">rejectUnauthorized</span>: <span class="hljs-literal">false</span>,  <span class="hljs-comment">// Ignore self-signed certificate errors (for testing)</span>
+      
+      <span class="hljs-comment">// Alternatively, provide CA, key, and cert for mutual authentication</span>
+      <span class="hljs-attr">ca</span>: fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-string">'/path/to/ca-cert.pem'</span>),
+      <span class="hljs-attr">cert</span>: fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-string">'/path/to/client-cert.pem'</span>),  <span class="hljs-comment">// Optional for client auth</span>
+      <span class="hljs-attr">key</span>: fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-string">'/path/to/client-key.pem'</span>),    <span class="hljs-comment">// Optional for client auth</span>
+    }
+};
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(tlsOptions) });
+</code></pre>
+<h1 id="api">API</h1>
+<h2 id="properties">Properties</h2>
+<ul>
+<li><strong>client</strong> - The Redis client, cluster, or sentinel connection instance.</li>
+<li><strong>namespace</strong> - The namespace to use for the keys. If <code>undefined</code> no namespace prefixing is applied. Default is <code>undefined</code>.</li>
+<li><strong>keyPrefixSeparator</strong> - The separator to use between the namespace and key. It can be set to a blank string. Default is <code>::</code>.</li>
+<li><strong>clearBatchSize</strong> - The number of keys to delete in a single batch. Has to be greater than 0. Default is <code>1000</code>.</li>
+<li><strong>useUnlink</strong> - Use the <code>UNLINK</code> command for deleting keys instead of <code>DEL</code>. Default is <code>true</code>.</li>
+<li><strong>noNamespaceAffectsAll</strong> - Whether to allow clearing and iterating all keys when no namespace is set. Default is <code>false</code>.</li>
+<li><strong>throwOnConnectError</strong> - Whether to throw an error if the client fails to connect. Default is <code>true</code>.</li>
+<li><strong>throwOnErrors</strong> - Whether to throw an error if any operation fails instead of emitting an error event and returning a no-op response. Default is <code>false</code>.</li>
+<li><strong>connectionTimeout</strong> - The connection timeout in milliseconds. Default is <code>undefined</code> which uses the Redis client default.</li>
+</ul>
+<h2 id="methods">Methods</h2>
+<ul>
+<li><strong>constructor([connection], [options])</strong> - Create a new <code>KeyvRedis</code> instance. See <a href="#keyv-redis-options">Keyv Redis Options</a>.</li>
+<li><strong>getClient()</strong> - Get the connected Redis client. Connects first if the client is not already connected.</li>
+<li><strong>set(key, value, [ttl])</strong> - Set a key. <code>ttl</code> is in milliseconds. Returns <code>boolean</code>.</li>
+<li><strong>setMany(entries)</strong> - Set multiple keys using <code>KeyvEntry<Value></code> objects (<code>{ key: string, value: Value, ttl?: number }</code>) via <code>MULTI/EXEC</code> transactions. Returns <code>boolean[]</code> with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.</li>
+<li><strong>get(key)</strong> - Get a key. Returns the value or <code>undefined</code> if the key does not exist.</li>
+<li><strong>getMany(keys)</strong> - Get multiple keys. Returns an array of values where each entry is the value or <code>undefined</code> if the key does not exist.</li>
+<li><strong>has(key)</strong> - Check if a key exists. Returns <code>boolean</code>.</li>
+<li><strong>hasMany(keys)</strong> - Check if multiple keys exist. Returns <code>boolean[]</code>.</li>
+<li><strong>delete(key)</strong> - Delete a key. Returns <code>boolean</code>.</li>
+<li><strong>deleteMany(keys)</strong> - Delete multiple keys. Returns <code>boolean[]</code>.</li>
+<li><strong>clear()</strong> - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless <code>noNamespaceAffectsAll</code> is set to <code>true</code>.</li>
+<li><strong>disconnect([force])</strong> - Disconnect from the Redis server using the <code>Quit</code> command. If you set <code>force</code> to <code>true</code> it will force the disconnect.</li>
+<li><strong>iterator()</strong> - Create a new async iterator for the keys and values. The iterator uses the namespace configured on the instance and does not take a namespace parameter. If no namespace is set it will iterate over all keys that are not prefixed with a namespace unless <code>noNamespaceAffectsAll</code> is set to <code>true</code>.</li>
+<li><strong>createKeyPrefix(key, [namespace])</strong> - Helper that returns the key with the namespace prefix applied such as <code>namespace::key</code>.</li>
+<li><strong>getKeyWithoutPrefix(key, [namespace])</strong> - Helper that returns the key with the namespace prefix removed.</li>
+<li><strong>isCluster()</strong> - Returns <code>true</code> if the client is a Redis cluster.</li>
+<li><strong>isSentinel()</strong> - Returns <code>true</code> if the client is a Redis sentinel.</li>
+<li><strong>getMasterNodes()</strong> - Get the master node clients in the cluster. If the client is not a cluster it returns the single client.</li>
+</ul>
+<h1 id="using-custom-redis-client-events">Using Custom Redis Client Events</h1>
+<p>Keyv by default supports the <code>error</code> event across all storage adapters. If you want to listen to other events you can do so by accessing the <code>client</code> property of the <code>KeyvRedis</code> instance. Here is an example of how to do that:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> {createKeyv} <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+<span class="hljs-keyword">const</span> redisClient = keyv.<span class="hljs-property">store</span>.<span class="hljs-property">client</span>;
+
+redisClient.<span class="hljs-title function_">on</span>(<span class="hljs-string">'connect'</span>, <span class="hljs-function">() =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Redis client connected'</span>);
+});
+
+redisClient.<span class="hljs-title function_">on</span>(<span class="hljs-string">'reconnecting'</span>, <span class="hljs-function">() =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Redis client reconnecting'</span>);
+});
+
+redisClient.<span class="hljs-title function_">on</span>(<span class="hljs-string">'end'</span>, <span class="hljs-function">() =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Redis client disconnected'</span>);
+});
+</code></pre>
+<p>Here are some of the events you can listen to: <a href="https://www.npmjs.com/package/redis#events">https://www.npmjs.com/package/redis#events</a></p>
+<h1 id="migrating-from-v3-to-v4">Migrating from v3 to v4</h1>
+<p>Overall the API is the same as v3 with additional options and performance improvements. Here are the main changes:</p>
+<ul>
+<li>The <code>ioredis</code> library has been removed in favor of the <code>redis</code> aka <code>node-redis</code> library. If you want to use ioredis you can use <code>@keyv/valkey</code></li>
+<li>The <code>useUnlink</code> option has been added to use <code>UNLINK</code> instead of <code>DEL</code> and set to true by default.</li>
+<li>The <code>clearBatchSize</code> option has been added to set the number of keys to delete in a single batch.</li>
+<li>The <code>clear()</code> and <code>delete()</code> methods now use <code>UNLINK</code> instead of <code>DEL</code>. If you want to use <code>DEL</code> you can set the <code>useUnlink</code> option to <code>false</code>.</li>
+<li>BREAKING: We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library.</li>
+<li>BREAKING: YOUR PREVIOUS KEYS WILL NOT BE VALID. This is because of the fixe of the namespace support and how it is handled. Now, when using <code>keyv</code> with <code>@keyv/redis</code> as the storage adapter you can do the following:</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> redis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: redis, <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-namespace'</span>, <span class="hljs-attr">useKeyPrefix</span>: <span class="hljs-literal">false</span> });
+</code></pre>
+<p>This will make it so the storage adapter <code>@keyv/redis</code> will handle the namespace and not the <code>keyv</code> instance. If you leave it on it will just look duplicated like <code>my-namespace:my-namespace:key</code>.</p>
+<h1 id="about-redis-sets-and-its-support-in-v4">About Redis Sets and its Support in v4</h1>
+<p>We no longer support redis sets. This is due to the fact that it caused significant performance issues and was not a good fit for the library.</p>
+<h1 id="using-with-nestjs">Using with NestJS</h1>
+<blockquote>
+<p>You can integrate <code>@keyv/redis</code> with NestJS by creating a custom <code>CacheModule</code>. This allows you to use Keyv as a cache store in your application.</p>
+</blockquote>
+<h3 id="1-install-dependencies">1. Install Dependencies</h3>
+<pre><code class="hljs language-bash">npm install @keyv/redis keyv @nestjs/cache-manager cache-manager cacheable
+</code></pre>
+<h3 id="2-create-a-cache-module">2. Create a Cache Module</h3>
+<p>Create a file <code>cache.module.ts</code>:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">Module</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/common'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">CacheModule</span> <span class="hljs-keyword">as</span> <span class="hljs-title class_">NestCacheModule</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/cache-manager'</span>;
+<span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-meta">@Module</span>({
+  <span class="hljs-attr">imports</span>: [
+    <span class="hljs-title class_">NestCacheModule</span>.<span class="hljs-title function_">registerAsync</span>({
+      <span class="hljs-attr">useFactory</span>: <span class="hljs-function">() =></span> ({
+        <span class="hljs-attr">stores</span>: [<span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://localhost:6379'</span>)],
+      }),
+    }),
+  ],
+  <span class="hljs-attr">providers</span>: [],
+  <span class="hljs-attr">exports</span>: [],
+})
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CacheModule</span> {}
+</code></pre>
+<h3 id="3-import-the-cache-module-in-appmodule">3. Import the Cache Module in AppModule</h3>
+<p>Update <code>app.module.ts</code>:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">Module</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/common'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">CacheModule</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./modules/config/cache/cache.module'</span>;
+
+<span class="hljs-meta">@Module</span>({
+  <span class="hljs-attr">imports</span>: [
+    <span class="hljs-title class_">CacheModule</span>, <span class="hljs-comment">// Import your custom cache module</span>
+    <span class="hljs-comment">// other modules...</span>
+  ],
+})
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AppModule</span> {}
+</code></pre>
+<h3 id="4-create-the-cache-service">4. Create the Cache Service</h3>
+<p>Create a file <code>cache.service.ts</code>:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { <span class="hljs-variable constant_">CACHE_MANAGER</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/cache-manager'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">Inject</span>, <span class="hljs-title class_">Injectable</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/common'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">Cache</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'cache-manager'</span>;
+
+<span class="hljs-meta">@Injectable</span>()
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CacheService</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"><span class="hljs-meta">@Inject</span>(CACHE_MANAGER) <span class="hljs-keyword">private</span> <span class="hljs-attr">cacheManager</span>: <span class="hljs-title class_">Cache</span></span>) {}
+
+  <span class="hljs-keyword">async</span> get<T>(<span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>): <span class="hljs-title class_">Promise</span><T | <span class="hljs-literal">undefined</span>> {
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">cacheManager</span>.<span class="hljs-property">get</span><T>(key);
+  }
+
+  <span class="hljs-keyword">async</span> set<T>(<span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">value</span>: T, <span class="hljs-attr">ttl</span>?: <span class="hljs-built_in">number</span>): <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">boolean</span>> {
+    <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">cacheManager</span>.<span class="hljs-title function_">set</span>(key, value, ttl);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  }
+
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">delete</span>(<span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>): <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">void</span>> {
+    <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">cacheManager</span>.<span class="hljs-title function_">del</span>(key);
+  }
+}
+</code></pre>
+<h3 id="5-register-cacheservice-in-cachemodule">5. Register CacheService in CacheModule</h3>
+<p>Update <code>cache.module.ts</code>:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">Module</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/common'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">CacheModule</span> <span class="hljs-keyword">as</span> <span class="hljs-title class_">NestCacheModule</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/cache-manager'</span>;
+<span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">CacheService</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./services/cache.service'</span>;
+
+<span class="hljs-meta">@Module</span>({
+  <span class="hljs-attr">imports</span>: [
+    <span class="hljs-title class_">NestCacheModule</span>.<span class="hljs-title function_">registerAsync</span>({
+      <span class="hljs-attr">useFactory</span>: <span class="hljs-function">() =></span> ({
+        <span class="hljs-attr">stores</span>: [<span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'redis://localhost:6379'</span>)],
+      }),
+    }),
+  ],
+  <span class="hljs-attr">providers</span>: [<span class="hljs-title class_">CacheService</span>],
+  <span class="hljs-attr">exports</span>: [<span class="hljs-title class_">CacheService</span>],
+})
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CacheModule</span> {}
+</code></pre>
+<h3 id="6-import-cachemodule-in-the-target-module-eg-taskmodule">6. Import CacheModule in the Target Module (e.g. TaskModule)</h3>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">Module</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/common'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">TaskService</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./task.service'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">TaskRepository</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./repositories/task.repository'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">CacheModule</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'src/modules/config/cache/cache.module'</span>;
+
+<span class="hljs-meta">@Module</span>({
+  <span class="hljs-attr">imports</span>: [<span class="hljs-title class_">CacheModule</span>],
+  <span class="hljs-attr">providers</span>: [<span class="hljs-title class_">TaskService</span>, <span class="hljs-title class_">TaskRepository</span>],
+})
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">TaskModule</span> {}
+</code></pre>
+<h3 id="7-using-the-cache-in-a-service">7. Using the Cache in a Service</h3>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">Injectable</span>, <span class="hljs-title class_">NotFoundException</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@nestjs/common'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">TaskRepository</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'../repositories/task.repository'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">TaskDto</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'../dto/task.dto'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">CacheService</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'src/modules/config/cache/services/cache.service'</span>;
+
+<span class="hljs-meta">@Injectable</span>()
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">TaskService</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">readonly</span> <span class="hljs-attr">taskRepository</span>: <span class="hljs-title class_">TaskRepository</span>,
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">readonly</span> <span class="hljs-attr">cache</span>: <span class="hljs-title class_">CacheService</span>, <span class="hljs-comment">// Inject the CacheService</span>
+  </span>) {}
+
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">findById</span>(<span class="hljs-attr">id</span>: <span class="hljs-built_in">number</span>): <span class="hljs-title class_">Promise</span><<span class="hljs-title class_">TaskDto</span>> {
+    <span class="hljs-keyword">const</span> cacheKey = <span class="hljs-string">`task:<span class="hljs-subst">${id}</span>`</span>;
+
+    <span class="hljs-comment">// 1. Try to get from cache</span>
+    <span class="hljs-keyword">const</span> cached = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">cache</span>.<span class="hljs-property">get</span><<span class="hljs-title class_">TaskDto</span>>(cacheKey);
+    
+	<span class="hljs-keyword">if</span> (cached) {
+      <span class="hljs-keyword">return</span> cached;
+    }
+
+    <span class="hljs-comment">// 2. If not found in cache, fetch from database</span>
+    <span class="hljs-keyword">const</span> task = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">taskRepository</span>.<span class="hljs-title function_">findById</span>(id);
+
+    <span class="hljs-keyword">if</span> (!task) {
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NotFoundException</span>(<span class="hljs-string">'Task not found'</span>);
+    }
+
+    <span class="hljs-comment">// 3. Set in cache for future requests</span>
+    <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">cache</span>.<span class="hljs-title function_">set</span>(cacheKey, task, <span class="hljs-number">300</span> * <span class="hljs-number">1000</span>); <span class="hljs-comment">// 5 minutes TTL</span>
+    <span class="hljs-keyword">return</span> task;
+  }
+}
+</code></pre>
+<p>You can learn more about caching in NestJS in the <a href="https://docs.nestjs.com/techniques/caching#in-memory-cache">official documentation</a>.</p>
+<hr>
+<h1 id="license">License</h1>
+<p><a href="LISCENCE">MIT © Jared Wray</a></p>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-30</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

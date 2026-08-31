@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - @keyv/bigmap</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"@keyv/bigmap","description":"","url":"https://keyv.org/v5/docs/storage-adapters/bigmap/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"2026-08-30","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">@keyv/bigmap</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">@keyv/bigmap</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <blockquote>
+<p>Bigmap for Keyv</p>
+</blockquote>
+<p><a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg" alt="build"></a>
+<a href="https://codecov.io/gh/jaredwray/keyv"><img src="https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ" alt="codecov"></a>
+<a href="https://www.npmjs.com/package/@keyv/bigmap"><img src="https://img.shields.io/npm/v/@keyv/bigmap.svg" alt="npm"></a>
+<a href="https://npmjs.com/package/@keyv/bigmap"><img src="https://img.shields.io/npm/dm/@keyv/bigmap" alt="npm"></a></p>
+<h1 id="features">Features</h1>
+<ul>
+<li>Based on the Map interface and uses the same API.</li>
+<li>Lightweight and easy to use.</li>
+<li>Scales to past the 17 million key limit of a regular Map.</li>
+<li>Ability to use your own hash function.</li>
+<li>Built in Typescript and Generics for type safety.</li>
+<li>Used in <code>@cacheable/memory</code> for scalable in-memory caching.</li>
+<li>Maintained regularly with a focus on performance and reliability.</li>
+</ul>
+<h1 id="table-of-contents">Table of Contents</h1>
+<ul>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#basic-usage">Basic Usage</a></li>
+<li><a href="#custom-store-size">Custom Store Size</a></li>
+<li><a href="#custom-hash-function">Custom Hash Function</a>
+<ul>
+<li><a href="#using-hashery-for-hash-functions">Using Hashery for Hash Functions</a></li>
+</ul>
+</li>
+<li><a href="#iteration">Iteration</a>
+<ul>
+<li><a href="#forof-loop">For...of Loop</a></li>
+<li><a href="#foreach">forEach</a></li>
+<li><a href="#keys-values-and-entries">Keys, Values, and Entries</a></li>
+</ul>
+</li>
+<li><a href="#events">Events</a></li>
+<li><a href="#advanced-features">Advanced Features</a>
+<ul>
+<li><a href="#type-safety-with-generics">Type Safety with Generics</a></li>
+<li><a href="#large-scale-data">Large-Scale Data</a></li>
+</ul>
+</li>
+<li><a href="#using-with-keyv">Using with Keyv</a>
+<ul>
+<li><a href="#createkeyv">createKeyv</a></li>
+<li><a href="#with-custom-options">With Custom Options</a></li>
+<li><a href="#type-safety">Type Safety</a></li>
+</ul>
+</li>
+<li><a href="#integration-with-keyv-ecosystem">Integration with Keyv Ecosystem</a></li>
+<li><a href="#api">API</a>
+<ul>
+<li><a href="#constructor">Constructor</a></li>
+<li><a href="#properties">Properties</a></li>
+<li><a href="#methods">Methods</a>
+<ul>
+<li><a href="#set">set</a></li>
+<li><a href="#get">get</a></li>
+<li><a href="#has">has</a></li>
+<li><a href="#delete">delete</a></li>
+<li><a href="#clear">clear</a></li>
+<li><a href="#foreach-1">forEach</a></li>
+<li><a href="#keys">keys</a></li>
+<li><a href="#values">values</a></li>
+<li><a href="#entries">entries</a></li>
+<li><a href="#symboliterator">Symbol.iterator</a></li>
+<li><a href="#getstore">getStore</a></li>
+<li><a href="#getstoremap">getStoreMap</a></li>
+<li><a href="#initstore">initStore</a></li>
+</ul>
+</li>
+<li><a href="#types">Types</a>
+<ul>
+<li><a href="#storehashfunction">StoreHashFunction</a></li>
+<li><a href="#bigmapevents">BigMapEvents</a></li>
+<li><a href="#defaulthashfunction">defaultHashFunction</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#benchmark">Benchmark</a></li>
+<li><a href="#contributing">Contributing</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+<h1 id="installation">Installation</h1>
+<pre><code class="hljs language-bash">npm install --save keyv @keyv/bigmap
+</code></pre>
+<h1 id="overview">Overview</h1>
+<p>BigMap is a scalable Map implementation that overcomes JavaScript's built-in Map limit of approximately 17 million entries. It uses a distributed hash approach with multiple internal Map instances.</p>
+<h1 id="basic-usage">Basic Usage</h1>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">BigMap</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-comment">// Create a new BigMap</span>
+<span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>();
+
+<span class="hljs-comment">// Set values</span>
+bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-number">100</span>);
+bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-number">200</span>);
+
+<span class="hljs-comment">// Get values</span>
+<span class="hljs-keyword">const</span> value = bigMap.<span class="hljs-title function_">get</span>(<span class="hljs-string">'key1'</span>); <span class="hljs-comment">// 100</span>
+
+<span class="hljs-comment">// Check if key exists</span>
+bigMap.<span class="hljs-title function_">has</span>(<span class="hljs-string">'key1'</span>); <span class="hljs-comment">// true</span>
+
+<span class="hljs-comment">// Delete a key</span>
+bigMap.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'key1'</span>); <span class="hljs-comment">// true</span>
+
+<span class="hljs-comment">// Get size</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(bigMap.<span class="hljs-property">size</span>); <span class="hljs-comment">// 1</span>
+
+<span class="hljs-comment">// Clear all entries</span>
+bigMap.<span class="hljs-title function_">clear</span>();
+</code></pre>
+<h1 id="custom-store-size">Custom Store Size</h1>
+<p>By default, BigMap uses 2 internal Map instances. You can configure this:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>({ <span class="hljs-attr">storeSize</span>: <span class="hljs-number">10</span> });
+</code></pre>
+<p><strong>Note:</strong> Changing the <code>storeSize</code> after initialization will clear all entries.</p>
+<h1 id="custom-hash-function">Custom Hash Function</h1>
+<p>Provide your own hash function for key distribution:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">customHashFunction</span> = (<span class="hljs-params"><span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">storeSize</span>: <span class="hljs-built_in">number</span></span>) => {
+  <span class="hljs-keyword">return</span> key.<span class="hljs-property">length</span> % storeSize;
+};
+
+<span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">string</span>>({
+  <span class="hljs-attr">storeHashFunction</span>: customHashFunction
+});
+</code></pre>
+<h2 id="using-hashery-for-hash-functions">Using Hashery for Hash Functions</h2>
+<p><a href="https://github.com/jaredwray/hashery">Hashery</a> is a powerful hashing library that provides multiple hash algorithms. You can use it for better key distribution and it is available as an export:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">BigMap</span>, <span class="hljs-title class_">Hashery</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-keyword">const</span> hashery = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Hashery</span>();
+
+<span class="hljs-comment">// Using Hashery's toNumberSync for deterministic key distribution</span>
+<span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">string</span>>({
+  <span class="hljs-attr">storeHashFunction</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">storeSize</span>: <span class="hljs-built_in">number</span></span>) =></span> {
+    <span class="hljs-keyword">return</span> hashery.<span class="hljs-title function_">toNumberSync</span>(key, { <span class="hljs-attr">min</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">max</span>: storeSize - <span class="hljs-number">1</span> });
+  }
+});
+
+<span class="hljs-comment">// You can also use different algorithms</span>
+<span class="hljs-keyword">const</span> hasheryFnv1 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Hashery</span>({ <span class="hljs-attr">defaultAlgorithmSync</span>: <span class="hljs-string">'fnv1'</span> });
+
+<span class="hljs-keyword">const</span> bigMapWithFnv1 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">string</span>>({
+  <span class="hljs-attr">storeHashFunction</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">storeSize</span>: <span class="hljs-built_in">number</span></span>) =></span> {
+    <span class="hljs-keyword">return</span> hasheryFnv1.<span class="hljs-title function_">toNumberSync</span>(key, { <span class="hljs-attr">min</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">max</span>: storeSize - <span class="hljs-number">1</span> });
+  }
+});
+</code></pre>
+<p>Hashery supports multiple synchronous hash algorithms:</p>
+<ul>
+<li><strong>djb2</strong> - Fast hash function (default)</li>
+<li><strong>fnv1</strong> - Excellent distribution for hash tables</li>
+<li><strong>murmer</strong> - MurmurHash algorithm</li>
+<li><strong>crc32</strong> - Cyclic Redundancy Check</li>
+</ul>
+<h1 id="iteration">Iteration</h1>
+<p>BigMap supports all standard Map iteration methods:</p>
+<h2 id="forof-loop">For...of Loop</h2>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>();
+bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'a'</span>, <span class="hljs-number">1</span>);
+bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'b'</span>, <span class="hljs-number">2</span>);
+
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> bigMap) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<h2 id="foreach">forEach</h2>
+<pre><code class="hljs language-typescript">bigMap.<span class="hljs-title function_">forEach</span>(<span class="hljs-function">(<span class="hljs-params">value, key</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+});
+
+<span class="hljs-comment">// With custom context</span>
+<span class="hljs-keyword">const</span> context = { <span class="hljs-attr">sum</span>: <span class="hljs-number">0</span> };
+bigMap.<span class="hljs-title function_">forEach</span>(<span class="hljs-keyword">function</span>(<span class="hljs-params">value</span>) {
+  <span class="hljs-variable language_">this</span>.<span class="hljs-property">sum</span> += value;
+}, context);
+</code></pre>
+<h2 id="keys-values-and-entries">Keys, Values, and Entries</h2>
+<pre><code class="hljs language-typescript"><span class="hljs-comment">// Iterate over keys</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> key <span class="hljs-keyword">of</span> bigMap.<span class="hljs-title function_">keys</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key);
+}
+
+<span class="hljs-comment">// Iterate over values</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> value <span class="hljs-keyword">of</span> bigMap.<span class="hljs-title function_">values</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(value);
+}
+
+<span class="hljs-comment">// Iterate over entries</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> bigMap.<span class="hljs-title function_">entries</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<h1 id="events">Events</h1>
+<p><code>BigMap</code> extends <a href="https://github.com/jaredwray/hookified">Hookified</a>, so it emits events on mutating operations. Subscribe with <code>on</code> (or <code>once</code>) using the <code>BigMapEvents</code> enum (the values are also plain strings such as <code>"set"</code>). Listeners are invoked synchronously, and <code>BigMapOptions</code> also accepts any <a href="https://github.com/jaredwray/hookified">Hookified options</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Enum</th>
+<th>Payload</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set</code></td>
+<td><code>BigMapEvents.SET</code></td>
+<td><code>(key, value)</code></td>
+<td>Emitted after a value is set.</td>
+</tr>
+<tr>
+<td><code>delete</code></td>
+<td><code>BigMapEvents.DELETE</code></td>
+<td><code>(key)</code></td>
+<td>Emitted after an existing entry is removed. Not emitted when the key was absent.</td>
+</tr>
+<tr>
+<td><code>clear</code></td>
+<td><code>BigMapEvents.CLEAR</code></td>
+<td><em>(none)</em></td>
+<td>Emitted after all entries are cleared, including when <code>storeSize</code> changes.</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">BigMap</span>, <span class="hljs-title class_">BigMapEvents</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>();
+
+bigMap.<span class="hljs-title function_">on</span>(<span class="hljs-title class_">BigMapEvents</span>.<span class="hljs-property">SET</span>, <span class="hljs-function">(<span class="hljs-params">key, value</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'set'</span>, key, value);
+});
+
+bigMap.<span class="hljs-title function_">on</span>(<span class="hljs-title class_">BigMapEvents</span>.<span class="hljs-property">DELETE</span>, <span class="hljs-function">(<span class="hljs-params">key</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'deleted'</span>, key);
+});
+
+bigMap.<span class="hljs-title function_">on</span>(<span class="hljs-title class_">BigMapEvents</span>.<span class="hljs-property">CLEAR</span>, <span class="hljs-function">() =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'cleared'</span>);
+});
+
+bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-number">100</span>); <span class="hljs-comment">// logs: set key1 100</span>
+bigMap.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'key1'</span>);   <span class="hljs-comment">// logs: deleted key1</span>
+bigMap.<span class="hljs-title function_">clear</span>();          <span class="hljs-comment">// logs: cleared</span>
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> When Hookified's <code>eventLogger</code> option is enabled, event arguments — including the value passed to <code>set</code> — are serialized with <code>JSON.stringify</code> for logging. Values that cannot be JSON-serialized, such as <code>BigInt</code> or circular objects, will cause the operation to throw while logging. Leave <code>eventLogger</code> unset (the default) if you need to store such values.</p>
+</blockquote>
+<h1 id="advanced-features">Advanced Features</h1>
+<h2 id="type-safety-with-generics">Type Safety with Generics</h2>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">User</span> {
+  <span class="hljs-attr">id</span>: <span class="hljs-built_in">number</span>;
+  <span class="hljs-attr">name</span>: <span class="hljs-built_in">string</span>;
+}
+
+<span class="hljs-keyword">const</span> userMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-title class_">User</span>>();
+userMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'user1'</span>, { <span class="hljs-attr">id</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">'Alice'</span> });
+</code></pre>
+<h2 id="large-scale-data">Large-Scale Data</h2>
+<p>BigMap is designed to handle millions of entries:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>({ <span class="hljs-attr">storeSize</span>: <span class="hljs-number">16</span> });
+
+<span class="hljs-comment">// Add 20+ million entries without hitting Map limits</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i < <span class="hljs-number">20000000</span>; i++) {
+  bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">`key<span class="hljs-subst">${i}</span>`</span>, i);
+}
+
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(bigMap.<span class="hljs-property">size</span>); <span class="hljs-comment">// 20000000</span>
+</code></pre>
+<h1 id="using-with-keyv">Using with Keyv</h1>
+<p>BigMap can be used as a storage adapter for <a href="https://github.com/jaredwray/keyv">Keyv</a>, providing a scalable in-memory store with TTL support.</p>
+<h2 id="createkeyv">createKeyv</h2>
+<p>The <code>createKeyv</code> function creates a Keyv instance with BigMap as the storage adapter.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>options</code> (optional): BigMap configuration options
+<ul>
+<li><code>storeSize</code> (number): Number of internal Map instances. Default: <code>2</code></li>
+<li><code>storeHashFunction</code> (StoreHashFunction): Custom hash function for key distribution</li>
+</ul>
+</li>
+</ul>
+<p><strong>Returns:</strong> <code>Keyv</code> instance with BigMap adapter</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-comment">// Basic usage</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>();
+
+<span class="hljs-comment">// Set with TTL (in milliseconds)</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'user:123'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Alice'</span>, <span class="hljs-attr">age</span>: <span class="hljs-number">30</span> }, <span class="hljs-number">60000</span>); <span class="hljs-comment">// Expires in 60 seconds</span>
+
+<span class="hljs-comment">// Get value</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'user:123'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(user); <span class="hljs-comment">// { name: 'Alice', age: 30 }</span>
+
+<span class="hljs-comment">// Check if key exists</span>
+<span class="hljs-keyword">const</span> exists = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">has</span>(<span class="hljs-string">'user:123'</span>);
+
+<span class="hljs-comment">// Delete key</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'user:123'</span>);
+
+<span class="hljs-comment">// Clear all keys</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">clear</span>();
+</code></pre>
+<h2 id="with-custom-options">With Custom Options</h2>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-comment">// Create with custom store size for better performance with millions of keys</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>({ <span class="hljs-attr">storeSize</span>: <span class="hljs-number">16</span> });
+
+<span class="hljs-comment">// With custom hash function</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>({
+  <span class="hljs-attr">storeSize</span>: <span class="hljs-number">8</span>,
+  <span class="hljs-attr">storeHashFunction</span>: <span class="hljs-function">(<span class="hljs-params">key, storeSize</span>) =></span> {
+    <span class="hljs-comment">// Custom distribution logic</span>
+    <span class="hljs-keyword">return</span> key.<span class="hljs-property">length</span> % storeSize;
+  }
+});
+</code></pre>
+<h2 id="type-safety">Type Safety</h2>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">Product</span> {
+  <span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">name</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">price</span>: <span class="hljs-built_in">number</span>;
+}
+
+<span class="hljs-keyword">const</span> keyv = createKeyv<<span class="hljs-built_in">string</span>, <span class="hljs-title class_">Product</span>>();
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'product:1'</span>, {
+  <span class="hljs-attr">id</span>: <span class="hljs-string">'1'</span>,
+  <span class="hljs-attr">name</span>: <span class="hljs-string">'Laptop'</span>,
+  <span class="hljs-attr">price</span>: <span class="hljs-number">999</span>
+});
+
+<span class="hljs-keyword">const</span> product = <span class="hljs-keyword">await</span> keyv.<span class="hljs-property">get</span><<span class="hljs-title class_">Product</span>>(<span class="hljs-string">'product:1'</span>);
+</code></pre>
+<h1 id="integration-with-keyv-ecosystem">Integration with Keyv Ecosystem</h1>
+<p>BigMap works seamlessly with the Keyv ecosystem:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-keyword">const</span> cache = <span class="hljs-title function_">createKeyv</span>({ <span class="hljs-attr">storeSize</span>: <span class="hljs-number">16</span> });
+
+<span class="hljs-comment">// Use with namespaces</span>
+<span class="hljs-keyword">const</span> users = cache.<span class="hljs-title function_">namespace</span>(<span class="hljs-string">'users'</span>);
+<span class="hljs-keyword">const</span> products = cache.<span class="hljs-title function_">namespace</span>(<span class="hljs-string">'products'</span>);
+
+<span class="hljs-keyword">await</span> users.<span class="hljs-title function_">set</span>(<span class="hljs-string">'123'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Alice'</span> });
+<span class="hljs-keyword">await</span> products.<span class="hljs-title function_">set</span>(<span class="hljs-string">'456'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Laptop'</span> });
+
+<span class="hljs-comment">// Iterate over keys</span>
+<span class="hljs-keyword">for</span> <span class="hljs-title function_">await</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> cache.<span class="hljs-title function_">iterator</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<h1 id="api">API</h1>
+<h2 id="constructor">Constructor</h2>
+<p><code>new BigMap<K, V>(options?)</code></p>
+<p>Creates a new BigMap instance.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>options</code> (optional): Configuration options
+<ul>
+<li><code>storeSize</code> (number): Number of internal Map instances to use. Default: <code>2</code>. Must be at least 1.</li>
+<li><code>storeHashFunction</code> (StoreHashFunction): Custom hash function for key distribution. Default: <code>defaultHashFunction</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>();
+<span class="hljs-keyword">const</span> customBigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>({
+  <span class="hljs-attr">storeSize</span>: <span class="hljs-number">10</span>,
+  <span class="hljs-attr">storeHashFunction</span>: <span class="hljs-function">(<span class="hljs-params">key, storeSize</span>) =></span> key.<span class="hljs-property">length</span> % storeSize
+});
+</code></pre>
+<h2 id="properties">Properties</h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Access</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>size</code></td>
+<td><code>number</code></td>
+<td>Read-only</td>
+<td>Gets the total number of entries in the BigMap.</td>
+</tr>
+<tr>
+<td><code>storeSize</code></td>
+<td><code>number</code></td>
+<td>Read/Write</td>
+<td>Gets or sets the number of internal Map instances. <strong>Note:</strong> Setting this clears all entries and emits <code>BigMapEvents.CLEAR</code>. Default: <code>2</code></td>
+</tr>
+<tr>
+<td><code>storeHashFunction</code></td>
+<td><code>StoreHashFunction | undefined</code></td>
+<td>Read/Write</td>
+<td>Gets or sets the hash function used for key distribution.</td>
+</tr>
+<tr>
+<td><code>store</code></td>
+<td><code>Array<Map<K, V>></code></td>
+<td>Read-only</td>
+<td>Gets the internal array of Map instances.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> bigMap = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigMap</span><<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>>();
+
+<span class="hljs-comment">// size property</span>
+bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-number">100</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(bigMap.<span class="hljs-property">size</span>); <span class="hljs-comment">// 1</span>
+
+<span class="hljs-comment">// storeSize property</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(bigMap.<span class="hljs-property">storeSize</span>); <span class="hljs-comment">// 2 (default)</span>
+bigMap.<span class="hljs-property">storeSize</span> = <span class="hljs-number">8</span>; <span class="hljs-comment">// Changes size and clears all entries</span>
+
+<span class="hljs-comment">// storeHashFunction property</span>
+bigMap.<span class="hljs-property">storeHashFunction</span> = <span class="hljs-function">(<span class="hljs-params">key, storeSize</span>) =></span> key.<span class="hljs-property">length</span> % storeSize;
+
+<span class="hljs-comment">// store property</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(bigMap.<span class="hljs-property">store</span>.<span class="hljs-property">length</span>); <span class="hljs-comment">// 8</span>
+</code></pre>
+<h2 id="methods">Methods</h2>
+<h3 id="set">set</h3>
+<p>Sets the value for a key in the map.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>key</code> (K): The key to set</li>
+<li><code>value</code> (V): The value to associate with the key</li>
+</ul>
+<p><strong>Returns:</strong> <code>BigMap<K, V></code> - The BigMap instance, enabling method chaining (matches the native <code>Map.set</code> API).</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript">bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'user123'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Alice'</span> });
+
+<span class="hljs-comment">// set() returns the BigMap instance, so calls can be chained</span>
+bigMap.<span class="hljs-title function_">set</span>(<span class="hljs-string">'a'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Alice'</span> }).<span class="hljs-title function_">set</span>(<span class="hljs-string">'b'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Bob'</span> });
+</code></pre>
+<h3 id="get">get</h3>
+<p>Gets the value associated with a key.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>key</code> (K): The key to retrieve</li>
+</ul>
+<p><strong>Returns:</strong> <code>V | undefined</code> - The value, or undefined if not found</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> value = bigMap.<span class="hljs-title function_">get</span>(<span class="hljs-string">'user123'</span>);
+</code></pre>
+<h3 id="has">has</h3>
+<p>Checks if a key exists in the map.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>key</code> (K): The key to check</li>
+</ul>
+<p><strong>Returns:</strong> <code>boolean</code> - True if the key exists, false otherwise</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">if</span> (bigMap.<span class="hljs-title function_">has</span>(<span class="hljs-string">'user123'</span>)) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'User exists'</span>);
+}
+</code></pre>
+<h3 id="delete">delete</h3>
+<p>Deletes a key-value pair from the map.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>key</code> (K): The key to delete</li>
+</ul>
+<p><strong>Returns:</strong> <code>boolean</code> - True if the entry was deleted, false if the key was not found</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> deleted = bigMap.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'user123'</span>);
+</code></pre>
+<h3 id="clear">clear</h3>
+<p>Removes all entries from the map.</p>
+<p><strong>Returns:</strong> <code>void</code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript">bigMap.<span class="hljs-title function_">clear</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(bigMap.<span class="hljs-property">size</span>); <span class="hljs-comment">// 0</span>
+</code></pre>
+<h3 id="foreach-1">forEach</h3>
+<p>Executes a provided function once for each key-value pair.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>callbackfn</code> (function): Function to execute for each entry
+<ul>
+<li><code>value</code> (V): The value of the current entry</li>
+<li><code>key</code> (K): The key of the current entry</li>
+<li><code>map</code> (<code>Map<K, V></code>): The BigMap instance</li>
+</ul>
+</li>
+<li><code>thisArg</code> (optional): Value to use as <code>this</code> when executing the callback</li>
+</ul>
+<p><strong>Returns:</strong> <code>void</code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript">bigMap.<span class="hljs-title function_">forEach</span>(<span class="hljs-function">(<span class="hljs-params">value, key</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`<span class="hljs-subst">${key}</span>: <span class="hljs-subst">${value}</span>`</span>);
+});
+
+<span class="hljs-comment">// With custom context</span>
+<span class="hljs-keyword">const</span> context = { <span class="hljs-attr">total</span>: <span class="hljs-number">0</span> };
+bigMap.<span class="hljs-title function_">forEach</span>(<span class="hljs-keyword">function</span>(<span class="hljs-params">value</span>) {
+  <span class="hljs-variable language_">this</span>.<span class="hljs-property">total</span> += value;
+}, context);
+</code></pre>
+<h3 id="keys">keys</h3>
+<p>Returns an iterator of all keys in the map.</p>
+<p><strong>Returns:</strong> <code>IterableIterator<K></code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> key <span class="hljs-keyword">of</span> bigMap.<span class="hljs-title function_">keys</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key);
+}
+</code></pre>
+<h3 id="values">values</h3>
+<p>Returns an iterator of all values in the map.</p>
+<p><strong>Returns:</strong> <code>IterableIterator<V></code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> value <span class="hljs-keyword">of</span> bigMap.<span class="hljs-title function_">values</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(value);
+}
+</code></pre>
+<h3 id="entries">entries</h3>
+<p>Returns an iterator of all key-value pairs in the map.</p>
+<p><strong>Returns:</strong> <code>IterableIterator<[K, V]></code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> bigMap.<span class="hljs-title function_">entries</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<h3 id="symboliterator">Symbol.iterator</h3>
+<p>Returns an iterator for the map (same as <code>entries()</code>). Enables <code>for...of</code> loops.</p>
+<p><strong>Returns:</strong> <code>IterableIterator<[K, V]></code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> bigMap) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<h3 id="getstore">getStore</h3>
+<p>Gets the internal Map instance for a specific key.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>key</code> (K): The key to find the store for</li>
+</ul>
+<p><strong>Returns:</strong> <code>Map<K, V></code> - The internal Map instance</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> store = bigMap.<span class="hljs-title function_">getStore</span>(<span class="hljs-string">'user123'</span>);
+</code></pre>
+<h3 id="getstoremap">getStoreMap</h3>
+<p>Gets the internal Map instance at a specific index.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>index</code> (number): The index of the Map to retrieve (0 to storeSize - 1)</li>
+</ul>
+<p><strong>Returns:</strong> <code>Map<K, V></code> - The Map at the specified index</p>
+<p><strong>Throws:</strong> Error if index is out of bounds</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">const</span> firstMap = bigMap.<span class="hljs-title function_">getStoreMap</span>(<span class="hljs-number">0</span>);
+</code></pre>
+<h3 id="initstore">initStore</h3>
+<p>Initializes the internal store with empty Map instances. Called automatically during construction.</p>
+<p><strong>Returns:</strong> <code>void</code></p>
+<h2 id="types">Types</h2>
+<h3 id="storehashfunction">StoreHashFunction</h3>
+<p>Type definition for custom hash functions.</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">type</span> <span class="hljs-title class_">StoreHashFunction</span> = <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">storeSize</span>: <span class="hljs-built_in">number</span></span>) =></span> <span class="hljs-built_in">number</span>;
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>key</code> (string): The key to hash (converted to string)</li>
+<li><code>storeSize</code> (number): The total number of stores</li>
+</ul>
+<p><strong>Returns:</strong> <code>number</code> - The index of the store to use (0 to storeSize - 1)</p>
+<h3 id="bigmapevents">BigMapEvents</h3>
+<p>Enum of the event names emitted by <code>BigMap</code>. See <a href="#events">Events</a> for payloads and usage.</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">enum</span> <span class="hljs-title class_">BigMapEvents</span> {
+  <span class="hljs-variable constant_">SET</span> = <span class="hljs-string">'set'</span>,
+  <span class="hljs-variable constant_">DELETE</span> = <span class="hljs-string">'delete'</span>,
+  <span class="hljs-variable constant_">CLEAR</span> = <span class="hljs-string">'clear'</span>,
+}
+</code></pre>
+<h3 id="defaulthashfunction">defaultHashFunction</h3>
+<p>The built-in hash function used for distributing keys across stores. It uses a fast multiplicative hash with XOR mixing to produce a bucket index. You can override it via the <code>storeHashFunction</code> option.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">import</span> { defaultHashFunction } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-keyword">const</span> index = <span class="hljs-title function_">defaultHashFunction</span>(<span class="hljs-string">'myKey'</span>, <span class="hljs-number">2</span>);
+</code></pre>
+<h1 id="benchmark">Benchmark</h1>
+<p>This benchmark compares <code>BigMap</code> against the native JavaScript <code>Map</code> for combined <code>set</code> and <code>get</code> operations using 10,000 iterations of randomly generated data. BigMap trades raw single-threaded speed for the ability to scale past the ~16.7 million entry limit of a native Map by distributing keys across multiple internal Map instances via a hash function. For most workloads under that limit, native Map will be faster; BigMap is designed for scenarios where you need to go beyond it.</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th align="center">summary</th>
+<th align="right">ops/sec</th>
+<th align="right">time/op</th>
+<th align="center">margin</th>
+<th align="right">samples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Map set / get</td>
+<td align="center">🥇</td>
+<td align="right">19M</td>
+<td align="right">64ns</td>
+<td align="center">±0.02%</td>
+<td align="right">16M</td>
+</tr>
+<tr>
+<td>BigMap set / get</td>
+<td align="center">-23%</td>
+<td align="right">14M</td>
+<td align="right">91ns</td>
+<td align="center">±0.03%</td>
+<td align="right">11M</td>
+</tr>
+</tbody>
+</table>
+<p>If you want to see comparable performance just set the <code>storeSize: 1</code> and it is <code>-1%</code> off from native <code>Map</code>.</p>
+<h1 id="contributing">Contributing</h1>
+<p>Please see our <a href="https://github.com/jaredwray/keyv/blob/main/CONTRIBUTING.md">contributing</a> guide.</p>
+<h1 id="license">License</h1>
+<p><a href="LICENSE">MIT © Jared Wray</a></p>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-30</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

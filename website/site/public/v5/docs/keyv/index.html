@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - Keyv API</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"Keyv API","description":"","url":"https://keyv.org/v5/docs/keyv/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"2026-08-30","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">Keyv API</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">Keyv API</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <blockquote>
+<p>Simple key-value storage with support for multiple backends</p>
+</blockquote>
+<p><a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg" alt="build"></a>
+<a href="https://github.com/jaredwray/keyv/actions/workflows/bun-test.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/bun-test.yaml/badge.svg" alt="bun"></a>
+<a href="https://github.com/jaredwray/keyv/actions/workflows/browser-compat.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/browser-compat.yaml/badge.svg" alt="browser"></a>
+<a href="https://www.jsdelivr.com/package/npm/keyv"><img src="https://data.jsdelivr.com/v1/package/npm/keyv/badge" alt=""></a>
+<a href="https://codecov.io/gh/jaredwray/keyv"><img src="https://codecov.io/gh/jaredwray/keyv/graph/badge.svg?token=bRzR3RyOXZ" alt="codecov"></a>
+<a href="https://www.npmjs.com/package/keyv"><img src="https://img.shields.io/npm/dm/keyv.svg" alt="npm"></a>
+<a href="https://www.npmjs.com/package/keyv"><img src="https://img.shields.io/npm/v/keyv.svg" alt="npm"></a></p>
+<p>Keyv provides a consistent interface for key-value storage across multiple backends via storage adapters. It supports TTL based expiry, making it suitable as a cache or a persistent key-value store.</p>
+<h1 id="features">Features</h1>
+<p>There are a few existing modules similar to Keyv, however Keyv is different because it:</p>
+<ul>
+<li>Isn't bloated</li>
+<li>Has a simple Promise based API</li>
+<li>Suitable as a TTL based cache or persistent key-value store</li>
+<li><a href="#add-cache-support-to-your-module">Easily embeddable</a> inside another module</li>
+<li>Works with any storage that implements the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map"><code>Map</code></a> API</li>
+<li>Handles all JSON types plus <code>Buffer</code> and <code>BigInt</code> via the built-in <code>KeyvJsonSerializer</code></li>
+<li>Supports namespaces</li>
+<li>Wide range of <a href="#official-storage-adapters"><strong>efficient, well tested</strong></a> storage adapters</li>
+<li>Connection errors are passed through (db failures won't kill your app)</li>
+<li>Supports the current active LTS version of Node.js or higher</li>
+</ul>
+<h1 id="table-of-contents">Table of Contents</h1>
+<ul>
+<li><a href="#usage">Usage</a></li>
+<li><a href="#type-safe-usage">Type-safe Usage</a>
+<ul>
+<li><a href="#example-with-instance-level-generic-type">Example with Instance-level Generic Type:</a></li>
+<li><a href="#example-with-method-level-generic-type">Example with Method-level Generic Type:</a></li>
+</ul>
+</li>
+<li><a href="#using-storage-adapters">Using Storage Adapters</a></li>
+<li><a href="#namespaces">Namespaces</a></li>
+<li><a href="#events">Events</a></li>
+<li><a href="#hooks">Hooks</a>
+<ul>
+<li><a href="#get-hooks">Get Hooks</a></li>
+<li><a href="#set-hooks">Set Hooks</a></li>
+<li><a href="#delete-hooks">Delete Hooks</a></li>
+</ul>
+</li>
+<li><a href="#serialization">Serialization</a>
+<ul>
+<li><a href="#official-serializers">Official Serializers</a>
+<ul>
+<li><a href="#superjson">SuperJSON</a></li>
+<li><a href="#messagepack-msgpackr">MessagePack (msgpackr)</a></li>
+</ul>
+</li>
+<li><a href="#custom-serializers">Custom Serializers</a></li>
+<li><a href="#disabling-serialization">Disabling Serialization</a></li>
+<li><a href="#pipeline">Pipeline</a></li>
+</ul>
+</li>
+<li><a href="#official-storage-adapters">Official Storage Adapters</a></li>
+<li><a href="#third-party-storage-adapters">Third-party Storage Adapters</a>
+<ul>
+<li><a href="#storage-adapter-contract-v6">Storage Adapter Contract (v6)</a></li>
+</ul>
+</li>
+<li><a href="#built-in-adapters-memory-and-bridge">Built-in Adapters: Memory and Bridge</a>
+<ul>
+<li><a href="#keyvmemoryadapter">KeyvMemoryAdapter</a></li>
+<li><a href="#keyvbridgeadapter">KeyvBridgeAdapter</a></li>
+</ul>
+</li>
+<li><a href="#using-bigmap-to-scale">Using BigMap to Scale</a>
+<ul>
+<li><a href="#understanding-javascript-map-limitations">Understanding JavaScript Map Limitations</a></li>
+<li><a href="#why-bigmap">Why BigMap?</a>
+<ul>
+<li><a href="#key-benefits">Key Benefits:</a></li>
+</ul>
+</li>
+<li><a href="#using-bigmap-with-keyv">Using BigMap with Keyv</a>
+<ul>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#basic-usage">Basic Usage</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#compression">Compression</a>
+<ul>
+<li><a href="#want-to-build-your-own-keyvcompressionadapter">Want to build your own KeyvCompressionAdapter?</a></li>
+</ul>
+</li>
+<li><a href="#encryption">Encryption</a></li>
+<li><a href="#capability-detection">Capability Detection</a>
+<ul>
+<li><a href="#detectkeyvobj">detectKeyv(obj)</a></li>
+<li><a href="#detectkeyvstorageobj">detectKeyvStorage(obj)</a></li>
+<li><a href="#detectkeyvcompressionobj">detectKeyvCompression(obj)</a></li>
+<li><a href="#detectkeyvserializationobj">detectKeyvSerialization(obj)</a></li>
+<li><a href="#detectkeyvencryptionobj">detectKeyvEncryption(obj)</a></li>
+</ul>
+</li>
+<li><a href="#api">API</a>
+<ul>
+<li><a href="#new-keyvstorage-adapter-options-or-new-keyvoptions">new Keyv([storage-adapter], [options]) or new Keyv([options])</a></li>
+<li><a href="#storage-adapter">storage-adapter</a></li>
+<li><a href="#namespace">.namespace</a></li>
+<li><a href="#options">options</a></li>
+<li><a href="#optionsnamespace">options.namespace</a></li>
+<li><a href="#optionsttl">options.ttl</a></li>
+<li><a href="#optionscompression">options.compression</a></li>
+<li><a href="#optionsserialization">options.serialization</a></li>
+<li><a href="#optionsstore">options.store</a></li>
+<li><a href="#optionsstats">options.stats</a></li>
+<li><a href="#optionsthrowonerrors">options.throwOnErrors</a></li>
+<li><a href="#optionssanitize">options.sanitize</a></li>
+<li><a href="#optionsencryption">options.encryption</a></li>
+<li><a href="#optionscheckexpired">options.checkExpired</a></li>
+</ul>
+</li>
+<li><a href="#keyv-instance">Keyv Instance</a>
+<ul>
+<li><a href="#setkey-value-ttl">.set(key, value, [ttl])</a></li>
+<li><a href="#setmanyentries">.setMany(entries)</a></li>
+<li><a href="#getkey">.get(key)</a></li>
+<li><a href="#getmanykeys">.getMany(keys)</a></li>
+<li><a href="#getrawkey">.getRaw(key)</a></li>
+<li><a href="#getmanyrawkeys">.getManyRaw(keys)</a></li>
+<li><a href="#setrawkey-value">.setRaw(key, value)</a></li>
+<li><a href="#setmanyrawentries">.setManyRaw(entries)</a></li>
+<li><a href="#deletekey">.delete(key)</a></li>
+<li><a href="#deletemanykeys">.deleteMany(keys)</a></li>
+<li><a href="#clear">.clear()</a></li>
+<li><a href="#haskey">.has(key)</a></li>
+<li><a href="#hasmanykeys">.hasMany(keys)</a></li>
+<li><a href="#disconnect">.disconnect()</a></li>
+<li><a href="#iterator">.iterator()</a></li>
+</ul>
+</li>
+<li><a href="#api---properties">API - Properties</a>
+<ul>
+<li><a href="#namespace-1">.namespace</a></li>
+<li><a href="#ttl">.ttl</a></li>
+<li><a href="#store">.store</a></li>
+<li><a href="#serialization-1">.serialization</a></li>
+<li><a href="#compression-1">.compression</a></li>
+<li><a href="#encryption-1">.encryption</a></li>
+<li><a href="#checkexpired">.checkExpired</a></li>
+<li><a href="#throwonerrors">.throwOnErrors</a></li>
+<li><a href="#stats">.stats</a>
+<ul>
+<li><a href="#enabling-stats">Enabling Stats:</a></li>
+<li><a href="#available-statistics">Available Statistics:</a></li>
+<li><a href="#accessing-stats">Accessing Stats:</a></li>
+<li><a href="#resetting-stats">Resetting Stats:</a></li>
+<li><a href="#manual-control">Manual Control:</a></li>
+<li><a href="#standalone-usage">Standalone Usage:</a></li>
+</ul>
+</li>
+<li><a href="#sanitize">.sanitize</a>
+<ul>
+<li><a href="#pattern-categories">Pattern Categories</a></li>
+<li><a href="#targets">Targets</a></li>
+<li><a href="#usage-1">Usage</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#bun-support">Bun Support</a></li>
+<li><a href="#how-to-contribute">How to Contribute</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+<h1 id="usage">Usage</h1>
+<p>Install Keyv.</p>
+<pre><code>npm install --save keyv
+</code></pre>
+<p>By default everything is stored in memory, you can optionally also install a storage adapter.</p>
+<pre><code>npm install --save @keyv/redis
+npm install --save @keyv/valkey
+npm install --save @keyv/mongo
+npm install --save @keyv/sqlite
+npm install --save @keyv/postgres
+npm install --save @keyv/mysql
+npm install --save @keyv/etcd
+npm install --save @keyv/memcache
+npm install --save @keyv/dynamo
+</code></pre>
+<p>First, create a new Keyv instance.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+</code></pre>
+<h1 id="type-safe-usage">Type-safe Usage</h1>
+<p>You can create a <code>Keyv</code> instance with a generic type to enforce type safety for the values stored. Additionally, both the <code>get</code> and <code>set</code> methods support specifying custom types for specific use cases.</p>
+<h2 id="example-with-instance-level-generic-type">Example with Instance-level Generic Type:</h2>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span><<span class="hljs-built_in">number</span>>(); <span class="hljs-comment">// Instance handles only numbers</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-number">123</span>);
+<span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'key1'</span>); <span class="hljs-comment">// value is inferred as number</span>
+</code></pre>
+<h2 id="example-with-method-level-generic-type">Example with Method-level Generic Type:</h2>
+<p>You can also specify a type directly in the <code>get</code> or <code>set</code> methods, allowing flexibility for different types of values within the same instance.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(); <span class="hljs-comment">// Generic type not specified at instance level</span>
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-property">set</span><<span class="hljs-built_in">string</span>>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'some string'</span>); <span class="hljs-comment">// Method-level type for this value</span>
+<span class="hljs-keyword">const</span> strValue = <span class="hljs-keyword">await</span> keyv.<span class="hljs-property">get</span><<span class="hljs-built_in">string</span>>(<span class="hljs-string">'key2'</span>); <span class="hljs-comment">// Explicitly typed as string</span>
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-property">set</span><<span class="hljs-built_in">number</span>>(<span class="hljs-string">'key3'</span>, <span class="hljs-number">456</span>); <span class="hljs-comment">// Storing a number in the same instance</span>
+<span class="hljs-keyword">const</span> numValue = <span class="hljs-keyword">await</span> keyv.<span class="hljs-property">get</span><<span class="hljs-built_in">number</span>>(<span class="hljs-string">'key3'</span>); <span class="hljs-comment">// Explicitly typed as number</span>
+</code></pre>
+<p>This makes <code>Keyv</code> highly adaptable to different data types while maintaining type safety.</p>
+<h1 id="using-storage-adapters">Using Storage Adapters</h1>
+<p>Once you have created your Keyv instance you can use it as a simple key-value store with <code>in-memory</code> by default. To use a storage adapter, create an instance of the adapter and pass it to the Keyv constructor. Here are some examples:</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// redis</span>
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>));
+</code></pre>
+<p>You can also pass in a storage adapter with other options such as <code>ttl</code> and <code>namespace</code> (example using <code>sqlite</code>):</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">//sqlite</span>
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSqlite</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+
+<span class="hljs-keyword">const</span> keyvSqlite = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvSqlite, <span class="hljs-attr">ttl</span>: <span class="hljs-number">5000</span>, <span class="hljs-attr">namespace</span>: <span class="hljs-string">'cache'</span> });
+</code></pre>
+<p>To handle an event you can do the following:</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// Handle DB connection errors</span>
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-params">err</span> =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Connection Error'</span>, err));
+</code></pre>
+<p>Now lets do an end-to-end example using <code>Keyv</code> and the <code>Redis</code> storage adapter:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvRedis });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'expires in 1 second'</span>, <span class="hljs-number">1000</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'never expires'</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'never expires'</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">clear</span>(); <span class="hljs-comment">// undefined</span>
+</code></pre>
+<p>It's is just that simple! Keyv is designed to be simple and easy to use.</p>
+<h1 id="namespaces">Namespaces</h1>
+<p>You can namespace your Keyv instance to avoid key collisions and allow you to clear only a certain namespace while using the same database.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> users = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>), { <span class="hljs-attr">namespace</span>: <span class="hljs-string">'users'</span> });
+<span class="hljs-keyword">const</span> cache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>), { <span class="hljs-attr">namespace</span>: <span class="hljs-string">'cache'</span> });
+
+<span class="hljs-keyword">await</span> users.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'users'</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-keyword">await</span> cache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'cache'</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-keyword">await</span> users.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'users'</span>
+<span class="hljs-keyword">await</span> cache.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'cache'</span>
+<span class="hljs-keyword">await</span> users.<span class="hljs-title function_">clear</span>(); <span class="hljs-comment">// undefined</span>
+<span class="hljs-keyword">await</span> users.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// undefined</span>
+<span class="hljs-keyword">await</span> cache.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'cache'</span>
+</code></pre>
+<h1 id="events">Events</h1>
+<p>Keyv is an <code>EventEmitter</code> (built on <a href="https://github.com/jaredwray/hookified">hookified</a>) and will emit an <code>'error'</code> event if there is an error. By default an error is only thrown if there are no listeners attached to the <code>'error'</code> event. To always throw on errors regardless of listeners, enable the <a href="#throwonerrors"><code>throwOnErrors</code></a> option.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-params">err</span> =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Connection Error'</span>, err));
+</code></pre>
+<p>In addition it will emit <code>clear</code> and <code>disconnect</code> events when the corresponding methods are called.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">handleConnectionError</span> = err => <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Connection Error'</span>, err);
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">handleClear</span> = (<span class="hljs-params"></span>) => <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Cache Cleared'</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-title function_">handleDisconnect</span> = (<span class="hljs-params"></span>) => <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">'Disconnected'</span>);
+
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, handleConnectionError);
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'clear'</span>, handleClear);
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'disconnect'</span>, handleDisconnect);
+</code></pre>
+<h1 id="hooks">Hooks</h1>
+<p>Keyv supports hooks for all of its operations. Hooks are useful for logging, debugging, and other custom functionality. Each operation fires a <code>BEFORE_*</code> hook before it runs and an <code>AFTER_*</code> hook after it completes. Here is the list of all the hooks:</p>
+<pre><code>BEFORE_GET            / AFTER_GET
+BEFORE_GET_MANY       / AFTER_GET_MANY
+BEFORE_GET_RAW        / AFTER_GET_RAW
+BEFORE_GET_MANY_RAW   / AFTER_GET_MANY_RAW
+BEFORE_SET            / AFTER_SET
+BEFORE_SET_RAW        / AFTER_SET_RAW
+BEFORE_SET_MANY       / AFTER_SET_MANY
+BEFORE_SET_MANY_RAW   / AFTER_SET_MANY_RAW
+BEFORE_DELETE         / AFTER_DELETE
+BEFORE_DELETE_MANY    / AFTER_DELETE_MANY
+BEFORE_HAS            / AFTER_HAS
+BEFORE_HAS_MANY       / AFTER_HAS_MANY
+BEFORE_CLEAR          / AFTER_CLEAR
+BEFORE_DISCONNECT     / AFTER_DISCONNECT
+</code></pre>
+<blockquote>
+<p>The older <code>PRE_*</code> / <code>POST_*</code> hook names (e.g. <code>PRE_GET</code>, <code>POST_SET</code>) are deprecated aliases that still fire for backward compatibility. Prefer the <code>BEFORE_*</code> / <code>AFTER_*</code> names going forward.</p>
+</blockquote>
+<p>You can access these by importing <code>KeyvHooks</code> from the main Keyv package and registering a handler with <code>onHook()</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, { <span class="hljs-title class_">KeyvHooks</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">onHook</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">BEFORE_SET</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Setting key <span class="hljs-subst">${data.key}</span> to <span class="hljs-subst">${data.value}</span>`</span>);
+});
+</code></pre>
+<h2 id="get-hooks">Get Hooks</h2>
+<p>The <code>AFTER_GET</code> and <code>AFTER_GET_RAW</code> hooks fire on both cache hits and misses. When a cache miss occurs (key doesn't exist or is expired), the hook receives <code>undefined</code> as the value.</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// AFTER_GET hook - fires on both hits and misses</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">onHook</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">AFTER_GET</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =></span> {
+  <span class="hljs-keyword">if</span> (data.<span class="hljs-property">value</span> === <span class="hljs-literal">undefined</span>) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Cache miss for key: <span class="hljs-subst">${data.key}</span>`</span>);
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Cache hit for key: <span class="hljs-subst">${data.key}</span>`</span>, data.<span class="hljs-property">value</span>);
+  }
+});
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'existing-key'</span>); <span class="hljs-comment">// Logs cache hit with value</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'missing-key'</span>);  <span class="hljs-comment">// Logs cache miss with undefined</span>
+</code></pre>
+<pre><code class="hljs language-js"><span class="hljs-comment">// AFTER_GET_RAW hook - same behavior as AFTER_GET</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">onHook</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">AFTER_GET_RAW</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Key: <span class="hljs-subst">${data.key}</span>, Value:`</span>, data.<span class="hljs-property">value</span>);
+});
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getRaw</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// Logs with value or undefined</span>
+</code></pre>
+<h2 id="set-hooks">Set Hooks</h2>
+<pre><code class="hljs language-js"><span class="hljs-comment">// BEFORE_SET hook</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">onHook</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">BEFORE_SET</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Setting key <span class="hljs-subst">${data.key}</span> to <span class="hljs-subst">${data.value}</span>`</span>));
+
+<span class="hljs-comment">// AFTER_SET hook</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">onHook</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">AFTER_SET</span>, <span class="hljs-function">(<span class="hljs-params">{ key, value }</span>) =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Set key <span class="hljs-subst">${key}</span> to <span class="hljs-subst">${value}</span>`</span>));
+</code></pre>
+<p>In the <code>BEFORE_SET</code> hook you can also manipulate the value before it is set. For example, you could add a prefix to all keys.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+keyv.<span class="hljs-title function_">onHook</span>(<span class="hljs-title class_">KeyvHooks</span>.<span class="hljs-property">BEFORE_SET</span>, <span class="hljs-function">(<span class="hljs-params">data</span>) =></span> {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Manipulating key <span class="hljs-subst">${data.key}</span> and <span class="hljs-subst">${data.value}</span>`</span>);
+  data.<span class="hljs-property">key</span> = <span class="hljs-string">`prefix-<span class="hljs-subst">${data.key}</span>`</span>;
+  data.<span class="hljs-property">value</span> = <span class="hljs-string">`prefix-<span class="hljs-subst">${data.value}</span>`</span>;
+});
+</code></pre>
+<p>Now this key will have <code>prefix-</code> added to it before it is set.</p>
+<h2 id="delete-hooks">Delete Hooks</h2>
+<p>In the <code>BEFORE_DELETE</code> and <code>AFTER_DELETE</code> hooks, the value could be a single item or an <code>Array</code>. This is based on the fact that <code>delete</code> can accept a single key or an <code>Array</code> of keys.</p>
+<h1 id="serialization">Serialization</h1>
+<p>By default, Keyv uses its built-in <code>KeyvJsonSerializer</code> — a JSON-based serializer with support for <code>Buffer</code> and <code>BigInt</code> types. This works out of the box with all storage adapters.</p>
+<h2 id="official-serializers">Official Serializers</h2>
+<p>In addition to the built-in serializer, Keyv offers two official serialization packages:</p>
+<h3 id="superjson">SuperJSON</h3>
+<p><a href="https://github.com/jaredwray/keyv/tree/main/serialization/superjson"><code>@keyv/serialize-superjson</code></a> supports <code>Date</code>, <code>RegExp</code>, <code>Map</code>, <code>Set</code>, <code>BigInt</code>, <code>undefined</code>, <code>Error</code>, and <code>URL</code> types.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> { superJsonSerializer } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/serialize-superjson'</span>; <span class="hljs-comment">// using the helper function that does new KeyvSuperJsonSerializer()</span>
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: superJsonSerializer });
+</code></pre>
+<h3 id="messagepack-msgpackr">MessagePack (msgpackr)</h3>
+<p><a href="https://github.com/jaredwray/keyv/tree/main/serialization/msgpackr"><code>@keyv/serialize-msgpackr</code></a> is a binary serializer that supports <code>Date</code>, <code>RegExp</code>, <code>Map</code>, <code>Set</code>, <code>Error</code>, <code>undefined</code>, <code>NaN</code>, and <code>Infinity</code> types.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-title class_">KeyvMsgpackrSerializer</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/serialize-msgpackr'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMsgpackrSerializer</span>() });
+</code></pre>
+<h2 id="custom-serializers">Custom Serializers</h2>
+<p>You can provide your own serializer by implementing the <code>KeyvSerializationAdapter</code> interface with <code>stringify</code> and <code>parse</code> methods:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">KeyvSerializationAdapter</span> {
+  <span class="hljs-attr">stringify</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">object</span>: <span class="hljs-built_in">unknown</span></span>) =></span> <span class="hljs-built_in">string</span> | <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">string</span>>;
+  <span class="hljs-attr">parse</span>: <T><span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">data</span>: <span class="hljs-built_in">string</span></span>) =></span> T | <span class="hljs-title class_">Promise</span><T>;
+}
+</code></pre>
+<h2 id="disabling-serialization">Disabling Serialization</h2>
+<p>You can disable serialization entirely by passing <code>false</code>. This stores data as raw objects, which works for in-memory <code>Map</code> storage where string conversion is not needed:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: <span class="hljs-literal">false</span> });
+</code></pre>
+<h2 id="pipeline">Pipeline</h2>
+<p>When serialization, compression, and/or encryption are configured, Keyv applies them in this order:</p>
+<p><strong>On set:</strong> serialize → compress (optional) → encrypt (optional) → store</p>
+<p><strong>On get:</strong> store → decrypt (optional) → decompress (optional) → parse → value</p>
+<p>Compression and encryption operate on the serialized string, so they only run when a serializer is configured. The built-in <code>KeyvJsonSerializer</code> is enabled by default, so this works out of the box. If you disable serialization with <code>serialization: false</code>, values are passed through to the store as-is and compression/encryption are skipped.</p>
+<h1 id="official-storage-adapters">Official Storage Adapters</h1>
+<p>The official storage adapters are covered by <a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml">over 150 integration tests</a> to guarantee consistent behaviour. They are lightweight, efficient wrappers over the DB clients making use of indexes and native TTLs where available.</p>
+<table>
+<thead>
+<tr>
+<th>Database</th>
+<th>Adapter</th>
+<th>Native TTL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redis</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/redis">@keyv/redis</a></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Valkey</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/valkey">@keyv/valkey</a></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>MongoDB</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/mongo">@keyv/mongo</a></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/sqlite">@keyv/sqlite</a></td>
+<td>No</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/postgres">@keyv/postgres</a></td>
+<td>No</td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/mysql">@keyv/mysql</a></td>
+<td>No</td>
+</tr>
+<tr>
+<td>Etcd</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/etcd">@keyv/etcd</a></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Memcache</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/memcache">@keyv/memcache</a></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>DynamoDB</td>
+<td><a href="https://github.com/jaredwray/keyv/tree/main/storage/dynamo">@keyv/dynamo</a></td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<h1 id="third-party-storage-adapters">Third-party Storage Adapters</h1>
+<p>We love the community and the third-party storage adapters they have built. They enable Keyv to be used with even more backends and use cases.</p>
+<p>You can also use third-party storage adapters or build your own. Keyv will wrap these storage adapters in TTL functionality and handle complex types internally.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> myAdapter <span class="hljs-keyword">from</span> <span class="hljs-string">'my-adapter'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: myAdapter });
+</code></pre>
+<p>Any store that follows the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map"><code>Map</code></a> api will work.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>() });
+</code></pre>
+<p>For example, <a href="https://github.com/sindresorhus/quick-lru"><code>quick-lru</code></a> is a completely unrelated module that implements the Map API.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">QuickLRU</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'quick-lru'</span>;
+
+<span class="hljs-keyword">const</span> lru = <span class="hljs-keyword">new</span> <span class="hljs-title class_">QuickLRU</span>({ <span class="hljs-attr">maxSize</span>: <span class="hljs-number">1000</span> });
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: lru });
+</code></pre>
+<p>View the complete list of third-party storage adapters and learn how to build your own at <a href="https://keyv.org/docs/third-party-storage-adapters/">https://keyv.org/docs/third-party-storage-adapters/</a></p>
+<h2 id="storage-adapter-contract-v6">Storage Adapter Contract (v6)</h2>
+<blockquote>
+<p>The public API above is unchanged — <code>keyv.set(key, value, ttl)</code> still takes a relative TTL in milliseconds. The change below only affects authors of custom <strong>storage adapters</strong>.</p>
+</blockquote>
+<p>As of v6, Keyv passes an <strong>absolute <code>expires</code></strong> timestamp (Unix ms since epoch) to a storage adapter's write methods instead of a relative TTL. Keyv computes <code>expires</code> once, so adapters never need to derive or parse it:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { keyvStorageCapability } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">KeyvStorageEntry</span><<span class="hljs-title class_">Value</span>> = { <span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">value</span>: <span class="hljs-title class_">Value</span>; <span class="hljs-attr">expires</span>?: <span class="hljs-built_in">number</span> };
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">MyAdapter</span> {
+  <span class="hljs-comment">// Declare support for the absolute-`expires` contract:</span>
+  <span class="hljs-keyword">get</span> <span class="hljs-title function_">capabilities</span>() {
+    <span class="hljs-keyword">return</span> <span class="hljs-title function_">keyvStorageCapability</span>(<span class="hljs-variable language_">this</span>); <span class="hljs-comment">// -> { ...detected, expires: true }</span>
+  }
+
+  <span class="hljs-comment">// `expires` is absolute Unix ms; `undefined` means no expiry; `<= Date.now()` means already expired.</span>
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">set</span>(<span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">value</span>: <span class="hljs-built_in">unknown</span>, <span class="hljs-attr">expires</span>?: <span class="hljs-built_in">number</span>): <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">boolean</span>> { <span class="hljs-comment">/* ... */</span> }
+  <span class="hljs-keyword">async</span> setMany<<span class="hljs-title class_">Value</span>>(<span class="hljs-attr">entries</span>: <span class="hljs-title class_">KeyvStorageEntry</span><<span class="hljs-title class_">Value</span>>[]): <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">boolean</span>[] | <span class="hljs-literal">undefined</span>> { <span class="hljs-comment">/* ... */</span> }
+  <span class="hljs-comment">// ...get, delete, clear, has, getMany, deleteMany, hasMany, etc.</span>
+}
+</code></pre>
+<p>A v6 adapter declares <code>capabilities.expires === true</code> (the <code>keyvStorageCapability(this)</code> helper sets it for you). Keyv then passes the absolute <code>expires</code> to it directly — this takes precedence over structural detection, so an adapter whose methods aren't written with <code>async</code> is still used directly rather than bridged. Any <strong>legacy</strong> storage adapter that does <em>not</em> declare <code>capabilities.expires</code> is treated as a relative-TTL adapter and transparently wrapped by <a href="#built-in-adapters-memory-and-bridge"><code>KeyvBridgeAdapter</code></a>, which converts the absolute <code>expires</code> back to a relative TTL before delegating (and deletes outright when the deadline has already elapsed) — so existing third-party adapters keep working unchanged. Stores that expose absolute-expiry primitives (e.g. Redis <code>PXAT</code>) use <code>expires</code> directly. Map-like stores wrapped via <code>new Keyv({ store: new Map() })</code> are unaffected.</p>
+<blockquote>
+<p><strong>Adapters should enforce expiry — and Keyv double-checks by default.</strong> Declaring <code>capabilities.expires === true</code> means a v6 adapter should enforce expiry itself — ideally via a native mechanism (key expiry, TTL index, lease) so the backend reclaims space, and/or a client-side check on read. On top of that, Keyv core filters expired reads at its own layer by default (<a href="#checkexpired"><code>checkExpired</code></a> is <code>true</code>), using the absolute <code>expires</code> in the serialized envelope, so <code>get</code>/<code>getMany</code>/<code>has</code> never surface a key past its deadline even on backends whose native expiry is coarse or lazily swept (e.g. Memcached, DynamoDB). Run <code>@keyv/test-suite</code>'s <code>storageTtlTests</code> against your adapter to verify its own expiry behaviour.</p>
+</blockquote>
+<h1 id="built-in-adapters-memory-and-bridge">Built-in Adapters: Memory and Bridge</h1>
+<p>Keyv ships with two storage adapters built directly into the core package. You rarely instantiate them yourself — Keyv selects and wires up the right one automatically when you create an instance — but knowing how they work explains how the default in-memory store behaves and how legacy or async stores are adapted to the v6 contract. Both are exported from <code>keyv</code>:</p>
+<h2 id="keyvmemoryadapter">KeyvMemoryAdapter</h2>
+<p><code>KeyvMemoryAdapter</code> is the <strong>default store</strong>. When you create a Keyv instance without a store (<code>new Keyv()</code>), it uses <code>new KeyvMemoryAdapter(new Map())</code> under the hood. It wraps any synchronous, <code>Map</code>-like object — the built-in <code>Map</code>, <a href="https://github.com/sindresorhus/quick-lru"><code>quick-lru</code></a>, <a href="https://github.com/wellwelwel/lru.min"><code>lru.min</code></a>, or anything exposing <code>get</code>, <code>set</code>, <code>delete</code>, <code>clear</code>, and <code>has</code>.</p>
+<p>It adds the pieces a raw <code>Map</code> does not have:</p>
+<ul>
+<li><strong>Namespace prefixing</strong> — keys are prefixed with the <code>namespace</code> and <code>keySeparator</code> (default <code>:</code>), so one underlying store can host multiple namespaces. A namespaced <code>clear()</code> removes only the current namespace's keys <strong>when the underlying store exposes a <code>keys()</code> method</strong> (a standard <code>Map</code> does); a minimal store without <code>keys()</code> falls back to wiping the <strong>entire</strong> store, so take care sharing one such store across namespaces.</li>
+<li><strong>TTL expiry</strong> — the adapter keeps a copy of each entry's expiry in its own <code>{ value, expires }</code> wrapper <em>alongside</em> the stored value, so it can evict expired entries lazily on <code>get</code>, <code>getMany</code>, <code>has</code>, and <code>iterator()</code> without decoding the value. This wrapper is <strong>separate from</strong> the <code>{ value, expires }</code> envelope Keyv core builds and runs through serialization/compression/encryption — with the default serializer that encoded payload still contains <code>expires</code>, so custom serializer/encryption adapters must still handle the <code>expires</code> field; only the adapter's outer copy lives outside the payload. When the underlying store accepts a TTL argument (e.g. QuickLRU), the adapter also passes a derived relative duration so the store can evict on its own.</li>
+<li><strong>Batch and iteration</strong> — <code>getMany</code>, <code>setMany</code>, <code>hasMany</code>, <code>deleteMany</code>, and an async <code>iterator()</code> (when the store supports <code>entries()</code>).</li>
+<li><strong>v6 contract</strong> — declares <code>capabilities.expires === true</code>, so Keyv hands it the absolute <code>expires</code> timestamp directly and trusts it to enforce expiry.</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, { <span class="hljs-title class_">KeyvMemoryAdapter</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-comment">// Wrap any Map-like store. Put the namespace on the Keyv options, not the adapter: Keyv</span>
+<span class="hljs-comment">// propagates its own namespace to the store, overwriting any namespace set on the adapter.</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemoryAdapter</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>()), <span class="hljs-attr">namespace</span>: <span class="hljs-string">'cache'</span> });
+
+<span class="hljs-comment">// Or wrap an LRU to bound memory usage</span>
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">QuickLRU</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'quick-lru'</span>;
+<span class="hljs-keyword">const</span> cache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemoryAdapter</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">QuickLRU</span>({ <span class="hljs-attr">maxSize</span>: <span class="hljs-number">1000</span> })) });
+</code></pre>
+<h2 id="keyvbridgeadapter">KeyvBridgeAdapter</h2>
+<p><code>KeyvBridgeAdapter</code> wraps any <strong>promise-based / async store</strong> and adapts it to the v6 storage contract. Keyv applies it automatically when you pass:</p>
+<ul>
+<li>a <strong>legacy storage adapter</strong> — a full async adapter that does <em>not</em> declare <code>capabilities.expires</code> (i.e. pre-v6 third-party adapters), or</li>
+<li>an <strong>async <code>Map</code>-like store</strong> with async <code>get</code>, <code>set</code>, <code>delete</code>, and <code>clear</code>. For such a store to actually expire data, its <code>set(key, value, ttl)</code> must honor the relative millisecond <code>ttl</code> the bridge passes as the third argument — a plain Promise-wrapped <code>Map</code> that ignores it won't evict on its own. Keyv's <code>checkExpired</code> (on by default) still filters expired entries on read, but they linger in the store until read; for native eviction, prefer a full v6 adapter or a store that honors the <code>ttl</code>.</li>
+</ul>
+<p>This is why existing third-party adapters keep working unchanged on v6. The bridge:</p>
+<ul>
+<li><strong>Converts expiry</strong> — Keyv passes an absolute <code>expires</code> timestamp; the bridge converts it back to the relative TTL the wrapped store expects. A write whose deadline has already elapsed is deleted instead of stored, so a past <code>expires</code> becomes an absent key — matching how the native adapters treat an already-expired write.</li>
+<li><strong>Delegates when it can</strong> — if the wrapped store implements <code>getMany</code>, <code>setMany</code>, <code>has</code>, <code>hasMany</code>, <code>deleteMany</code>, <code>iterator</code>, or <code>disconnect</code>, the bridge calls them directly; otherwise it falls back to looping over the single-key primitives.</li>
+<li><strong>Handles namespacing both ways</strong> — if the wrapped store manages its own namespace (a full adapter exposing a <code>namespace</code> property), the bridge propagates its namespace to the store and does <em>not</em> prefix keys, avoiding double-namespacing, so the store's native scoped <code>clear()</code> and <code>iterator()</code> are used. Otherwise the bridge prefixes keys itself, letting one shared store host multiple namespaces.</li>
+<li><strong>Forwards errors</strong> — re-emits <code>error</code> events from the wrapped store so connection failures surface on the Keyv instance.</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, { <span class="hljs-title class_">KeyvBridgeAdapter</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-comment">// Usually automatic — just pass the store:</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: myAsyncStore });
+
+<span class="hljs-comment">// ...which is equivalent to wrapping it explicitly. Put the namespace on the Keyv options —</span>
+<span class="hljs-comment">// Keyv overwrites any namespace set on the adapter directly:</span>
+<span class="hljs-keyword">const</span> explicit = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvBridgeAdapter</span>(myAsyncStore), <span class="hljs-attr">namespace</span>: <span class="hljs-string">'cache'</span> });
+</code></pre>
+<h1 id="using-bigmap-to-scale">Using BigMap to Scale</h1>
+<h2 id="understanding-javascript-map-limitations">Understanding JavaScript Map Limitations</h2>
+<p>JavaScript's built-in <code>Map</code> object has a practical limit of approximately <strong>16.7 million entries</strong> (2^24). When you try to store more entries than this limit, you'll encounter performance degradation or runtime errors. This limitation is due to how JavaScript engines internally manage Map objects.</p>
+<p>For applications that need to cache millions of entries in memory, this becomes a significant constraint. Common scenarios include:</p>
+<ul>
+<li>High-traffic caching layers</li>
+<li>Session stores for large-scale applications</li>
+<li>In-memory data processing of large datasets</li>
+<li>Real-time analytics with millions of data points</li>
+</ul>
+<h2 id="why-bigmap">Why BigMap?</h2>
+<p><code>@keyv/bigmap</code> solves this limitation by using a <strong>distributed hash approach</strong> with multiple internal Map instances. Instead of storing all entries in a single Map, BigMap distributes entries across multiple Maps using a hash function. This allows you to scale beyond the 16.7 million entry limit while maintaining the familiar Map API.</p>
+<h3 id="key-benefits">Key Benefits:</h3>
+<ul>
+<li><strong>Scales beyond Map limits</strong>: Store 20+ million entries without issues</li>
+<li><strong>Map-compatible API</strong>: Drop-in replacement for standard Map</li>
+<li><strong>Performance</strong>: Uses efficient DJB2 hashing for fast key distribution</li>
+<li><strong>Type-safe</strong>: Built with TypeScript and supports generics</li>
+<li><strong>Customizable</strong>: Configure store size and hash functions</li>
+</ul>
+<h2 id="using-bigmap-with-keyv">Using BigMap with Keyv</h2>
+<p>BigMap can be used directly with Keyv as a storage adapter, providing scalable in-memory storage with full TTL support.</p>
+<h3 id="installation">Installation</h3>
+<pre><code class="hljs language-bash">npm install --save keyv @keyv/bigmap
+</code></pre>
+<h3 id="basic-usage">Basic Usage</h3>
+<p>The simplest way to use BigMap with Keyv is through the <code>createKeyv</code> helper function:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/bigmap'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>();
+
+<span class="hljs-comment">// Set values with TTL (time in milliseconds)</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'user:1'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Alice'</span>, <span class="hljs-attr">email</span>: <span class="hljs-string">'alice@example.com'</span> }, <span class="hljs-number">60000</span>); <span class="hljs-comment">// Expires in 60 seconds</span>
+
+<span class="hljs-comment">// Get values</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'user:1'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(user); <span class="hljs-comment">// { name: 'Alice', email: 'alice@example.com' }</span>
+
+<span class="hljs-comment">// Delete values</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'user:1'</span>);
+
+<span class="hljs-comment">// Clear all values</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">clear</span>();
+</code></pre>
+<p>For more details about BigMap, see the <a href="https://github.com/jaredwray/keyv/tree/main/core/bigmap">@keyv/bigmap documentation</a>.</p>
+<h1 id="compression">Compression</h1>
+<p>Keyv supports <code>gzip</code>, <code>brotli</code> and <code>lz4</code> compression. To enable compression, pass the <code>compress</code> option to the constructor.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvGzip</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/compress-gzip'</span>;
+
+<span class="hljs-keyword">const</span> keyvGzip = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvGzip</span>();
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">compression</span>: keyvGzip });
+</code></pre>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvBrotli</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/compress-brotli'</span>;
+
+<span class="hljs-keyword">const</span> keyvBrotli = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvBrotli</span>();
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">compression</span>: keyvBrotli });
+</code></pre>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvLz4</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/compress-lz4'</span>;
+
+<span class="hljs-keyword">const</span> keyvLz4 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvLz4</span>();
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">compression</span>: keyvLz4 });
+</code></pre>
+<p>You can also pass a custom compression function to the <code>compression</code> option. Following the pattern of the official compression adapters.</p>
+<h2 id="want-to-build-your-own-keyvcompressionadapter">Want to build your own KeyvCompressionAdapter?</h2>
+<p>Great! Keyv is designed to be easily extended. You can build your own compression adapter by following the pattern of the official compression adapters based on this interface:</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">KeyvCompressionAdapter</span> {
+	<span class="hljs-title function_">compress</span>(<span class="hljs-attr">value</span>: <span class="hljs-built_in">any</span>, <span class="hljs-attr">options</span>?: <span class="hljs-built_in">any</span>): <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">any</span>>;
+	<span class="hljs-title function_">decompress</span>(<span class="hljs-attr">value</span>: <span class="hljs-built_in">any</span>, <span class="hljs-attr">options</span>?: <span class="hljs-built_in">any</span>): <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">any</span>>;
+}
+</code></pre>
+<p>In addition to the interface, you can test it with our compression test suite using @keyv/test-suite:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { keyvCompressionTests } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/test-suite'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvGzip</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/compress-gzip'</span>;
+
+<span class="hljs-title function_">keyvCompressionTests</span>(test, <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvGzip</span>());
+</code></pre>
+<h1 id="encryption">Encryption</h1>
+<p>Keyv supports pluggable encryption of stored values via the <code>KeyvEncryptionAdapter</code> interface. Pass an adapter with <code>encrypt</code> and <code>decrypt</code> methods using the <code>encryption</code> option (or set the <a href="#encryption-1"><code>.encryption</code></a> property). Encryption runs on the serialized (and optionally compressed) value, so it requires a serializer — the built-in <code>KeyvJsonSerializer</code> is enabled by default.</p>
+<pre><code class="hljs language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">KeyvEncryptionAdapter</span> {
+  <span class="hljs-attr">encrypt</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">data</span>: <span class="hljs-built_in">string</span></span>) =></span> <span class="hljs-built_in">string</span> | <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">string</span>>;
+  <span class="hljs-attr">decrypt</span>: <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">data</span>: <span class="hljs-built_in">string</span></span>) =></span> <span class="hljs-built_in">string</span> | <span class="hljs-title class_">Promise</span><<span class="hljs-built_in">string</span>>;
+}
+</code></pre>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> encryption = {
+  <span class="hljs-attr">encrypt</span>: <span class="hljs-title function_">async</span> (data) => <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(data).<span class="hljs-title function_">toString</span>(<span class="hljs-string">'base64'</span>),
+  <span class="hljs-attr">decrypt</span>: <span class="hljs-title function_">async</span> (data) => <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(data, <span class="hljs-string">'base64'</span>).<span class="hljs-title function_">toString</span>(<span class="hljs-string">'utf8'</span>),
+};
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ encryption });
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>); <span class="hljs-comment">// value is encrypted at rest</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'bar'</span>
+</code></pre>
+<h1 id="capability-detection">Capability Detection</h1>
+<p>Keyv exports helper functions to check whether an object implements the expected interface for a Keyv instance, storage adapter, compression adapter, serialization adapter, or encryption adapter. Each function returns an object with a top-level <code>compatible</code> boolean (whether the object fully satisfies the interface) plus a <code>methods</code> record describing every method it looked for.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> {
+  detectKeyv,
+  detectKeyvStorage,
+  detectKeyvCompression,
+  detectKeyvSerialization,
+  detectKeyvEncryption,
+} <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+</code></pre>
+<p>Every entry in the <code>methods</code> record has the shape <code>{ exists: boolean, methodType: "sync" | "async" | "none" }</code>.</p>
+<h2 id="detectkeyvobj">detectKeyv(obj)</h2>
+<p>Returns a <code>KeyvCapability</code>: <code>{ compatible, methods, properties }</code>. <code>compatible</code> is <code>true</code> only when <strong>all</strong> Keyv methods and properties are present.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, { detectKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">detectKeyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>());
+result.<span class="hljs-property">compatible</span>;              <span class="hljs-comment">// true — all capabilities present</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">get</span>.<span class="hljs-property">exists</span>;      <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">get</span>.<span class="hljs-property">methodType</span>;  <span class="hljs-comment">// "async"</span>
+result.<span class="hljs-property">properties</span>.<span class="hljs-property">hooks</span>;        <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">properties</span>.<span class="hljs-property">stats</span>;        <span class="hljs-comment">// true</span>
+
+<span class="hljs-keyword">const</span> partial = <span class="hljs-title function_">detectKeyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>());
+partial.<span class="hljs-property">compatible</span>;             <span class="hljs-comment">// false — missing getMany, setMany, hooks, stats, etc.</span>
+partial.<span class="hljs-property">methods</span>.<span class="hljs-property">get</span>.<span class="hljs-property">exists</span>;     <span class="hljs-comment">// true</span>
+</code></pre>
+<h2 id="detectkeyvstorageobj">detectKeyvStorage(obj)</h2>
+<p>Returns a <code>KeyvStorageCapability</code>: <code>{ compatible, store, methods }</code>. <code>compatible</code> is <code>true</code> when the object is a usable storage adapter, and <code>store</code> reports the detected kind:</p>
+<ul>
+<li><strong><code>"keyvStorage"</code></strong> — implements the full async storage adapter interface (<code>get</code>, <code>set</code>, <code>delete</code>, <code>clear</code>, <code>has</code>, <code>setMany</code>, <code>deleteMany</code>, <code>hasMany</code>, all async)</li>
+<li><strong><code>"mapLike"</code></strong> — has synchronous <code>get</code>, <code>set</code>, <code>delete</code>, and <code>has</code> (i.e. it behaves like a <code>Map</code>)</li>
+<li><strong><code>"asyncMap"</code></strong> — has at least async <code>get</code>, <code>set</code>, <code>delete</code>, and <code>clear</code></li>
+<li><strong><code>"none"</code></strong> — not a usable store</li>
+</ul>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { detectKeyvStorage } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-comment">// Map-like object</span>
+<span class="hljs-keyword">const</span> map = <span class="hljs-title function_">detectKeyvStorage</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>());
+map.<span class="hljs-property">compatible</span>;              <span class="hljs-comment">// true</span>
+map.<span class="hljs-property">store</span>;                   <span class="hljs-comment">// "mapLike"</span>
+map.<span class="hljs-property">methods</span>.<span class="hljs-property">get</span>.<span class="hljs-property">methodType</span>;  <span class="hljs-comment">// "sync"</span>
+
+<span class="hljs-comment">// Async storage adapter</span>
+<span class="hljs-keyword">const</span> adapter = {
+  <span class="hljs-attr">get</span>: <span class="hljs-title function_">async</span> () => {}, <span class="hljs-attr">set</span>: <span class="hljs-title function_">async</span> () => {}, <span class="hljs-attr">delete</span>: <span class="hljs-title function_">async</span> () => {},
+  <span class="hljs-attr">clear</span>: <span class="hljs-title function_">async</span> () => {}, <span class="hljs-attr">has</span>: <span class="hljs-title function_">async</span> () => {}, <span class="hljs-attr">setMany</span>: <span class="hljs-title function_">async</span> () => {},
+  <span class="hljs-attr">deleteMany</span>: <span class="hljs-title function_">async</span> () => {}, <span class="hljs-attr">hasMany</span>: <span class="hljs-title function_">async</span> () => {},
+};
+<span class="hljs-keyword">const</span> adapterResult = <span class="hljs-title function_">detectKeyvStorage</span>(adapter);
+adapterResult.<span class="hljs-property">compatible</span>;             <span class="hljs-comment">// true</span>
+adapterResult.<span class="hljs-property">store</span>;                  <span class="hljs-comment">// "keyvStorage"</span>
+adapterResult.<span class="hljs-property">methods</span>.<span class="hljs-property">get</span>.<span class="hljs-property">methodType</span>; <span class="hljs-comment">// "async"</span>
+</code></pre>
+<h2 id="detectkeyvcompressionobj">detectKeyvCompression(obj)</h2>
+<p>Returns a <code>KeyvCompressionCapability</code>: <code>{ compatible, methods }</code>. <code>compatible</code> is <code>true</code> when both <code>compress</code> and <code>decompress</code> methods are present.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { detectKeyvCompression } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">detectKeyvCompression</span>({ <span class="hljs-attr">compress</span>: <span class="hljs-function">(<span class="hljs-params">d</span>) =></span> d, <span class="hljs-attr">decompress</span>: <span class="hljs-function">(<span class="hljs-params">d</span>) =></span> d });
+result.<span class="hljs-property">compatible</span>;                <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">compress</span>.<span class="hljs-property">exists</span>;   <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">decompress</span>.<span class="hljs-property">exists</span>; <span class="hljs-comment">// true</span>
+</code></pre>
+<h2 id="detectkeyvserializationobj">detectKeyvSerialization(obj)</h2>
+<p>Returns a <code>KeyvSerializationCapability</code>: <code>{ compatible, methods }</code>. <code>compatible</code> is <code>true</code> when both <code>stringify</code> and <code>parse</code> methods are present.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { detectKeyvSerialization } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">detectKeyvSerialization</span>(<span class="hljs-title class_">JSON</span>);
+result.<span class="hljs-property">compatible</span>;               <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">stringify</span>.<span class="hljs-property">exists</span>; <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">parse</span>.<span class="hljs-property">exists</span>;     <span class="hljs-comment">// true</span>
+</code></pre>
+<h2 id="detectkeyvencryptionobj">detectKeyvEncryption(obj)</h2>
+<p>Returns a <code>KeyvEncryptionCapability</code>: <code>{ compatible, methods }</code>. <code>compatible</code> is <code>true</code> when both <code>encrypt</code> and <code>decrypt</code> methods are present.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> { detectKeyvEncryption } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">detectKeyvEncryption</span>({ <span class="hljs-attr">encrypt</span>: <span class="hljs-function">(<span class="hljs-params">d</span>) =></span> d, <span class="hljs-attr">decrypt</span>: <span class="hljs-function">(<span class="hljs-params">d</span>) =></span> d });
+result.<span class="hljs-property">compatible</span>;              <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">encrypt</span>.<span class="hljs-property">exists</span>;  <span class="hljs-comment">// true</span>
+result.<span class="hljs-property">methods</span>.<span class="hljs-property">decrypt</span>.<span class="hljs-property">exists</span>;  <span class="hljs-comment">// true</span>
+</code></pre>
+<h1 id="api">API</h1>
+<h2 id="new-keyvstorage-adapter-options-or-new-keyvoptions">new Keyv([storage-adapter], [options]) or new Keyv([options])</h2>
+<p>Returns a new Keyv instance.</p>
+<p>The Keyv instance is also an <code>EventEmitter</code> that will emit an <code>'error'</code> event if the storage adapter connection fails.</p>
+<h2 id="storage-adapter">storage-adapter</h2>
+<p>Type: <code>KeyvStorageAdapter</code>
+Default: <code>undefined</code></p>
+<p>The storage adapter instance to be used by Keyv.</p>
+<h2 id="namespace">.namespace</h2>
+<p>Type: <code>String</code>
+Default: <code>undefined</code></p>
+<p>This is the namespace for the current instance. When you set it it will set it also on the storage adapter.</p>
+<h2 id="options">options</h2>
+<p>Type: <code>Object</code></p>
+<p>The options object is also passed through to the storage adapter. Check your storage adapter docs for any extra options.</p>
+<h2 id="optionsnamespace">options.namespace</h2>
+<p>Type: <code>String</code>
+Default: <code>undefined</code></p>
+<p>Namespace for the current instance.</p>
+<h2 id="optionsttl">options.ttl</h2>
+<p>Type: <code>Number</code>
+Default: <code>undefined</code></p>
+<p>Default TTL. Can be overridden by specififying a TTL on <code>.set()</code>.</p>
+<h2 id="optionscompression">options.compression</h2>
+<p>Type: <code>KeyvCompressionAdapter</code>
+Default: <code>undefined</code></p>
+<p>Compression package to use. See <a href="#compression">Compression</a> for more details.</p>
+<h2 id="optionsserialization">options.serialization</h2>
+<p>Type: <code>KeyvSerializationAdapter | false</code>
+Default: <code>KeyvJsonSerializer</code> (built-in)</p>
+<p>A serialization object with <code>stringify</code> and <code>parse</code> methods. Set to <code>false</code> to disable serialization and store raw objects. See <a href="#serialization">Serialization</a> for more details.</p>
+<h2 id="optionsstore">options.store</h2>
+<p>Type: <code>Storage adapter instance</code>
+Default: <code>new Map()</code></p>
+<p>The storage adapter instance to be used by Keyv.</p>
+<h2 id="optionsstats">options.stats</h2>
+<p>Type: <code>Boolean</code>
+Default: <code>false</code></p>
+<p>Enable statistics tracking (hits, misses, sets, deletes, errors). See <a href="#stats">.stats</a> for details.</p>
+<h2 id="optionsthrowonerrors">options.throwOnErrors</h2>
+<p>Type: <code>Boolean</code>
+Default: <code>false</code></p>
+<p>Throw on all errors instead of only when there are no <code>'error'</code> listeners. See <a href="#throwonerrors">.throwOnErrors</a> for details.</p>
+<h2 id="optionssanitize">options.sanitize</h2>
+<p>Type: <code>KeyvSanitizeOptions</code>
+Default: <code>undefined</code></p>
+<p>Enable sanitization of keys and namespaces by stripping dangerous patterns. See <a href="#sanitize">.sanitize</a> for details.</p>
+<h2 id="optionsencryption">options.encryption</h2>
+<p>Type: <code>KeyvEncryptionAdapter</code>
+Default: <code>undefined</code></p>
+<p>Encryption adapter used to encrypt and decrypt stored values. See <a href="#encryption">Encryption</a> for details.</p>
+<h2 id="optionscheckexpired">options.checkExpired</h2>
+<p>Type: <code>Boolean</code>
+Default: <code>true</code></p>
+<p>When <code>true</code> (default), Keyv checks expiry at its own layer on <code>get</code>/<code>getMany</code>/<code>has</code>/<code>hasMany</code> in addition to the storage adapter. Set to <code>false</code> to trust the storage adapter alone. See <a href="#checkexpired">.checkExpired</a> for details.</p>
+<h1 id="keyv-instance">Keyv Instance</h1>
+<p>Keys must always be strings. Values can be of any type.</p>
+<h2 id="setkey-value-ttl">.set(key, value, [ttl])</h2>
+<p>Set a value.</p>
+<p>By default keys are persistent. You can set an expiry TTL in milliseconds.</p>
+<p>Returns a promise which resolves to <code>true</code>.</p>
+<h2 id="setmanyentries">.setMany(entries)</h2>
+<p>Set multiple values using <code>KeyvEntry<Value></code> objects (<code>{ key: string, value: Value, ttl?: number }</code>). The <code>Value</code> type is inferred from the entries provided.</p>
+<h2 id="getkey">.get(key)</h2>
+<p>Returns a promise which resolves to the retrieved value, or <code>undefined</code> if the key does not exist or is expired. If an array of keys is passed it delegates to <code>.getMany()</code> and resolves to an array of values.</p>
+<h2 id="getmanykeys">.getMany(keys)</h2>
+<p>Returns a promise which resolves to an array of retrieved values, with <code>undefined</code> for keys that do not exist or are expired.</p>
+<h2 id="getrawkey">.getRaw(key)</h2>
+<p>Returns a promise which resolves to the raw stored data for the key or <code>undefined</code> if the key does not exist or is expired.</p>
+<h2 id="getmanyrawkeys">.getManyRaw(keys)</h2>
+<p>Returns a promise which resolves to an array of raw stored data for the keys or <code>undefined</code> if the key does not exist or is expired.</p>
+<h2 id="setrawkey-value">.setRaw(key, value)</h2>
+<p>Sets a raw value in the store without wrapping. This is the write-side counterpart to <code>.getRaw()</code>. The caller provides the <code>KeyvValue</code> envelope directly (<code>{ value, expires? }</code>) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (<code>get()</code>, <code>getRaw()</code>, <code>has()</code>, <code>getManyRaw()</code>) work consistently. If you need TTL-based expiration, set <code>expires</code> on the value directly (e.g. <code>{ value: 'bar', expires: Date.now() + 60000 }</code>). The store-level TTL is derived automatically from <code>value.expires</code>.</p>
+<p>Returns a promise which resolves to <code>true</code>.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+
+<span class="hljs-comment">// Set a raw value with expiration</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setRaw</span>(<span class="hljs-string">'foo'</span>, { <span class="hljs-attr">value</span>: <span class="hljs-string">'bar'</span>, <span class="hljs-attr">expires</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + <span class="hljs-number">60000</span> });
+
+<span class="hljs-comment">// Set a raw value without expiration</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setRaw</span>(<span class="hljs-string">'foo'</span>, { <span class="hljs-attr">value</span>: <span class="hljs-string">'bar'</span> });
+
+<span class="hljs-comment">// Round-trip: get raw, modify, set raw</span>
+<span class="hljs-keyword">const</span> raw = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getRaw</span>(<span class="hljs-string">'foo'</span>);
+<span class="hljs-keyword">if</span> (raw) {
+  raw.<span class="hljs-property">value</span> = <span class="hljs-string">'updated'</span>;
+  <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setRaw</span>(<span class="hljs-string">'foo'</span>, raw);
+}
+</code></pre>
+<h2 id="setmanyrawentries">.setManyRaw(entries)</h2>
+<p>Sets many raw values in the store without wrapping. Each entry should have a <code>key</code> and a <code>value</code> (<code>KeyvValue</code> envelope). Like <code>setRaw()</code>, the envelopes are serialized before storing and the store-level TTL is derived from each entry's <code>value.expires</code>.</p>
+<p>Returns a promise which resolves to an array of booleans.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setManyRaw</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'foo'</span>, <span class="hljs-attr">value</span>: { <span class="hljs-attr">value</span>: <span class="hljs-string">'bar'</span> } },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'baz'</span>, <span class="hljs-attr">value</span>: { <span class="hljs-attr">value</span>: <span class="hljs-string">'qux'</span>, <span class="hljs-attr">expires</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + <span class="hljs-number">60000</span> } },
+]);
+</code></pre>
+<h2 id="deletekey">.delete(key)</h2>
+<p>Deletes an entry.</p>
+<p>Returns a promise which resolves to <code>true</code> if the key existed, <code>false</code> if not.</p>
+<h2 id="deletemanykeys">.deleteMany(keys)</h2>
+<p>Deletes multiple entries.
+Returns a promise which resolves to <code>true</code> if all keys were deleted successfully, <code>false</code> otherwise.</p>
+<h2 id="clear">.clear()</h2>
+<p>Delete all entries in the current namespace.</p>
+<p>Returns a promise which is resolved when the entries have been cleared.</p>
+<h2 id="haskey">.has(key)</h2>
+<p>Check if a key exists in the store.</p>
+<p>Returns a promise which resolves to <code>true</code> if the key exists, <code>false</code> if not.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">has</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">has</span>(<span class="hljs-string">'unknown'</span>); <span class="hljs-comment">// false</span>
+</code></pre>
+<h2 id="hasmanykeys">.hasMany(keys)</h2>
+<p>Check if multiple keys exist in the store.</p>
+<p>Returns a promise which resolves to an array of booleans indicating if each key exists.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">hasMany</span>([<span class="hljs-string">'foo'</span>, <span class="hljs-string">'unknown'</span>]); <span class="hljs-comment">// [true, false]</span>
+</code></pre>
+<h2 id="disconnect">.disconnect()</h2>
+<p>Disconnect from the storage adapter. Emits a <code>'disconnect'</code> event.</p>
+<p>Returns a promise which is resolved when the connection has been closed.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">disconnect</span>();
+</code></pre>
+<h2 id="iterator">.iterator()</h2>
+<p>Iterate over all key-value pairs in the store. Automatically deserializes values, filters out expired entries, and deletes them.</p>
+<p>Returns an async generator that yields <code>[key, value]</code> pairs. Use with <code>for await...of</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">for</span> <span class="hljs-title function_">await</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> keyv.<span class="hljs-title function_">iterator</span>()) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<p>The iterator works with any storage backend:</p>
+<ul>
+<li><strong>Map stores</strong>: iterates using the built-in <code>Symbol.iterator</code></li>
+<li><strong>Storage adapters</strong>: delegates to the adapter's <code>iterator()</code> method (e.g., Redis SCAN, SQL cursor)</li>
+<li><strong>Unsupported stores</strong>: yields nothing if the store does not support iteration</li>
+</ul>
+<h1 id="api---properties">API - Properties</h1>
+<h2 id="namespace-1">.namespace</h2>
+<p>Type: <code>String</code></p>
+<p>The namespace for the current instance. This will define the namespace for the current instance and the storage adapter. If you set the namespace to <code>undefined</code> it will no longer do key prefixing.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">namespace</span>: <span class="hljs-string">'my-namespace'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">namespace</span>); <span class="hljs-comment">// 'my-namespace'</span>
+</code></pre>
+<p>here is an example of setting the namespace to <code>undefined</code>:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">namespace</span>); <span class="hljs-comment">// undefined which is default</span>
+keyv.<span class="hljs-property">namespace</span> = <span class="hljs-literal">undefined</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">namespace</span>); <span class="hljs-comment">// undefined</span>
+</code></pre>
+<h2 id="ttl">.ttl</h2>
+<p>Type: <code>Number</code>
+Default: <code>undefined</code></p>
+<p>Default TTL. Can be overridden by specififying a TTL on <code>.set()</code>. If set to <code>undefined</code> it will never expire.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">ttl</span>: <span class="hljs-number">5000</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">ttl</span>); <span class="hljs-comment">// 5000</span>
+keyv.<span class="hljs-property">ttl</span> = <span class="hljs-literal">undefined</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">ttl</span>); <span class="hljs-comment">// undefined (never expires)</span>
+</code></pre>
+<h2 id="store">.store</h2>
+<p>Type: <code>Storage adapter instance</code>
+Default: <code>new Map()</code></p>
+<p>The storage adapter instance to be used by Keyv. This will wire up the iterator, events, and more when a set happens. If it is not a valid Map or Storage Adapter it will throw an error.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSqlite</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">store</span> <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">Map</span>); <span class="hljs-comment">// true</span>
+keyv.<span class="hljs-property">store</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">store</span> <span class="hljs-keyword">instanceof</span> <span class="hljs-title class_">KeyvSqlite</span>); <span class="hljs-comment">// true</span>
+</code></pre>
+<h2 id="serialization-1">.serialization</h2>
+<p>Type: <code>KeyvSerializationAdapter | false | undefined</code>
+Default: <code>KeyvJsonSerializer</code> (built-in)</p>
+<p>The serialization object used for storing and retrieving values. Set to <code>false</code> or <code>undefined</code> to disable serialization and use raw object pass-through. See <a href="#serialization">Serialization</a> for more details.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">serialization</span>); <span class="hljs-comment">// KeyvJsonSerializer (default)</span>
+keyv.<span class="hljs-property">serialization</span> = <span class="hljs-literal">false</span>; <span class="hljs-comment">// disable serialization</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">serialization</span>); <span class="hljs-comment">// undefined</span>
+</code></pre>
+<h2 id="compression-1">.compression</h2>
+<p>Type: <code>KeyvCompressionAdapter</code>
+Default: <code>undefined</code></p>
+<p>This is the compression package to use. See <a href="#compression">Compression</a> for more details. If it is undefined it will not compress (default).</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvGzip</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/compress-gzip'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">compression</span>); <span class="hljs-comment">// undefined</span>
+keyv.<span class="hljs-property">compression</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvGzip</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">compression</span>); <span class="hljs-comment">// KeyvGzip</span>
+</code></pre>
+<h2 id="encryption-1">.encryption</h2>
+<p>Type: <code>KeyvEncryptionAdapter</code>
+Default: <code>undefined</code></p>
+<p>The encryption adapter used to encrypt and decrypt stored values. If <code>undefined</code> (default) values are not encrypted. See <a href="#encryption">Encryption</a> for more details.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">encryption</span>); <span class="hljs-comment">// undefined</span>
+keyv.<span class="hljs-property">encryption</span> = {
+  <span class="hljs-attr">encrypt</span>: <span class="hljs-title function_">async</span> (data) => <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(data).<span class="hljs-title function_">toString</span>(<span class="hljs-string">'base64'</span>),
+  <span class="hljs-attr">decrypt</span>: <span class="hljs-title function_">async</span> (data) => <span class="hljs-title class_">Buffer</span>.<span class="hljs-title function_">from</span>(data, <span class="hljs-string">'base64'</span>).<span class="hljs-title function_">toString</span>(<span class="hljs-string">'utf8'</span>),
+};
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">encryption</span>); <span class="hljs-comment">// the encryption adapter</span>
+</code></pre>
+<h2 id="checkexpired">.checkExpired</h2>
+<p>Type: <code>Boolean</code>
+Default: <code>true</code></p>
+<p>A read-only property (configured via the <code>checkExpired</code> constructor option). When <code>true</code> (the default), Keyv checks expiry at its own layer on <code>get</code>, <code>getMany</code>, <code>has</code>, and <code>hasMany</code>, deleting any expired entries it encounters. It does this using the absolute <code>expires</code> stored in the serialized envelope, so reads stay <strong>millisecond-precise regardless of the adapter</strong>.</p>
+<p>This defaults to <code>true</code> because some backends can return entries that are already logically expired: Memcached's <code>exptime</code> is <strong>second-granular</strong> (a value can linger up to ~1s past a sub-second deadline), and DynamoDB's native TTL is a <strong>background sweep that can lag by hours</strong> before it deletes expired items. Trusting the backend alone would surface those stale reads; the Keyv-layer check closes that gap.</p>
+<p>Set it to <code>false</code> to trust the storage adapter to handle expiry on its own. That skips the extra decode + expiry check on every read (and lets <code>has</code>/<code>hasMany</code> use the adapter's native existence check), at the cost of backend-granularity expiry.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">checkExpired</span>); <span class="hljs-comment">// true (default)</span>
+
+<span class="hljs-keyword">const</span> trusting = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">checkExpired</span>: <span class="hljs-literal">false</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(trusting.<span class="hljs-property">checkExpired</span>); <span class="hljs-comment">// false</span>
+</code></pre>
+<h2 id="throwonerrors">.throwOnErrors</h2>
+<p>Type: <code>Boolean</code>
+Default: <code>false</code></p>
+<p>If set to <code>true</code>, Keyv will throw an error if any operation fails. This is useful if you want to ensure that all operations are successful and you want to handle errors.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">throwOnErrors</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">throwOnErrors</span>); <span class="hljs-comment">// true</span>
+keyv.<span class="hljs-property">throwOnErrors</span> = <span class="hljs-literal">false</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">throwOnErrors</span>); <span class="hljs-comment">// false</span>
+</code></pre>
+<p>A good example of this is with the <code>@keyv/redis</code> storage adapter. If you want to handle connection errors, retries, and timeouts more gracefully, you can use the <code>throwOnErrors</code> option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-comment">// create redis instance that will throw on connection error</span>
+<span class="hljs-keyword">const</span> keyvRedis = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://user:pass@localhost:6379'</span>, { <span class="hljs-attr">throwOnConnectErrors</span>: <span class="hljs-literal">true</span> });
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvRedis, <span class="hljs-attr">throwOnErrors</span>: <span class="hljs-literal">true</span> });
+</code></pre>
+<p>What this does is it only throw on connection errors with the Redis client.</p>
+<h2 id="stats">.stats</h2>
+<p>Type: <code>KeyvStats</code>
+Default: <code>KeyvStats</code> instance with <code>enabled: false</code></p>
+<p>The stats property provides access to statistics tracking for cache operations. When enabled via the <code>stats</code> option during initialization, it tracks hits, misses, sets, deletes, and errors. It also maintains LRU-bounded per-key frequency maps for each event type, allowing you to see which keys are accessed most.</p>
+<h3 id="enabling-stats">Enabling Stats:</h3>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">stats</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">enabled</span>); <span class="hljs-comment">// true</span>
+</code></pre>
+<h3 id="available-statistics">Available Statistics:</h3>
+<p><strong>Aggregate counters:</strong></p>
+<ul>
+<li><code>hits</code>: Number of successful cache retrievals</li>
+<li><code>misses</code>: Number of failed cache retrievals</li>
+<li><code>sets</code>: Number of set operations</li>
+<li><code>deletes</code>: Number of delete operations</li>
+<li><code>errors</code>: Number of errors encountered</li>
+</ul>
+<p><strong>Per-key LRU frequency maps</strong> (each capped at <code>maxEntries</code>, default 1000):</p>
+<ul>
+<li><code>hitKeys</code>: <code>Map<string, number></code> — key to hit count</li>
+<li><code>missKeys</code>: <code>Map<string, number></code> — key to miss count</li>
+<li><code>setKeys</code>: <code>Map<string, number></code> — key to set count</li>
+<li><code>deleteKeys</code>: <code>Map<string, number></code> — key to delete count</li>
+<li><code>errorKeys</code>: <code>Map<string, number></code> — key to error count</li>
+</ul>
+<h3 id="accessing-stats">Accessing Stats:</h3>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">stats</span>: <span class="hljs-literal">true</span> });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// cache hit</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'nonexistent'</span>); <span class="hljs-comment">// cache miss</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>);
+
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">hits</span>);    <span class="hljs-comment">// 1</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">misses</span>);  <span class="hljs-comment">// 1</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">sets</span>);    <span class="hljs-comment">// 1</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">deletes</span>); <span class="hljs-comment">// 1</span>
+
+<span class="hljs-comment">// Per-key frequency maps</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">hitKeys</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>));          <span class="hljs-comment">// 1</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">missKeys</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">'nonexistent'</span>)); <span class="hljs-comment">// 1</span>
+</code></pre>
+<h3 id="resetting-stats">Resetting Stats:</h3>
+<pre><code class="hljs language-js">keyv.<span class="hljs-property">stats</span>.<span class="hljs-title function_">reset</span>();
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">hits</span>); <span class="hljs-comment">// 0</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">hitKeys</span>.<span class="hljs-property">size</span>); <span class="hljs-comment">// 0</span>
+</code></pre>
+<h3 id="manual-control">Manual Control:</h3>
+<p>You can also manually enable/disable stats tracking at runtime. Disabling stats will automatically unsubscribe from events:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">stats</span>: <span class="hljs-literal">false</span> });
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">enabled</span> = <span class="hljs-literal">true</span>; <span class="hljs-comment">// Enable stats tracking</span>
+<span class="hljs-comment">// ... perform operations ...</span>
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">enabled</span> = <span class="hljs-literal">false</span>; <span class="hljs-comment">// Disable stats tracking and unsubscribe</span>
+</code></pre>
+<h3 id="standalone-usage">Standalone Usage:</h3>
+<p>You can create a <code>KeyvStats</code> instance independently and subscribe it to a Keyv instance:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">KeyvStats</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-keyword">const</span> stats = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvStats</span>({ <span class="hljs-attr">enabled</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">maxEntries</span>: <span class="hljs-number">500</span>, <span class="hljs-attr">emitter</span>: keyv });
+</code></pre>
+<h2 id="sanitize">.sanitize</h2>
+<p>Type: <code>KeyvSanitize</code> (configured via the <code>sanitize</code> option: <code>KeyvSanitizeOptions</code>)
+Default: disabled</p>
+<p>The <code>.sanitize</code> property is a <code>KeyvSanitize</code> adapter. It is configured through the <code>sanitize</code> constructor option (<code>true</code>, or a <code>KeyvSanitizeOptions</code> object) and disabled by default.</p>
+<p>It detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous <em>patterns</em> are stripped.</p>
+<p>Results are cached in an LRU cache (10,000 entries) for fast repeated lookups.</p>
+<h3 id="pattern-categories">Pattern Categories</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Patterns Stripped</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sql</code></td>
+<td><code>;</code> <code>--</code> <code>/*</code></td>
+<td>Prevents SQL injection</td>
+</tr>
+<tr>
+<td><code>mongo</code></td>
+<td>leading <code>$</code>, <code>{$</code> sequences</td>
+<td>Prevents MongoDB operator injection</td>
+</tr>
+<tr>
+<td><code>escape</code></td>
+<td><code>\0</code> <code>\r</code> <code>\n</code></td>
+<td>Strips null bytes, CRLF injection</td>
+</tr>
+<tr>
+<td><code>path</code></td>
+<td><code>../</code> <code>..\</code></td>
+<td>Prevents path traversal</td>
+</tr>
+</tbody>
+</table>
+<h3 id="targets">Targets</h3>
+<table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>keys</code></td>
+<td><code>true</code> (when enabled)</td>
+<td>Sanitize keys on all operations</td>
+</tr>
+<tr>
+<td><code>namespace</code></td>
+<td><code>true</code> (when enabled)</td>
+<td>Sanitize namespace on construction and setter</td>
+</tr>
+</tbody>
+</table>
+<h3 id="usage-1">Usage</h3>
+<p>Enable all sanitization:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">sanitize</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">"test; DROP TABLE"</span>, <span class="hljs-string">"value"</span>);
+<span class="hljs-comment">// Key is stored as "test DROP TABLE"</span>
+
+<span class="hljs-comment">// Harmless characters pass through</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">"user's-data"</span>, <span class="hljs-string">"value"</span>);
+<span class="hljs-comment">// Key is stored as "user's-data" (unchanged)</span>
+</code></pre>
+<p>Disable all sanitization (default):</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">sanitize</span>: <span class="hljs-literal">false</span> });
+</code></pre>
+<p>Granular control per target and category:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({
+  <span class="hljs-attr">sanitize</span>: {
+    <span class="hljs-attr">keys</span>: { <span class="hljs-attr">sql</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">mongo</span>: <span class="hljs-literal">false</span> },     <span class="hljs-comment">// only SQL patterns on keys</span>
+    <span class="hljs-attr">namespace</span>: { <span class="hljs-attr">path</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">sql</span>: <span class="hljs-literal">false</span> },  <span class="hljs-comment">// only path patterns on namespace</span>
+  }
+});
+</code></pre>
+<p>Disable namespace sanitization only:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({
+  <span class="hljs-attr">sanitize</span>: { <span class="hljs-attr">keys</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">namespace</span>: <span class="hljs-literal">false</span> }
+});
+</code></pre>
+<p>Change at runtime by updating the options on the existing adapter, or by replacing it:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { <span class="hljs-title class_">KeyvSanitize</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-comment">// Update options on the existing adapter</span>
+keyv.<span class="hljs-property">sanitize</span>.<span class="hljs-title function_">updateOptions</span>({ <span class="hljs-attr">keys</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">namespace</span>: <span class="hljs-literal">true</span> });   <span class="hljs-comment">// enable all</span>
+keyv.<span class="hljs-property">sanitize</span>.<span class="hljs-title function_">updateOptions</span>({ <span class="hljs-attr">keys</span>: { <span class="hljs-attr">sql</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">mongo</span>: <span class="hljs-literal">false</span> } }); <span class="hljs-comment">// granular</span>
+
+<span class="hljs-comment">// Or replace the adapter entirely</span>
+keyv.<span class="hljs-property">sanitize</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSanitize</span>({ <span class="hljs-attr">keys</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">namespace</span>: <span class="hljs-literal">true</span> });
+</code></pre>
+<p>Sanitization is applied to all key-accepting methods: <code>get</code>, <code>set</code>, <code>delete</code>, <code>has</code>, <code>getMany</code>, <code>setMany</code>, <code>deleteMany</code>, <code>hasMany</code>, <code>getRaw</code>, <code>getManyRaw</code>, <code>setRaw</code>, and <code>setManyRaw</code>. Namespace sanitization is applied at construction and when the <code>namespace</code> setter is used.</p>
+<h1 id="bun-support">Bun Support</h1>
+<p>We make a best effort to support <a href="https://bun.sh/">Bun</a> as a runtime. Our default and primary target is Node.js, but we run tests against Bun to ensure compatibility. If you encounter any issues while using Keyv with Bun, please report them at our <a href="https://github.com/jaredwray/keyv/issues">GitHub issues</a>.</p>
+<h1 id="how-to-contribute">How to Contribute</h1>
+<p>We welcome contributions to Keyv! 🎉 Here are some guides to get you started with contributing:</p>
+<ul>
+<li><a href="https://github.com/jaredwray/keyv/blob/main/CONTRIBUTING.md">Contributing</a> - Learn about how to contribute to Keyv</li>
+<li><a href="https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a> - Learn about the Keyv Code of Conduct</li>
+<li><a href="https://github.com/jaredwray/keyv/blob/main/README.md">How to Contribute</a> - How do develop in the Keyv mono repo!</li>
+</ul>
+<h1 id="license">License</h1>
+<p><a href="LICENSE">MIT © Jared Wray</a></p>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-30</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

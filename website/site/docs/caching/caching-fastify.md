@@ -2,6 +2,7 @@
 title: 'How to Implement Caching with Fastify'
 sidebarTitle: 'Caching with Fastify'
 parent: 'Caching'
+order: 4
 ---
 
 # How to Implement Caching with Fastify

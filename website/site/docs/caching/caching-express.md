@@ -2,6 +2,7 @@
 title: 'How to Implement Caching with Express'
 sidebarTitle: 'Caching with Express'
 parent: 'Caching'
+order: 3
 ---
 
 # How to Implement Caching with Express

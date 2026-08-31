@@ -1,6 +1,8 @@
 ---
 title: 'v4 to v5 Migration'
-order: 2
+sidebarTitle: 'v4 to v5'
+parent: 'Migration'
+order: 1
 ---
 
 # v4 to v5 Migration

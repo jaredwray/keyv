@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - @keyv/sqlite</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"@keyv/sqlite","description":"","url":"https://keyv.org/v5/docs/storage-adapters/sqlite/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"2026-08-30","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">@keyv/sqlite</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">@keyv/sqlite</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <blockquote>
+<p>SQLite storage adapter for Keyv with multi-driver support for <code>nodejs</code>, <code>bun</code>, and custom drivers.</p>
+</blockquote>
+<p><a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg" alt="build"></a>
+<a href="https://codecov.io/gh/jaredwray/keyv"><img src="https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ" alt="codecov"></a>
+<a href="https://www.npmjs.com/package/@keyv/sqlite"><img src="https://img.shields.io/npm/v/@keyv/sqlite.svg" alt="npm"></a>
+<a href="https://npmjs.com/package/@keyv/sqlite"><img src="https://img.shields.io/npm/dm/@keyv/sqlite" alt="npm"></a></p>
+<p>SQLite storage adapter for <a href="https://github.com/jaredwray/keyv">Keyv</a>.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#install">Install</a></li>
+<li><a href="#usage">Usage</a></li>
+<li><a href="#using-createkeyv">Using createKeyv</a></li>
+<li><a href="#multi-driver-support">Multi-Driver Support</a>
+<ul>
+<li><a href="#selecting-a-specific-driver">Selecting a specific driver</a></li>
+<li><a href="#auto-detection-order">Auto-detection order</a></li>
+</ul>
+</li>
+<li><a href="#creating-a-custom-driver">Creating a Custom Driver</a>
+<ul>
+<li><a href="#type-exports">Type exports</a></li>
+</ul>
+</li>
+<li><a href="#using-sqlite3">Using sqlite3</a></li>
+<li><a href="#migrating-to-v6">Migrating to v6</a>
+<ul>
+<li><a href="#breaking-changes">Breaking changes</a>
+<ul>
+<li><a href="#properties-instead-of-opts">Properties instead of opts</a></li>
+<li><a href="#native-namespace-support">Native namespace support</a></li>
+<li><a href="#hookified-integration">Hookified integration</a></li>
+</ul>
+</li>
+<li><a href="#new-features">New features</a>
+<ul>
+<li><a href="#native-ttl-support-with-expires-column">Native TTL support with <code>expires</code> column</a></li>
+<li><a href="#clearexpired-method"><code>clearExpired()</code> method</a></li>
+<li><a href="#clearexpiredinterval-option"><code>clearExpiredInterval</code> option</a></li>
+<li><a href="#bulk-operations">Bulk operations</a></li>
+<li><a href="#createkeyv-helper"><code>createKeyv()</code> helper</a></li>
+<li><a href="#multi-driver-support-1">Multi-driver support</a></li>
+<li><a href="#improved-iterator">Improved iterator</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#constructor-options">Constructor Options</a></li>
+<li><a href="#properties">Properties</a>
+<ul>
+<li><a href="#namespace">namespace</a></li>
+<li><a href="#uri">uri</a></li>
+<li><a href="#table">table</a></li>
+<li><a href="#keysize">keySize</a></li>
+<li><a href="#namespacelength">namespaceLength</a></li>
+<li><a href="#db">db</a></li>
+<li><a href="#iterationlimit">iterationLimit</a></li>
+<li><a href="#wal">wal</a></li>
+<li><a href="#busytimeout">busyTimeout</a></li>
+<li><a href="#driver">driver</a></li>
+<li><a href="#drivername">driverName</a></li>
+<li><a href="#clearexpiredinterval">clearExpiredInterval</a></li>
+<li><a href="#ready">ready</a></li>
+<li><a href="#opts">opts</a></li>
+</ul>
+</li>
+<li><a href="#methods">Methods</a>
+<ul>
+<li><a href="#setkey-value-ttl">.set(key, value, ttl?)</a></li>
+<li><a href="#setmanyentries">.setMany(entries)</a></li>
+<li><a href="#getkey">.get(key)</a></li>
+<li><a href="#getmanykeys">.getMany(keys)</a></li>
+<li><a href="#haskey">.has(key)</a></li>
+<li><a href="#hasmanykeys">.hasMany(keys)</a></li>
+<li><a href="#deletekey">.delete(key)</a></li>
+<li><a href="#deletemanykeys">.deleteMany(keys)</a></li>
+<li><a href="#clear">.clear()</a></li>
+<li><a href="#clearexpired">.clearExpired()</a></li>
+<li><a href="#iterator">.iterator()</a></li>
+<li><a href="#disconnect">.disconnect()</a></li>
+</ul>
+</li>
+<li><a href="#clearing-expired-keys">Clearing Expired Keys</a>
+<ul>
+<li><a href="#automatic-cleanup">Automatic cleanup</a></li>
+<li><a href="#manual-cleanup">Manual cleanup</a></li>
+</ul>
+</li>
+<li><a href="#wal-mode">WAL Mode</a></li>
+<li><a href="#benchmarks">Benchmarks</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+<h1 id="install">Install</h1>
+<pre><code class="hljs language-shell">npm install --save keyv @keyv/sqlite
+</code></pre>
+<h1 id="usage">Usage</h1>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSqlite</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>) });
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-params">err</span> =></span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(err));
+</code></pre>
+<p>You can specify the <code>table</code>, <code>busyTimeout</code>, and <code>wal</code> options:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyvSqlite = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">table</span>: <span class="hljs-string">'cache'</span>,
+  <span class="hljs-attr">busyTimeout</span>: <span class="hljs-number">10000</span>,
+  <span class="hljs-attr">wal</span>: <span class="hljs-literal">true</span>,
+});
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: keyvSqlite });
+</code></pre>
+<h1 id="using-createkeyv">Using createKeyv</h1>
+<p>The <code>createKeyv</code> helper creates a <code>Keyv</code> instance with <code>KeyvSqlite</code> as the store in one call:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+
+<span class="hljs-comment">// With a URI string</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>);
+
+<span class="hljs-comment">// With an options object</span>
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">table</span>: <span class="hljs-string">'cache'</span>,
+  <span class="hljs-attr">wal</span>: <span class="hljs-literal">true</span>,
+});
+</code></pre>
+<h1 id="multi-driver-support">Multi-Driver Support</h1>
+<p><code>@keyv/sqlite</code> supports multiple SQLite drivers and automatically selects the best one available for your runtime:</p>
+<table>
+<thead>
+<tr>
+<th>Driver</th>
+<th>Package</th>
+<th>Runtime</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>better-sqlite3</code></td>
+<td><code>better-sqlite3</code></td>
+<td>Node.js</td>
+<td>Synchronous (fallback)</td>
+</tr>
+<tr>
+<td><code>node:sqlite</code></td>
+<td>Built-in</td>
+<td>Node.js 22.13+</td>
+<td>Synchronous</td>
+</tr>
+<tr>
+<td><code>bun:sqlite</code></td>
+<td>Built-in</td>
+<td>Bun</td>
+<td>Synchronous</td>
+</tr>
+</tbody>
+</table>
+<p>The built-in runtime drivers are preferred: on Node.js 22.13+ the built-in <code>node:sqlite</code> driver is used (available behind the <code>--experimental-sqlite</code> flag from 22.5), and on Bun the native <code>bun:sqlite</code> driver is used. <code>better-sqlite3</code> is included as a direct dependency and used as a fallback when a built-in driver is unavailable, or explicitly via <code>driver: 'better-sqlite3'</code>. If you still need to use <code>sqlite3</code> then go to the <a href="#using-sqlite3">using sqlite3</a>.</p>
+<h2 id="selecting-a-specific-driver">Selecting a specific driver</h2>
+<p>You can explicitly choose a driver via the <code>driver</code> option:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">driver</span>: <span class="hljs-string">'better-sqlite3'</span>, <span class="hljs-comment">// or 'node:sqlite' or 'bun:sqlite'</span>
+});
+</code></pre>
+<h2 id="auto-detection-order">Auto-detection order</h2>
+<p>When no <code>driver</code> is specified, the adapter tries drivers in this order:</p>
+<ul>
+<li><strong>Bun</strong>: <code>bun:sqlite</code> then <code>better-sqlite3</code></li>
+<li><strong>Node.js</strong>: <code>node:sqlite</code> then <code>better-sqlite3</code></li>
+</ul>
+<h1 id="creating-a-custom-driver">Creating a Custom Driver</h1>
+<p>You can pass a custom driver object that implements the <code>SqliteDriver</code> interface. A custom driver must provide a <code>name</code> and a <code>connect()</code> method that returns <code>{ query, close }</code>:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSqlite</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-keyword">type</span> { <span class="hljs-title class_">SqliteDriver</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-attr">customDriver</span>: <span class="hljs-title class_">SqliteDriver</span> = {
+  <span class="hljs-attr">name</span>: <span class="hljs-string">'custom'</span>,
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">connect</span>(<span class="hljs-params">options</span>) {
+    <span class="hljs-comment">// options: { filename: string, busyTimeout?: number, wal?: boolean }</span>
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-keyword">async</span> <span class="hljs-title function_">query</span>(<span class="hljs-params">sql, ...params</span>) {
+        <span class="hljs-comment">// Execute SQL and return rows for SELECT/PRAGMA, empty array for mutations</span>
+      },
+      <span class="hljs-keyword">async</span> <span class="hljs-title function_">close</span>(<span class="hljs-params"></span>) {
+        <span class="hljs-comment">// Close the database connection</span>
+      },
+    };
+  },
+};
+
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">driver</span>: customDriver,
+});
+</code></pre>
+<p>The <code>query</code> function must return an array of row objects for <code>SELECT</code> and <code>PRAGMA</code> statements, and an empty array for all other statements (<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, etc.).</p>
+<h2 id="type-exports">Type exports</h2>
+<p>The following types are available for building custom drivers:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> <span class="hljs-keyword">type</span> {
+  <span class="hljs-title class_">SqliteDriver</span>,        <span class="hljs-comment">// Driver interface: { name, connect() }</span>
+  <span class="hljs-title class_">SqliteDriverName</span>,    <span class="hljs-comment">// 'better-sqlite3' | 'node:sqlite' | 'bun:sqlite' | 'custom'</span>
+  <span class="hljs-title class_">KeyvSqliteOptions</span>,   <span class="hljs-comment">// Constructor options</span>
+  <span class="hljs-title class_">Sqlite3ModuleLike</span>,   <span class="hljs-comment">// Structural type for the sqlite3 module</span>
+  <span class="hljs-title class_">Sqlite3DatabaseLike</span>, <span class="hljs-comment">// Structural type for a sqlite3.Database instance</span>
+} <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+</code></pre>
+<p>The <code>createSqlite3Driver</code> export is a real-world example of a custom driver — see <a href="#using-sqlite3">Using sqlite3</a>.</p>
+<h1 id="using-sqlite3">Using sqlite3</h1>
+<p>The callback-based <a href="https://www.npmjs.com/package/sqlite3"><code>sqlite3</code></a> package is not auto-detected or bundled with <code>@keyv/sqlite</code>. If you need to use it, install it in your project and pass it via the <code>createSqlite3Driver</code> helper. Note that <code>sqlite3</code> ships no prebuilt binaries for newer Node.js versions (it fails to compile on Node 26+), so prefer the default <code>better-sqlite3</code> or <code>node:sqlite</code> drivers unless you have an existing dependency on it:</p>
+<pre><code class="hljs language-bash">npm install sqlite3
+</code></pre>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvSqlite</span>, { createSqlite3Driver } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+<span class="hljs-keyword">import</span> sqlite3 <span class="hljs-keyword">from</span> <span class="hljs-string">'sqlite3'</span>;
+
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">driver</span>: <span class="hljs-title function_">createSqlite3Driver</span>(sqlite3),
+});
+</code></pre>
+<p><code>sqlite3.verbose()</code> also works:</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">driver</span>: <span class="hljs-title function_">createSqlite3Driver</span>(sqlite3.<span class="hljs-title function_">verbose</span>()),
+});
+</code></pre>
+<p>All standard options (<code>wal</code>, <code>busyTimeout</code>, etc.) are supported.</p>
+<h1 id="migrating-to-v6">Migrating to v6</h1>
+<h2 id="breaking-changes">Breaking changes</h2>
+<h3 id="properties-instead-of-opts">Properties instead of opts</h3>
+<p>The <code>opts</code> getter still exists for backward compatibility and returns all current settings as a plain object. New top-level getters and setters have been added for <code>namespace</code> and <code>clearExpiredInterval</code>:</p>
+<pre><code class="hljs language-js">store.<span class="hljs-property">namespace</span> = <span class="hljs-string">'my-namespace'</span>;
+store.<span class="hljs-property">clearExpiredInterval</span> = <span class="hljs-number">60_000</span>;
+</code></pre>
+<h3 id="native-namespace-support">Native namespace support</h3>
+<p>In v5, namespaces were stored as key prefixes in the <code>key</code> column (e.g. <code>key="myns:mykey"</code> with no namespace column). In v6, the namespace is stored in a dedicated <code>namespace</code> column (e.g. <code>key="mykey"</code>, <code>namespace="myns"</code>). This enables more efficient queries and proper namespace isolation.</p>
+<p>The adapter automatically detects old schemas and migrates existing data on connect — no manual migration steps are needed. During migration, prefixed keys like <code>myns:mykey</code> are split into <code>key="mykey"</code> and <code>namespace="myns"</code>.</p>
+<h3 id="hookified-integration">Hookified integration</h3>
+<p>The adapter now extends <a href="https://hookified.org">Hookified</a> instead of a custom EventEmitter. Events work the same (<code>on</code>, <code>emit</code>), but hooks are also available via the standard Hookified API.</p>
+<h2 id="new-features">New features</h2>
+<h3 id="native-ttl-support-with-expires-column">Native TTL support with <code>expires</code> column</h3>
+<p>v6 adds an <code>expires BIGINT</code> column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the <code>expires</code> timestamp from the serialized value and stores it in the column. A partial index is created on the <code>expires</code> column for efficient cleanup queries.</p>
+<p>The schema migration is automatic on connect — existing tables get the column added via <code>ALTER TABLE ... ADD COLUMN</code>.</p>
+<h3 id="clearexpired-method"><code>clearExpired()</code> method</h3>
+<p>A new utility method that deletes all rows where the <code>expires</code> column is set and the timestamp is in the past:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> store.<span class="hljs-title function_">clearExpired</span>();
+</code></pre>
+<h3 id="clearexpiredinterval-option"><code>clearExpiredInterval</code> option</h3>
+<p>Set an interval (in milliseconds) to automatically call <code>clearExpired()</code> on a schedule. Disabled by default (<code>0</code>). The timer uses <code>unref()</code> so it won't keep the Node.js process alive.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">clearExpiredInterval</span>: <span class="hljs-number">60_000</span>, <span class="hljs-comment">// clean up every 60 seconds</span>
+});
+</code></pre>
+<h3 id="bulk-operations">Bulk operations</h3>
+<p>New methods for efficient multi-key operations:</p>
+<ul>
+<li><code>.setMany(entries)</code> — bulk upsert with automatic batching (249 entries per batch to stay within SQLite's 999 parameter limit)</li>
+<li><code>.getMany(keys)</code> — bulk retrieve with automatic batching</li>
+<li><code>.deleteMany(keys)</code> — bulk delete with automatic batching</li>
+<li><code>.hasMany(keys)</code> — bulk existence check</li>
+</ul>
+<h3 id="createkeyv-helper"><code>createKeyv()</code> helper</h3>
+<p>A convenience function to create a <code>Keyv</code> instance with <code>KeyvSqlite</code> as the store in one call:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/sqlite'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>);
+</code></pre>
+<h3 id="multi-driver-support-1">Multi-driver support</h3>
+<p>v6 replaces the callback-based <code>sqlite3</code> package with <code>better-sqlite3</code> as the default driver and adds support for <code>node:sqlite</code> (Node.js 22.5+) and <code>bun:sqlite</code> (Bun). The driver is auto-detected or can be explicitly selected via the <code>driver</code> option. See <a href="#multi-driver-support">Multi-Driver Support</a> for details.</p>
+<h3 id="improved-iterator">Improved iterator</h3>
+<p>The iterator now uses cursor-based (keyset) pagination instead of <code>OFFSET</code>. This handles concurrent modifications during iteration without skipping entries and is more efficient for large datasets.</p>
+<h1 id="constructor-options">Constructor Options</h1>
+<p><code>KeyvSqlite</code> accepts a connection URI string or an options object:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uri</code></td>
+<td><code>string</code></td>
+<td><code>'sqlite://:memory:'</code></td>
+<td>SQLite connection URI</td>
+</tr>
+<tr>
+<td><code>table</code></td>
+<td><code>string</code></td>
+<td><code>'keyv'</code></td>
+<td>Table name for key-value storage</td>
+</tr>
+<tr>
+<td><code>keySize</code></td>
+<td><code>number</code></td>
+<td><code>255</code></td>
+<td>Maximum key column length (VARCHAR length, max 65535). Alias: <code>keyLength</code></td>
+</tr>
+<tr>
+<td><code>namespaceLength</code></td>
+<td><code>number</code></td>
+<td><code>255</code></td>
+<td>Maximum namespace column length (VARCHAR length)</td>
+</tr>
+<tr>
+<td><code>busyTimeout</code></td>
+<td><code>number</code></td>
+<td><code>undefined</code></td>
+<td>SQLite <a href="https://sqlite.org/c3ref/busy_timeout.html">busy timeout</a> in milliseconds</td>
+</tr>
+<tr>
+<td><code>iterationLimit</code></td>
+<td><code>number</code></td>
+<td><code>10</code></td>
+<td>Number of rows fetched per batch during iteration</td>
+</tr>
+<tr>
+<td><code>wal</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Enable <a href="https://sqlite.org/wal.html">WAL mode</a> for better concurrency</td>
+</tr>
+<tr>
+<td><code>clearExpiredInterval</code></td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+<td>Interval in milliseconds to automatically clear expired entries (0 = disabled)</td>
+</tr>
+<tr>
+<td><code>driver</code></td>
+<td><code>string | SqliteDriver</code></td>
+<td><code>undefined</code></td>
+<td>Explicit driver selection (<code>'better-sqlite3'</code>, <code>'node:sqlite'</code>, <code>'bun:sqlite'</code>) or custom driver object. Auto-detected if omitted</td>
+</tr>
+</tbody>
+</table>
+<h1 id="properties">Properties</h1>
+<h2 id="namespace">namespace</h2>
+<p>Get or set the namespace for the adapter. Used for key prefixing and scoping operations like <code>clear()</code> and <code>iterator()</code>.</p>
+<ul>
+<li>Type: <code>string | undefined</code></li>
+<li>Default: <code>undefined</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>);
+store.<span class="hljs-property">namespace</span> = <span class="hljs-string">'my-namespace'</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">namespace</span>); <span class="hljs-comment">// 'my-namespace'</span>
+</code></pre>
+<h2 id="uri">uri</h2>
+<p>Get the SQLite connection URI.</p>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: <code>'sqlite://:memory:'</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">uri</span>); <span class="hljs-comment">// 'sqlite://path/to/database.sqlite'</span>
+</code></pre>
+<h2 id="table">table</h2>
+<p>Get or set the table name used for storage. The name is sanitized and escaped for safe use in SQL queries to prevent SQL injection.</p>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: <code>'keyv'</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://:memory:'</span>, <span class="hljs-attr">table</span>: <span class="hljs-string">'cache'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">table</span>); <span class="hljs-comment">// 'cache'</span>
+store.<span class="hljs-property">table</span> = <span class="hljs-string">'sessions'</span>;
+</code></pre>
+<h2 id="keysize">keySize</h2>
+<p>Get or set the maximum key length (VARCHAR length) for the key column.</p>
+<ul>
+<li>Type: <code>number</code></li>
+<li>Default: <code>255</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://:memory:'</span>, <span class="hljs-attr">keySize</span>: <span class="hljs-number">512</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">keySize</span>); <span class="hljs-comment">// 512</span>
+</code></pre>
+<h2 id="namespacelength">namespaceLength</h2>
+<p>Get or set the maximum namespace column length (VARCHAR length).</p>
+<ul>
+<li>Type: <code>number</code></li>
+<li>Default: <code>255</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://:memory:'</span>, <span class="hljs-attr">namespaceLength</span>: <span class="hljs-number">128</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">namespaceLength</span>); <span class="hljs-comment">// 128</span>
+</code></pre>
+<h2 id="db">db</h2>
+<p>Get the resolved file path for the SQLite database, derived from the URI.</p>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: <code>':memory:'</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://data/app.sqlite'</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">db</span>); <span class="hljs-comment">// 'data/app.sqlite'</span>
+</code></pre>
+<h2 id="iterationlimit">iterationLimit</h2>
+<p>Get or set the number of rows to fetch per iteration batch.</p>
+<ul>
+<li>Type: <code>number</code></li>
+<li>Default: <code>10</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://:memory:'</span>, <span class="hljs-attr">iterationLimit</span>: <span class="hljs-number">50</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">iterationLimit</span>); <span class="hljs-comment">// 50</span>
+</code></pre>
+<h2 id="wal">wal</h2>
+<p>Get whether WAL (Write-Ahead Logging) mode is enabled.</p>
+<ul>
+<li>Type: <code>boolean</code></li>
+<li>Default: <code>false</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>, <span class="hljs-attr">wal</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">wal</span>); <span class="hljs-comment">// true</span>
+</code></pre>
+<h2 id="busytimeout">busyTimeout</h2>
+<p>Get the SQLite busy timeout in milliseconds.</p>
+<ul>
+<li>Type: <code>number | undefined</code></li>
+<li>Default: <code>undefined</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://:memory:'</span>, <span class="hljs-attr">busyTimeout</span>: <span class="hljs-number">5000</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">busyTimeout</span>); <span class="hljs-comment">// 5000</span>
+</code></pre>
+<h2 id="driver">driver</h2>
+<p>Get the explicit driver selection. Returns <code>undefined</code> when auto-detected.</p>
+<ul>
+<li>Type: <code>string | SqliteDriver | undefined</code></li>
+<li>Default: <code>undefined</code> (auto-detected)</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({ <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://:memory:'</span>, <span class="hljs-attr">driver</span>: <span class="hljs-string">'better-sqlite3'</span> });
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">driver</span>); <span class="hljs-comment">// 'better-sqlite3'</span>
+</code></pre>
+<h2 id="drivername">driverName</h2>
+<p>Get the name of the resolved driver after connection. This is useful to check which driver was auto-detected.</p>
+<ul>
+<li>Type: <code>string | undefined</code></li>
+<li>Default: <code>undefined</code> (set after connection is established)</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://:memory:'</span>);
+<span class="hljs-keyword">await</span> store.<span class="hljs-property">ready</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">driverName</span>); <span class="hljs-comment">// 'better-sqlite3', 'node:sqlite', 'bun:sqlite', or 'custom'</span>
+</code></pre>
+<h2 id="clearexpiredinterval">clearExpiredInterval</h2>
+<p>Get or set the interval in milliseconds between automatic expired-entry cleanup runs. When set to a value greater than 0, the adapter will automatically call <code>clearExpired()</code> at the specified interval. The timer uses <code>unref()</code> so it won't keep the Node.js process alive. Setting to 0 disables the automatic cleanup.</p>
+<ul>
+<li>Type: <code>number</code></li>
+<li>Default: <code>0</code> (disabled)</li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-comment">// Clean up expired entries every 60 seconds</span>
+<span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">clearExpiredInterval</span>: <span class="hljs-number">60_000</span>,
+});
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">clearExpiredInterval</span>); <span class="hljs-comment">// 60000</span>
+
+<span class="hljs-comment">// Disable it later</span>
+store.<span class="hljs-property">clearExpiredInterval</span> = <span class="hljs-number">0</span>;
+</code></pre>
+<h2 id="ready">ready</h2>
+<p>A promise that resolves when the database connection and schema setup are complete. You can optionally await this before the first operation to ensure the adapter is fully initialized.</p>
+<ul>
+<li>Type: <code>Promise<void></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>(<span class="hljs-string">'sqlite://path/to/database.sqlite'</span>);
+<span class="hljs-keyword">await</span> store.<span class="hljs-property">ready</span>; <span class="hljs-comment">// connection and schema migration complete</span>
+</code></pre>
+<h2 id="opts">opts</h2>
+<p>Get a snapshot of all current settings as a plain object. This getter exists for backward compatibility with v5 — prefer the individual property getters above. <code>keySize</code> is also exposed under its <code>keyLength</code> alias, and the resolved database path is included as <code>db</code>.</p>
+<ul>
+<li>Type: <code>KeyvSqliteOptions & { db: string }</code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://:memory:'</span>,
+  <span class="hljs-attr">table</span>: <span class="hljs-string">'cache'</span>,
+  <span class="hljs-attr">wal</span>: <span class="hljs-literal">true</span>,
+});
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">opts</span>.<span class="hljs-property">uri</span>); <span class="hljs-comment">// 'sqlite://:memory:'</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">opts</span>.<span class="hljs-property">table</span>); <span class="hljs-comment">// 'cache'</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">opts</span>.<span class="hljs-property">wal</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(store.<span class="hljs-property">opts</span>.<span class="hljs-property">db</span>); <span class="hljs-comment">// ':memory:'</span>
+</code></pre>
+<h1 id="methods">Methods</h1>
+<h2 id="setkey-value-ttl">.set(key, value, ttl?)</h2>
+<p>Set a key-value pair. Returns <code>true</code> on success, <code>false</code> on failure.</p>
+<ul>
+<li><code>key</code> <em>(string)</em> - The key to set.</li>
+<li><code>value</code> <em>(any)</em> - The value to store.</li>
+<li><code>ttl</code> <em>(number, optional)</em> - Time to live in milliseconds.</li>
+<li>Returns: <code>Promise<boolean></code></li>
+</ul>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>, <span class="hljs-number">5000</span>); <span class="hljs-comment">// expires in 5 seconds</span>
+</code></pre>
+<h2 id="setmanyentries">.setMany(entries)</h2>
+<p>Set multiple key-value pairs at once. Each entry is a <code>KeyvEntry<Value></code> object (<code>{ key: string, value: Value, ttl?: number }</code>), where <code>Value</code> is inferred from the entries provided. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a <code>boolean[]</code> with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return <code>false</code> while entries in successful batches return <code>true</code>. On batch failure, an <code>error</code> event is emitted.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setMany</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'foo'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'bar'</span> },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'baz'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'qux'</span> },
+]); <span class="hljs-comment">// [true, true]</span>
+</code></pre>
+<h2 id="getkey">.get(key)</h2>
+<p>Get a value by key. Returns <code>undefined</code> if the key does not exist.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'bar'</span>
+</code></pre>
+<h2 id="getmanykeys">.getMany(keys)</h2>
+<p>Get multiple values at once. Returns an array of values in the same order as the keys, with <code>undefined</code> for missing keys.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> values = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getMany</span>([<span class="hljs-string">'foo'</span>, <span class="hljs-string">'baz'</span>]); <span class="hljs-comment">// ['bar', 'qux']</span>
+</code></pre>
+<h2 id="haskey">.has(key)</h2>
+<p>Check if a key exists. Returns a boolean.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> exists = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">has</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// true</span>
+</code></pre>
+<h2 id="hasmanykeys">.hasMany(keys)</h2>
+<p>Check if multiple keys exist. Returns an array of booleans in the same order as the input keys.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">hasMany</span>([<span class="hljs-string">'foo'</span>, <span class="hljs-string">'baz'</span>, <span class="hljs-string">'unknown'</span>]); <span class="hljs-comment">// [true, true, false]</span>
+</code></pre>
+<h2 id="deletekey">.delete(key)</h2>
+<p>Delete a key. Returns <code>true</code> if the key existed, <code>false</code> otherwise.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> deleted = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// true</span>
+</code></pre>
+<h2 id="deletemanykeys">.deleteMany(keys)</h2>
+<p>Delete multiple keys at once. Returns a <code>boolean[]</code> indicating whether each key existed.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">deleteMany</span>([<span class="hljs-string">'foo'</span>, <span class="hljs-string">'baz'</span>]); <span class="hljs-comment">// [true, true]</span>
+</code></pre>
+<h2 id="clear">.clear()</h2>
+<p>Clear all keys in the current namespace.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">clear</span>();
+</code></pre>
+<h2 id="clearexpired">.clearExpired()</h2>
+<p>Utility helper method to delete all expired entries from the store. This removes any rows where the <code>expires</code> column is set and the timestamp is in the past. This is useful for periodic cleanup of expired data.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> store.<span class="hljs-title function_">clearExpired</span>();
+</code></pre>
+<h2 id="iterator">.iterator()</h2>
+<p>Iterate over all key-value pairs. The iterator uses the namespace configured on the instance. Uses cursor-based pagination controlled by the <code>iterationLimit</code> option.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> iterator = keyv.<span class="hljs-title function_">iterator</span>();
+<span class="hljs-keyword">for</span> <span class="hljs-title function_">await</span> (<span class="hljs-keyword">const</span> [key, value] <span class="hljs-keyword">of</span> iterator) {
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(key, value);
+}
+</code></pre>
+<h2 id="disconnect">.disconnect()</h2>
+<p>Disconnect from the SQLite database and release resources. Stops the automatic expired-entry cleanup interval if running.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> store.<span class="hljs-title function_">disconnect</span>();
+</code></pre>
+<h1 id="clearing-expired-keys">Clearing Expired Keys</h1>
+<p>When a key is stored with a TTL, the adapter records the expiration timestamp in the <code>expires</code> column. Keyv core enforces TTL automatically — expired keys return <code>undefined</code> from <code>get()</code> and <code>false</code> from <code>has()</code>, and are lazily deleted from the store when accessed via <code>get()</code>, <code>getMany()</code>, or iteration.</p>
+<p>However, expired rows that are never accessed again will remain in the database. The <code>clearExpired()</code> method and <code>clearExpiredInterval</code> option provide bulk cleanup to remove these stale rows efficiently via SQL, without needing to deserialize every row.</p>
+<h2 id="automatic-cleanup">Automatic cleanup</h2>
+<p>Set the <code>clearExpiredInterval</code> option (in milliseconds) to automatically remove expired entries on a recurring timer. The timer uses <code>unref()</code> so it won't keep the Node.js process alive.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">clearExpiredInterval</span>: <span class="hljs-number">60_000</span>, <span class="hljs-comment">// clean up every 60 seconds</span>
+});
+</code></pre>
+<p>You can change or disable the interval at runtime:</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// Change to every 5 minutes</span>
+store.<span class="hljs-property">clearExpiredInterval</span> = <span class="hljs-number">300_000</span>;
+
+<span class="hljs-comment">// Disable automatic cleanup</span>
+store.<span class="hljs-property">clearExpiredInterval</span> = <span class="hljs-number">0</span>;
+</code></pre>
+<h2 id="manual-cleanup">Manual cleanup</h2>
+<p>Call <code>clearExpired()</code> directly to remove all expired entries on demand:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> store.<span class="hljs-title function_">clearExpired</span>();
+</code></pre>
+<h1 id="wal-mode">WAL Mode</h1>
+<p>By default, SQLite uses the rollback journal for transactions. Enabling <a href="https://sqlite.org/wal.html">WAL (Write-Ahead Logging)</a> mode can significantly improve concurrency and write performance for most workloads.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> store = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvSqlite</span>({
+  <span class="hljs-attr">uri</span>: <span class="hljs-string">'sqlite://path/to/database.sqlite'</span>,
+  <span class="hljs-attr">wal</span>: <span class="hljs-literal">true</span>,
+});
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ store });
+</code></pre>
+<p><strong>Note:</strong> WAL mode is not supported for in-memory databases (<code>:memory:</code>). If enabled for an in-memory database, a warning will be logged and the option will be ignored.</p>
+<p>From the <a href="https://sqlite.org/wal.html">SQLite documentation</a>:</p>
+<blockquote>
+<p>WAL provides more concurrency as readers do not block writers and a writer does not block readers. Reading and writing can proceed concurrently. WAL is significantly faster than the default rollback journal in most scenarios involving a single database connection, and is also faster in many scenarios involving multiple database connections.</p>
+</blockquote>
+<h1 id="benchmarks">Benchmarks</h1>
+<p>Simple <code>set</code> / <code>get</code> benchmarks comparing the built-in SQLite drivers plus an optional <code>sqlite3</code> custom-driver setup using in-memory databases with 10,000 pre-generated key-value pairs. Results will vary across machines and runs — they are meant as a relative comparison, not absolute performance numbers.</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th align="center">summary</th>
+<th align="right">ops/sec</th>
+<th align="right">time/op</th>
+<th align="center">margin</th>
+<th align="right">samples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bun set / get</td>
+<td align="center">🥇</td>
+<td align="right">64K</td>
+<td align="right">18µs</td>
+<td align="center">±0.79%</td>
+<td align="right">57K</td>
+</tr>
+<tr>
+<td>better set / get</td>
+<td align="center">-32.0%</td>
+<td align="right">44K</td>
+<td align="right">25µs</td>
+<td align="center">±2.34%</td>
+<td align="right">40K</td>
+</tr>
+<tr>
+<td>node set / get</td>
+<td align="center">-32.7%</td>
+<td align="right">43K</td>
+<td align="right">25µs</td>
+<td align="center">±2.46%</td>
+<td align="right">40K</td>
+</tr>
+<tr>
+<td>sqlite3 set / get</td>
+<td align="center">-74.7%</td>
+<td align="right">16K</td>
+<td align="right">67µs</td>
+<td align="center">±1.25%</td>
+<td align="right">15K</td>
+</tr>
+</tbody>
+</table>
+<p>Note: we included <code>sqlite3</code> tests in this but by default we do not have it as a dependency as our fallback is <code>better-sqlite3</code> now. Please refor to <a href="#using-sqlite3">using sqlite3</a> if you want to use it.</p>
+<h1 id="license">License</h1>
+<p><a href="LICENCE">MIT © Jared Wray</a></p>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-30</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>
