@@ -20,10 +20,12 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Migrating to v6](#migrating-to-v6)
 - [Constructor Options](#constructor-options)
 - [Properties](#properties)
+  - [capabilities](#capabilities)
   - [namespace](#namespace)
   - [uri](#uri)
   - [table](#table)
   - [keySize](#keysize)
+  - [keyLength](#keylength)
   - [namespaceLength](#namespacelength)
   - [db](#db)
   - [iterationLimit](#iterationlimit)
@@ -35,7 +37,7 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [ready](#ready)
   - [opts](#opts)
 - [Methods](#methods)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
@@ -46,7 +48,10 @@ SQLite storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.clear()](#clear)
   - [.clearExpired()](#clearexpired)
   - [.iterator()](#iterator)
+  - [.query(sql, ...params)](#querysql-params)
+  - [.close()](#close)
   - [.disconnect()](#disconnect)
+- [Events](#events)
 - [Clearing Expired Keys](#clearing-expired-keys)
 - [WAL Mode](#wal-mode)
 - [Benchmarks](#benchmarks)
@@ -301,6 +306,17 @@ The iterator now uses cursor-based (keyset) pagination instead of `OFFSET`. This
 
 # Properties
 
+## capabilities
+
+Read-only capability descriptor. `capabilities.expires` is `true`, which tells Keyv that `set` / `setMany` accept an **absolute** Unix-ms `expires` timestamp (the v6 storage contract).
+
+- Type: `KeyvStorageCapability`
+
+```js
+const store = new KeyvSqlite('sqlite://:memory:');
+console.log(store.capabilities.expires); // true
+```
+
 ## namespace
 
 Get or set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()` and `iterator()`.
@@ -348,6 +364,19 @@ Get or set the maximum key length (VARCHAR length) for the key column.
 
 ```js
 const store = new KeyvSqlite({ uri: 'sqlite://:memory:', keySize: 512 });
+console.log(store.keySize); // 512
+```
+
+## keyLength
+
+Alias for `keySize`. The constructor option `keyLength` is deprecated; prefer `keySize`.
+
+- Type: `number`
+- Default: `255`
+
+```js
+const store = new KeyvSqlite({ uri: 'sqlite://:memory:', keyLength: 512 });
+console.log(store.keyLength); // 512
 console.log(store.keySize); // 512
 ```
 
@@ -486,92 +515,124 @@ console.log(store.opts.db); // ':memory:'
 
 # Methods
 
-## .set(key, value, ttl?)
+## .set(key, value, expires?)
 
-Set a key-value pair. Returns `true` on success, `false` on failure.
+Set a key-value pair on the store. Returns `true` on success, `false` on failure (an `error` event is also emitted).
 
-When called through a `Keyv` instance, `ttl` is a **relative** duration in milliseconds. Keyv converts it to an absolute Unix-ms `expires` timestamp before calling the adapter. If you call `store.set()` directly, the third argument is that absolute `expires` timestamp (not a relative TTL).
+The third argument is an **absolute** Unix timestamp in milliseconds (`Date.now() + ttl`), or omitted/`undefined` for no expiry. This is the v6 adapter contract.
+
+When you call `keyv.set(key, value, ttl)` on a `Keyv` instance, `ttl` is still a **relative** duration in milliseconds — Keyv converts it to `expires` before calling the adapter.
 
 - `key` *(string)* - The key to set.
 - `value` *(any)* - The value to store.
-- `ttl` *(number, optional)* - Time to live in milliseconds.
+- `expires` *(number, optional)* - Absolute expiry as Unix ms since epoch.
 - Returns: `Promise<boolean>`
 
 ```js
-await keyv.set('foo', 'bar');
+await store.set('foo', 'bar');
+await store.set('foo', 'bar', Date.now() + 5000); // expires at an absolute timestamp
+
+// Through Keyv, ttl is still relative:
 await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
 ```
 
 ## .setMany(entries)
 
-Set multiple key-value pairs at once. Through a `Keyv` instance each entry is a `KeyvEntry` (`{ key, value, ttl? }`) with a relative `ttl`. The adapter itself receives `KeyvStorageEntry` objects (`{ key, value, expires? }`) with an absolute `expires` timestamp. Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a `boolean[]` with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return `false` while entries in successful batches return `true`. On batch failure, an `error` event is emitted.
+Set multiple key-value pairs at once. Each entry is a `KeyvStorageEntry` (`{ key, value, expires? }`) with an absolute `expires` timestamp. Through a `Keyv` instance, `keyv.setMany()` takes `KeyvEntry` objects (`{ key, value, ttl? }`) with a relative `ttl` and converts them before calling the adapter.
+
+Entries are automatically batched (249 per batch) to stay within SQLite's bind parameter limit. Returns a `boolean[]` with per-entry success tracking. Each batch is atomic — if a batch fails, entries in that batch return `false` while entries in successful batches return `true`. On batch failure, an `error` event is emitted.
+
+- `entries` *(`KeyvStorageEntry[]`)* - Entries to upsert (`{ key, value, expires? }`).
+- Returns: `Promise<boolean[]>`
 
 ```js
-const results = await keyv.setMany([
+const results = await store.setMany([
   { key: 'foo', value: 'bar' },
-  { key: 'baz', value: 'qux' },
+  { key: 'baz', value: 'qux', expires: Date.now() + 5000 },
 ]); // [true, true]
 ```
 
 ## .get(key)
 
-Get a value by key. Returns `undefined` if the key does not exist.
+Get a value by key. Returns `undefined` if the key does not exist, has expired, or was stored as SQL `NULL`. Never returns `null`.
+
+- `key` *(string)* - The key to retrieve.
+- Returns: `Promise<Value | undefined>`
 
 ```js
-const value = await keyv.get('foo'); // 'bar'
+const value = await store.get('foo'); // 'bar'
 ```
 
 ## .getMany(keys)
 
-Get multiple values at once. Returns an array of values in the same order as the keys, with `undefined` for missing keys.
+Get multiple values at once. Returns an array of values in the same order as the keys, with `undefined` for missing, expired, or SQL `NULL` entries (never `null`).
+
+- `keys` *(string[])* - The keys to retrieve.
+- Returns: `Promise<Array<Value | undefined>>`
 
 ```js
-const values = await keyv.getMany(['foo', 'baz']); // ['bar', 'qux']
+const values = await store.getMany(['foo', 'baz']); // ['bar', 'qux']
 ```
 
 ## .has(key)
 
-Check if a key exists. Returns a boolean.
+Check if a key exists. Returns a boolean. Expired keys are deleted on read and reported as missing.
+
+- `key` *(string)* - The key to check.
+- Returns: `Promise<boolean>`
 
 ```js
-const exists = await keyv.has('foo'); // true
+const exists = await store.has('foo'); // true
 ```
 
 ## .hasMany(keys)
 
-Check if multiple keys exist. Returns an array of booleans in the same order as the input keys.
+Check if multiple keys exist. Returns an array of booleans in the same order as the input keys. Expired keys are deleted on read and reported as missing.
+
+- `keys` *(string[])* - The keys to check.
+- Returns: `Promise<boolean[]>`
 
 ```js
-const results = await keyv.hasMany(['foo', 'baz', 'unknown']); // [true, true, false]
+const results = await store.hasMany(['foo', 'baz', 'unknown']); // [true, true, false]
 ```
 
 ## .delete(key)
 
 Delete a key. Returns `true` if the key existed, `false` otherwise.
 
+- `key` *(string)* - The key to delete.
+- Returns: `Promise<boolean>`
+
 ```js
-const deleted = await keyv.delete('foo'); // true
+const deleted = await store.delete('foo'); // true
 ```
 
 ## .deleteMany(keys)
 
 Delete multiple keys at once. Returns a `boolean[]` indicating whether each key existed.
 
+- `keys` *(string[])* - The keys to delete.
+- Returns: `Promise<boolean[]>`
+
 ```js
-const results = await keyv.deleteMany(['foo', 'baz']); // [true, true]
+const results = await store.deleteMany(['foo', 'baz']); // [true, true]
 ```
 
 ## .clear()
 
-Clear all keys in the current namespace.
+Clear all keys in the current namespace. If no namespace is set, entries with an empty namespace are removed.
+
+- Returns: `Promise<void>`
 
 ```js
-await keyv.clear();
+await store.clear();
 ```
 
 ## .clearExpired()
 
 Utility helper method to delete all expired entries from the store. This removes any rows where the `expires` column is set and the timestamp is in the past. This is useful for periodic cleanup of expired data.
+
+- Returns: `Promise<void>`
 
 ```js
 await store.clearExpired();
@@ -579,22 +640,67 @@ await store.clearExpired();
 
 ## .iterator()
 
-Iterate over all key-value pairs. The iterator uses the namespace configured on the instance. Uses cursor-based pagination controlled by the `iterationLimit` option.
+Iterate over all key-value pairs. The iterator uses the namespace configured on the instance. Uses cursor-based pagination controlled by the `iterationLimit` option. Expired rows are skipped (not deleted). SQL `NULL` values are yielded as `undefined`.
+
+- Returns: `AsyncGenerator<[string, string | undefined]>`
+- Yields: `[key, value]` tuples. Values are never `null`.
 
 ```js
-const iterator = keyv.iterator();
-for await (const [key, value] of iterator) {
+for await (const [key, value] of store.iterator()) {
   console.log(key, value);
 }
 ```
 
+## .query(sql, ...params)
+
+Execute a SQL statement against the database. Returns result rows for `SELECT`, `PRAGMA`, and `RETURNING` statements, and an empty array for mutations.
+
+- `sql` *(string)* - The SQL statement to execute.
+- `...params` *(unknown[])* - Bind parameters for the statement.
+- Returns: `Promise<unknown[]>`
+
+```js
+const rows = await store.query('SELECT * FROM keyv WHERE namespace = ?', 'my-namespace');
+```
+
+## .close()
+
+Close the underlying database connection. Prefer `.disconnect()`, which also stops the expired-entry cleanup timer.
+
+- Returns: `Promise<void>`
+
+```js
+await store.close();
+```
+
 ## .disconnect()
 
-Disconnect from the SQLite database and release resources. Stops the automatic expired-entry cleanup interval if running.
+Disconnect from the SQLite database and release resources. Stops the automatic expired-entry cleanup interval if running, then closes the connection.
+
+- Returns: `Promise<void>`
 
 ```js
 await store.disconnect();
 ```
+
+# Events
+
+`KeyvSqlite` extends [Hookified](https://hookified.org) (not Node's `EventEmitter`). The constructor calls `super({ throwOnEmptyListeners: false })`, so emitting `error` with no listener does not throw. Use `on`, `once`, and `emit` the same way as EventEmitter.
+
+An `error` event is emitted on:
+
+- connection / schema-setup failures
+- `set` / `setMany` failures
+- iterator failures
+- `clearExpired` interval failures
+
+```js
+const store = new KeyvSqlite('sqlite://path/to/database.sqlite');
+store.on('error', (error) => console.error(error));
+store.once('error', (error) => console.error('first error only', error));
+```
+
+Hooks from the Hookified API (`onHook`, `hook`, `before`, `after`, etc.) are also available. Storage adapters emit events; Keyv core owns operation hooks (`before:get`, `after:set`, etc.). See the [Hookified documentation](https://hookified.org).
 
 # Clearing Expired Keys
 

@@ -3,13 +3,14 @@ import Keyv, {
 	type KeyvAny,
 	type KeyvAnyArray,
 	type KeyvStorageAdapter,
+	type KeyvStorageCapability,
 	type KeyvStorageEntry,
 	type KeyvStorageGetResult,
 	keyvStorageCapability,
 } from "keyv";
 import { resolveDriver } from "./drivers/index.js";
 import type { SqliteDriver, SqliteDriverName } from "./drivers/types.js";
-import type { Db, DbClose, DbQuery, KeyvSqliteOptions } from "./types.js";
+import type { Db, KeyvSqliteOptions } from "./types.js";
 
 /**
  * Sanitizes a table name for safe use in SQL statements.
@@ -56,11 +57,6 @@ function escapeIdentifier(identifier: string): string {
  * ```
  */
 export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
-	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
-	public get capabilities() {
-		return keyvStorageCapability(this);
-	}
-
 	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
 
@@ -134,6 +130,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/** The resolved driver name, populated after connection. */
 	private _resolvedDriverName?: string;
 
+	/** The pending database connection used by {@link query} and {@link close}. */
+	private _connected: Promise<Db>;
+
 	/**
 	 * Creates a new KeyvSqlite instance.
 	 *
@@ -166,7 +165,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		const createTable = `CREATE TABLE IF NOT EXISTS ${this.getCleanTableName()}(key VARCHAR(${keySize}) NOT NULL, value TEXT, namespace VARCHAR(${Number(this._namespaceLength)}) NOT NULL DEFAULT '', expires BIGINT DEFAULT NULL, UNIQUE(key, namespace))`;
 		const createExpiresIndex = `CREATE INDEX IF NOT EXISTS ${escapeIdentifier(`${this._table}_expires_idx`)} ON ${this.getCleanTableName()} (expires) WHERE expires IS NOT NULL`;
 
-		const connected: Promise<Db> = this.createConnection()
+		this._connected = this.createConnection()
 			.then(async (database) => {
 				await this.ensureSchema(database, createTable);
 				await database.query(createExpiresIndex);
@@ -183,14 +182,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		// Suppress unhandled-rejection on the base promise. Connection errors
 		// are still surfaced through this.query, this.close, and this.ready
 		// when those are awaited, and via the 'error' event emitted above.
-		connected.catch(() => {});
+		this._connected.catch(() => {});
 
-		this.query = async (sqlString, ...parameter) =>
-			connected.then(async (database) => database.query(sqlString, ...parameter));
-
-		this.close = async () => connected.then((database) => database.close());
-
-		this.ready = connected.then(() => {});
+		this.ready = this._connected.then(() => undefined);
 		// Suppress unhandled-rejection when callers never await ready
 		this.ready.catch(() => {});
 
@@ -201,25 +195,17 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * A promise that resolves when the database connection and schema setup
 	 * are complete. Useful for awaiting initialization before the first operation.
 	 * @type {Promise<void>}
+	 * @returns {Promise<void>} Resolves once the connection and schema are ready.
 	 */
 	public readonly ready: Promise<void>;
 
 	/**
-	 * Promise-based function that closes the underlying database connection.
-	 * @type {DbClose}
-	 * @returns {Promise<void>} Resolves once the connection has been closed.
+	 * Declares the v6 absolute-`expires` storage contract via `capabilities.expires`.
+	 * @returns {KeyvStorageCapability} The capability descriptor with `expires` set to `true`.
 	 */
-	public close: DbClose;
-
-	/**
-	 * Promise-based function that executes a SQL statement against the database.
-	 * Returns the result rows for `SELECT`/`PRAGMA` statements and an empty array otherwise.
-	 * @type {DbQuery}
-	 * @param {string} sqlString - The SQL statement to execute.
-	 * @param {...unknown} parameter - The bind parameters for the statement.
-	 * @returns {Promise<unknown[]>} The result rows.
-	 */
-	public query: DbQuery;
+	public get capabilities(): KeyvStorageCapability {
+		return keyvStorageCapability(this);
+	}
 
 	/**
 	 * Get the namespace for the adapter. If `undefined`, no namespace prefix is applied
@@ -477,7 +463,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 				if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
 					expiredKeys.push(row.key);
 				} else {
-					validMap.set(row.key, row.value);
+					validMap.set(row.key, (row.value ?? undefined) as Value);
 				}
 			}
 
@@ -498,7 +484,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * Sets a key-value pair. Uses an upsert operation via `ON CONFLICT` to
 	 * insert a new entry or update an existing one atomically.
 	 * @param {string} key - The key to set. If a namespace is set, the namespace prefix is stripped before storing.
-	 * @param {any} value - The value to store.
+	 * @param {KeyvAny} value - The value to store.
 	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns {Promise<boolean>} `true` on success, or `false` if an error occurred (an `error` event is also emitted).
 	 */
@@ -698,16 +684,17 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * The namespace does not need to be passed in — it is read from the {@link namespace} property.
 	 * Uses cursor-based (keyset) pagination with batch size controlled by {@link iterationLimit},
 	 * which safely handles concurrent modifications during iteration without skipping entries.
-	 * @yields {[string, string]} A `[key, value]` tuple for each non-expired entry.
-	 * @returns {AsyncGenerator<[string, string], void, unknown>} An async generator of `[key, value]` tuples.
+	 * @yields {[string, string | undefined]} A `[key, value]` tuple for each non-expired entry.
+	 *   SQL `NULL` values are yielded as `undefined` (the adapter never yields `null`).
+	 * @returns {AsyncGenerator<[string, string | undefined], void, unknown>} An async generator of `[key, value]` tuples.
 	 */
-	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
+	public async *iterator(): AsyncGenerator<[string, string | undefined], void, unknown> {
 		const limit = this._iterationLimit > 0 ? this._iterationLimit : 10;
 		const ns = this.getNamespaceValue();
 		let lastKey: string | null = null;
 
 		while (true) {
-			let entries: Array<{ key: string; value: string }>;
+			let entries: Array<{ key: string; value: string | null }>;
 
 			try {
 				let select: string;
@@ -723,7 +710,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 				entries = (await this.query(select, ...params)) as Array<{
 					key: string;
-					value: string;
+					value: string | null;
 				}>;
 				/* v8 ignore start -- @preserve */
 			} catch (error) {
@@ -740,7 +727,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			}
 
 			for (const entry of entries) {
-				yield [entry.key, entry.value];
+				yield [entry.key, entry.value ?? undefined];
 			}
 
 			// Update cursor to the last key processed
@@ -751,6 +738,28 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 				return;
 			}
 		}
+	}
+
+	/**
+	 * Executes a SQL statement against the database.
+	 * Returns the result rows for `SELECT`/`PRAGMA`/`RETURNING` statements and an empty array otherwise.
+	 * @param {string} sqlString - The SQL statement to execute.
+	 * @param {...unknown} parameter - The bind parameters for the statement.
+	 * @returns {Promise<unknown[]>} The result rows, or an empty array for mutations.
+	 */
+	public async query(sqlString: string, ...parameter: unknown[]): Promise<unknown[]> {
+		const database = await this._connected;
+		return database.query(sqlString, ...parameter);
+	}
+
+	/**
+	 * Closes the underlying database connection.
+	 * Prefer {@link disconnect}, which also stops the expired-entry cleanup timer.
+	 * @returns {Promise<void>} Resolves once the connection has been closed.
+	 */
+	public async close(): Promise<void> {
+		const database = await this._connected;
+		return database.close();
 	}
 
 	/**
@@ -779,6 +788,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * Recovers a leftover `{table}_migration_old` table from an interrupted v6
 	 * migration, then either creates the table, rebuilds it to add `namespace`,
 	 * or `ALTER`s in the `expires` column.
+	 * @param {Db} database - The open database connection.
+	 * @param {string} createTable - The `CREATE TABLE` statement for the v6 schema.
+	 * @returns {Promise<void>} Resolves once the schema is ready.
 	 */
 	private async ensureSchema(database: Db, createTable: string): Promise<void> {
 		await this.recoverIncompleteMigration(database, createTable);
@@ -806,6 +818,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * Completes a migration that was interrupted after the old table was renamed
 	 * to `{table}_migration_old`. Copies remaining rows into the v6 table and
 	 * drops the leftover. No-op when that table does not exist.
+	 * @param {Db} database - The open database connection.
+	 * @param {string} createTable - The `CREATE TABLE` statement for the v6 schema.
+	 * @returns {Promise<void>} Resolves once leftover rows are merged or skipped.
 	 */
 	private async recoverIncompleteMigration(database: Db, createTable: string): Promise<void> {
 		const oldTableName = `${this._table}_migration_old`;
@@ -832,6 +847,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Rebuilds a pre-v6 table (no `namespace` column) inside a transaction.
 	 * Prefixed keys like `myns:mykey` are split into `key` + `namespace`.
+	 * @param {Db} database - The open database connection.
+	 * @param {string} createTable - The `CREATE TABLE` statement for the v6 schema.
+	 * @returns {Promise<void>} Resolves once the rebuild and copy have committed.
 	 */
 	private async migrateLegacySchema(database: Db, createTable: string): Promise<void> {
 		const oldTable = escapeIdentifier(`${this._table}_migration_old`);
@@ -846,6 +864,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Runs `work` inside a SQLite transaction, rolling back on failure.
+	 * @param {Db} database - The open database connection.
+	 * @param {() => Promise<void>} work - The statements to run inside the transaction.
+	 * @returns {Promise<void>} Resolves once the transaction has committed.
 	 */
 	private async runInTransaction(database: Db, work: () => Promise<void>): Promise<void> {
 		await database.query("BEGIN");
@@ -861,6 +882,8 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Copies rows from a pre-v6 table, splitting `namespace:key` prefixes on the
 	 * first colon. Keys with no colon stay in the default (empty) namespace.
+	 * @param {string} oldTable - The escaped identifier of the source table.
+	 * @returns {string} An `INSERT OR IGNORE ... SELECT` statement.
 	 */
 	private getLegacyMigrationInsertSql(oldTable: string): string {
 		const newTable = this.getCleanTableName();
@@ -912,6 +935,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * Starts (or restarts) the automatic expired-entry cleanup interval.
 	 * If the interval is `0` or negative, any existing timer is stopped.
 	 * The timer is unreffed so it does not prevent the Node.js process from exiting.
+	 * @returns {void}
 	 */
 	private startClearExpiredTimer(): void {
 		this.stopClearExpiredTimer();
@@ -938,6 +962,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Stops the automatic expired-entry cleanup interval if running
 	 * and clears the timer reference.
+	 * @returns {void}
 	 */
 	private stopClearExpiredTimer(): void {
 		if (this._clearExpiredTimer) {
@@ -951,6 +976,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * Only properties that are explicitly defined (not `undefined`) are updated.
 	 * The `keyLength` property is treated as an alias for `keySize`.
 	 * @param {KeyvSqliteOptions} options - The options to apply.
+	 * @returns {void}
 	 */
 	private setOptions(options: KeyvSqliteOptions): void {
 		if (options.uri !== undefined) {
@@ -999,6 +1025,11 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
  * Helper function to create a Keyv instance with KeyvSqlite as the storage adapter.
  * @param {KeyvSqliteOptions | string} [keyvOptions] - Optional {@link KeyvSqliteOptions} configuration object or URI string.
  * @returns {Keyv} A new Keyv instance backed by SQLite.
+ * @example
+ * ```ts
+ * import { createKeyv } from '@keyv/sqlite';
+ * const keyv = createKeyv('sqlite://path/to/db.sqlite');
+ * ```
  */
 export const createKeyv = (keyvOptions?: KeyvSqliteOptions | string) =>
 	new Keyv({ store: new KeyvSqlite(keyvOptions) });

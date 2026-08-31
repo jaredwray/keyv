@@ -5,6 +5,7 @@ import type { SqliteDriver, SqliteDriverConnectOptions } from "./types.js";
 
 /**
  * Structural type for the `sqlite3` module so consumers don't need `@types/sqlite3`.
+ * @property {new (filename: string, callback?: (err: Error | null) => void) => Sqlite3DatabaseLike} Database - Database constructor.
  */
 export type Sqlite3ModuleLike = {
 	Database: new (filename: string, callback?: (err: Error | null) => void) => Sqlite3DatabaseLike;
@@ -12,6 +13,11 @@ export type Sqlite3ModuleLike = {
 
 /**
  * Structural type for a `sqlite3.Database` instance.
+ * @property {(sql: string, params: unknown[], callback: (err: Error | null, rows: unknown[]) => void) => void} all - Execute a statement that returns rows.
+ * @property {(sql: string, params: unknown[], callback: (err: Error | null) => void) => void} run - Execute a mutation statement.
+ * @property {(sql: string, callback?: (err: Error | null) => void) => void} exec - Execute raw SQL.
+ * @property {(option: string, value: number) => void} configure - Configure the connection (for example `busyTimeout`).
+ * @property {(callback?: (err: Error | null) => void) => void} close - Close the connection.
  */
 export type Sqlite3DatabaseLike = {
 	all(sql: string, params: unknown[], callback: (err: Error | null, rows: unknown[]) => void): void;
@@ -23,6 +29,9 @@ export type Sqlite3DatabaseLike = {
 
 /**
  * Creates a {@link SqliteDriver} backed by the user-provided `sqlite3` module.
+ *
+ * @param {Sqlite3ModuleLike} sqlite3 - The `sqlite3` module (or `sqlite3.verbose()`).
+ * @returns {SqliteDriver} A driver object suitable for `KeyvSqliteOptions.driver`.
  *
  * @example
  * ```ts
