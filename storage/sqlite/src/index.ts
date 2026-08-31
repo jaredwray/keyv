@@ -39,6 +39,16 @@ function escapeIdentifier(identifier: string): string {
 }
 
 /**
+ * Returns true when `identifier` is a safe unquoted SQLite name (letter/underscore, then
+ * alphanumeric or underscore). Table names are reduced to this set by {@link toTableString}.
+ * @param {string} identifier - The identifier to validate.
+ * @returns {boolean} `true` if the identifier is safe to quote and interpolate.
+ */
+function isSafeSqlIdentifier(identifier: string): boolean {
+	return /^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier);
+}
+
+/**
  * SQLite storage adapter for Keyv.
  *
  * Supports multiple drivers (`better-sqlite3`, `node:sqlite`, `bun:sqlite`) with
@@ -839,7 +849,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 				await database.query(createTable);
 			}
 
-			await database.query(this.getLegacyMigrationInsertSql(oldTable));
+			await database.query(this.getLegacyMigrationInsertSql());
 			await database.query(`DROP TABLE ${oldTable}`);
 		});
 	}
@@ -857,7 +867,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		await this.runInTransaction(database, async () => {
 			await database.query(`ALTER TABLE ${newTable} RENAME TO ${oldTable}`);
 			await database.query(createTable);
-			await database.query(this.getLegacyMigrationInsertSql(oldTable));
+			await database.query(this.getLegacyMigrationInsertSql());
 			await database.query(`DROP TABLE ${oldTable}`);
 		});
 	}
@@ -882,12 +892,26 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Copies rows from a pre-v6 table, splitting `namespace:key` prefixes on the
 	 * first colon. Keys with no colon stay in the default (empty) namespace.
-	 * @param {string} oldTable - The escaped identifier of the source table.
+	 * Identifiers are derived from the sanitized {@link table} name and quoted only
+	 * after an alphanumeric whitelist check (table names cannot be bound as parameters).
 	 * @returns {string} An `INSERT OR IGNORE ... SELECT` statement.
 	 */
-	private getLegacyMigrationInsertSql(oldTable: string): string {
-		const newTable = this.getCleanTableName();
-		return `INSERT OR IGNORE INTO ${newTable} (key, value, namespace) SELECT CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, INSTR(key, ':') + 1) ELSE key END, value, CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, 1, INSTR(key, ':') - 1) ELSE '' END FROM ${oldTable}`;
+	private getLegacyMigrationInsertSql(): string {
+		const table = this._table;
+		const oldName = `${table}_migration_old`;
+		/* v8 ignore next 3 -- @preserve: table names are sanitized in the constructor */
+		if (!isSafeSqlIdentifier(table) || !isSafeSqlIdentifier(oldName)) {
+			throw new Error("Invalid table name: must contain alphanumeric characters");
+		}
+
+		const newTable = `"${table}"`;
+		const oldTable = `"${oldName}"`;
+		return (
+			"INSERT OR IGNORE INTO " +
+			newTable +
+			" (key, value, namespace) SELECT CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, INSTR(key, ':') + 1) ELSE key END, value, CASE WHEN INSTR(key, ':') > 0 THEN SUBSTR(key, 1, INSTR(key, ':') - 1) ELSE '' END FROM " +
+			oldTable
+		);
 	}
 
 	/**
