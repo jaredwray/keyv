@@ -42,7 +42,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [TLS Support](#tls-support)
 * [Keyv Redis Options](#keyv-redis-options)
 * [API](#api)
-* [Using Custom Redis Client Events](#using-custom-redis-client-events)
+* [Events](#events)
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
 * [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
 * [Using with NestJS](#using-with-nestjs)
@@ -148,28 +148,27 @@ export type KeyvRedisOptions = {
 	/**
 	 * Whether to allow clearing all keys when no namespace is set.
 	 * If set to true and no namespace is set, iterate() will return all keys.
-	 * Defaults to `false`.
+	 * @default false
 	 */
 	noNamespaceAffectsAll?: boolean;
 
 	/**
-	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
-	 * set to true so that it throws an error when trying to connect to the Redis server fails.
+	 * Throw an error if the client is not connected when trying to connect. By default this is
+	 * `true` so a failed Redis connection throws.
+	 * @default true
 	 */
 	throwOnConnectError?: boolean;
 
 	/**
-	 * This is used to throw an error if at any point there is a failure. Use this if you want to
-	 * ensure that all operations are successful and you want to handle errors. By default, this is
-	 * set to false so that it does not throw an error on every operation and instead emits an error event
-	 * and returns no-op responses.
+	 * Throw an error if any operation fails. When `false`, failures emit an `error` event
+	 * and return no-op responses (`undefined` for gets, `false` for writes/deletes).
 	 * @default false
 	 */
 	throwOnErrors?: boolean;
 
 	/**
-	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
-	 * If set, it will throw an error if the connection does not succeed within the specified time.
+	 * Timeout in milliseconds for the connection. When undefined, the Redis client default is used.
+	 * If set, connection that does not succeed within this time throws.
 	 * @default undefined
 	 */
 	connectionTimeout?: number;
@@ -201,6 +200,8 @@ import {createKeyv} from '@keyv/redis';
 const keyv = createKeyv('redis://user:pass@localhost:6379');
 keyv.store.namespace = 'my-namespace';
 ```
+
+See [API](#api) for the full property and method list. Missing keys and swallowed errors return `undefined` (never `null`). Events are emitted through [Hookified](https://hookified.org) — see [Events](#events).
 
 # Using the `createKeyv` function
 
@@ -511,61 +512,88 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 
 # API
 
+`KeyvRedis` extends [Hookified](https://hookified.org) (`on`, `once`, `emit`, hooks) and implements the Keyv storage adapter contract. Missing keys and swallowed errors return `undefined` (never `null`).
+
 ## Properties
-* **client** - The Redis client, cluster, or sentinel connection instance.
-* **namespace** - The namespace to use for the keys. If `undefined` no namespace prefixing is applied. Default is `undefined`.
-* **keyPrefixSeparator** - The separator to use between the namespace and key. It can be set to a blank string. Default is `::`.
-* **clearBatchSize** - The number of keys to delete in a single batch. Has to be greater than 0. Default is `1000`.
-* **useUnlink** - Use the `UNLINK` command for deleting keys instead of `DEL`. Default is `true`.
-* **noNamespaceAffectsAll** - Whether to allow clearing and iterating all keys when no namespace is set. Default is `false`.
-* **throwOnConnectError** - Whether to throw an error if the client fails to connect. Default is `true`.
-* **throwOnErrors** - Whether to throw an error if any operation fails instead of emitting an error event and returning a no-op response. Default is `false`.
-* **connectionTimeout** - The connection timeout in milliseconds. Default is `undefined` which uses the Redis client default.
+* **capabilities** - Adapter capability descriptor. `capabilities.expires` is `true` (absolute Unix-ms `expires` on `set` / `setMany`).
+* **client** - The Redis client, cluster, or sentinel connection. Assigning a new connection re-wires Hookified event listeners and resets PXAT detection. Type: `RedisClientConnectionType`.
+* **namespace** - Namespace used to prefix keys. `undefined` means no prefixing. Default: `undefined`.
+* **keyPrefixSeparator** - Separator between namespace and key. May be `""`. Default: `"::"`.
+* **clearBatchSize** - `SCAN` / delete batch size. Must be greater than `0` or an `error` event is emitted. Default: `1000`.
+* **useUnlink** - Use `UNLINK` instead of `DEL`. Default: `true`.
+* **noNamespaceAffectsAll** - When no namespace is set, `clear()` / `iterator()` affect all keys (including namespaced ones). Default: `false`.
+* **throwOnConnectError** - Throw when connect fails. Default: `true`.
+* **throwOnErrors** - Throw on operation failures instead of emitting `error` and returning a no-op. Default: `false`.
+* **connectionTimeout** - Connect timeout in milliseconds. `undefined` uses the Redis client default.
 
 ## Methods
-* **constructor([connection], [options])** - Create a new `KeyvRedis` instance. See [Keyv Redis Options](#keyv-redis-options).
-* **getClient()** - Get the connected Redis client. Connects first if the client is not already connected.
-* **set(key, value, [expires])** - Set a key. `expires` is an absolute Unix timestamp in milliseconds. Returns `boolean`. When used through Keyv, pass a relative millisecond `ttl` to `keyv.set` — Keyv converts it to `expires` for you.
-* **setMany(entries)** - Set multiple keys using `KeyvStorageEntry` objects (`{ key: string, value: Value, expires?: number }`) via `MULTI/EXEC` transactions. Returns `boolean[]` with per-entry success tracking by inspecting each command's result. In cluster mode, entries are grouped by hash slot with results mapped back to the original order.
-* **get(key)** - Get a key. Returns the value or `undefined` if the key does not exist.
-* **getMany(keys)** - Get multiple keys. Returns an array of values where each entry is the value or `undefined` if the key does not exist.
-* **has(key)** - Check if a key exists. Returns `boolean`.
-* **hasMany(keys)** - Check if multiple keys exist. Returns `boolean[]`.
-* **delete(key)** - Delete a key. Returns `boolean`.
-* **deleteMany(keys)** - Delete multiple keys. Returns `boolean[]`.
-* **clear()** - Clear all keys in the namespace. If the namespace is not set it will clear all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
-* **disconnect([force])** - Disconnect from the Redis server using the `Quit` command. If you set `force` to `true` it will force the disconnect.
-* **iterator()** - Create a new async iterator for the keys and values. The iterator uses the namespace configured on the instance and does not take a namespace parameter. If no namespace is set it will iterate over all keys that are not prefixed with a namespace unless `noNamespaceAffectsAll` is set to `true`.
-* **createKeyPrefix(key, [namespace])** - Helper that returns the key with the namespace prefix applied such as `namespace::key`.
-* **getKeyWithoutPrefix(key, [namespace])** - Helper that returns the key with the namespace prefix removed.
-* **isCluster()** - Returns `true` if the client is a Redis cluster.
-* **isSentinel()** - Returns `true` if the client is a Redis sentinel.
-* **getMasterNodes()** - Get the master node clients in the cluster. If the client is not a cluster it returns the single client.
+* **constructor([connect], [options])** - `connect` is a URI string, client/cluster/sentinel options (`KeyvRedisConnect`), or an existing connection. See [Keyv Redis Options](#keyv-redis-options).
+* **getClient()** - Return the connected client, connecting first if needed. Returns `Promise<RedisClientConnectionType>`.
+* **set(key, value, [expires])** - Set a key. `expires` is an absolute Unix timestamp in milliseconds. Returns `Promise<boolean>`. Through Keyv, pass a relative millisecond `ttl` to `keyv.set` — Keyv converts it to `expires`.
+* **setMany(entries)** - Set `KeyvStorageEntry` objects (`{ key, value, expires? }`) via `MULTI/EXEC`. Returns `Promise<boolean[]>` (per-entry success). Cluster mode groups by hash slot.
+* **get(key)** - Get a key. Returns the value or `undefined` if missing (Redis `null` is mapped to `undefined`).
+* **getMany(keys)** - Get multiple keys. Each missing entry is `undefined`.
+* **has(key)** - Returns `Promise<boolean>`.
+* **hasMany(keys)** - Returns `Promise<boolean[]>`.
+* **delete(key)** - Returns `Promise<boolean>`.
+* **deleteMany(keys)** - Returns `Promise<boolean[]>`.
+* **clear()** - Clear keys in the namespace. With no namespace, clears un-prefixed keys unless `noNamespaceAffectsAll` is `true` (`FLUSHDB`).
+* **iterator()** - Async generator of `[key, value]` pairs. Uses the instance namespace. Missing values are `undefined`.
+* **disconnect([force])** - Graceful `close()` (`QUIT`) when `force` is false; `destroy()` when `true`.
+* **createKeyPrefix(key, [namespace])** - Returns `namespace::key` (or `key` when namespace is omitted).
+* **getKeyWithoutPrefix(key, [namespace])** - Strips a leading namespace prefix.
+* **isCluster()** - `true` if the connection is a Redis cluster.
+* **isSentinel()** - `true` if the connection is a Redis sentinel.
+* **getMasterNodes()** - Cluster master node clients, or `[client]` when standalone.
 
-# Using Custom Redis Client Events
+## Helpers
+* **createKeyv([connect], [options])** - Keyv instance with this adapter. Applies `namespace` on both Keyv and the store. `connect` accepts the same `KeyvRedisConnect` types as the constructor (including cluster/sentinel). Defaults to `"redis://localhost:6379"` when `connect` is omitted.
+* **createKeyvNonBlocking([connect], [options])** - Same as `createKeyv`, then disables throws, the offline queue, and reconnect for secondary-cache use.
+* **defaultReconnectStrategy(attempts)** - Default socket reconnect delay when a URI string is passed to the constructor. Exponential backoff capped at 2s, plus up to ±50ms of jitter. Returns a delay in milliseconds.
 
-Keyv by default supports the `error` event across all storage adapters. If you want to listen to other events you can do so by accessing the `client` property of the `KeyvRedis` instance. Here is an example of how to do that:
+# Events
+
+`KeyvRedis` extends Hookified and re-emits these events from the Redis client onto the adapter:
+
+| Event | Payload | When |
+| --- | --- | --- |
+| `error` | `Error` (or a string for invalid `clearBatchSize`) | Client errors, connect failures, operation failures |
+| `connect` | the Redis connection | The client connects |
+| `disconnect` | the Redis connection | The client disconnects |
+| `reconnecting` | reconnect info from `@redis/client` | The client is reconnecting |
 
 ```js
 import {createKeyv} from '@keyv/redis';
 
 const keyv = createKeyv('redis://user:pass@localhost:6379');
-const redisClient = keyv.store.client;
+const store = keyv.store;
 
-redisClient.on('connect', () => {
-  console.log('Redis client connected');
+store.on('error', (error) => {
+  console.error('adapter error', error);
 });
 
-redisClient.on('reconnecting', () => {
-  console.log('Redis client reconnecting');
+store.on('connect', () => {
+  console.log('Redis connected');
 });
 
-redisClient.on('disconnect', () => {
-  console.log('Redis client disconnected');
+store.once('disconnect', () => {
+  console.log('Redis disconnected');
+});
+
+store.on('reconnecting', () => {
+  console.log('Redis reconnecting');
 });
 ```
 
-Here are some of the events you can listen to: https://www.npmjs.com/package/redis#events
+`error`, `connect`, `disconnect`, and `reconnecting` are re-emitted on the adapter. Other Redis-client-only events (for example `ready`) can still be listened on `store.client`:
+
+```js
+store.client.on('ready', () => {
+  console.log('Redis client ready');
+});
+```
+
+Client events: https://www.npmjs.com/package/redis#events
 
 # Migrating from v3 to v4
 

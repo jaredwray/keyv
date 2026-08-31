@@ -48,12 +48,24 @@ export {
 	RedisErrorMessages,
 };
 
+/**
+ * Redis storage adapter for Keyv. Supports standalone, cluster, and sentinel
+ * connections via `@redis/client`. Extends [Hookified](https://hookified.org) and
+ * re-emits `error`, `connect`, `disconnect`, and `reconnecting` from the underlying
+ * client. Implements {@link KeyvStorageAdapter} with namespacing, absolute `expires`
+ * (`PXAT` / `PX` fallback), batch operations, and async iteration.
+ *
+ * @example
+ * ```ts
+ * import KeyvRedis from "@keyv/redis";
+ * import Keyv from "keyv";
+ *
+ * const store = new KeyvRedis("redis://localhost:6379", { namespace: "cache" });
+ * const keyv = new Keyv({ store });
+ * store.on("error", (error) => console.error(error));
+ * ```
+ */
 export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapter {
-	/** Declares the v6 absolute-`expires` storage contract via `capabilities.expires`. */
-	public get capabilities() {
-		return keyvStorageCapability(this);
-	}
-
 	/**
 	 * The underlying Redis client, cluster, or sentinel connection used for all storage operations.
 	 */
@@ -99,6 +111,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 */
 	private _connectionTimeout: number | undefined;
 	/**
+	 * Whether the connected server supports the absolute-expiry `PXAT` option (Redis 6.2+).
+	 * Detected lazily on first expiring write and cached. `undefined` until detected.
+	 */
+	private _pxatSupported?: boolean;
+	/**
 	 * Tracks the client instance whose events have already been wired up so that
 	 * repeated initialization does not attach duplicate listeners.
 	 */
@@ -133,9 +150,18 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	};
 
 	/**
-	 * KeyvRedis constructor.
-	 * @param {KeyvRedisConnect} [connect] How to connect to the Redis server. If string pass in the url, if object pass in the options, if RedisClient pass in the client.
-	 * @param {KeyvRedisOptions} [options] Options for the adapter such as namespace, keyPrefixSeparator, and clearBatchSize.
+	 * Creates a new KeyvRedis adapter.
+	 *
+	 * Accepts a Redis URI string, client/cluster/sentinel options, or an existing
+	 * connection. When a URI string is provided, a client is created with
+	 * {@link defaultReconnectStrategy}.
+	 *
+	 * @param {KeyvRedisConnect} [connect] - URI (`"redis://localhost:6379"`),
+	 *   Redis client/cluster/sentinel options, or an existing connection. Defaults to
+	 *   a localhost client with {@link defaultReconnectStrategy}.
+	 * @param {KeyvRedisOptions} [options] - Adapter options such as `namespace`,
+	 *   `keyPrefixSeparator`, `clearBatchSize`, `useUnlink`, `throwOnErrors`, and
+	 *   `connectionTimeout`.
 	 */
 	constructor(connect?: KeyvRedisConnect, options?: KeyvRedisOptions) {
 		super({ throwOnEmptyListeners: false });
@@ -178,8 +204,16 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
+	 * Declares the v6 absolute-`expires` storage contract via `capabilities.expires`.
+	 * @returns {ReturnType<typeof keyvStorageCapability>} The adapter capability descriptor with `expires: true`.
+	 */
+	public get capabilities() {
+		return keyvStorageCapability(this);
+	}
+
+	/**
 	 * Get the Redis client, cluster, or sentinel connection.
-	 * @returns {RedisClientConnectionType} The current Redis client connection.
+	 * @returns {RedisClientConnectionType} The current Redis client, cluster, or sentinel connection.
 	 */
 	public get client(): RedisClientConnectionType {
 		return this._client;
@@ -352,10 +386,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get the connected Redis client. If the client is not already connected it will connect first, respecting
-	 * the connectionTimeout. If the connection fails it will emit an error event and, when throwOnConnectError
-	 * is true, throw an error.
-	 * @returns {Promise<RedisClientConnectionType>} The connected Redis client.
+	 * Get the connected Redis client. Connects first if the client is not already
+	 * connected, respecting `connectionTimeout`. On failure, emits `error` and, when
+	 * `throwOnConnectError` is true, throws {@link RedisErrorMessages.RedisClientNotConnectedThrown}.
+	 * @returns {Promise<RedisClientConnectionType>} The connected Redis client, cluster, or sentinel.
+	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
 		if (this._client.isOpen) {
@@ -384,71 +419,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Whether the connected server supports the absolute-expiry `PXAT` option (Redis 6.2+).
-	 * Detected lazily on first expiring write and cached. `undefined` until detected.
-	 */
-	private _pxatSupported?: boolean;
-
-	/**
-	 * Lazily detect whether the server supports `SET ... PXAT` (Redis 6.2+), caching the result.
-	 * Falls back to assuming support (PXAT) when the version cannot be determined (e.g. clusters
-	 * where `INFO` isn't directly available, or a transient error) — those deployments are modern.
-	 * @param client - the Redis client/cluster/sentinel connection to introspect
-	 * @returns {Promise<boolean>} true if PXAT may be used, false to fall back to relative PX
-	 */
-	private async supportsPxat(client: RedisClientConnectionType): Promise<boolean> {
-		if (this._pxatSupported !== undefined) {
-			return this._pxatSupported;
-		}
-
-		try {
-			const info = String(await (client as RedisClientType).info("server"));
-			const match = /redis_version:(\d+)\.(\d+)/.exec(info);
-			if (match) {
-				const major = Number(match[1]);
-				const minor = Number(match[2]);
-				this._pxatSupported = major > 6 || (major === 6 && minor >= 2);
-			} else {
-				this._pxatSupported = true;
-			}
-		} catch {
-			this._pxatSupported = true;
-		}
-
-		return this._pxatSupported;
-	}
-
-	/**
-	 * Build the `SET` expiry option for an absolute `expires`. Prefers the skew-immune absolute
-	 * `PXAT`; falls back to a relative `PX` (remaining ms) for servers older than 6.2.
-	 * @param expires - absolute expiry as Unix ms since epoch
-	 * @param usePxat - whether the server supports PXAT (from {@link supportsPxat})
-	 */
-	private expiryOptions(expires: number, usePxat: boolean): { PXAT: number } | { PX: number } {
-		// Redis rejects `SET ... PX 0` ("invalid expire time"), so floor the relative fallback at
-		// 1ms for an already-elapsed deadline — the key is written and reaped almost immediately,
-		// matching how an absolute PXAT in the past behaves (and the memcache exptime floor).
-		return usePxat ? { PXAT: expires } : { PX: Math.max(1, expires - Date.now()) };
-	}
-
-	/**
-	 * Resolve the `SET` expiry option for a single write, detecting PXAT support as needed.
-	 * @param client - the Redis client/cluster/sentinel connection
-	 * @param expires - absolute expiry as Unix ms since epoch
-	 */
-	private async buildExpiryOptions(
-		client: RedisClientConnectionType,
-		expires: number,
-	): Promise<{ PXAT: number } | { PX: number }> {
-		return this.expiryOptions(expires, await this.supportsPxat(client));
-	}
-
-	/**
 	 * Set a key value pair in the store. Expiry is an absolute Unix timestamp in milliseconds.
-	 * @param {string} key - the key to set
-	 * @param {string} value - the value to set
-	 * @param {number} [expires] - absolute expiry as Unix ms since epoch, or undefined for no expiry
-	 * @returns {Promise<boolean>} - true if the value was set, false if an error occurred and throwOnErrors is false
+	 * @param {string} key - The key to set.
+	 * @param {string} value - The value to set.
+	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
+	 * @returns {Promise<boolean>} `true` if the value was set, `false` if an error occurred and `throwOnErrors` is false.
 	 */
 	public async set(key: string, value: string, expires?: number): Promise<boolean> {
 		const client = await this.getClient();
@@ -475,11 +450,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Will set many key value pairs in the store. Expiry is an absolute Unix timestamp in milliseconds. This will be done as a single transaction.
-	 * @param {KeyvStorageEntry[]} entries - the key value pairs to set with optional absolute expires
-	 * @returns {Promise<boolean[] | undefined>} - array of booleans indicating whether each entry was successfully set
+	 * Set many key-value pairs in a single `MULTI/EXEC` transaction (or one transaction
+	 * per hash slot in cluster mode).
+	 * @param {KeyvStorageEntry<Value>[]} entries - Entries with `key`, `value`, and optional absolute `expires`.
+	 * @returns {Promise<boolean[]>} Per-entry success flags, or all `false` when an error is swallowed.
 	 */
-	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
+	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[]> {
 		try {
 			const results = new Array<boolean>(entries.length).fill(false);
 
@@ -552,8 +528,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Check if a key exists in the store.
-	 * @param {string} key - the key to check
-	 * @returns {Promise<boolean>} - true if the key exists, false if not
+	 * @param {string} key - The key to check.
+	 * @returns {Promise<boolean>} `true` if the key exists, `false` if it does not or an error was swallowed.
 	 */
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
@@ -574,9 +550,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Check if many keys exist in the store. This will be done as a single transaction.
-	 * @param {Array<string>} keys - the keys to check
-	 * @returns {Promise<Array<boolean>>} - array of booleans for each key if it exists
+	 * Check if many keys exist in the store in a single transaction (or per hash slot in cluster mode).
+	 * @param {string[]} keys - The keys to check.
+	 * @returns {Promise<boolean[]>} Per-key existence flags.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		try {
@@ -625,9 +601,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get a value from the store. If the key does not exist, it will return undefined.
-	 * @param {string} key - the key to get
-	 * @returns {Promise<string | undefined>} - the value or undefined if the key does not exist
+	 * Get a value from the store. Redis `null` replies are mapped to `undefined`.
+	 * @param {string} key - The key to get.
+	 * @returns {Promise<U | undefined>} The stored value, or `undefined` if the key does not exist or an error was swallowed.
 	 */
 	public async get<U = T>(key: string): Promise<U | undefined> {
 		const client = await this.getClient();
@@ -636,11 +612,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			key = this.createKeyPrefix(key, this._namespace);
 
 			const value = await client.get(key);
-			if (value === null) {
-				return undefined;
-			}
-
-			return value as U;
+			return value === null ? undefined : (value as U);
 		} catch (error) {
 			this.emit("error", error);
 			if (this._throwOnErrors) {
@@ -652,9 +624,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get many values from the store. If a key does not exist, it will return undefined.
-	 * @param {Array<string>} keys - the keys to get
-	 * @returns {Promise<Array<string | undefined>>} - array of values or undefined if the key does not exist
+	 * Get many values from the store. Missing keys are `undefined`, never `null`.
+	 * @param {string[]} keys - The keys to get.
+	 * @returns {Promise<Array<U | undefined>>} Values in the same order as `keys`.
 	 */
 	public async getMany<U = T>(keys: string[]): Promise<Array<U | undefined>> {
 		if (keys.length === 0) {
@@ -677,9 +649,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Delete a key from the store.
-	 * @param {string} key - the key to delete
-	 * @returns {Promise<boolean>} - true if the key was deleted, false if not
+	 * Delete a key from the store. Uses `UNLINK` when `useUnlink` is true, otherwise `DEL`.
+	 * @param {string} key - The key to delete.
+	 * @returns {Promise<boolean>} `true` if the key was deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
 		const client = await this.getClient();
@@ -701,9 +673,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Delete many keys from the store. This will be done as a single transaction.
-	 * @param {Array<string>} keys - the keys to delete
-	 * @returns {Promise<boolean[]>} - array of booleans indicating whether each key was successfully deleted
+	 * Delete many keys from the store in a single transaction (or per hash slot in cluster mode).
+	 * @param {string[]} keys - The keys to delete.
+	 * @returns {Promise<boolean[]>} Per-key deletion flags.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const resultMap = new Map<string, boolean>();
@@ -763,9 +735,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Disconnect from the Redis server.
-	 * @returns {Promise<void>}
-	 * @param {boolean} [force] - it will send a quit command if false, otherwise it will send a disconnect command to forcefully disconnect.
+	 * Disconnect from the Redis server. Sends `QUIT` (`close`) when `force` is false,
+	 * or forcefully destroys the socket when `force` is true.
+	 * @param {boolean} [force] - When `true`, destroy the connection instead of a graceful close.
+	 * @returns {Promise<void>} Resolves when the client is closed, or immediately if it was not open.
 	 * @see {@link https://github.com/redis/node-redis/tree/master/packages/redis#disconnecting}
 	 */
 	public async disconnect(force?: boolean): Promise<void> {
@@ -775,10 +748,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Helper function to create a key with a namespace.
-	 * @param {string} key - the key to prefix
-	 * @param {string} namespace - the namespace to prefix the key with
-	 * @returns {string} - the key with the namespace such as 'namespace::key'
+	 * Prefix a key with the namespace and {@link keyPrefixSeparator}.
+	 * @param {string} key - The key to prefix.
+	 * @param {string} [namespace] - The namespace to prefix the key with.
+	 * @returns {string} `namespace::key` when a namespace is set, otherwise the original key.
 	 */
 	public createKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
@@ -789,10 +762,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Helper function to get a key without the namespace.
-	 * @param {string} key - the key to remove the namespace from
-	 * @param {string} namespace - the namespace to remove from the key
-	 * @returns {string} - the key without the namespace such as 'key'
+	 * Strip a leading namespace prefix from a key.
+	 * @param {string} key - The key to remove the namespace from.
+	 * @param {string} [namespace] - The namespace to remove from the start of the key.
+	 * @returns {string} The key without the namespace prefix, or the original key if it was not prefixed.
 	 */
 	public getKeyWithoutPrefix(key: string, namespace?: string): string {
 		if (namespace) {
@@ -806,25 +779,24 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Is the client a cluster.
-	 * @returns {boolean} - true if the client is a cluster, false if not
+	 * Whether the current connection is a Redis cluster.
+	 * @returns {boolean} `true` if the client is a cluster, `false` otherwise.
 	 */
 	public isCluster(): boolean {
 		return this.isClientCluster(this._client);
 	}
 
 	/**
-	 * Is the client a sentinel.
-	 * @returns {boolean} - true if the client is a sentinel, false if not
+	 * Whether the current connection is a Redis sentinel.
+	 * @returns {boolean} `true` if the client is a sentinel, `false` otherwise.
 	 */
 	public isSentinel(): boolean {
 		return this.isClientSentinel(this._client);
 	}
 
 	/**
-	 * Get the master nodes in the cluster. If not a cluster, it will return the single client.
-	 *
-	 * @returns {Promise<RedisClientType[]>} - array of master nodes
+	 * Get the master node clients in the cluster. If the client is not a cluster, returns the single client.
+	 * @returns {Promise<RedisClientType[]>} Master node clients, or a one-element array with the standalone client.
 	 */
 	public async getMasterNodes(): Promise<RedisClientType[]> {
 		if (this.isCluster()) {
@@ -843,10 +815,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get an async iterator for the keys and values in the store. The namespace is not passed in and instead
-	 * uses the namespace configured on the instance. It will only iterate over keys with the current namespace.
-	 * If no namespace is set it will iterate over keys with no namespace prefix unless noNamespaceAffectsAll is true.
-	 * @returns {AsyncGenerator<[string, U | undefined], void, unknown>} - async iterator with key value pairs
+	 * Async iterator over keys and values. Uses the instance namespace. With no namespace,
+	 * iterates un-prefixed keys unless `noNamespaceAffectsAll` is true.
+	 * @returns {AsyncGenerator<[string, U | undefined], void, unknown>} Yields `[key, value]` pairs. Missing values are `undefined`.
 	 */
 	public async *iterator<U = T>(): AsyncGenerator<[string, U | undefined], void, unknown> {
 		// When instance is not a cluster, it will only have one client
@@ -881,11 +852,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Clear all keys in the store.
-	 * IMPORTANT: this can cause performance issues if there are a large number of keys in the store and worse with clusters. Use with caution as not recommended for production.
-	 * If a namespace is not set it will clear all keys with no prefix.
-	 * If a namespace is set it will clear all keys with that namespace.
-	 * @returns {Promise<void>}
+	 * Clear keys in the current namespace. With no namespace, clears un-prefixed keys unless
+	 * `noNamespaceAffectsAll` is true (then `FLUSHDB`). Uses `SCAN` in batches of `clearBatchSize`.
+	 * Can be expensive on large keyspaces and clusters — not recommended in production.
+	 * @returns {Promise<void>} Resolves when the matching keys have been removed.
 	 */
 	public async clear(): Promise<void> {
 		try {
@@ -937,8 +907,66 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Get many keys. If the instance is a cluster, it will do multiple MGET calls
-	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
+	 * Lazily detect whether the server supports `SET ... PXAT` (Redis 6.2+), caching the result.
+	 * Falls back to assuming support (PXAT) when the version cannot be determined (e.g. clusters
+	 * where `INFO` isn't directly available, or a transient error) — those deployments are modern.
+	 * @param {RedisClientConnectionType} client - The Redis client, cluster, or sentinel connection to introspect.
+	 * @returns {Promise<boolean>} `true` if PXAT may be used, `false` to fall back to relative PX.
+	 */
+	private async supportsPxat(client: RedisClientConnectionType): Promise<boolean> {
+		if (this._pxatSupported !== undefined) {
+			return this._pxatSupported;
+		}
+
+		try {
+			const info = String(await (client as RedisClientType).info("server"));
+			const match = /redis_version:(\d+)\.(\d+)/.exec(info);
+			if (match) {
+				const major = Number(match[1]);
+				const minor = Number(match[2]);
+				this._pxatSupported = major > 6 || (major === 6 && minor >= 2);
+			} else {
+				this._pxatSupported = true;
+			}
+		} catch {
+			this._pxatSupported = true;
+		}
+
+		return this._pxatSupported;
+	}
+
+	/**
+	 * Build the `SET` expiry option for an absolute `expires`. Prefers the skew-immune absolute
+	 * `PXAT`; falls back to a relative `PX` (remaining ms) for servers older than 6.2.
+	 * @param {number} expires - Absolute expiry as Unix ms since epoch.
+	 * @param {boolean} usePxat - Whether the server supports PXAT (from {@link supportsPxat}).
+	 * @returns {{PXAT: number} | {PX: number}} The Redis `SET` expiry option.
+	 */
+	private expiryOptions(expires: number, usePxat: boolean): { PXAT: number } | { PX: number } {
+		// Redis rejects `SET ... PX 0` ("invalid expire time"), so floor the relative fallback at
+		// 1ms for an already-elapsed deadline — the key is written and reaped almost immediately,
+		// matching how an absolute PXAT in the past behaves (and the memcache exptime floor).
+		return usePxat ? { PXAT: expires } : { PX: Math.max(1, expires - Date.now()) };
+	}
+
+	/**
+	 * Resolve the `SET` expiry option for a single write, detecting PXAT support as needed.
+	 * @param {RedisClientConnectionType} client - The Redis client, cluster, or sentinel connection.
+	 * @param {number} expires - Absolute expiry as Unix ms since epoch.
+	 * @returns {Promise<{PXAT: number} | {PX: number}>} The Redis `SET` expiry option.
+	 */
+	private async buildExpiryOptions(
+		client: RedisClientConnectionType,
+		expires: number,
+	): Promise<{ PXAT: number } | { PX: number }> {
+		return this.expiryOptions(expires, await this.supportsPxat(client));
+	}
+
+	/**
+	 * Get many keys. In cluster mode, issues one `MGET` per hash slot to avoid CROSSSLOT errors.
+	 * Redis `null` replies are mapped to `undefined`.
+	 * @param {string[]} keys - Prefixed keys to fetch.
+	 * @returns {Promise<Array<T | undefined>>} Values in the same order as `keys`.
 	 */
 	private async mget<T = KeyvAny>(keys: string[]): Promise<Array<T | undefined>> {
 		const valueMap = new Map<string, string | undefined>();
@@ -969,8 +997,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Clear all keys in the store with a specific namespace. If the instance is a cluster, it will clear all keys
-	 * by separating the keys by slot to solve the CROSS-SLOT restriction.
+	 * Delete the given keys, grouping by hash slot in cluster mode to avoid CROSSSLOT errors.
+	 * @param {string[]} keys - Prefixed keys to delete.
+	 * @returns {Promise<void>} Resolves when all slot groups have been deleted.
 	 */
 	private async clearWithClusterSupport(keys: string[]): Promise<void> {
 		/* v8 ignore next -- @preserve */
@@ -988,7 +1017,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Returns the master node client for a given slot or the instance's client if it's not a cluster.
+	 * Return the master node client for a hash slot, or the instance client when not clustered.
+	 * @param {number} slot - Redis cluster hash slot.
+	 * @returns {Promise<RedisClientType>} The node client that owns `slot`.
 	 */
 	private async getSlotMaster(slot: number): Promise<RedisClientType> {
 		const connection = await this.getClient();
@@ -1009,12 +1040,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Group keys by their slot.
-	 *
-	 * @param {string[]} keys - the keys to group
-	 * @returns {Map<number, string[]>} - map of slot to keys
+	 * Group keys by their Redis cluster hash slot. Non-cluster clients use a single slot `0` group.
+	 * @param {string[]} keys - The keys to group.
+	 * @returns {Map<number, string[]>} Map of slot number to keys in that slot.
 	 */
-	private getSlotMap(keys: string[]) {
+	private getSlotMap(keys: string[]): Map<number, string[]> {
 		const slotMap = new Map<number, string[]>();
 		if (this.isCluster()) {
 			for (const key of keys) {
@@ -1032,26 +1062,27 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Check if the provided client is a cluster client.
-	 * @param {RedisClientConnectionType} client - the client to check
-	 * @returns {boolean} - true if the client is a cluster client, false if not
+	 * Whether the provided client is a cluster connection.
+	 * @param {RedisClientConnectionType} client - The client to check.
+	 * @returns {boolean} `true` if `client` exposes cluster `slots`.
 	 */
 	private isClientCluster(client: RedisClientConnectionType): boolean {
 		return (client as KeyvAny).slots !== undefined;
 	}
 
 	/**
-	 * Check if the provided client is a sentinel client.
-	 * @param {RedisClientConnectionType} client - the client to check
-	 * @returns {boolean} - true if the client is a sentinel client, false if not
+	 * Whether the provided client is a sentinel connection.
+	 * @param {RedisClientConnectionType} client - The client to check.
+	 * @returns {boolean} `true` if `client` exposes `getSentinelNode`.
 	 */
 	private isClientSentinel(client: RedisClientConnectionType): boolean {
 		return (client as KeyvAny).getSentinelNode !== undefined;
 	}
 
 	/**
-	 * Apply the provided options to the instance. Only defined options are applied.
-	 * @param {KeyvRedisOptions} [options] - the options to apply
+	 * Apply defined adapter options to this instance.
+	 * @param {KeyvRedisOptions} [options] - Options to apply. Omitted or undefined fields are left unchanged.
+	 * @returns {void}
 	 */
 	private setOptions(options?: KeyvRedisOptions): void {
 		if (!options) {
@@ -1092,9 +1123,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Wire up the client events (error, connect, disconnect, reconnecting) to be re-emitted on this instance.
-	 * Listeners are only attached once per client instance to avoid duplicates. When the client is replaced,
-	 * listeners are removed from the previous client so events from a discarded connection are not re-emitted.
+	 * Re-emit client `error`, `connect`, `disconnect`, and `reconnecting` events on this adapter
+	 * via Hookified. Listeners are attached once per client instance. Replacing `client` removes
+	 * listeners from the previous connection.
+	 * @returns {void}
 	 */
 	private initClient(): void {
 		if (this._eventsWiredClient === this._client) {
@@ -1121,6 +1153,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	/**
 	 * Whether an operation error should be re-thrown after being emitted. Connection failures
 	 * honor `throwOnConnectError`; all other failures honor `throwOnErrors`.
+	 * @param {unknown} error - The caught error.
+	 * @returns {boolean} `true` when the caller should rethrow.
 	 */
 	private shouldRethrow(error: unknown): boolean {
 		if (
@@ -1137,9 +1171,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	/**
 	 * Race a promise against a timeout, always clearing the timer so a successful connect
 	 * does not leave a dangling rejection.
-	 * @param {Promise<T>} promise - the promise to race
-	 * @param {number} timeoutMs - the timeout in milliseconds before the race rejects
-	 * @returns {Promise<T>} - the original promise result, or a timeout rejection
+	 * @template T
+	 * @param {Promise<T>} promise - The promise to race.
+	 * @param {number} timeoutMs - Timeout in milliseconds before the race rejects.
+	 * @returns {Promise<T>} The original promise result, or a timeout rejection.
 	 */
 	private async raceWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 		let timeoutId: ReturnType<typeof setTimeout> | undefined;

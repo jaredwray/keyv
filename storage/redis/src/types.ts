@@ -37,28 +37,27 @@ export type KeyvRedisOptions = {
 	/**
 	 * Whether to allow clearing all keys when no namespace is set.
 	 * If set to true and no namespace is set, iterate() will return all keys.
-	 * Defaults to `false`.
+	 * @default false
 	 */
 	noNamespaceAffectsAll?: boolean;
 
 	/**
-	 * This is used to throw an error if the client is not connected when trying to connect. By default, this is
-	 * set to true so that it throws an error when trying to connect to the Redis server fails.
+	 * Throw an error if the client is not connected when trying to connect. By default this is
+	 * `true` so a failed Redis connection throws.
+	 * @default true
 	 */
 	throwOnConnectError?: boolean;
 
 	/**
-	 * This is used to throw an error if at any point there is a failure. Use this if you want to
-	 * ensure that all operations are successful and you want to handle errors. By default, this is
-	 * set to false so that it does not throw an error on every operation and instead emits an error event
-	 * and returns no-op responses.
+	 * Throw an error if any operation fails. When `false`, failures emit an `error` event
+	 * and return no-op responses (`undefined` for gets, `false` for writes/deletes).
 	 * @default false
 	 */
 	throwOnErrors?: boolean;
 
 	/**
-	 * Timeout in milliseconds for the connection. Default is undefined, which uses the default timeout of the Redis client.
-	 * If set, it will throw an error if the connection does not succeed within the specified time.
+	 * Timeout in milliseconds for the connection. When undefined, the Redis client default is used.
+	 * If set, connection that does not succeed within this time throws.
 	 * @default undefined
 	 */
 	connectionTimeout?: number;
@@ -93,6 +92,12 @@ export enum RedisErrorMessages {
 	RedisClientNotConnectedThrown = "Redis client is not connected or has failed to connect. This is thrown because throwOnConnectError is set to true.",
 }
 
+/**
+ * Default socket reconnect strategy used when a URI string is passed to the constructor.
+ * Exponential backoff capped at 2s, plus up to ±50ms of jitter.
+ * @param {number} attempts - The current reconnection attempt count (0-based).
+ * @returns {number | Error} Delay in milliseconds before the next attempt.
+ */
 export const defaultReconnectStrategy = (attempts: number): number | Error => {
 	// Exponential backoff base: double each time, capped at 2s.
 	// Parentheses make it clear we do (2 ** attempts) first, then * 100
@@ -125,8 +130,15 @@ export type RedisClientConnectionType =
 	| RedisConnectionSentinelType;
 
 /**
- * Accepted first argument to the KeyvRedis constructor and `createKeyv`: a URI string,
- * client/cluster/sentinel options object, or an already-created connection.
+ * First argument to the {@link KeyvRedis} constructor and {@link createKeyv}: a URI string,
+ * `@redis/client` client/cluster/sentinel options, or an already-created connection.
+ *
+ * @example
+ * ```ts
+ * new KeyvRedis("redis://localhost:6379");
+ * new KeyvRedis({ url: "redis://localhost:6379" });
+ * new KeyvRedis({ rootNodes: [{ url: "redis://localhost:7001" }] });
+ * ```
  */
 export type KeyvRedisConnect =
 	| string
