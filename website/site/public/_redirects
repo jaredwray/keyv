@@ -17,3 +17,6 @@
 /docs/compression/ /docs/compression/overview/ 301
 /docs/encryption /docs/encryption/overview/ 301
 /docs/encryption/ /docs/encryption/overview/ 301
+/docs/caching https://cacheable.org 301
+/docs/caching/ https://cacheable.org 301
+/docs/caching/* https://cacheable.org 301

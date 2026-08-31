@@ -23,7 +23,6 @@ export const options: Partial<DoculaOptions> = {
 		{ name: "Serialization", path: "serialization", order: 21 },
 		{ name: "Compression", path: "compression", order: 22 },
 		{ name: "Encryption", path: "encryption", order: 23 },
-		{ name: "Caching", path: "caching", order: 24 },
-		{ name: "Migration", path: "migration", order: 25 },
+		{ name: "Migration", path: "migration", order: 24 },
 	],
 };
