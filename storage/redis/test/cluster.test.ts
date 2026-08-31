@@ -112,9 +112,7 @@ describe("KeyvRedis Cluster", () => {
 			let errorThrown = false;
 			try {
 				await keyvRedis.clear();
-			} catch (error) {
-				console.log(error);
-				expect(error).toBeDefined();
+			} catch {
 				errorThrown = true;
 			}
 
@@ -270,9 +268,7 @@ describe("KeyvRedis Cluster", () => {
 					keys.push(key);
 					values.push(value);
 				}
-			} catch (error) {
-				console.log(error);
-				expect(error).toBeDefined();
+			} catch {
 				errorThrown = true;
 			}
 
@@ -376,7 +372,7 @@ describe("KeyvRedis Cluster", () => {
 			expect(values).toContain(val3);
 		});
 
-		test("should only iterate over keys with no namespace if name is undefined set and noNamespaceAffectsAll is false", async () => {
+		test("should only iterate un-prefixed keys when namespace is undefined and noNamespaceAffectsAll is false", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 			keyvRedis.noNamespaceAffectsAll = false;
@@ -415,7 +411,7 @@ describe("KeyvRedis Cluster", () => {
 	});
 
 	describe("KeyvRedis Batch Operations", () => {
-		test("setMany should work with cluster mode without CROSSSLOT errors", async () => {
+		test("should set many keys in cluster mode without CROSSSLOT errors", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 
@@ -435,7 +431,7 @@ describe("KeyvRedis Cluster", () => {
 			await keyvRedis.disconnect();
 		});
 
-		test("hasMany should work with cluster mode without CROSSSLOT errors", async () => {
+		test("should check many keys in cluster mode without CROSSSLOT errors", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 
@@ -457,7 +453,7 @@ describe("KeyvRedis Cluster", () => {
 			await keyvRedis.disconnect();
 		});
 
-		test("deleteMany should work with cluster mode without CROSSSLOT errors", async () => {
+		test("should delete many keys in cluster mode without CROSSSLOT errors", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 
@@ -482,7 +478,7 @@ describe("KeyvRedis Cluster", () => {
 			await keyvRedis.disconnect();
 		});
 
-		test("setMany with expires should work with cluster mode", async () => {
+		test("should set many keys with expires in cluster mode", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster);
 
@@ -503,7 +499,7 @@ describe("KeyvRedis Cluster", () => {
 			await keyvRedis.disconnect();
 		});
 
-		test("deleteMany with useUnlink false should work with cluster mode", async () => {
+		test("should delete many keys in cluster mode when useUnlink is false", async () => {
 			const cluster = createCluster(defaultClusterOptions);
 			const keyvRedis = new KeyvRedis(cluster, { useUnlink: false });
 

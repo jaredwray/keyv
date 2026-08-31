@@ -6,7 +6,7 @@ import KeyvRedis, { createKeyv, createKeyvNonBlocking } from "../src/index.js";
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 
 describe("createKeyv", () => {
-	test("should create Keyv instance with default options", async () => {
+	test("should create a Keyv instance with default options", () => {
 		const keyv = createKeyv(redisUri);
 		expect(keyv).toBeDefined();
 		expect(keyv.store).toBeInstanceOf(KeyvRedis);
@@ -14,7 +14,13 @@ describe("createKeyv", () => {
 		expect(keyv.store.namespace).toBeUndefined();
 	});
 
-	test("should create Keyv instance with custom namespace", async () => {
+	test("should default to the localhost Redis URI when connect is omitted", () => {
+		const keyv = createKeyv();
+		expect(keyv.store).toBeInstanceOf(KeyvRedis);
+		expect(keyv.namespace).toBeUndefined();
+	});
+
+	test("should create a Keyv instance with a custom namespace", async () => {
 		const namespace = faker.string.alphanumeric(10);
 		const keyv = createKeyv(redisUri, { namespace });
 		expect(keyv).toBeDefined();
@@ -23,7 +29,7 @@ describe("createKeyv", () => {
 		expect(keyv.store.namespace).toBe(namespace);
 	});
 
-	test("should create Keyv instance with custom namespace and errors enabled", async () => {
+	test("should create a Keyv instance with a custom namespace and errors enabled", async () => {
 		const namespace = faker.string.alphanumeric(10);
 		const keyv = createKeyv(redisUri, {
 			namespace,
@@ -47,7 +53,7 @@ describe("createKeyv", () => {
 });
 
 describe("createKeyvNonBlocking", () => {
-	test("should create Keyv instance with default options", async () => {
+	test("should create a Keyv instance with default options", async () => {
 		const keyv = createKeyvNonBlocking(redisUri);
 		expect(keyv).toBeDefined();
 		expect(keyv.throwOnErrors).toBe(false);

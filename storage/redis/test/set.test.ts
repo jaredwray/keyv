@@ -245,17 +245,7 @@ describe("set", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
-	test("should be able to set an expires", async () => {
-		const keyvRedis = new KeyvRedis();
-		const key = faker.string.uuid();
-		await keyvRedis.set(key, faker.lorem.word(), Date.now() + 100);
-		await delay(300);
-		const value = await keyvRedis.get(key);
-		expect(value).toBeUndefined();
-		await keyvRedis.disconnect();
-	});
-
-	test("should be able to set many keys", async () => {
+	test("should set many keys including an expired entry", async () => {
 		const keyvRedis = new KeyvRedis();
 		const key1 = faker.string.uuid();
 		const key2 = faker.string.uuid();

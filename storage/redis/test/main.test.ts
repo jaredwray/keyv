@@ -58,6 +58,20 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.client).toBe(client);
 	});
 
+	test("should apply RedisClientOptions including reconnectStrategy", () => {
+		const reconnectStrategy = (times: number) => Math.min(times * 50, 2000);
+		const keyvRedis = new KeyvRedis({
+			socket: {
+				host: "localhost",
+				port: 6379,
+				reconnectStrategy,
+			},
+		});
+		expect((keyvRedis.client as RedisClientType).options?.socket?.reconnectStrategy).toBe(
+			reconnectStrategy,
+		);
+	});
+
 	test("should be able to pass in a client to constructor", () => {
 		const client = createClient() as RedisClientType;
 		const keyvRedis = new KeyvRedis(client);
@@ -106,7 +120,7 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.useUnlink).toBe(false);
 	});
 
-	test("keyPrefixSeparator should be able to set to blank string", () => {
+	test("should allow keyPrefixSeparator to be set to a blank string", () => {
 		const keyvRedis = new KeyvRedis("redis://localhost:6379", {
 			keyPrefixSeparator: "",
 		});
@@ -117,7 +131,7 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.keyPrefixSeparator).toBe("");
 	});
 
-	test("clearBatchSize should not set if 0 or less than", () => {
+	test("should not set clearBatchSize when the value is 0 or less", () => {
 		const keyvRedis = new KeyvRedis("redis://localhost:6379", {
 			clearBatchSize: 0,
 		});
@@ -149,7 +163,7 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.useUnlink).toBe(true);
 	});
 
-	test("client options should contain the url", () => {
+	test("should store the url on the Redis client options", () => {
 		const uri = "redis://foo:6379";
 		const keyvRedis = new KeyvRedis(uri);
 		expect((keyvRedis.client as RedisClientType).options?.url).toBe(uri);

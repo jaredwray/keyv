@@ -167,14 +167,7 @@ describe("delete", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
-	test("should return false on delete if key does not exist", async () => {
-		const keyvRedis = new KeyvRedis();
-		const deleted = await keyvRedis.delete(faker.string.uuid());
-		expect(deleted).toBe(false);
-		await keyvRedis.disconnect();
-	});
-
-	test("should be able to delete many with namespace", async () => {
+	test("should delete many keys", async () => {
 		const keyvRedis = new KeyvRedis();
 		const key1 = faker.string.uuid();
 		const key2 = faker.string.uuid();
@@ -197,7 +190,7 @@ describe("delete", () => {
 		await keyvRedis.disconnect();
 	});
 
-	test("should be able to delete many with namespace with useUnlink false", async () => {
+	test("should delete many keys when useUnlink is false", async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.useUnlink = false;
 		const key1 = faker.string.uuid();

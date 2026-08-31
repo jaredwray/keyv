@@ -8,29 +8,23 @@ const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 const redisBadUri = process.env.REDIS_BAD_URI ?? "redis://localhost:6378";
 
 describe("has", () => {
-	test("should return true for existing keys", async () => {
+	test("should return true for an existing key", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
-		const data = {
-			key: faker.string.alphanumeric(10),
-			value: faker.lorem.sentence(),
-		};
+		const key = faker.string.alphanumeric(10);
+		const value = faker.lorem.sentence();
 
-		await keyvRedis.set(data.key, data.value);
+		await keyvRedis.set(key, value);
 
-		const result = await keyvRedis.has(data.key);
-
-		expect(result).toBe(true);
+		expect(await keyvRedis.has(key)).toBe(true);
+		await keyvRedis.disconnect();
 	});
 
-	test("should return false for non-existing keys", async () => {
+	test("should return false for a missing key", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
-		const data = {
-			key: faker.string.alphanumeric(10),
-		};
+		const key = faker.string.alphanumeric(10);
 
-		const result = await keyvRedis.has(data.key);
-
-		expect(result).toBe(false);
+		expect(await keyvRedis.has(key)).toBe(false);
+		await keyvRedis.disconnect();
 	});
 
 	test("should throw on connection error", async () => {
@@ -87,7 +81,7 @@ describe("has", () => {
 		vi.spyOn(keyvRedis.client, "exists").mockRestore();
 	});
 
-	test("should throw an error when throwErrors is true and an error occurs", async () => {
+	test("should throw on has when throwOnErrors is true", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {
@@ -110,7 +104,7 @@ describe("has", () => {
 		vi.spyOn(keyvRedis.client, "exists").mockRestore();
 	});
 
-	test("should not throw an error on hasMany when throwErrors is false", async () => {
+	test("should not throw on hasMany when throwOnErrors is false", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: false });
 
 		const data = {
@@ -133,7 +127,7 @@ describe("has", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
-	test("should throw an error on hasMany when throwErrors is true", async () => {
+	test("should throw on hasMany when throwOnErrors is true", async () => {
 		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
 
 		const data = {
@@ -156,7 +150,7 @@ describe("has", () => {
 		vi.spyOn(keyvRedis.client, "multi").mockRestore();
 	});
 
-	test("should be able to has many keys", async () => {
+	test("should return existence flags for many keys including an expired entry", async () => {
 		const keyvRedis = new KeyvRedis();
 		const key1 = faker.string.uuid();
 		const key2 = faker.string.uuid();
@@ -172,24 +166,6 @@ describe("has", () => {
 		await delay(300);
 		const exists = await keyvRedis.hasMany([key1, key2, key3]);
 		expect(exists).toEqual([true, true, false]);
-		await keyvRedis.disconnect();
-	});
-
-	test("should return true on has if key exists", async () => {
-		const keyvRedis = new KeyvRedis();
-		const key = faker.string.uuid();
-		const value = faker.lorem.word();
-		await keyvRedis.set(key, value);
-		const exists = await keyvRedis.has(key);
-		expect(exists).toBe(true);
-		await keyvRedis.disconnect();
-	});
-
-	test("should return false on has if key does not exist", async () => {
-		const keyvRedis = new KeyvRedis();
-		const key = faker.string.uuid();
-		const exists = await keyvRedis.has(key);
-		expect(exists).toBe(false);
 		await keyvRedis.disconnect();
 	});
 });

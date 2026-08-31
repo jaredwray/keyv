@@ -1,6 +1,6 @@
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
-import { afterAll, it } from "vitest";
+import { afterAll, test } from "vitest";
 import KeyvRedis, { type RedisClientType } from "../src/index.js";
 
 const redisUrl = "redis://localhost:6379/5";
@@ -12,6 +12,6 @@ afterAll(async () => {
 	await store().disconnect();
 });
 
-keyvTestSuite(it, Keyv, store);
-keyvIteratorTests(it, Keyv, store);
-storageTestSuite(it, store);
+keyvTestSuite(test, Keyv, store);
+keyvIteratorTests(test, Keyv, store);
+storageTestSuite(test, store);
