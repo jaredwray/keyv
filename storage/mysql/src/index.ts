@@ -675,20 +675,23 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
 		const limit = this._iterationLimit || 10;
 		const namespaceValue = this.getNamespaceValue();
+		const table = escapeIdentifier(this._table);
 		let lastKey: string | null = null;
 
 		while (true) {
 			let sql: string;
 			if (lastKey === null) {
-				// First batch: no cursor constraint
+				// First batch: no cursor constraint.
+				// Alias the converted key as converted_id so ORDER BY id uses the VARBINARY
+				// column (keyset order) rather than the utf8 alias (collation order).
 				sql = mysql.format(
-					`SELECT CONVERT(id USING utf8mb4) AS id, value, expires FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
+					`SELECT CONVERT(id USING utf8mb4) AS converted_id, value, expires FROM ${table} WHERE namespace = ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
 					[this.encodeNamespace(namespaceValue), Date.now(), limit],
 				);
 			} else {
-				// Subsequent batches: use keyset pagination
+				// Subsequent batches: use keyset pagination on the VARBINARY id column.
 				sql = mysql.format(
-					`SELECT CONVERT(id USING utf8mb4) AS id, value, expires FROM ${escapeIdentifier(this._table)} WHERE namespace = ? AND id > ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
+					`SELECT CONVERT(id USING utf8mb4) AS converted_id, value, expires FROM ${table} WHERE namespace = ? AND id > ? AND (expires IS NULL OR expires > ?) ORDER BY id LIMIT ?`,
 					[this.encodeNamespace(namespaceValue), this.encodeKey(lastKey), Date.now(), limit],
 				);
 			}
@@ -699,11 +702,11 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			}
 
 			for (const entry of entries) {
-				yield [entry.id, entry.value];
+				yield [entry.converted_id, entry.value];
 			}
 
 			// Update cursor to the last key processed
-			lastKey = entries[entries.length - 1].id;
+			lastKey = entries[entries.length - 1].converted_id;
 
 			// If we got fewer entries than the limit, we've reached the end
 			if (entries.length < limit) {
