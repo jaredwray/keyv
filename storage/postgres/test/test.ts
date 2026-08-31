@@ -34,6 +34,12 @@ describe("constructor", () => {
 		expect(keyv.namespace).toBeUndefined();
 	});
 
+	test("keeps the default uri when it is omitted from options", () => {
+		const keyv = new KeyvPostgres({ table: "custom_table" });
+		expect(keyv.uri).toBe("postgresql://localhost:5432");
+		expect(keyv.table).toBe("custom_table");
+	});
+
 	test("sets properties from constructor options", () => {
 		const keyv = new KeyvPostgres({
 			uri: postgresUri,

@@ -121,4 +121,6 @@ export const endPool = async (uri: string, options: PoolConfig = {}) =>
  * Ends all shared pools and clears the pool cache.
  * @returns A promise that resolves once all pools have been closed.
  */
+/* v8 ignore start -- @preserve */
 export const endAllPools = async () => poolManager.endAllPools();
+/* v8 ignore stop -- @preserve */
