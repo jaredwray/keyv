@@ -45,10 +45,11 @@ describe("v6 migration", () => {
 			await pool.query(
 				`CREATE TABLE ${tableEsc} (key VARCHAR(255) NOT NULL PRIMARY KEY, value TEXT)`,
 			);
-			await pool.query(`INSERT INTO ${tableEsc} (key, value) VALUES ($1, $2)`, [
-				"legacy:key",
-				"legacy-value",
-			]);
+			const ns = faker.string.alphanumeric(8);
+			const key = faker.string.alphanumeric(8);
+			const value = faker.lorem.word();
+			const prefixed = `${ns}:${key}`;
+			await pool.query(`INSERT INTO ${tableEsc} (key, value) VALUES ($1, $2)`, [prefixed, value]);
 
 			const schemaBefore = await pool.query(
 				`SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position`,
@@ -61,10 +62,10 @@ describe("v6 migration", () => {
 			);
 			const rows = await pool.query(`SELECT key, value FROM ${tableEsc}`);
 
-			expect(stdout).toContain('"legacy:key" -> key="key", namespace="legacy"');
+			expect(stdout).toContain(`"${prefixed}" -> key="${key}", namespace="${ns}"`);
 			expect(stdout).toContain("Dry run — no changes made.");
 			expect(schemaAfter.rows).toEqual(schemaBefore.rows);
-			expect(rows.rows).toMatchObject([{ key: "legacy:key", value: "legacy-value" }]);
+			expect(rows.rows).toMatchObject([{ key: prefixed, value }]);
 		} finally {
 			await pool.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 			await pool.end();
@@ -81,11 +82,16 @@ describe("v6 migration", () => {
 			await pool.query(
 				`CREATE TABLE ${tableEsc} (key VARCHAR(255) NOT NULL PRIMARY KEY, value TEXT)`,
 			);
+			const nsName1 = faker.string.alphanumeric(8);
+			const nsName2 = faker.string.alphanumeric(8);
+			const sharedKey = faker.string.alphanumeric(8);
+			const val1 = faker.lorem.word();
+			const val2 = faker.lorem.word();
 			await pool.query(`INSERT INTO ${tableEsc} (key, value) VALUES ($1, $2), ($3, $4)`, [
-				"ns1:foo",
-				'"a"',
-				"ns2:foo",
-				'"b"',
+				`${nsName1}:${sharedKey}`,
+				val1,
+				`${nsName2}:${sharedKey}`,
+				val2,
 			]);
 
 			const { stdout } = await runMigrate(["--uri", postgresUri, "--table", table]);
@@ -95,10 +101,13 @@ describe("v6 migration", () => {
 			const rows = await pool.query(
 				`SELECT key, value, namespace FROM ${tableEsc} ORDER BY namespace`,
 			);
-			expect(rows.rows).toMatchObject([
-				{ key: "foo", value: '"a"', namespace: "ns1" },
-				{ key: "foo", value: '"b"', namespace: "ns2" },
-			]);
+			expect(rows.rows).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({ key: sharedKey, value: val1, namespace: nsName1 }),
+					expect.objectContaining({ key: sharedKey, value: val2, namespace: nsName2 }),
+				]),
+			);
+			expect(rows.rows).toHaveLength(2);
 
 			const pk = await pool.query(
 				`SELECT c.conname FROM pg_constraint c
@@ -118,11 +127,11 @@ describe("v6 migration", () => {
 			);
 
 			const ns1 = new KeyvPostgres({ uri: postgresUri, table });
-			ns1.namespace = "ns1";
+			ns1.namespace = nsName1;
 			const ns2 = new KeyvPostgres({ uri: postgresUri, table });
-			ns2.namespace = "ns2";
-			expect(await ns1.get("foo")).toBe('"a"');
-			expect(await ns2.get("foo")).toBe('"b"');
+			ns2.namespace = nsName2;
+			expect(await ns1.get(sharedKey)).toBe(val1);
+			expect(await ns2.get(sharedKey)).toBe(val2);
 		} finally {
 			await pool.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 			await pool.end();
@@ -140,9 +149,11 @@ describe("v6 migration", () => {
 			await pool.query(
 				`CREATE TABLE ${tableEsc} (key VARCHAR(255) NOT NULL PRIMARY KEY, value TEXT, namespace VARCHAR(255) DEFAULT NULL)`,
 			);
+			const key = faker.string.alphanumeric(10);
+			const keep = faker.lorem.word();
 			await pool.query(`INSERT INTO ${tableEsc} (key, value) VALUES ($1, $2)`, [
-				"plain",
-				JSON.stringify({ value: "keep", expires }),
+				key,
+				JSON.stringify({ value: keep, expires }),
 			]);
 
 			const { stdout } = await runMigrate([
@@ -188,16 +199,18 @@ describe("v6 migration", () => {
 			await pool.query(
 				`CREATE TABLE ${tableEsc} (key VARCHAR(255) NOT NULL PRIMARY KEY, value TEXT)`,
 			);
+			const key = faker.string.alphanumeric(10);
+			const expiresFallback = faker.number.int({ min: 1000, max: 99_999 });
 			await pool.query(`INSERT INTO ${tableEsc} (key, value) VALUES ($1, $2)`, [
-				"plain",
-				'{not json "expires": 4242}',
+				key,
+				`{not json "expires": ${expiresFallback}}`,
 			]);
 
 			const { stdout } = await runMigrate(["--uri", postgresUri, "--table", table]);
 
 			expect(stdout).toContain("via fallback parser");
 			const rows = await pool.query(`SELECT expires FROM ${tableEsc}`);
-			expect(rows.rows[0]?.expires).toBe("4242");
+			expect(rows.rows[0]?.expires).toBe(String(expiresFallback));
 		} finally {
 			await pool.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 			await pool.end();
@@ -214,7 +227,11 @@ describe("v6 migration", () => {
 			await pool.query(
 				`CREATE TABLE ${tableEsc} (key VARCHAR(255) NOT NULL PRIMARY KEY, value TEXT)`,
 			);
-			const values = Array.from({ length: 21 }, (_, index) => [`ns:key${index}`, `"v${index}"`]);
+			const ns = faker.string.alphanumeric(8);
+			const values = Array.from({ length: 21 }, (_, index) => [
+				`${ns}:${faker.string.alphanumeric(8)}${index}`,
+				faker.lorem.word(),
+			]);
 			for (const [key, value] of values) {
 				await pool.query(`INSERT INTO ${tableEsc} (key, value) VALUES ($1, $2)`, [key, value]);
 			}

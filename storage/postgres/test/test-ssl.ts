@@ -40,7 +40,7 @@ describe("ssl", () => {
 		await keyv.set(key2, value2);
 		await keyv.set(key3, value3);
 
-		const collected = new Map<string, string>();
+		const collected = new Map<string, string | undefined>();
 		for await (const [key, value] of keyv.iterator()) {
 			collected.set(key, value);
 		}
