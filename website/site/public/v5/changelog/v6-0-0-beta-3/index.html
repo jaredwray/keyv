@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - v6.0.0-beta.3</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","headline":"v6.0.0-beta.3","description":"<p>This release rolls up the entire v6 beta cycle — everything merged since <code>v6.0.0-alpha.3</code>. v6 is a major, ground-up modernization of Keyv: a leaner core, a new raw-data API, first-class capability detection, telemetry, two new encryption packages, a dependency-free etcd adapter, and a wave of breaking dependency upgrades across the monorepo.</p>\n<blockquote>\n<p><strong>Heads up:</strong> v6 contains a number of breaking changes vs. v5. If you are upgrading from v5, read the v5 → v6 migration guide alongside these...</p>\n</blockquote>","url":"https://keyv.org/v5/changelog/v6-0-0-beta-3/","publisher":{"@type":"Organization","name":"Keyv"},"datePublished":"2026-06-11"}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="content">
+    <main class="versions-container">
+      <div class="versions-content">
+        <div class="changelog-entry-nav">
+          <a href="/v5/changelog/">← Back to Changelog</a>
+        </div>
+        <div class="changelog-entry changelog-entry-single">
+          <div class="changelog-entry-header">
+            <h1 class="changelog-entry-title">v6.0.0-beta.3</h1>
+            <span class="changelog-tag changelog-tag-release">Release</span>
+          </div>
+          <span class="changelog-entry-date">June 11, 2026</span>
+          <div class="changelog-entry-body">
+            <h1 id="keyv-v600-beta3">Keyv v6.0.0-beta.3</h1>
+<p>This release rolls up the entire v6 beta cycle — everything merged since <code>v6.0.0-alpha.3</code>. v6 is a major, ground-up modernization of Keyv: a leaner core, a new raw-data API, first-class capability detection, telemetry, two new encryption packages, a dependency-free etcd adapter, and a wave of breaking dependency upgrades across the monorepo.</p>
+<blockquote>
+<p><strong>Heads up:</strong> v6 contains a number of breaking changes vs. v5. If you are upgrading from v5, read the <a href="https://github.com/jaredwray/keyv/blob/main/website/site/docs/migration.md">v5 → v6 migration guide</a> alongside these notes.</p>
+</blockquote>
+<hr>
+<h2 id="highlights">Highlights</h2>
+<ul>
+<li>🔐 <strong>Two new encryption packages</strong> — <code>@keyv/encrypt-node</code> (Node.js <code>crypto</code>) and <code>@keyv/encrypt-web</code> (Web Crypto API), with a shared wire format so they're cross-compatible.</li>
+<li>🧩 <strong>Raw data API</strong> — <code>getRaw</code> / <code>getManyRaw</code> / <code>setRaw</code> / <code>setManyRaw</code> for working directly with the stored <code>{ value, expires }</code> envelope.</li>
+<li>🔎 <strong>Capability detection</strong> — <code>detectKeyv</code>, <code>detectKeyvStorage</code>, <code>detectKeyvCompression</code>, <code>detectKeyvSerialization</code>, <code>detectKeyvEncryption</code> helpers.</li>
+<li>📊 <strong>Stats / telemetry overhaul</strong> — aggregate counters plus LRU-bounded per-key frequency maps.</li>
+<li>🧼 <strong>Key sanitization</strong> — opt-in protection against SQL/Mongo/path-traversal/control-character injection in keys and namespaces.</li>
+<li>🪝 <strong>Hookified everywhere</strong> — unified events + pre/post hooks across the core and every adapter, now including <code>setMany</code>, <code>deleteMany</code>, <code>clear</code>, and <code>disconnect</code>.</li>
+<li>🌐 <strong>Dependency-free etcd adapter</strong> — talks to etcd v3 over its HTTP/JSON gateway via an in-house client (no <code>etcd3</code>).</li>
+<li>⚙️ <strong>Optional serialization</strong> and <strong>no key-prefixing in core</strong> for a smaller, faster default path.</li>
+<li>🏗️ <strong>Build & toolchain modernization</strong> — moved to <code>tsdown</code>, TypeScript 6, and a refreshed release pipeline (OIDC publishing).</li>
+<li>📦 <strong>Major dependency upgrades</strong> across Redis, MongoDB, MySQL, Postgres, DynamoDB, msgpackr, hookified, hashery, and more.</li>
+</ul>
+<hr>
+<h2 id="️-breaking-changes">⚠️ Breaking Changes</h2>
+<h3 id="core">Core</h3>
+<ul>
+<li><strong><code>StoredData</code> and <code>StoredDataRaw</code> types removed.</strong> Use the <code>KeyvValue<T></code> envelope (<code>{ value, expires? }</code>) and the new raw API instead. (#1929)</li>
+<li><strong>Keys are no longer prefixed in core.</strong> Namespacing/prefixing is now handled by the storage adapters that need it, not the core. (#1899)</li>
+<li><strong><code>get</code> no longer checks expiry by default.</strong> Expiration is evaluated lazily/where appropriate to keep the hot path fast; expired entries still resolve to <code>undefined</code> through the normal read paths. To re-enable core-level expiry checks, set the <code>checkExpired: true</code> option. (#1923)</li>
+<li><strong>Moved to <a href="https://github.com/jaredwray/hookified">Hookified</a> for events + hooks.</strong> Replaces the old <code>EventEmitter</code> base across core and adapters. (#1900)</li>
+<li><strong><code>.set()</code> now returns a boolean</strong> instead of the instance. (#1904)</li>
+<li><strong>Iterator API simplified</strong> and various method signatures cleaned up. (#1902)</li>
+<li><strong><code>setRaw</code> / <code>setManyRaw</code> no longer take a <code>ttl</code> argument</strong> — set <code>expires</code> on the value envelope instead. (#1905)</li>
+<li><strong><code>opts</code> removed from <code>KeyvStorageAdapter</code></strong> and the <code>opts</code> property removed from the <code>Keyv</code> class. (#1906)</li>
+</ul>
+<h3 id="adapters--tooling-dependency-bumps-that-change-minimums">Adapters & tooling (dependency bumps that change minimums)</h3>
+<ul>
+<li><strong><code>@redis/client</code> upgraded to v6</strong> (breaking). (#1954)</li>
+<li><strong>hookified upgraded to v3</strong> (breaking) across the monorepo. (#1957)</li>
+<li><strong>hashery upgraded to v2</strong> in BigMap (breaking). (#1956)</li>
+<li><strong>msgpackr upgraded to v2</strong> in <code>@keyv/serialize-msgpackr</code> (breaking). (#1958)</li>
+<li><strong>bignumber.js upgraded to v11</strong> in the test-suite (breaking). (#1955)</li>
+<li><strong>docula upgraded to v2</strong> for the website (breaking). (#1947)</li>
+<li><strong>Code-quality deps, GitHub Actions, and build tooling</strong> upgraded (some breaking minimum versions). (#1944, #1946, #1945)</li>
+<li><strong>TypeScript 6</strong> is now used to build the monorepo. (#1933)</li>
+<li><strong>test-suite v6 overhaul</strong> — compliance tests rewritten for the v6 API. If you maintain a third-party adapter against <code>@keyv/test-suite</code>, expect changes. (#1931)</li>
+</ul>
+<hr>
+<h2 id="-new-encryption-packages">🔐 New: Encryption Packages</h2>
+<p>Two new adapters let you encrypt values transparently. They share a wire format, so data written by one can be read by the other (same key + algorithm).</p>
+<h3 id="keyvencrypt-node--nodejs-crypto"><code>@keyv/encrypt-node</code> — Node.js <code>crypto</code></h3>
+<p>Supports AES-GCM (default), AES-CCM, ChaCha20-Poly1305, AES-CBC, and any cipher available in your Node install. (#1927)</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvEncryptNode</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/encrypt-node'</span>;
+
+<span class="hljs-keyword">const</span> encryption = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvEncryptNode</span>({ <span class="hljs-attr">key</span>: <span class="hljs-string">'your-secret-key'</span> });
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ encryption });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'bar' (decrypted automatically)</span>
+</code></pre>
+<pre><code class="hljs language-js"><span class="hljs-comment">// Pick an algorithm and output encoding</span>
+<span class="hljs-keyword">const</span> encryption = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvEncryptNode</span>({
+  <span class="hljs-attr">key</span>: <span class="hljs-string">'your-secret-key'</span>,
+  <span class="hljs-attr">algorithm</span>: <span class="hljs-string">'chacha20-poly1305'</span>,
+  <span class="hljs-attr">encoding</span>: <span class="hljs-string">'hex'</span>,
+});
+</code></pre>
+<h3 id="keyvencrypt-web--web-crypto-api"><code>@keyv/encrypt-web</code> — Web Crypto API</h3>
+<p>Works in browsers, Deno, Cloudflare Workers, and Node.js 18+ with no Node-specific dependencies. Supports AES-GCM (recommended) and AES-CBC. (#1928)</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvEncryptWeb</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/encrypt-web'</span>;
+
+<span class="hljs-keyword">const</span> encryption = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvEncryptWeb</span>({ <span class="hljs-attr">key</span>: <span class="hljs-string">'your-secret-key'</span> });
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ encryption });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'bar'</span>
+</code></pre>
+<p><strong>Cross-compatibility wire format</strong> (same for both packages):</p>
+<ul>
+<li><strong>AES-GCM:</strong> <code>base64([IV (12 bytes) || AuthTag (16 bytes) || Ciphertext])</code></li>
+<li><strong>AES-CBC:</strong> <code>base64([IV (16 bytes) || Ciphertext])</code></li>
+</ul>
+<hr>
+<h2 id="-core-raw-data-api">🧩 Core: Raw Data API</h2>
+<p>Work directly with the stored envelope (<code>{ value, expires? }</code>) — useful for replication, cache warming, and moving data between stores. (#1897, #1929)</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>();
+
+<span class="hljs-comment">// Write a raw envelope with an absolute expiry timestamp</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setRaw</span>(<span class="hljs-string">'foo'</span>, { <span class="hljs-attr">value</span>: <span class="hljs-string">'bar'</span>, <span class="hljs-attr">expires</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + <span class="hljs-number">60_000</span> });
+
+<span class="hljs-comment">// No expiry</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setRaw</span>(<span class="hljs-string">'foo'</span>, { <span class="hljs-attr">value</span>: <span class="hljs-string">'bar'</span> });
+
+<span class="hljs-comment">// Read the raw envelope back</span>
+<span class="hljs-keyword">const</span> raw = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getRaw</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// { value: 'bar', expires: 1234567890 }</span>
+
+<span class="hljs-comment">// Copy between instances without unwrapping/rewrapping</span>
+<span class="hljs-keyword">if</span> (raw) {
+  <span class="hljs-keyword">await</span> other.<span class="hljs-title function_">setRaw</span>(<span class="hljs-string">'foo'</span>, raw);
+}
+
+<span class="hljs-comment">// Batch variants</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">setManyRaw</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'a'</span>, <span class="hljs-attr">value</span>: { <span class="hljs-attr">value</span>: <span class="hljs-number">1</span> } },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'b'</span>, <span class="hljs-attr">value</span>: { <span class="hljs-attr">value</span>: <span class="hljs-number">2</span>, <span class="hljs-attr">expires</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + <span class="hljs-number">60_000</span> } },
+]);
+<span class="hljs-keyword">const</span> many = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">getManyRaw</span>([<span class="hljs-string">'a'</span>, <span class="hljs-string">'b'</span>]);
+</code></pre>
+<blockquote>
+<p>The store-level TTL is derived automatically from <code>value.expires</code>, so you no longer pass a separate <code>ttl</code> to the raw setters.</p>
+</blockquote>
+<hr>
+<h2 id="-core-capability-detection">🔎 Core: Capability Detection</h2>
+<p>New helpers report exactly which parts of an interface an object implements. Each returns a <code>compatible</code> flag — <code>true</code> only when the full interface is satisfied — plus a <code>methods</code> map describing whether each method <code>exists</code> and its <code>methodType</code> (<code>"sync"</code> / <code>"async"</code> / <code>"none"</code>). (#1909, #1930)</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span>, {
+  detectKeyv,
+  detectKeyvStorage,
+  detectKeyvCompression,
+  detectKeyvSerialization,
+  detectKeyvEncryption,
+} <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+
+<span class="hljs-title function_">detectKeyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>()).<span class="hljs-property">compatible</span>; <span class="hljs-comment">// true (only when ALL capabilities are present)</span>
+<span class="hljs-title function_">detectKeyv</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>()).<span class="hljs-property">compatible</span>;  <span class="hljs-comment">// false — but methods.get.exists is still true</span>
+
+<span class="hljs-comment">// Storage detection reports the detected store type plus sync/async per method</span>
+<span class="hljs-keyword">const</span> r = <span class="hljs-title function_">detectKeyvStorage</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>());
+r.<span class="hljs-property">compatible</span>;             <span class="hljs-comment">// true</span>
+r.<span class="hljs-property">store</span>;                  <span class="hljs-comment">// "mapLike"  ("keyvStorage" | "mapLike" | "asyncMap" | "none")</span>
+r.<span class="hljs-property">methods</span>.<span class="hljs-property">get</span>.<span class="hljs-property">methodType</span>; <span class="hljs-comment">// "sync"</span>
+
+<span class="hljs-title function_">detectKeyvSerialization</span>(<span class="hljs-title class_">JSON</span>).<span class="hljs-property">compatible</span>;                                    <span class="hljs-comment">// true</span>
+<span class="hljs-title function_">detectKeyvCompression</span>({ <span class="hljs-attr">compress</span>: <span class="hljs-function"><span class="hljs-params">d</span> =></span> d, <span class="hljs-attr">decompress</span>: <span class="hljs-function"><span class="hljs-params">d</span> =></span> d }).<span class="hljs-property">compatible</span>;  <span class="hljs-comment">// true</span>
+<span class="hljs-title function_">detectKeyvEncryption</span>({ <span class="hljs-attr">encrypt</span>: <span class="hljs-function"><span class="hljs-params">d</span> =></span> d, <span class="hljs-attr">decrypt</span>: <span class="hljs-function"><span class="hljs-params">d</span> =></span> d }).<span class="hljs-property">compatible</span>;       <span class="hljs-comment">// true</span>
+</code></pre>
+<hr>
+<h2 id="-core-stats--telemetry">📊 Core: Stats / Telemetry</h2>
+<p>Opt-in statistics with aggregate counters and LRU-bounded per-key frequency maps. (#1912)</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">stats</span>: <span class="hljs-literal">true</span> });
+
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>);          <span class="hljs-comment">// hit</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'nonexistent'</span>);  <span class="hljs-comment">// miss</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>);
+
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">hits</span>;    <span class="hljs-comment">// 1</span>
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">misses</span>;  <span class="hljs-comment">// 1</span>
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">sets</span>;    <span class="hljs-comment">// 1</span>
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">deletes</span>; <span class="hljs-comment">// 1</span>
+
+<span class="hljs-comment">// Per-key frequency (each map capped at maxEntries, default 1000)</span>
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">hitKeys</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>);           <span class="hljs-comment">// 1</span>
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">missKeys</span>.<span class="hljs-title function_">get</span>(<span class="hljs-string">'nonexistent'</span>);  <span class="hljs-comment">// 1</span>
+
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-title function_">reset</span>();          <span class="hljs-comment">// clears counters and maps</span>
+keyv.<span class="hljs-property">stats</span>.<span class="hljs-property">enabled</span> = <span class="hljs-literal">false</span>;  <span class="hljs-comment">// disable at runtime (auto-unsubscribes)</span>
+</code></pre>
+<hr>
+<h2 id="-core-key-sanitization">🧼 Core: Key Sanitization</h2>
+<p>Opt-in detection that strips dangerous <em>patterns</em> (not harmless characters) from keys and namespaces — guarding against SQL injection, MongoDB operator injection, path traversal, and control-character/CRLF attacks. Results are LRU-cached for speed.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">sanitize</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-comment">// or fine-grained:</span>
+<span class="hljs-keyword">const</span> keyv2 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">sanitize</span>: { <span class="hljs-attr">sql</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">mongo</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">path</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">escape</span>: <span class="hljs-literal">true</span> } });
+</code></pre>
+<p>Applied to every key-accepting method (<code>get</code>, <code>set</code>, <code>delete</code>, <code>has</code>, the <code>*Many</code> variants, and the raw variants), plus namespaces at construction and on the <code>namespace</code> setter.</p>
+<hr>
+<h2 id="-core-events-hooks--error-handling">🪝 Core: Events, Hooks & Error Handling</h2>
+<ul>
+<li>
+<p><strong>Hooks for more operations</strong> — added pre/post hooks for <code>setMany</code>, <code>deleteMany</code>, <code>clear</code>, and <code>disconnect</code>, in addition to the existing single-key hooks. (#1918, #1924)</p>
+</li>
+<li>
+<p><strong><code>throwOnErrors</code></strong> — make operations throw instead of emitting <code>'error'</code>, so you can <code>try/catch</code> (great with <code>@keyv/redis</code> connection handling). (#1910)</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvRedis</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/redis'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvRedis</span>(<span class="hljs-string">'redis://localhost:6379'</span>), <span class="hljs-attr">throwOnErrors</span>: <span class="hljs-literal">true</span> });
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+} <span class="hljs-keyword">catch</span> (error) {
+  <span class="hljs-comment">// handle connection/timeout errors yourself</span>
+}
+</code></pre>
+</li>
+<li>
+<p><strong>Key prefixing moved to adapters.</strong> Prefixing/namespacing is now handled by the storage adapters that need it rather than the core. (#1899)</p>
+</li>
+<li>
+<p><strong>Encode/decode now propagate errors</strong> instead of swallowing them, and several stats/telemetry edge cases were fixed (no <code>STAT_SET</code> on empty set, <code>setRaw</code> telemetry, <code>getManyRaw</code> dead code). (#1922, #1920, #1921, #1919)</p>
+</li>
+</ul>
+<hr>
+<h2 id="️-core-optional-serialization">⚙️ Core: Optional Serialization</h2>
+<p>Serialization is now optional. Disable it to store raw objects (ideal for the default in-memory <code>Map</code>, where string conversion isn't needed). (#1898)</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">serialization</span>: <span class="hljs-literal">false</span> });
+</code></pre>
+<p>Pipeline ordering when serialization/compression are configured:</p>
+<ul>
+<li><strong>On set:</strong> serialize (optional) → compress (optional) → store</li>
+<li><strong>On get:</strong> store → decompress (optional) → parse (optional) → value</li>
+</ul>
+<p>If compression is configured without a serializer, Keyv falls back to <code>JSON.stringify</code>/<code>JSON.parse</code> since compression needs string input.</p>
+<hr>
+<h2 id="-storage-adapters">🌐 Storage Adapters</h2>
+<ul>
+<li><strong>etcd: dependency-free client.</strong> <code>@keyv/etcd</code> now talks to etcd v3 directly over its HTTP/JSON gateway via a small in-house client — the <code>etcd3</code> dependency is gone. Requires etcd v3+ and Node.js 20+ (uses global <code>fetch</code> / <code>AbortSignal.timeout</code>). TTL via etcd leases, namespace isolation, async iterator, and <code>setMany</code>/<code>getMany</code>/<code>deleteMany</code>/<code>hasMany</code> are all supported. (#1936, #1893)</li>
+<li><strong>DynamoDB:</strong> added <code>disconnect()</code> and <code>iterator()</code>; moved to v6 requirements with namespace support; TTL now stored in milliseconds; internal <code>isExpired</code> rename. AWS SDK dependencies upgraded. (#1914, #1894, #1934, #1935, #1948)</li>
+<li><strong>Compression adapters</strong> moved to the <code>KeyvCompressionAdapter</code> standard. (#1901)</li>
+<li><strong>BigMap:</strong> optimized hash function and hot-path performance. (#1915)</li>
+<li><strong>Adapter dependency upgrades:</strong> MongoDB (#1951), MySQL/mysql2 (#1952), Postgres/pg (#1953), memcache (#1950).</li>
+</ul>
+<hr>
+<h2 id="️-build-tooling--release">🏗️ Build, Tooling & Release</h2>
+<ul>
+<li>Moved the monorepo build to <strong><code>tsdown</code></strong>. (#1926)</li>
+<li>Upgraded to <strong>TypeScript 6</strong>. (#1933)</li>
+<li>New <strong>release management with OIDC</strong> and multi-version publishing, plus a hardened release pipeline. (#1942)</li>
+<li><strong>test-suite:</strong> v6 compliance overhaul, and TTL tests can now specify milliseconds or seconds. (#1931, #1949)</li>
+<li><strong>Stability:</strong> hardened service-backed test suites against timing flakes. (#1960)</li>
+<li><strong>Docs/links:</strong> fixed <code>main</code>-vs-<code>master</code> links and broken logo links in package READMEs. (#1939, #1943)</li>
+</ul>
+<hr>
+<h2 id="-notable-dependency-upgrades">📦 Notable Dependency Upgrades</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Package</th><th>Change</th><th>PR</th></tr></thead><tbody><tr><td><code>@redis/client</code></td><td>→ v6 (breaking)</td><td>#1954</td></tr><tr><td><code>hookified</code></td><td>→ v3 (breaking)</td><td>#1957</td></tr><tr><td><code>hashery</code> (BigMap)</td><td>→ v2 (breaking)</td><td>#1956</td></tr><tr><td><code>msgpackr</code> (serialize)</td><td>→ v2 (breaking)</td><td>#1958</td></tr><tr><td><code>bignumber.js</code> (test-suite)</td><td>→ v11 (breaking)</td><td>#1955</td></tr><tr><td><code>docula</code> (website)</td><td>→ v2 (breaking)</td><td>#1947</td></tr><tr><td><code>mongodb</code></td><td>upgraded</td><td>#1951</td></tr><tr><td><code>mysql2</code></td><td>upgraded</td><td>#1952</td></tr><tr><td><code>pg</code></td><td>upgraded</td><td>#1953</td></tr><tr><td>AWS SDK (dynamo)</td><td>upgraded</td><td>#1948</td></tr><tr><td>memcache</td><td>upgraded</td><td>#1950</td></tr><tr><td>TypeScript</td><td>→ v6</td><td>#1933</td></tr><tr><td>GitHub Actions</td><td>upgraded (breaking)</td><td>#1946</td></tr></tbody></table>
+<hr>
+<h2 id="full-changelog-by-release">Full Changelog by Release</h2>
+<h3 id="since-v600-beta1">Since <code>v6.0.0-beta.1</code></h3>
+<ul>
+<li><code>mono</code> - test: harden service-backed suites against timing flakes (#1960)</li>
+<li><code>serialize-msgpackr</code> - chore: upgrade msgpackr to v2 (breaking) (#1958)</li>
+<li><code>mono</code> - chore: upgrade hookified to v3 (breaking) (#1957)</li>
+<li><code>bigmap</code> - chore: upgrade hashery to v2 (breaking) (#1956)</li>
+<li><code>test-suite</code> - chore: upgrade bignumber.js to v11 (breaking) (#1955)</li>
+<li><code>redis</code> - chore: upgrade @redis/client to v6 (breaking) (#1954)</li>
+<li><code>postgres</code> - chore: upgrade pg (#1953)</li>
+<li><code>mysql</code> - chore: upgrade mysql2 (#1952)</li>
+<li><code>mongo</code> - chore: upgrade mongodb (#1951)</li>
+<li><code>memcache</code> - chore: upgrade memcache (#1950)</li>
+<li><code>dynamo</code> - chore: upgrade AWS SDK dependencies (#1948)</li>
+<li><code>test-suite</code> - feat: allow storage TTL tests to specify milliseconds or seconds (#1949)</li>
+<li><code>website</code> - chore: upgrade docula to v2 (breaking) (#1947)</li>
+<li><code>mono</code> - chore: upgrade GitHub Actions (breaking) (#1946)</li>
+<li><code>mono</code> - chore: upgrade TypeScript and build tooling (#1945)</li>
+<li><code>mono</code> - chore: upgrade code quality dependencies (breaking) (#1944)</li>
+<li><code>mono</code> - docs: fix broken keyv logo link in package READMEs (#1943)</li>
+<li><code>feat</code>: release management with OIDC and multi versions (#1942)</li>
+<li><code>keyv</code> - fix: <code>main</code> branch used instead of <code>master</code> for links (#1939)</li>
+<li><code>etcd</code> - feat: replace etcd3 dependency with built-in HTTP/JSON client (#1936)</li>
+<li><code>dynamo</code> - fix: renaming internal isExpired (#1935)</li>
+<li><code>dynamo</code> - fix: storing ttl in ms now also (#1934)</li>
+<li><code>mono</code> - chore: upgrading to TypeScript 6 (#1933)</li>
+</ul>
+<h3 id="v600-beta1"><code>v6.0.0-beta.1</code></h3>
+<ul>
+<li><code>keyv</code> - feat (breaking) stats / telemetry overhaul (#1912)</li>
+<li><code>keyv</code> - feat: (breaking) memory adapter, bridge adapter, keyv overhaul (#1913)</li>
+<li><code>bigmap</code> - feat: optimize BigMap hash function and hot path performance (#1915)</li>
+<li><code>dynamo</code> - feat: add disconnect and iterator methods to KeyvDynamo (#1914)</li>
+<li><code>keyv</code> - fix: handling has and hasMany better (#1916)</li>
+<li><code>keyv</code> - fix: adding in decode expiring to has (#1917)</li>
+<li><code>keyv</code> - feat: adding hooks for setMany and deleteMany (#1918)</li>
+<li><code>keyv</code> - fix: dead code on getManyRaw (#1919)</li>
+<li><code>keyv</code> - fix: on set with no result do not send telemetry STAT_SET (#1920)</li>
+<li><code>keyv</code> - fix: telemetry issue on setRaw (#1921)</li>
+<li><code>keyv</code> - fix: having encode / decode propagate errors (#1922)</li>
+<li><code>keyv</code> - feat: (breaking) by default keyv no longer checks expires (#1923)</li>
+<li><code>keyv</code> - feat: adding in hooks for clear and disconnect (#1924)</li>
+<li><code>keyv</code> - fix: minor bug fixes on memory, ttl, etc (#1925)</li>
+<li><code>mono</code> - feat: moving to tsdown for build (#1926)</li>
+<li><code>encryption-node</code> - feat: add Node.js encryption adapter for Keyv (#1927)</li>
+<li><code>encrypt-web</code> - feat: adding new web crypto module (#1928)</li>
+<li><code>keyv</code> - feat: (breaking) removing StoredData and StoredDataRaw types (#1929)</li>
+<li><code>keyv</code> - feat: enhancing capabilities (#1930)</li>
+<li><code>test-suite</code> - feat (breaking) overhaul based on v6 changes (#1931)</li>
+</ul>
+<h3 id="v600-alpha4"><code>v6.0.0-alpha.4</code></h3>
+<ul>
+<li><code>keyv</code> - feat: (breaking) moving to Hookified (#1900)</li>
+<li><code>compression</code> - feat: moving to KeyvCompressionAdapter standard (#1901)</li>
+<li><code>keyv</code> - feat: (breaking) api changes and iterator simplification (#1902)</li>
+<li><code>keyv</code> - feat: moving storage setMany to use KeyvEntry (#1903)</li>
+<li><code>keyv</code> - feat: (breaking) moving to boolean return on set (#1904)</li>
+<li><code>keyv</code> - fix: (breaking) setRaw and setMany raw do not need ttl param (#1905)</li>
+<li><code>keyv</code> - feat: (breaking) removing opts from KeyvStorageAdapter (#1906)</li>
+<li><code>keyv</code> - feat: browser compatibility (#1907)</li>
+<li><code>keyv</code> - fix: updating checks for browser tests (#1908)</li>
+<li><code>feat</code>: updating capability helper functions (#1909)</li>
+<li><code>keyv</code> - feat: clean up of code with fixes and helpers (#1910)</li>
+</ul>
+<p><strong>Full Changelog</strong>: <a href="https://github.com/jaredwray/keyv/compare/v6.0.0">https://github.com/jaredwray/keyv/compare/v6.0.0</a>-alpha.3...v6.0.0-beta.3</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-06-11</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

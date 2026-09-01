@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple key-value storage with support for multiple backends">
+  <link rel="stylesheet" href="/v5/css/variables.css">
+  <link rel="stylesheet" href="/v5/css/styles.css">
+  <link rel="stylesheet" href="/v5/css/highlight/styles/base16/docula.css">
+  <link rel="icon" href="/v5/favicon.ico">
+  <script>
+    (function(){
+      window.__doculaThemeKey = 'docula:theme:' + ('https://keyv.org').replace(/^https?:\/\//, '');
+      var mode = localStorage.getItem(window.__doculaThemeKey) || 'system';
+      var resolved = mode === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : mode;
+      if (resolved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        var authState = JSON.parse(localStorage.getItem('docula-auth-state'));
+        if (authState) {
+          window.__doculaAuth = authState;
+          if (authState.loggedIn) {
+            document.documentElement.classList.add('docula-auth-logged-in');
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage parsing errors
+      }
+      if (!window.__doculaAuth) {
+        window.__doculaAuth = { loggedIn: false, displayName: null };
+      }
+    })();
+  </script>
+  <title>Keyv - @keyv/memcache</title>
+  <script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"@keyv/memcache","description":"","url":"https://keyv.org/v5/docs/storage-adapters/memcache/","publisher":{"@type":"Organization","name":"Keyv"},"dateModified":"2026-08-30","keywords":[]}
+</script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-top">
+      <div class="header-top__content">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <a href="/v5/" class="logo-link">
+          <img alt="Keyv" class="logo__img" src="/v5/logo.svg">
+        </a>
+        <nav class="header-bottom__nav">
+          <a class="header-bottom__item" href="/v5/docs/" id="nav-docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <span>Documentation</span>
+          </a>
+          <a class="header-bottom__item" href="/v5/changelog/" id="nav-changelog">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+            <span>Changelog</span>
+          </a>
+        </nav>
+        <div class="header-actions">
+          <button class="search-button" id="search-button" type="button" aria-label="Search" aria-keyshortcuts="Meta+K Control+K">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-button__text">Search</span>
+            <span class="search-button__shortcut">⌘K</span>
+          </button>
+          <button class="theme-button" id="theme-toggle" aria-label="Theme: system (following system)">
+            <svg class="theme-button__icon theme-button__icon--system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg class="theme-button__icon theme-button__icon--sun theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="theme-button__icon theme-button__icon--moon theme-button__icon--hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <aside class="mobile-sidebar" id="mobile-sidebar">
+    <nav class="mobile-nav">
+      <a class="mobile-nav__item" href="/v5/docs/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+        <span>Documentation</span>
+      </a>
+      <a class="mobile-nav__item" href="/v5/changelog/">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"/><path d="M8 6v8"/></svg>
+        <span>Changelog</span>
+      </a>
+    </nav>
+    <div class="mobile-sidebar__docs" id="mobile-sidebar-docs"></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="search-modal" id="search-modal" hidden>
+    <div class="search-modal__backdrop" data-search-close></div>
+    <div class="search-modal__panel" role="dialog" aria-modal="true" aria-label="Search">
+      <div class="search-modal__header">
+        <svg class="search-modal__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-modal__input"
+          placeholder="Search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Search"
+          aria-controls="search-results"
+          aria-activedescendant=""
+          role="combobox"
+          aria-expanded="true"
+        />
+        <button class="search-modal__clear" id="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-modal__body">
+        <ul class="search-results" id="search-results" role="listbox" aria-label="Search results"></ul>
+        <div class="search-modal__empty" id="search-empty" hidden>
+          No results for "<span class="search-modal__empty-query" id="search-empty-query"></span>"
+        </div>
+        <div class="search-modal__initial" id="search-initial">
+          Type to search the documentation.
+        </div>
+      </div>
+      <div class="search-modal__footer">
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↑</kbd><kbd class="search-modal__kbd">↓</kbd> to navigate</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">↵</kbd> to select</span>
+        <span class="search-modal__hint"><kbd class="search-modal__kbd">esc</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.__doculaSearch = { indexUrl: "/v5/search-index.json" };
+  </script>
+  <script src="/v5/js/search.js" defer></script>
+  <div class="page-dropdown" id="page-dropdown">
+    <button class="page-dropdown__toggle" id="page-dropdown-toggle">
+      <span class="page-dropdown__title">@keyv/memcache</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+    <div class="page-dropdown__list" id="page-dropdown-list">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </div>
+  </div>
+  <div class="content">
+    <aside class="nav-sidebar" id="nav-sidebar">
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/" class="nav-sidebar__item">Getting Started Guide</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v4-to-v5/" class="nav-sidebar__item">v4 to v5 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/v5-to-v6/" class="nav-sidebar__item">v5 to v6 Migration</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/keyv/" class="nav-sidebar__item">Keyv API</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/versioning/" class="nav-sidebar__item">Versioning & Release Tags</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Storage Adapters</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/storage-adapters/bigmap/" class="nav-sidebar__item">@keyv/bigmap</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/cloudflare-kv/" class="nav-sidebar__item">@keyv/cloudflare-kv</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/dynamo/" class="nav-sidebar__item">@keyv/dynamo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/etcd/" class="nav-sidebar__item">@keyv/etcd</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/memcache/" class="nav-sidebar__item">@keyv/memcache</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mongo/" class="nav-sidebar__item">@keyv/mongo</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/mysql/" class="nav-sidebar__item">@keyv/mysql</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/postgres/" class="nav-sidebar__item">@keyv/postgres</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/redis/" class="nav-sidebar__item">@keyv/redis</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/sqlite/" class="nav-sidebar__item">@keyv/sqlite</a>
+              </li>
+              <li>
+                <a href="/v5/docs/storage-adapters/valkey/" class="nav-sidebar__item">@keyv/valkey</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/third-party-storage-adapters/" class="nav-sidebar__item">Third-Party Storage Adapters</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Compression</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/compression/compress-brotli/" class="nav-sidebar__item">@keyv/compress-brotli</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-gzip/" class="nav-sidebar__item">@keyv/compress-gzip</a>
+              </li>
+              <li>
+                <a href="/v5/docs/compression/compress-lz4/" class="nav-sidebar__item">@keyv/compress-lz4</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section">
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/test-suite/" class="nav-sidebar__item">Test Suite</a>
+              </li>
+            </ul>
+          </section>
+          <section class="nav-sidebar__section nav-sidebar__section--collapsible">
+            <h2 class="nav-sidebar__title">
+              <button type="button" class="nav-sidebar__toggle" aria-expanded="true">
+                <span class="nav-sidebar__toggle-label">Caching</span>
+                <svg class="nav-sidebar__chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </h2>
+            <ul class="nav-sidebar__list">
+              <li>
+                <a href="/v5/docs/caching/caching-express/" class="nav-sidebar__item">How to Implement Caching with Express</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-fastify/" class="nav-sidebar__item">How to Implement Caching with Fastify</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-javascript/" class="nav-sidebar__item">How to Implement Caching in Javascript</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-koa/" class="nav-sidebar__item">How to Implement Caching with Koa</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-nestjs/" class="nav-sidebar__item">Utilizing Keyv for Caching in NestJS: A Step-by-Step Guide</a>
+              </li>
+              <li>
+                <a href="/v5/docs/caching/caching-node/" class="nav-sidebar__item">Utilizing Keyv for Caching in Node.js: A Step-by-Step Guide</a>
+              </li>
+            </ul>
+          </section>
+    </aside>
+<article class="article">
+  <header class="article__header">
+    <h1 class="article__title">@keyv/memcache</h1>
+  </header>
+  <div class="article__body">
+    <main class="article__main">
+      <blockquote>
+<p>Memcache storage adapter for <a href="https://github.com/jaredwray/keyv">Keyv</a> using the <a href="https://github.com/jaredwray/memcache">memcache</a> client</p>
+</blockquote>
+<p><a href="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml"><img src="https://github.com/jaredwray/keyv/actions/workflows/tests.yaml/badge.svg" alt="build"></a>
+<a href="https://codecov.io/gh/jaredwray/keyv"><img src="https://codecov.io/gh/jaredwray/keyv/branch/main/graph/badge.svg?token=bRzR3RyOXZ" alt="codecov"></a>
+<a href="https://github.com/jaredwray/keyv/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jaredwray/keyv" alt="GitHub license"></a>
+<a href="https://npmjs.com/package/@keyv/memcache"><img src="https://img.shields.io/npm/dm/@keyv/memcache" alt="npm"></a></p>
+<h2 id="features">Features</h2>
+<ul>
+<li>Built on the <a href="https://github.com/jaredwray/memcache">memcache</a> package with a fully Promise-based API and TypeScript types</li>
+<li>TTL support (millisecond input, converted to seconds for memcache)</li>
+<li>Namespace support for key isolation across multiple Keyv instances</li>
+<li>Multiple nodes with consistent hashing (KetamaHash)</li>
+<li>SASL authentication support</li>
+<li>AWS ElastiCache Auto Discovery support</li>
+<li>Retry and backoff support for failed commands</li>
+<li><code>createKeyv</code> helper for quick setup</li>
+</ul>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li>
+<ul>
+<li><a href="#install">Install</a></li>
+<li><a href="#keyv-compression-is-not-supported">Keyv Compression is not Supported</a></li>
+<li><a href="#expiration-granularity">Expiration Granularity</a></li>
+<li><a href="#quick-start-with-createkeyv">Quick Start with createKeyv</a></li>
+<li><a href="#usage">Usage</a></li>
+<li><a href="#usage-with-namespaces">Usage with Namespaces</a></li>
+<li><a href="#options">Options</a></li>
+<li><a href="#multiple-nodes">Multiple Nodes</a></li>
+<li><a href="#sasl-authentication">SASL Authentication</a></li>
+<li><a href="#aws-elasticache-auto-discovery">AWS ElastiCache Auto Discovery</a></li>
+<li><a href="#api">API</a>
+<ul>
+<li><a href="#constructoruri-options">constructor(uri?, options?)</a></li>
+<li><a href="#getkey">.get(key)</a></li>
+<li><a href="#getmanykeys">.getMany(keys)</a></li>
+<li><a href="#setkey-value-ttl">.set(key, value, ttl?)</a></li>
+<li><a href="#setmanyentries">.setMany(entries)</a></li>
+<li><a href="#deletekey">.delete(key)</a></li>
+<li><a href="#deletemanykeys">.deleteMany(keys)</a></li>
+<li><a href="#clear">.clear()</a></li>
+<li><a href="#haskey">.has(key)</a></li>
+<li><a href="#hasmanykeys">.hasMany(keys)</a></li>
+<li><a href="#disconnect">.disconnect()</a></li>
+<li><a href="#formatkeykey">.formatKey(key)</a></li>
+<li><a href="#properties">Properties</a></li>
+</ul>
+</li>
+<li><a href="#works-with-memcached-and-google-cloud">Works with Memcached and Google Cloud</a>
+<ul>
+<li><a href="#using-memcached">Using Memcached</a></li>
+<li><a href="#using-google-cloud">Using Google Cloud</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#breaking-changes-from-v2-to-v6">Breaking Changes from v2 to v6</a>
+<ul>
+<li><a href="#underlying-client-changed-from-memjs-to-memcache">Underlying Client Changed from <code>memjs</code> to <code>memcache</code></a></li>
+<li><a href="#client-property-type-changed"><code>client</code> Property Type Changed</a></li>
+<li><a href="#keyvmemcacheoptions-type-changed"><code>KeyvMemcacheOptions</code> Type Changed</a></li>
+<li><a href="#disconnect-method-added"><code>disconnect()</code> Method Added</a></li>
+<li><a href="#buffer-dependency-removed"><code>buffer</code> Dependency Removed</a></li>
+<li><a href="#license">License</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="install">Install</h2>
+<pre><code class="hljs language-shell">npm install --save @keyv/memcache
+</code></pre>
+<h2 id="keyv-compression-is-not-supported">Keyv Compression is not Supported</h2>
+<p>This package does not support compression. If you need compression, please use the <code>@keyv/redis</code> or another service package instead.</p>
+<h2 id="expiration-granularity">Expiration Granularity</h2>
+<p>Expiry is enforced server-side by Memcached's <code>exptime</code>, which is <strong>second-granular</strong>. TTLs are accepted in milliseconds and rounded up to whole seconds, so Memcached itself can return a value for up to ~1 second past a sub-second (or just-elapsed) deadline before it evicts it. Keyv filters expired reads at its own layer by default (<code>checkExpired</code> defaults to <code>true</code>), using the absolute <code>expires</code> stored with the value, so reads are millisecond-precise out of the box even though Memcached's eviction is coarser. If you prefer to trust Memcached's <code>exptime</code> alone (and skip the extra decode on reads), opt out:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>), <span class="hljs-attr">checkExpired</span>: <span class="hljs-literal">false</span> });
+</code></pre>
+<h2 id="quick-start-with-createkeyv">Quick Start with createKeyv</h2>
+<p>The <code>createKeyv</code> helper creates a <code>Keyv</code> instance with a Memcache store in a single call:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>(<span class="hljs-string">'localhost:11211'</span>);
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, handleConnectionError);
+
+<span class="hljs-comment">// set a value</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>, <span class="hljs-number">6000</span>);
+
+<span class="hljs-comment">// get a value</span>
+<span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>);
+
+<span class="hljs-comment">// delete a value</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>);
+</code></pre>
+<p>You can also pass an options object:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> { createKeyv } <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-title function_">createKeyv</span>({ <span class="hljs-attr">nodes</span>: [<span class="hljs-string">'localhost:11211'</span>] });
+</code></pre>
+<h2 id="usage">Usage</h2>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: memcache });
+keyv.<span class="hljs-title function_">on</span>(<span class="hljs-string">'error'</span>, handleConnectionError);
+
+<span class="hljs-comment">//set</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">set</span>(<span class="hljs-string">"foo"</span>,<span class="hljs-string">"bar"</span>, <span class="hljs-number">6000</span>) <span class="hljs-comment">//Expiring time is optional</span>
+
+<span class="hljs-comment">//get</span>
+<span class="hljs-keyword">const</span> obj = <span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">get</span>(<span class="hljs-string">"foo"</span>);
+
+<span class="hljs-comment">//delete</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">delete</span>(<span class="hljs-string">"foo"</span>);
+
+<span class="hljs-comment">//clear</span>
+<span class="hljs-keyword">await</span> keyv.<span class="hljs-title function_">clear</span>();
+
+<span class="hljs-comment">//disconnect</span>
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">disconnect</span>();
+</code></pre>
+<h2 id="usage-with-namespaces">Usage with Namespaces</h2>
+<p>The namespace lives on the store adapter, which prefixes every key with <code>namespace:</code>. Because the namespace is held on the adapter, give each namespace its own <code>KeyvMemcache</code> instance rather than sharing a single store between multiple <code>Keyv</code> instances:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> keyv1 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>), <span class="hljs-attr">namespace</span>: <span class="hljs-string">"namespace1"</span> });
+<span class="hljs-keyword">const</span> keyv2 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>), <span class="hljs-attr">namespace</span>: <span class="hljs-string">"namespace2"</span> });
+
+<span class="hljs-comment">//set</span>
+<span class="hljs-keyword">await</span> keyv1.<span class="hljs-title function_">set</span>(<span class="hljs-string">"foo"</span>,<span class="hljs-string">"bar1"</span>, <span class="hljs-number">6000</span>) <span class="hljs-comment">//Expiring time is optional</span>
+<span class="hljs-keyword">await</span> keyv2.<span class="hljs-title function_">set</span>(<span class="hljs-string">"foo"</span>,<span class="hljs-string">"bar2"</span>, <span class="hljs-number">6000</span>) <span class="hljs-comment">//Expiring time is optional</span>
+
+<span class="hljs-comment">//get</span>
+<span class="hljs-keyword">const</span> obj1 = <span class="hljs-keyword">await</span> keyv1.<span class="hljs-title function_">get</span>(<span class="hljs-string">"foo"</span>); <span class="hljs-comment">//will return bar1</span>
+<span class="hljs-keyword">const</span> obj2 = <span class="hljs-keyword">await</span> keyv2.<span class="hljs-title function_">get</span>(<span class="hljs-string">"foo"</span>); <span class="hljs-comment">//will return bar2</span>
+
+</code></pre>
+<p>You can also set the namespace directly on the store, which is handy when you only need a single namespace:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+memcache.<span class="hljs-property">namespace</span> = <span class="hljs-string">"namespace1"</span>;
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: memcache });
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> <code>clear()</code> always flushes the entire Memcached server because Memcached cannot enumerate keys, so it is not scoped to a namespace.</p>
+</blockquote>
+<h2 id="options">Options</h2>
+<p>The <code>KeyvMemcacheOptions</code> type extends <code>MemcacheOptions</code> from the <code>memcache</code> package with a <code>namespace</code> property:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td><code>undefined</code></td>
+<td>Key prefix for namespace isolation</td>
+</tr>
+<tr>
+<td><code>nodes</code></td>
+<td><code>(string | MemcacheNode)[]</code></td>
+<td><code>['localhost:11211']</code></td>
+<td>Array of memcache server URIs or MemcacheNode instances</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>number</code></td>
+<td><code>5000</code></td>
+<td>Operation timeout in milliseconds</td>
+</tr>
+<tr>
+<td><code>keepAlive</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Keep the connection alive</td>
+</tr>
+<tr>
+<td><code>keepAliveDelay</code></td>
+<td><code>number</code></td>
+<td><code>1000</code></td>
+<td>Keep-alive delay in milliseconds</td>
+</tr>
+<tr>
+<td><code>retries</code></td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+<td>Number of retry attempts for failed commands (0 to disable)</td>
+</tr>
+<tr>
+<td><code>retryDelay</code></td>
+<td><code>number</code></td>
+<td><code>100</code></td>
+<td>Base delay in milliseconds between retries</td>
+</tr>
+<tr>
+<td><code>retryBackoff</code></td>
+<td><code>function</code></td>
+<td>fixed delay</td>
+<td>Function to calculate backoff delay between retries</td>
+</tr>
+<tr>
+<td><code>retryOnlyIdempotent</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Only retry idempotent commands to prevent double-execution</td>
+</tr>
+<tr>
+<td><code>sasl</code></td>
+<td><code>{ username, password, mechanism? }</code></td>
+<td><code>undefined</code></td>
+<td>SASL PLAIN authentication credentials</td>
+</tr>
+<tr>
+<td><code>autoDiscover</code></td>
+<td><code>AutoDiscoverOptions</code></td>
+<td><code>undefined</code></td>
+<td>AWS ElastiCache Auto Discovery configuration</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>({
+  <span class="hljs-attr">nodes</span>: [<span class="hljs-string">'server1:11211'</span>, <span class="hljs-string">'server2:11211'</span>],
+  <span class="hljs-attr">timeout</span>: <span class="hljs-number">3000</span>,
+  <span class="hljs-attr">retries</span>: <span class="hljs-number">2</span>,
+  <span class="hljs-attr">retryDelay</span>: <span class="hljs-number">200</span>,
+});
+</code></pre>
+<h2 id="multiple-nodes">Multiple Nodes</h2>
+<p>The adapter supports connecting to multiple memcache servers. Keys are distributed across nodes using consistent hashing (KetamaHash):</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>({
+  <span class="hljs-attr">nodes</span>: [<span class="hljs-string">'server1:11211'</span>, <span class="hljs-string">'server2:11211'</span>, <span class="hljs-string">'server3:11211'</span>],
+});
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: memcache });
+</code></pre>
+<p>Node URIs support multiple formats:</p>
+<ul>
+<li>Simple: <code>localhost:11211</code></li>
+<li>With protocol: <code>memcache://localhost:11211</code></li>
+<li>IPv6: <code>[::1]:11211</code></li>
+</ul>
+<h2 id="sasl-authentication">SASL Authentication</h2>
+<p>To connect to a memcache server that requires SASL authentication:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>({
+  <span class="hljs-attr">nodes</span>: [<span class="hljs-string">'localhost:11211'</span>],
+  <span class="hljs-attr">sasl</span>: {
+    <span class="hljs-attr">username</span>: <span class="hljs-string">'myuser'</span>,
+    <span class="hljs-attr">password</span>: <span class="hljs-string">'mypassword'</span>,
+  },
+});
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: memcache });
+</code></pre>
+<h2 id="aws-elasticache-auto-discovery">AWS ElastiCache Auto Discovery</h2>
+<p>When using AWS ElastiCache, you can enable auto discovery to automatically detect cluster topology changes:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>({
+  <span class="hljs-attr">nodes</span>: [<span class="hljs-string">'my-cluster.cfg.use1.cache.amazonaws.com:11211'</span>],
+  <span class="hljs-attr">autoDiscover</span>: {
+    <span class="hljs-attr">enabled</span>: <span class="hljs-literal">true</span>,
+    <span class="hljs-attr">pollingInterval</span>: <span class="hljs-number">60000</span>, <span class="hljs-comment">// poll every 60 seconds (default)</span>
+  },
+});
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: memcache });
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td><code>boolean</code></td>
+<td>—</td>
+<td>Enable auto discovery</td>
+</tr>
+<tr>
+<td><code>pollingInterval</code></td>
+<td><code>number</code></td>
+<td><code>60000</code></td>
+<td>How often to poll for topology changes (ms)</td>
+</tr>
+<tr>
+<td><code>configEndpoint</code></td>
+<td><code>string</code></td>
+<td>first node</td>
+<td>The <code>.cfg</code> endpoint for discovery</td>
+</tr>
+<tr>
+<td><code>useLegacyCommand</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Use legacy command for engine versions < 1.4.14</td>
+</tr>
+</tbody>
+</table>
+<h2 id="api">API</h2>
+<h3 id="constructoruri-options">constructor(uri?, options?)</h3>
+<p>Creates a new <code>KeyvMemcache</code> instance.</p>
+<ul>
+<li><code>uri</code> — A memcache server URI string (e.g., <code>'localhost:11211'</code>) or a <code>KeyvMemcacheOptions</code> object. Defaults to <code>'localhost:11211'</code> if not provided.</li>
+<li><code>options</code> — Optional <code>KeyvMemcacheOptions</code> object. When both <code>uri</code> and <code>options</code> are objects, they are merged together.</li>
+</ul>
+<p>The <code>namespace</code> property is extracted from the resolved options and used for key prefixing. All remaining options are passed directly to the underlying <code>Memcache</code> client.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-comment">// Using a URI string</span>
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+
+<span class="hljs-comment">// Using an options object</span>
+<span class="hljs-keyword">const</span> memcache2 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>({ <span class="hljs-attr">nodes</span>: [<span class="hljs-string">'localhost:11211'</span>], <span class="hljs-attr">timeout</span>: <span class="hljs-number">3000</span> });
+
+<span class="hljs-comment">// Using multiple nodes</span>
+<span class="hljs-keyword">const</span> memcache3 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>({
+  <span class="hljs-attr">nodes</span>: [<span class="hljs-string">'server1:11211'</span>, <span class="hljs-string">'server2:11211'</span>, <span class="hljs-string">'server3:11211'</span>],
+  <span class="hljs-attr">namespace</span>: <span class="hljs-string">'myapp'</span>,
+});
+
+<span class="hljs-comment">// Using a URI string with additional options</span>
+<span class="hljs-keyword">const</span> memcache4 = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>, { <span class="hljs-attr">namespace</span>: <span class="hljs-string">'myapp'</span> });
+</code></pre>
+<h3 id="getkey">.get(key)</h3>
+<p>Retrieves a value from the memcache server. Returns the stored value, or <code>undefined</code> if the key does not exist or has expired.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">get</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'bar'</span>
+</code></pre>
+<h3 id="getmanykeys">.getMany(keys)</h3>
+<p>Retrieves multiple values from the memcache server. Returns an array of values corresponding to each key, with <code>undefined</code> for any key that does not exist.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">getMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>, <span class="hljs-string">'key3'</span>]); <span class="hljs-comment">// ['value1', 'value2', undefined]</span>
+</code></pre>
+<h3 id="setkey-value-ttl">.set(key, value, ttl?)</h3>
+<p>Stores a value in the memcache server. The optional <code>ttl</code> parameter is in milliseconds and is converted to seconds internally.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>); <span class="hljs-comment">// no expiration</span>
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>, <span class="hljs-number">5000</span>); <span class="hljs-comment">// expires in 5 seconds</span>
+</code></pre>
+<h3 id="setmanyentries">.setMany(entries)</h3>
+<p>Stores multiple values in the memcache server. Each entry is a <code>KeyvEntry<Value></code> object (<code>{ key: string, value: Value, ttl?: number }</code>), where <code>Value</code> is inferred from the entries provided. Returns a <code>boolean[]</code> indicating whether each entry was set successfully.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">setMany</span>([
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key1'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value1'</span> },
+  { <span class="hljs-attr">key</span>: <span class="hljs-string">'key2'</span>, <span class="hljs-attr">value</span>: <span class="hljs-string">'value2'</span>, <span class="hljs-attr">ttl</span>: <span class="hljs-number">5000</span> },
+]); <span class="hljs-comment">// [true, true]</span>
+</code></pre>
+<h3 id="deletekey">.delete(key)</h3>
+<p>Deletes a key from the memcache server. Returns <code>true</code> if the key was deleted.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">const</span> deleted = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">delete</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// true</span>
+</code></pre>
+<h3 id="deletemanykeys">.deleteMany(keys)</h3>
+<p>Deletes multiple keys from the memcache server. Returns a <code>boolean[]</code> indicating whether each key was deleted.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">deleteMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>]); <span class="hljs-comment">// [true, true]</span>
+</code></pre>
+<h3 id="clear">.clear()</h3>
+<p>Flushes all data from the memcache server. Note: this clears the entire server, not just keys within the current namespace.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">clear</span>();
+</code></pre>
+<h3 id="haskey">.has(key)</h3>
+<p>Checks whether a key exists in the memcache server. Returns <code>false</code> on any error.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'foo'</span>, <span class="hljs-string">'bar'</span>);
+<span class="hljs-keyword">const</span> exists = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">has</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// true</span>
+<span class="hljs-keyword">const</span> missing = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">has</span>(<span class="hljs-string">'baz'</span>); <span class="hljs-comment">// false</span>
+</code></pre>
+<h3 id="hasmanykeys">.hasMany(keys)</h3>
+<p>Checks whether multiple keys exist in the memcache server. Returns an array of booleans corresponding to each key.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key1'</span>, <span class="hljs-string">'value1'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">set</span>(<span class="hljs-string">'key2'</span>, <span class="hljs-string">'value2'</span>);
+<span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">hasMany</span>([<span class="hljs-string">'key1'</span>, <span class="hljs-string">'key2'</span>, <span class="hljs-string">'key3'</span>]); <span class="hljs-comment">// [true, true, false]</span>
+</code></pre>
+<h3 id="disconnect">.disconnect()</h3>
+<p>Gracefully disconnects from the memcache server.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+<span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">disconnect</span>();
+</code></pre>
+<h3 id="formatkeykey">.formatKey(key)</h3>
+<p>Formats a key by prepending the namespace if one is set. If no namespace is set, the key is returned as-is.</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>);
+memcache.<span class="hljs-title function_">formatKey</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'foo'</span>
+
+memcache.<span class="hljs-property">namespace</span> = <span class="hljs-string">'myapp'</span>;
+memcache.<span class="hljs-title function_">formatKey</span>(<span class="hljs-string">'foo'</span>); <span class="hljs-comment">// 'myapp:foo'</span>
+</code></pre>
+<h3 id="properties">Properties</h3>
+<p>The following public properties are available on a <code>KeyvMemcache</code> instance:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>client</code></td>
+<td><code>Memcache</code></td>
+<td>The underlying <a href="https://github.com/jaredwray/memcache">memcache</a> client instance for advanced use.</td>
+</tr>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string | undefined</code></td>
+<td>The namespace used to prefix keys. Can be read and set directly.</td>
+</tr>
+<tr>
+<td><code>nodes</code></td>
+<td><code>(string | MemcacheNode)[]</code></td>
+<td>The configured memcache nodes (read-only).</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>number | undefined</code></td>
+<td>The configured operation timeout in milliseconds (read-only).</td>
+</tr>
+<tr>
+<td><code>keepAlive</code></td>
+<td><code>boolean | undefined</code></td>
+<td>The configured keep-alive setting (read-only).</td>
+</tr>
+<tr>
+<td><code>retries</code></td>
+<td><code>number | undefined</code></td>
+<td>The configured number of retry attempts (read-only).</td>
+</tr>
+<tr>
+<td><code>retryDelay</code></td>
+<td><code>number | undefined</code></td>
+<td>The configured base retry delay in milliseconds (read-only).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="works-with-memcached-and-google-cloud">Works with Memcached and Google Cloud</h2>
+<h3 id="using-memcached">Using Memcached</h3>
+<ol>
+<li>Install Memcached and start an instance</li>
+</ol>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-comment">//set the server to the correct address and port</span>
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">"localhost:11211"</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: memcache});
+</code></pre>
+<h3 id="using-google-cloud">Using Google Cloud</h3>
+<ol>
+<li>Go to <a href="https://cloud.google.com/">https://cloud.google.com/</a> and sign up.</li>
+<li>Go to the memcached configuration page in the google cloud console by navigating to Memorystore > Memcached.</li>
+<li>On the memcached page (Eg. <a href="https://console.cloud.google.com/memorystore/memcached/instances?project=example">https://console.cloud.google.com/memorystore/memcached/instances?project=example</a>), Click Create Instance</li>
+<li>Fill in all mandatory fields as needed. You will need to set up a private service connection.</li>
+<li>To set up a private service connection, click the Set Up Connection button.</li>
+<li>Once required fields are complete, click the Create button to create the instance.</li>
+<li>Google provides further documentation for connecting to and managing your Memcached instance <a href="https://cloud.google.com/memorystore/docs/memcached">here</a>.</li>
+</ol>
+<pre><code class="hljs language-js"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Keyv</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'keyv'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">KeyvMemcache</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'@keyv/memcache'</span>;
+
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">"insert the internal google memcached discovery endpoint"</span>);
+<span class="hljs-keyword">const</span> keyv = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Keyv</span>({ <span class="hljs-attr">store</span>: memcache});
+
+</code></pre>
+<h1 id="breaking-changes-from-v2-to-v6">Breaking Changes from v2 to v6</h1>
+<h2 id="underlying-client-changed-from-memjs-to-memcache">Underlying Client Changed from <code>memjs</code> to <code>memcache</code></h2>
+<p>The underlying memcache client has been replaced from <a href="https://github.com/alevy/memjs">memjs</a> to <a href="https://github.com/jaredwray/memcache">memcache</a>. This brings a fully Promise-based API, built-in TypeScript types, and removes the need for the <code>buffer</code> dependency.</p>
+<h2 id="client-property-type-changed"><code>client</code> Property Type Changed</h2>
+<p>The <code>client</code> property on <code>KeyvMemcache</code> is now an instance of <code>Memcache</code> from the <code>memcache</code> package instead of <code>memjs.Client</code>. If you were accessing <code>client</code> directly, you will need to update your code to use the new API.</p>
+<h2 id="keyvmemcacheoptions-type-changed"><code>KeyvMemcacheOptions</code> Type Changed</h2>
+<p>The options type no longer extends <code>memjs.ClientOptions</code>. It now extends <code>MemcacheOptions</code> from the <code>memcache</code> package. Options such as <code>logger</code>, <code>username</code>, <code>password</code> passed directly are no longer supported. Use the <code>memcache</code> package options format instead:</p>
+<pre><code class="hljs language-js"><span class="hljs-comment">// Before (v2)</span>
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'user:pass@localhost:11211'</span>, { <span class="hljs-attr">logger</span>: { <span class="hljs-attr">log</span>: <span class="hljs-variable language_">console</span>.<span class="hljs-property">log</span> } });
+
+<span class="hljs-comment">// After (v6)</span>
+<span class="hljs-keyword">const</span> memcache = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KeyvMemcache</span>(<span class="hljs-string">'localhost:11211'</span>, { <span class="hljs-attr">sasl</span>: { <span class="hljs-attr">username</span>: <span class="hljs-string">'user'</span>, <span class="hljs-attr">password</span>: <span class="hljs-string">'pass'</span> } });
+</code></pre>
+<h2 id="disconnect-method-added"><code>disconnect()</code> Method Added</h2>
+<p>A new <code>disconnect()</code> method is available to gracefully close the connection to the memcache server:</p>
+<pre><code class="hljs language-js"><span class="hljs-keyword">await</span> memcache.<span class="hljs-title function_">disconnect</span>();
+</code></pre>
+<h2 id="buffer-dependency-removed"><code>buffer</code> Dependency Removed</h2>
+<p>The <code>buffer</code> polyfill dependency has been removed. Values are now handled as strings instead of Buffers.</p>
+<h2 id="license">License</h2>
+<p><a href="LICENSE">MIT © Jared Wray</a></p>
+    </main>
+    <aside class="content-aside">
+      <h2 class="content-aside__title">TABLE OF CONTENTS</h2>
+      <ul class="content-aside__list" id="toc-list">
+      </ul>
+    </aside>
+  </div>
+</article>
+  </div>
+  <footer>
+    <a href="/v5/llms.txt" class="footer__link">llms.txt</a>
+    <a href="/v5/feed.xml" class="footer__link" aria-label="RSS Feed">
+      <svg class="footer__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
+    </a>
+    
+    <a href="https://docula.org/" target="_blank" rel="noopener noreferrer" class="footer__link" aria-label="Docula">
+      <svg class="footer__bat" xmlns="http://www.w3.org/2000/svg" viewBox="70 110 360 205" fill="currentColor"><path d="M420,173c-16.76-18-72.78-36.65-131.59-30.58A160.15,160.15,0,0,0,269,120.55c-3.78,4.52-11.15,9.45-19,9.45s-15.23-4.93-19-9.45a160.15,160.15,0,0,0-19.4,21.83C152.78,136.31,96.76,154.94,80,173c48.86,5.86,79.5,34.09,79.5,72.06,52.37,0,77,28,90.5,59.94C263.54,273,288.13,245,340.5,245,340.5,207,371.14,178.8,420,173Z"/><circle cx="239.19" cy="145.36" r="3.32" fill="#fff"/><circle cx="260.81" cy="145.36" r="3.32" fill="#fff"/></svg>
+    </a>
+    <span class="footer__updated">updated: 2026-08-30</span>
+  </footer>
+  <script src="/v5/css/highlight/highlight.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('pre code').forEach(el => { el.textContent = el.textContent.trimEnd(); });
+      hljs.highlightAll();
+      var kbd = document.querySelector('.search-button__shortcut');
+      if (kbd) kbd.textContent = navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Ctrl K';
+  
+      // Copy code buttons
+      const copyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.innerHTML = copyIcon;
+        btn.setAttribute('aria-label', 'Copy code');
+        btn.addEventListener('click', function() {
+          const code = pre.querySelector('code');
+          const text = code ? code.textContent : pre.textContent;
+          navigator.clipboard.writeText(text || '').then(function() {
+            btn.innerHTML = checkIcon;
+            setTimeout(function() { btn.innerHTML = copyIcon; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var themeKey = window.__doculaThemeKey;
+      function getMode() {
+        return localStorage.getItem(themeKey) || 'system';
+      }
+  
+      function resolveTheme(mode) {
+        if (mode === 'system') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return mode;
+      }
+  
+      var cachedEls = null;
+      function getThemeEls() {
+        if (!cachedEls) {
+          cachedEls = {
+            systemIcon: document.querySelector('.theme-button__icon--system'),
+            sunIcon: document.querySelector('.theme-button__icon--sun'),
+            moonIcon: document.querySelector('.theme-button__icon--moon'),
+            toggle: document.getElementById('theme-toggle')
+          };
+        }
+        return cachedEls;
+      }
+  
+      function applyTheme(mode) {
+        var resolved = resolveTheme(mode);
+        if (resolved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+  
+        var els = getThemeEls();
+        if (els.systemIcon && els.sunIcon && els.moonIcon) {
+          els.systemIcon.classList.add('theme-button__icon--hidden');
+          els.sunIcon.classList.add('theme-button__icon--hidden');
+          els.moonIcon.classList.add('theme-button__icon--hidden');
+          if (mode === 'system') {
+            els.systemIcon.classList.remove('theme-button__icon--hidden');
+          } else if (mode === 'light') {
+            els.sunIcon.classList.remove('theme-button__icon--hidden');
+          } else {
+            els.moonIcon.classList.remove('theme-button__icon--hidden');
+          }
+        }
+  
+        if (els.toggle) {
+          var labels = { system: 'Theme: system (following system)', light: 'Theme: light', dark: 'Theme: dark' };
+          els.toggle.setAttribute('aria-label', labels[mode] || 'Toggle theme');
+        }
+      }
+  
+      function nextMode(current) {
+        var cycle = { system: 'light', light: 'dark', dark: 'system' };
+        return cycle[current] || 'system';
+      }
+  
+      var currentMode = getMode();
+  
+      document.addEventListener('DOMContentLoaded', function() {
+        applyTheme(currentMode);
+  
+        var els = getThemeEls();
+        if (els.toggle) {
+          els.toggle.addEventListener('click', function() {
+            currentMode = nextMode(currentMode);
+            localStorage.setItem(themeKey, currentMode);
+            applyTheme(currentMode);
+          });
+        }
+      });
+  
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+        if (getMode() === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
+  <script defer>
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileSidebar = document.getElementById('mobile-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (menuToggle && mobileSidebar) {
+        menuToggle.addEventListener('click', () => {
+          mobileSidebar.classList.toggle('mobile-sidebar--open');
+          if (backdrop) backdrop.classList.toggle('sidebar-backdrop--visible');
+        });
+        if (backdrop) {
+          backdrop.addEventListener('click', () => {
+            mobileSidebar.classList.remove('mobile-sidebar--open');
+            backdrop.classList.remove('sidebar-backdrop--visible');
+          });
+        }
+      }
+  
+      // Page dropdown toggle (docs pages)
+      const dropdownToggle = document.getElementById('page-dropdown-toggle');
+      const dropdownList = document.getElementById('page-dropdown-list');
+      if (dropdownToggle && dropdownList) {
+        dropdownToggle.addEventListener('click', () => {
+          dropdownList.classList.toggle('page-dropdown__list--open');
+        });
+      }
+  
+      // Active sidebar link highlighting
+      const sidebarLinks = document.querySelectorAll('.nav-sidebar__item');
+      const currentPath = window.location.pathname;
+      sidebarLinks.forEach((link) => {
+        if (link.getAttribute('href') === currentPath || link.getAttribute('href') === currentPath.replace(/\/$/, '')) {
+          link.classList.add('nav-sidebar__item--active');
+        }
+      });
+  
+      // Sidebar section collapse/expand
+      const SIDEBAR_STORAGE_KEY = 'docula:sidebar-sections';
+      const collapsibleSections = document.querySelectorAll('.nav-sidebar__section--collapsible');
+      if (collapsibleSections.length > 0) {
+        let storedSectionState = {};
+        try {
+          storedSectionState = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+        } catch (e) { storedSectionState = {}; }
+  
+        const setSectionOpen = (section, toggle, open) => {
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          section.classList.toggle('nav-sidebar__section--collapsed', !open);
+        };
+  
+        collapsibleSections.forEach((section, idx) => {
+          const toggle = section.querySelector('.nav-sidebar__toggle');
+          const list = section.querySelector('.nav-sidebar__list');
+          if (!toggle || !list) return;
+          const listId = 'nav-sidebar-section-' + idx;
+          list.id = listId;
+          toggle.setAttribute('aria-controls', listId);
+  
+          const key = 'section-' + idx;
+          const hasStored = Object.prototype.hasOwnProperty.call(storedSectionState, key);
+          const isOpen = hasStored ? !!storedSectionState[key] : true;
+          setSectionOpen(section, toggle, isOpen);
+  
+          toggle.addEventListener('click', () => {
+            const next = toggle.getAttribute('aria-expanded') !== 'true';
+            setSectionOpen(section, toggle, next);
+            storedSectionState[key] = next;
+            try {
+              localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(storedSectionState));
+            } catch (e) { /* storage unavailable */ }
+          });
+        });
+      }
+  
+      // Active nav link highlighting (header + mobile). Highlight only the
+      // single most-specific link: the one whose path is the longest prefix of
+      // the current path. A plain startsWith() check lights up every link whose
+      // path merely prefixes the current one, so when the site is embedded under
+      // a base path (e.g. served at /developer with docs at that root) the
+      // Documentation link — whose path is a prefix of every page — would stay
+      // highlighted everywhere. Trailing slashes are normalized so matches stop
+      // at a path boundary. We read the anchor's resolved origin/pathname so
+      // absolute, relative, and same-origin hrefs all work, while cross-origin
+      // links and non-anchor items (e.g. the mobile logout button) are skipped.
+      const withTrailingSlash = (p) => (p.endsWith('/') ? p : p + '/');
+      const here = withTrailingSlash(currentPath);
+      const markActiveNav = (selector, activeClass) => {
+        let bestLink = null;
+        let bestLength = -1;
+        document.querySelectorAll(selector).forEach((link) => {
+          // Only same-origin anchors can match the current pathname.
+          if (!link.href || link.origin !== window.location.origin) return;
+          const base = withTrailingSlash(link.pathname);
+          if (here.startsWith(base) && base.length > bestLength) {
+            bestLink = link;
+            bestLength = base.length;
+          }
+        });
+        if (bestLink) bestLink.classList.add(activeClass);
+      };
+      markActiveNav('.header-bottom__item', 'header-bottom__item--active');
+      markActiveNav('.mobile-nav__item', 'mobile-nav__item--active');
+  
+      // TOC extraction: move the inline TOC into the right sidebar and hide the original
+      const tocHeading = document.getElementById('table-of-contents');
+      if (tocHeading) {
+        const tocList = tocHeading.nextElementSibling;
+        const tocTarget = document.getElementById('toc-list');
+        if (tocList && tocList.tagName === 'UL' && tocTarget) {
+          tocTarget.innerHTML = tocList.innerHTML;
+          tocHeading.style.display = 'none';
+          tocList.style.display = 'none';
+        }
+      }
+  
+      // Hide the TOC aside if it has no entries
+      const tocSidebar = document.getElementById('toc-list');
+      if (tocSidebar && tocSidebar.children.length === 0) {
+        const aside = tocSidebar.closest('.content-aside');
+        if (aside) { aside.style.display = 'none'; }
+      }
+  
+      // Image lightbox
+      const lightboxOverlay = document.createElement('div');
+      lightboxOverlay.className = 'lightbox-overlay';
+      lightboxOverlay.addEventListener('click', function(e) {
+        if (e.target !== lightboxImg) lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxClose = document.createElement('button');
+      lightboxClose.className = 'lightbox-close';
+      lightboxClose.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      lightboxClose.addEventListener('click', function() {
+        lightboxOverlay.classList.remove('lightbox-overlay--visible');
+      });
+      const lightboxImg = document.createElement('img');
+      lightboxOverlay.appendChild(lightboxClose);
+      lightboxOverlay.appendChild(lightboxImg);
+      document.body.appendChild(lightboxOverlay);
+  
+      document.querySelectorAll('.article__main img, .changelog-entry-body img').forEach(function(img) {
+        if (img.closest('a')) return;
+        img.addEventListener('click', function() {
+          lightboxImg.src = img.src;
+          lightboxOverlay.classList.add('lightbox-overlay--visible');
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

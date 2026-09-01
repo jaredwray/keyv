@@ -1,30 +1,52 @@
 :root {
-    --font-family: 'Open Sans', sans-serif;
-  
-    --color-primary:  #643cb4;
-    --color-secondary: #c85ae6;
-    --color-secondary-dark: #005ac3;
-    --color-text: #323232;
-  
-    --background: #ffffff;
-    --home-background: #ffffff;
-    --header-background: #ffffff;
-  
-    --sidebar-background: #ffffff;
-    --sidebar-text: #323232;
-    --sidebar-text-active: #1e96dc;
-  
-    --border: rgba(238,238,245,1);
-  
-    --background-search-highlight: var(--color-secondary-dark);
-    --color-search-highlight: #ffffff;
-    --search-input-background: var(--header-background);
-  
-    --code: rgba(238,238,245,1);
-  
-    --pagefind-ui-text: var(--color-text) !important;
-    --pagefind-ui-font: var(--font-family) !important;
-    --pagefind-ui-background: var(--background) !important;
-    --pagefind-ui-border: var(--border) !important;
-    --pagefind-ui-scale: .9 !important;
-  }
+	--bg: #121212;
+	--fg: #f4f4f5;
+	--border: rgba(255, 255, 255, 0.1);
+	--border-strong: rgba(255, 255, 255, 0.2);
+	--border-hover: rgba(255, 255, 255, 0.4);
+	--surface: #1e1630;
+	--surface-hover: rgba(200, 90, 230, 0.12);
+	--muted: #c5cdd3;
+	--muted-fg: rgba(255, 255, 255, 0.65);
+	--code-bg: rgba(200, 90, 230, 0.12);
+	--pre-bg: rgba(255, 255, 255, 0.05);
+	--link: #c85ae6;
+	--scrollbar: rgba(200, 90, 230, 0.35);
+	--header-height: 81px;
+}
+
+[data-theme="light"] {
+	--bg: #ffffff;
+	--fg: #1a1a1a;
+	--border: rgba(100, 60, 180, 0.12);
+	--border-strong: rgba(100, 60, 180, 0.22);
+	--border-hover: rgba(100, 60, 180, 0.35);
+	--surface: #f6f1fb;
+	--surface-hover: rgba(100, 60, 180, 0.08);
+	--muted: #5c5b6a;
+	--muted-fg: rgba(0, 0, 0, 0.5);
+	--code-bg: rgba(100, 60, 180, 0.08);
+	--pre-bg: rgba(100, 60, 180, 0.04);
+	--link: #643cb4;
+	--scrollbar: rgba(100, 60, 180, 0.3);
+}
+
+.markdown-alert {
+	border-left: 4px solid var(--border);
+	border-radius: 8px;
+	margin: 1rem 0;
+	padding: 0.75rem 1rem;
+	background: var(--surface);
+}
+
+.markdown-alert-note {
+	border-left-color: #1e96dc;
+}
+
+.markdown-alert-warning {
+	border-left-color: #f2b90c;
+}
+
+.markdown-alert-caution {
+	border-left-color: #e5534b;
+}

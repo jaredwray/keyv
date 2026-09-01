@@ -102,14 +102,18 @@ keyv.iml
 #vim
 *.swp
 
-#website
-website/site/docs/**
-!website/site/docs/index.md
-!website/site/docs/v4-to-v5.md
-!website/site/docs/v5-to-v6.md
-!website/site/docs/third-party-storage-adapters.md
-!website/site/docs/versioning.md
-!website/site/docs/caching/**
+# website generated from package READMEs
+website/site/docs/storage-adapters/**
+!website/site/docs/storage-adapters/overview.md
+!website/site/docs/storage-adapters/third-party.md
+website/site/docs/compression/**
+!website/site/docs/compression/overview.md
+website/site/docs/serialization/**
+!website/site/docs/serialization/overview.md
+website/site/docs/encryption/**
+!website/site/docs/encryption/overview.md
+website/site/docs/test-suite.md
+website/site/.cache
 core/keyv/test.db
 
 # AI

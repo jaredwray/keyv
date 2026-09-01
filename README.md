@@ -95,7 +95,7 @@ The default serializer (`KeyvJsonSerializer`) is built into the core `keyv` pack
 
 We love the community and the third-party storage adapters they have built. They enable Keyv to be used with even more backends and use cases.
 
-View the complete list of third-party storage adapters and learn how to build your own at https://keyv.org/docs/third-party-storage-adapters/
+View the complete list of third-party storage adapters and learn how to build your own at https://keyv.org/docs/storage-adapters/third-party/
 
 # Contributing
 
@@ -110,7 +110,9 @@ We welcome contributions! Here are some ways to get involved:
 
 # Keyv v5 to v6
 
-We are actively working on Keyv v6, which includes several major changes such as improved TypeScript support, enhanced hooks system, and streamlined storage adapter interfaces. You can follow along with the development and see the full migration guide at https://keyv.org/docs/keyv-v5-to-v6
+We are actively working on Keyv v6, which includes several major changes such as improved TypeScript support, enhanced hooks system, and streamlined storage adapter interfaces. You can follow along with the development and see the full migration guide at https://keyv.org/docs/migration/v5-to-v6/
+
+The previous documentation site is archived at https://keyv.org/v5/.
 
 No major functionality will be added to Keyv v5. Only maintenance and security fixes will be applied going forward.
 

@@ -1,0 +1,133 @@
+/* Hero section */
+.home-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem 2rem;
+  min-height: 40vh;
+}
+
+.home-hero img {
+  max-width: 12.5rem;
+  width: 100%;
+}
+
+.hero-container {
+  margin: 2rem auto;
+  max-width: 90%;
+}
+
+.hero-container h1 {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.home-docs-button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid var(--border-strong);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: var(--fg);
+  transition: border-color 0.2s;
+}
+
+.home-docs-button:hover {
+  border-color: var(--border-hover);
+}
+
+.home-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Announcement */
+.announcement {
+  margin: 1rem 0;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  background: var(--surface);
+  font-size: 14px;
+}
+
+/* GitHub corner */
+.github-corner svg {
+  fill: var(--fg);
+  color: var(--bg);
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 0;
+  z-index: 10;
+}
+
+.github-corner:hover .octo-arm {
+  animation: octocat-wave 560ms ease-in-out;
+}
+
+@keyframes octocat-wave {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(-25deg); }
+  40%, 80% { transform: rotate(10deg); }
+}
+
+@media (max-width: 500px) {
+  .github-corner:hover .octo-arm { animation: none; }
+  .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+}
+
+
+/* Mobile adjustments */
+@media (max-width: 767px) {
+  .home-hero {
+    min-height: auto;
+    padding: 2rem 1rem 1rem;
+  }
+
+  .home-hero img {
+    max-width: 8rem;
+  }
+
+  .hero-container {
+    margin: 1rem auto;
+  }
+
+  .hero-container h1 {
+    font-size: 1.125rem;
+  }
+
+  .home-actions {
+    padding-bottom: 1rem;
+  }
+
+  .home-content {
+    padding: 0.75rem;
+  }
+
+  .home-content > section {
+    padding: 0.75rem 0;
+  }
+
+  .home-content .home-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Responsive hero */
+@media (min-width: 768px) {
+  .home-hero { min-height: 50vh; }
+  .home-hero img { max-width: 21.25rem; }
+  .hero-container h1 { font-size: 1.75rem; }
+}
+
+@media (min-width: 992px) {
+  .home-hero img { max-width: 28rem; }
+  .hero-container h1 { font-size: 2rem; }
+  .home-docs-button { font-size: 1.5rem; }
+}
