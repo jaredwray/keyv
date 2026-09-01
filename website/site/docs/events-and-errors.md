@@ -92,16 +92,16 @@ Hookified's `throwOnEmptyListeners` is **on** by default. An `'error'` event wit
 keyv.on("error", () => {});
 ```
 
-`throwOnErrors` (`throwOnEmitError`) defaults to `false`. When you set it to `true`, errors still throw only when there is **no** `'error'` listener. With a listener attached, the listener handles the error and nothing is thrown.
+`throwOnErrors` maps to Hookified's `throwOnEmitError` and defaults to `false`. In the current runtime, Hookified evaluates that flag only when an `'error'` event has **no** listeners. Because `throwOnEmptyListeners` is already enabled, an unhandled error throws whether `throwOnErrors` is `false` or `true`; with a listener attached, the listener handles the error and nothing is thrown.
 
 ```js
 const keyv = new Keyv({ throwOnErrors: true });
 
-// throws if the store fails — no listener
+// throws if the store fails — no listener (the default behavior too)
 await keyv.get("key");
 
 keyv.on("error", (error) => console.error(error));
-await keyv.get("key"); // listener runs instead of throwing
+await keyv.get("key"); // current runtime: listener runs instead of throwing
 ```
 
 ## Adapter-level throw options

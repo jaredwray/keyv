@@ -118,7 +118,7 @@ const keyv = new Keyv({ stats: true });
 Type: `boolean`  
 Default: `false`
 
-Maps to Hookified's `throwOnEmitError`. When `true`, errors throw if there is **no** `'error'` listener. With a listener, the error is delivered to the listener instead. See [Events and Errors](/docs/events-and-errors/).
+Maps to Hookified's `throwOnEmitError`. In the current runtime, this flag is only evaluated for an `'error'` event with no listeners. Because `throwOnEmptyListeners` is enabled by default, unhandled errors already throw; a registered listener prevents the throw even when `throwOnErrors` is `true`. See [Events and Errors](/docs/events-and-errors/).
 
 ## `checkExpired`
 
