@@ -90,10 +90,11 @@ const keyv = new Keyv({
 
 ## `sanitize`
 
-Type: `true | KeyvSanitizeOptions`  
+Type: `KeyvSanitizeOptions`
+
 Default: disabled
 
-Strip dangerous patterns from keys and namespaces. `true` enables every category on both targets. See [Sanitization](/docs/sanitization/).
+Strip dangerous patterns from keys and namespaces. Set `keys` and `namespace` to `true` to enable every category on both targets. See [Sanitization](/docs/sanitization/).
 
 ```js
 const keyv = new Keyv({

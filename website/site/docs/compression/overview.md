@@ -45,4 +45,4 @@ import KeyvGzip from "@keyv/compress-gzip";
 keyvCompressionTests(test, new KeyvGzip());
 ```
 
-Serialization must stay enabled (the default) or values must already be strings.
+Serialization must stay enabled (the default). Disabling serialization bypasses compression regardless of the original value type.

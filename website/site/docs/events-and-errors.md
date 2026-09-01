@@ -26,13 +26,13 @@ keyv.on(KeyvEvents.ERROR, (error) => {
 | `ERROR` | `'error'` | Store failure, encode/decode failure, invalid store, unserializable value |
 | `INFO` | `'info'` | Informational messages (available for your own emits and logger routing) |
 | `WARN` | `'warn'` | Warnings, including Hookified deprecation warnings |
-| `STAT_HIT` | `'stat:hit'` | Successful `get` / `has` hit |
-| `STAT_MISS` | `'stat:miss'` | Missing or expired key |
+| `STAT_HIT` | `'stat:hit'` | Successful `get` / `getRaw` read, including batch variants |
+| `STAT_MISS` | `'stat:miss'` | Missing or expired `get` / `getRaw` read, including batch variants |
 | `STAT_SET` | `'stat:set'` | Successful set |
 | `STAT_DELETE` | `'stat:delete'` | Delete attempted |
 | `STAT_ERROR` | `'stat:error'` | Operation failed |
 
-`clear` and `disconnect` are also emitted (as those method names) when those methods complete.
+`clear` and `disconnect` are also emitted (as those method names) when those methods begin, before the corresponding hooks and adapter operation run.
 
 ```js
 keyv.on("clear", () => console.log("namespace cleared"));

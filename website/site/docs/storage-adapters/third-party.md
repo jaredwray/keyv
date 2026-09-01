@@ -75,64 +75,142 @@ type KeyvStorageAdapter = {
 |--------|-------------|
 | `get(key)` | Return the stored payload or `undefined`. |
 | `set(key, value, expires?)` | Persist a value. `expires` is absolute Unix ms; omit for no expiry. |
+| `getMany(keys)` | Return stored payloads in the same order as the keys. |
+| `setMany(entries)` | Persist entries and return one result per entry. |
 | `delete(key)` | Return `true` if the key existed. |
+| `deleteMany(keys)` | Delete keys and return one result per key. |
 | `clear()` | Delete keys in the current namespace. |
+| `has(key)` | Return whether a live value exists. |
+| `hasMany(keys)` | Return one existence result per key. |
 
 ## Optional methods
 
-`has`, `hasMany`, `getMany`, `setMany`, `deleteMany`, `disconnect`, `iterator` — implement them for batch performance and iteration. Keyv (or the bridge) will loop single-key methods if they are missing.
+`disconnect` and `iterator` are optional. The other methods above are part of the direct v6 adapter contract.
 
 ## Minimal example
 
 ```typescript
 import { EventEmitter } from "events";
-import { keyvStorageCapability, type KeyvStorageAdapter, type KeyvStorageGetResult } from "keyv";
+import {
+  keyvStorageCapability,
+  type KeyvStorageAdapter,
+  type KeyvStorageCapability,
+  type KeyvStorageEntry,
+  type KeyvStorageGetResult,
+} from "keyv";
+
+type StoredEntry = {
+  payload: unknown;
+  expires?: number;
+};
 
 class MyCustomStore extends EventEmitter implements KeyvStorageAdapter {
-  private store = new Map<string, { value: unknown; expires?: number }>();
-  namespace?: string;
+  public namespace?: string;
+  private readonly data: Map<string, StoredEntry>;
 
-  get capabilities() {
+  public constructor(data = new Map<string, StoredEntry>()) {
+    super();
+    this.data = data;
+  }
+
+  public get capabilities(): KeyvStorageCapability {
     return keyvStorageCapability(this);
   }
 
-  async get<Value>(key: string): Promise<KeyvStorageGetResult<Value> | undefined> {
-    const data = this.store.get(key);
-    if (!data) return undefined;
-    if (data.expires && Date.now() > data.expires) {
-      this.store.delete(key);
-      return undefined;
-    }
-    return data as KeyvStorageGetResult<Value>;
+  private prefix(): string {
+    return this.namespace ? `${this.namespace}:` : "";
   }
 
-  async set(key: string, value: unknown, expires?: number): Promise<boolean> {
-    this.store.set(key, { value, expires });
+  private storageKey(key: string): string {
+    return `${this.prefix()}${key}`;
+  }
+
+  private liveEntry(key: string): StoredEntry | undefined {
+    const storageKey = this.storageKey(key);
+    const entry = this.data.get(storageKey);
+
+    if (entry?.expires !== undefined && entry.expires <= Date.now()) {
+      this.data.delete(storageKey);
+      return undefined;
+    }
+
+    return entry;
+  }
+
+  public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
+    return this.liveEntry(key)?.payload as KeyvStorageGetResult<Value>;
+  }
+
+  public async set(key: string, value: unknown, expires?: number): Promise<boolean> {
+    const storageKey = this.storageKey(key);
+    if (expires !== undefined && expires <= Date.now()) {
+      this.data.delete(storageKey);
+      return true;
+    }
+
+    const entry: StoredEntry =
+      expires === undefined ? { payload: value } : { payload: value, expires };
+    this.data.set(storageKey, entry);
     return true;
   }
 
-  async delete(key: string): Promise<boolean> {
-    return this.store.delete(key);
+  public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[]> {
+    return Promise.all(
+      entries.map(({ key, value, expires }) => this.set(key, value, expires)),
+    );
   }
 
-  async clear(): Promise<void> {
-    this.store.clear();
+  public async delete(key: string): Promise<boolean> {
+    return this.data.delete(this.storageKey(key));
   }
 
-  async has(key: string): Promise<boolean> {
-    return (await this.get(key)) !== undefined;
+  public async deleteMany(keys: string[]): Promise<boolean[]> {
+    return Promise.all(keys.map((key) => this.delete(key)));
   }
 
-  async getMany<Value>(keys: string[]) {
-    return Promise.all(keys.map((key) => this.get<Value>(key)));
+  public async getMany<Value>(
+    keys: string[],
+  ): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
+    return Promise.all(keys.map((key) => this.get<Value | undefined>(key)));
   }
 
-  async setMany() { return undefined; }
-  async hasMany(keys: string[]) {
+  public async has(key: string): Promise<boolean> {
+    return this.liveEntry(key) !== undefined;
+  }
+
+  public async hasMany(keys: string[]): Promise<boolean[]> {
     return Promise.all(keys.map((key) => this.has(key)));
   }
-  async deleteMany(keys: string[]) {
-    return keys.map((key) => this.store.delete(key));
+
+  public async clear(): Promise<void> {
+    const prefix = this.prefix();
+    if (!prefix) {
+      this.data.clear();
+      return;
+    }
+
+    for (const key of this.data.keys()) {
+      if (key.startsWith(prefix)) {
+        this.data.delete(key);
+      }
+    }
+  }
+
+  public async *iterator<Value>(): AsyncGenerator<
+    Array<string | Awaited<Value> | undefined>,
+    void
+  > {
+    const prefix = this.prefix();
+    for (const [storageKey, entry] of this.data) {
+      if (prefix && !storageKey.startsWith(prefix)) continue;
+      if (entry.expires !== undefined && entry.expires <= Date.now()) {
+        this.data.delete(storageKey);
+        continue;
+      }
+
+      const key = prefix ? storageKey.slice(prefix.length) : storageKey;
+      yield [key, entry.payload as Awaited<Value>];
+    }
   }
 }
 

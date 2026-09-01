@@ -6,7 +6,7 @@ description: stat:* telemetry events, eventLogger (Pino/Winston), and how stats 
 
 # Logging & Telemetry
 
-Keyv emits structured telemetry on every cache operation and can pipe events through Hookified's `eventLogger` (Pino, Winston, or any logger with `info` / `warn` / `error` / …).
+Keyv emits structured telemetry for reads, writes, deletes, and operation errors, and can pipe events through Hookified's `eventLogger` (Pino, Winston, or any logger with `info` / `warn` / `error` / …).
 
 ## Telemetry events
 
@@ -20,7 +20,7 @@ Emitted as `KeyvEvents` (see [Events and Errors](/docs/events-and-errors/)):
 | `stat:delete` | `{ event: 'delete', key, namespace, timestamp }` |
 | `stat:error` | `{ event: 'error', key, namespace, timestamp }` |
 
-Batch methods emit **one event per key**.
+Batch read, write, and delete methods emit **one event per key**. Successful `has()` and `hasMany()` probes do not emit `stat:hit` or `stat:miss`; failures still emit `stat:error`.
 
 ```js
 import Keyv, { KeyvEvents } from "keyv";

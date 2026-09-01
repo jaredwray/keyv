@@ -384,7 +384,7 @@ Key changes:
 - Automatically handles Map stores, storage adapters with `iterator()`, and unsupported stores
 - Expired entries are automatically filtered and deleted during iteration
 - The `IteratorFunction` type has been removed
-- If the store does not support iteration, an `error` event is emitted instead of throwing
+- If the store does not support iteration, the generator finishes immediately without emitting an error
 
 **v5 (before):**
 ```javascript
@@ -745,14 +745,15 @@ Keyv v6 includes `KeyvMemoryAdapter`, a wrapper class for storage types that don
 - Adds TTL support and handles expiration
 
 ```javascript
-import Keyv from 'keyv';
+import Keyv, { detectKeyvStorage } from 'keyv';
 
 // Map-compatible stores are automatically wrapped
-const keyv = new Keyv({ store: new Map() });
+const yourStore = new Map();
+const keyv = new Keyv({ store: yourStore });
 
 // Check if your adapter will use KeyvMemoryAdapter
-const capabilities = keyv.getStoreCapabilities(yourStore);
-if (capabilities.mapCompatible && !capabilities.adapter) {
+const capabilities = detectKeyvStorage(yourStore);
+if (capabilities.store === 'mapLike') {
   console.log('This store will use KeyvMemoryAdapter');
 }
 ```

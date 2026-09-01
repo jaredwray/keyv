@@ -102,7 +102,7 @@ Disable serialization for in-memory objects with `{ serialization: false }`. Com
 
 ### Sanitization
 
-Enable `{ sanitize: true }` to strip SQL comments, Mongo operators, path traversal, and control characters from keys and namespaces. Harmless characters such as quotes pass through. See [Sanitization](/docs/sanitization/).
+Enable `{ sanitize: { keys: true, namespace: true } }` to strip SQL comments, Mongo operators, path traversal, and control characters from keys and namespaces. Harmless characters such as quotes pass through. See [Sanitization](/docs/sanitization/).
 
 ### Encryption
 

@@ -13,7 +13,9 @@ Results are cached in an LRU (10,000 entries) so repeated keys are cheap.
 ## Enable it
 
 ```js
-const keyv = new Keyv({ sanitize: true });
+const keyv = new Keyv({
+	sanitize: { keys: true, namespace: true },
+});
 
 await keyv.set("test; DROP TABLE", "value");
 // stored as "test DROP TABLE"
@@ -22,7 +24,7 @@ await keyv.set("user's-data", "value");
 // unchanged
 ```
 
-`sanitize: false` or omitting the option leaves keys untouched.
+Omitting `sanitize`, or setting both targets to `false`, leaves keys and namespaces untouched.
 
 ## Pattern categories
 
