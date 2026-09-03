@@ -44,7 +44,7 @@
 		"cache",
 		"ttl"
 	],
-	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com",
+	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/jaredwray/keyv/issues"
@@ -75,6 +75,7 @@
 	},
 	"files": [
 		"dist",
+		"scripts",
 		"LICENSE"
 	]
 }

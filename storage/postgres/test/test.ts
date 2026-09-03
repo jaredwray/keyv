@@ -1,7 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
+import { Hookified } from "hookified";
 import Keyv from "keyv";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvPostgres, { createKeyv } from "../src/index.js";
 
 const postgresUri = "postgresql://postgres:postgres@localhost:5432/keyv_test";
@@ -32,6 +33,14 @@ describe("constructor", () => {
 		expect(keyv.clearExpiredInterval).toBe(0);
 		expect(keyv.ssl).toBeUndefined();
 		expect(keyv.namespace).toBeUndefined();
+		expect(keyv.capabilities.expires).toBe(true);
+		expect(keyv.capabilities.store).toBe("keyvStorage");
+	});
+
+	test("keeps the default uri when it is omitted from options", () => {
+		const keyv = new KeyvPostgres({ table: "custom_table" });
+		expect(keyv.uri).toBe("postgresql://localhost:5432");
+		expect(keyv.table).toBe("custom_table");
 	});
 
 	test("sets properties from constructor options", () => {
@@ -67,12 +76,16 @@ describe("constructor", () => {
 
 	test("updates properties via setters", () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
-		keyv.uri = "postgresql://localhost:5433";
-		expect(keyv.uri).toBe("postgresql://localhost:5433");
-		keyv.table = "new_table";
-		expect(keyv.table).toBe("new_table");
-		keyv.schema = "new_schema";
-		expect(keyv.schema).toBe("new_schema");
+		const nextUri = "postgresql://localhost:5433";
+		const nextTable = "new_table";
+		const nextSchema = "new_schema";
+		const nextNamespace = faker.string.alphanumeric(10);
+		keyv.uri = nextUri;
+		expect(keyv.uri).toBe(nextUri);
+		keyv.table = nextTable;
+		expect(keyv.table).toBe(nextTable);
+		keyv.schema = nextSchema;
+		expect(keyv.schema).toBe(nextSchema);
 		keyv.keyLength = 512;
 		expect(keyv.keyLength).toBe(512);
 		keyv.namespaceLength = 1024;
@@ -83,10 +96,51 @@ describe("constructor", () => {
 		expect(keyv.useUnloggedTable).toBe(true);
 		keyv.ssl = { rejectUnauthorized: false };
 		expect(keyv.ssl).toEqual({ rejectUnauthorized: false });
-		keyv.namespace = "test-ns";
-		expect(keyv.namespace).toBe("test-ns");
+		keyv.namespace = nextNamespace;
+		expect(keyv.namespace).toBe(nextNamespace);
 		keyv.namespace = undefined;
 		expect(keyv.namespace).toBeUndefined();
+	});
+});
+
+describe("events and hooks", () => {
+	test("extends Hookified and exposes event and hook methods", () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		expect(keyv).toBeInstanceOf(Hookified);
+		expect(typeof keyv.on).toBe("function");
+		expect(typeof keyv.once).toBe("function");
+		expect(typeof keyv.emit).toBe("function");
+		expect(typeof keyv.onHook).toBe("function");
+		expect(typeof keyv.hook).toBe("function");
+	});
+
+	test("does not throw when emitting error with no listeners", () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		expect(() => keyv.emit("error", new Error(faker.lorem.word()))).not.toThrow();
+	});
+
+	test("runs handlers registered with onHook when hook() is called", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const action = faker.lorem.word();
+		const key = faker.string.alphanumeric(10);
+		const received: unknown[] = [];
+		keyv.onHook("audit", (...args: unknown[]) => {
+			received.push(...args);
+		});
+		await keyv.hook("audit", action, key);
+		expect(received).toEqual([action, key]);
+	});
+
+	test("emits an error event when the connection fails", async () => {
+		const keyv = new KeyvPostgres({
+			uri: "postgresql://invalid:invalid@localhost:9999/nonexistent",
+		});
+
+		const error = await new Promise((resolve) => {
+			keyv.on("error", (error: unknown) => resolve(error));
+		});
+
+		expect(error).toBeInstanceOf(Error);
 	});
 });
 
@@ -131,6 +185,15 @@ describe("get", () => {
 		expect(await keyv.get(key)).toBeDefined();
 	});
 
+	test("returns undefined and deletes an expired key", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const key = faker.string.alphanumeric(10);
+		const pastExpires = Date.now() - 1000;
+		await keyv.set(key, faker.lorem.word(), pastExpires);
+		expect(await keyv.get(key)).toBeUndefined();
+		expect(await keyv.has(key)).toBe(false);
+	});
+
 	test("handles object values without an expires field", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
@@ -166,6 +229,19 @@ describe("getMany", () => {
 		expect(results).toEqual([undefined, undefined]);
 		expect(results[0]).not.toBeNull();
 	});
+
+	test("returns undefined for expired keys and deletes them", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const expiredKey = faker.string.alphanumeric(10);
+		const validKey = faker.string.alphanumeric(10);
+		const pastExpires = Date.now() - 1000;
+		const futureExpires = Date.now() + 60_000;
+		const validValue = faker.lorem.word();
+		await keyv.set(expiredKey, faker.lorem.word(), pastExpires);
+		await keyv.set(validKey, validValue, futureExpires);
+		expect(await keyv.getMany([expiredKey, validKey])).toEqual([undefined, validValue]);
+		expect(await keyv.has(expiredKey)).toBe(false);
+	});
 });
 
 describe("set and setMany", () => {
@@ -196,16 +272,24 @@ describe("set and setMany", () => {
 	test("setMany updates existing keys", async () => {
 		const keyv = new KeyvPostgres(postgresUri);
 		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, "original");
-		await keyv.setMany([{ key, value: "updated" }]);
-		expect(await keyv.get(key)).toBe("updated");
+		const original = faker.lorem.word();
+		const updated = faker.lorem.word();
+		await keyv.set(key, original);
+		await keyv.setMany([{ key, value: updated }]);
+		expect(await keyv.get(key)).toBe(updated);
 	});
 
 	test("gracefully handles non-JSON string values", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const key = faker.string.alphanumeric(10);
-		await keyv.set(key, "not-json-at-all");
-		expect(await keyv.get(key)).toBe("not-json-at-all");
+		const rawValue = faker.lorem.words(3);
+		await keyv.set(key, rawValue);
+		expect(await keyv.get(key)).toBe(rawValue);
+	});
+
+	test("setMany with no entries returns an empty array", async () => {
+		const keyv = new KeyvPostgres(postgresUri);
+		expect(await keyv.setMany([])).toEqual([]);
 	});
 
 	test("setMany emits an error and returns false entries on query error", async () => {
@@ -214,14 +298,15 @@ describe("set and setMany", () => {
 		keyv.on("error", () => {
 			emittedError = true;
 		});
-		// Close the connection to force an error.
-		await keyv.disconnect();
+		// biome-ignore lint/suspicious/noExplicitAny: spy on private query
+		const query = vi.spyOn(keyv as any, "query").mockRejectedValue(new Error(faker.lorem.word()));
 		const result = await keyv.setMany([
-			{ key: "key1", value: "val1" },
-			{ key: "key2", value: "val2" },
+			{ key: faker.string.alphanumeric(10), value: faker.lorem.word() },
+			{ key: faker.string.alphanumeric(10), value: faker.lorem.word() },
 		]);
 		expect(result).toEqual([false, false]);
 		expect(emittedError).toBe(true);
+		query.mockRestore();
 	});
 });
 
@@ -358,8 +443,9 @@ describe("clearExpired", () => {
 		};
 		const keyv = new Keyv({ store, serialization });
 		const key = faker.string.uuid();
-		await keyv.set(key, "value", 100);
-		expect(await keyv.get(key)).toBe("value");
+		const stored = faker.lorem.word();
+		await keyv.set(key, stored, 100);
+		expect(await keyv.get(key)).toBe(stored);
 		await new Promise((resolve) => {
 			setTimeout(resolve, 200);
 		});
@@ -481,6 +567,31 @@ describe("clearExpiredInterval", () => {
 		// After disconnect the timer is stopped; verify no errors are thrown.
 		await keyv.disconnect();
 		expect(keyv.clearExpiredInterval).toBe(100);
+	});
+
+	test("does not overlap automatic cleanup runs", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		let releaseCleanup = () => {};
+		const blockedCleanup = new Promise<void>((resolve) => {
+			releaseCleanup = resolve;
+		});
+		const clearExpired = vi
+			.spyOn(keyv, "clearExpired")
+			.mockImplementation(async () => blockedCleanup);
+
+		try {
+			keyv.clearExpiredInterval = 50;
+			await vi.waitFor(() => {
+				expect(clearExpired).toHaveBeenCalledTimes(1);
+			});
+			await new Promise((resolve) => {
+				setTimeout(resolve, 120);
+			});
+			expect(clearExpired).toHaveBeenCalledTimes(1);
+		} finally {
+			keyv.clearExpiredInterval = 0;
+			releaseCleanup();
+		}
 	});
 });
 
@@ -669,7 +780,7 @@ describe("iterator", () => {
 		await keyv.set(key2, val2);
 		await keyv.set(key3, val3);
 
-		const collected = new Map<string, string>();
+		const collected = new Map<string, string | undefined>();
 		for await (const [key, value] of keyv.iterator()) {
 			collected.set(key, value);
 		}
@@ -690,7 +801,7 @@ describe("iterator", () => {
 		await keyv.set(key1, val1);
 		await keyv.set(key2, val2);
 
-		const collected = new Map<string, string>();
+		const collected = new Map<string, string | undefined>();
 		for await (const [key, value] of keyv.iterator()) {
 			collected.set(key, value);
 		}
@@ -761,6 +872,41 @@ describe("iterator", () => {
 
 		expect(keys).toContain(key);
 	});
+
+	test("skips expired entries", async () => {
+		const ns = faker.string.alphanumeric(8);
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		keyv.namespace = ns;
+		const validKey = faker.string.alphanumeric(10);
+		const expiredKey = faker.string.alphanumeric(10);
+		const validValue = faker.lorem.word();
+		await keyv.set(validKey, validValue, Date.now() + 60_000);
+		await keyv.set(expiredKey, faker.lorem.word(), Date.now() - 1000);
+
+		const collected = new Map<string, string | undefined>();
+		for await (const [key, value] of keyv.iterator()) {
+			collected.set(key, value);
+		}
+
+		expect(collected.get(validKey)).toBe(validValue);
+		expect(collected.has(expiredKey)).toBe(false);
+	});
+
+	test("yields undefined (not null) for a key stored with a null value", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const key = faker.string.alphanumeric(10);
+		// biome-ignore lint/suspicious/noExplicitAny: testing null value path
+		await keyv.set(key, null as any);
+
+		const collected = new Map<string, string | undefined>();
+		for await (const [entryKey, value] of keyv.iterator()) {
+			collected.set(entryKey, value);
+		}
+
+		expect(collected.has(key)).toBe(true);
+		expect(collected.get(key)).toBeUndefined();
+		expect(collected.get(key)).not.toBeNull();
+	});
 });
 
 describe("schema", () => {
@@ -792,7 +938,8 @@ describe("SQL injection prevention", () => {
 	test("has prevents a DROP TABLE injection", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const safeKey = faker.string.alphanumeric(10);
-		await keyv.set(safeKey, "value");
+		const safeValue = faker.lorem.word();
+		await keyv.set(safeKey, safeValue);
 		expect(await keyv.has("'; DROP TABLE keyv; --")).toBe(false);
 		// The table and the safe key should still be intact.
 		expect(await keyv.has(safeKey)).toBe(true);
@@ -801,9 +948,10 @@ describe("SQL injection prevention", () => {
 	test("handles keys with single quotes", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		const keyWithQuote = "key'with'quotes";
-		await keyv.set(keyWithQuote, "value");
+		const quotedValue = faker.lorem.word();
+		await keyv.set(keyWithQuote, quotedValue);
 		expect(await keyv.has(keyWithQuote)).toBe(true);
-		expect(await keyv.get(keyWithQuote)).toBe("value");
+		expect(await keyv.get(keyWithQuote)).toBe(quotedValue);
 	});
 
 	test("handles keys with special SQL characters", async () => {
@@ -814,8 +962,9 @@ describe("SQL injection prevention", () => {
 			"key/*comment*/",
 			"key\\with\\backslash",
 		];
+		const specialValue = faker.lorem.word();
 		for (const key of specialKeys) {
-			await keyv.set(key, "value");
+			await keyv.set(key, specialValue);
 			expect(await keyv.has(key)).toBe(true);
 		}
 
@@ -823,25 +972,61 @@ describe("SQL injection prevention", () => {
 	});
 });
 
+describe("deleteMany", () => {
+	test("returns an empty array for no keys", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		expect(await keyv.deleteMany([])).toEqual([]);
+	});
+
+	test("returns per-key results for existing and missing keys", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		await keyv.set(key1, faker.lorem.word());
+		await keyv.set(key2, faker.lorem.word());
+		expect(await keyv.deleteMany([key1, faker.string.alphanumeric(10), key2])).toEqual([
+			true,
+			false,
+			true,
+		]);
+		expect(await keyv.has(key1)).toBe(false);
+		expect(await keyv.has(key2)).toBe(false);
+	});
+});
+
 describe("connection", () => {
 	test("closes the connection on disconnect", async () => {
-		const keyv = store();
+		const keyv = new KeyvPostgres({
+			uri: postgresUri,
+			application_name: `disconnect-${faker.string.alphanumeric(8)}`,
+		});
 		const key = faker.string.alphanumeric(10);
 		expect(await keyv.get(key)).toBeUndefined();
 		await keyv.disconnect();
 		await expect(keyv.get(key)).rejects.toBeDefined();
 	});
 
-	test("emits an error when the connection fails", async () => {
+	test("disconnect is a no-op when the pool is already closed", async () => {
 		const keyv = new KeyvPostgres({
-			uri: "postgresql://invalid:invalid@localhost:9999/nonexistent",
+			uri: postgresUri,
+			application_name: `disconnect-twice-${faker.string.alphanumeric(8)}`,
 		});
+		await keyv.get(faker.string.alphanumeric(10));
+		await keyv.disconnect();
+		await keyv.disconnect();
+	});
 
-		const error = await new Promise((resolve) => {
-			keyv.on("error", (error: unknown) => resolve(error));
-		});
-
-		expect(error).toBeInstanceOf(Error);
+	test("keeps a shared pool open until the last adapter disconnects", async () => {
+		const applicationName = `shared-pool-${faker.string.alphanumeric(8)}`;
+		const first = new KeyvPostgres({ uri: postgresUri, application_name: applicationName });
+		const second = new KeyvPostgres({ uri: postgresUri, application_name: applicationName });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.lorem.word();
+		await first.set(key, value);
+		await first.disconnect();
+		expect(await second.get(key)).toBe(value);
+		await second.disconnect();
+		await expect(second.get(key)).rejects.toBeDefined();
 	});
 });
 
