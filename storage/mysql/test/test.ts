@@ -1401,6 +1401,32 @@ describe("iterator", () => {
 		expect(collected.get(key3)).toBe(val3);
 	});
 
+	test("iterates mixed-case keys across keyset pages", async () => {
+		const keyv = new KeyvMysql({ uri, iterationLimit: 2 });
+		keyv.namespace = faker.string.alphanumeric(8);
+		await keyv.clear();
+		// utf8mb4_ci order is apple, banana, Zebra; VARBINARY order is Zebra, apple, banana.
+		// ORDER BY the utf8 alias with LIMIT 2 used to skip Zebra on the next page.
+		const entries = [
+			{ key: "Zebra", value: faker.lorem.word() },
+			{ key: "apple", value: faker.lorem.word() },
+			{ key: "banana", value: faker.lorem.word() },
+		];
+		for (const entry of entries) {
+			await keyv.set(entry.key, entry.value);
+		}
+
+		const collected = new Map<string, string>();
+		for await (const [key, value] of keyv.iterator()) {
+			collected.set(key, value);
+		}
+
+		expect(collected.size).toBe(3);
+		for (const entry of entries) {
+			expect(collected.get(entry.key)).toBe(entry.value);
+		}
+	});
+
 	test("only yields keys from the configured namespace", async () => {
 		const ns1 = faker.string.alphanumeric(8);
 		const ns2 = faker.string.alphanumeric(8);

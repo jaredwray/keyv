@@ -6,7 +6,7 @@ import KeyvSqlite from "../src/index.js";
 const sqliteUri = "sqlite://test/testdb2.sqlite";
 
 describe("iterator with Keyv", () => {
-	test("iterates over values set through a Keyv instance", async () => {
+	test("should iterate over values set through a Keyv instance", async () => {
 		const store = new KeyvSqlite({ uri: sqliteUri, busyTimeout: 3000 });
 		const keyv = new Keyv({ store });
 		await keyv.clear();
@@ -28,7 +28,7 @@ describe("iterator with Keyv", () => {
 		expect(keyvDataFound).toBe(true);
 	});
 
-	test("iterates when the Keyv namespace is undefined", async () => {
+	test("should iterate when the Keyv namespace is undefined", async () => {
 		const store = new KeyvSqlite({ uri: sqliteUri, busyTimeout: 3000 });
 		const keyv = new Keyv({ store });
 		keyv.namespace = undefined;

@@ -40,6 +40,9 @@ declare const Bun: KeyvAny;
  * - If `preferred` is omitted, auto-detection tries drivers in priority order:
  *   - **Bun**: `bun:sqlite` then `better-sqlite3`
  *   - **Node.js**: `node:sqlite` then `better-sqlite3`
+ * @param {SqliteDriverName | SqliteDriver} [preferred] - An explicit driver name, custom driver object, or omitted for auto-detection.
+ * @returns {Promise<SqliteDriver>} The resolved driver.
+ * @throws {Error} If an explicit driver cannot be loaded, or if no auto-detected driver is available.
  */
 export async function resolveDriver(
 	preferred?: SqliteDriverName | SqliteDriver,
@@ -75,6 +78,6 @@ export async function resolveDriver(
 
 	/* v8 ignore next 3 -- @preserve */
 	throw new Error(
-		"No SQLite driver found. Use Node.js 22.13+ (built-in node:sqlite) or install better-sqlite3: npm install better-sqlite3",
+		"No SQLite driver found. Use Node.js 22.13+ (built-in node:sqlite, still experimental) or install better-sqlite3: npm install better-sqlite3",
 	);
 }
