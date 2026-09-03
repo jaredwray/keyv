@@ -7,7 +7,7 @@ const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
 
 describe("iterator", () => {
 	test("should iterate over entries within the namespace without passing one in", async () => {
-		const namespace = `iterator-${faker.string.alphanumeric(8)}`;
+		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkey(valkeyUri, { namespace });
 		await store.clear();
 
@@ -21,6 +21,7 @@ describe("iterator", () => {
 
 		const collected = new Map<string, string>();
 		for await (const [key, value] of store.iterator()) {
+			expect(value).not.toBeNull();
 			collected.set(key, value as string);
 		}
 
@@ -34,7 +35,7 @@ describe("iterator", () => {
 	});
 
 	test("should iterate over entries when useSets is true", async () => {
-		const namespace = `iter-sets-${faker.string.alphanumeric(8)}`;
+		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkey(valkeyUri, { useSets: true, namespace });
 		await store.clear();
 
@@ -45,6 +46,7 @@ describe("iterator", () => {
 
 		const collected = new Map<string, string>();
 		for await (const [key, value] of store.iterator()) {
+			expect(value).not.toBeNull();
 			collected.set(key, value as string);
 		}
 
@@ -54,11 +56,12 @@ describe("iterator", () => {
 	});
 
 	test("should yield undefined when the namespace is empty", async () => {
-		const namespace = `iter-empty-${faker.string.alphanumeric(8)}`;
+		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkey(valkeyUri, { namespace });
 		await store.clear();
 		const first = await store.iterator().next();
-		expect(first.value).toBe(undefined);
+		expect(first.value).toBeUndefined();
+		expect(first.value).not.toBeNull();
 		await store.disconnect();
 	});
 
@@ -66,6 +69,10 @@ describe("iterator", () => {
 		const store = new KeyvValkey(valkeyUri);
 		const result = await store.iterator().next();
 		expect(result.done === true || Array.isArray(result.value)).toBe(true);
+		if (Array.isArray(result.value)) {
+			expect(result.value[1]).not.toBeNull();
+		}
+
 		await store.disconnect();
 	});
 });

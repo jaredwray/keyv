@@ -2,7 +2,7 @@ import process from "node:process";
 import { faker } from "@faker-js/faker";
 import Redis, { type Cluster } from "iovalkey";
 import { describe, expect, test } from "vitest";
-import KeyvValkey, { createKeyv } from "../src/index.js";
+import KeyvValkey, { createKeyv, KeyvValkey as NamedKeyvValkey } from "../src/index.js";
 
 const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
 
@@ -11,82 +11,104 @@ describe("KeyvValkey", () => {
 		expect(KeyvValkey).toBeInstanceOf(Function);
 	});
 
-	test("should expose the client instance", () => {
-		const keyv = new KeyvValkey(valkeyUri);
-		expect(keyv.client).toBeInstanceOf(Redis);
+	test("should be available as a named export", () => {
+		expect(NamedKeyvValkey).toBe(KeyvValkey);
+	});
+
+	test("should declare expires capability", async () => {
+		const store = new KeyvValkey(valkeyUri);
+		expect(store.capabilities.expires).toBe(true);
+		await store.disconnect();
+	});
+
+	test("should expose the client instance", async () => {
+		const store = new KeyvValkey(valkeyUri);
+		expect(store.client).toBeInstanceOf(Redis);
+		await store.disconnect();
 	});
 
 	test("should reuse an existing valkey instance", async () => {
 		const redis = new Redis(valkeyUri);
+		const marker = faker.string.alphanumeric(10);
 		// @ts-expect-error foo doesn't exist on Redis
-		redis.foo = "bar";
-		const keyv = new KeyvValkey(redis);
-		expect(keyv.client.foo).toBe("bar");
+		redis.foo = marker;
+		const store = new KeyvValkey(redis);
+		expect(store.client.foo).toBe(marker);
 
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await keyv.set(key, value);
-		expect(await keyv.get(key)).toBe(value);
-		await keyv.disconnect();
+		await store.set(key, value);
+		expect(await store.get(key)).toBe(value);
+		await store.disconnect();
 	});
 
-	test("should handle options without a uri", () => {
+	test("should handle options without a uri", async () => {
 		const options = { isCluster: true };
-		const keyv = new KeyvValkey(options as Cluster);
-		expect(keyv.client).toBeInstanceOf(Redis);
+		const store = new KeyvValkey(options as Cluster);
+		expect(store.client).toBeInstanceOf(Redis);
+		await store.disconnect();
 	});
 
-	test("should handle options with a family option", () => {
+	test("should handle options with a family option", async () => {
 		const options = { options: {}, family: 4 };
-		const keyv = new KeyvValkey(options);
-		expect(keyv.client).toBeInstanceOf(Redis);
+		const store = new KeyvValkey(options);
+		expect(store.client).toBeInstanceOf(Redis);
+		await store.disconnect();
 	});
 
-	test("should handle RedisOptions", () => {
-		const options = { db: 2, connectionName: "name" };
-		const keyv = new KeyvValkey(options);
-		expect(keyv.client).toBeInstanceOf(Redis);
+	test("should handle RedisOptions", async () => {
+		const options = { db: 2, connectionName: faker.string.alphanumeric(8) };
+		const store = new KeyvValkey(options);
+		expect(store.client).toBeInstanceOf(Redis);
+		await store.disconnect();
 	});
 
-	test("should apply useSets from options when passing in a client", () => {
+	test("should apply useSets from options when passing in a client", async () => {
 		const redis = new Redis(valkeyUri);
-		const keyv = new KeyvValkey(redis, { useSets: false });
-		expect(keyv.useSets).toBe(false);
+		const store = new KeyvValkey(redis, { useSets: false });
+		expect(store.useSets).toBe(false);
+		await store.disconnect();
 	});
 
-	test("should default useSets to false", () => {
-		const keyv = new KeyvValkey(valkeyUri);
-		expect(keyv.useSets).toBe(false);
+	test("should default useSets to false", async () => {
+		const store = new KeyvValkey(valkeyUri);
+		expect(store.useSets).toBe(false);
+		await store.disconnect();
 	});
 
-	test("should get and set useSets via the setter", () => {
-		const keyv = new KeyvValkey(valkeyUri);
-		expect(keyv.useSets).toBe(false);
-		keyv.useSets = true;
-		expect(keyv.useSets).toBe(true);
+	test("should get and set useSets via the setter", async () => {
+		const store = new KeyvValkey(valkeyUri);
+		expect(store.useSets).toBe(false);
+		store.useSets = true;
+		expect(store.useSets).toBe(true);
+		await store.disconnect();
 	});
 
-	test("should support the deprecated useRedisSets getter and setter", () => {
-		const keyv = new KeyvValkey(valkeyUri);
-		expect(keyv.useRedisSets).toBe(false);
-		keyv.useRedisSets = true;
-		expect(keyv.useRedisSets).toBe(true);
-		expect(keyv.useSets).toBe(true);
+	test("should support the deprecated useRedisSets getter and setter", async () => {
+		const store = new KeyvValkey(valkeyUri);
+		expect(store.useRedisSets).toBe(false);
+		store.useRedisSets = true;
+		expect(store.useRedisSets).toBe(true);
+		expect(store.useSets).toBe(true);
+		await store.disconnect();
 	});
 
-	test("should replace the client via the setter", () => {
-		const keyv = new KeyvValkey(valkeyUri);
+	test("should replace the client via the setter", async () => {
+		const store = new KeyvValkey(valkeyUri);
+		const previous = store.client;
 		const newClient = new Redis(valkeyUri);
-		keyv.client = newClient;
-		expect(keyv.client).toBe(newClient);
+		store.client = newClient;
+		expect(store.client).toBe(newClient);
+		await previous.disconnect();
+		await store.disconnect();
 	});
 
 	test("should close the connection on disconnect", async () => {
-		const keyv = new KeyvValkey(valkeyUri);
+		const store = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
-		expect(await keyv.get(key)).toBe(undefined);
-		await keyv.disconnect();
-		await expect(keyv.get(key)).rejects.toThrow();
+		expect(await store.get(key)).toBe(undefined);
+		await store.disconnect();
+		await expect(store.get(key)).rejects.toThrow();
 	});
 });
 
@@ -108,7 +130,7 @@ describe("createKeyv", () => {
 	});
 
 	test("should propagate the namespace option to the store", async () => {
-		const namespace = `ck-${faker.string.alphanumeric(8)}`;
+		const namespace = faker.string.alphanumeric(8);
 		const keyv = createKeyv(valkeyUri, { namespace });
 		expect(keyv.namespace).toBe(namespace);
 		expect(keyv.store.namespace).toBe(namespace);
@@ -116,12 +138,11 @@ describe("createKeyv", () => {
 	});
 
 	test("should preserve the namespace from the connect options object", async () => {
-		const namespace = `ck-obj-${faker.string.alphanumeric(8)}`;
+		const namespace = faker.string.alphanumeric(8);
 		const keyv = createKeyv({ uri: valkeyUri, namespace });
 		expect(keyv.namespace).toBe(namespace);
 		expect(keyv.store.namespace).toBe(namespace);
 
-		// Keys are stored under the namespace prefix natively, not un-namespaced.
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value);
