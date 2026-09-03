@@ -2,7 +2,7 @@ import process from "node:process";
 import { faker } from "@faker-js/faker";
 import { createClient, type RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
-import KeyvRedis, { createKeyv } from "../src/index.js";
+import KeyvRedis, { createKeyv, RedisErrorMessages } from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 
@@ -58,6 +58,20 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.client).toBe(client);
 	});
 
+	test("should apply RedisClientOptions including reconnectStrategy", () => {
+		const reconnectStrategy = (times: number) => Math.min(times * 50, 2000);
+		const keyvRedis = new KeyvRedis({
+			socket: {
+				host: "localhost",
+				port: 6379,
+				reconnectStrategy,
+			},
+		});
+		expect((keyvRedis.client as RedisClientType).options?.socket?.reconnectStrategy).toBe(
+			reconnectStrategy,
+		);
+	});
+
 	test("should be able to pass in a client to constructor", () => {
 		const client = createClient() as RedisClientType;
 		const keyvRedis = new KeyvRedis(client);
@@ -106,7 +120,7 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.useUnlink).toBe(false);
 	});
 
-	test("keyPrefixSeparator should be able to set to blank string", () => {
+	test("should allow keyPrefixSeparator to be set to a blank string", () => {
 		const keyvRedis = new KeyvRedis("redis://localhost:6379", {
 			keyPrefixSeparator: "",
 		});
@@ -117,7 +131,7 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.keyPrefixSeparator).toBe("");
 	});
 
-	test("clearBatchSize should not set if 0 or less than", () => {
+	test("should not set clearBatchSize when the value is 0 or less", () => {
 		const keyvRedis = new KeyvRedis("redis://localhost:6379", {
 			clearBatchSize: 0,
 		});
@@ -149,7 +163,7 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.useUnlink).toBe(true);
 	});
 
-	test("client options should contain the url", () => {
+	test("should store the url on the Redis client options", () => {
 		const uri = "redis://foo:6379";
 		const keyvRedis = new KeyvRedis(uri);
 		expect((keyvRedis.client as RedisClientType).options?.url).toBe(uri);
@@ -219,5 +233,24 @@ describe("KeyvRedis Methods", () => {
 		keyvRedis.namespace = "ns1";
 		await keyvRedis.clear();
 		await keyvRedis.disconnect();
+	});
+
+	test("should throw on clear connection error when throwOnConnectError is true", async () => {
+		const redisBadUri = process.env.REDIS_BAD_URI ?? "redis://localhost:6378";
+		const keyvRedis = new KeyvRedis(redisBadUri, {
+			throwOnConnectError: true,
+			connectionTimeout: 500,
+		});
+		keyvRedis.on("error", () => {});
+
+		let didError = false;
+		try {
+			await keyvRedis.clear();
+		} catch (error) {
+			didError = true;
+			expect((error as Error).message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
+		}
+
+		expect(didError).toBe(true);
 	});
 });

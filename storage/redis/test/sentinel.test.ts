@@ -91,9 +91,7 @@ describe("KeyvRedis Sentinel", () => {
 			let errorThrown = false;
 			try {
 				await keyvRedis.clear();
-			} catch (error) {
-				console.log(error);
-				expect(error).toBeDefined();
+			} catch {
 				errorThrown = true;
 			}
 
@@ -247,9 +245,7 @@ describe("KeyvRedis Sentinel", () => {
 					keys.push(key);
 					values.push(value);
 				}
-			} catch (error) {
-				console.log(error);
-				expect(error).toBeDefined();
+			} catch {
 				errorThrown = true;
 			}
 
@@ -352,7 +348,7 @@ describe("KeyvRedis Sentinel", () => {
 			expect(values).toContain(val3);
 		});
 
-		test("should only iterate over keys with no namespace if name is undefined set and noNamespaceAffectsAll is false", async () => {
+		test("should only iterate un-prefixed keys when namespace is undefined and noNamespaceAffectsAll is false", async () => {
 			const sentinel = createSentinel(defaultSentinelOptions);
 			const keyvRedis = new KeyvRedis(sentinel);
 			keyvRedis.noNamespaceAffectsAll = false;

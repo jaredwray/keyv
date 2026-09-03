@@ -12,15 +12,22 @@ describe("Namespace", () => {
 		await keyvRedis.disconnect();
 	});
 
-	test("if there is a namespace on key prefix", async () => {
+	test("should prefix a key with the given namespace", async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.namespace = "ns1";
 		const testKey = faker.string.uuid();
 		const key = keyvRedis.createKeyPrefix(testKey, "ns2");
 		expect(key).toBe(`ns2::${testKey}`);
+		expect(keyvRedis.getKeyWithoutPrefix(key, "ns2")).toBe(testKey);
 	});
 
-	test("if no namespace on key prefix and no default namespace", async () => {
+	test("should only strip a leading namespace prefix", () => {
+		const keyvRedis = new KeyvRedis();
+		const key = "ns1::hello::ns1::world";
+		expect(keyvRedis.getKeyWithoutPrefix(key, "ns1")).toBe("hello::ns1::world");
+	});
+
+	test("should return the key unchanged when no namespace is set", async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.namespace = undefined;
 		const testKey = faker.string.uuid();
@@ -63,7 +70,7 @@ describe("Namespace", () => {
 		await keyvRedis.disconnect();
 	});
 
-	test("should clear with no namespace but not the namespace ones", async () => {
+	test("should clear un-prefixed keys and leave namespaced keys", async () => {
 		const keyvRedis = new KeyvRedis();
 		const client = (await keyvRedis.getClient()) as RedisClientType;
 		await client.flushDb();
@@ -171,7 +178,7 @@ describe("Namespace", () => {
 		await keyvRedis.disconnect();
 	});
 
-	test("should be able to has many keys with namespace", async () => {
+	test("should check many namespaced keys including an expired entry", async () => {
 		const keyvRedis = new KeyvRedis("redis://localhost:6379", {
 			namespace: "ns-many2",
 		});

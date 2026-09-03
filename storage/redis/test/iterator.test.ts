@@ -1,9 +1,9 @@
 import { faker } from "@faker-js/faker";
 import type { RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
-import KeyvRedis, { createKeyv } from "../src/index.js";
+import KeyvRedis from "../src/index.js";
 
-describe("iterators", () => {
+describe("iterator", () => {
 	beforeEach(async () => {
 		const keyvRedis = new KeyvRedis();
 		const client = (await keyvRedis.getClient()) as RedisClientType;
@@ -71,7 +71,7 @@ describe("iterators", () => {
 		await keyvRedis.disconnect();
 	});
 
-	test("should be able to iterate over all keys if namespace is undefined and noNamespaceAffectsAll is true", async () => {
+	test("should iterate all keys when namespace is undefined and noNamespaceAffectsAll is true", async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.noNamespaceAffectsAll = true;
 
@@ -104,7 +104,7 @@ describe("iterators", () => {
 		expect(values).toContain(val3);
 	});
 
-	test("should only iterate over keys with no namespace if name is undefined set and noNamespaceAffectsAll is false", async () => {
+	test("should only iterate un-prefixed keys when noNamespaceAffectsAll is false", async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.noNamespaceAffectsAll = false;
 
@@ -138,27 +138,5 @@ describe("iterators", () => {
 		expect(keys).not.toContain(key2);
 		expect(values).not.toContain(val1);
 		expect(values).not.toContain(val2);
-	});
-
-	test("should be able to pass undefined on connect to get localhost", async () => {
-		const keyv = createKeyv();
-		const keyvRedis = keyv.store as KeyvRedis<string>;
-		expect((keyvRedis.client as RedisClientType).options?.url).toBe("redis://localhost:6379");
-	});
-
-	test("should go to the RedisClientOptions if passed in", async () => {
-		const reconnectStrategy = (times: number) => Math.min(times * 50, 2000);
-
-		const keyvRedis = new KeyvRedis({
-			socket: {
-				host: "localhost",
-				port: 6379,
-				reconnectStrategy,
-			},
-		});
-
-		expect((keyvRedis.client as RedisClientType).options?.socket?.reconnectStrategy).toBe(
-			reconnectStrategy,
-		);
 	});
 });
