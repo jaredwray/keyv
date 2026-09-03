@@ -21,9 +21,8 @@ trustPolicy: no-downgrade
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
 blockExoticSubdeps: true
-# writr@6.1.2 and semver@5.7.2 fail trustPolicy: no-downgrade (no provenance;
-# later versions of the same packages have attestations). Pin to versions that
-# already meet the gate — do not exclude first-party packages.
+# semver@5.7.2 fails trustPolicy: no-downgrade (no provenance;
+# later versions of the same package have attestations). Pin to a version that
+# already meets the gate — do not exclude first-party packages.
 overrides:
-  writr: 6.1.5
   semver@5.7.2: 7.7.3

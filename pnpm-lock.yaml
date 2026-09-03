@@ -5,7 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  writr: 6.1.5
   semver@5.7.2: 7.7.3
 
 importers:
