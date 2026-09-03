@@ -62,10 +62,10 @@
 		"hookified": "^3.0.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.6",
-		"@faker-js/faker": "^10.5.0",
-		"@vitest/coverage-v8": "^4.1.10",
-		"happy-dom": "^20.11.1",
+		"@biomejs/biome": "^2.5.10",
+		"@faker-js/faker": "^10.6.0",
+		"@vitest/coverage-v8": "^4.1.11",
+		"happy-dom": "^20.11.12",
 		"keyv-anyredis": "^3.3.0",
 		"keyv-file": "^5.3.5",
 		"lru.min": "^1.1.4",
@@ -73,7 +73,7 @@
 		"rimraf": "^6.1.3",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.33.0",
-		"vitest": "^4.1.10"
+		"vitest": "^4.1.11"
 	},
 	"tsd": {
 		"directory": "test"
