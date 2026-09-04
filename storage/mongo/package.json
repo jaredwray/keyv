@@ -54,7 +54,7 @@
 		"mongodb": "^7.5.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.10",
+		"@biomejs/biome": "^2.5.11",
 		"@faker-js/faker": "^10.6.0",
 		"@keyv/test-suite": "workspace:^",
 		"@vitest/coverage-v8": "^4.1.11",
