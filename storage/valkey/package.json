@@ -58,15 +58,15 @@
 		"iovalkey": "^0.4.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.6",
-		"@faker-js/faker": "^10.5.0",
+		"@biomejs/biome": "^2.5.10",
+		"@faker-js/faker": "^10.6.0",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.1.10",
+		"@vitest/coverage-v8": "^4.1.11",
 		"keyv": "workspace:^",
 		"rimraf": "^6.1.3",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.33.0",
-		"vitest": "^4.1.10"
+		"vitest": "^4.1.11"
 	},
 	"tsd": {
 		"directory": "test"
