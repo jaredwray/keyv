@@ -28,7 +28,7 @@
     "test:scripts": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.10",
+    "@biomejs/biome": "^2.5.11",
     "@faker-js/faker": "^10.6.0",
     "@types/node": "^24.13.1",
     "@vitest/coverage-v8": "^4.1.11",
