@@ -20,7 +20,7 @@ services:
     ports:
       - 5433:5432/tcp
   keyv_mysql:
-    image: mysql/mysql-server:latest
+    image: mysql/mysql-server:8.0.32@sha256:d6c8301b7834c5b9c2b733b10b7e630f441af7bc917c74dba379f24eeeb6a313
     command: [ "mysqld",
                "--character-set-server=utf8mb4",
                "--collation-server=utf8mb4_unicode_ci",
@@ -35,7 +35,7 @@ services:
       MYSQL_USER: mysql
       MYSQL_ROOT_HOST: '%'
   keyv_mysql_1:
-    image: "mysql/mysql-server:latest"
+    image: "mysql/mysql-server:8.0.32@sha256:d6c8301b7834c5b9c2b733b10b7e630f441af7bc917c74dba379f24eeeb6a313"
     command: [ "mysqld",
                "--character-set-server=utf8mb4",
                "--collation-server=utf8mb4_unicode_ci",
