@@ -68,7 +68,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.11",
 		"@types/json-bigint": "^1.0.4",
-		"lz4-napi": "^2.9.1",
+		"lz4-napi": "^2.10.0",
 		"rimraf": "^6.1.3"
 	}
 }
