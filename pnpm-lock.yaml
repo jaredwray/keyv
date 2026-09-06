@@ -34,16 +34,16 @@ importers:
         version: 0.33.0
       tsdown:
         specifier: ^0.22.14
-        version: 0.22.14(tsx@4.23.12)(typescript@7.0.2)(unrun@0.2.34(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3))
+        version: 0.22.14(tsx@4.23.13)(typescript@7.0.2)(unrun@0.2.34(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3))
       tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
+        specifier: ^4.23.13
+        version: 4.23.13
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   compression/compress-brotli:
     dependencies:
@@ -65,7 +65,7 @@ importers:
         version: 6.1.3
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   compression/compress-gzip:
     dependencies:
@@ -93,7 +93,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   compression/compress-lz4:
     dependencies:
@@ -118,7 +118,7 @@ importers:
         version: 6.1.3
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   core/bigmap:
     dependencies:
@@ -140,7 +140,7 @@ importers:
         version: 10.6.0
       '@monstermann/tinybench-pretty-printer':
         specifier: ^0.3.0
-        version: 0.3.0(tinybench@6.1.3)
+        version: 0.3.0(tinybench@6.1.4)
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
@@ -148,17 +148,17 @@ importers:
         specifier: ^6.1.3
         version: 6.1.3
       tinybench:
-        specifier: ^6.1.3
-        version: 6.1.3
+        specifier: ^6.1.4
+        version: 6.1.4
       tsd:
         specifier: ^0.33.0
         version: 0.33.0
       tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
+        specifier: ^4.23.13
+        version: 4.23.13
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   core/keyv:
     dependencies:
@@ -201,7 +201,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   core/test-suite:
     dependencies:
@@ -225,7 +225,7 @@ importers:
         version: 2.3.1
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.11
@@ -260,7 +260,7 @@ importers:
         version: 6.1.3
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   encryption/encrypt-web:
     dependencies:
@@ -285,7 +285,7 @@ importers:
         version: 6.1.3
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   serialization/msgpackr:
     dependencies:
@@ -316,7 +316,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   serialization/superjson:
     dependencies:
@@ -347,7 +347,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   storage/cloudflare-kv:
     dependencies:
@@ -448,7 +448,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   storage/mysql:
     dependencies:
@@ -485,7 +485,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   storage/postgres:
     dependencies:
@@ -522,7 +522,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   storage/redis:
     dependencies:
@@ -563,13 +563,13 @@ importers:
         version: link:../../core/test-suite
       '@monstermann/tinybench-pretty-printer':
         specifier: ^0.3.0
-        version: 0.3.0(tinybench@6.1.3)
+        version: 0.3.0(tinybench@6.1.4)
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0
       tinybench:
-        specifier: ^6.1.3
-        version: 6.1.3
+        specifier: ^6.1.4
+        version: 6.1.4
       tsd:
         specifier: ^0.33.0
         version: 0.33.0
@@ -612,7 +612,7 @@ importers:
         version: 0.33.0
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   website:
     devDependencies:
@@ -623,8 +623,8 @@ importers:
         specifier: ^6.1.3
         version: 6.1.3
       tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
+        specifier: ^4.23.13
+        version: 4.23.13
 
 packages:
 
@@ -4243,8 +4243,8 @@ packages:
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
-  tinybench@6.1.3:
-    resolution: {integrity: sha512-8k25iNSZHnzkjp3nrpEmx6YkrTNs41PzOHYc28DR5Z2l/CId/Nzw+Ume/41jCeDDmCUMPuK5GkQ/VxJaJ2P6Qg==}
+  tinybench@6.1.4:
+    resolution: {integrity: sha512-9APumHG7r4yOk4X4WlkmE71aZcv1gvin1czO3OQ1U9iJcFA5Ja/ygyb0vPOVHTthFozUYs8CLoLUlM8grb2lTQ==}
     engines: {node: '>=20.0.0'}
 
   tinyexec@1.2.4:
@@ -4343,8 +4343,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tsx@4.23.12:
-    resolution: {integrity: sha512-FDf4L4sYzKtzWYhU/Xm0AQFdTjdIxNo9ElTf2mxXM6k8YMHXzYUe4yODVaXP4V9uMFbVg8c0qyBccK2OOxb45Q==}
+  tsx@4.23.13:
+    resolution: {integrity: sha512-BL5MGkRln6aDYhb0xbQlEAGw743BaZYWdbWtdJOBriYJboKgUUYCadFp2/FpBBZquBC/ezNBn7wMMPx7FDZUDw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -5384,11 +5384,11 @@ snapshots:
       picocolors: 1.1.1
       string-width: 7.2.0
 
-  '@monstermann/tinybench-pretty-printer@0.3.0(tinybench@6.1.3)':
+  '@monstermann/tinybench-pretty-printer@0.3.0(tinybench@6.1.4)':
     dependencies:
       '@monstermann/tables': 0.0.0
       picocolors: 1.1.1
-      tinybench: 6.1.3
+      tinybench: 6.1.4
 
   '@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.4':
     optional: true
@@ -5859,7 +5859,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -5870,13 +5870,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.11(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))':
+  '@vitest/mocker@4.1.11(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12)
+      vite: 7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13)
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
@@ -8321,7 +8321,7 @@ snapshots:
 
   tinybench@2.9.0: {}
 
-  tinybench@6.1.3: {}
+  tinybench@6.1.4: {}
 
   tinyexec@1.2.4: {}
 
@@ -8378,7 +8378,7 @@ snapshots:
       path-exists: 4.0.0
       read-pkg-up: 7.0.1
 
-  tsdown@0.22.14(tsx@4.23.12)(typescript@7.0.2)(unrun@0.2.34(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)):
+  tsdown@0.22.14(tsx@4.23.13)(typescript@7.0.2)(unrun@0.2.34(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)):
     dependencies:
       ansis: 4.3.1
       cac: 7.0.0
@@ -8396,7 +8396,7 @@ snapshots:
       unconfig-core: 7.5.0
       verkit: 0.3.1
     optionalDependencies:
-      tsx: 4.23.12
+      tsx: 4.23.13
       typescript: 7.0.2
       unrun: 0.2.34(@emnapi/core@2.0.0-alpha.3)(@emnapi/runtime@2.0.0-alpha.3)
     transitivePeerDependencies:
@@ -8409,7 +8409,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsx@4.23.12:
+  tsx@4.23.13:
     dependencies:
       esbuild: 0.28.0
     optionalDependencies:
@@ -8558,7 +8558,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.2
 
-  vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12):
+  vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13):
     dependencies:
       esbuild: 0.27.2
       fdir: 6.5.0(picomatch@4.0.5)
@@ -8571,12 +8571,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       terser: 5.37.0
-      tsx: 4.23.12
+      tsx: 4.23.13
 
-  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12)):
+  vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12))
+      '@vitest/mocker': 4.1.11(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -8593,7 +8593,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.12)
+      vite: 7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
