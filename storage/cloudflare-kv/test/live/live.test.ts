@@ -3,8 +3,9 @@ import { afterAll, describe, expect, it } from "vitest";
 import KeyvCloudflareKV from "../../src/index.js";
 
 // Live integration test against the real Cloudflare KV REST API. It is skipped unless all three
-// credentials are present, so it is a no-op locally and on forks. The scheduled
-// `cloudflare-keyv-integration` GitHub workflow provides them from repository secrets.
+// credentials are present, so it is a no-op locally and on forks. The
+// `cloudflare-keyv-integration` GitHub workflow maps repository secret
+// CLOUDFLARE_API_TOKEN_KV_TESTS onto CLOUDFLARE_API_TOKEN.
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const namespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
 const apiToken = process.env.CLOUDFLARE_API_TOKEN;

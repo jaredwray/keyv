@@ -180,7 +180,7 @@ This local server emulates Cloudflare's live REST environment. We keep it in syn
 Cloudflare API and additionally run a **live integration test** (the `cloudflare-keyv-integration`
 GitHub workflow) against the real Cloudflare KV API, so we notice if the live behavior ever drifts
 from the emulation. That workflow requires the `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_KV_NAMESPACE_ID`,
-and `CLOUDFLARE_API_TOKEN` repository secrets and self-skips when they are absent.
+and `CLOUDFLARE_API_TOKEN_KV_TESTS` repository secrets and self-skips when they are absent.
 
 ## How Values Are Stored
 
