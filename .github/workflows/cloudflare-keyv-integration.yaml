@@ -6,9 +6,10 @@ name: cloudflare-keyv-integration
 # secrets below are absent, so it never fails on forks or when secrets are not configured.
 #
 # Required repository secrets:
-#   CLOUDFLARE_ACCOUNT_ID       - the Cloudflare account ID that owns the KV namespace
-#   CLOUDFLARE_KV_NAMESPACE_ID  - the KV namespace ID (not the binding name)
-#   CLOUDFLARE_API_TOKEN        - an API token with the "Workers KV Storage" Edit permission
+#   CLOUDFLARE_ACCOUNT_ID            - the Cloudflare account ID that owns the KV namespace
+#   CLOUDFLARE_KV_NAMESPACE_ID       - the KV namespace ID (not the binding name)
+#   CLOUDFLARE_API_TOKEN_KV_TESTS    - an API token with the "Workers KV Storage" Edit permission
+#                                      (dedicated to this workflow; not CLOUDFLARE_API_TOKEN)
 
 on:
   workflow_dispatch:
@@ -43,7 +44,7 @@ jobs:
           firewall-version: "1.15.1"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -61,5 +62,5 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_KV_NAMESPACE_ID: ${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_KV_TESTS }}
         run: pnpm test:live
