@@ -65,7 +65,7 @@
 		"@biomejs/biome": "^2.5.11",
 		"@faker-js/faker": "^10.6.0",
 		"@vitest/coverage-v8": "^4.1.11",
-		"happy-dom": "^20.11.12",
+		"happy-dom": "^20.12.0",
 		"keyv-anyredis": "^3.3.0",
 		"keyv-file": "^5.3.5",
 		"lru.min": "^1.1.4",
