@@ -406,8 +406,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
       memcache:
-        specifier: ^1.9.0
-        version: 1.9.0
+        specifier: ^1.10.0
+        version: 1.10.0
     devDependencies:
       '@keyv/compress-gzip':
         specifier: workspace:^
@@ -3094,10 +3094,6 @@ packages:
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
 
-  hookified@3.0.2:
-    resolution: {integrity: sha512-FpIcRHpFlW7yh68lmL0h1/Vodv77TogpHlt4qqakE/0RyQMjgNxs53acH9NJPeyRZutP7GnlqiyqRNejV8/lHQ==}
-    engines: {node: '>=22.18.0'}
-
   hookified@3.0.3:
     resolution: {integrity: sha512-ZcbRytYgERoKtosiaXolUIPIWMgUCrSiWQEzFZ0kc8etD/LPgpy4/KOrtssFdK7ZXlTTyb4cob2veqj7osv8yA==}
     engines: {node: '>=22.18.0'}
@@ -3478,8 +3474,8 @@ packages:
   mdurl@2.0.0:
     resolution: {integrity: sha512-Lf+9+2r+Tdp5wXDXC4PcIBjTDtq4UKjCPMQhKIuzpJNW0b96kVqSwW0bT7FhRSfmAiFYgP+SCRvdrDozfh0U5w==}
 
-  memcache@1.9.0:
-    resolution: {integrity: sha512-tysDsbWZjQDrxKU3absG6nl1AWlf1+V1+3yA/jSTMSUWtToqx6KY9psqlBIly45F46DVBT/P2YBhpA2pu1LU9Q==}
+  memcache@1.10.0:
+    resolution: {integrity: sha512-USVidZugkSeQuWK8qoI2UUVvTzs1i4tgZ0RhD1Jlw0Ep/02depgMLBoZRIae0YgnRbV4qOVW+QJlijmcoe6DzQ==}
     engines: {node: '>=22.19.0', pnpm: '>=11'}
 
   memory-pager@1.5.0:
@@ -6748,8 +6744,6 @@ snapshots:
 
   hookified@2.2.0: {}
 
-  hookified@3.0.2: {}
-
   hookified@3.0.3: {}
 
   hosted-git-info@2.8.9: {}
@@ -7239,9 +7233,9 @@ snapshots:
 
   mdurl@2.0.0: {}
 
-  memcache@1.9.0:
+  memcache@1.10.0:
     dependencies:
-      hashery: 3.0.0
+      hashery: 3.0.1
       hookified: 3.0.3
 
   memory-pager@1.5.0: {}
@@ -8675,7 +8669,7 @@ snapshots:
       ai: 7.0.66(zod@4.4.3)
       cacheable: 2.5.0
       hashery: 3.0.1
-      hookified: 3.0.2
+      hookified: 3.0.3
       html-react-parser: 6.1.7(react@19.2.7)
       js-yaml: 5.2.2
       react: 19.2.7
