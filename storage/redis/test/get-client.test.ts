@@ -26,6 +26,9 @@ async function createHangServer(): Promise<{
 			sockets.delete(socket);
 		});
 		socket.on("error", () => {});
+		// Flow incoming bytes so a client destroy() can emit `close`. A paused socket with unread
+		// HELLO data never emits `close`, which is a Node stream artifact rather than a client leak.
+		socket.resume();
 	});
 
 	await new Promise<void>((resolve) => {
@@ -154,23 +157,23 @@ describe("getClient", () => {
 	test("should apply connectionTimeout as socket.connectTimeout when constructing a client", () => {
 		const keyvRedis = new KeyvRedis(redisUri, { connectionTimeout: 1234 });
 		expect((keyvRedis.client as RedisClientType).options?.socket?.connectTimeout).toBe(1234);
-		expect((keyvRedis.client as RedisClientType).options?.socket?.socketTimeout).toBe(1234);
 		expect((keyvRedis.client as RedisClientType).options?.socket?.reconnectStrategy).toBe(false);
 	});
 
-	test("should not overwrite an existing socket.connectTimeout", () => {
+	test("should not overwrite existing socket timeouts", () => {
 		const keyvRedis = new KeyvRedis(
 			{
 				url: redisUri,
 				socket: {
 					connectTimeout: 999,
+					socketTimeout: 888,
 					reconnectStrategy: false,
 				},
 			},
 			{ connectionTimeout: 50 },
 		);
 		expect((keyvRedis.client as RedisClientType).options?.socket?.connectTimeout).toBe(999);
-		expect((keyvRedis.client as RedisClientType).options?.socket?.socketTimeout).toBe(50);
+		expect((keyvRedis.client as RedisClientType).options?.socket?.socketTimeout).toBe(888);
 	});
 
 	test("should construct cluster and sentinel clients with connectionTimeout", () => {
@@ -258,7 +261,7 @@ describe("getClient", () => {
 		const server = await createHangServer();
 		const client = createClient({
 			url: `redis://127.0.0.1:${server.port}`,
-			socket: { reconnectStrategy: false, socketTimeout: 50 },
+			socket: { reconnectStrategy: false },
 		}) as RedisClientType;
 		const keyvRedis = new KeyvRedis(client, { connectionTimeout: 50 });
 		keyvRedis.on("error", () => {});
@@ -280,6 +283,7 @@ describe("getClient", () => {
 		const keyv = createKeyvNonBlocking(`redis://127.0.0.1:${server.port}`, {
 			connectionTimeout: 50,
 		});
+		keyv.on("error", () => {});
 		keyv.store.on("error", () => {});
 
 		try {
@@ -302,7 +306,7 @@ describe("getClient", () => {
 		expect(await keyvRedis.set(key, "ok")).toBe(true);
 		expect(await keyvRedis.get(key)).toBe("ok");
 		await keyvRedis.delete(key);
-		await keyvRedis.disconnect();
+		await keyvRedis.disconnect(true);
 	});
 
 	test("should force disconnect a client that was never opened", async () => {
