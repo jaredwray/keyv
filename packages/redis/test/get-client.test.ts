@@ -321,6 +321,27 @@ describe("getClient", () => {
 		expect(client.listenerCount("connect")).toBe(connectListeners);
 	});
 
+	test("should not hang on cluster clients that have isOpen but no isReady", async () => {
+		const client = new FakeRedisClient();
+		Object.defineProperty(client, "slots", {
+			configurable: true,
+			value: {},
+		});
+		Object.defineProperty(client, "isReady", {
+			configurable: true,
+			get: () => undefined,
+			set: () => {},
+		});
+		const keyvRedis = createAdapter(client);
+
+		const first = await keyvRedis.getClient();
+		const second = await keyvRedis.getClient();
+
+		expect(client.connectCalls).toBe(1);
+		expect(first).toBe(client);
+		expect(second).toBe(client);
+	});
+
 	test("should treat cluster connect as ready when isReady becomes true", async () => {
 		const client = new FakeRedisClient();
 		client.isOpen = true;

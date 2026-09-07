@@ -319,12 +319,12 @@ export default class KeyvRedis<T>
 	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
-		if (this.isClientReady()) {
-			return this._client;
-		}
-
 		if (this._connectPromise) {
 			return this._connectPromise;
+		}
+
+		if (this.isClientReady()) {
+			return this._client;
 		}
 
 		const attempt = this.connectClient().finally(() => {
@@ -441,12 +441,17 @@ export default class KeyvRedis<T>
 	}
 
 	/**
-	 * node-redis standalone clients expose `isReady`; cluster types do not in the
-	 * public typings even though the runtime client still reports readiness.
+	 * Standalone and sentinel clients expose boolean `isReady`. Redis Cluster does
+	 * not; `isOpen` is the usable signal after `connect()` resolves. Check
+	 * `_connectPromise` before this so cluster callers still share the handshake.
 	 */
 	private isClientReady(
 		client: RedisClientConnectionType = this._client,
 	): boolean {
+		if (this.isClientCluster(client)) {
+			return client.isOpen;
+		}
+
 		return Boolean((client as { isReady?: boolean }).isReady);
 	}
 
