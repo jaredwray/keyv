@@ -259,6 +259,41 @@ describe("getClient", () => {
 		expect(client.isReady).toBe(true);
 	});
 
+	test("should ignore connect events until the open client is ready", async () => {
+		const client = new FakeRedisClient();
+		client.isOpen = true;
+		const keyvRedis = createAdapter(client);
+
+		const connected = keyvRedis.getClient();
+		setTimeout(() => {
+			client.emit("connect");
+		}, 10);
+		setTimeout(() => {
+			client.isReady = true;
+			client.emit("ready");
+		}, 30);
+
+		await connected;
+		expect(client.connectCalls).toBe(0);
+		expect(client.isReady).toBe(true);
+	});
+
+	test("should drop a stale connect promise when the client is replaced", async () => {
+		const client = new FakeRedisClient();
+		client.connectDelayMs = 50;
+		const keyvRedis = createAdapter(client);
+
+		const pending = keyvRedis.getClient();
+		const replacement = new FakeRedisClient();
+		replacement.isOpen = true;
+		replacement.isReady = true;
+		keyvRedis.client = replacement as unknown as RedisClientType;
+
+		await pending;
+		const connected = await keyvRedis.getClient();
+		expect(connected).toBe(replacement);
+	});
+
 	test("should treat cluster connect as ready when isReady becomes true", async () => {
 		const client = new FakeRedisClient();
 		client.isOpen = true;
