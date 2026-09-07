@@ -56,8 +56,13 @@ export type KeyvRedisOptions = {
 	throwOnErrors?: boolean;
 
 	/**
-	 * Timeout in milliseconds for the connection. When undefined, the Redis client default is used.
-	 * If set, connection that does not succeed within this time throws.
+	 * Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH).
+	 * When undefined, the Redis client default is used. If set, a connection that does not
+	 * succeed within this time throws, the in-flight attempt is aborted, and leftover sockets
+	 * are not left open. When Keyv constructs the client, this is also passed as
+	 * `socket.connectTimeout` and `socket.socketTimeout` (handshake only; idle timeout is
+	 * cleared after connect) unless those options are already set. Auto-reconnect is disabled
+	 * unless you pass `socket.reconnectStrategy`.
 	 * @default undefined
 	 */
 	connectionTimeout?: number;

@@ -167,8 +167,13 @@ export type KeyvRedisOptions = {
 	throwOnErrors?: boolean;
 
 	/**
-	 * Timeout in milliseconds for the connection. When undefined, the Redis client default is used.
-	 * If set, connection that does not succeed within this time throws.
+	 * Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH).
+	 * When undefined, the Redis client default is used. If set, a connection that does not
+	 * succeed within this time throws, the in-flight attempt is aborted, and leftover sockets
+	 * are not left open. When Keyv constructs the client, this is also passed as
+	 * `socket.connectTimeout` and `socket.socketTimeout` (handshake only; idle timeout is
+	 * cleared after connect) unless those options are already set. Auto-reconnect is disabled
+	 * unless you pass `socket.reconnectStrategy`.
 	 * @default undefined
 	 */
 	connectionTimeout?: number;
@@ -524,7 +529,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **noNamespaceAffectsAll** - When no namespace is set, `clear()` / `iterator()` affect all keys (including namespaced ones). Default: `false`.
 * **throwOnConnectError** - Throw when connect fails. Default: `true`.
 * **throwOnErrors** - Throw on operation failures instead of emitting `error` and returning a no-op. Default: `false`.
-* **connectionTimeout** - Connect timeout in milliseconds. `undefined` uses the Redis client default.
+* **connectionTimeout** - Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH). `undefined` uses the Redis client default. On expiry the in-flight connect is aborted so sockets and timers are not left active. When Keyv constructs the client, this is also passed as `socket.connectTimeout` and `socket.socketTimeout` (handshake only; idle timeout is cleared after connect) unless those options are already set. Auto-reconnect is disabled unless you pass `socket.reconnectStrategy`.
 
 ## Methods
 * **constructor([connect], [options])** - `connect` is a URI string, client/cluster/sentinel options (`KeyvRedisConnect`), or an existing connection. See [Keyv Redis Options](#keyv-redis-options).
