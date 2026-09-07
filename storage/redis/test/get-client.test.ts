@@ -142,7 +142,6 @@ describe("getClient", () => {
 			throwOnErrors: true,
 			connectionTimeout: 500,
 		});
-		keyv.on("error", () => {});
 		let didError = false;
 		try {
 			await keyv.get(faker.string.alphanumeric(10));
@@ -158,7 +157,6 @@ describe("getClient", () => {
 			throwOnConnectError: true,
 			connectionTimeout: 500,
 		});
-		keyv.on("error", () => {});
 		let didError = false;
 		try {
 			await keyv.get(faker.string.alphanumeric(10));
@@ -356,5 +354,83 @@ describe("getClient", () => {
 		const connected = await keyvRedis.getClient();
 		expect(connected).toBe(client);
 		expect(client.connectCalls).toBe(0);
+	});
+
+	test("should return if the client becomes ready after getClient starts connectClient", async () => {
+		const client = new FakeRedisClient();
+		let readyChecks = 0;
+		Object.defineProperty(client, "isReady", {
+			configurable: true,
+			get: () => {
+				readyChecks += 1;
+				return readyChecks > 1;
+			},
+		});
+		const keyvRedis = createAdapter(client);
+
+		const connected = await keyvRedis.getClient();
+		expect(connected).toBe(client);
+		expect(client.connectCalls).toBe(0);
+	});
+
+	test("should return from waitUntilReady if the client is already ready", async () => {
+		const client = new FakeRedisClient();
+		client.isOpen = true;
+		let readyChecks = 0;
+		Object.defineProperty(client, "isReady", {
+			configurable: true,
+			get: () => {
+				readyChecks += 1;
+				return readyChecks >= 3;
+			},
+		});
+		const keyvRedis = createAdapter(client);
+
+		const connected = await keyvRedis.getClient();
+		expect(connected).toBe(client);
+		expect(client.connectCalls).toBe(0);
+	});
+
+	test("should resolve waitUntilReady if the client becomes ready while listeners are attached", async () => {
+		const client = new FakeRedisClient();
+		client.isOpen = true;
+		let readyChecks = 0;
+		Object.defineProperty(client, "isReady", {
+			configurable: true,
+			get: () => {
+				readyChecks += 1;
+				return readyChecks >= 4;
+			},
+		});
+		const keyvRedis = createAdapter(client);
+
+		const connected = await keyvRedis.getClient();
+		expect(connected).toBe(client);
+		expect(client.connectCalls).toBe(0);
+	});
+
+	test("should fail waitUntilReady if the client closes while listeners are attached", async () => {
+		const client = new FakeRedisClient();
+		let openChecks = 0;
+		Object.defineProperty(client, "isOpen", {
+			configurable: true,
+			get: () => {
+				openChecks += 1;
+				return openChecks === 1;
+			},
+			set: () => {},
+		});
+		Object.defineProperty(client, "isReady", {
+			configurable: true,
+			get: () => false,
+		});
+		const keyvRedis = new KeyvRedis(client as unknown as RedisClientType, {
+			connectionTimeout: 500,
+		});
+		keyvRedis.on("error", () => {});
+
+		await expect(keyvRedis.getClient()).rejects.toThrow(
+			RedisErrorMessages.RedisClientNotConnectedThrown,
+		);
 	});
 });
