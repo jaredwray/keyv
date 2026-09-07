@@ -221,7 +221,7 @@ const keyv = createKeyv('redis://user:pass@localhost:6379', {namespace: 'my-name
 
 # Using the `createKeyvNonBlocking` function
 
-The `createKeyvNonBlocking` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store does what `createKeyv` does but also disables throwing errors, removes the offline queue redis functionality, and reconnect strategy so that when used as a secondary cache in libraries such as [cacheable](https://npmjs.org/package/cacheable) it does not block the primary cache. This is useful when you want to use Redis as a secondary cache and do not want to block the primary cache on connection errors or timeouts when using `nonBlocking`. Here is an example of how to use it:
+The `createKeyvNonBlocking` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store does what `createKeyv` does but also disables throwing errors, removes the offline queue redis functionality, and reconnect strategy so that when used as a secondary cache in libraries such as [cacheable](https://npmjs.org/package/cacheable) it does not block the primary cache. This is useful when you want to use Redis as a secondary cache and do not want to block the primary cache on connection errors or timeouts when using `nonBlocking`. Concurrent operations share the in-flight Redis connect so they are not dropped while the client is still opening. Here is an example of how to use it:
 
 ```js
 import { createKeyvNonBlocking } from '@keyv/redis';
@@ -528,7 +528,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 
 ## Methods
 * **constructor([connect], [options])** - `connect` is a URI string, client/cluster/sentinel options (`KeyvRedisConnect`), or an existing connection. See [Keyv Redis Options](#keyv-redis-options).
-* **getClient()** - Return the connected client, connecting first if needed. Returns `Promise<RedisClientConnectionType>`.
+* **getClient()** - Return the ready client, connecting first if needed. Concurrent callers share the in-flight connect and wait until `isReady` (not only `isOpen`). Returns `Promise<RedisClientConnectionType>`.
 * **set(key, value, [expires])** - Set a key. `expires` is an absolute Unix timestamp in milliseconds. Returns `Promise<boolean>`. Through Keyv, pass a relative millisecond `ttl` to `keyv.set` — Keyv converts it to `expires`.
 * **setMany(entries)** - Set `KeyvStorageEntry` objects (`{ key, value, expires? }`) via `MULTI/EXEC`. Returns `Promise<boolean[]>` (per-entry success). Cluster mode groups by hash slot.
 * **get(key)** - Get a key. Returns the value or `undefined` if missing (Redis `null` is mapped to `undefined`).
@@ -548,7 +548,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 
 ## Helpers
 * **createKeyv([connect], [options])** - Keyv instance with this adapter. Applies `namespace` on both Keyv and the store. `connect` accepts the same `KeyvRedisConnect` types as the constructor (including cluster/sentinel). Defaults to `"redis://localhost:6379"` when `connect` is omitted.
-* **createKeyvNonBlocking([connect], [options])** - Same as `createKeyv`, then disables throws, the offline queue, and reconnect for secondary-cache use.
+* **createKeyvNonBlocking([connect], [options])** - Same as `createKeyv`, then disables throws, the offline queue, and reconnect for secondary-cache use. Concurrent operations wait for the shared in-flight connect instead of being dropped.
 * **defaultReconnectStrategy(attempts)** - Default socket reconnect delay when a URI string is passed to the constructor. Exponential backoff capped at 2s, plus up to ±50ms of jitter. Returns a delay in milliseconds.
 
 # Events
