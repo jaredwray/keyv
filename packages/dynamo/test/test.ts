@@ -113,8 +113,11 @@ test.it(
 		const originalSend = (store as any).client.send;
 		(store as any).client.send = test.vi.fn().mockImplementation((command) => {
 			if (command.constructor.name === "CreateTableCommand") {
-				// Call CreateTableCommand twice to trigger the ResourceInUseException
-				originalSend.call((store as any).client, command);
+				// Duplicate create to trigger ResourceInUseException. Swallow the
+				// extra promise so a late rejection cannot fail the run as unhandled.
+				void originalSend
+					.call((store as any).client, command)
+					.catch(() => undefined);
 			}
 
 			return originalSend.call((store as any).client, command);
