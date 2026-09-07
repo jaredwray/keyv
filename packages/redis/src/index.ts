@@ -370,8 +370,6 @@ export default class KeyvRedis<T>
 			}
 		}
 
-		this.initClient();
-
 		return this._client;
 	}
 

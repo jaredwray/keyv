@@ -294,6 +294,33 @@ describe("getClient", () => {
 		expect(connected).toBe(replacement);
 	});
 
+	test("should not register duplicate listeners after connect or wait-until-ready", async () => {
+		const client = new FakeRedisClient();
+		const keyvRedis = createAdapter(client);
+		const errorListeners = client.listenerCount("error");
+		const connectListeners = client.listenerCount("connect");
+
+		await keyvRedis.getClient();
+		expect(client.listenerCount("error")).toBe(errorListeners);
+		expect(client.listenerCount("connect")).toBe(connectListeners);
+
+		await keyvRedis.disconnect();
+		await keyvRedis.getClient();
+		expect(client.listenerCount("error")).toBe(errorListeners);
+		expect(client.listenerCount("connect")).toBe(connectListeners);
+
+		await keyvRedis.disconnect();
+		client.isOpen = true;
+		const pending = keyvRedis.getClient();
+		setTimeout(() => {
+			client.isReady = true;
+			client.emit("ready");
+		}, 20);
+		await pending;
+		expect(client.listenerCount("error")).toBe(errorListeners);
+		expect(client.listenerCount("connect")).toBe(connectListeners);
+	});
+
 	test("should treat cluster connect as ready when isReady becomes true", async () => {
 		const client = new FakeRedisClient();
 		client.isOpen = true;
