@@ -17,7 +17,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["20", "22", "24"]
+        include:
+          # pnpm 11 requires Node >= 22.13 (uses node:sqlite). Node 20 stays on pnpm 10.
+          - node: "20"
+            pnpm: "10"
+          - node: "22"
+            pnpm: "11.9.0"
+          - node: "24"
+            pnpm: "11.9.0"
     name: node-${{ matrix.node }}
     steps:
       - name: Checkout
@@ -25,16 +32,31 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
       - name: Setup node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ matrix.pnpm }}
+
+      - name: Allow pnpm 10 on a pnpm 11 workspace
+        if: matrix.node == '20'
+        run: |
+          printf '%s\n' \
+            'manage-package-manager-versions=false' \
+            'package-manager-strict=false' \
+            'only-built-dependencies[]=esbuild' \
+            'only-built-dependencies[]=protobufjs' \
+            'only-built-dependencies[]=sqlite3' \
+            'only-built-dependencies[]=sqlite325h' \
+            'only-built-dependencies[]=unrs-resolver' \
+            > .npmrc
+
       - name: Start Services
-        run: pnpm test:services:start
+        run: chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh
 
       - name: Install Dependencies
         # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
