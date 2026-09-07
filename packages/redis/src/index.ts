@@ -319,7 +319,7 @@ export default class KeyvRedis<T>
 	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
-		if (this._client.isReady) {
+		if (this.isClientReady()) {
 			return this._client;
 		}
 
@@ -344,11 +344,11 @@ export default class KeyvRedis<T>
 	 */
 	private async connectClient(): Promise<RedisClientConnectionType> {
 		try {
-			if (this._client.isReady) {
+			if (this.isClientReady()) {
 				return this._client;
 			}
 
-			const connecting = this._client.isOpen
+			const connecting: Promise<unknown> = this._client.isOpen
 				? this.waitUntilReady(this._client)
 				: this._client.connect();
 			connecting.catch(() => {
@@ -383,7 +383,7 @@ export default class KeyvRedis<T>
 	private async waitUntilReady(
 		client: RedisClientConnectionType,
 	): Promise<void> {
-		if (client.isReady) {
+		if (this.isClientReady(client)) {
 			return;
 		}
 
@@ -412,7 +412,7 @@ export default class KeyvRedis<T>
 			};
 
 			const onConnect = (): void => {
-				if (client.isReady) {
+				if (this.isClientReady(client)) {
 					succeed();
 				}
 			};
@@ -432,12 +432,22 @@ export default class KeyvRedis<T>
 			emitter.on("end", onEnd);
 			emitter.on("error", onError);
 
-			if (client.isReady) {
+			if (this.isClientReady(client)) {
 				succeed();
 			} else if (!client.isOpen) {
 				fail(new Error("Redis client closed before it became ready"));
 			}
 		});
+	}
+
+	/**
+	 * node-redis standalone clients expose `isReady`; cluster types do not in the
+	 * public typings even though the runtime client still reports readiness.
+	 */
+	private isClientReady(
+		client: RedisClientConnectionType = this._client,
+	): boolean {
+		return Boolean((client as { isReady?: boolean }).isReady);
 	}
 
 	/**
@@ -1018,7 +1028,7 @@ export default class KeyvRedis<T>
 				TypeMapping
 			>;
 			const mainNode = cluster.slots[slot].master;
-			return cluster.nodeClient(mainNode) as RedisClientType;
+			return (await cluster.nodeClient(mainNode)) as unknown as RedisClientType;
 		}
 
 		return connection as RedisClientType;
