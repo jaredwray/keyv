@@ -17,14 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # pnpm 11 requires Node >= 22.13 (uses node:sqlite). Node 20 stays on pnpm 10.
-          - node: "20"
-            pnpm: "10"
-          - node: "22"
-            pnpm: "11.9.0"
-          - node: "24"
-            pnpm: "11.9.0"
+        node: ["20", "22", "24"]
     name: node-${{ matrix.node }}
     steps:
       - name: Checkout
@@ -37,10 +30,16 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
+      # pnpm 11.9 (packageManager) requires Node >= 22.13. Node 20 cannot use
+      # pnpm/action-setup with a different version either — it errors on the
+      # mismatch — so install pnpm 10 via npm for that job only.
       - name: Install pnpm
+        if: matrix.node != '20'
         uses: pnpm/action-setup@v6
-        with:
-          version: ${{ matrix.pnpm }}
+
+      - name: Install pnpm 10 (Node 20)
+        if: matrix.node == '20'
+        run: npm install -g pnpm@10
 
       - name: Allow pnpm 10 on a pnpm 11 workspace
         if: matrix.node == '20'
