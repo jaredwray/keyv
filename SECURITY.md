@@ -29,9 +29,10 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - pnpm is pinned via `packageManager` (`pnpm@11.25.0`).
 - Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`.
 - The lockfile is committed and CI installs with `--frozen-lockfile`. There is no Dependabot config; dependency updates go through reviewed PRs.
-- CI runs with read-only permissions (only the release job gets `id-token: write`); every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install` / `npm install`; workflows are security-linted with zizmor on every PR.
+- CI runs with read-only permissions (only jobs whose purpose is mutating the repo get `contents: write`); generated output is an artifact, never committed back; every action is pinned to a full commit SHA; Socket Firewall (`sfw`) wraps `pnpm install` / `npm install`; workflows are security-linted with zizmor on every PR.
 - Workflows do not use `pull_request_target`.
-- npm releases are staged, never published directly: CI stages via stage-only OIDC trusted publishing after an Aikido `scan-release` gate, Drydock reviews the staged artifact, and a maintainer promotes it with 2FA. There are no npm tokens.
+- npm releases are staged, never published directly: CI stages via stage-only OIDC trusted publishing after an Aikido `scan-release` gate, Drydock reviews the staged artifact, and a maintainer promotes it with 2FA. There are no npm publish tokens.
 - Published packages set `repository.url` to this repo so provenance can map back.
 - Socket reviews every pull request that changes dependencies; Aikido scans every build.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
+- The Codespaces Dev Container image is pinned by digest (`name:<tag>@sha256:<digest>`), not a floating tag.
