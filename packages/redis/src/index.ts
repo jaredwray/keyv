@@ -47,6 +47,7 @@ export default class KeyvRedis<T>
 	implements KeyvStoreAdapter
 {
 	private _client!: RedisClientConnectionType;
+	private _boundClient: RedisClientConnectionType | undefined;
 	private _namespace: string | undefined;
 	private _keyPrefixSeparator = "::";
 	private _clearBatchSize = 1000;
@@ -110,7 +111,7 @@ export default class KeyvRedis<T>
 		}
 
 		this.setOptions(options);
-		this.initClient();
+		this.bindClientEvents();
 	}
 
 	/**
@@ -125,7 +126,7 @@ export default class KeyvRedis<T>
 	 */
 	public set client(value: RedisClientConnectionType) {
 		this._client = value;
-		this.initClient();
+		this.bindClientEvents();
 	}
 
 	/**
@@ -329,7 +330,7 @@ export default class KeyvRedis<T>
 			}
 		}
 
-		this.initClient();
+		this.bindClientEvents();
 
 		return this._client;
 	}
@@ -987,24 +988,45 @@ export default class KeyvRedis<T>
 		}
 	}
 
-	private initClient(): void {
-		this._client.on("error", (error) => {
-			this.emit("error", error);
-		});
+	private readonly onClientError = (error: Error): void => {
+		this.emit("error", error);
+	};
 
-		this._client.on("connect", () => {
-			this.emit("connect", this._client);
-		});
+	private readonly onClientConnect = (): void => {
+		this.emit("connect", this._client);
+	};
 
-		/* v8 ignore next -- @preserve */
-		this._client.on("disconnect", () => {
-			this.emit("disconnect", this._client);
-		});
+	private readonly onClientDisconnect = (): void => {
+		this.emit("disconnect", this._client);
+	};
 
-		/* v8 ignore next -- @preserve */
-		this._client.on("reconnecting", (reconnectInfo) => {
-			this.emit("reconnecting", reconnectInfo);
-		});
+	private readonly onClientReconnecting = (reconnectInfo: unknown): void => {
+		this.emit("reconnecting", reconnectInfo);
+	};
+
+	private bindClientEvents(): void {
+		if (this._boundClient === this._client) {
+			return;
+		}
+
+		this.unbindClientEvents();
+		this._client.on("error", this.onClientError);
+		this._client.on("connect", this.onClientConnect);
+		this._client.on("disconnect", this.onClientDisconnect);
+		this._client.on("reconnecting", this.onClientReconnecting);
+		this._boundClient = this._client;
+	}
+
+	private unbindClientEvents(): void {
+		if (this._boundClient === undefined) {
+			return;
+		}
+
+		this._boundClient.off("error", this.onClientError);
+		this._boundClient.off("connect", this.onClientConnect);
+		this._boundClient.off("disconnect", this.onClientDisconnect);
+		this._boundClient.off("reconnecting", this.onClientReconnecting);
+		this._boundClient = undefined;
 	}
 
 	private async createTimeoutPromise(timeoutMs: number): Promise<never> {
