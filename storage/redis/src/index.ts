@@ -119,10 +119,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 */
 	private _ownsClient = true;
 	/**
-	 * In-flight `getClient()` connect so concurrent callers share one attempt.
-	 */
-	private _connectPromise: Promise<RedisClientConnectionType> | undefined;
-	/**
 	 * Swallows Redis client errors while an in-flight connect is being aborted.
 	 */
 	private readonly _swallowClientError = (): void => {
@@ -138,6 +134,11 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * repeated initialization does not attach duplicate listeners.
 	 */
 	private _eventsWiredClient: RedisClientConnectionType | undefined;
+	/**
+	 * In-flight `connect()` / wait-until-ready so concurrent `getClient()` callers share
+	 * one attempt instead of returning a not-yet-ready client.
+	 */
+	private _connectPromise: Promise<RedisClientConnectionType> | undefined;
 
 	/**
 	 * Stable `error` listener so it can be removed when the underlying client is replaced.
@@ -212,6 +213,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @param {RedisClientConnectionType} value - The Redis client connection to use.
 	 */
 	public set client(value: RedisClientConnectionType) {
+		this._connectPromise = undefined;
 		this._client = value;
 		this._ownsClient = false;
 		this._pxatSupported = undefined;
@@ -375,27 +377,144 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Get the connected Redis client. Connects first if the client is not already
-	 * connected, respecting `connectionTimeout`. Concurrent callers share one connect
-	 * attempt. On failure, the in-flight connect is aborted, `error` is emitted, and when
+	 * ready, respecting `connectionTimeout`. Concurrent callers share the in-flight
+	 * connect so commands are not issued while `isOpen && !isReady` (which rejects
+	 * with `ClientOfflineError` when the offline queue is disabled). On failure,
+	 * the in-flight handshake is aborted, `error` is emitted, and when
 	 * `throwOnConnectError` is true, throws {@link RedisErrorMessages.RedisClientNotConnectedThrown}.
 	 * @returns {Promise<RedisClientConnectionType>} The connected Redis client, cluster, or sentinel.
 	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
+		if (this._client.isReady) {
+			return this._client;
+		}
+
 		if (this._connectPromise) {
 			return this._connectPromise;
 		}
 
-		if (this._client.isOpen) {
+		const attempt = this.connectClient().finally(() => {
+			if (this._connectPromise === attempt) {
+				this._connectPromise = undefined;
+			}
+		});
+		this._connectPromise = attempt;
+		return attempt;
+	}
+
+	/**
+	 * Connect the current client, or wait until an already-open client becomes ready.
+	 * Concurrent `getClient()` callers share this promise via `_connectPromise`. On
+	 * failure, abort the in-flight attempt so sockets are not left open, then emit
+	 * `error` and optionally throw.
+	 * @returns {Promise<RedisClientConnectionType>} The client after connect succeeds or is swallowed.
+	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
+	 */
+	private async connectClient(): Promise<RedisClientConnectionType> {
+		const client = this._client;
+		try {
+			if (client.isReady) {
+				this.initClient();
+				return client;
+			}
+
+			const connecting = client.isOpen
+				? this.waitUntilReady(client)
+				: (client.connect() as Promise<unknown>);
+			connecting.catch(() => {
+				// Timeout can win the race while connect is still pending; ignore late rejections.
+			});
+
+			if (this._connectionTimeout === undefined) {
+				await connecting;
+			} else {
+				await this.raceWithTimeout(connecting, this._connectionTimeout);
+			}
+		} catch (error) {
+			const timedOut = this.isConnectTimeoutError(error);
+			this.abortConnect(client, timedOut);
+
+			try {
+				this.emit("error", error);
+			} catch {
+				// Keyv forwards store `error` events and may throw when it has no listener.
+			}
+
+			if (this._throwOnConnectError) {
+				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown);
+			}
+
 			return this._client;
 		}
 
-		this._connectPromise = this.connectClient();
-		try {
-			return await this._connectPromise;
-		} finally {
-			this._connectPromise = undefined;
+		this.initClient();
+		return this._client;
+	}
+
+	/**
+	 * Wait until an already-open client becomes ready. Used when `isOpen` is true
+	 * but `isReady` is not — calling `connect()` again throws in node-redis.
+	 * Standalone clients emit `ready`; cluster emits `connect` once discovery finishes.
+	 * @param {RedisClientConnectionType} client - The Redis client, cluster, or sentinel connection.
+	 * @returns {Promise<void>} Resolves when `client.isReady` is true.
+	 */
+	private async waitUntilReady(client: RedisClientConnectionType): Promise<void> {
+		if (client.isReady) {
+			return;
 		}
+
+		await new Promise<void>((resolve, reject) => {
+			const emitter = client as KeyvAny;
+
+			const cleanup = (): void => {
+				emitter.removeListener("ready", onReady);
+				emitter.removeListener("connect", onConnect);
+				emitter.removeListener("end", onEnd);
+				emitter.removeListener("error", onError);
+			};
+
+			const succeed = (): void => {
+				cleanup();
+				resolve();
+			};
+
+			const fail = (error: Error): void => {
+				cleanup();
+				reject(error);
+			};
+
+			const onReady = (): void => {
+				succeed();
+			};
+
+			const onConnect = (): void => {
+				if (client.isReady) {
+					succeed();
+				}
+			};
+
+			const onEnd = (): void => {
+				fail(new Error("Redis client closed before it became ready"));
+			};
+
+			const onError = (error: Error): void => {
+				if (!client.isOpen) {
+					fail(error);
+				}
+			};
+
+			emitter.on("ready", onReady);
+			emitter.on("connect", onConnect);
+			emitter.on("end", onEnd);
+			emitter.on("error", onError);
+
+			if (client.isReady) {
+				succeed();
+			} else if (!client.isOpen) {
+				fail(new Error("Redis client closed before it became ready"));
+			}
+		});
 	}
 
 	/**
@@ -1302,47 +1421,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		}
 
 		return this._throwOnErrors;
-	}
-
-	/**
-	 * Connect `_client`, racing `connectionTimeout` when set. On failure, abort the in-flight
-	 * attempt so sockets are not left open, then emit `error` and optionally throw.
-	 * @returns {Promise<RedisClientConnectionType>} The connected client, or the replacement
-	 *   disconnected client when `throwOnConnectError` is false.
-	 */
-	private async connectClient(): Promise<RedisClientConnectionType> {
-		const client = this._client;
-		const connectPromise = client.connect() as Promise<unknown>;
-		connectPromise.catch(() => {
-			// Timeout can win the race while `connect()` is still pending; ignore late rejections.
-		});
-
-		try {
-			if (this._connectionTimeout === undefined) {
-				await connectPromise;
-			} else {
-				await this.raceWithTimeout(connectPromise, this._connectionTimeout);
-			}
-		} catch (error) {
-			const timedOut = this.isConnectTimeoutError(error);
-			this.abortConnect(client, timedOut);
-
-			try {
-				this.emit("error", error);
-			} catch {
-				// Keyv forwards store `error` events and may throw when it has no listener.
-			}
-
-			if (this._throwOnConnectError) {
-				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown);
-			}
-
-			return this._client;
-		}
-
-		this.initClient();
-
-		return client;
 	}
 
 	/**
