@@ -3,9 +3,9 @@ name: tests
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [v5]
   pull_request:
-    branches: [ main ]
+    branches: [v5]
 
 permissions:
   contents: read
@@ -13,31 +13,57 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
-        node: [ '24' ]
-    name: Node ${{ matrix.node }}
+        node: ["20", "22", "24"]
+    name: node-${{ matrix.node }}
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
       - name: Setup node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
-      
+
+      # pnpm 11.9 (packageManager) requires Node >= 22.13. Node 20 cannot use
+      # pnpm/action-setup with a different version either — it errors on the
+      # mismatch — so install pnpm 10 via npm for that job only.
       - name: Install pnpm
-        run: npm install -g pnpm
+        if: matrix.node != '20'
+        uses: pnpm/action-setup@v6
+
+      - name: Install pnpm 10 (Node 20)
+        if: matrix.node == '20'
+        run: npm install -g pnpm@10
+
+      - name: Allow pnpm 10 on a pnpm 11 workspace
+        if: matrix.node == '20'
+        run: |
+          printf '%s\n' \
+            'manage-package-manager-versions=false' \
+            'package-manager-strict=false' \
+            'only-built-dependencies[]=esbuild' \
+            'only-built-dependencies[]=protobufjs' \
+            'only-built-dependencies[]=sqlite3' \
+            'only-built-dependencies[]=sqlite325h' \
+            'only-built-dependencies[]=unrs-resolver' \
+            > .npmrc
 
       - name: Start Services
-        run: pnpm test:services:start
+        run: chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh
 
-      - name: Install Dependencies  
+      - name: Install Dependencies
+        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
+        # rather than using --frozen-lockfile.
         run: pnpm install
-
-      - name: Approve Builds
-        run: pnpm approve-builds
 
       - name: Build
         run: pnpm build
-        
+
       - name: Test Packages
         run: pnpm test
