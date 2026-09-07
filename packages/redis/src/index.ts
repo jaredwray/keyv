@@ -56,6 +56,11 @@ export default class KeyvRedis<T>
 	private _throwOnConnectError = true;
 	private _throwOnErrors = false;
 	private _connectionTimeout: number | undefined;
+	/**
+	 * In-flight `connect()` / wait-until-ready so concurrent `getClient()` callers
+	 * share one attempt instead of returning a not-yet-ready client.
+	 */
+	private _connectPromise: Promise<RedisClientConnectionType> | undefined;
 
 	/**
 	 * KeyvRedis constructor.
@@ -125,6 +130,7 @@ export default class KeyvRedis<T>
 	 * Set the Redis client.
 	 */
 	public set client(value: RedisClientConnectionType) {
+		this._connectPromise = undefined;
 		this._client = value;
 		this.bindClientEvents();
 	}
@@ -304,21 +310,56 @@ export default class KeyvRedis<T>
 	}
 
 	/**
-	 * Get the Redis URL used to connect to the server. This is used to get a connected client.
+	 * Get the connected Redis client. Connects first if the client is not already
+	 * ready, respecting `connectionTimeout`. Concurrent callers share the in-flight
+	 * connect so commands are not issued while `isOpen && !isReady` (which rejects
+	 * with `ClientOfflineError` when the offline queue is disabled). On failure,
+	 * emits `error` and, when `throwOnConnectError` is true, throws
+	 * {@link RedisErrorMessages.RedisClientNotConnectedThrown}.
+	 * @returns {Promise<RedisClientConnectionType>} The connected Redis client, cluster, or sentinel.
+	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
 	public async getClient(): Promise<RedisClientConnectionType> {
-		if (this._client.isOpen) {
+		if (this._connectPromise) {
+			return this._connectPromise;
+		}
+
+		if (this.isClientReady()) {
 			return this._client;
 		}
 
+		const attempt = this.connectClient().finally(() => {
+			if (this._connectPromise === attempt) {
+				this._connectPromise = undefined;
+			}
+		});
+		this._connectPromise = attempt;
+		return attempt;
+	}
+
+	/**
+	 * Connect the current client, or wait until an already-open client becomes ready.
+	 * Concurrent `getClient()` callers share this promise via `_connectPromise`.
+	 * @returns {Promise<RedisClientConnectionType>} The client after connect succeeds or is swallowed.
+	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
+	 */
+	private async connectClient(): Promise<RedisClientConnectionType> {
 		try {
+			if (this.isClientReady()) {
+				return this._client;
+			}
+
+			const connecting: Promise<unknown> = this._client.isOpen
+				? this.waitUntilReady(this._client)
+				: this._client.connect();
+			connecting.catch(() => {
+				/* handled by the await below or by connectionTimeout */
+			});
+
 			if (this._connectionTimeout === undefined) {
-				await this._client.connect();
+				await connecting;
 			} else {
-				await Promise.race([
-					this._client.connect(),
-					this.createTimeoutPromise(this._connectionTimeout),
-				]);
+				await this.raceWithTimeout(connecting, this._connectionTimeout);
 			}
 		} catch (error) {
 			this.emit("error", error);
@@ -333,6 +374,88 @@ export default class KeyvRedis<T>
 		this.bindClientEvents();
 
 		return this._client;
+	}
+
+	/**
+	 * Wait until an already-open client becomes ready. Used when `isOpen` is true
+	 * but `isReady` is not — calling `connect()` again throws in node-redis.
+	 * Standalone clients emit `ready`; cluster emits `connect` once discovery finishes.
+	 * @param {RedisClientConnectionType} client - The Redis client, cluster, or sentinel connection.
+	 * @returns {Promise<void>} Resolves when `client.isReady` is true.
+	 */
+	private async waitUntilReady(
+		client: RedisClientConnectionType,
+	): Promise<void> {
+		if (this.isClientReady(client)) {
+			return;
+		}
+
+		await new Promise<void>((resolve, reject) => {
+			const emitter = client as any;
+
+			const cleanup = (): void => {
+				emitter.removeListener("ready", onReady);
+				emitter.removeListener("connect", onConnect);
+				emitter.removeListener("end", onEnd);
+				emitter.removeListener("error", onError);
+			};
+
+			const succeed = (): void => {
+				cleanup();
+				resolve();
+			};
+
+			const fail = (error: Error): void => {
+				cleanup();
+				reject(error);
+			};
+
+			const onReady = (): void => {
+				succeed();
+			};
+
+			const onConnect = (): void => {
+				if (this.isClientReady(client)) {
+					succeed();
+				}
+			};
+
+			const onEnd = (): void => {
+				fail(new Error("Redis client closed before it became ready"));
+			};
+
+			const onError = (error: Error): void => {
+				if (!client.isOpen) {
+					fail(error);
+				}
+			};
+
+			emitter.on("ready", onReady);
+			emitter.on("connect", onConnect);
+			emitter.on("end", onEnd);
+			emitter.on("error", onError);
+
+			if (this.isClientReady(client)) {
+				succeed();
+			} else if (!client.isOpen) {
+				fail(new Error("Redis client closed before it became ready"));
+			}
+		});
+	}
+
+	/**
+	 * Standalone and sentinel clients expose boolean `isReady`. Redis Cluster does
+	 * not; `isOpen` is the usable signal after `connect()` resolves. Check
+	 * `_connectPromise` before this so cluster callers still share the handshake.
+	 */
+	private isClientReady(
+		client: RedisClientConnectionType = this._client,
+	): boolean {
+		if (this.isClientCluster(client)) {
+			return client.isOpen;
+		}
+
+		return Boolean((client as { isReady?: boolean }).isReady);
 	}
 
 	/**
@@ -913,7 +1036,7 @@ export default class KeyvRedis<T>
 				TypeMapping
 			>;
 			const mainNode = cluster.slots[slot].master;
-			return (await cluster.nodeClient(mainNode)) as RedisClientType;
+			return (await cluster.nodeClient(mainNode)) as unknown as RedisClientType;
 		}
 
 		return connection as RedisClientType;
@@ -1029,13 +1152,31 @@ export default class KeyvRedis<T>
 		this._boundClient = undefined;
 	}
 
-	private async createTimeoutPromise(timeoutMs: number): Promise<never> {
-		return new Promise<never>((_, reject) =>
-			setTimeout(() => {
-				/* v8 ignore next 3 -- @preserve */
-				reject(new Error(`Redis timed out after ${timeoutMs}ms`));
-			}, timeoutMs),
-		);
+	/**
+	 * Race a promise against a timeout, always clearing the timer so a successful connect
+	 * does not leave a dangling rejection.
+	 * @template T
+	 * @param {Promise<T>} promise - The promise to race.
+	 * @param {number} timeoutMs - Timeout in milliseconds before the race rejects.
+	 * @returns {Promise<T>} The original promise result, or a timeout rejection.
+	 */
+	private async raceWithTimeout<T>(
+		promise: Promise<T>,
+		timeoutMs: number,
+	): Promise<T> {
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
+		try {
+			const timeout = new Promise<never>((_, reject) => {
+				timeoutId = setTimeout(() => {
+					reject(new Error(`Redis timed out after ${timeoutMs}ms`));
+				}, timeoutMs);
+			});
+			return await Promise.race([promise, timeout]);
+		} finally {
+			if (timeoutId !== undefined) {
+				clearTimeout(timeoutId);
+			}
+		}
 	}
 }
 
