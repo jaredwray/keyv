@@ -84,7 +84,7 @@ services:
     ports:
       - 27017:27017
   keyv_memcached:
-    image: memcached:latest
+    image: memcached:1.6.45-trixie@sha256:75c93cc91e76853da7c029e74d6e8dbd44774dd3713c93be8cd1971ad26120a4
     ports:
       - "11211:11211"
   keyv_etcd:
