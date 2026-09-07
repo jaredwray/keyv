@@ -167,8 +167,12 @@ export type KeyvRedisOptions = {
 	throwOnErrors?: boolean;
 
 	/**
-	 * Timeout in milliseconds for the connection. When undefined, the Redis client default is used.
-	 * If set, connection that does not succeed within this time throws.
+	 * Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH).
+	 * When undefined, the Redis client default is used. If set, a connection that does not
+	 * succeed within this time throws, the in-flight attempt is aborted, and leftover sockets
+	 * are not left open. When Keyv constructs the client, this is also passed as
+	 * `socket.connectTimeout` unless that option is already set. Auto-reconnect is disabled
+	 * unless you pass `socket.reconnectStrategy`.
 	 * @default undefined
 	 */
 	connectionTimeout?: number;
@@ -524,11 +528,11 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **noNamespaceAffectsAll** - When no namespace is set, `clear()` / `iterator()` affect all keys (including namespaced ones). Default: `false`.
 * **throwOnConnectError** - Throw when connect fails. Default: `true`.
 * **throwOnErrors** - Throw on operation failures instead of emitting `error` and returning a no-op. Default: `false`.
-* **connectionTimeout** - Connect timeout in milliseconds. `undefined` uses the Redis client default.
+* **connectionTimeout** - Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH). `undefined` uses the Redis client default. On expiry the in-flight connect is aborted so sockets and timers are not left active. When Keyv constructs the client, this is also passed as `socket.connectTimeout` unless that option is already set. Auto-reconnect is disabled unless you pass `socket.reconnectStrategy`.
 
 ## Methods
 * **constructor([connect], [options])** - `connect` is a URI string, client/cluster/sentinel options (`KeyvRedisConnect`), or an existing connection. See [Keyv Redis Options](#keyv-redis-options).
-* **getClient()** - Return the ready client, connecting first if needed. Concurrent callers share the in-flight connect and wait until `isReady` (not only `isOpen`). Returns `Promise<RedisClientConnectionType>`.
+* **getClient()** - Return the ready client, connecting first if needed. Concurrent callers share the in-flight connect and wait until `isReady` (not only `isOpen`). On `connectionTimeout`, the hung handshake is aborted so sockets are not left open. Returns `Promise<RedisClientConnectionType>`.
 * **set(key, value, [expires])** - Set a key. `expires` is an absolute Unix timestamp in milliseconds. Returns `Promise<boolean>`. Through Keyv, pass a relative millisecond `ttl` to `keyv.set` — Keyv converts it to `expires`.
 * **setMany(entries)** - Set `KeyvStorageEntry` objects (`{ key, value, expires? }`) via `MULTI/EXEC`. Returns `Promise<boolean[]>` (per-entry success). Cluster mode groups by hash slot.
 * **get(key)** - Get a key. Returns the value or `undefined` if missing (Redis `null` is mapped to `undefined`).

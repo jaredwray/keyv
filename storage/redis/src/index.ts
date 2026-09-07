@@ -111,6 +111,20 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 */
 	private _connectionTimeout: number | undefined;
 	/**
+	 * Original connect argument so a timed-out owned client can be recreated cleanly.
+	 */
+	private readonly _connect: KeyvRedisConnect | undefined;
+	/**
+	 * Whether this adapter created `_client` and may replace it after a timed-out connect.
+	 */
+	private _ownsClient = true;
+	/**
+	 * Swallows Redis client errors while an in-flight connect is being aborted.
+	 */
+	private readonly _swallowClientError = (): void => {
+		// Late errors from an aborted handshake (eject/destroy during HELLO).
+	};
+	/**
 	 * Whether the connected server supports the absolute-expiry `PXAT` option (Redis 6.2+).
 	 * Detected lazily on first expiring write and cached. `undefined` until detected.
 	 */
@@ -121,8 +135,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 */
 	private _eventsWiredClient: RedisClientConnectionType | undefined;
 	/**
-	 * In-flight `connect()` / wait-until-ready so concurrent `getClient()` callers
-	 * share one attempt instead of returning a not-yet-ready client.
+	 * In-flight `connect()` / wait-until-ready so concurrent `getClient()` callers share
+	 * one attempt instead of returning a not-yet-ready client.
 	 */
 	private _connectPromise: Promise<RedisClientConnectionType> | undefined;
 
@@ -171,40 +185,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	constructor(connect?: KeyvRedisConnect, options?: KeyvRedisOptions) {
 		super({ throwOnEmptyListeners: false });
 
-		// Build the socket reconnect strategy
-		const socket = {
-			reconnectStrategy: defaultReconnectStrategy, // Default timeout for the connection
-		};
-
-		if (connect) {
-			if (typeof connect === "string") {
-				this._client = createClient({
-					url: connect,
-					socket,
-				}) as RedisClientType;
-			} else if ((connect as KeyvAny).connect !== undefined) {
-				if (this.isClientSentinel(connect as RedisClientConnectionType)) {
-					this._client = connect as RedisConnectionSentinelType;
-				} else if (this.isClientCluster(connect as RedisClientConnectionType)) {
-					this._client = connect as RedisConnectionClusterType;
-				} else {
-					this._client = connect as RedisClientType;
-				}
-			} else if (connect instanceof Object) {
-				if ((connect as KeyvAny).sentinelRootNodes !== undefined) {
-					this._client = createSentinel(connect as RedisSentinelOptions) as RedisSentinelType;
-				} else if ((connect as KeyvAny).rootNodes === undefined) {
-					this._client = createClient(connect as RedisClientOptions) as RedisClientType;
-				} else {
-					this._client = createCluster(connect as RedisClusterOptions);
-				}
-			}
-		} else {
-			// No connect provided, create the default client here instead of at class field initialization
-			this._client = createClient({ socket }) as RedisConnectionClientType;
-		}
-
+		this._connect = connect;
 		this.setOptions(options);
+		this._client = this.createConnection(connect);
 		this.initClient();
 	}
 
@@ -232,6 +215,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	public set client(value: RedisClientConnectionType) {
 		this._connectPromise = undefined;
 		this._client = value;
+		this._ownsClient = false;
 		this._pxatSupported = undefined;
 		this.initClient();
 	}
@@ -396,8 +380,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * ready, respecting `connectionTimeout`. Concurrent callers share the in-flight
 	 * connect so commands are not issued while `isOpen && !isReady` (which rejects
 	 * with `ClientOfflineError` when the offline queue is disabled). On failure,
-	 * emits `error` and, when `throwOnConnectError` is true, throws
-	 * {@link RedisErrorMessages.RedisClientNotConnectedThrown}.
+	 * the in-flight handshake is aborted, `error` is emitted, and when
+	 * `throwOnConnectError` is true, throws {@link RedisErrorMessages.RedisClientNotConnectedThrown}.
 	 * @returns {Promise<RedisClientConnectionType>} The connected Redis client, cluster, or sentinel.
 	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
@@ -421,21 +405,25 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Connect the current client, or wait until an already-open client becomes ready.
-	 * Concurrent `getClient()` callers share this promise via `_connectPromise`.
+	 * Concurrent `getClient()` callers share this promise via `_connectPromise`. On
+	 * failure, abort the in-flight attempt so sockets are not left open, then emit
+	 * `error` and optionally throw.
 	 * @returns {Promise<RedisClientConnectionType>} The client after connect succeeds or is swallowed.
 	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
 	private async connectClient(): Promise<RedisClientConnectionType> {
+		const client = this._client;
 		try {
-			if (this._client.isReady) {
-				return this._client;
+			if (client.isReady) {
+				this.initClient();
+				return client;
 			}
 
-			const connecting = this._client.isOpen
-				? this.waitUntilReady(this._client)
-				: this._client.connect();
+			const connecting = client.isOpen
+				? this.waitUntilReady(client)
+				: (client.connect() as Promise<unknown>);
 			connecting.catch(() => {
-				/* handled by the await below or by connectionTimeout */
+				// Timeout can win the race while connect is still pending; ignore late rejections.
 			});
 
 			if (this._connectionTimeout === undefined) {
@@ -444,17 +432,23 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				await this.raceWithTimeout(connecting, this._connectionTimeout);
 			}
 		} catch (error) {
-			this.emit("error", error);
+			const timedOut = this.isConnectTimeoutError(error);
+			this.abortConnect(client, timedOut);
 
-			await this.disconnect(true);
+			try {
+				this.emit("error", error);
+			} catch {
+				// Keyv forwards store `error` events and may throw when it has no listener.
+			}
 
 			if (this._throwOnConnectError) {
 				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown);
 			}
+
+			return this._client;
 		}
 
 		this.initClient();
-
 		return this._client;
 	}
 
@@ -847,8 +841,17 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @see {@link https://github.com/redis/node-redis/tree/master/packages/redis#disconnecting}
 	 */
 	public async disconnect(force?: boolean): Promise<void> {
-		if (this._client.isOpen) {
-			await (force ? this._client.destroy() : this._client.close());
+		try {
+			if (force) {
+				this.destroyQuietly(this._client);
+				return;
+			}
+
+			if (this._client.isOpen) {
+				await this._client.close();
+			}
+		} catch {
+			// Already closed or never connected.
 		}
 	}
 
@@ -1185,6 +1188,153 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
+	 * Create a Redis client, cluster, or sentinel from the constructor connect argument.
+	 * When this adapter owns construction and `connectionTimeout` is set, that value is
+	 * applied as `socket.connectTimeout` unless the caller already set one.
+	 * @param {KeyvRedisConnect} [connect] - URI, client/cluster/sentinel options, or an existing connection.
+	 * @returns {RedisClientConnectionType} The created or provided connection.
+	 */
+	private createConnection(connect?: KeyvRedisConnect): RedisClientConnectionType {
+		const socket = {
+			reconnectStrategy: defaultReconnectStrategy,
+			...this.handshakeSocketOptions(),
+		};
+
+		if (!connect) {
+			this._ownsClient = true;
+			return createClient({ socket }) as RedisConnectionClientType;
+		}
+
+		if (typeof connect === "string") {
+			this._ownsClient = true;
+			return createClient({
+				url: connect,
+				socket,
+			}) as RedisClientType;
+		}
+
+		if ((connect as KeyvAny).connect !== undefined) {
+			this._ownsClient = false;
+			if (this.isClientSentinel(connect as RedisClientConnectionType)) {
+				return connect as RedisConnectionSentinelType;
+			}
+
+			if (this.isClientCluster(connect as RedisClientConnectionType)) {
+				return connect as RedisConnectionClusterType;
+			}
+
+			return connect as RedisClientType;
+		}
+
+		this._ownsClient = true;
+		if ((connect as KeyvAny).sentinelRootNodes !== undefined) {
+			return createSentinel(
+				this.withSentinelConnectTimeout(connect as RedisSentinelOptions),
+			) as RedisSentinelType;
+		}
+
+		if ((connect as KeyvAny).rootNodes === undefined) {
+			return createClient(
+				this.withClientConnectTimeout(connect as RedisClientOptions),
+			) as RedisClientType;
+		}
+
+		return createCluster(this.withClusterConnectTimeout(connect as RedisClusterOptions));
+	}
+
+	/**
+	 * Build socket options that enforce `connectionTimeout` for TCP connect. Handshake stalls are
+	 * aborted in {@link abortConnect} because node-redis removes `connectTimeout` after TCP.
+	 * @param {RedisClientOptions["socket"]} [base] - Existing socket options to merge into.
+	 * @returns {RedisClientOptions["socket"] | undefined} Merged socket options, or `base` when no timeout is set.
+	 */
+	private handshakeSocketOptions(
+		base?: RedisClientOptions["socket"],
+	): RedisClientOptions["socket"] | undefined {
+		if (this._connectionTimeout === undefined) {
+			return base;
+		}
+
+		const socket = { ...base };
+		if (socket.connectTimeout === undefined) {
+			socket.connectTimeout = this._connectionTimeout;
+		}
+
+		if (socket.reconnectStrategy === undefined) {
+			// Avoid opening replacement sockets while a handshake timeout is tearing down.
+			socket.reconnectStrategy = false;
+		}
+
+		return socket;
+	}
+
+	/**
+	 * Stamp handshake timeouts onto standalone client options when Keyv owns construction.
+	 * @param {RedisClientOptions} connect - Client options passed to `createClient`.
+	 * @returns {RedisClientOptions} Original options, or a shallow copy with handshake timeouts set.
+	 */
+	private withClientConnectTimeout(connect: RedisClientOptions): RedisClientOptions {
+		if (this._connectionTimeout === undefined) {
+			return connect;
+		}
+
+		return {
+			...connect,
+			socket: this.handshakeSocketOptions(connect.socket),
+		};
+	}
+
+	/**
+	 * Stamp handshake timeouts onto cluster `defaults.socket` when Keyv owns construction.
+	 * @param {RedisClusterOptions} connect - Cluster options passed to `createCluster`.
+	 * @returns {RedisClusterOptions} Original options, or a shallow copy with handshake timeouts set.
+	 */
+	private withClusterConnectTimeout(connect: RedisClusterOptions): RedisClusterOptions {
+		if (this._connectionTimeout === undefined) {
+			return connect;
+		}
+
+		return {
+			...connect,
+			defaults: {
+				...connect.defaults,
+				socket: this.handshakeSocketOptions(connect.defaults?.socket),
+			},
+		};
+	}
+
+	/**
+	 * Stamp handshake timeouts onto sentinel node and sentinel client options when Keyv owns construction.
+	 * @param {RedisSentinelOptions} connect - Sentinel options passed to `createSentinel`.
+	 * @returns {RedisSentinelOptions} Original options, or a shallow copy with handshake timeouts set.
+	 */
+	private withSentinelConnectTimeout(connect: RedisSentinelOptions): RedisSentinelOptions {
+		if (this._connectionTimeout === undefined) {
+			return connect;
+		}
+
+		return {
+			...connect,
+			nodeClientOptions: this.withNodeClientConnectTimeout(connect.nodeClientOptions),
+			sentinelClientOptions: this.withNodeClientConnectTimeout(connect.sentinelClientOptions),
+		};
+	}
+
+	/**
+	 * Stamp handshake timeouts onto sentinel node/client option bags.
+	 * @param {RedisClientOptions} [options] - Node or sentinel client options.
+	 * @returns {RedisClientOptions | undefined} Original options, or a copy with handshake timeouts.
+	 */
+	private withNodeClientConnectTimeout(
+		options: RedisClientOptions | undefined,
+	): RedisClientOptions | undefined {
+		return {
+			...options,
+			socket: this.handshakeSocketOptions(options?.socket),
+		};
+	}
+
+	/**
 	 * Apply defined adapter options to this instance.
 	 * @param {KeyvRedisOptions} [options] - Options to apply. Omitted or undefined fields are left unchanged.
 	 * @returns {void}
@@ -1274,6 +1424,133 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
+	 * Whether a failed `connect()` was a handshake timeout (Keyv race or node-redis socketTimeout).
+	 * `RedisClient.destroy()` during HELLO can leave the TCP socket open, so those errors must not
+	 * use `destroy()`.
+	 * @param {unknown} error - The error from `connect()` or `raceWithTimeout()`.
+	 * @returns {boolean} `true` when the failure is a connect/handshake timeout.
+	 */
+	private isConnectTimeoutError(error: unknown): boolean {
+		if (!(error instanceof Error)) {
+			/* v8 ignore next -- @preserve */
+			return false;
+		}
+
+		return (
+			error.message.startsWith("Redis timed out after") ||
+			error.message.includes("Socket timeout") ||
+			error.message.includes("Connection timeout")
+		);
+	}
+
+	/**
+	 * Stop using a failed client. Timed-out handshakes close via RedisSocket.destroy() (sets
+	 * `isOpen` false and destroys the net.Socket without RedisClient.flushAll). Other failures
+	 * destroy if still open. Owned clients are replaced so a later `getClient()` cannot resume
+	 * the aborted `#connect()` loop.
+	 * @param {RedisClientConnectionType} client - The client whose `connect()` failed.
+	 * @param {boolean} timedOut - Whether the failure was a handshake timeout.
+	 * @returns {void}
+	 */
+	private abortConnect(client: RedisClientConnectionType, timedOut: boolean): void {
+		client.on("error", this._swallowClientError);
+
+		if (timedOut) {
+			this.closeHungHandshake(client);
+		} else {
+			this.destroyQuietly(client);
+		}
+
+		if (this._ownsClient && this._client === client) {
+			// Recreate after close so retries cannot resume the aborted `#connect()` loop.
+			this._client = this.createConnection(this._connect);
+			this.copyClientRuntimeOptions(client, this._client);
+			this._pxatSupported = undefined;
+			this.initClient();
+		}
+	}
+
+	/**
+	 * Close a hung handshake without `RedisClient.destroy()`. That path `flushAll`s pending HELLO
+	 * commands and can leave the TCP connection open. Eject the RedisSocket and destroy the
+	 * underlying `net.Socket` without passing an error.
+	 * @param {RedisClientConnectionType} client - The client whose handshake is hung.
+	 * @returns {void}
+	 */
+	private closeHungHandshake(client: RedisClientConnectionType): void {
+		const maybe = client as KeyvAny;
+		try {
+			if (typeof maybe._ejectSocket === "function") {
+				const redisSocket = maybe._ejectSocket() as {
+					destroy?: () => void;
+					destroySocket?: () => void;
+					isOpen?: boolean;
+				};
+				// RedisSocket.destroy() sets isOpen=false so `#connect` does not open a replacement
+				// socket. RedisClient.destroy() is avoided because flushAll() during HELLO can leak.
+				if (redisSocket.isOpen && typeof redisSocket.destroy === "function") {
+					redisSocket.destroy();
+					return;
+				}
+
+				/* v8 ignore next -- @preserve */
+				if (typeof redisSocket.destroySocket === "function") {
+					/* v8 ignore next -- @preserve */
+					redisSocket.destroySocket();
+					/* v8 ignore next -- @preserve */
+					return;
+				}
+			}
+		} catch {
+			/* v8 ignore next -- @preserve */
+			// Cluster/sentinel clients, or the socket was not assigned yet.
+		}
+
+		/* v8 ignore next -- @preserve */
+		this.destroyQuietly(client);
+	}
+
+	/**
+	 * Copy runtime client option mutations (for example `createKeyvNonBlocking`) onto a replacement client.
+	 * @param {RedisClientConnectionType} from - The aborted client.
+	 * @param {RedisClientConnectionType} to - The newly created client.
+	 * @returns {void}
+	 */
+	private copyClientRuntimeOptions(
+		from: RedisClientConnectionType,
+		to: RedisClientConnectionType,
+	): void {
+		const fromOptions = (from as KeyvAny).options as RedisClientOptions | undefined;
+		const toOptions = (to as KeyvAny).options as RedisClientOptions | undefined;
+		if (!fromOptions || !toOptions) {
+			/* v8 ignore next -- @preserve */
+			return;
+		}
+
+		toOptions.disableOfflineQueue = fromOptions.disableOfflineQueue;
+		if (fromOptions.socket && toOptions.socket) {
+			toOptions.socket.reconnectStrategy = fromOptions.socket.reconnectStrategy;
+		}
+	}
+
+	/**
+	 * Call `destroy()` and ignore already-closed errors.
+	 * @param {RedisClientConnectionType} client - The client to destroy.
+	 * @returns {void}
+	 */
+	private destroyQuietly(client: RedisClientConnectionType): void {
+		try {
+			if (!client.isOpen) {
+				return;
+			}
+
+			client.destroy();
+		} catch {
+			// Already closed, ejected, or never opened.
+		}
+	}
+
+	/**
 	 * Race a promise against a timeout, always clearing the timer so a successful connect
 	 * does not leave a dangling rejection.
 	 * @template T
@@ -1288,6 +1565,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				timeoutId = setTimeout(() => {
 					reject(new Error(`Redis timed out after ${timeoutMs}ms`));
 				}, timeoutMs);
+				timeoutId.unref();
 			});
 			return await Promise.race([promise, timeout]);
 		} finally {
