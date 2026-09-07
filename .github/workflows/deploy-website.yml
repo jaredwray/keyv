@@ -24,7 +24,7 @@ jobs:
         node-version: 22
 
     - name: Install pnpm
-      run: npm install -g pnpm
+      uses: pnpm/action-setup@v6
 
     - name: Install Dependencies  
       run: pnpm install
