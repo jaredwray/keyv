@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
-minimumReleaseAge: 2880
+# 7 days in minutes — only install versions at least this old.
+minimumReleaseAge: 10080
 # pnpm 11 moved dependency build-script approval here (was
 # pnpm.onlyBuiltDependencies in package.json) — same set, same format as main.
 allowBuilds:
