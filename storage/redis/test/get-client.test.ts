@@ -7,6 +7,7 @@ import KeyvRedis, {
 	createClient,
 	createKeyv,
 	createKeyvNonBlocking,
+	defaultReconnectStrategy,
 	type RedisClientType,
 	RedisErrorMessages,
 } from "../src/index.js";
@@ -272,10 +273,23 @@ describe("getClient", () => {
 			);
 			await waitForOpenSockets(server, 0);
 			expect(keyvRedis.client).toBe(client);
+			expect(() => {
+				client.emit("error", new Error("late handshake error"));
+			}).not.toThrow();
 		} finally {
 			await keyvRedis.disconnect(true);
 			await server.close();
 		}
+	});
+
+	test("should export defaultReconnectStrategy with exponential backoff and jitter", () => {
+		const first = defaultReconnectStrategy(0);
+		expect(first).toBeGreaterThanOrEqual(50);
+		expect(first).toBeLessThanOrEqual(150);
+
+		const capped = defaultReconnectStrategy(10);
+		expect(capped).toBeGreaterThanOrEqual(1950);
+		expect(capped).toBeLessThanOrEqual(2050);
 	});
 
 	test("should abort a hung handshake for createKeyvNonBlocking without throwing", async () => {

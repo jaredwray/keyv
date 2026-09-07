@@ -125,7 +125,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	/**
 	 * Swallows Redis client errors while an in-flight connect is being aborted.
 	 */
-	/* v8 ignore next 4 -- @preserve */
 	private readonly _swallowClientError = (): void => {
 		// Late errors from an aborted handshake (eject/destroy during HELLO).
 	};
