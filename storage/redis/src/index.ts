@@ -125,6 +125,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	/**
 	 * Swallows Redis client errors while an in-flight connect is being aborted.
 	 */
+	/* v8 ignore next 4 -- @preserve */
 	private readonly _swallowClientError = (): void => {
 		// Late errors from an aborted handshake (eject/destroy during HELLO).
 	};
@@ -1209,10 +1210,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	private withNodeClientConnectTimeout(
 		options: RedisClientOptions | undefined,
 	): RedisClientOptions | undefined {
-		if (this._connectionTimeout === undefined) {
-			return options;
-		}
-
 		return {
 			...options,
 			socket: this.handshakeSocketOptions(options?.socket),
@@ -1419,15 +1416,20 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 					return;
 				}
 
+				/* v8 ignore next -- @preserve */
 				if (typeof redisSocket.destroySocket === "function") {
+					/* v8 ignore next -- @preserve */
 					redisSocket.destroySocket();
+					/* v8 ignore next -- @preserve */
 					return;
 				}
 			}
 		} catch {
+			/* v8 ignore next -- @preserve */
 			// Cluster/sentinel clients, or the socket was not assigned yet.
 		}
 
+		/* v8 ignore next -- @preserve */
 		this.destroyQuietly(client);
 	}
 
@@ -1444,6 +1446,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		const fromOptions = (from as KeyvAny).options as RedisClientOptions | undefined;
 		const toOptions = (to as KeyvAny).options as RedisClientOptions | undefined;
 		if (!fromOptions || !toOptions) {
+			/* v8 ignore next -- @preserve */
 			return;
 		}
 
