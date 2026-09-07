@@ -540,4 +540,115 @@ describe("getClient", () => {
 			RedisErrorMessages.RedisClientNotConnectedThrown,
 		);
 	});
+
+	test("should not accumulate listeners after reconnects", async () => {
+		const keyvRedis = new KeyvRedis(redisUri);
+		const client = keyvRedis.client as RedisClientType;
+
+		expect(client.listenerCount("error")).toBe(1);
+		expect(client.listenerCount("connect")).toBe(1);
+		expect(client.listenerCount("disconnect")).toBe(1);
+		expect(client.listenerCount("reconnecting")).toBe(1);
+
+		for (let index = 0; index < 12; index++) {
+			await keyvRedis.getClient();
+			await keyvRedis.disconnect();
+			expect(client.listenerCount("error")).toBe(1);
+			expect(client.listenerCount("connect")).toBe(1);
+			expect(client.listenerCount("disconnect")).toBe(1);
+			expect(client.listenerCount("reconnecting")).toBe(1);
+		}
+
+		await keyvRedis.getClient();
+		await keyvRedis.set("listener-reconnect-key", "ok");
+		expect(await keyvRedis.get("listener-reconnect-key")).toBe("ok");
+		await keyvRedis.delete("listener-reconnect-key");
+		await keyvRedis.disconnect();
+	});
+});
+
+describe("client event listeners", () => {
+	test("should attach listeners once across reconnects", async () => {
+		const client = new FakeRedisClient();
+		const store = new KeyvRedis(client as unknown as RedisClientType);
+		const listenerCounts = [client.listenerCount("error")];
+
+		for (let index = 0; index < 12; index++) {
+			await store.getClient();
+			await store.disconnect();
+			listenerCounts.push(client.listenerCount("error"));
+		}
+
+		expect(listenerCounts).toEqual(Array.from({ length: 13 }).fill(1));
+		expect(client.listenerCount("connect")).toBe(1);
+		expect(client.listenerCount("disconnect")).toBe(1);
+		expect(client.listenerCount("reconnecting")).toBe(1);
+	});
+
+	test("should forward a client error only once after reconnects", async () => {
+		const client = new FakeRedisClient();
+		const store = new KeyvRedis(client as unknown as RedisClientType);
+		let forwardedErrors = 0;
+		store.on("error", () => {
+			forwardedErrors++;
+		});
+
+		for (let index = 0; index < 5; index++) {
+			await store.getClient();
+			await store.disconnect();
+		}
+
+		client.emit("error", new Error("test"));
+		expect(forwardedErrors).toBe(1);
+	});
+
+	test("should forward connect, disconnect, and reconnecting events", async () => {
+		const client = new FakeRedisClient();
+		const store = new KeyvRedis(client as unknown as RedisClientType);
+		const events: unknown[] = [];
+		store.on("connect", (value) => {
+			events.push(["connect", value]);
+		});
+		store.on("disconnect", (value) => {
+			events.push(["disconnect", value]);
+		});
+		store.on("reconnecting", (value) => {
+			events.push(["reconnecting", value]);
+		});
+
+		client.emit("connect");
+		client.emit("disconnect");
+		client.emit("reconnecting", { attempt: 2 });
+
+		expect(events).toEqual([
+			["connect", client],
+			["disconnect", client],
+			["reconnecting", { attempt: 2 }],
+		]);
+	});
+
+	test("should move listeners when the client is replaced", () => {
+		const originalClient = new FakeRedisClient();
+		const replacementClient = new FakeRedisClient();
+		const store = new KeyvRedis(originalClient as unknown as RedisClientType);
+		let forwardedErrors = 0;
+		store.on("error", () => {
+			forwardedErrors++;
+		});
+
+		expect(originalClient.listenerCount("error")).toBe(1);
+
+		store.client = replacementClient as unknown as RedisClientType;
+		store.client = replacementClient as unknown as RedisClientType;
+
+		expect(originalClient.listenerCount("error")).toBe(0);
+		expect(replacementClient.listenerCount("error")).toBe(1);
+
+		originalClient.on("error", () => {});
+		originalClient.emit("error", new Error("old"));
+		expect(forwardedErrors).toBe(0);
+
+		replacementClient.emit("error", new Error("new"));
+		expect(forwardedErrors).toBe(1);
+	});
 });
