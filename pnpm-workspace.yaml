@@ -2,6 +2,9 @@ packages:
   - 'packages/*'
 # 7 days in minutes — only install versions at least this old.
 minimumReleaseAge: 10080
+# Adapters and @keyv/test-suite depend on each other. pnpm 12 fails cyclic
+# `run build` unless this is set; pnpm 11 only warned.
+ignoreWorkspaceCycles: true
 # pnpm 11 moved dependency build-script approval here (was
 # pnpm.onlyBuiltDependencies in package.json) — same set, same format as main.
 allowBuilds:

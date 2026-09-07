@@ -20,9 +20,9 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-      
+
       - name: Install pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v6
 
       - name: Start Services
         run: pnpm test:services:start
