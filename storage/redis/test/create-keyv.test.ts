@@ -63,4 +63,52 @@ describe("createKeyvNonBlocking", () => {
 		expect(keyv.namespace).toBeUndefined();
 		expect(keyv.store.namespace).toBeUndefined();
 	});
+
+	test("should persist concurrent sets during the initial Redis connect", async () => {
+		const keyv = createKeyvNonBlocking(redisUri);
+		const errors: Error[] = [];
+		const onError = (error: unknown) => {
+			errors.push(error as Error);
+		};
+		keyv.on("error", onError);
+		keyv.store.on("error", onError);
+
+		const prefix = `keyv-concurrent-connect-${Date.now()}`;
+		const keys = Array.from({ length: 50 }, (_, index) => `${prefix}:${index}`);
+		const results = await Promise.all(keys.map((key, index) => keyv.set(key, index, 60_000)));
+		const values = await Promise.all(keys.map((key) => keyv.get<number>(key)));
+
+		expect(results.every((result) => result === true)).toBe(true);
+		expect(values).toEqual(keys.map((_, index) => index));
+		expect(errors.filter((error) => error.name === "ClientOfflineError")).toHaveLength(0);
+
+		await keyv.deleteMany(keys);
+		await keyv.disconnect();
+	});
+
+	test("should persist concurrent sets after disconnect and reconnect", async () => {
+		const keyv = createKeyvNonBlocking(redisUri);
+		const errors: Error[] = [];
+		const onError = (error: unknown) => {
+			errors.push(error as Error);
+		};
+		keyv.on("error", onError);
+		keyv.store.on("error", onError);
+
+		const warmupKey = `keyv-concurrent-reconnect-warmup-${Date.now()}`;
+		await keyv.set(warmupKey, "warmup", 60_000);
+		await keyv.disconnect();
+
+		const prefix = `keyv-concurrent-reconnect-${Date.now()}`;
+		const keys = Array.from({ length: 50 }, (_, index) => `${prefix}:${index}`);
+		const results = await Promise.all(keys.map((key, index) => keyv.set(key, index, 60_000)));
+		const values = await Promise.all(keys.map((key) => keyv.get<number>(key)));
+
+		expect(results.every((result) => result === true)).toBe(true);
+		expect(values).toEqual(keys.map((_, index) => index));
+		expect(errors.filter((error) => error.name === "ClientOfflineError")).toHaveLength(0);
+
+		await keyv.deleteMany(keys);
+		await keyv.disconnect();
+	});
 });
