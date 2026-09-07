@@ -55,7 +55,7 @@ jobs:
     timeout-minutes: 15
     name: Build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -63,7 +63,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
@@ -80,7 +80,7 @@ jobs:
     timeout-minutes: 30
     name: Test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -88,7 +88,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
@@ -118,7 +118,7 @@ jobs:
       contents: read
       id-token: write # required for OIDC trusted publishing + provenance
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # This job only reads the repo (it never pushes), so don't leave the
           # GITHUB_TOKEN in .git/config for later steps to read.
@@ -128,7 +128,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org' # writes the .npmrc the registry expects
