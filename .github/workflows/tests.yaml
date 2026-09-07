@@ -3,9 +3,9 @@ name: tests
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [v5]
   pull_request:
-    branches: [ main ]
+    branches: [v5]
 
 permissions:
   contents: read
@@ -13,31 +13,36 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
-        node: [ '24' ]
-    name: Node ${{ matrix.node }}
+        node: ["20", "22", "24"]
+    name: node-${{ matrix.node }}
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Setup node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
-      
-      - name: Install pnpm
-        run: npm install -g pnpm
 
       - name: Start Services
         run: pnpm test:services:start
 
-      - name: Install Dependencies  
+      - name: Install Dependencies
+        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
+        # rather than using --frozen-lockfile.
         run: pnpm install
-
-      - name: Approve Builds
-        run: pnpm approve-builds
 
       - name: Build
         run: pnpm build
-        
+
       - name: Test Packages
         run: pnpm test

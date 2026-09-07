@@ -3,9 +3,9 @@ name: codecov
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [v5]
   pull_request:
-    branches: [ main ]
+    branches: [v5]
 
 permissions:
   contents: write
