@@ -12,11 +12,11 @@ Omitted until they apply on this branch:
 - Dev Container image pin — no `devcontainer.json`
 
 ## 1. Security docs
-- [ ] `SECURITY.md` present — contact info + "How this repository is secured" summary (PR #2128 pending)
-- [ ] `DEFENSE_IN_DEPTH.md` present (this file) (PR #2128 pending)
+- [x] `SECURITY.md` present — contact info + "How this repository is secured" summary — PR #2128
+- [x] `DEFENSE_IN_DEPTH.md` present (this file) — PR #2128
 
 ## 2. CODEOWNERS and cloud bootstrap
-- [ ] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names
+- [ ] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names (PR pending)
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified 2026-09-08 (`pnpm@12.2.1`)
