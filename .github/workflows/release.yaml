@@ -13,10 +13,13 @@ on:
 # Never run two releases at once; let an in-flight stage finish rather than
 # cancelling it half-way through the package set. The v5 branch's release
 # workflow uses the same group, so the two release lines never stage
-# concurrently either.
+# concurrently either. `queue: max` keeps every queued release pending in
+# FIFO order (up to 100) instead of GitHub's default of a single pending run,
+# where a newly queued release silently cancels the one already waiting.
 concurrency:
   group: release
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
@@ -149,6 +152,27 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Full history so the release-tag guard below can check ancestry.
+          fetch-depth: 0
+
+      # A GitHub Release publishes the v6 line only. The workflow file that
+      # runs for a Release is the one at the tagged commit (a tag on the v5
+      # branch runs v5's dispatch-only workflow, never this file), but refuse
+      # anyway if the released commit is not on main, so a release-notes tag
+      # cut from another branch can never reach npm's stage queue from here.
+      - name: Verify the release tag is on main
+        if: github.event_name == 'release'
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if git merge-base --is-ancestor "$RELEASE_SHA" origin/main; then
+            echo "Release $RELEASE_TAG ($RELEASE_SHA) is on main."
+          else
+            echo "::error::Release $RELEASE_TAG points at $RELEASE_SHA, which is not on the main branch. Refusing to stage."
+            exit 1
+          fi
 
       - name: Install Socket Firewall
         uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
