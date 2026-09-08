@@ -26,33 +26,14 @@ jobs:
           persist-credentials: false
 
       - name: Setup node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
 
-      # pnpm 11.9 (packageManager) requires Node >= 22.13. Node 20 cannot use
-      # pnpm/action-setup with a different version either — it errors on the
-      # mismatch — so install pnpm 10 via npm for that job only.
+      # pnpm 12 (packageManager) is a native binary and supports Node 20, so
+      # every matrix job can use action-setup. pnpm 11 required Node >= 22.13.
       - name: Install pnpm
-        if: matrix.node != '20'
         uses: pnpm/action-setup@v6
-
-      - name: Install pnpm 10 (Node 20)
-        if: matrix.node == '20'
-        run: npm install -g pnpm@10
-
-      - name: Allow pnpm 10 on a pnpm 11 workspace
-        if: matrix.node == '20'
-        run: |
-          printf '%s\n' \
-            'manage-package-manager-versions=false' \
-            'package-manager-strict=false' \
-            'only-built-dependencies[]=esbuild' \
-            'only-built-dependencies[]=protobufjs' \
-            'only-built-dependencies[]=sqlite3' \
-            'only-built-dependencies[]=sqlite325h' \
-            'only-built-dependencies[]=unrs-resolver' \
-            > .npmrc
 
       - name: Start Services
         run: chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh

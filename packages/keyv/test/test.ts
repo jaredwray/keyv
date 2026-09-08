@@ -688,9 +688,9 @@ test.it("close connection undefined", async (t) => {
 test.it("get keys, one key expired", async (t) => {
 	const keyv = new Keyv({ store: keyvMemcache });
 	await keyv.set("foo", "bar", 10_000);
-	await keyv.set("fizz", "buzz", 100);
+	await keyv.set("fizz", "buzz", 500);
 	await keyv.set("ping", "pong", 10_000);
-	await snooze(100);
+	await snooze(600);
 	await keyv.get(["foo", "fizz", "ping"]);
 	t.expect(await keyv.get("fizz")).toBeUndefined();
 	t.expect(await keyv.get("foo")).toBe("bar");

@@ -1,6 +1,6 @@
 services:
   keyv_postgres:
-    image: postgres:latest
+    image: postgres:18.6-trixie@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
     command: postgres -c 'max_connections=200'
     environment:
       POSTGRES_DB: keyv_test
@@ -20,7 +20,7 @@ services:
     ports:
       - 5433:5432/tcp
   keyv_mysql:
-    image: mysql/mysql-server:latest
+    image: mysql/mysql-server:8.0.32@sha256:d6c8301b7834c5b9c2b733b10b7e630f441af7bc917c74dba379f24eeeb6a313
     command: [ "mysqld",
                "--character-set-server=utf8mb4",
                "--collation-server=utf8mb4_unicode_ci",
@@ -35,7 +35,7 @@ services:
       MYSQL_USER: mysql
       MYSQL_ROOT_HOST: '%'
   keyv_mysql_1:
-    image: "mysql/mysql-server:latest"
+    image: mysql/mysql-server:8.0.32@sha256:d6c8301b7834c5b9c2b733b10b7e630f441af7bc917c74dba379f24eeeb6a313
     command: [ "mysqld",
                "--character-set-server=utf8mb4",
                "--collation-server=utf8mb4_unicode_ci",
@@ -57,20 +57,20 @@ services:
       MYSQL_DATABASE: keyv_test
       MYSQL_ROOT_HOST: '%'
   keyv_valkey:
-    image: valkey/valkey:latest
+    image: valkey/valkey:9.1.1-trixie@sha256:64e361b630ecf18dff7ca4df6a88e6eafc193687eb48cff2c7e0a293ab67d29a
     command: redis-server --port 6370
     environment:
       REDIS_HOST: redis
     ports:
       - 6370:6370
   keyv_redis:
-    image: redis:latest
+    image: redis:8.10.1-trixie@sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
     environment:
       REDIS_HOST: redis
     ports:
       - 6379:6379
   keyv_redis_tls_1:
-    image: redis:latest
+    image: redis:8.10.1-trixie@sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
     command: redis-server --port 0 --tls-port 6380 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no
     environment:
       REDIS_HOST: redis
@@ -79,16 +79,16 @@ services:
     volumes:
       - ../packages/redis/tls:/tls
   keyv_mongo:
-    image: mongo:latest
+    image: mongo:8.3.8@sha256:5211c51171f57ae60842b11664bb244628971b3d35325762a97888337b9bb0db
     restart: always
     ports:
       - 27017:27017
   keyv_memcached:
-    image: memcached:latest
+    image: memcached:1.6.45-trixie@sha256:75c93cc91e76853da7c029e74d6e8dbd44774dd3713c93be8cd1971ad26120a4
     ports:
       - "11211:11211"
   keyv_etcd:
-    image: registry.k8s.io/etcd:3.5.15-0
+    image: registry.k8s.io/etcd:3.5.33-0@sha256:89e9d4e344864374bf141d10ac90034e50647f58498ef0b5f0d6e4fd328c58b9
     platform: linux/arm64/v8
     command:
       - etcd
@@ -98,7 +98,7 @@ services:
       - 2379:2379
       - 2380:2380
   keyv_dynamo:
-    image: amazon/dynamodb-local:latest
+    image: amazon/dynamodb-local:3.3.1@sha256:ff89bd48ff32cd8d9be5fee8873b65b8854dc408f1afe881be6eb00247bc0dab
     ports:
       - 8000:8000
     healthcheck:

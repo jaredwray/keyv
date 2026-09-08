@@ -17,12 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
-      
+
       - name: Install pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v6
 
       - name: Start Services
         run: pnpm test:services:start
