@@ -1,46 +1,54 @@
 name: release
 
-# Publishes v5-branch workspace packages to npm whose manually-set version is
+# Stages v5-branch workspace packages to npm whose manually-set version is
 # ahead of the registry. Versions are never bumped here — a human bumps each
 # package's `version` (typically via a release PR), then runs this workflow
-# MANUALLY from the v5 branch, which figures out what actually needs
-# publishing and publishes it in dependency order under the right dist-tag.
-# See scripts/release.mjs for the decision logic, including the MAJOR CEILING:
-# nothing at or above 6.0.0 (including pre-releases) can ever be published
-# from the v5 branch — v6 is released from `main`.
+# MANUALLY from the v5 branch. The workflow figures out what actually needs
+# releasing and STAGES it (npm staged publishing) in dependency order under
+# the right dist-tag. Nothing goes live from CI: a maintainer reviews and
+# approves each staged version with 2FA (`pnpm stage approve` or the "Staged
+# Packages" tab on npmjs.com). See scripts/release.mjs for the decision
+# logic, including the MAJOR CEILING: nothing at or above 6.0.0 (including
+# pre-releases) can ever be staged from the v5 branch — v6 is released from
+# `main`. The full runbook lives in changelog/README.md.
 #
-# How to run it (manual, workflow_dispatch only):
+# How to run it (manual, workflow_dispatch only — by design):
 #   Actions tab → "release" → "Run workflow" → set "Use workflow from" to the
 #   `v5` branch → leave "Dry run" checked to preview the plan, or uncheck it to
-#   publish for real → "Run workflow". The workflow definition on the branch
-#   you pick is the one that runs; a real publish only happens from `v5` (any
-#   other ref is forced to a dry run below).
+#   stage for real → "Run workflow". The workflow definition on the branch you
+#   pick is the one that runs: the button is listed because main's
+#   release.yaml also has workflow_dispatch, and picking `v5` runs THIS file.
+#   A real stage only happens from `v5` (any other ref is forced to a dry run
+#   below). GitHub Releases never trigger this workflow — cutting a v5 release
+#   means merging the release PR and dispatching this workflow from `v5`.
 #
 # Authentication uses OIDC trusted publishing (tokenless) with provenance:
 #   - `id-token: write` lets GitHub mint the OIDC token pnpm exchanges for a
 #     short-lived npm credential and uses to sign the provenance attestation.
 #   - Each package needs a "Trusted Publisher" on npmjs.com pointing at repo
-#     `jaredwray/keyv` + workflow `release.yaml` (+ environment `release`).
+#     `jaredwray/keyv` + workflow `release.yaml` (+ environment `release`),
+#     configured STAGE-ONLY: it may `stage publish`, never `publish` live.
 #     This file shares its name with main's release workflow on purpose, so
-#     one trusted-publisher configuration covers both release lines.
-#   - This workflow is fully tokenless: no NPM_TOKEN secret anywhere. A
-#     brand-new package's first-ever publish (which OIDC cannot do) needs a
-#     one-time manual `pnpm publish` — the release script refuses such
-#     packages at plan time rather than failing mid-run.
+#     one trusted-publisher configuration covers both release lines. Note that
+#     `@keyv/serialize` only exists on this branch and needs its own entry.
+#   - This workflow is fully tokenless: no NPM_TOKEN secret anywhere. npm
+#     cannot stage a brand-new package, so a package's first-ever publish
+#     needs a one-time manual `pnpm publish` — the release script refuses
+#     such packages at plan time rather than failing mid-run.
 
 on:
   # Manual runs ONLY — there is deliberately no `release`/`push` trigger, so a
-  # publish never happens automatically. Defaults to a dry run that prints the
-  # publish plan and validates packaging without publishing anything.
+  # stage never happens automatically. Defaults to a dry run that prints the
+  # stage plan and validates packaging (pnpm pack) without staging anything.
   # Dispatching from any ref other than the v5 branch is forced to a dry run.
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run — compute and print the publish plan without publishing"
+        description: "Dry run — compute and print the stage plan and validate packaging without staging"
         type: boolean
         default: true
 
-# Never run two releases at once; let an in-flight publish finish rather than
+# Never run two releases at once; let an in-flight stage finish rather than
 # cancelling it half-way through the package set.
 concurrency:
   group: release
@@ -55,7 +63,7 @@ jobs:
     timeout-minutes: 15
     name: Build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -63,7 +71,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
 
@@ -80,7 +88,7 @@ jobs:
     timeout-minutes: 30
     name: Test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -88,7 +96,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
 
@@ -106,19 +114,27 @@ jobs:
       - name: Test Packages
         run: pnpm test
 
-  publish:
+  stage:
     needs: [build, test]
     runs-on: ubuntu-latest # provenance/OIDC require a cloud-hosted runner
     timeout-minutes: 20
-    name: Publish
+    name: Stage
     environment: release
     # OIDC trusted publishing: GitHub mints a short-lived OIDC token that pnpm
-    # exchanges with npm for a one-time publish credential. No NPM_TOKEN.
+    # exchanges with npm for a one-time stage credential. No NPM_TOKEN.
+    # The trusted publisher must be configured stage-only on npmjs.com.
     permissions:
       contents: read
       id-token: write # required for OIDC trusted publishing + provenance
+    env:
+      # Provenance is generated automatically when staging via OIDC; setting
+      # this makes it explicit and fails closed if OIDC ever isn't available.
+      # scripts/release.mjs also passes --provenance on every stage publish,
+      # and the "Verify release logic" step fails the run if that flag is ever
+      # removed from the script.
+      NPM_CONFIG_PROVENANCE: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # This job only reads the repo (it never pushes), so don't leave the
           # GITHUB_TOKEN in .git/config for later steps to read.
@@ -128,7 +144,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org' # writes the .npmrc the registry expects
@@ -142,15 +158,20 @@ jobs:
         run: pnpm build
 
       # Verify the release decision logic (major ceiling, dist-tag model,
-      # backwards guards) before any publish runs.
+      # backwards guards, the exact `pnpm stage publish … --provenance`
+      # command) before anything is staged.
       - name: Verify release logic
         run: pnpm test:release
 
-      # Honors the dry_run input, and is forced to a dry run from any ref other
-      # than the v5 branch so branch versions can't be pushed to npm. A real
-      # publish therefore requires dispatching from v5 with dry_run unchecked.
-      # The script's own guards still apply on top: the < 6.0.0 major ceiling,
-      # skip-already-published, refuse first-time (non-OIDC) publishes, and
-      # never move a dist-tag backwards.
-      - name: Release
-        run: node scripts/release.mjs ${{ (inputs.dry_run || github.ref != 'refs/heads/v5') && '--dry-run' || '' }}
+      # Packs each package whose version is ahead of npm and stages the
+      # tarball with provenance; nothing goes live until a maintainer approves
+      # it with 2FA. Honors the dry_run input, and is forced to a dry run from
+      # any ref other than the v5 branch so branch versions can't reach npm's
+      # stage queue. A real stage therefore requires dispatching from v5 with
+      # dry_run unchecked. The script's own guards still apply on top: the
+      # < 6.0.0 major ceiling, skip-already-published, refuse never-published
+      # packages, and never move a dist-tag backwards.
+      - name: Stage release (pack + pnpm stage publish)
+        env:
+          DRY_RUN: ${{ inputs.dry_run || github.ref != 'refs/heads/v5' }}
+        run: node scripts/release.mjs

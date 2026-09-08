@@ -31,6 +31,13 @@ Individual package tests:
 ### Clean Up
 - `pnpm clean` - Remove node_modules and generated files from all packages
 
+### Releasing (v5 line)
+- Versions are bumped by hand in a release PR; `scripts/release.mjs` never bumps them, and nothing on this branch may be `6.0.0` or higher (v6 ships from `main`)
+- `pnpm release:dry` - Print the stage plan (which packages are ahead of npm, under which dist-tag) and validate packaging; stages nothing
+- `pnpm test:release` - Unit tests for the release decision logic and the exact `pnpm stage publish … --provenance` command (CI runs them before staging)
+- Publishing is manual: Actions → `release` → "Run workflow" with "Use workflow from" set to `v5`. CI only **stages** packages on npm (`pnpm stage publish` with provenance via OIDC trusted publishing); a maintainer approves them with 2FA (`pnpm stage list` / `pnpm stage view <id>` / `pnpm stage approve <id>…`, dependencies first)
+- Never run `pnpm publish` directly. The full runbook is in `changelog/README.md`
+
 ## Architecture Overview
 
 ### Monorepo Structure

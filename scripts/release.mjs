@@ -5,8 +5,19 @@
  * Versions are set **manually** (each package's `version` in package.json is
  * bumped by a human / release PR). This script never changes versions. Its job
  * is to decide, for every publishable workspace package, whether the locally
- * declared version still needs to be published — and under which dist-tag —
- * and, unless running a dry run, to publish the ones that do.
+ * declared version still needs to be released — and under which dist-tag —
+ * and, unless running a dry run, to STAGE the ones that do on npm.
+ *
+ * ## Staged publishing — nothing goes live from CI
+ *
+ * This script never runs `pnpm publish`. It packs each package and runs
+ * `pnpm stage publish`, which uploads the tarball to npm's stage queue
+ * together with a provenance attestation. A maintainer then reviews and
+ * approves each staged version with 2FA — `pnpm stage list`,
+ * `pnpm stage view <id>`, `pnpm stage approve <id>…` (or the "Staged
+ * Packages" tab on npmjs.com) — and only then does it become installable.
+ * The npm trusted publisher for the release workflow is configured
+ * stage-only, so CI could not publish live even if it tried.
  *
  * ## The v5 branch context
  *
@@ -14,36 +25,42 @@
  * the 6.x line). This branch is the v5 maintenance line, so two invariants are
  * enforced mechanically:
  *
- *   1. THE MAJOR CEILING — no package on this branch may ever publish a
+ *   1. THE MAJOR CEILING — no package on this branch may ever stage a
  *      version whose major is above MAX_MAJOR (5). 6.0.0, 6.0.0-beta.1 and
  *      anything higher belong to `main`; the run aborts before any registry
  *      call if a manifest crosses the ceiling.
  *   2. `latest` (and every other dist-tag) never moves backwards. Once v6 GA
- *      owns `latest`, v5 releases automatically publish under `v5-lts`
+ *      owns `latest`, v5 releases automatically stage under `v5-lts`
  *      instead — same convention as main's release-publish.ts — with no
  *      workflow variable to flip on this branch.
  *
- * ## How "needs publishing" is decided
+ * ## How "needs staging" is decided
  *
  *   1. Enumerate workspace packages with `pnpm -r ls --depth -1 --json`.
  *   2. Drop packages that are `private` or explicitly ignored (see
  *      IGNORED_PACKAGES) — these are never published to npm.
  *   3. Refuse the whole run if any package version crosses the major ceiling.
  *   4. For each remaining package, fetch its document from the npm registry:
- *        - 404            → never published → REFUSED (a first publish cannot
- *          authenticate via OIDC trusted publishing — bootstrap it manually
- *          once with `pnpm publish`, then re-run)
+ *        - 404            → never published → REFUSED (npm cannot stage a
+ *          brand-new package, and a first publish cannot authenticate via
+ *          OIDC trusted publishing — bootstrap it manually once with
+ *          `pnpm publish`, then re-run)
  *        - version listed → this exact version is already on npm    → skip
- *        - version absent → a newer (manually-set) version is ready → publish
+ *        - version absent → a newer (manually-set) version is ready → stage
  *   5. The full plan — including each package's dist-tag — is computed before
- *      anything is published. If the registry state of any package cannot be
- *      determined (after retries), the run aborts *before* publishing
- *      anything: a release is all-or-nothing on a known plan, never a
- *      partial guess.
- *   6. Immediately before each real publish the package is re-verified
- *      against the live registry under the same rules, so a concurrent
- *      release from another branch (e.g. v6 going GA from main mid-run)
- *      cannot race the snapshot the plan was computed from.
+ *      anything is staged. If the registry state of any package cannot be
+ *      determined (after retries), the run aborts *before* staging anything:
+ *      a release is all-or-nothing on a known plan, never a partial guess.
+ *   6. Immediately before each real stage the package is re-verified against
+ *      the live registry under the same rules, so a concurrent release from
+ *      another branch (e.g. v6 going GA from main mid-run) cannot race the
+ *      snapshot the plan was computed from.
+ *
+ * Versions that are staged but not yet approved are NOT part of the public
+ * registry document, and listing the stage queue needs credentials CI does
+ * not have. So a re-run before approval attempts them again; the registry
+ * rejects the duplicate and the run reports it as a conflict — approve or
+ * reject the existing staged version in the queue instead of re-staging.
  *
  * ## The dist-tag model (per package, from the registry's own state)
  *
@@ -61,58 +78,76 @@
  * Every package is tagged from its OWN version against its OWN registry
  * document, so the heterogeneous majors on this branch (keyv 5.x, serialize
  * 1.x, sqlite 4.x, …) each get the right tag without any shared setting.
- * Whatever tag is computed, the publish is refused if it would move that
+ * Whatever tag is computed, the stage is refused if it would move that
  * dist-tag backwards on the registry.
  *
- * ## Publish order and authentication
+ * The tag is fixed when a version is STAGED but only applied when it is
+ * APPROVED. If the registry moves in between — e.g. v6 goes GA and takes
+ * `latest` while keyv@5.x sits in the queue tagged `latest` — approving would
+ * move `latest` backwards. Approve promptly; if the registry moved, reject the
+ * staged version (`pnpm stage reject <id>`) and re-run this workflow so the
+ * tag is recomputed (`v5-lts`).
  *
- * Publishing happens in **dependency order** (topological sort over the
+ * ## Stage order, failure policy and authentication
+ *
+ * Staging happens in **dependency order** (topological sort over the
  * workspace's runtime deps — dependencies, optionalDependencies and
- * peerDependencies): a package is always published after the workspace
- * packages it relies on, because pnpm rewrites each `workspace:^` reference
- * to the dependency's concrete version at publish time, and a dependent must
- * never be released ahead of a dependency it points at. If a run fails
- * partway, dependencies are already published before their dependents.
+ * peerDependencies): a package is always staged after the workspace packages
+ * it relies on, because pnpm rewrites each `workspace:^` reference to the
+ * dependency's concrete version at pack time, and a dependent must never be
+ * approved ahead of a dependency it points at. Because nothing goes live at
+ * stage time, a failure does not abort the run: unrelated packages are still
+ * staged, but any package whose workspace dependency failed to stage is
+ * skipped. Every failure is reported and the run exits non-zero.
  *
- * Publishing uses pnpm only (never npm) with provenance, so packages are
- * cryptographically linked to this repo + workflow when run from CI with an
- * OIDC `id-token: write` permission (npm trusted publishing — no NPM_TOKEN):
+ * Each package is packed with pnpm, then the tarball is staged with
+ * provenance, so packages are cryptographically linked to this repo +
+ * workflow when run from CI with an OIDC `id-token: write` permission
+ * (npm trusted publishing — no NPM_TOKEN):
  *
- *     pnpm --filter <name> publish --tag <tag> --provenance --access public --no-git-checks
+ *     pnpm --filter <name> pack --out ./packed/<name>.tgz
+ *     pnpm stage publish ./packed/<name>.tgz --registry <registry> --tag <tag> --access public --no-git-checks --provenance
  *
  * ## Usage
  *
- *   node scripts/release.mjs              # publish every package whose version is new
- *   node scripts/release.mjs --dry-run    # print the plan + validate packaging, publish nothing
- *   node scripts/release.mjs --json       # emit the plan as JSON (implies no publishing noise)
+ *   node scripts/release.mjs              # stage every package whose version is new
+ *   node scripts/release.mjs --dry-run    # print the plan + validate packaging (pack), stage nothing
+ *   node scripts/release.mjs --json       # emit the plan as JSON (implies no staging noise)
  *
  * ## Environment
  *
- *   NPM_CONFIG_REGISTRY   override the registry queried + published to (default: npmjs.org)
- *   GITHUB_STEP_SUMMARY   when set, a markdown summary table is appended to it
- *   GITHUB_OUTPUT         when set, `published-count` / `published-packages` outputs are written
+ *   DRY_RUN               "true" behaves like --dry-run (how the workflow passes its input)
+ *   NPM_CONFIG_REGISTRY   override the registry queried + staged to (default: npmjs.org)
+ *   GITHUB_STEP_SUMMARY   when set, a markdown summary is appended to it
+ *   GITHUB_OUTPUT         when set, `staged-count` / `staged-packages` outputs are written
  *
- * Exit codes: 0 = success (including "nothing to publish"); non-zero = the
+ * Exit codes: 0 = success (including "nothing to stage"); non-zero = the
  * major ceiling was crossed, a dist-tag would move backwards, a registry
- * lookup failed, or a publish failed.
+ * lookup failed, or a pack/stage failed (including packages skipped because
+ * a workspace dependency of theirs failed).
  *
  * The pure helpers (parseVersion / compareSemver / computeTag /
- * resolvePlanAction) are exported and unit-tested in release.test.mjs;
- * main() only executes when the file is run directly, so importing it for
- * tests has no side effects.
+ * resolvePlanAction / blockedBy / packedTarballFor / packArgs / stageArgs /
+ * classifyStageFailure / isDryRunRequested) are exported and unit-tested in
+ * release.test.mjs; main() only executes when the file is run directly, so
+ * importing it for tests has no side effects.
  */
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const REGISTRY = (process.env.NPM_CONFIG_REGISTRY || "https://registry.npmjs.org").replace(/\/$/, "");
 
+// Monorepo root, resolved relative to this file (scripts/ lives one level
+// down), so pack output and pnpm invocations don't depend on the caller's cwd.
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
 /**
  * THE MAJOR CEILING for this branch. Keyv v6 is the line released from
- * `main`, so nothing on the v5 branch may ever publish a version at or above
+ * `main`, so nothing on the v5 branch may ever stage a version at or above
  * 6.0.0 — including 6.0.0 pre-releases, which is why the check is on the
  * major number rather than full semver precedence (6.0.0-beta.1 sorts below
  * 6.0.0 but still belongs to main's line).
@@ -122,7 +157,7 @@ export const MAX_MAJOR = 5;
 /**
  * Packages that live in the workspace and are *not* marked `private`, yet
  * should never be published to npm. Keep this list small and documented —
- * removing a name here is all it takes to start publishing that package.
+ * removing a name here is all it takes to start staging that package.
  * (The private @keyv/website package is excluded automatically.)
  */
 const IGNORED_PACKAGES = new Set([]);
@@ -154,12 +189,14 @@ function parseArgs(argv) {
 const HELP = `Release orchestrator for the Keyv v5 maintenance branch.
 
 Usage:
-  node scripts/release.mjs            Publish every package whose version is not yet on npm
-  node scripts/release.mjs --dry-run  Print the plan and validate packaging without publishing
-  node scripts/release.mjs --json     Emit the publish plan as JSON
+  node scripts/release.mjs            Stage every package whose version is not yet on npm
+  node scripts/release.mjs --dry-run  Print the plan and validate packaging without staging
+  node scripts/release.mjs --json     Emit the stage plan as JSON
 
 Versions are set manually; this script never bumps them. No version may be
-6.0.0 or higher — v6 is released from the main branch.`;
+6.0.0 or higher — v6 is released from the main branch. Nothing goes live from
+here: staged versions must be approved by a maintainer with 2FA
+(pnpm stage list / pnpm stage view <id> / pnpm stage approve <id>...).`;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -238,7 +275,7 @@ export function compareSemver(a, b) {
 }
 
 /**
- * Decide which dist-tag a version publishes under, from that package's own
+ * Decide which dist-tag a version stages under, from that package's own
  * registry dist-tags. Returns `{ tag, reason }` on success or
  * `{ error: reason }` when no safe tag exists. See the file header for the
  * full decision table.
@@ -275,7 +312,7 @@ export function computeTag(version, distTags = {}) {
 		// ("latest", the v{major}-lts convention) or that npm rejects as
 		// semver-range-like ("x", "v5", …) have no safe channel. Refuse at
 		// plan time — a hand-authored "5.7.0-latest.1" must never end up
-		// publishing a pre-release under the `latest` dist-tag.
+		// staged under the `latest` dist-tag.
 		if (channel === "latest" || channel === "lts" || channel === "x" || /^v\d/.test(channel)) {
 			return {
 				error: `pre-release "${version}" would publish under the reserved channel "${channel}" — use a named identifier like -beta.1 or -rc.1`,
@@ -319,22 +356,22 @@ export function computeTag(version, distTags = {}) {
  * the package has never been published.
  *
  * Returns the package extended with `{ registryVersion, tag, action, reason }`
- * where action is "publish" | "skip" | "error".
+ * where action is "publish" (= stage it) | "skip" | "error".
  */
 export function resolvePlanAction(pkg, doc) {
 	if (doc === null) {
-		// A first-ever publish cannot authenticate via OIDC trusted publishing
-		// (the trusted-publisher config lives on an existing package), so a
-		// brand-new package would only fail mid-run — after its dependencies
-		// already published. Refuse at plan time instead: bootstrap the
-		// package manually once (`pnpm publish`), then re-run.
+		// npm cannot stage a brand-new package, and a first-ever publish cannot
+		// authenticate via OIDC trusted publishing (the trusted-publisher config
+		// lives on an existing package), so a brand-new package would only fail
+		// mid-run. Refuse at plan time instead: bootstrap the package manually
+		// once (`pnpm publish`), then re-run.
 		return {
 			...pkg,
 			registryVersion: null,
 			tag: null,
 			action: "error",
 			reason:
-				"never published — a first-time publish cannot use OIDC trusted publishing; publish it manually once, then re-run",
+				"never published — a brand-new package cannot be staged or use OIDC trusted publishing; publish it manually once, then re-run",
 		};
 	}
 
@@ -374,6 +411,94 @@ export function resolvePlanAction(pkg, doc) {
 	};
 }
 
+/**
+ * The workspace dependencies of `entry` that already failed in this run. A
+ * non-empty result means the package must not be staged: pnpm rewrote its
+ * `workspace:^` references to versions that never reached the stage queue, so
+ * approving it would point consumers at a version that does not exist.
+ *
+ * @param entry       A plan entry carrying `internalDeps` (set by orderByDependencies).
+ * @param failedNames Set of package names that failed (or were skipped) so far.
+ */
+export function blockedBy(entry, failedNames) {
+	return (entry.internalDeps ?? []).filter((dep) => failedNames.has(dep));
+}
+
+/**
+ * Relative tarball path for a workspace package (`./` prefix so pnpm treats
+ * it as a local path). Scoped names are flattened (`@keyv/redis` ->
+ * `keyv-redis`). Resolved against the repo root by the pnpm invocations.
+ */
+export function packedTarballFor(name) {
+	return `./packed/${name.replace(/^@/, "").replaceAll("/", "-")}.tgz`;
+}
+
+/** Pack a workspace package to its known tarball path under `./packed/`. */
+export function packArgs(name) {
+	return ["--filter", name, "pack", "--out", packedTarballFor(name)];
+}
+
+/**
+ * The exact `pnpm` argument list used to stage a packed tarball — the single
+ * source of truth so the same command is both printed and executed. Flags:
+ * `--registry` pins the stage to the SAME registry the plan was computed
+ * against (an NPM_CONFIG_REGISTRY override can never plan against one
+ * registry and stage to another); `--tag` applies exactly one dist-tag;
+ * `--access public` (required for the scoped `@keyv/*` packages);
+ * `--no-git-checks` (git checks run even for a tarball and would fail on the
+ * untracked pack output); `--provenance` (REQUIRED: generates the npm
+ * provenance attestation from the CI OIDC context so every staged package is
+ * verifiably built here — it fails closed when no OIDC context is available,
+ * and release.test.mjs asserts the flag is always present); `--dry-run`
+ * (dry runs only) does everything except upload to the registry.
+ */
+export function stageArgs(entry, { dryRun = false, registry = REGISTRY } = {}) {
+	const args = [
+		"stage",
+		"publish",
+		packedTarballFor(entry.name),
+		"--registry",
+		registry,
+		"--tag",
+		entry.tag,
+		"--access",
+		"public",
+		"--no-git-checks",
+		"--provenance",
+	];
+
+	if (dryRun) {
+		args.push("--dry-run");
+	}
+
+	return args;
+}
+
+/**
+ * Best-effort classification of a failed `pnpm stage publish`. Staged versions
+ * share npm's version index with published ones, so re-staging a version that
+ * is already in the queue (typical after a partial run, before approval) is
+ * rejected by the registry. That case only changes the hint shown to the
+ * maintainer — every failure still fails the run.
+ *
+ * @returns "conflict" when the output looks like a duplicate-version rejection, else "failure".
+ */
+export function classifyStageFailure(output) {
+	const text = String(output ?? "");
+	return /\(status 409\b|already (?:staged|exists)|previously (?:staged|published)|staged version/i.test(text)
+		? "conflict"
+		: "failure";
+}
+
+/**
+ * Whether this run is a dry run: the `--dry-run` CLI flag, or `DRY_RUN=true`
+ * in the environment (how the release workflow passes its input through
+ * without interpolating anything into the shell command).
+ */
+export function isDryRunRequested(args, env = process.env) {
+	return Boolean(args.dryRun) || env.DRY_RUN === "true";
+}
+
 // ---------------------------------------------------------------------------
 // Workspace + registry IO.
 // ---------------------------------------------------------------------------
@@ -381,6 +506,7 @@ export function resolvePlanAction(pkg, doc) {
 /** Enumerate publishable workspace packages via pnpm (respects pnpm-workspace.yaml). */
 function listWorkspacePackages() {
 	const result = spawnSync("pnpm", ["-r", "ls", "--depth", "-1", "--json"], {
+		cwd: rootDir,
 		encoding: "utf8",
 		maxBuffer: 32 * 1024 * 1024,
 	});
@@ -402,8 +528,8 @@ function listWorkspacePackages() {
 /** Read the workspace packages a given package depends on at runtime. */
 function readInternalDeps(pkg, workspaceNames) {
 	const manifest = JSON.parse(readFileSync(path.join(pkg.path, "package.json"), "utf8"));
-	// Only runtime-facing deps are rewritten into the published manifest and
-	// thus constrain publish order — devDependencies are not installed by
+	// Only runtime-facing deps are rewritten into the packed manifest and
+	// thus constrain stage order — devDependencies are not installed by
 	// consumers, so a dev-only `workspace:` link never affects ordering.
 	const deps = {
 		...manifest.dependencies,
@@ -417,25 +543,27 @@ function readInternalDeps(pkg, workspaceNames) {
  * Order packages so every package comes after the workspace dependencies it
  * relies on (Kahn's algorithm; alphabetical within a tier for determinism).
  * For this workspace that means @keyv/serialize → keyv → the adapters that
- * peer-depend on keyv. Throws on a dependency cycle.
+ * peer-depend on keyv. Each returned package carries its `internalDeps` so
+ * the stage loop can skip dependents of a failed package. Throws on a
+ * dependency cycle.
  */
 function orderByDependencies(packages) {
 	const workspaceNames = new Set(packages.map((pkg) => pkg.name));
 	const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
-	const deps = new Map(packages.map((pkg) => [pkg.name, new Set(readInternalDeps(pkg, workspaceNames))]));
+	const deps = new Map(packages.map((pkg) => [pkg.name, readInternalDeps(pkg, workspaceNames)]));
 
 	const ordered = [];
 	const emitted = new Set();
 	let remaining = packages.map((pkg) => pkg.name).sort();
 
 	while (remaining.length > 0) {
-		const ready = remaining.filter((name) => [...deps.get(name)].every((dep) => emitted.has(dep)));
+		const ready = remaining.filter((name) => deps.get(name).every((dep) => emitted.has(dep)));
 		if (ready.length === 0) {
 			throw new Error(`dependency cycle among workspace packages: ${remaining.join(", ")}`);
 		}
 
 		for (const name of ready) {
-			ordered.push(byName.get(name));
+			ordered.push({ ...byName.get(name), internalDeps: deps.get(name) });
 			emitted.add(name);
 		}
 
@@ -478,7 +606,7 @@ async function fetchRegistryDoc(name, { retries = 4 } = {}) {
 	throw new Error(`failed to query the registry for ${name}: ${lastError?.message ?? lastError}`);
 }
 
-/** Resolve whether (and under which tag) a single package needs publishing. */
+/** Resolve whether (and under which tag) a single package needs staging. */
 async function resolvePlanEntry(pkg) {
 	const doc = await fetchRegistryDoc(pkg.name);
 	return resolvePlanAction(pkg, doc);
@@ -493,13 +621,18 @@ async function buildPlan(packages) {
 // Reporting.
 // ---------------------------------------------------------------------------
 
+/** Human-facing label for a plan action ("publish" means "stage it"). */
+function actionLabel(action) {
+	return action === "publish" ? "STAGE" : action.toUpperCase();
+}
+
 function renderTable(plan) {
 	const rows = plan.map((entry) => ({
 		package: entry.name,
 		local: entry.version,
 		registry: entry.registryVersion ?? "—",
 		tag: entry.tag ?? "—",
-		action: entry.action.toUpperCase(),
+		action: actionLabel(entry.action),
 	}));
 
 	const headers = ["package", "local", "registry", "tag", "action"];
@@ -513,70 +646,133 @@ function renderTable(plan) {
 	}
 }
 
-function writeStepSummary(plan, { dryRun }) {
+function appendSummary(lines) {
 	if (!process.env.GITHUB_STEP_SUMMARY) {
 		return;
 	}
 
-	const title = dryRun ? "Release plan (dry run)" : "Release";
-	const lines = [
+	appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
+}
+
+function writeStepSummary(plan, { dryRun }) {
+	const title = dryRun ? "Stage plan (dry run)" : "Stage plan";
+	appendSummary([
 		`## ${title}`,
 		"",
 		"| Package | Local | Registry | Tag | Action |",
 		"| --- | --- | --- | --- | --- |",
 		...plan.map(
 			(entry) =>
-				`| \`${entry.name}\` | ${entry.version} | ${entry.registryVersion ?? "—"} | ${entry.tag ?? "—"} | ${entry.action} |`,
+				`| \`${entry.name}\` | ${entry.version} | ${entry.registryVersion ?? "—"} | ${entry.tag ?? "—"} | ${actionLabel(entry.action).toLowerCase()} |`,
 		),
 		"",
-	];
-	appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
+	]);
 }
 
-function writeOutputs(published) {
+/** The maintainer-facing approval instructions, printed after a real stage. */
+const APPROVAL_STEPS = [
+	"pnpm stage list                 # staged versions awaiting approval",
+	"pnpm stage view <stage-id>      # verify version, dist-tag and provenance",
+	"pnpm stage approve <stage-id>…  # promotes to the registry (2FA); approve dependencies first",
+];
+
+function writeResultSummary({ staged, failed, notAttempted, dryRun }) {
+	const lines = [];
+	if (staged.length > 0) {
+		lines.push(`### ${dryRun ? "Would stage" : "Staged for approval"}`, "");
+		for (const entry of staged) {
+			lines.push(`- \`${entry.name}@${entry.version}\` → \`${entry.tag}\``);
+		}
+		lines.push("");
+		if (!dryRun) {
+			lines.push(
+				"Nothing is live yet. Approve in dependency order (`@keyv/serialize` → `keyv` → adapters) with 2FA:",
+				"",
+				"```sh",
+				...APPROVAL_STEPS,
+				"```",
+				"",
+				"Approve promptly: the dist-tag is applied at approval time. If `latest` moved to a newer major since staging, `pnpm stage reject` the staged version and re-run this workflow.",
+				"",
+			);
+		}
+	}
+
+	if (failed.length > 0 || notAttempted.length > 0) {
+		lines.push("### Failed", "");
+		for (const { entry, reason } of failed) {
+			lines.push(`- \`${entry.name}@${entry.version}\`: ${reason}`);
+		}
+		for (const { entry, blockers } of notAttempted) {
+			lines.push(`- \`${entry.name}@${entry.version}\`: not attempted — depends on ${blockers.join(", ")}, which failed`);
+		}
+		lines.push("");
+	}
+
+	appendSummary(lines);
+}
+
+function writeOutputs(staged) {
 	if (!process.env.GITHUB_OUTPUT) {
 		return;
 	}
 
-	const names = published.map((entry) => entry.name);
-	appendFileSync(process.env.GITHUB_OUTPUT, `published-count=${names.length}\npublished-packages=${names.join(",")}\n`);
+	const names = staged.map((entry) => entry.name);
+	appendFileSync(process.env.GITHUB_OUTPUT, `staged-count=${names.length}\nstaged-packages=${names.join(",")}\n`);
 }
 
 // ---------------------------------------------------------------------------
-// Publishing.
+// Staging.
 // ---------------------------------------------------------------------------
 
-/** Publish a single package with pnpm under exactly one dist-tag. Returns true on success. */
-function publishPackage(entry, { dryRun }) {
-	// --registry pins the publish to the SAME registry the plan was computed
-	// against, so an NPM_CONFIG_REGISTRY override can never produce a plan
-	// from one registry and a publish to another.
-	const args = [
-		"--filter",
-		entry.name,
-		"publish",
-		"--registry",
-		REGISTRY,
-		"--tag",
-		entry.tag,
-		"--access",
-		"public",
-		"--no-git-checks",
-	];
+/** Maintainer-facing explanation for a failed stagePackage result. */
+function describeFailure(result) {
+	switch (result.kind) {
+		case "pack":
+			return "pnpm pack failed (see log above)";
+		case "conflict":
+			return "the registry rejected the version as a duplicate — most likely it is already in the stage queue from an earlier run; check `pnpm stage list <name>` and approve or reject it there instead of re-staging";
+		default:
+			return "pnpm stage publish failed (see log above)";
+	}
+}
 
-	// Provenance attestations require the CI OIDC token (npm trusted
-	// publishing), so the flag is only meaningful for a real publish — and
-	// then it is REQUIRED, failing closed when no OIDC context is available.
-	// A dry run just validates the tarball/packaging locally.
-	if (dryRun) {
-		args.push("--dry-run");
-	} else {
-		args.push("--provenance");
+/**
+ * Pack a single package, then stage the tarball under exactly one dist-tag.
+ * Packing happens in dry runs too (it validates the tarball the way the old
+ * `publish --dry-run` did); the stage step then runs with `--dry-run`, which
+ * does everything except upload. Returns `{ ok: true }` or
+ * `{ ok: false, kind: "pack" | "conflict" | "failure" }`.
+ */
+function stagePackage(entry, { dryRun }) {
+	mkdirSync(path.join(rootDir, "packed"), { recursive: true });
+
+	const pack = packArgs(entry.name);
+	console.log(`\n$ pnpm ${pack.join(" ")}`);
+	const packed = spawnSync("pnpm", pack, { cwd: rootDir, stdio: "inherit" });
+	if (packed.status !== 0) {
+		return { ok: false, kind: "pack" };
 	}
 
-	console.log(`\n$ pnpm ${args.join(" ")}`);
-	const result = spawnSync("pnpm", args, { stdio: "inherit" });
-	return result.status === 0;
+	const stage = stageArgs(entry, { dryRun });
+	console.log(`$ pnpm ${stage.join(" ")}`);
+	// Capture the output so a registry rejection can be classified, then echo
+	// it so the job log still shows everything pnpm/npm printed.
+	const result = spawnSync("pnpm", stage, {
+		cwd: rootDir,
+		encoding: "utf8",
+		stdio: ["inherit", "pipe", "pipe"],
+		maxBuffer: 32 * 1024 * 1024,
+	});
+	if (result.stdout) process.stdout.write(result.stdout);
+	if (result.stderr) process.stderr.write(result.stderr);
+	if (result.error) console.error(result.error.message);
+
+	if (result.status === 0) {
+		return { ok: true };
+	}
+
+	return { ok: false, kind: classifyStageFailure(`${result.stdout ?? ""}\n${result.stderr ?? ""}`) };
 }
 
 async function main() {
@@ -586,6 +782,7 @@ async function main() {
 		return;
 	}
 
+	const dryRun = isDryRunRequested(args);
 	const packages = orderByDependencies(listWorkspacePackages());
 
 	// THE MAJOR CEILING — checked before any registry call so a bad manifest
@@ -598,7 +795,7 @@ async function main() {
 			console.error(`  - ${pkg.name}@${pkg.version}`);
 		}
 
-		console.error(`\nKeyv v${MAX_MAJOR + 1} is released from the main branch. Nothing at or above ${MAX_MAJOR + 1}.0.0 (including pre-releases) may be published from the v${MAX_MAJOR} branch.`);
+		console.error(`\nKeyv v${MAX_MAJOR + 1} is released from the main branch. Nothing at or above ${MAX_MAJOR + 1}.0.0 (including pre-releases) may be staged from the v${MAX_MAJOR} branch.`);
 		process.exit(1);
 	}
 
@@ -616,11 +813,12 @@ async function main() {
 		return;
 	}
 
-	console.log(`Registry: ${REGISTRY}\n`);
+	console.log(`Registry: ${REGISTRY}`);
+	console.log(`Mode:     ${dryRun ? "DRY RUN — nothing will be staged" : "STAGE — nothing goes live until approved"}\n`);
 	renderTable(plan);
-	writeStepSummary(plan, { dryRun: args.dryRun });
+	writeStepSummary(plan, { dryRun });
 
-	// Fail closed on a known-bad plan before publishing anything (e.g. a
+	// Fail closed on a known-bad plan before staging anything (e.g. a
 	// version that would move a dist-tag backwards). Reported even in a dry run.
 	const errors = plan.filter((entry) => entry.action === "error");
 	if (errors.length > 0) {
@@ -633,31 +831,44 @@ async function main() {
 		process.exit(1);
 	}
 
-	const toPublish = plan.filter((entry) => entry.action === "publish");
+	const toStage = plan.filter((entry) => entry.action === "publish");
 
-	if (toPublish.length === 0) {
-		console.log("\nNothing to publish — every package is already at its registry version.");
+	if (toStage.length === 0) {
+		console.log("\nNothing to stage — every package is already at its registry version.");
 		writeOutputs([]);
 		return;
 	}
 
 	console.log(
-		`\n${args.dryRun ? "[dry run] would publish" : "Publishing"} ${toPublish.length} package(s): ${toPublish
+		`\n${dryRun ? "[dry run] would stage" : "Staging"} ${toStage.length} package(s): ${toStage
 			.map((entry) => `${entry.name}@${entry.version} → ${entry.tag}`)
 			.join(", ")}`,
 	);
 
-	const published = [];
-	const failed = [];
-	for (const entry of toPublish) {
+	const staged = [];
+	const failed = []; // { entry, reason }
+	const notAttempted = []; // { entry, blockers }
+	const failedNames = new Set();
+	for (const entry of toStage) {
+		// Never stage a package whose workspace dependency did not make it to
+		// the queue: its packed manifest points at a version that would not
+		// exist. Unrelated packages keep going — nothing is live at this point.
+		const blockers = blockedBy(entry, failedNames);
+		if (blockers.length > 0) {
+			console.log(`\nSkipping ${entry.name}@${entry.version} — depends on ${blockers.join(", ")}, which failed to stage.`);
+			notAttempted.push({ entry, blockers });
+			failedNames.add(entry.name);
+			continue;
+		}
+
 		// The plan was computed from a registry snapshot. Re-verify each
 		// package against the live registry immediately before its real
-		// publish so a concurrent release (e.g. v6 going GA from main while
+		// stage so a concurrent release (e.g. v6 going GA from main while
 		// this run is in flight) cannot slip a stale tag through the
-		// backwards guard. A dry run keeps the snapshot plan — it publishes
+		// backwards guard. A dry run keeps the snapshot plan — it stages
 		// nothing, so the race does not apply.
 		let toRelease = entry;
-		if (!args.dryRun) {
+		if (!dryRun) {
 			const fresh = await resolvePlanEntry(entry);
 			if (fresh.action === "skip") {
 				console.log(`\nSkipping ${entry.name}@${entry.version} — ${fresh.reason} (registry changed since the plan was computed).`);
@@ -665,9 +876,10 @@ async function main() {
 			}
 
 			if (fresh.action === "error") {
-				console.error(`\nAborting before ${entry.name}@${entry.version}: ${fresh.reason} (registry changed since the plan was computed).`);
-				failed.push(entry);
-				break;
+				console.error(`\nNot staging ${entry.name}@${entry.version}: ${fresh.reason} (registry changed since the plan was computed).`);
+				failed.push({ entry, reason: fresh.reason });
+				failedNames.add(entry.name);
+				continue;
 			}
 
 			if (fresh.tag !== entry.tag) {
@@ -677,50 +889,55 @@ async function main() {
 			toRelease = fresh;
 		}
 
-		const ok = publishPackage(toRelease, { dryRun: args.dryRun });
-		if (ok) {
-			published.push(toRelease);
+		const result = stagePackage(toRelease, { dryRun });
+		if (result.ok) {
+			staged.push(toRelease);
 			continue;
 		}
 
-		failed.push(entry);
-		// Stop a real publish at the first failure: the list is in dependency
-		// order, so releasing a dependent after its dependency failed would
-		// reference a version that never made it to the registry. A dry run
-		// keeps going to surface every packaging problem at once.
-		if (!args.dryRun) {
-			break;
-		}
+		const reason = describeFailure(result);
+		console.error(`\n✖ ${toRelease.name}@${toRelease.version}: ${reason}`);
+		failed.push({ entry: toRelease, reason });
+		failedNames.add(toRelease.name);
 	}
 
-	if (!args.dryRun) {
-		writeOutputs(published);
+	writeResultSummary({ staged, failed, notAttempted, dryRun });
+	if (!dryRun) {
+		writeOutputs(staged);
 	}
 
 	console.log("");
-	if (failed.length > 0) {
-		console.error(`Failed to publish ${failed.length} package(s):`);
-		for (const entry of failed) {
-			console.error(`  - ${entry.name}@${entry.version}`);
+	if (failed.length > 0 || notAttempted.length > 0) {
+		console.error(`Failed to ${dryRun ? "validate" : "stage"} ${failed.length + notAttempted.length} package(s):`);
+		for (const { entry, reason } of failed) {
+			console.error(`  - ${entry.name}@${entry.version}: ${reason}`);
+		}
+		for (const { entry, blockers } of notAttempted) {
+			console.error(`  - ${entry.name}@${entry.version}: not attempted — depends on ${blockers.join(", ")}, which failed`);
 		}
 
-		const attempted = new Set([...published, ...failed].map((entry) => entry.name));
-		const notAttempted = toPublish.filter((entry) => !attempted.has(entry.name));
-		if (notAttempted.length > 0) {
-			console.error("\nNot attempted (aborted after the failure above, in dependency order):");
-			for (const entry of notAttempted) {
-				console.error(`  - ${entry.name}@${entry.version}`);
-			}
+		if (staged.length > 0) {
+			console.error(
+				`\n${dryRun ? "Would still stage" : "Staged"} ${staged.length} package(s): ${staged.map((entry) => `${entry.name}@${entry.version}`).join(", ")}`,
+			);
 		}
 
 		process.exit(1);
 	}
 
-	console.log(
-		args.dryRun
-			? `Dry run complete — ${toPublish.length} package(s) would be published.`
-			: `Published ${published.length} package(s) successfully.`,
-	);
+	if (dryRun) {
+		console.log(`Dry run complete — ${staged.length} package(s) would be staged.`);
+		return;
+	}
+
+	console.log(`Staged ${staged.length} package(s) — nothing is live until a maintainer approves them with 2FA:`);
+	for (const entry of staged) {
+		console.log(`  - ${entry.name}@${entry.version} → ${entry.tag}`);
+	}
+	console.log("\nApprove in dependency order (@keyv/serialize → keyv → adapters):");
+	for (const step of APPROVAL_STEPS) {
+		console.log(`  ${step}`);
+	}
 }
 
 // Only run when executed directly (e.g. `node scripts/release.mjs`), not when

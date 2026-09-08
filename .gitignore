@@ -114,3 +114,6 @@ pnpm-lock.yaml
 
 # AI
 .claude
+
+# pnpm pack output written by scripts/release.mjs
+packed

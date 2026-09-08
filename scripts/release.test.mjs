@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
 	MAX_MAJOR,
+	blockedBy,
+	classifyStageFailure,
 	compareSemver,
 	computeTag,
 	exceedsMajorCeiling,
+	isDryRunRequested,
+	packArgs,
+	packedTarballFor,
 	parseVersion,
 	resolvePlanAction,
+	stageArgs,
 } from "./release.mjs";
 
 describe("parseVersion", () => {
@@ -215,5 +221,135 @@ describe("resolvePlanAction", () => {
 	it("handles a registry document without dist-tags", () => {
 		const doc = { versions: { "1.0.0": {} } };
 		expect(resolvePlanAction(pkg("@keyv/x", "1.0.1"), doc)).toMatchObject({ action: "publish", tag: "latest" });
+	});
+});
+
+describe("packedTarballFor / packArgs", () => {
+	it("flattens scoped names into a ./packed tarball path", () => {
+		expect(packedTarballFor("keyv")).toBe("./packed/keyv.tgz");
+		expect(packedTarballFor("@keyv/redis")).toBe("./packed/keyv-redis.tgz");
+		expect(packedTarballFor("@keyv/compress-gzip")).toBe("./packed/keyv-compress-gzip.tgz");
+	});
+
+	it("packs a workspace package to that tarball path", () => {
+		expect(packArgs("@keyv/redis")).toEqual(["--filter", "@keyv/redis", "pack", "--out", "./packed/keyv-redis.tgz"]);
+	});
+});
+
+describe("stageArgs", () => {
+	const registry = "https://registry.npmjs.org";
+
+	it("builds the exact pnpm stage publish command for a packed tarball + tag", () => {
+		expect(stageArgs({ name: "keyv", tag: "latest" }, { registry })).toEqual([
+			"stage",
+			"publish",
+			"./packed/keyv.tgz",
+			"--registry",
+			"https://registry.npmjs.org",
+			"--tag",
+			"latest",
+			"--access",
+			"public",
+			"--no-git-checks",
+			"--provenance",
+		]);
+	});
+
+	it("uses the given tarball, tag and registry", () => {
+		expect(`pnpm ${stageArgs({ name: "@keyv/sqlite", tag: "v4-lts" }, { registry: "https://example.test" }).join(" ")}`).toBe(
+			"pnpm stage publish ./packed/keyv-sqlite.tgz --registry https://example.test --tag v4-lts --access public --no-git-checks --provenance",
+		);
+	});
+
+	it("only appends --dry-run for a dry run", () => {
+		expect(stageArgs({ name: "keyv", tag: "latest" }, { registry, dryRun: true }).at(-1)).toBe("--dry-run");
+		expect(stageArgs({ name: "keyv", tag: "latest" }, { registry })).not.toContain("--dry-run");
+	});
+
+	it("always stages — never a direct publish", () => {
+		for (const dryRun of [false, true]) {
+			expect(stageArgs({ name: "keyv", tag: "latest" }, { registry, dryRun }).slice(0, 2)).toEqual(["stage", "publish"]);
+		}
+	});
+
+	// Release-blocking guard: the workflow runs these tests before staging, so
+	// removing --provenance from stageArgs fails the release. Provenance
+	// attestation is required for every package staged from this repo.
+	it("always includes --provenance (required for npm provenance attestation)", () => {
+		for (const dryRun of [false, true]) {
+			expect(stageArgs({ name: "keyv", tag: "latest" }, { registry, dryRun })).toContain("--provenance");
+			expect(stageArgs({ name: "@keyv/redis", tag: "v5-lts" }, { registry, dryRun })).toContain("--provenance");
+		}
+	});
+
+	it("pins the registry, requires public access and skips git checks", () => {
+		const args = stageArgs({ name: "keyv", tag: "beta" }, { registry: "https://example.test" });
+		expect(args).toContain("--no-git-checks");
+		expect(args.slice(args.indexOf("--access"), args.indexOf("--access") + 2)).toEqual(["--access", "public"]);
+		expect(args.slice(args.indexOf("--registry"), args.indexOf("--registry") + 2)).toEqual(["--registry", "https://example.test"]);
+	});
+});
+
+describe("isDryRunRequested", () => {
+	it("honors the --dry-run flag", () => {
+		expect(isDryRunRequested({ dryRun: true }, {})).toBe(true);
+	});
+
+	it("honors DRY_RUN=true from the workflow", () => {
+		expect(isDryRunRequested({ dryRun: false }, { DRY_RUN: "true" })).toBe(true);
+	});
+
+	it("is a real stage otherwise", () => {
+		expect(isDryRunRequested({ dryRun: false }, {})).toBe(false);
+		expect(isDryRunRequested({ dryRun: false }, { DRY_RUN: "false" })).toBe(false);
+		expect(isDryRunRequested({ dryRun: false }, { DRY_RUN: "" })).toBe(false);
+	});
+});
+
+describe("blockedBy (dependents of a failed package are not staged)", () => {
+	it("blocks an adapter when keyv failed to stage", () => {
+		expect(blockedBy({ name: "@keyv/redis", internalDeps: ["keyv"] }, new Set(["keyv"]))).toEqual(["keyv"]);
+	});
+
+	it("blocks keyv when @keyv/serialize failed to stage", () => {
+		expect(blockedBy({ name: "keyv", internalDeps: ["@keyv/serialize"] }, new Set(["@keyv/serialize"]))).toEqual([
+			"@keyv/serialize",
+		]);
+	});
+
+	it("does not block on an unrelated failure", () => {
+		expect(blockedBy({ name: "@keyv/redis", internalDeps: ["keyv"] }, new Set(["@keyv/mongo"]))).toEqual([]);
+	});
+
+	it("never blocks a package without workspace dependencies", () => {
+		expect(blockedBy({ name: "@keyv/serialize", internalDeps: [] }, new Set(["keyv"]))).toEqual([]);
+		expect(blockedBy({ name: "@keyv/serialize" }, new Set(["keyv"]))).toEqual([]);
+	});
+
+	it("lists every failed dependency", () => {
+		expect(
+			blockedBy({ name: "@keyv/compress-gzip", internalDeps: ["@keyv/serialize", "keyv"] }, new Set(["keyv", "@keyv/serialize"])),
+		).toEqual(["@keyv/serialize", "keyv"]);
+	});
+});
+
+describe("classifyStageFailure", () => {
+	it("recognizes a duplicate-version rejection from the registry", () => {
+		expect(classifyStageFailure("ERR_PNPM_FAILED_TO_PUBLISH  Failed to publish package keyv@5.6.1 (status 409 Conflict): {}")).toBe(
+			"conflict",
+		);
+		expect(classifyStageFailure("npm error 403 You cannot publish over the previously published versions: 5.6.1.")).toBe(
+			"conflict",
+		);
+		expect(classifyStageFailure("cannot publish a version that already exists as a staged version")).toBe("conflict");
+		expect(classifyStageFailure("version 5.6.1 is already staged")).toBe("conflict");
+	});
+
+	it("treats anything else as a plain failure", () => {
+		expect(classifyStageFailure("Failed to publish package keyv@5.6.1 (status 500 Internal Server Error): {}")).toBe("failure");
+		expect(classifyStageFailure("Failed to publish package keyv@5.6.1 (status 4090 Weird): {}")).toBe("failure");
+		expect(classifyStageFailure("ENOENT: no such file or directory")).toBe("failure");
+		expect(classifyStageFailure("")).toBe("failure");
+		expect(classifyStageFailure(undefined)).toBe("failure");
 	});
 });
