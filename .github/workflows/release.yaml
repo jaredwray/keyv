@@ -10,6 +10,14 @@ on:
   release:
     types: [published]
 
+# Never run two releases at once; let an in-flight stage finish rather than
+# cancelling it half-way through the package set. The v5 branch's release
+# workflow uses the same group, so the two release lines never stage
+# concurrently either.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

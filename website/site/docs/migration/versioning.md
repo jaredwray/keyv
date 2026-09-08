@@ -48,6 +48,10 @@ Each release computes its tag from its version:
 
 A safety guard refuses any release that would move `latest` backwards, so `pnpm add keyv` always installs a forward-moving stable line.
 
+## How releases are published
+
+Both release lines publish through the same GitHub Actions workflow (`release.yaml`) using npm [staged publishing](https://docs.npmjs.com/staged-publishing/) with [trusted publishing](https://docs.npmjs.com/trusted-publishers/) and provenance: CI only *stages* a version, and a maintainer approves it with 2FA before it becomes installable. On `main` (v6) a GitHub Release triggers the workflow. On the `v5` branch a maintainer runs it manually from `v5`, and only the packages whose version is ahead of npm are staged, since v5 packages are versioned independently. A GitHub Release named `v5-YYYY-MM-DD` may accompany a v5 cut for release notes; it does not publish anything.
+
 ## Why all packages share one version
 
 Before v6, each Keyv package was versioned independently — a package only got a new version when its own code changed. That is the textbook semver approach, but for a family of packages designed to be used together it created friction:
