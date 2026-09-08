@@ -41,7 +41,9 @@ becomes installable. GitHub Releases never trigger publishing on this branch.
    approve run inside the workspace does this automatically. The "Staged
    Packages" tab on npmjs.com works too. Verify with `npm view keyv dist-tags`.
 5. **Optional GitHub Release** for release notes: tag `v5-YYYY-MM-DD` on the
-   `v5` head. It publishes nothing.
+   `v5` head. It publishes nothing: a GitHub Release runs the workflow file at
+   the tag's commit, this branch's workflow has no `release` trigger, and
+   main's release workflow refuses any tag whose commit is not on `main`.
 
 Rules of thumb:
 
@@ -54,8 +56,25 @@ Rules of thumb:
 - **CI cannot see the stage queue.** Re-running before approving reports already
   staged versions as conflicts (the registry rejects the duplicate); approve or
   reject them in the queue rather than re-staging.
-- **A brand-new package cannot be staged.** Publish it manually once, then it
-  joins the normal flow.
+- **Overlapping releases wait their turn.** Release runs on both branches
+  share one concurrency group with a FIFO queue, so a run dispatched while
+  another release (v5 or v6) is in flight stays pending until it finishes.
+
+## New packages
+
+npm cannot stage a package that does not exist yet, and trusted publishing
+cannot create one, so the release script refuses a never-published package at
+plan time. Creating a new package on npm is the **one deliberate exception** to
+"never publish directly": a maintainer publishes its first version by hand,
+with 2FA, from a clean checkout of the merged release commit —
+
+```sh
+pnpm --filter <name> publish --access public
+```
+
+— then adds the stage-only trusted publisher for it on npmjs.com (repo
+`jaredwray/keyv`, workflow `release.yaml`, environment `release`). Every later
+version of that package goes through the workflow like any other.
 
 ## Releases
 

@@ -42,9 +42,10 @@
  *   3. Refuse the whole run if any package version crosses the major ceiling.
  *   4. For each remaining package, fetch its document from the npm registry:
  *        - 404            → never published → REFUSED (npm cannot stage a
- *          brand-new package, and a first publish cannot authenticate via
- *          OIDC trusted publishing — bootstrap it manually once with
- *          `pnpm publish`, then re-run)
+ *          brand-new package and trusted publishing cannot create one; a
+ *          maintainer creates it on npm once by hand — the single documented
+ *          exception to "never publish directly", see "New packages" in
+ *          changelog/README.md — then re-runs)
  *        - version listed → this exact version is already on npm    → skip
  *        - version absent → a newer (manually-set) version is ready → stage
  *   5. The full plan — including each package's dist-tag — is computed before
@@ -363,15 +364,17 @@ export function resolvePlanAction(pkg, doc) {
 		// npm cannot stage a brand-new package, and a first-ever publish cannot
 		// authenticate via OIDC trusted publishing (the trusted-publisher config
 		// lives on an existing package), so a brand-new package would only fail
-		// mid-run. Refuse at plan time instead: bootstrap the package manually
-		// once (`pnpm publish`), then re-run.
+		// mid-run. Refuse at plan time instead. Creating the package on npm is a
+		// deliberate one-time manual step for a maintainer (the documented
+		// exception under "New packages" in changelog/README.md) — never
+		// something this script does.
 		return {
 			...pkg,
 			registryVersion: null,
 			tag: null,
 			action: "error",
 			reason:
-				"never published — a brand-new package cannot be staged or use OIDC trusted publishing; publish it manually once, then re-run",
+				'never published — npm cannot stage a brand-new package; a maintainer must create it on npm once by hand (see "New packages" in changelog/README.md), then re-run',
 		};
 	}
 

@@ -32,9 +32,10 @@ name: release
 #     one trusted-publisher configuration covers both release lines. Note that
 #     `@keyv/serialize` only exists on this branch and needs its own entry.
 #   - This workflow is fully tokenless: no NPM_TOKEN secret anywhere. npm
-#     cannot stage a brand-new package, so a package's first-ever publish
-#     needs a one-time manual `pnpm publish` — the release script refuses
-#     such packages at plan time rather than failing mid-run.
+#     cannot stage a brand-new package, so a new package is created on npm
+#     once by a maintainer by hand (the documented exception under "New
+#     packages" in changelog/README.md) — the release script refuses
+#     never-published packages at plan time rather than failing mid-run.
 
 on:
   # Manual runs ONLY — there is deliberately no `release`/`push` trigger, so a
@@ -49,10 +50,15 @@ on:
         default: true
 
 # Never run two releases at once; let an in-flight stage finish rather than
-# cancelling it half-way through the package set.
+# cancelling it half-way through the package set. main's release workflow
+# uses the same group, so the two release lines never stage concurrently.
+# `queue: max` keeps every queued release pending in FIFO order (up to 100)
+# instead of GitHub's default of a single pending run, where a newly queued
+# release silently cancels the one already waiting.
 concurrency:
   group: release
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read

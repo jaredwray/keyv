@@ -36,7 +36,7 @@ Individual package tests:
 - `pnpm release:dry` - Print the stage plan (which packages are ahead of npm, under which dist-tag) and validate packaging; stages nothing
 - `pnpm test:release` - Unit tests for the release decision logic and the exact `pnpm stage publish … --provenance` command (CI runs them before staging)
 - Publishing is manual: Actions → `release` → "Run workflow" with "Use workflow from" set to `v5`. CI only **stages** packages on npm (`pnpm stage publish` with provenance via OIDC trusted publishing); a maintainer approves them with 2FA (`pnpm stage list` / `pnpm stage view <id>` / `pnpm stage approve <id>…`, dependencies first)
-- Never run `pnpm publish` directly. The full runbook is in `changelog/README.md`
+- Never run `pnpm publish` for a release. The one exception is creating a brand-new package on npm, which staging cannot do — see "New packages" in `changelog/README.md`, which also has the full runbook
 
 ## Architecture Overview
 

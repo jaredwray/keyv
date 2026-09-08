@@ -79,7 +79,7 @@ To preview without staging anything: Actions → `release` → **Run workflow** 
 1. Open a release PR against `v5`: bump `version` in each package that has unreleased changes (never `6.0.0` or higher — the script refuses it), add `changelog/<name>.md`, and merge.
 2. Actions → `release` → **Run workflow** → set "Use workflow from" to **`v5`**. Leave **Dry run** checked first: the job summary shows the stage plan (which packages would be staged, under which dist-tag, and which are skipped) and packaging is validated. Then run it again with Dry run unchecked to stage for real. Any ref other than `v5` is forced to a dry run.
 3. Approve the staged versions on npm, dependencies first (`@keyv/serialize` → `keyv` → adapters).
-4. Optionally create a GitHub Release tagged `v5-YYYY-MM-DD` for release notes. It publishes nothing.
+4. Optionally create a GitHub Release tagged `v5-YYYY-MM-DD` for release notes. It publishes nothing: a GitHub Release runs the workflow file at the tag's commit, the `v5` branch's workflow has no `release` trigger, and main's release workflow refuses any tag whose commit is not on `main`.
 
 The full v5 runbook, including re-run and recovery rules, is in `changelog/README.md` on the `v5` branch.
 
@@ -100,6 +100,8 @@ The **Staged Packages** tab on npmjs.com does the same. A few rules:
 - Never approve a package whose workspace dependency was not staged or approved.
 - Staged versions are not visible in the public registry, so re-running a release before approving reports them as conflicts. Approve or reject them in the queue rather than re-staging.
 - Verify afterwards with `npm view keyv dist-tags` (or the package in question).
+- Release runs on both branches share one concurrency group with a FIFO queue, so a run dispatched while another release is in flight waits for it to finish rather than running alongside it.
+- A brand-new package cannot be staged, and trusted publishing cannot create it. Creating it on npm is the one exception to "never publish directly": a maintainer publishes its first version by hand with 2FA, then adds its stage-only trusted publisher on npmjs.com; every later version goes through the workflow.
 
 # Code of Conduct
 Please refer to our [Code of Conduct](https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md) readme for how to contribute to this open source project and work within the community. 
