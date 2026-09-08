@@ -50,5 +50,57 @@ To update packages (respecting the minimum release age):
 pnpm update
 ```
 
+# Release Process
+
+Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** branch (maintenance / LTS). Both publish to npm through the same GitHub Actions workflow file, `.github/workflows/release.yaml` (each branch carries its own copy), using **npm staged publishing** with **OIDC trusted publishing** and **provenance**:
+
+- CI never publishes live. It builds, tests, packs each package and runs `pnpm stage publish … --provenance`, which puts the version in npm's stage queue with a provenance attestation.
+- A maintainer then approves each staged version on npm with 2FA; only then does it become installable.
+- There are no npm tokens anywhere. The trusted publisher on npmjs.com (repo `jaredwray/keyv`, workflow `release.yaml`, environment `release`) is configured **stage-only**, and because both branches use the same workflow filename one configuration covers both lines.
+
+| | `main` (v6) | `v5` branch |
+| --- | --- | --- |
+| Versioning | Every package shares one version (`pnpm version:sync`) | Each package keeps its own version |
+| Trigger | Publishing a GitHub Release from a tag on `main` (`vX.Y.Z`, `vX.Y.Z-beta.N`) | Manual **Run workflow** from the `v5` branch (`workflow_dispatch`); GitHub Releases do not publish |
+| What gets staged | Every package whose exact version is not on npm yet | Only the packages whose version is ahead of npm |
+| Dist-tag | From the version and `LATEST_MAJOR`: pre-release → its channel (`beta`, `rc`), current major → `latest`, older major → `v{major}-lts` | From each package's own registry state, same tag names; a tag is never moved backwards |
+| Script | `scripts/release-publish.ts` (`pnpm test:scripts`) | `scripts/release.mjs` (`pnpm test:release`, `pnpm release:dry`) |
+| Release notes | The GitHub Release | `changelog/<name>.md` on the `v5` branch |
+
+## Releasing v6 from `main`
+
+1. Open a release PR: set the new version in the root `package.json`, run `pnpm version:sync` so every workspace package matches, and merge it.
+2. Create a GitHub Release from a new tag on `main` (for example `v6.1.0` or `v6.1.0-beta.1`). Publishing it runs the `release` workflow from that tag: build, the full test suite, the Aikido release scan, the release-logic tests, then the stage step. Versions already on npm are skipped, and a release that would move `latest` backwards is refused.
+3. Approve the staged versions on npm (see [Approving staged versions](#approving-staged-versions-both-lines)).
+
+To preview without staging anything: Actions → `release` → **Run workflow** (Dry run is on by default).
+
+## Releasing v5 from the `v5` branch
+
+1. Open a release PR against `v5`: bump `version` in each package that has unreleased changes (never `6.0.0` or higher — the script refuses it), add `changelog/<name>.md`, and merge.
+2. Actions → `release` → **Run workflow** → set "Use workflow from" to **`v5`**. Leave **Dry run** checked first: the job summary shows the stage plan (which packages would be staged, under which dist-tag, and which are skipped) and packaging is validated. Then run it again with Dry run unchecked to stage for real. Any ref other than `v5` is forced to a dry run.
+3. Approve the staged versions on npm, dependencies first (`@keyv/serialize` → `keyv` → adapters).
+4. Optionally create a GitHub Release tagged `v5-YYYY-MM-DD` for release notes. It publishes nothing.
+
+The full v5 runbook, including re-run and recovery rules, is in `changelog/README.md` on the `v5` branch.
+
+## Approving staged versions (both lines)
+
+With pnpm 11.25 or later (or npm 11.15 or later) and an npm login that has 2FA:
+
+```bash
+pnpm stage list                 # staged versions awaiting approval
+pnpm stage view <stage-id>      # verify version, dist-tag and provenance
+pnpm stage approve <stage-id>…  # promote to the registry; one OTP covers a batch
+pnpm stage reject <stage-id>    # discard a staged version
+```
+
+The **Staged Packages** tab on npmjs.com does the same. A few rules:
+
+- Approve promptly and in dependency order. The dist-tag is fixed when a version is staged and applied when it is approved, so if `latest` has moved to a newer major in between, reject the staged version and re-run the release so the tag is recomputed.
+- Never approve a package whose workspace dependency was not staged or approved.
+- Staged versions are not visible in the public registry, so re-running a release before approving reports them as conflicts. Approve or reject them in the queue rather than re-staging.
+- Verify afterwards with `npm view keyv dist-tags` (or the package in question).
+
 # Code of Conduct
 Please refer to our [Code of Conduct](https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md) readme for how to contribute to this open source project and work within the community. 
