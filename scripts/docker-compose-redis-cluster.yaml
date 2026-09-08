@@ -1,6 +1,6 @@
 services:
   redis-1:
-    image: redis:latest
+    image: redis:8.10.1-trixie@sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
     container_name: redis-cluster-1
     command: redis-server --port 7001 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7001 --cluster-announce-bus-port 17001
     network_mode: host
@@ -8,7 +8,7 @@ services:
       - redis-1-data:/data
 
   redis-2:
-    image: redis:latest
+    image: redis:8.10.1-trixie@sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
     container_name: redis-cluster-2
     command: redis-server --port 7002 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7002 --cluster-announce-bus-port 17002
     network_mode: host
@@ -16,7 +16,7 @@ services:
       - redis-2-data:/data
 
   redis-3:
-    image: redis:latest
+    image: redis:8.10.1-trixie@sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
     container_name: redis-cluster-3
     command: redis-server --port 7003 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7003 --cluster-announce-bus-port 17003
     network_mode: host
@@ -24,7 +24,7 @@ services:
       - redis-3-data:/data
 
   redis-cluster-init:
-    image: redis:latest
+    image: redis:8.10.1-trixie@sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
     container_name: redis-cluster-init
     network_mode: host
     depends_on:
