@@ -30,3 +30,4 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - Workflows do not use `pull_request_target`.
 - Published packages set `repository.url` to this repo so provenance can map back.
 - Socket reviews every pull request that changes dependencies; Aikido scans every build.
+- `.github/CODEOWNERS` names `@jaredwray` for `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, and `/scripts/`.
