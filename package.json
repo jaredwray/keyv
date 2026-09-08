@@ -7,7 +7,7 @@
   "author": "Jared Wray <me@jaredwray.com>",
   "license": "MIT",
   "private": true,
-  "packageManager": "pnpm@12.1.0+sha512.d9b8276d97f6ec86e49815877f91ee9f63cee61f2063b304e43b6dab8fa07ce8a9afd46d2facd39f921e6a9d06b3c75a81349c7b888c2d22886bae0229901037",
+  "packageManager": "pnpm@12.2.1+sha512.f55ca68aacb9eb5ab69c66f828a98af89a32286703aef1f8da131ca7eab4d677f34bfa85e186467a919c0799df8b6f4aa240f7dc2919b33b3273190104162616",
   "scripts": {
     "build:keyv:serialize": "pnpm recursive --filter=@keyv/serialize run build",
     "build:keyv": "pnpm recursive --filter=keyv run build",
