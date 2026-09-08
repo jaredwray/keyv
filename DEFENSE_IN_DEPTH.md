@@ -37,7 +37,7 @@ Omitted until they apply on this branch:
 - [ ] `persist-credentials: false` on checkouts that don't push
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified 2026-09-08
 - [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning
-- [x] No npm tokens (or other registry credentials) in Actions secrets — verified 2026-09-08 (no `NPM_TOKEN` in workflow YAML; publish uses OIDC `id-token`)
+- [ ] No npm tokens (or other registry credentials) in Actions secrets
 
 ## 5. npm publishing — npm libraries only
 - [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
