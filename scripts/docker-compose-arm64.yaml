@@ -88,7 +88,7 @@ services:
     ports:
       - "11211:11211"
   keyv_etcd:
-    image: registry.k8s.io/etcd:3.5.15-0
+    image: registry.k8s.io/etcd:3.5.33-0@sha256:89e9d4e344864374bf141d10ac90034e50647f58498ef0b5f0d6e4fd328c58b9
     platform: linux/arm64/v8
     command:
       - etcd
