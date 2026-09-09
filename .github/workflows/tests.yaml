@@ -39,9 +39,7 @@ jobs:
         run: chmod +x ./scripts/test-services-start.sh && ./scripts/test-services-start.sh
 
       - name: Install Dependencies
-        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
-        # rather than using --frozen-lockfile.
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build

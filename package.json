@@ -20,7 +20,7 @@
     "test:services:stop": "chmod +x ./scripts/test-services-stop.sh && ./scripts/test-services-stop.sh",
     "website:build": "pnpm recursive --filter @keyv/website run website:build",
     "website:serve": "pnpm recursive --filter @keyv/website run website:serve",
-    "clean": "rimraf node_modules pnpm-lock.yaml && pnpm recursive run clean"
+    "clean": "rimraf node_modules && pnpm recursive run clean"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.1",

@@ -8,7 +8,6 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 
 Omitted until they apply on this branch:
 
-- Aikido Safe Chain cloud bootstrap — no committed `pnpm-lock.yaml` (`pnpm-lock.yaml` is gitignored on `v5`)
 - Dev Container image pin — no `devcontainer.json`
 
 ## 1. Security docs
@@ -17,14 +16,15 @@ Omitted until they apply on this branch:
 
 ## 2. CODEOWNERS and cloud bootstrap
 - [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names — PR #2129
+- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile)
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified 2026-09-08 (`pnpm@12.2.1`)
 - [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` — PR #2130
 - [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — PR #2131
 - [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline — PR #2132 (third-party `allowBuilds` exceptions: esbuild, protobufjs, sqlite3)
-- [ ] `blockExoticSubdeps: true` (PR #2133 pending)
-- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile`
+- [x] `blockExoticSubdeps: true` — PR #2133
+- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` (PR #2134 pending)
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified 2026-09-08
 
 ## 4. GitHub Actions

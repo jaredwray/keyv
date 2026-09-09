@@ -109,8 +109,5 @@ packages/website/site/docs/**
 packages/third-party/keyv-file.json
 packages/keyv/test.db
 
-# pnpm
-pnpm-lock.yaml
-
 # AI
 .claude
