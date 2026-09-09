@@ -25,7 +25,7 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified 2026-09-08
 
 ## 4. GitHub Actions
-- [ ] `permissions: contents: read` (or `{}` + per-job grants) on every workflow (PR pending)
+- [ ] `permissions: contents: read` (or `{}` + per-job grants) on every workflow (PR #2136 pending)
 - [ ] No `contents: write` except jobs whose purpose is mutating the repo (GitHub Release, Changesets version PR); generated output is a workflow artifact, never committed back from CI
 - [ ] Every action pinned to a full commit SHA (`npx actions-up`)
 - [ ] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install`
