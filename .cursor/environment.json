@@ -1,0 +1,3 @@
+{
+	"install": "bash ./scripts/setup-cloud-environment.sh"
+}
