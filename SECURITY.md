@@ -37,6 +37,7 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - The release workflow stages packages with `pnpm stage publish` (pack then stage a tarball); it does not publish live.
 - Published packages set `repository.url` to this repo so provenance can map back.
 - Socket reviews every pull request that changes dependencies; Aikido scans every build.
+- The release stage job does not run unless an Aikido `scan-release` gate passes.
 - `.github/CODEOWNERS` names `@jaredwray` for `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, and `/scripts/`.
 - Codespaces and Cursor Cloud Agents install through Aikido Safe Chain; package-manager shims must not be bypassed.
 - The Codespaces Dev Container image is pinned by digest (`name:<tag>@sha256:<digest>`), not a floating tag.
