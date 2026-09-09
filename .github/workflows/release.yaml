@@ -67,24 +67,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    name: Build
+    name: build
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.1"
+
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
+          package-manager-cache: false
 
       - name: Install Dependencies
-        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
-        # (same as tests.yaml) rather than using --frozen-lockfile.
-        run: pnpm install
+        run: sfw pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -92,27 +97,32 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Test
+    name: test
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.1"
+
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
+          package-manager-cache: false
 
       - name: Start Services
         run: pnpm test:services:start
 
       - name: Install Dependencies
-        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
-        # (same as tests.yaml) rather than using --frozen-lockfile.
-        run: pnpm install
+        run: sfw pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -124,7 +134,7 @@ jobs:
     needs: [build, test]
     runs-on: ubuntu-latest # provenance/OIDC require a cloud-hosted runner
     timeout-minutes: 20
-    name: Stage
+    name: stage
     environment: release
     # OIDC trusted publishing: GitHub mints a short-lived OIDC token that pnpm
     # exchanges with npm for a one-time stage credential. No NPM_TOKEN.
@@ -140,25 +150,30 @@ jobs:
       # removed from the script.
       NPM_CONFIG_PROVENANCE: "true"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # This job only reads the repo (it never pushes), so don't leave the
           # GITHUB_TOKEN in .git/config for later steps to read.
           persist-credentials: false
 
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.1"
+
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: Setup node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
+          package-manager-cache: false
           registry-url: 'https://registry.npmjs.org' # writes the .npmrc the registry expects
 
       - name: Install Dependencies
-        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
-        # (same as tests.yaml) rather than using --frozen-lockfile.
-        run: pnpm install
+        run: sfw pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build

@@ -1,15 +1,27 @@
 packages:
   - 'packages/*'
 # 7 days in minutes — only install versions at least this old.
+# Fail closed if publish time is missing or the only matching version is too new.
 minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+# Fail if a later-published version has weaker trust evidence than an earlier one.
+trustPolicy: no-downgrade
+# These versions fail trustPolicy: no-downgrade (no provenance; later versions
+# of the same package have attestations). Pin to a version that already meets
+# the gate — do not exclude first-party packages.
+overrides:
+  semver@5.7.2: 7.7.3
+  chokidar@4.0.3: 5.0.0
 # Adapters and @keyv/test-suite depend on each other. pnpm 12 fails cyclic
 # `run build` unless this is set; pnpm 11 only warned.
 ignoreWorkspaceCycles: true
-# pnpm 11 moved dependency build-script approval here (was
-# pnpm.onlyBuiltDependencies in package.json) — same set, same format as main.
+# Lifecycle scripts are blocked unless listed here. Each entry is a reviewed
+# third-party exception — do not run `pnpm approve-builds` in CI.
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
+blockExoticSubdeps: true
 allowBuilds:
   esbuild: true
   protobufjs: true
   sqlite3: true
-  sqlite325h: true
-  unrs-resolver: true
