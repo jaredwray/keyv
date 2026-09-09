@@ -6,7 +6,8 @@
  * bumped by a human / release PR). This script never changes versions. Its job
  * is to decide, for every publishable workspace package, whether the locally
  * declared version still needs to be published — and under which dist-tag —
- * and, unless running a dry run, to publish the ones that do.
+ * and, unless running a dry run, to stage the ones that do. A maintainer
+ * promotes each staged version with 2FA; this script never publishes live.
  *
  * ## The v5 branch context
  *
@@ -68,22 +69,28 @@
  *
  * Publishing happens in **dependency order** (topological sort over the
  * workspace's runtime deps — dependencies, optionalDependencies and
- * peerDependencies): a package is always published after the workspace
+ * peerDependencies): a package is always staged after the workspace
  * packages it relies on, because pnpm rewrites each `workspace:^` reference
- * to the dependency's concrete version at publish time, and a dependent must
+ * to the dependency's concrete version at pack time, and a dependent must
  * never be released ahead of a dependency it points at. If a run fails
- * partway, dependencies are already published before their dependents.
+ * partway, dependencies are already staged before their dependents.
  *
- * Publishing uses pnpm only (never npm) with provenance, so packages are
+ * Staging uses pnpm only (never npm) with provenance, so packages are
  * cryptographically linked to this repo + workflow when run from CI with an
  * OIDC `id-token: write` permission (npm trusted publishing — no NPM_TOKEN):
  *
- *     pnpm --filter <name> publish --tag <tag> --provenance --access public --no-git-checks
+ *     pnpm --filter <name> pack --out ./packed/<name>.tgz
+ *     pnpm stage publish ./packed/<name>.tgz --tag <tag> --provenance --access public --no-git-checks
+ *
+ * `pnpm stage publish` uploads to npm's staging queue, not the live
+ * registry. OIDC authorizes stage/publish only — it does not authorize
+ * `npm dist-tag add` (npm/cli#8547). Exactly one tag is applied via
+ * `stage publish --tag`.
  *
  * ## Usage
  *
- *   node scripts/release.mjs              # publish every package whose version is new
- *   node scripts/release.mjs --dry-run    # print the plan + validate packaging, publish nothing
+ *   node scripts/release.mjs              # stage every package whose version is new
+ *   node scripts/release.mjs --dry-run    # print the plan + pack tarballs, stage nothing
  *   node scripts/release.mjs --json       # emit the plan as JSON (implies no publishing noise)
  *
  * ## Environment
@@ -97,16 +104,19 @@
  * lookup failed, or a publish failed.
  *
  * The pure helpers (parseVersion / compareSemver / computeTag /
- * resolvePlanAction) are exported and unit-tested in release.test.mjs;
+ * resolvePlanAction / packedTarballFor / packArgs / publishArgs) are exported
+ * and unit-tested in release.test.mjs;
  * main() only executes when the file is run directly, so importing it for
  * tests has no side effects.
  */
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const REGISTRY = (process.env.NPM_CONFIG_REGISTRY || "https://registry.npmjs.org").replace(/\/$/, "");
 
@@ -154,8 +164,8 @@ function parseArgs(argv) {
 const HELP = `Release orchestrator for the Keyv v5 maintenance branch.
 
 Usage:
-  node scripts/release.mjs            Publish every package whose version is not yet on npm
-  node scripts/release.mjs --dry-run  Print the plan and validate packaging without publishing
+  node scripts/release.mjs            Stage every package whose version is not yet on npm
+  node scripts/release.mjs --dry-run  Print the plan and pack tarballs without staging
   node scripts/release.mjs --json     Emit the publish plan as JSON
 
 Versions are set manually; this script never bumps them. No version may be
@@ -546,36 +556,70 @@ function writeOutputs(published) {
 // Publishing.
 // ---------------------------------------------------------------------------
 
-/** Publish a single package with pnpm under exactly one dist-tag. Returns true on success. */
-function publishPackage(entry, { dryRun }) {
-	// --registry pins the publish to the SAME registry the plan was computed
-	// against, so an NPM_CONFIG_REGISTRY override can never produce a plan
-	// from one registry and a publish to another.
+// ---------------------------------------------------------------------------
+// Packing and staging.
+// ---------------------------------------------------------------------------
+
+/**
+ * Flatten a package name into a `./packed/*.tgz` path (`pnpm pack --out`
+ * and `pnpm stage publish` treat it as a local path). Scoped names are
+ * flattened (`@keyv/redis` → `keyv-redis`).
+ */
+export function packedTarballFor(name) {
+	return `./packed/${name.replace(/^@/, "").replaceAll("/", "-")}.tgz`;
+}
+
+/** Pack a workspace package to a known tarball path under `./packed/`. */
+export function packArgs(name) {
+	return ["--filter", name, "pack", "--out", packedTarballFor(name)];
+}
+
+/**
+ * The exact `pnpm` argument list used to stage a packed tarball. Flags:
+ * `--no-git-checks` (git-checks run even for a tarball and fail on a detached
+ * checkout and on the untracked pack output), `--access public` (required for
+ * scoped `@keyv/*` packages), `--provenance` on a real stage (REQUIRED:
+ * generates the npm provenance attestation from the CI OIDC context; it
+ * fails closed when no OIDC context is available). A dry run packs then
+ * runs `stage publish --dry-run` so packaging is validated without uploading.
+ * `--registry` pins the stage to the same registry the plan was computed
+ * against.
+ */
+export function publishArgs(tarball, tag, { dryRun = false } = {}) {
 	const args = [
-		"--filter",
-		entry.name,
+		"stage",
 		"publish",
+		tarball,
 		"--registry",
 		REGISTRY,
 		"--tag",
-		entry.tag,
+		tag,
 		"--access",
 		"public",
 		"--no-git-checks",
 	];
-
-	// Provenance attestations require the CI OIDC token (npm trusted
-	// publishing), so the flag is only meaningful for a real publish — and
-	// then it is REQUIRED, failing closed when no OIDC context is available.
-	// A dry run just validates the tarball/packaging locally.
 	if (dryRun) {
 		args.push("--dry-run");
 	} else {
 		args.push("--provenance");
 	}
 
-	console.log(`\n$ pnpm ${args.join(" ")}`);
-	const result = spawnSync("pnpm", args, { stdio: "inherit" });
+	return args;
+}
+
+/** Pack a package, then stage the tarball under exactly one dist-tag. Returns true on success. */
+function publishPackage(entry, { dryRun }) {
+	mkdirSync(path.join(ROOT_DIR, "packed"), { recursive: true });
+	const pack = packArgs(entry.name);
+	console.log(`\n$ pnpm ${pack.join(" ")}`);
+	const packed = spawnSync("pnpm", pack, { cwd: ROOT_DIR, stdio: "inherit" });
+	if (packed.status !== 0) {
+		return false;
+	}
+
+	const args = publishArgs(packedTarballFor(entry.name), entry.tag, { dryRun });
+	console.log(`$ pnpm ${args.join(" ")}`);
+	const result = spawnSync("pnpm", args, { cwd: ROOT_DIR, stdio: "inherit" });
 	return result.status === 0;
 }
 
@@ -642,7 +686,7 @@ async function main() {
 	}
 
 	console.log(
-		`\n${args.dryRun ? "[dry run] would publish" : "Publishing"} ${toPublish.length} package(s): ${toPublish
+		`\n${args.dryRun ? "[dry run] would stage" : "Staging"} ${toPublish.length} package(s): ${toPublish
 			.map((entry) => `${entry.name}@${entry.version} → ${entry.tag}`)
 			.join(", ")}`,
 	);
@@ -699,7 +743,7 @@ async function main() {
 
 	console.log("");
 	if (failed.length > 0) {
-		console.error(`Failed to publish ${failed.length} package(s):`);
+		console.error(`Failed to stage ${failed.length} package(s):`);
 		for (const entry of failed) {
 			console.error(`  - ${entry.name}@${entry.version}`);
 		}
@@ -718,8 +762,8 @@ async function main() {
 
 	console.log(
 		args.dryRun
-			? `Dry run complete — ${toPublish.length} package(s) would be published.`
-			: `Published ${published.length} package(s) successfully.`,
+			? `Dry run complete — ${toPublish.length} package(s) would be staged.`
+			: `Staged ${published.length} package(s) successfully.`,
 	);
 }
 
