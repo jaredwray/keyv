@@ -4,7 +4,10 @@ import {
 	compareSemver,
 	computeTag,
 	exceedsMajorCeiling,
+	packArgs,
+	packedTarballFor,
 	parseVersion,
+	publishArgs,
 	resolvePlanAction,
 } from "./release.mjs";
 
@@ -215,5 +218,51 @@ describe("resolvePlanAction", () => {
 	it("handles a registry document without dist-tags", () => {
 		const doc = { versions: { "1.0.0": {} } };
 		expect(resolvePlanAction(pkg("@keyv/x", "1.0.1"), doc)).toMatchObject({ action: "publish", tag: "latest" });
+	});
+});
+
+describe("packedTarballFor / packArgs", () => {
+	it("flattens scoped names into a ./packed tarball path", () => {
+		expect(packedTarballFor("keyv")).toBe("./packed/keyv.tgz");
+		expect(packedTarballFor("@keyv/redis")).toBe("./packed/keyv-redis.tgz");
+	});
+
+	it("packs a workspace package to that tarball path", () => {
+		expect(packArgs("keyv")).toEqual(["--filter", "keyv", "pack", "--out", "./packed/keyv.tgz"]);
+	});
+});
+
+describe("publishArgs", () => {
+	it("builds the exact pnpm stage publish command for a tarball + tag", () => {
+		expect(publishArgs("./packed/keyv.tgz", "beta")).toEqual([
+			"stage",
+			"publish",
+			"./packed/keyv.tgz",
+			"--registry",
+			"https://registry.npmjs.org",
+			"--tag",
+			"beta",
+			"--access",
+			"public",
+			"--no-git-checks",
+			"--provenance",
+		]);
+	});
+
+	it("uses the given tarball and tag", () => {
+		expect(`pnpm ${publishArgs("./packed/keyv-redis.tgz", "v5-lts").join(" ")}`).toBe(
+			"pnpm stage publish ./packed/keyv-redis.tgz --registry https://registry.npmjs.org --tag v5-lts --access public --no-git-checks --provenance",
+		);
+	});
+
+	it("always includes --provenance on a real stage (required for npm provenance attestation)", () => {
+		expect(publishArgs("./packed/keyv.tgz", "latest")).toContain("--provenance");
+		expect(publishArgs("./packed/keyv-redis.tgz", "beta")).toContain("--provenance");
+	});
+
+	it("uses --dry-run instead of --provenance for a dry run", () => {
+		const args = publishArgs("./packed/keyv.tgz", "latest", { dryRun: true });
+		expect(args).toContain("--dry-run");
+		expect(args).not.toContain("--provenance");
 	});
 });

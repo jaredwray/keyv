@@ -34,6 +34,7 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - CI `pnpm install` / `npm install` runs through Socket Firewall (`sfw`).
 - Workflows are security-linted with zizmor on every pull request.
 - Release and website-deploy jobs disable `setup-node`'s default package-manager cache.
+- The release workflow stages packages with `pnpm stage publish` (pack then stage a tarball); it does not publish live.
 - Published packages set `repository.url` to this repo so provenance can map back.
 - Socket reviews every pull request that changes dependencies; Aikido scans every build.
 - `.github/CODEOWNERS` names `@jaredwray` for `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, and `/scripts/`.

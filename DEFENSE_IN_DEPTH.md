@@ -33,12 +33,12 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 - [x] Workflow `name:` and job `name:` contain no spaces (kebab-case) so they can be set as required status checks — PR #2140
 - [x] `persist-credentials: false` on checkouts that don't push — verified 2026-09-09 (required for zizmor to pass)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified 2026-09-08
-- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning (PR #2141 pending)
+- [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — PR #2141
 - [ ] No npm tokens (or other registry credentials) in Actions secrets
 
 ## 5. npm publishing — npm libraries only
 - [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
-- [ ] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks`
+- [ ] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` (PR pending)
 - [ ] Maintainer promotes staged versions with 2FA (manual)
 - [ ] Drydock connected — staged releases reviewed before promotion (manual)
 - [ ] No direct publish rights: package requires 2FA and disallows tokens (manual)
