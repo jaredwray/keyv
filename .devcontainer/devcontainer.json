@@ -1,0 +1,11 @@
+{
+	"name": "Node.js",
+	"image": "mcr.microsoft.com/devcontainers/javascript-node:5.0.2-24-trixie@sha256:1f13af93fc9b845a4ee55c84d6e6c6ad2c6419b0fdeef4a6c13ad5a3f561d034",
+	"features": {
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:4": {
+			"moby": false
+		}
+	},
+	"postCreateCommand": "bash ./scripts/setup-cloud-environment.sh"
+}

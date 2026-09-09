@@ -6,17 +6,14 @@ Profile: npm library · public
 
 This checklist is for the `v5` branch. The same catalog is already complete on `main`.
 
-Omitted until they apply on this branch:
-
-- Dev Container image pin — no `devcontainer.json`
-
 ## 1. Security docs
 - [x] `SECURITY.md` present — contact info + "How this repository is secured" summary — PR #2128
 - [x] `DEFENSE_IN_DEPTH.md` present (this file) — PR #2128
 
 ## 2. CODEOWNERS and cloud bootstrap
 - [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names — PR #2129
-- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile)
+- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) (PR #2135 pending)
+- [ ] Dev Container `image` pinned by digest (`name:<tag>@sha256:<digest>`; not a floating tag)
 
 ## 3. Dependencies (pnpm)
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified 2026-09-08 (`pnpm@12.2.1`)
@@ -24,7 +21,7 @@ Omitted until they apply on this branch:
 - [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — PR #2131
 - [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline — PR #2132 (third-party `allowBuilds` exceptions: esbuild, protobufjs, sqlite3)
 - [x] `blockExoticSubdeps: true` — PR #2133
-- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` (PR #2134 pending)
+- [x] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` — PR #2134
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified 2026-09-08
 
 ## 4. GitHub Actions
