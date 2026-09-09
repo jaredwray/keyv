@@ -22,8 +22,8 @@ Omitted until they apply on this branch:
 - [x] `packageManager: pnpm@11.3+` pinned in `package.json` — verified 2026-09-08 (`pnpm@12.2.1`)
 - [x] 7-day cooldown: `minimumReleaseAge: 10080`, `minimumReleaseAgeStrict: true`, `minimumReleaseAgeIgnoreMissingTime: false`; no first-party `minimumReleaseAgeExclude` — PR #2130
 - [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — PR #2131
-- [ ] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline (PR #2132 pending)
-- [ ] `blockExoticSubdeps: true`
+- [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline — PR #2132 (third-party `allowBuilds` exceptions: esbuild, protobufjs, sqlite3)
+- [ ] `blockExoticSubdeps: true` (PR #2133 pending)
 - [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile`
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified 2026-09-08
 

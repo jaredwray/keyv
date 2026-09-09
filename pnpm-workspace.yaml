@@ -20,6 +20,7 @@ ignoreWorkspaceCycles: true
 # third-party exception — do not run `pnpm approve-builds` in CI.
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
+blockExoticSubdeps: true
 allowBuilds:
   esbuild: true
   protobufjs: true
