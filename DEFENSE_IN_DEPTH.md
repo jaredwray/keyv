@@ -12,7 +12,7 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 
 ## 2. CODEOWNERS and cloud bootstrap
 - [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names — PR #2129
-- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) (PR pending)
+- [ ] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) (PR #2135 pending)
 - [ ] Dev Container `image` pinned by digest (`name:<tag>@sha256:<digest>`; not a floating tag)
 
 ## 3. Dependencies (pnpm)
