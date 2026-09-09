@@ -16,11 +16,11 @@ overrides:
 # Adapters and @keyv/test-suite depend on each other. pnpm 12 fails cyclic
 # `run build` unless this is set; pnpm 11 only warned.
 ignoreWorkspaceCycles: true
-# pnpm 11 moved dependency build-script approval here (was
-# pnpm.onlyBuiltDependencies in package.json) — same set, same format as main.
+# Lifecycle scripts are blocked unless listed here. Each entry is a reviewed
+# third-party exception — do not run `pnpm approve-builds` in CI.
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
 allowBuilds:
   esbuild: true
   protobufjs: true
   sqlite3: true
-  sqlite325h: true
-  unrs-resolver: true
