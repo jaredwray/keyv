@@ -30,10 +30,10 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 - [x] Every action pinned to a full commit SHA (`npx actions-up`) — PR #2137
 - [x] Every job installs Socket Firewall (`SocketDev/action` SHA-pinned, `firewall-version` pinned); `pnpm install` / `npm install` run as `sfw pnpm install` / `sfw npm install` — PR #2138
 - [x] `.github/workflows/check-workflows.yaml` lints workflows with zizmor on every PR — PR #2139
-- [ ] Workflow `name:` and job `name:` contain no spaces (kebab-case) so they can be set as required status checks (PR #2140 pending)
+- [x] Workflow `name:` and job `name:` contain no spaces (kebab-case) so they can be set as required status checks — PR #2140
 - [x] `persist-credentials: false` on checkouts that don't push — verified 2026-09-09 (required for zizmor to pass)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified 2026-09-08
-- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning
+- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning (PR #2141 pending)
 - [ ] No npm tokens (or other registry credentials) in Actions secrets
 
 ## 5. npm publishing — npm libraries only
