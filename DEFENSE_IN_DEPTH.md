@@ -46,10 +46,10 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified 2026-09-08 (PR #2127: Aikido Security: check code)
-- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` (PR #2143 pending)
+- [x] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` — PR #2143
 - [x] Socket reviews every PR that changes dependencies — verified 2026-09-08 (PR #2127: Socket Security Pull Request Alerts and Project Report)
 
 ## 7. Repository lockdown
 - [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
 - [ ] Recovery codes stored offline in a password manager (manual)
-- [ ] `lockdown-repo.sh` applied by a repo admin (never committed to this repo); `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos))
+- [x] `lockdown-repo.sh` applied by a repo admin (never committed to this repo); `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos)) — verified 2026-09-09 (repo-wide; default branch `main`) — PR #2144
