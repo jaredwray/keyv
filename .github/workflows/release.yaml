@@ -53,7 +53,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    name: Build
+    name: build
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -82,7 +82,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Test
+    name: test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -118,7 +118,7 @@ jobs:
     needs: [build, test]
     runs-on: ubuntu-latest # provenance/OIDC require a cloud-hosted runner
     timeout-minutes: 20
-    name: Publish
+    name: publish
     environment: release
     # OIDC trusted publishing: GitHub mints a short-lived OIDC token that pnpm
     # exchanges with npm for a one-time publish credential. No NPM_TOKEN.

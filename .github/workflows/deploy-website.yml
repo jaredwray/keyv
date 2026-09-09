@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   setup-build-deploy:
-    name: Deploy Website
+    name: deploy-website
     runs-on: ubuntu-latest
 
     steps:
