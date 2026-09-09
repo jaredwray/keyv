@@ -24,7 +24,7 @@ Omitted until they apply on this branch:
 - [x] `trustPolicy: no-downgrade`; no first-party `trustPolicyExclude` — PR #2131
 - [x] Lifecycle scripts blocked: `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, `allowBuilds: {}` baseline — PR #2132 (third-party `allowBuilds` exceptions: esbuild, protobufjs, sqlite3)
 - [x] `blockExoticSubdeps: true` — PR #2133
-- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` (PR pending)
+- [ ] Lockfile committed; CI installs with `pnpm install --frozen-lockfile` (PR #2134 pending)
 - [x] No `.github/dependabot.yml`; other dependency-update tools (if any) open PRs only — never auto-merge — verified 2026-09-08
 
 ## 4. GitHub Actions
