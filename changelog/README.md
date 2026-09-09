@@ -25,8 +25,8 @@ becomes installable. GitHub Releases never trigger publishing on this branch.
    version ahead of npm) under which dist-tag, and which are skipped — and
    validates packaging. Run it again with Dry run unchecked to stage for real.
    Any ref other than `v5` is forced to a dry run.
-3. **What the run does.** Builds, runs the full test suite and the release-logic
-   tests (`pnpm test:release`), then `scripts/release.mjs` packs each package
+3. **What the run does.** Builds, runs the full test suite, the Aikido release
+   scan and the release-logic tests (`pnpm test:release`), then `scripts/release.mjs` packs each package
    whose version is not on npm and runs
    `pnpm stage publish <tarball> --tag <tag> --provenance` in dependency order
    (`@keyv/serialize` → `keyv` → adapters). Nothing is installable yet; the job

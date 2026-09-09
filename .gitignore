@@ -50,6 +50,9 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
+# Release staging tarballs (scripts/release.mjs)
+packed
+
 ## OS X
 
 *.DS_Store
@@ -111,6 +114,3 @@ packages/keyv/test.db
 
 # AI
 .claude
-
-# pnpm pack output written by scripts/release.mjs
-packed

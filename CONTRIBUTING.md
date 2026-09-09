@@ -77,7 +77,7 @@ To preview without staging anything: Actions → `release` → **Run workflow** 
 ## Releasing v5 from the `v5` branch
 
 1. Open a release PR against `v5`: bump `version` in each package that has unreleased changes (never `6.0.0` or higher — the script refuses it), add `changelog/<name>.md`, and merge.
-2. Actions → `release` → **Run workflow** → set "Use workflow from" to **`v5`**. Leave **Dry run** checked first: the job summary shows the stage plan (which packages would be staged, under which dist-tag, and which are skipped) and packaging is validated. Then run it again with Dry run unchecked to stage for real. Any ref other than `v5` is forced to a dry run.
+2. Actions → `release` → **Run workflow** → set "Use workflow from" to **`v5`**. Leave **Dry run** checked first: the job summary shows the stage plan (which packages would be staged, under which dist-tag, and which are skipped) and packaging is validated. Then run it again with Dry run unchecked to stage for real. The run builds, runs the full test suite, the Aikido release scan and the release-logic tests before anything is staged. Any ref other than `v5` is forced to a dry run.
 3. Approve the staged versions on npm, dependencies first (`@keyv/serialize` → `keyv` → adapters).
 4. Optionally create a GitHub Release tagged `v5-YYYY-MM-DD` for release notes. It publishes nothing: a GitHub Release runs the workflow file at the tag's commit, the `v5` branch's workflow has no `release` trigger, and main's release workflow refuses any tag whose commit is not on `main`.
 

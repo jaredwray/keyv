@@ -109,6 +109,12 @@
  *     pnpm --filter <name> pack --out ./packed/<name>.tgz
  *     pnpm stage publish ./packed/<name>.tgz --registry <registry> --tag <tag> --access public --no-git-checks --provenance
  *
+ * `pnpm stage publish` uploads to npm's staging queue, not the live
+ * registry. OIDC authorizes stage/publish only — it does not authorize
+ * `npm dist-tag add` (npm/cli#8547). Exactly one tag is applied via
+ * `stage publish --tag`. A dry run packs for real and runs
+ * `stage publish --dry-run` (no upload, no provenance) instead.
+ *
  * ## Usage
  *
  *   node scripts/release.mjs              # stage every package whose version is new
@@ -128,7 +134,7 @@
  * a workspace dependency of theirs failed).
  *
  * The pure helpers (parseVersion / compareSemver / computeTag /
- * resolvePlanAction / blockedBy / packedTarballFor / packArgs / stageArgs /
+ * resolvePlanAction / blockedBy / packedTarballFor / packArgs / publishArgs /
  * classifyStageFailure / isDryRunRequested) are exported and unit-tested in
  * release.test.mjs; main() only executes when the file is run directly, so
  * importing it for tests has no side effects.
@@ -144,7 +150,7 @@ const REGISTRY = (process.env.NPM_CONFIG_REGISTRY || "https://registry.npmjs.org
 
 // Monorepo root, resolved relative to this file (scripts/ lives one level
 // down), so pack output and pnpm invocations don't depend on the caller's cwd.
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
  * THE MAJOR CEILING for this branch. Keyv v6 is the line released from
@@ -449,29 +455,30 @@ export function packArgs(name) {
  * registry and stage to another); `--tag` applies exactly one dist-tag;
  * `--access public` (required for the scoped `@keyv/*` packages);
  * `--no-git-checks` (git checks run even for a tarball and would fail on the
- * untracked pack output); `--provenance` (REQUIRED: generates the npm
- * provenance attestation from the CI OIDC context so every staged package is
- * verifiably built here — it fails closed when no OIDC context is available,
- * and release.test.mjs asserts the flag is always present); `--dry-run`
- * (dry runs only) does everything except upload to the registry.
+ * untracked pack output); `--provenance` on a real stage (REQUIRED: generates
+ * the npm provenance attestation from the CI OIDC context so every staged
+ * package is verifiably built here — it fails closed when no OIDC context is
+ * available, and release.test.mjs asserts the flag is always present on a
+ * real stage). A dry run packs then runs `stage publish --dry-run`, which
+ * does everything except upload, so packaging is validated without OIDC.
  */
-export function stageArgs(entry, { dryRun = false, registry = REGISTRY } = {}) {
+export function publishArgs(tarball, tag, { dryRun = false } = {}) {
 	const args = [
 		"stage",
 		"publish",
-		packedTarballFor(entry.name),
+		tarball,
 		"--registry",
-		registry,
+		REGISTRY,
 		"--tag",
-		entry.tag,
+		tag,
 		"--access",
 		"public",
 		"--no-git-checks",
-		"--provenance",
 	];
-
 	if (dryRun) {
 		args.push("--dry-run");
+	} else {
+		args.push("--provenance");
 	}
 
 	return args;
@@ -509,7 +516,7 @@ export function isDryRunRequested(args, env = process.env) {
 /** Enumerate publishable workspace packages via pnpm (respects pnpm-workspace.yaml). */
 function listWorkspacePackages() {
 	const result = spawnSync("pnpm", ["-r", "ls", "--depth", "-1", "--json"], {
-		cwd: rootDir,
+		cwd: ROOT_DIR,
 		encoding: "utf8",
 		maxBuffer: 32 * 1024 * 1024,
 	});
@@ -748,21 +755,21 @@ function describeFailure(result) {
  * `{ ok: false, kind: "pack" | "conflict" | "failure" }`.
  */
 function stagePackage(entry, { dryRun }) {
-	mkdirSync(path.join(rootDir, "packed"), { recursive: true });
+	mkdirSync(path.join(ROOT_DIR, "packed"), { recursive: true });
 
 	const pack = packArgs(entry.name);
 	console.log(`\n$ pnpm ${pack.join(" ")}`);
-	const packed = spawnSync("pnpm", pack, { cwd: rootDir, stdio: "inherit" });
+	const packed = spawnSync("pnpm", pack, { cwd: ROOT_DIR, stdio: "inherit" });
 	if (packed.status !== 0) {
 		return { ok: false, kind: "pack" };
 	}
 
-	const stage = stageArgs(entry, { dryRun });
+	const stage = publishArgs(packedTarballFor(entry.name), entry.tag, { dryRun });
 	console.log(`$ pnpm ${stage.join(" ")}`);
 	// Capture the output so a registry rejection can be classified, then echo
 	// it so the job log still shows everything pnpm/npm printed.
 	const result = spawnSync("pnpm", stage, {
-		cwd: rootDir,
+		cwd: ROOT_DIR,
 		encoding: "utf8",
 		stdio: ["inherit", "pipe", "pipe"],
 		maxBuffer: 32 * 1024 * 1024,

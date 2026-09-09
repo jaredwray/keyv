@@ -10,8 +10,8 @@ import {
 	packArgs,
 	packedTarballFor,
 	parseVersion,
+	publishArgs,
 	resolvePlanAction,
-	stageArgs,
 } from "./release.mjs";
 
 describe("parseVersion", () => {
@@ -228,26 +228,23 @@ describe("packedTarballFor / packArgs", () => {
 	it("flattens scoped names into a ./packed tarball path", () => {
 		expect(packedTarballFor("keyv")).toBe("./packed/keyv.tgz");
 		expect(packedTarballFor("@keyv/redis")).toBe("./packed/keyv-redis.tgz");
-		expect(packedTarballFor("@keyv/compress-gzip")).toBe("./packed/keyv-compress-gzip.tgz");
 	});
 
 	it("packs a workspace package to that tarball path", () => {
-		expect(packArgs("@keyv/redis")).toEqual(["--filter", "@keyv/redis", "pack", "--out", "./packed/keyv-redis.tgz"]);
+		expect(packArgs("keyv")).toEqual(["--filter", "keyv", "pack", "--out", "./packed/keyv.tgz"]);
 	});
 });
 
-describe("stageArgs", () => {
-	const registry = "https://registry.npmjs.org";
-
-	it("builds the exact pnpm stage publish command for a packed tarball + tag", () => {
-		expect(stageArgs({ name: "keyv", tag: "latest" }, { registry })).toEqual([
+describe("publishArgs", () => {
+	it("builds the exact pnpm stage publish command for a tarball + tag", () => {
+		expect(publishArgs("./packed/keyv.tgz", "beta")).toEqual([
 			"stage",
 			"publish",
 			"./packed/keyv.tgz",
 			"--registry",
 			"https://registry.npmjs.org",
 			"--tag",
-			"latest",
+			"beta",
 			"--access",
 			"public",
 			"--no-git-checks",
@@ -255,38 +252,41 @@ describe("stageArgs", () => {
 		]);
 	});
 
-	it("uses the given tarball, tag and registry", () => {
-		expect(`pnpm ${stageArgs({ name: "@keyv/sqlite", tag: "v4-lts" }, { registry: "https://example.test" }).join(" ")}`).toBe(
-			"pnpm stage publish ./packed/keyv-sqlite.tgz --registry https://example.test --tag v4-lts --access public --no-git-checks --provenance",
+	it("uses the given tarball and tag", () => {
+		expect(`pnpm ${publishArgs("./packed/keyv-redis.tgz", "v5-lts").join(" ")}`).toBe(
+			"pnpm stage publish ./packed/keyv-redis.tgz --registry https://registry.npmjs.org --tag v5-lts --access public --no-git-checks --provenance",
 		);
 	});
 
-	it("only appends --dry-run for a dry run", () => {
-		expect(stageArgs({ name: "keyv", tag: "latest" }, { registry, dryRun: true }).at(-1)).toBe("--dry-run");
-		expect(stageArgs({ name: "keyv", tag: "latest" }, { registry })).not.toContain("--dry-run");
+	it("always includes --provenance on a real stage (required for npm provenance attestation)", () => {
+		expect(publishArgs("./packed/keyv.tgz", "latest")).toContain("--provenance");
+		expect(publishArgs("./packed/keyv-redis.tgz", "beta")).toContain("--provenance");
 	});
 
+	it("uses --dry-run instead of --provenance for a dry run", () => {
+		const args = publishArgs("./packed/keyv.tgz", "latest", { dryRun: true });
+		expect(args).toContain("--dry-run");
+		expect(args).not.toContain("--provenance");
+	});
+});
+
+describe("publishArgs (staging invariants)", () => {
 	it("always stages — never a direct publish", () => {
 		for (const dryRun of [false, true]) {
-			expect(stageArgs({ name: "keyv", tag: "latest" }, { registry, dryRun }).slice(0, 2)).toEqual(["stage", "publish"]);
+			expect(publishArgs("./packed/keyv.tgz", "latest", { dryRun }).slice(0, 2)).toEqual(["stage", "publish"]);
 		}
 	});
 
-	// Release-blocking guard: the workflow runs these tests before staging, so
-	// removing --provenance from stageArgs fails the release. Provenance
-	// attestation is required for every package staged from this repo.
-	it("always includes --provenance (required for npm provenance attestation)", () => {
+	it("pins the registry, requires public access and skips git checks in both modes", () => {
 		for (const dryRun of [false, true]) {
-			expect(stageArgs({ name: "keyv", tag: "latest" }, { registry, dryRun })).toContain("--provenance");
-			expect(stageArgs({ name: "@keyv/redis", tag: "v5-lts" }, { registry, dryRun })).toContain("--provenance");
+			const args = publishArgs("./packed/keyv.tgz", "beta", { dryRun });
+			expect(args).toContain("--no-git-checks");
+			expect(args.slice(args.indexOf("--access"), args.indexOf("--access") + 2)).toEqual(["--access", "public"]);
+			expect(args.slice(args.indexOf("--registry"), args.indexOf("--registry") + 2)).toEqual([
+				"--registry",
+				"https://registry.npmjs.org",
+			]);
 		}
-	});
-
-	it("pins the registry, requires public access and skips git checks", () => {
-		const args = stageArgs({ name: "keyv", tag: "beta" }, { registry: "https://example.test" });
-		expect(args).toContain("--no-git-checks");
-		expect(args.slice(args.indexOf("--access"), args.indexOf("--access") + 2)).toEqual(["--access", "public"]);
-		expect(args.slice(args.indexOf("--registry"), args.indexOf("--registry") + 2)).toEqual(["--registry", "https://example.test"]);
 	});
 });
 

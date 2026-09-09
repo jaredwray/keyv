@@ -23,8 +23,10 @@ We will acknowledge receipt, work with you on a coordinated disclosure timeline,
 This repository follows the [defense-in-depth](https://github.com/jaredwray/agentic/blob/main/skills/security/defense-in-depth-nodejs/SKILL.md)
 hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_DEPTH.md). Measures currently in place on `v5`:
 
+- All changes land through pull requests — direct pushes to `main` (the default branch) are blocked, and merging requires passing status checks.
+- Tags can only be created by repository admins; published GitHub Releases are immutable (assets and tags cannot be changed after publish).
+- Workflow runs from outside collaborators always require maintainer approval, and only allowlisted GitHub Actions can run.
 - Private vulnerability reporting is enabled.
-- Tags can only be created by repository admins.
 - pnpm is pinned via `packageManager` (`pnpm@12.2.1`).
 - Dependencies install through pnpm with a 7-day cooldown on new versions, lifecycle scripts blocked by default, and `trustPolicy: no-downgrade`.
 - The lockfile is committed and CI installs with `--frozen-lockfile`. There is no Dependabot config; dependency updates go through reviewed PRs.
@@ -34,6 +36,7 @@ hardening checklist; progress is tracked in [DEFENSE_IN_DEPTH.md](./DEFENSE_IN_D
 - CI `pnpm install` / `npm install` runs through Socket Firewall (`sfw`).
 - Workflows are security-linted with zizmor on every pull request.
 - Release and website-deploy jobs disable `setup-node`'s default package-manager cache.
+- npm releases are staged, never published directly: CI stages via stage-only OIDC trusted publishing (`pnpm stage publish`) after an Aikido `scan-release` gate, Drydock reviews the staged artifact, and a maintainer promotes it with 2FA. There are no npm publish tokens.
 - Published packages set `repository.url` to this repo so provenance can map back.
 - Socket reviews every pull request that changes dependencies; Aikido scans every build.
 - `.github/CODEOWNERS` names `@jaredwray` for `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, and `/scripts/`.

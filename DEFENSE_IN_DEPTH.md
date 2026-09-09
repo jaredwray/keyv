@@ -33,23 +33,23 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 - [x] Workflow `name:` and job `name:` contain no spaces (kebab-case) so they can be set as required status checks — PR #2140
 - [x] `persist-credentials: false` on checkouts that don't push — verified 2026-09-09 (required for zizmor to pass)
 - [x] No `pull_request_target` on workflows that run untrusted PR code — verified 2026-09-08
-- [ ] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning (PR #2141 pending)
-- [ ] No npm tokens (or other registry credentials) in Actions secrets
+- [x] Artifact-publishing workflows disable `actions/setup-node` default caching (`package-manager-cache: false`) to prevent cache poisoning — PR #2141
+- [x] No npm tokens (or other registry credentials) in Actions secrets — verified 2026-09-09
 
 ## 5. npm publishing — npm libraries only
-- [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual)
-- [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` (plus `--provenance`; manual `workflow_dispatch` from `v5` only; approval runbook in `changelog/README.md`) — PR #2119
-- [ ] Maintainer promotes staged versions with 2FA (manual)
-- [ ] Drydock connected — staged releases reviewed before promotion (manual)
-- [ ] No direct publish rights: package requires 2FA and disallows tokens (manual)
+- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual) — verified 2026-09-09
+- [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2142, #2119
+- [x] Maintainer promotes staged versions with 2FA (manual) — verified 2026-09-09
+- [x] Drydock connected — staged releases reviewed before promotion (manual) — verified 2026-09-09
+- [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified 2026-09-09
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified 2026-09-08
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified 2026-09-08 (PR #2127: Aikido Security: check code)
-- [ ] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release`
+- [x] Aikido release gate: the release workflow's stage-publish job `needs:` a passing `scan-release` — PR #2143
 - [x] Socket reviews every PR that changes dependencies — verified 2026-09-08 (PR #2127: Socket Security Pull Request Alerts and Project Report)
 
 ## 7. Repository lockdown
-- [ ] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual)
-- [ ] Recovery codes stored offline in a password manager (manual)
-- [ ] `lockdown-repo.sh` applied by a repo admin (never committed to this repo); `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos))
+- [x] Phishing-resistant 2FA (passkeys / hardware keys) on the GitHub and npm accounts (manual) — verified 2026-09-09
+- [x] Recovery codes stored offline in a password manager (manual) — verified 2026-09-09
+- [x] `lockdown-repo.sh` applied by a repo admin (never committed to this repo); `--check` with `--required-checks` and `--allowed-actions` passes (PRs required on the default branch, merges blocked unless required status checks pass, tag ruleset, immutable releases, fork-PR approval (public repos), read-only workflow tokens, Actions allowlist, secret scanning, Dependabot disabled, private vulnerability reporting (public repos)) — verified 2026-09-09 (repo-wide; default branch `main`) — PR #2144
