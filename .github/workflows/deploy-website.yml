@@ -6,7 +6,7 @@ on:
     types: [released]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   setup-build-deploy:

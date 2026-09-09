@@ -8,7 +8,7 @@ on:
     branches: [v5]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
