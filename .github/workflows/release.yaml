@@ -68,9 +68,7 @@ jobs:
           node-version: '24'
 
       - name: Install Dependencies
-        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
-        # (same as tests.yaml) rather than using --frozen-lockfile.
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -96,9 +94,7 @@ jobs:
         run: pnpm test:services:start
 
       - name: Install Dependencies
-        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
-        # (same as tests.yaml) rather than using --frozen-lockfile.
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -134,9 +130,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org' # writes the .npmrc the registry expects
 
       - name: Install Dependencies
-        # The v5 branch does not commit a pnpm-lock.yaml, so install resolves fresh
-        # (same as tests.yaml) rather than using --frozen-lockfile.
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
