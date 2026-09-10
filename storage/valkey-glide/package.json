@@ -1,0 +1,81 @@
+{
+	"name": "@keyv/valkey-glide",
+	"version": "6.0.0-rc.1",
+	"description": "Valkey GLIDE storage adapter for Keyv",
+	"type": "module",
+	"main": "./dist/index.mjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			},
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			}
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"prepublishOnly": "pnpm build",
+		"lint": "biome check --write --error-on-warnings",
+		"lint:ci": "biome check --error-on-warnings",
+		"test": "pnpm lint && vitest run --coverage",
+		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+		"clean": "rimraf ./node_modules ./coverage ./dist"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git",
+		"directory": "storage/valkey-glide"
+	},
+	"keywords": [
+		"redis",
+		"valkey",
+		"valkey-glide",
+		"glide",
+		"keyv",
+		"storage",
+		"adapter",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl",
+		"az-affinity"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (http://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+		"@valkey/valkey-glide": "^2.2.0",
+		"hookified": "^3.0.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.11",
+		"@faker-js/faker": "^10.6.0",
+		"@keyv/test-suite": "workspace:^",
+		"@vitest/coverage-v8": "^4.1.11",
+		"keyv": "workspace:^",
+		"rimraf": "^6.1.3",
+		"timekeeper": "^2.3.1",
+		"tsd": "^0.33.0",
+		"vitest": "^4.1.11"
+	},
+	"tsd": {
+		"directory": "test"
+	},
+	"engines": {
+		"node": ">= 22.19.0"
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	]
+}
