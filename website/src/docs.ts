@@ -3,15 +3,16 @@ import fs from "node:fs";
 const adapterOrder: Record<string, number> = {
 	redis: 10,
 	valkey: 11,
-	postgres: 12,
-	mysql: 13,
-	mongo: 14,
-	sqlite: 15,
-	memcache: 16,
-	etcd: 17,
-	dynamo: 18,
-	"cloudflare-kv": 19,
-	bigmap: 20,
+	"valkey-glide": 12,
+	postgres: 13,
+	mysql: 14,
+	mongo: 15,
+	sqlite: 16,
+	memcache: 17,
+	etcd: 18,
+	dynamo: 19,
+	"cloudflare-kv": 20,
+	bigmap: 21,
 };
 
 const compressionOrder: Record<string, number> = {
