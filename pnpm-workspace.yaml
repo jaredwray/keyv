@@ -7,6 +7,8 @@ packages:
   - 'website'
 allowBuilds:
   better-sqlite3: true
+  "@valkey/valkey-glide": true
+  protobufjs: true
   esbuild: true
   msgpackr-extract: true
   sharp: false
