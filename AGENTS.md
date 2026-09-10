@@ -39,7 +39,7 @@ Individual package tests:
 - **serialization/superjson**: SuperJSON serializer (@keyv/serialize-superjson) - optional
 - **serialization/msgpackr**: MessagePack serializer (@keyv/serialize-msgpackr) - optional
 - **core/bigmap**: BigMap - scalable in-memory Map implementation
-- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB
+- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, Valkey GLIDE, DynamoDB
 - **compression/**: Compression adapters - Brotli, Gzip, LZ4
 - **website**: Documentation website
 
