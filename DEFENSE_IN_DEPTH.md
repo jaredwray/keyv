@@ -41,6 +41,9 @@ Profile: npm library · public
 - [x] Drydock connected — staged releases reviewed before promotion (manual) — verified 2026-08-25
 - [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified 2026-08-25
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified 2026-08-24
+- [x] v5 maintenance line stages through the same `release.yaml` / `release` environment trusted publisher (manual `workflow_dispatch` from `v5` only; `pnpm stage publish … --provenance`, no direct publish) — v5 PR #2119
+- [ ] Stage-only trusted publisher configured for `@keyv/serialize` (v5-only package, not covered by main's setup) (manual)
+- [x] `release` events refuse a tag whose commit is not on `main` (a tag on another branch runs that branch's workflow, and the v5 line has no `release` trigger) — PR #2124
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified 2026-08-24 (PR #2053–#2057: Aikido Security: check code)
