@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
 	MAX_MAJOR,
+	blockedBy,
+	classifyStageFailure,
 	compareSemver,
 	computeTag,
 	exceedsMajorCeiling,
+	isDryRunRequested,
 	packArgs,
 	packedTarballFor,
 	parseVersion,
@@ -264,5 +267,89 @@ describe("publishArgs", () => {
 		const args = publishArgs("./packed/keyv.tgz", "latest", { dryRun: true });
 		expect(args).toContain("--dry-run");
 		expect(args).not.toContain("--provenance");
+	});
+});
+
+describe("publishArgs (staging invariants)", () => {
+	it("always stages — never a direct publish", () => {
+		for (const dryRun of [false, true]) {
+			expect(publishArgs("./packed/keyv.tgz", "latest", { dryRun }).slice(0, 2)).toEqual(["stage", "publish"]);
+		}
+	});
+
+	it("pins the registry, requires public access and skips git checks in both modes", () => {
+		for (const dryRun of [false, true]) {
+			const args = publishArgs("./packed/keyv.tgz", "beta", { dryRun });
+			expect(args).toContain("--no-git-checks");
+			expect(args.slice(args.indexOf("--access"), args.indexOf("--access") + 2)).toEqual(["--access", "public"]);
+			expect(args.slice(args.indexOf("--registry"), args.indexOf("--registry") + 2)).toEqual([
+				"--registry",
+				"https://registry.npmjs.org",
+			]);
+		}
+	});
+});
+
+describe("isDryRunRequested", () => {
+	it("honors the --dry-run flag", () => {
+		expect(isDryRunRequested({ dryRun: true }, {})).toBe(true);
+	});
+
+	it("honors DRY_RUN=true from the workflow", () => {
+		expect(isDryRunRequested({ dryRun: false }, { DRY_RUN: "true" })).toBe(true);
+	});
+
+	it("is a real stage otherwise", () => {
+		expect(isDryRunRequested({ dryRun: false }, {})).toBe(false);
+		expect(isDryRunRequested({ dryRun: false }, { DRY_RUN: "false" })).toBe(false);
+		expect(isDryRunRequested({ dryRun: false }, { DRY_RUN: "" })).toBe(false);
+	});
+});
+
+describe("blockedBy (dependents of a failed package are not staged)", () => {
+	it("blocks an adapter when keyv failed to stage", () => {
+		expect(blockedBy({ name: "@keyv/redis", internalDeps: ["keyv"] }, new Set(["keyv"]))).toEqual(["keyv"]);
+	});
+
+	it("blocks keyv when @keyv/serialize failed to stage", () => {
+		expect(blockedBy({ name: "keyv", internalDeps: ["@keyv/serialize"] }, new Set(["@keyv/serialize"]))).toEqual([
+			"@keyv/serialize",
+		]);
+	});
+
+	it("does not block on an unrelated failure", () => {
+		expect(blockedBy({ name: "@keyv/redis", internalDeps: ["keyv"] }, new Set(["@keyv/mongo"]))).toEqual([]);
+	});
+
+	it("never blocks a package without workspace dependencies", () => {
+		expect(blockedBy({ name: "@keyv/serialize", internalDeps: [] }, new Set(["keyv"]))).toEqual([]);
+		expect(blockedBy({ name: "@keyv/serialize" }, new Set(["keyv"]))).toEqual([]);
+	});
+
+	it("lists every failed dependency", () => {
+		expect(
+			blockedBy({ name: "@keyv/compress-gzip", internalDeps: ["@keyv/serialize", "keyv"] }, new Set(["keyv", "@keyv/serialize"])),
+		).toEqual(["@keyv/serialize", "keyv"]);
+	});
+});
+
+describe("classifyStageFailure", () => {
+	it("recognizes a duplicate-version rejection from the registry", () => {
+		expect(classifyStageFailure("ERR_PNPM_FAILED_TO_PUBLISH  Failed to publish package keyv@5.6.1 (status 409 Conflict): {}")).toBe(
+			"conflict",
+		);
+		expect(classifyStageFailure("npm error 403 You cannot publish over the previously published versions: 5.6.1.")).toBe(
+			"conflict",
+		);
+		expect(classifyStageFailure("cannot publish a version that already exists as a staged version")).toBe("conflict");
+		expect(classifyStageFailure("version 5.6.1 is already staged")).toBe("conflict");
+	});
+
+	it("treats anything else as a plain failure", () => {
+		expect(classifyStageFailure("Failed to publish package keyv@5.6.1 (status 500 Internal Server Error): {}")).toBe("failure");
+		expect(classifyStageFailure("Failed to publish package keyv@5.6.1 (status 4090 Weird): {}")).toBe("failure");
+		expect(classifyStageFailure("ENOENT: no such file or directory")).toBe("failure");
+		expect(classifyStageFailure("")).toBe("failure");
+		expect(classifyStageFailure(undefined)).toBe("failure");
 	});
 });

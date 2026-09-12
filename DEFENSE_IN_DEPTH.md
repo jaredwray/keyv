@@ -38,7 +38,7 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 
 ## 5. npm publishing — npm libraries only
 - [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual) — verified 2026-09-09
-- [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2142
+- [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2142, #2119
 - [x] Maintainer promotes staged versions with 2FA (manual) — verified 2026-09-09
 - [x] Drydock connected — staged releases reviewed before promotion (manual) — verified 2026-09-09
 - [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified 2026-09-09
