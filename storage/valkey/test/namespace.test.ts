@@ -104,6 +104,26 @@ describe("clear", () => {
 		await sibling.disconnect();
 	});
 
+	test("should match glob metacharacters in the namespace literally when useSets is false", async () => {
+		const base = faker.string.alphanumeric(8);
+		// `[a-z]`, `?`, `*` and a trailing backslash would all be glob syntax if left unescaped
+		const store = new KeyvValkey(valkeyUri, { useSets: false, namespace: `${base}[a-z]?*\\` });
+		const sibling = new KeyvValkey(valkeyUri, { useSets: false, namespace: `${base}xy-prod` });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(key, value);
+
+		await store.clear();
+
+		expect(await store.get(key)).toBeUndefined();
+		expect(await sibling.get(key)).toBe(value);
+
+		await sibling.clear();
+		await store.disconnect();
+		await sibling.disconnect();
+	});
+
 	test("should not clear a namespace that shares a prefix when useSets is true", async () => {
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkey(valkeyUri, { useSets: true, namespace });

@@ -225,7 +225,7 @@ console.log(store.useSets); // true
 
 When `useSets` is enabled, all keys use the `sets:` prefix (e.g., `sets:myns:mykey`) to isolate them from non-useSets keys. The SET tracking key is stored at `sets:<namespace>`.
 
-When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS namespace:<namespace>:*`) to find and delete keys, which may be slower on very large databases. Only keys in the exact namespace match, so a namespace that merely shares a prefix (for example `users` and `users-archive`) is not affected. With no namespace this matches every key in the current database.
+When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS namespace:<namespace>:*`, with any glob characters in the namespace escaped) to find and delete keys, which may be slower on very large databases. A namespace that merely shares a prefix (for example `users` and `users-archive`) is not affected. Because `:` is also the key separator, a namespace that extends another with `:` (for example `users:archive` under `users`) cannot be told apart by the pattern and is cleared along with it; use `useSets: true`, which tracks keys per namespace, if you need that separation. With no namespace this matches every key in the current database.
 
 ### useRedisSets (deprecated)
 
@@ -322,7 +322,7 @@ const results = await store.hasMany(['foo', 'bar', 'baz']);
 
 ### .clear()
 
-Clears all entries from the store. If a namespace is set, only entries within that exact namespace are cleared (`namespace:<namespace>:*`), never those of a namespace that shares a prefix. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
+Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared (`namespace:<namespace>:*`, glob characters escaped), so a namespace that merely shares a prefix such as `users-archive` is left alone. A namespace that extends it with the `:` separator, such as `users:archive`, cannot be distinguished from keys containing `:` and is cleared too unless `useSets` is `true`. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
 
 ```js
 await store.clear();
@@ -330,7 +330,7 @@ await store.clear();
 
 ### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance. Missing values are yielded as `undefined`, never `null`.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance and the same key pattern as `clear()`. Missing values are yielded as `undefined`, never `null`.
 
 ```js
 for await (const [key, value] of store.iterator()) {
