@@ -225,7 +225,7 @@ console.log(store.useSets); // true
 
 When `useSets` is enabled, all keys use the `sets:` prefix (e.g., `sets:myns:mykey`) to isolate them from non-useSets keys. The SET tracking key is stored at `sets:<namespace>`.
 
-When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS` command) to find and delete keys, which may be slower on very large databases. With no namespace this matches every key in the current database.
+When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS namespace:<namespace>:*`) to find and delete keys, which may be slower on very large databases. Only keys in the exact namespace match, so a namespace that merely shares a prefix (for example `users` and `users-archive`) is not affected. With no namespace this matches every key in the current database.
 
 ### useRedisSets (deprecated)
 
@@ -322,7 +322,7 @@ const results = await store.hasMany(['foo', 'bar', 'baz']);
 
 ### .clear()
 
-Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
+Clears all entries from the store. If a namespace is set, only entries within that exact namespace are cleared (`namespace:<namespace>:*`), never those of a namespace that shares a prefix. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
 
 ```js
 await store.clear();

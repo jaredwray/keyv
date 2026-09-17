@@ -82,6 +82,50 @@ describe("clear", () => {
 		await store.disconnect();
 	});
 
+	test("should not clear a namespace that shares a prefix when useSets is false", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkey(valkeyUri, { useSets: false, namespace });
+		const sibling = new KeyvValkey(valkeyUri, {
+			useSets: false,
+			namespace: `${namespace}${faker.string.alphanumeric(3)}`,
+		});
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(key, value);
+
+		await store.clear();
+
+		expect(await store.get(key)).toBeUndefined();
+		expect(await sibling.get(key)).toBe(value);
+
+		await sibling.clear();
+		await store.disconnect();
+		await sibling.disconnect();
+	});
+
+	test("should not clear a namespace that shares a prefix when useSets is true", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkey(valkeyUri, { useSets: true, namespace });
+		const sibling = new KeyvValkey(valkeyUri, {
+			useSets: true,
+			namespace: `${namespace}${faker.string.alphanumeric(3)}`,
+		});
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(key, value);
+
+		await store.clear();
+
+		expect(await store.get(key)).toBeUndefined();
+		expect(await sibling.get(key)).toBe(value);
+
+		await sibling.clear();
+		await store.disconnect();
+		await sibling.disconnect();
+	});
+
 	test("should clear keys tracked in the set when useSets is true", async () => {
 		const store = new KeyvValkey(valkeyUri, { useSets: true });
 		store.namespace = faker.string.alphanumeric(8);

@@ -491,8 +491,10 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * When `useSets` is enabled, retrieves all tracked keys from the namespace set
 	 * and removes them along with the set itself using `UNLINK` and `SREM`.
 	 * When `useSets` is disabled, uses the `KEYS` command with a pattern match
-	 * to find and remove all keys matching the namespace prefix. With no namespace
-	 * this matches every key in the current database.
+	 * (`namespace:<namespace>:*`) to find and remove all keys in this namespace.
+	 * The separator is part of the pattern, so a namespace that merely shares a
+	 * prefix (for example `users` vs `users-archive`) is never touched. With no
+	 * namespace this matches every key in the current database.
 	 * @returns {Promise<void>}
 	 */
 	public async clear(): Promise<void> {
@@ -521,7 +523,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			}
 		} else {
 			const prefix = this.getKeyPrefix();
-			const pattern = prefix ? `${prefix}*` : "*";
+			const pattern = prefix ? `${prefix}:*` : "*";
 			const keys: string[] = await this._client.keys(pattern);
 			if (keys.length > 0) {
 				await this._client.unlink(keys);
