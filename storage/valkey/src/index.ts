@@ -490,9 +490,14 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * Removes all keys belonging to the current namespace from the Valkey store.
 	 * When `useSets` is enabled, retrieves all tracked keys from the namespace set
 	 * and removes them along with the set itself using `UNLINK` and `SREM`.
-	 * When `useSets` is disabled, uses the `KEYS` command with a pattern match
-	 * to find and remove all keys matching the namespace prefix. With no namespace
-	 * this matches every key in the current database.
+	 * When `useSets` is disabled, uses the `KEYS` command with the pattern from
+	 * {@link getKeyPattern} (`namespace:<namespace>:*`, glob metacharacters escaped)
+	 * to find and remove all keys in this namespace. A namespace that merely shares
+	 * a prefix (for example `users` vs `users-archive`) is never touched. One that
+	 * extends this namespace with the `:` separator (`users:archive`) is cleared too,
+	 * because a pattern cannot tell it apart from a key that contains `:`; use
+	 * `useSets: true` for that separation. With no namespace this matches every key
+	 * in the current database.
 	 * @returns {Promise<void>}
 	 */
 	public async clear(): Promise<void> {
@@ -520,9 +525,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 		} else {
-			const prefix = this.getKeyPrefix();
-			const pattern = prefix ? `${prefix}*` : "*";
-			const keys: string[] = await this._client.keys(pattern);
+			const keys: string[] = await this._client.keys(this.getKeyPattern());
 			if (keys.length > 0) {
 				await this._client.unlink(keys);
 			}
@@ -532,7 +535,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Creates an async generator that iterates over all key-value pairs within the adapter's
 	 * configured namespace. The namespace is not passed in; it uses the namespace set on the
-	 * instance, so only keys for the current namespace are returned. Uses the `SCAN` command
+	 * instance, so only keys for the current namespace are returned (matched with the pattern
+	 * from {@link getKeyPattern}). Uses the `SCAN` command
 	 * for cursor-based iteration to avoid blocking the server, fetching values in batches with `MGET`.
 	 * @template Value - The type of the stored values.
 	 * @returns {AsyncGenerator<[string, Value | undefined], void, unknown>} An async generator
@@ -544,7 +548,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 		const get = this._client.mget.bind(this._client);
 		const keyPrefix = this.getKeyPrefix();
 		const prefix = keyPrefix ? `${keyPrefix}:` : "";
-		const match = prefix ? `${prefix}*` : "*";
+		const match = this.getKeyPattern();
 		let cursor = "0";
 		do {
 			const [curs, keys] = await scan(cursor, "MATCH", match);
@@ -650,6 +654,25 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return key;
+	}
+
+	/**
+	 * Builds the `KEYS` / `SCAN MATCH` pattern that selects every data key in the current
+	 * namespace. Glob metacharacters in the prefix (`*`, `?`, `[`, `]`, `\`) are escaped so
+	 * the namespace is matched literally, and the key separator is part of the pattern so a
+	 * namespace that merely shares a prefix (for example `users` vs `users-archive`) is never
+	 * selected. Because `:` is also the separator, a namespace that extends this one with `:`
+	 * (`users:archive`) cannot be told apart from a key containing `:`; `useSets: true` tracks
+	 * keys per namespace instead. With no prefix this matches every key in the database.
+	 * @returns {string} The glob pattern, e.g. `"namespace:myns:*"`, or `"*"` with no prefix.
+	 */
+	private getKeyPattern(): string {
+		const prefix = this.getKeyPrefix();
+		if (!prefix) {
+			return "*";
+		}
+
+		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}:*`;
 	}
 
 	/**

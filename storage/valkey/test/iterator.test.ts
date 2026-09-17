@@ -55,6 +55,29 @@ describe("iterator", () => {
 		await store.disconnect();
 	});
 
+	test("should match glob metacharacters in the namespace literally", async () => {
+		const base = faker.string.alphanumeric(8);
+		// `[a-z]`, `?`, `*` and a trailing backslash would all be glob syntax if left unescaped
+		const store = new KeyvValkey(valkeyUri, { namespace: `${base}[a-z]?*\\` });
+		const sibling = new KeyvValkey(valkeyUri, { namespace: `${base}xy-prod` });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+
+		const collected: Array<[string, string | undefined]> = [];
+		for await (const entry of store.iterator<string>()) {
+			collected.push(entry);
+		}
+
+		expect(collected).toEqual([[key, value]]);
+
+		await store.clear();
+		await sibling.clear();
+		await store.disconnect();
+		await sibling.disconnect();
+	});
+
 	test("should yield undefined when the namespace is empty", async () => {
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkey(valkeyUri, { namespace });
