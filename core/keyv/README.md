@@ -86,6 +86,7 @@ By default everything is stored in memory, you can optionally also install a sto
 ```
 npm install --save @keyv/redis
 npm install --save @keyv/valkey
+npm install --save @keyv/valkey-glide
 npm install --save @keyv/mongo
 npm install --save @keyv/sqlite
 npm install --save @keyv/postgres
@@ -374,6 +375,7 @@ Database | Adapter | Native TTL
 ---|---|---
 Redis | [@keyv/redis](https://github.com/jaredwray/keyv/tree/main/storage/redis) | Yes
 Valkey | [@keyv/valkey](https://github.com/jaredwray/keyv/tree/main/storage/valkey) | Yes
+Valkey GLIDE | [@keyv/valkey-glide](https://github.com/jaredwray/keyv/tree/main/storage/valkey-glide) | Yes
 MongoDB | [@keyv/mongo](https://github.com/jaredwray/keyv/tree/main/storage/mongo) | Yes
 SQLite | [@keyv/sqlite](https://github.com/jaredwray/keyv/tree/main/storage/sqlite) | No
 PostgreSQL | [@keyv/postgres](https://github.com/jaredwray/keyv/tree/main/storage/postgres) | No
