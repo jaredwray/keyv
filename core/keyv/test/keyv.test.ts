@@ -971,6 +971,19 @@ describe("throwErrors", () => {
 		expect(bridge.throwOnErrors).toBe(true);
 	});
 
+	test("should forward an error an adapter emits on its own without throwing", () => {
+		const store = new KeyvMemoryAdapter(new Map());
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		// Errors outside any Keyv call, such as a reconnect, stay events. Keyv keeps the option
+		// itself, so Hookified's throwOnEmitError, which throws on every error event, stays off.
+		expect(() => store.emit("error", new Error("reconnect failed"))).not.toThrow();
+		expect(errors).toHaveLength(1);
+		expect(keyv.throwOnEmitError).toBe(false);
+	});
+
 	test("should throw a string error as an Error when throwOnErrors is true", async () => {
 		const keyv = new Keyv({ throwOnErrors: true });
 		const errors: unknown[] = [];

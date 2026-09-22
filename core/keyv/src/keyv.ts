@@ -60,9 +60,9 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		super({
 			throwOnHookError: false,
 			throwOnEmptyListeners: true,
-			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
 		});
 
+		this._throwOnErrors = mergedOptions.throwOnErrors ?? false;
 		this.deprecatedHooks = buildDeprecatedHooks();
 		this._compression = mergedOptions.compression;
 		this._encryption = mergedOptions.encryption;
@@ -131,6 +131,13 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 * native expiry is coarse or lazily swept (e.g. Memcached, DynamoDB).
 	 */
 	private _checkExpired = true;
+
+	/**
+	 * When true, a failed operation throws its error after emitting it, even with `error` listeners
+	 * attached. Keyv keeps this itself instead of using Hookified's `throwOnEmitError`, which would
+	 * also throw errors that an adapter emits outside any Keyv call.
+	 */
+	private _throwOnErrors = false;
 
 	/**
 	 * Get the current storage adapter.
@@ -237,7 +244,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 * @return {boolean} The current throwOnErrors value.
 	 */
 	public get throwOnErrors(): boolean {
-		return this.throwOnEmitError;
+		return this._throwOnErrors;
 	}
 
 	/**
@@ -246,7 +253,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 * @param {boolean} value The throwOnErrors value to set.
 	 */
 	public set throwOnErrors(value: boolean) {
-		this.throwOnEmitError = value;
+		this._throwOnErrors = value;
 		this.syncStoreThrowOnErrors();
 	}
 
@@ -1172,7 +1179,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	private emitError(error: unknown): void {
 		// Read the setting first, so a listener that changes it cannot affect this failure.
-		const shouldThrow = this.throwOnErrors;
+		const shouldThrow = this._throwOnErrors;
 		this.emit(KeyvEvents.ERROR, error);
 
 		if (shouldThrow) {
@@ -1186,7 +1193,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	private syncStoreThrowOnErrors(): void {
 		if (this._store instanceof KeyvMemoryAdapter || this._store instanceof KeyvBridgeAdapter) {
-			this._store.throwOnErrors = this.throwOnErrors;
+			this._store.throwOnErrors = this._throwOnErrors;
 		}
 	}
 
