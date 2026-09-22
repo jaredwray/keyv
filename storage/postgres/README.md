@@ -151,25 +151,25 @@ The iterator now uses cursor-based (keyset) pagination instead of `OFFSET`. This
 
 ## Running the migration script
 
-If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script ships in the npm package at `scripts/migrate-v6.ts` (Node.js 22.19+ can run it directly via type stripping).
+If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script ships in the npm package at `scripts/migrate-v6.ts`. Run it from your project root with `tsx`. Node.js refuses to strip TypeScript types from files under `node_modules`, so running the script with plain `node` from there fails with `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`.
 
 Preview the changes first with `--dry-run`. Dry-run mode only reads schema metadata and previews affected rows; it does not modify the schema or data:
 
 ```shell
-node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --dry-run
+npx tsx node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --dry-run
 ```
 
 Run the migration:
 
 ```shell
-node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname
+npx tsx node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname
 ```
 
 You can also specify a custom table, schema, and column lengths:
 
 ```shell
-node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --table cache --schema keyv
-node node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --keyLength 512 --namespaceLength 512
+npx tsx node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --table cache --schema keyv
+npx tsx node_modules/@keyv/postgres/scripts/migrate-v6.ts --uri postgresql://user:pass@localhost:5432/dbname --keyLength 512 --namespaceLength 512
 ```
 
 From a clone of this repo you can run `node scripts/migrate-v6.ts` in `storage/postgres` with the same flags.
