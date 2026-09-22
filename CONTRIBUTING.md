@@ -69,7 +69,7 @@ Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** 
 
 ## Releasing v6 from `main`
 
-1. Open a release PR: set the new version in the root `package.json`, run `pnpm version:sync` so every workspace package matches, and merge it.
+1. Open a release PR: set the new version in the root `package.json`, run `pnpm version:sync` so every workspace package matches, and merge it. For the first stable release of a new major (for example `6.0.0`), also bump `LATEST_MAJOR` in the `publish` job of `.github/workflows/release.yaml` to that major in the same PR; with the old value the release is staged under `v{major}-lts` and `latest` stays on the previous major.
 2. Create a GitHub Release from a new tag on `main` (for example `v6.1.0` or `v6.1.0-beta.1`). Publishing it runs the `release` workflow from that tag: build, the full test suite, the Aikido release scan, the release-logic tests, then the stage step. Versions already on npm are skipped, and a release that would move `latest` backwards is refused.
 3. Approve the staged versions on npm (see [Approving staged versions](#approving-staged-versions-both-lines)).
 

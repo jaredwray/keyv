@@ -208,6 +208,9 @@ jobs:
       # manual runs default to dry_run=true. Uses OIDC only — no token.
       - name: Stage publish (compute dist-tag, skip unchanged, guard latest)
         env:
-          LATEST_MAJOR: 5 # Version 5 is the LTS at this time
+          # The major that owns npm's `latest`. Bump it in the release PR for the
+          # first stable release of a new major; a stable release of any other
+          # major is staged under v{major}-lts and never moves `latest`.
+          LATEST_MAJOR: 6
           DRY_RUN: ${{ inputs.dry_run }}
         run: pnpm tsx scripts/release-publish.ts
