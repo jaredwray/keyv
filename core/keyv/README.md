@@ -1086,6 +1086,8 @@ Default: `false`
 
 If set to `true`, Keyv will throw an error if any operation fails. This is useful if you want to ensure that all operations are successful and you want to handle errors.
 
+Keyv still emits the `'error'` event before it throws, so attached listeners receive every error. Errors that a storage adapter reports only through its own `'error'` event are forwarded to Keyv's `'error'` event and are not thrown, because they can arrive outside any Keyv call. A Redis connection error is one example.
+
 ```js
 const keyv = new Keyv({ throwOnErrors: true });
 console.log(keyv.throwOnErrors); // true

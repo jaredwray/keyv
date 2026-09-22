@@ -209,8 +209,8 @@ export type KeyvOptions = {
 	stats?: boolean;
 	/**
 	 * Will throw on all errors if this is enabled to true. By default, errors
-	 * will only throw if there are no listeners to the error event.
-	 * This maps to hookified's `throwOnEmitError` under the hood.
+	 * will only throw if there are no listeners to the error event. Keyv emits
+	 * the error event before throwing, so listeners still receive every error.
 	 * @default false
 	 */
 	throwOnErrors?: boolean;

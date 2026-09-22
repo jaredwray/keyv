@@ -159,6 +159,20 @@ describe("Keyv Set Raw", async () => {
 		);
 	});
 
+	test("should throw with an error listener attached when throwOnErrors is true", async () => {
+		const store = createStore();
+		store.set = async () => {
+			throw new Error("store error");
+		};
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+		await expect(keyv.setRaw(faker.string.alphanumeric(10), { value: "test" })).rejects.toThrow(
+			"store error",
+		);
+		expect(errors).toHaveLength(1);
+	});
+
 	test("should use store boolean return value", async () => {
 		const store = createStore();
 		const originalSet = store.set.bind(store);
@@ -333,6 +347,20 @@ describe("Keyv Set Many Raw", async () => {
 		await expect(keyv.setManyRaw([{ key: "a", value: { value: "test" } }])).rejects.toThrow(
 			"batch error",
 		);
+	});
+
+	test("should throw with an error listener attached when throwOnErrors is true", async () => {
+		const store = createStore();
+		store.setMany = async () => {
+			throw new Error("batch error");
+		};
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+		await expect(keyv.setManyRaw([{ key: "a", value: { value: "test" } }])).rejects.toThrow(
+			"batch error",
+		);
+		expect(errors).toHaveLength(1);
 	});
 
 	test("should emit error on failure", async () => {

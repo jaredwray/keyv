@@ -806,6 +806,125 @@ describe("throwErrors", () => {
 		await expect(keyv.deleteMany(testKeys)).rejects.toThrow("Test error");
 		await expect(keyv.setMany(testData)).rejects.toThrow("Test error");
 	});
+
+	test("should throw with an error listener attached when throwOnErrors is true", async () => {
+		const keyv = new Keyv({ store: throwingStore, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		await expect(keyv.set("key", "value")).rejects.toThrow("Test error");
+		await expect(keyv.get("key")).rejects.toThrow("Test error");
+		await expect(keyv.delete("key")).rejects.toThrow("Test error");
+		await expect(keyv.clear()).rejects.toThrow("Test error");
+		await expect(keyv.has("key")).rejects.toThrow("Test error");
+		await expect(keyv.setMany(testData)).rejects.toThrow("Test error");
+		await expect(keyv.hasMany(testKeys)).rejects.toThrow("Test error");
+		expect(errors).toHaveLength(7);
+	});
+
+	test("should throw on deleteMany with a listener attached when throwOnErrors is true", async () => {
+		// KeyvMemoryAdapter reports a failed key in deleteMany as an event, so use an adapter whose
+		// deleteMany rejects.
+		const store = Object.assign(createStore(), {
+			async deleteMany(): Promise<boolean[]> {
+				throw new Error("Test error");
+			},
+		});
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		await expect(keyv.deleteMany(testKeys)).rejects.toThrow("Test error");
+		expect(errors).toHaveLength(1);
+	});
+
+	test("should stop throwing with a listener attached when throwOnErrors is turned off", async () => {
+		const keyv = new Keyv({ store: throwingStore, throwOnErrors: true });
+		keyv.on("error", () => {});
+		await expect(keyv.get("key")).rejects.toThrow("Test error");
+
+		keyv.throwOnErrors = false;
+		expect(await keyv.get("key")).toBeUndefined();
+	});
+
+	test("should throw on disconnect with a listener attached when throwOnErrors is true", async () => {
+		const store = new KeyvMemoryAdapter(new Map());
+		store.disconnect = async () => {
+			throw new Error("disconnect error");
+		};
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		await expect(keyv.disconnect()).rejects.toThrow("disconnect error");
+		expect(errors).toHaveLength(1);
+	});
+
+	test("should throw a value that fails to decode, emitting it once", async () => {
+		const keyv = new Keyv({
+			serialization: {
+				stringify: (value: unknown) => JSON.stringify(value),
+				parse: () => {
+					throw new Error("decode error");
+				},
+			},
+			throwOnErrors: true,
+		});
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+		await keyv.set("key", "value");
+
+		await expect(keyv.get("key")).rejects.toThrow("decode error");
+		expect(errors).toHaveLength(1);
+		// has and hasMany decode outside their store error handling, so the failure is emitted once.
+		await expect(keyv.has("key")).rejects.toThrow("decode error");
+		expect(errors).toHaveLength(2);
+		await expect(keyv.hasMany(["key"])).rejects.toThrow("decode error");
+		expect(errors).toHaveLength(3);
+	});
+
+	test("should emit each failure when the store throws the same error again", async () => {
+		const error = new Error("store down");
+		const store = new Map();
+		store.get = () => {
+			throw error;
+		};
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (emitted) => errors.push(emitted));
+
+		await expect(keyv.get("a")).rejects.toBe(error);
+		await expect(keyv.get("b")).rejects.toBe(error);
+		expect(errors).toEqual([error, error]);
+	});
+
+	test("should count an error in stats when throwOnErrors throws it", async () => {
+		const keyv = new Keyv({ store: throwingStore, throwOnErrors: true, stats: true });
+		keyv.on("error", () => {});
+
+		await expect(keyv.get("key")).rejects.toThrow("Test error");
+		expect(keyv.stats.errors).toBe(1);
+	});
+
+	test("should throw a string error as an Error when throwOnErrors is true", async () => {
+		const keyv = new Keyv({ throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		await expect(keyv.set("key", Symbol("value"))).rejects.toThrow(
+			new Error("symbol cannot be serialized"),
+		);
+		expect(errors).toEqual(["symbol cannot be serialized"]);
+	});
+
+	test("should throw when setStore falls back and throwOnErrors is true", () => {
+		const keyv = new Keyv({ throwOnErrors: true });
+		keyv.on("error", () => {});
+		const store = keyv.store;
+
+		expect(() => keyv.setStore({})).toThrow("Could not use the provided storage adapter");
+		expect(keyv.store).toBe(store);
+	});
 });
 
 describe("sanitize", () => {
