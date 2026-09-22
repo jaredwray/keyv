@@ -17,6 +17,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 - [Quick Migration Guide](#quick-migration-guide)
 - [Breaking Changes](#breaking-changes)
   - [Namespace Overhaul](#namespace-overhaul)
+  - [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed)
   - [`opts` Property Removed](#opts-property-removed)
   - [Serialization Replaces `stringify` and `parse`](#serialization-replaces-stringify-and-parse)
   - [Hookified for Events and Hooks](#hookified-for-events-and-hooks)
@@ -78,9 +79,11 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 For most users, migrating from v5 to v6 involves a few key changes:
 
-1. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
+1. **Keep reading data written by v5** - v5 stored keys under a default `keyv` namespace, and v6 has no default. Without `namespace: 'keyv'`, or the namespace you already used, data written by v5 reads as missing. Redis, Memcache, Valkey, and MongoDB need more than that; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed).
 
-2. **Update serialization** - Replace `serialize`/`deserialize` options with the `serialization` adapter. v6 ships a built-in `KeyvJsonSerializer` (no extra package). For SuperJSON or MessagePack, install those packages:
+2. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
+
+3. **Update serialization** - Replace `serialize`/`deserialize` options with the `serialization` adapter. v6 ships a built-in `KeyvJsonSerializer` (no extra package). For SuperJSON or MessagePack, install those packages:
    ```javascript
    // v5
    const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
@@ -93,9 +96,9 @@ For most users, migrating from v5 to v6 involves a few key changes:
    const keyv = new Keyv({ serialization: superJsonSerializer });
    ```
 
-3. **Update raw value access** - Replace `get(key, { raw: true })` with `getRaw(key)` and `getMany(keys, { raw: true })` with `getManyRaw(keys)`
+4. **Update raw value access** - Replace `get(key, { raw: true })` with `getRaw(key)` and `getMany(keys, { raw: true })` with `getManyRaw(keys)`
 
-4. **Handle new return types** - `deleteMany` and `setMany` now return `boolean[]` instead of a single `boolean`
+5. **Handle new return types** - `deleteMany` and `setMany` now return `boolean[]` instead of a single `boolean`
 
 For detailed information on each change, see the sections below.
 
@@ -132,6 +135,52 @@ const keyv = new Keyv({ namespace: 'myapp' });
 ```
 
 For legacy storage adapters or `Map`-compatible stores, we have added `KeyvMemoryAdapter` which handles advanced features without overloading the main Keyv codebase. See [Memory Adapter](#memory-adapter) for more details.
+
+---
+
+### The Default `keyv` Namespace Was Removed
+
+In v5, a Keyv instance created without a `namespace` used the namespace `keyv`, and Keyv prefixed every key with it. `keyv.set('foo', 'bar')` handed the storage adapter the key `keyv:foo`. v6 has no default namespace and never prefixes keys, so after upgrading, `keyv.get('foo')` looks for `foo` and data written by a default v5 setup reads as missing. The v5 entries are still in your store. v6 just no longer looks for them.
+
+To keep reading v5 data, configure v6 to build the same storage keys v5 did. For most adapters that means passing the namespace v5 used, which is `keyv` if you never set one:
+
+```javascript
+// v5: no namespace set, so `foo` was stored as `keyv:foo`
+const keyv = new Keyv(store);
+
+// v6: read the same keys
+const keyv = new Keyv(store, { namespace: 'keyv' });
+```
+
+If your v5 code set a namespace, pass that value instead of `keyv`. Set it in Keyv's options as shown, not on the adapter.
+
+Some v5 adapters added their own prefix on top of Keyv's, and some v5 `createKeyv` helpers turned Keyv's prefix off, so the stored key depends on the adapter and how you created it. In this table, `ns` is the namespace your v5 instance used, which is `keyv` unless you set one. "Default" means `new Keyv(store)` or `new Keyv(store, { namespace })`.
+
+| Adapter | v5 setup | Key v5 stored for `foo` | v6 setting that reads it |
+| --- | --- | --- | --- |
+| SQLite, PostgreSQL, MySQL | default | `ns:foo` | Migrate the table, then `namespace: 'ns'`. SQLite migrates on connect. PostgreSQL and MySQL need their migration script. |
+| Etcd | default | `ns:foo` | `namespace: 'ns'` |
+| DynamoDB | default | `ns:foo` | `namespace: 'ns'` |
+| DynamoDB | `createKeyv()` | `foo` | No namespace |
+| Redis | default | `ns::ns:foo` | `namespace: 'ns'` with `new KeyvRedis(uri, { keyPrefixSeparator: '::ns:' })` |
+| Redis | `useKeyPrefix: false`, or `createKeyv()` with a namespace | `ns::foo` | `namespace: 'ns'` |
+| Redis | `createKeyv()` without a namespace | `foo` | No namespace |
+| Memcache | default | `ns:ns:foo` | `namespace: 'ns:ns'` |
+| Memcache | `useKeyPrefix: false` | `ns:foo` | `namespace: 'ns'` |
+| Valkey | default, or `createKeyv()` | `ns:foo` | None. v6 cannot build this key, so let the entries repopulate or rename them to the v6 layout. |
+| Valkey | `useRedisSets: false` | `namespace:ns:ns:foo` | `namespace: 'ns:ns'` |
+| MongoDB | any | `ns:foo`, with no `namespace` field | None. v6 matches on a `namespace` field that v5 documents do not have, so they need a data migration. |
+
+With `useKeyPrefix: false`, the SQL, Etcd, and DynamoDB adapters stored plain `foo`, which v6 reads with no namespace.
+
+If you are unsure which layout you have, look at one key in your store and choose the v6 settings that produce the same string. v6 builds storage keys like this:
+
+- **SQLite, PostgreSQL, MySQL:** a `namespace` column and a key column.
+- **Etcd, DynamoDB, Memcache:** `<namespace>:<key>`.
+- **Redis:** `<namespace><keyPrefixSeparator><key>`, where the separator defaults to `::`.
+- **Valkey:** `namespace:<namespace>:<key>`, or `sets:<namespace>:<key>` with `useSets: true`.
+
+If the data is a cache you can rebuild, you can skip all of this. The v5 entries stay in the store until they expire or you remove them.
 
 ---
 

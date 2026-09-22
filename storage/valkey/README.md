@@ -162,10 +162,14 @@ const store = new KeyvValkey('redis://localhost:6379', { useSets: true });
 
 When `useSets` is enabled, all keys (both data keys and the SET tracking key) now use a `sets:` prefix instead of `namespace:`. This prevents `WRONGTYPE` collisions between the SET tracking key and regular string data keys that could share the same name.
 
-- **Data keys**: `sets:<namespace>:<key>` (was `namespace:<namespace>:<key>`)
+- **Data keys**: `sets:<namespace>:<key>` (v5 stored the key as Keyv passed it, `<namespace>:<key>`)
 - **SET tracking key**: `sets:<namespace>` (was `namespace:<namespace>`)
 
-The `clear()` method automatically detects and cleans up legacy `namespace:`-prefixed SET keys, so no manual migration is needed.
+The `clear()` method automatically detects and cleans up legacy `namespace:`-prefixed SET keys.
+
+#### Data written by v5
+
+v5's default setup stored `foo` as `keyv:foo`: the key Keyv had prefixed with its default `keyv` namespace. No v6 setting builds that key, so let those entries repopulate or rename them to the v6 layout. Data written with `useRedisSets: false` was stored as `namespace:keyv:keyv:foo`, which v6 reads with `useSets: false` and `new Keyv(store, { namespace: 'keyv:keyv' })`. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) for other setups.
 
 #### Missing values are `undefined`, never `null`
 

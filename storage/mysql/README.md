@@ -171,6 +171,7 @@ The migration script also populates the new `expires` column from existing JSON 
 **Important notes:**
 - The script only migrates namespace rows where `namespace = ''` (the default). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
 - Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
+- Keyv v5 used `keyv` as the namespace when none was set, so rows written that way migrate into namespace `keyv`. Pass `namespace: 'keyv'` to Keyv afterwards to keep reading them. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed).
 - The `expires` column is populated by extracting `value->'$.expires'` from existing JSON values.
 
 ## Constructor Options

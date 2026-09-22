@@ -116,6 +116,7 @@ const keyv = new Keyv({ store: keyvRedis});
 * **`@redis/client` is now v6.** `createClient`, `createCluster`, and `createSentinel` are still exported from this package. `createClient` takes a `RedisClientOptions` object (`{ url: 'redis://...' }`), not a URI string.
 * **Adapters receive absolute `expires`, not relative `ttl`.** When you call `keyv.set(key, value, 1000)`, Keyv converts that millisecond ttl to a Unix-ms deadline and passes it to the adapter. Direct adapter calls should pass `expires` (`Date.now() + ttl`), not a relative ttl.
 * **Keyv no longer prefixes keys.** Namespacing lives on the adapter (`namespace` + `keyPrefixSeparator`, default `::`). You do not need `useKeyPrefix: false` — that option was removed from Keyv.
+* **Keys written by v5 need matching settings.** v5's default setup, `new Keyv(new KeyvRedis(uri))`, applied its default `keyv` namespace twice, once in Keyv and once in the adapter, so `foo` was stored as `keyv::keyv:foo`. Read those keys with `new Keyv(new KeyvRedis(uri, { keyPrefixSeparator: '::keyv:' }), { namespace: 'keyv' })`. The [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) lists the settings for other v5 setups.
 * **`createKeyv` accepts cluster and sentinel options** the same way the `KeyvRedis` constructor does.
 
 # Migrating from v4 to v5

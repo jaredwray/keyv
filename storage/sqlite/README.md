@@ -228,7 +228,9 @@ In v5, namespaces were stored as key prefixes in the `key` column (e.g. `key="my
 
 The adapter automatically detects old schemas and migrates existing data on connect — no manual migration steps are needed. During migration, prefixed keys like `myns:mykey` are split into `key="mykey"` and `namespace="myns"`.
 
-**Colon caveat:** migration splits on the **first** colon. That is correct for v5 namespaced keys (`namespace:actualKey`, including keys that themselves contain colons). It is incorrect for v5 data stored **without** a namespace where the key itself contains a colon (e.g. `http://example.com` becomes `namespace="http"`, `key="//example.com"`). If you stored colon-containing keys without a namespace, migrate those rows yourself before upgrading.
+Keyv v5 used `keyv` as the namespace when none was set, so rows written that way migrate into namespace `keyv`. Pass `namespace: 'keyv'` to Keyv to keep reading them: `new Keyv(new KeyvSqlite(uri), { namespace: 'keyv' })`. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed).
+
+**Colon caveat:** migration splits on the **first** colon. That is correct for v5 namespaced keys (`namespace:actualKey`, including keys that themselves contain colons). It is incorrect for colon-containing keys that v5 stored **without a prefix**, which happens only when v5 ran with `useKeyPrefix: false` or an empty namespace (e.g. `http://example.com` becomes `namespace="http"`, `key="//example.com"`). If you stored colon-containing keys that way, migrate those rows yourself before upgrading.
 
 ### Hookified integration
 
