@@ -182,6 +182,7 @@ The data rewrite runs inside a transaction and will roll back automatically if i
 - After the data rewrite it creates the unique `(key, COALESCE(namespace, ''))` index and the partial `expires` index, matching what the adapter creates on connect.
 - The script only migrates rows where `namespace IS NULL` (or all colon-prefixed keys if the column does not exist yet). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
 - Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
+- Keyv v5 used `keyv` as the namespace when none was set, so rows written that way migrate into namespace `keyv`. Pass `namespace: 'keyv'` to Keyv afterwards to keep reading them. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed).
 - The `expires` column is populated from legacy JSON envelopes (`{"value":...,"expires":...}`). Non-JSON values (compressed, encrypted, custom serializers) are left with `expires` NULL; new writes from Keyv v6 store expiry in the column directly.
 
 # Constructor Options
