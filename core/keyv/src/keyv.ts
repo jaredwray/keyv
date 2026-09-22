@@ -73,6 +73,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 
 		if (mergedOptions.store) {
 			this.setStore(mergedOptions.store);
+		} else {
+			this.syncStoreThrowOnErrors();
 		}
 
 		this.setTtl(mergedOptions.ttl);
@@ -245,6 +247,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public set throwOnErrors(value: boolean) {
 		this.throwOnEmitError = value;
+		this.syncStoreThrowOnErrors();
 	}
 
 	/**
@@ -354,9 +357,10 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public setStore(store: KeyvStorageAdapter | KeyvMapAny): void {
 		this._store = this.resolveStore(store);
+		this.syncStoreThrowOnErrors();
 		if (typeof this._store.on === "function") {
-			// Adapter errors are forwarded as events only. They arrive outside any Keyv call, so there
-			// is no operation for throwOnErrors to fail.
+			// Errors an adapter emits on its own are forwarded as events. Some arrive outside any Keyv
+			// call, such as a Redis reconnect error, so throwOnErrors does not throw them here.
 			this._store.on(KeyvEvents.ERROR, (error: KeyvAny) => this.emit(KeyvEvents.ERROR, error));
 		}
 
@@ -1167,10 +1171,22 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 * @param {unknown} error the error to emit
 	 */
 	private emitError(error: unknown): void {
+		// Read the setting first, so a listener that changes it cannot affect this failure.
+		const shouldThrow = this.throwOnErrors;
 		this.emit(KeyvEvents.ERROR, error);
 
-		if (this.throwOnErrors) {
+		if (shouldThrow) {
 			throw error instanceof Error ? error : new Error(String(error));
+		}
+	}
+
+	/**
+	 * Applies `throwOnErrors` to Keyv's built-in memory and bridge adapters. Their `deleteMany`
+	 * reports a key that fails to delete as an event, unless told to throw.
+	 */
+	private syncStoreThrowOnErrors(): void {
+		if (this._store instanceof KeyvMemoryAdapter || this._store instanceof KeyvBridgeAdapter) {
+			this._store.throwOnErrors = this.throwOnErrors;
 		}
 	}
 

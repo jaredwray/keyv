@@ -103,7 +103,7 @@ trusting.checkExpired; // false
 Type: `boolean`  
 Default: `false`
 
-Alias of Hookified's `throwOnEmitError`. See [Events and Errors](/docs/events-and-errors/).
+Gets or sets whether a failed operation throws even when `'error'` listeners are attached. See [Events and Errors](/docs/events-and-errors/).
 
 ```js
 const keyv = new Keyv({ throwOnErrors: true });

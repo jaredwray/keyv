@@ -906,6 +906,71 @@ describe("throwErrors", () => {
 		expect(keyv.stats.errors).toBe(1);
 	});
 
+	test("should throw a failure even if an error listener turns throwOnErrors off", async () => {
+		const keyv = new Keyv({ store: throwingStore, throwOnErrors: true });
+		keyv.on("error", () => {
+			keyv.throwOnErrors = false;
+		});
+
+		await expect(keyv.get("key")).rejects.toThrow("Test error");
+		expect(await keyv.get("key")).toBeUndefined();
+	});
+
+	test("should throw on deleteMany when the memory adapter fails to delete a key", async () => {
+		// KeyvMemoryAdapter wraps the Map. By default it reports a failed key as an event.
+		const map = new Map();
+		map.delete = () => {
+			throw new Error("delete error");
+		};
+		const keyv = new Keyv({ store: map, throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		await expect(keyv.deleteMany(testKeys)).rejects.toThrow("delete error");
+		expect(errors).toHaveLength(1);
+
+		keyv.throwOnErrors = false;
+		expect(await keyv.deleteMany(testKeys)).toEqual(testKeys.map(() => false));
+		expect(errors).toHaveLength(1 + testKeys.length);
+	});
+
+	test("should throw on deleteMany when a bridged store fails to delete a key", async () => {
+		// A store without deleteMany is bridged, and the bridge deletes one key at a time.
+		const store = {
+			get: async () => undefined,
+			set: async () => true,
+			delete: async () => {
+				throw new Error("delete error");
+			},
+			clear: async () => {},
+		};
+		const keyv = new Keyv({ store, throwOnErrors: true });
+		expect(keyv.store).toBeInstanceOf(KeyvBridgeAdapter);
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		await expect(keyv.deleteMany(testKeys)).rejects.toThrow("delete error");
+		expect(errors).toHaveLength(1);
+	});
+
+	test("should keep the built-in adapters' throwOnErrors in step with Keyv", () => {
+		const keyv = new Keyv({ throwOnErrors: true });
+		const memory = keyv.store as KeyvMemoryAdapter;
+		expect(memory.throwOnErrors).toBe(true);
+		keyv.throwOnErrors = false;
+		expect(memory.throwOnErrors).toBe(false);
+
+		const bridge = new KeyvBridgeAdapter({
+			get: async () => undefined,
+			set: async () => true,
+			delete: async () => true,
+			clear: async () => {},
+		});
+		keyv.throwOnErrors = true;
+		keyv.setStore(bridge);
+		expect(bridge.throwOnErrors).toBe(true);
+	});
+
 	test("should throw a string error as an Error when throwOnErrors is true", async () => {
 		const keyv = new Keyv({ throwOnErrors: true });
 		const errors: unknown[] = [];

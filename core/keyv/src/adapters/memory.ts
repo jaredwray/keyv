@@ -88,6 +88,12 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	private readonly _capabilities: KeyvStorageCapability;
 
 	/**
+	 * When true, `deleteMany` rejects with the error from a key that fails to delete, instead of
+	 * emitting it and returning `false` for that key. Keyv sets this to match its `throwOnErrors`.
+	 */
+	public throwOnErrors = false;
+
+	/**
 	 * Creates a new KeyvMemoryAdapter instance.
 	 * @param store - The underlying Map or Map-like object to use for storage
 	 * @param options - Configuration options for the store
@@ -353,6 +359,10 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 				this._store.delete(keyPrefix);
 				results.push(existed);
 			} catch (error) {
+				if (this.throwOnErrors) {
+					throw error;
+				}
+
 				this.emit(KeyvEvents.ERROR, error);
 				results.push(false);
 			}

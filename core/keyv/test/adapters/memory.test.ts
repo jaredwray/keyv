@@ -206,6 +206,20 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		expect(deleteError).toBe(true);
 	});
 
+	test("deleteMany rejects instead of emitting when throwOnErrors is true", async () => {
+		const store = new Map();
+		store.delete = () => {
+			throw new Error("delete error");
+		};
+		const adapter = new KeyvMemoryAdapter(store);
+		adapter.throwOnErrors = true;
+		const errors: unknown[] = [];
+		adapter.on("error", (error) => errors.push(error));
+
+		await expect(adapter.deleteMany([faker.string.uuid()])).rejects.toThrow("delete error");
+		expect(errors).toHaveLength(0);
+	});
+
 	test("hasMany through createKeyv with store hasMany", async () => {
 		const keyv = createKeyv(new Map());
 		const testData = Array.from({ length: 5 }, () => ({

@@ -261,6 +261,23 @@ describe("KeyvBridgeAdapter - Fallback Methods (minimal store)", () => {
 		expect(errors).toHaveLength(2);
 	});
 
+	test("deleteMany rejects instead of emitting when throwOnErrors is true", async () => {
+		const store: KeyvBridgeStore = {
+			get: vi.fn(),
+			set: vi.fn(),
+			delete: vi.fn().mockRejectedValue(new Error("delete failed")),
+			clear: vi.fn(),
+		};
+		const bridge = new KeyvBridgeAdapter(store);
+		bridge.throwOnErrors = true;
+		const errors: unknown[] = [];
+		bridge.on(KeyvEvents.ERROR, (error: unknown) => {
+			errors.push(error);
+		});
+		await expect(bridge.deleteMany(["key1", "key2"])).rejects.toThrow("delete failed");
+		expect(errors).toHaveLength(0);
+	});
+
 	test("iterator returns empty generator and disconnect is a no-op", async () => {
 		const store = createMinimalStore();
 		const bridge = new KeyvBridgeAdapter(store);

@@ -101,6 +101,12 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	private readonly _storeHandlesNamespace: boolean;
 
 	/**
+	 * When true, `deleteMany` rejects with the error from a key that fails to delete, instead of
+	 * emitting it and returning `false` for that key. Keyv sets this to match its `throwOnErrors`.
+	 */
+	public throwOnErrors = false;
+
+	/**
 	 * Creates a new KeyvBridgeAdapter instance.
 	 * @param store - The underlying promise-based store to bridge
 	 * @param options - Configuration options for the adapter
@@ -431,6 +437,10 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 				const result = await this._store.delete(keyPrefix);
 				results.push(result);
 			} catch (error) {
+				if (this.throwOnErrors) {
+					throw error;
+				}
+
 				this.emit(KeyvEvents.ERROR, error);
 				results.push(false);
 			}

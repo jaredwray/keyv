@@ -92,17 +92,17 @@ Hookified's `throwOnEmptyListeners` is **on** by default. An `'error'` event wit
 keyv.on("error", () => {});
 ```
 
-`throwOnErrors` maps to Hookified's `throwOnEmitError` and defaults to `false`. In the current runtime, Hookified evaluates that flag only when an `'error'` event has **no** listeners. Because `throwOnEmptyListeners` is already enabled, an unhandled error throws whether `throwOnErrors` is `false` or `true`; with a listener attached, the listener handles the error and nothing is thrown.
+`throwOnErrors` defaults to `false`. Set it to `true` to make a failed operation throw even when listeners are attached. Keyv emits `'error'` first, so listeners still receive the error, and then the operation rejects with it.
 
 ```js
 const keyv = new Keyv({ throwOnErrors: true });
-
-// throws if the store fails — no listener (the default behavior too)
-await keyv.get("key");
-
 keyv.on("error", (error) => console.error(error));
-await keyv.get("key"); // current runtime: listener runs instead of throwing
+
+// the listener logs the error, then the call rejects with it
+await keyv.get("key");
 ```
+
+`throwOnErrors` does not throw errors that a storage adapter emits on its own, such as a Redis connection error between calls, because they can arrive outside any Keyv call. Keyv forwards them to `'error'`, so they throw only when no listener is attached.
 
 ## Adapter-level throw options
 
