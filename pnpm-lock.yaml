@@ -455,6 +455,9 @@ importers:
       hookified:
         specifier: ^3.0.3
         version: 3.0.3
+      keyv:
+        specifier: workspace:^
+        version: link:../../core/keyv
       mysql2:
         specifier: ^3.24.2
         version: 3.24.2(@types/node@24.13.1)
@@ -471,9 +474,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
-      keyv:
-        specifier: workspace:^
-        version: link:../../core/keyv
       rimraf:
         specifier: ^6.1.3
         version: 6.1.3
@@ -585,6 +585,9 @@ importers:
       iovalkey:
         specifier: ^0.4.0
         version: 0.4.0(supports-color@10.2.2)
+      keyv:
+        specifier: workspace:^
+        version: link:../../core/keyv
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.11
@@ -598,9 +601,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
-      keyv:
-        specifier: workspace:^
-        version: link:../../core/keyv
       rimraf:
         specifier: ^6.1.3
         version: 6.1.3
