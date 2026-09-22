@@ -35,6 +35,12 @@ const keyv = new Keyv({store: new Map(), compression: new KeyvBrotli()});
 
 All options for `@keyv/compress-brotli` are based on the package [compress-brotli](https://github.com/Kikobeats/compress-brotli)
 
+## Upgrading from Keyv v5
+
+Keyv v5 compressed only the value and stored it in a JSON envelope, like `{"value":":base64:…","expires":1700000000000}`. Keyv v6 compresses the whole serialized entry. This adapter recognizes the v5 format and decodes it, so values that Keyv v5 wrote with `@keyv/compress-brotli` v2 stay readable after the upgrade. Keyv writes a value in the v6 format the next time it is set.
+
+This covers Keyv's default serialization. Values that v5 compressed with custom `serialize` and `deserialize` functions are not recognized. Keyv v6 also needs the namespace v5 used to find those keys. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed).
+
 ## License
 
 [MIT © Jared Wray](LICENSE)

@@ -590,6 +590,16 @@ await keyv.set('key', { foo: 'bar' });
 
 > **Note:** Encryption and compression require string values. If your values are not strings, you must use `serialization`.
 
+#### Values Compressed by v5
+
+The stored format changed as well. v5 compressed only the value and kept it in a JSON envelope, like `{"value":":base64:…","expires":1700000000000}`. v6 compresses the whole serialized entry into one base64 string. The v6 releases of `@keyv/compress-brotli`, `@keyv/compress-gzip`, and `@keyv/compress-lz4` recognize the v5 format and decode it, so values written by v5 stay readable:
+
+- Use the same adapter as in v5. For `@keyv/compress-gzip`, pass the same options. For `@keyv/compress-lz4`, pass the same dictionary.
+- Keep Keyv's default serialization. Values that v5 compressed with custom `serialize` and `deserialize` functions are not recognized.
+- v5 keys still need the namespace v5 used. See [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed).
+
+Keyv writes a value in the v6 format the next time it is set.
+
 ---
 
 ### `@keyv/memcache` Moves from `memjs` to `memcache`
