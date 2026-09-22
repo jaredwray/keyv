@@ -38,6 +38,7 @@ Uses TTL indexes to automatically remove expired documents. However [MongoDB doe
   - [clearExpired](#clearexpired)
   - [clearUnusedFor](#clearunusedfor)
 - [Migration from v3 to v6](#migration-from-v3-to-v6)
+  - [Running the migration script](#running-the-migration-script)
 - [License](#license)
 
 ## Install
@@ -464,9 +465,11 @@ console.log(store.useGridFS); // true (read-only)
 
 The `ttlSupport` property has been removed. If your code checks for TTL support on the adapter, remove those checks.
 
-#### Namespace Index Change
+#### Namespaces Are Stored in Their Own Field
 
-The unique index on the underlying MongoDB collection has changed from `{ key: 1 }` to `{ key: 1, namespace: 1 }`. This allows the same key name to exist in different namespaces without conflicts. The old index is automatically dropped and replaced on first connection, so no manual migration is needed.
+v3 stored the namespace as a prefix of each key (`key: "keyv:foo"`) and wrote no namespace field. v6 stores it separately (`key: "foo"`, `namespace: "keyv"`) and only reads documents that have a `namespace` field, so documents written by v3 stay invisible to v6 until you [run the migration script](#running-the-migration-script).
+
+The unique index on the underlying MongoDB collection has also changed from `{ key: 1 }` to `{ key: 1, namespace: 1 }`, so the same key can exist in different namespaces. The adapter drops the old index and creates the new one when it connects.
 
 #### Options Type is Now Strongly Typed
 
@@ -534,6 +537,40 @@ Remove GridFS files that have not been accessed for a specified duration.
 const store = new KeyvMongo({ url: 'mongodb://localhost:27017', useGridFS: true });
 await store.clearUnusedFor(3600); // remove files unused for 1 hour
 ```
+
+### Running the migration script
+
+If you have documents written by `@keyv/mongo` v3, run the migration script so v6 can read them. The script ships in the npm package at `scripts/migrate-v6.ts`. Run it from your project root with `tsx`. Node.js refuses to strip TypeScript types from files under `node_modules`, so running the script with plain `node` from there fails with `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`.
+
+Preview the changes first with `--dry-run`. Dry-run mode only counts and previews the documents that would change:
+
+```shell
+npx tsx node_modules/@keyv/mongo/scripts/migrate-v6.ts --uri mongodb://user:pass@localhost:27017/dbname --dry-run
+```
+
+Run the migration:
+
+```shell
+npx tsx node_modules/@keyv/mongo/scripts/migrate-v6.ts --uri mongodb://user:pass@localhost:27017/dbname
+```
+
+Pass `--collection` if you set a custom collection, `--db` if the database is not in the URI, and `--gridfs` for a store created with `useGridFS: true`:
+
+```shell
+npx tsx node_modules/@keyv/mongo/scripts/migrate-v6.ts --uri mongodb://user:pass@localhost:27017 --db cache --collection sessions
+npx tsx node_modules/@keyv/mongo/scripts/migrate-v6.ts --uri mongodb://user:pass@localhost:27017/dbname --gridfs
+```
+
+From a clone of this repo you can run `node scripts/migrate-v6.ts` in `storage/mongo` with the same flags.
+
+**Important notes:**
+- The script only changes documents that have no `namespace` field, so it is safe to run again. Documents already in the v6 layout are never touched.
+- Keys are split on the first colon: the part before becomes the namespace, the rest becomes the key. A key without a colon gets the empty namespace v6 uses when none is set. Namespaces containing colons are not supported. The split is also wrong for colon-containing keys that Keyv v5 stored without a prefix, which happens only when it ran with `useKeyPrefix: false` or an empty namespace.
+- Keyv v5 used `keyv` as the namespace when none was set, so those documents migrate into namespace `keyv`. Pass `namespace: 'keyv'` to Keyv afterwards to keep reading them. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed).
+- In standard mode the script first replaces the unique index on `key` with the unique index on `{ key, namespace }`, the same change the adapter makes when it connects.
+- If v6 already stores a value under the same key and namespace, that value was written after the upgrade and is kept. The v3 document is left unchanged and listed in the output.
+- In GridFS mode, v3 kept every revision of a file and read the newest. The script migrates only the newest revision of each key and lists the older ones, which v6 cannot read.
+- The rewrite is not transactional. If it stops part way, documents already migrated keep their new layout, so run the script again to finish.
 
 ## License
 

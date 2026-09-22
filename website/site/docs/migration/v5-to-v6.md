@@ -169,13 +169,14 @@ Some v5 adapters added their own prefix on top of Keyv's, and some v5 `createKey
 | Memcache | `useKeyPrefix: false` | `ns:foo` | `namespace: 'ns'` |
 | Valkey | default, or `createKeyv()` | `ns:foo` | None. v6 cannot build this key, so let the entries repopulate or rename them to the v6 layout. |
 | Valkey | `useRedisSets: false` | `namespace:ns:ns:foo` | `namespace: 'ns:ns'` |
-| MongoDB | any | `ns:foo`, with no `namespace` field | None. v6 matches on a `namespace` field that v5 documents do not have, so they need a data migration. |
+| MongoDB | default | `ns:foo`, with no `namespace` field | Run the `@keyv/mongo` migration script, then `namespace: 'ns'`. |
 
-With `useKeyPrefix: false`, the SQL, Etcd, and DynamoDB adapters stored plain `foo`, which v6 reads with no namespace.
+With `useKeyPrefix: false`, the SQL, Etcd, DynamoDB, and MongoDB adapters stored plain `foo`. v6 reads it with no namespace, after the table or collection migration where the adapter has one.
 
 If you are unsure which layout you have, look at one key in your store and choose the v6 settings that produce the same string. v6 builds storage keys like this:
 
 - **SQLite, PostgreSQL, MySQL:** a `namespace` column and a key column.
+- **MongoDB:** a `namespace` field and a `key` field, or `metadata.namespace` and `filename` with GridFS.
 - **Etcd, DynamoDB, Memcache:** `<namespace>:<key>`.
 - **Redis:** `<namespace><keyPrefixSeparator><key>`, where the separator defaults to `::`.
 - **Valkey:** `namespace:<namespace>:<key>`, or `sets:<namespace>:<key>` with `useSets: true`.
