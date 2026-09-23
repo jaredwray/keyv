@@ -53,6 +53,35 @@ describe("iterator", () => {
 		await store.disconnect();
 	});
 
+	test("should not yield keys from another namespace when this namespace contains glob metacharacters", async () => {
+		const base = faker.string.alphanumeric(6);
+		const namespaceA = `${base}*`;
+		const namespaceB = `${base}X`;
+
+		const storeA = new KeyvValkeyGlide(valkeyUri, { namespace: namespaceA });
+		const storeB = new KeyvValkeyGlide(valkeyUri, { namespace: namespaceB });
+		await storeA.clear();
+		await storeB.clear();
+
+		const keyA = faker.string.alphanumeric(10);
+		const keyB = faker.string.alphanumeric(10);
+		await storeA.set(keyA, faker.string.alphanumeric(10));
+		await storeB.set(keyB, faker.string.alphanumeric(10));
+
+		const collected = new Set<string>();
+		for await (const [key] of storeA.iterator()) {
+			collected.add(key);
+		}
+
+		expect(collected.has(keyA)).toBe(true);
+		expect(collected.has(keyB)).toBe(false);
+
+		await storeA.clear();
+		await storeB.clear();
+		await storeA.disconnect();
+		await storeB.disconnect();
+	});
+
 	test("should yield undefined when the namespace is empty", async () => {
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(valkeyUri, { namespace });

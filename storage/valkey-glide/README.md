@@ -192,6 +192,8 @@ Replacing `store.client` switches to an existing instance without closing the pr
 
 Same Keyv storage contract as `@keyv/valkey`: `get`, `getMany`, `set`, `setMany`, `delete`, `deleteMany`, `has`, `hasMany`, `clear`, `iterator`, `disconnect`.
 
+When `useSets` is `false`, `clear()` and `iterator()` use `SCAN MATCH` with the pattern `namespace:<namespace>:*` (glob metacharacters in the namespace are escaped), so a namespace that merely shares a prefix — for example `users` vs `users-archive` — is left alone. Because `:` is also the key separator, a namespace that extends another with `:` (for example `users:archive` under `users`) cannot be told apart from a key containing `:` and is matched too; use `useSets: true`, which tracks keys per namespace instead, if you need that separation.
+
 `getClient()` returns the connected GLIDE client, creating it if needed.
 
 Missing keys are `undefined`, never `null`.
