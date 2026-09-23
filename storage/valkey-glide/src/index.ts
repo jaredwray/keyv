@@ -322,9 +322,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return;
 		}
 
-		const prefix = this.getKeyPrefix();
-		const pattern = prefix ? `${prefix}:*` : "*";
-		for await (const page of this.scanPages(client, pattern)) {
+		for await (const page of this.scanPages(client, this.getKeyPattern())) {
 			await client.unlink(page);
 		}
 	}
@@ -333,8 +331,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		const client = await this.getClient();
 		const keyPrefix = this.getKeyPrefix();
 		const prefix = keyPrefix ? `${keyPrefix}:` : "";
-		const match = prefix ? `${prefix}*` : "*";
-		for await (const page of this.scanPages(client, match)) {
+		for await (const page of this.scanPages(client, this.getKeyPattern())) {
 			const values = await client.mget(page);
 			for (const [index, storedKey] of page.entries()) {
 				const key = prefix ? storedKey.slice(prefix.length) : storedKey;
@@ -417,6 +414,25 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return key;
+	}
+
+	/**
+	 * Builds the `SCAN MATCH` pattern that selects every data key in the current
+	 * namespace. Glob metacharacters in the prefix (`*`, `?`, `[`, `]`, `\`) are
+	 * escaped so the namespace is matched literally, and the key separator is part
+	 * of the pattern so a namespace that merely shares a prefix (for example
+	 * `users` vs `users-archive`) is never selected. Because `:` is also the
+	 * separator, a namespace that extends this one with `:` (`users:archive`)
+	 * cannot be told apart from a key containing `:`; `useSets: true` tracks keys
+	 * per namespace instead. With no prefix this matches every key in the database.
+	 */
+	private getKeyPattern(): string {
+		const prefix = this.getKeyPrefix();
+		if (!prefix) {
+			return "*";
+		}
+
+		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}:*`;
 	}
 
 	private async *scanPages(

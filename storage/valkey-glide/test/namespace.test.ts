@@ -109,6 +109,29 @@ describe("clear", () => {
 		await storeA.disconnect();
 		await storeB.disconnect();
 	});
+
+	test("should not clear another namespace when this namespace contains glob metacharacters", async () => {
+		const base = faker.string.alphanumeric(6);
+		const namespaceA = `${base}*`;
+		const namespaceB = `${base}X`;
+
+		const storeA = new KeyvValkeyGlide(valkeyUri, { namespace: namespaceA });
+		const storeB = new KeyvValkeyGlide(valkeyUri, { namespace: namespaceB });
+
+		const keyA = faker.string.alphanumeric(10);
+		const keyB = faker.string.alphanumeric(10);
+		await storeA.set(keyA, faker.string.alphanumeric(10));
+		await storeB.set(keyB, faker.string.alphanumeric(10));
+
+		await storeA.clear();
+
+		expect(await storeA.get(keyA)).toBeUndefined();
+		expect(await storeB.get(keyB)).not.toBeUndefined();
+
+		await storeB.clear();
+		await storeA.disconnect();
+		await storeB.disconnect();
+	});
 });
 
 describe("useSets", () => {
