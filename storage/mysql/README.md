@@ -139,12 +139,12 @@ v6 adds new methods for efficient multi-key operations:
 
 ### Running the migration script
 
-If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script is located at `scripts/migrate-v6.ts` in the `@keyv/mysql` package.
+If you have existing data from v5, you need to run the migration script to move namespace prefixes from keys into the new `namespace` column. The script ships in the npm package at `scripts/migrate-v6.ts`. Run it from your project root with `tsx`. Node.js refuses to strip TypeScript types from files under `node_modules`, so running the script with plain `node` from there fails with `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`.
 
 Preview the changes first with `--dry-run`:
 
 ```shell
-npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --dry-run
+npx tsx node_modules/@keyv/mysql/scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --dry-run
 ```
 
 Dry-run mode only reads schema metadata and previews affected rows; it does not modify the schema or data.
@@ -152,15 +152,17 @@ Dry-run mode only reads schema metadata and previews affected rows; it does not 
 Run the migration:
 
 ```shell
-npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname
+npx tsx node_modules/@keyv/mysql/scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname
 ```
 
 You can also specify a custom table and column lengths:
 
 ```shell
-npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --table cache
-npx tsx scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --keyLength 512 --namespaceLength 256
+npx tsx node_modules/@keyv/mysql/scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --table cache
+npx tsx node_modules/@keyv/mysql/scripts/migrate-v6.ts --uri mysql://user:pass@localhost:3306/dbname --keyLength 512 --namespaceLength 256
 ```
+
+From a clone of this repo you can run `node scripts/migrate-v6.ts` in `storage/mysql` with the same flags.
 
 The migration runs inside a transaction and will roll back automatically if anything fails.
 
@@ -169,6 +171,7 @@ The migration script also populates the new `expires` column from existing JSON 
 **Important notes:**
 - The script only migrates namespace rows where `namespace = ''` (the default). Rows that already have a namespace value (e.g. from a partial earlier migration) are skipped.
 - Keys are split on the first colon — the part before becomes the namespace, the rest becomes the key. Namespaces containing colons are not supported.
+- Keyv v5 used `keyv` as the namespace when none was set, so rows written that way migrate into namespace `keyv`. Pass `namespace: 'keyv'` to Keyv afterwards to keep reading them. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed).
 - The `expires` column is populated by extracting `value->'$.expires'` from existing JSON values.
 
 ## Constructor Options

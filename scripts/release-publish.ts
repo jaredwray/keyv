@@ -21,8 +21,10 @@
  *   6.0.0  + LATEST_MAJOR=6        latest           YES
  *
  * `LATEST_MAJOR` is the single source of truth for "which major is the current
- * stable line". It lives as a GitHub Actions repository variable so every
- * branch agrees on it; flipping it from 5 to 6 is the entire v6 GA cutover.
+ * stable line". It is set in the `publish` job of .github/workflows/release.yaml
+ * and must be bumped, in the release PR, before the first stable release of a
+ * new major is published: with the old value that release is staged under
+ * `v{major}-lts` and `latest` never moves.
  *
  * Users still install older lines with plain semver ranges — `keyv@5`, `keyv@4`
  * — which npm resolves to the newest stable of that major automatically. The
@@ -60,7 +62,7 @@
  *
  * ## Inputs (environment variables)
  *
- * - LATEST_MAJOR        Major number that owns `latest` (e.g. "5"). Required
+ * - LATEST_MAJOR        Major number that owns `latest` (e.g. "6"). Required
  *                       only for stable releases; pre-releases ignore it.
  * - DRY_RUN             "true" to print the plan and exit without publishing.
  *                       (The CLI flag `--dry-run` does the same locally.)

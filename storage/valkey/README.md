@@ -162,10 +162,14 @@ const store = new KeyvValkey('redis://localhost:6379', { useSets: true });
 
 When `useSets` is enabled, all keys (both data keys and the SET tracking key) now use a `sets:` prefix instead of `namespace:`. This prevents `WRONGTYPE` collisions between the SET tracking key and regular string data keys that could share the same name.
 
-- **Data keys**: `sets:<namespace>:<key>` (was `namespace:<namespace>:<key>`)
+- **Data keys**: `sets:<namespace>:<key>` (v5 stored the key as Keyv passed it, `<namespace>:<key>`)
 - **SET tracking key**: `sets:<namespace>` (was `namespace:<namespace>`)
 
-The `clear()` method automatically detects and cleans up legacy `namespace:`-prefixed SET keys, so no manual migration is needed.
+The `clear()` method automatically detects and cleans up legacy `namespace:`-prefixed SET keys.
+
+#### Data written by v5
+
+v5's default setup stored `foo` as `keyv:foo`: the key Keyv had prefixed with its default `keyv` namespace. No v6 setting builds that key, so let those entries repopulate or rename them to the v6 layout. Data written with `useRedisSets: false` was stored as `namespace:keyv:keyv:foo`, which v6 reads with `useSets: false` and `new Keyv(store, { namespace: 'keyv:keyv' })`. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) for other setups.
 
 #### Missing values are `undefined`, never `null`
 
@@ -225,7 +229,7 @@ console.log(store.useSets); // true
 
 When `useSets` is enabled, all keys use the `sets:` prefix (e.g., `sets:myns:mykey`) to isolate them from non-useSets keys. The SET tracking key is stored at `sets:<namespace>`.
 
-When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS` command) to find and delete keys, which may be slower on very large databases. With no namespace this matches every key in the current database.
+When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS namespace:<namespace>:*`, with any glob characters in the namespace escaped) to find and delete keys, which may be slower on very large databases. A namespace that merely shares a prefix (for example `users` and `users-archive`) is not affected. Because `:` is also the key separator, a namespace that extends another with `:` (for example `users:archive` under `users`) cannot be told apart by the pattern and is cleared along with it; use `useSets: true`, which tracks keys per namespace, if you need that separation. With no namespace this matches every key in the current database.
 
 ### useRedisSets (deprecated)
 
@@ -322,7 +326,7 @@ const results = await store.hasMany(['foo', 'bar', 'baz']);
 
 ### .clear()
 
-Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
+Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared (`namespace:<namespace>:*`, glob characters escaped), so a namespace that merely shares a prefix such as `users-archive` is left alone. A namespace that extends it with the `:` separator, such as `users:archive`, cannot be distinguished from keys containing `:` and is cleared too unless `useSets` is `true`. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
 
 ```js
 await store.clear();
@@ -330,7 +334,7 @@ await store.clear();
 
 ### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance. Missing values are yielded as `undefined`, never `null`.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance and the same key pattern as `clear()`. Missing values are yielded as `undefined`, never `null`.
 
 ```js
 for await (const [key, value] of store.iterator()) {
