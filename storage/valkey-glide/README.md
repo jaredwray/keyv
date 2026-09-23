@@ -16,10 +16,12 @@ GLIDE can route reads with **AZ affinity** (`readFrom` + `clientAz`) and execute
 ## Table of Contents
 
 - [Install](#install)
+- [Platform Support](#platform-support)
 - [Usage](#usage)
 - [Using the createKeyv function](#using-the-createkeyv-function)
 - [AZ affinity](#az-affinity)
 - [Constructor Options](#constructor-options)
+- [GLIDE Defaults](#glide-defaults)
 - [Properties](#properties)
 - [Methods](#methods)
 - [Events](#events)
@@ -32,6 +34,10 @@ GLIDE can route reads with **AZ affinity** (`readFrom` + `clientAz`) and execute
 ```shell
 npm install --save keyv @keyv/valkey-glide
 ```
+
+## Platform Support
+
+`@valkey/valkey-glide` ships a native (Rust core) binary. It supports Linux (glibc and musl) and macOS — there is no Windows build. Installing it adds roughly 20 MB to `node_modules`.
 
 ## Usage
 
@@ -138,6 +144,28 @@ const store = new KeyvValkeyGlide({
 
 All other fields are forwarded to GLIDE (`addresses`, `useTLS`, `credentials`, `readFrom`, `clientAz`, `requestTimeout`, `clientName`, `databaseId`, …). See [BaseClientConfiguration](https://glide.valkey.io/languages/nodejs/api/interfaces/BaseClient.BaseClientConfiguration.html).
 
+`uri` only parses host, port, `useTLS`, credentials, and the path as a database index — query parameters are ignored. Pass GLIDE fields (`readFrom`, `requestTimeout`, …) as constructor options instead of putting them in the URI.
+
+## GLIDE Defaults
+
+GLIDE's own defaults apply unless you override them:
+
+| Setting | Default | Override with |
+| --- | --- | --- |
+| Request timeout | 250 ms | `requestTimeout` (ms) |
+| Connection timeout | 2 s | `advancedConfiguration.connectionTimeout` (ms) |
+| In-flight request limit | 1000 | `inflightRequestsLimit` |
+
+```js
+const store = new KeyvValkeyGlide('redis://localhost:6379', {
+  requestTimeout: 1000,
+  inflightRequestsLimit: 2000,
+  advancedConfiguration: { connectionTimeout: 5000 },
+});
+```
+
+`setMany`, `deleteMany`, and `hasMany` execute one GLIDE batch instead of one command per key, so they stay well under the in-flight limit regardless of input size.
+
 ## Properties
 
 ### capabilities
@@ -152,7 +180,7 @@ Get or set the key namespace.
 
 When `true`, data keys and a tracking SET use the `sets:` prefix (same layout as `@keyv/valkey`). Default `false`.
 
-Prefer `false` on a cluster: the tracking SET and data keys hash to different slots.
+Unlike `@keyv/valkey`, this adapter never uses `MULTI`, so `useSets` works fine on a cluster (verified against a real cluster). The write itself is **non-atomic**: `set()` issues `SET` then `SADD` as two separate commands (and `delete()` issues `UNLINK` then `SREM`), so a crash or connection drop between the two can leave the tracking SET out of sync with the actual keys.
 
 ### client
 
@@ -194,7 +222,7 @@ Pass a `GlideClusterClient` or `{ cluster: true, addresses: [...] }`.
 
 ### Cluster gotchas
 
-- **`useSets: true` is not cluster-safe** for the tracking SET vs data keys. Keep the default `useSets: false` on a cluster.
+- **`useSets: true` is non-atomic**, on a cluster or standalone. See [useSets](#usesets).
 
 ## License
 

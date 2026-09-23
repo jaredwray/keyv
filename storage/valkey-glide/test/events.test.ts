@@ -43,14 +43,14 @@ describe("events", () => {
 			throw new Error(faker.lorem.sentence());
 		};
 
-		let emittedError = false;
-		store.on("error", () => {
-			emittedError = true;
+		const errors: unknown[] = [];
+		store.on("error", (error) => {
+			errors.push(error);
 		});
 		expect(await store.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10))).toBe(
 			false,
 		);
-		expect(emittedError).toBe(true);
+		expect(errors).toHaveLength(1);
 		client.set = originalSet;
 		await store.disconnect();
 	});
