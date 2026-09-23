@@ -40,7 +40,8 @@ describe("createKeyv", () => {
 		expect(keyv.store).toBeInstanceOf(KeyvRedis);
 		expect(keyv.namespace).toBe(namespace);
 		expect(keyv.store.namespace).toBe(namespace);
-		expect(keyv.throwOnErrors).toBe(true);
+		expect(keyv.store.throwOnErrors).toBe(true);
+		expect(keyv.store.throwOnConnectError).toBe(true);
 	});
 
 	test("should create a cluster-backed Keyv instance from cluster options", () => {
@@ -56,7 +57,6 @@ describe("createKeyvNonBlocking", () => {
 	test("should create a Keyv instance with default options", async () => {
 		const keyv = createKeyvNonBlocking(redisUri);
 		expect(keyv).toBeDefined();
-		expect(keyv.throwOnErrors).toBe(false);
 		expect(keyv.store).toBeInstanceOf(KeyvRedis);
 		expect(keyv.store.throwOnErrors).toBe(false);
 		expect(keyv.store.throwOnConnectError).toBe(false);

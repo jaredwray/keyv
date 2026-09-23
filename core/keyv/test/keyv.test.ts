@@ -737,7 +737,7 @@ describe("checkExpired: false (trust the adapter)", () => {
 	});
 });
 
-describe("throwErrors", () => {
+describe("error handling", () => {
 	const throwingStore = new Map();
 	throwingStore.get = () => {
 		throw new Error("Test error");
@@ -767,44 +767,51 @@ describe("throwErrors", () => {
 		testKeys = testData.map((data) => data.key);
 	});
 
-	test("throwOnErrors getter/setter and constructor option", () => {
+	test("should reject when no error listener is attached", async () => {
 		const keyv = new Keyv(throwingStore);
-		expect(keyv.throwOnErrors).toBe(false);
-		keyv.throwOnErrors = true;
-		expect(keyv.throwOnErrors).toBe(true);
-
-		const keyv2 = new Keyv({ store: throwingStore, throwOnErrors: true });
-		expect(keyv2.throwOnErrors).toBe(true);
-	});
-
-	test("should throw on set/get/delete/clear/has when throwOnErrors is true", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = true;
 		await expect(keyv.set("key", "value")).rejects.toThrow("Test error");
 		await expect(keyv.get("key")).rejects.toThrow("Test error");
 		await expect(keyv.delete("key")).rejects.toThrow("Test error");
 		await expect(keyv.clear()).rejects.toThrow("Test error");
 		await expect(keyv.has("key")).rejects.toThrow("Test error");
-	});
-
-	test("should not throw when throwOnErrors is false", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = false;
-		keyv.on("error", () => {});
-		expect(await keyv.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10))).toBe(
-			false,
-		);
-		expect(await keyv.get(faker.string.alphanumeric(10))).toBeUndefined();
-		expect(await keyv.delete(faker.string.alphanumeric(10))).toBe(false);
-		expect(await keyv.clear()).toBeUndefined();
-		expect(await keyv.has(faker.string.alphanumeric(10))).toBe(false);
-	});
-
-	test("should throw on deleteMany and setMany when throwOnErrors is true", async () => {
-		const keyv = new Keyv(throwingStore);
-		keyv.throwOnErrors = true;
-		await expect(keyv.deleteMany(testKeys)).rejects.toThrow("Test error");
 		await expect(keyv.setMany(testData)).rejects.toThrow("Test error");
+		await expect(keyv.deleteMany(testKeys)).rejects.toThrow("Test error");
+		await expect(keyv.hasMany(testKeys)).rejects.toThrow("Test error");
+		await expect(keyv.getMany(testKeys)).rejects.toThrow("Test error");
+		await expect(keyv.getRaw("key")).rejects.toThrow("Test error");
+		await expect(keyv.getManyRaw(testKeys)).rejects.toThrow("Test error");
+	});
+
+	test("should return fallback values and emit the error when a listener is attached", async () => {
+		const keyv = new Keyv(throwingStore);
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+
+		expect(await keyv.set("key", "value")).toBe(false);
+		expect(await keyv.get("key")).toBeUndefined();
+		expect(await keyv.delete("key")).toBe(false);
+		expect(await keyv.clear()).toBeUndefined();
+		expect(await keyv.has("key")).toBe(false);
+		expect(await keyv.setMany(testData)).toEqual(testKeys.map(() => false));
+		expect(await keyv.hasMany(testKeys)).toEqual(testKeys.map(() => false));
+		expect(await keyv.getMany(testKeys)).toEqual(testKeys.map(() => undefined));
+		expect(await keyv.getRaw("key")).toBeUndefined();
+		expect(await keyv.getManyRaw(testKeys)).toEqual(testKeys.map(() => undefined));
+		expect(errors).toHaveLength(10);
+
+		// KeyvMemoryAdapter reports each key that fails in deleteMany as its own error.
+		expect(await keyv.deleteMany(testKeys)).toEqual(testKeys.map(() => false));
+		expect(errors).toHaveLength(10 + testKeys.length);
+	});
+
+	test("should count store errors from getMany, getRaw, and getManyRaw in stats", async () => {
+		const keyv = new Keyv({ store: throwingStore, stats: true });
+		keyv.on("error", () => {});
+
+		await keyv.getMany(["a", "b"]);
+		await keyv.getRaw("c");
+		await keyv.getManyRaw(["d"]);
+		expect(keyv.stats.errors).toBe(4);
 	});
 });
 

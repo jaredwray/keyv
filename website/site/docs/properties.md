@@ -98,18 +98,6 @@ const trusting = new Keyv({ checkExpired: false });
 trusting.checkExpired; // false
 ```
 
-## `.throwOnErrors`
-
-Type: `boolean`  
-Default: `false`
-
-Alias of Hookified's `throwOnEmitError`. See [Events and Errors](/docs/events-and-errors/).
-
-```js
-const keyv = new Keyv({ throwOnErrors: true });
-keyv.throwOnErrors = false;
-```
-
 ## `.stats`
 
 Type: `KeyvStats`

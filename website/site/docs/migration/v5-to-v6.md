@@ -21,6 +21,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`opts` Property Removed](#opts-property-removed)
   - [Serialization Replaces `stringify` and `parse`](#serialization-replaces-stringify-and-parse)
   - [Hookified for Events and Hooks](#hookified-for-events-and-hooks)
+  - [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed)
   - [`deleteMany` Returns `boolean[]`](#deletemany-returns-boolean)
   - [`setMany` Uses `KeyvEntry[]` and Returns `boolean[]`](#setmany-uses-keyventry-and-returns-boolean)
   - [`get` and `getMany` No Longer Support Raw](#get-and-getmany-no-longer-support-raw)
@@ -99,6 +100,8 @@ For most users, migrating from v5 to v6 involves a few key changes:
 4. **Update raw value access** - Replace `get(key, { raw: true })` with `getRaw(key)` and `getMany(keys, { raw: true })` with `getManyRaw(keys)`
 
 5. **Handle new return types** - `deleteMany` and `setMany` now return `boolean[]` instead of a single `boolean`
+
+6. **Attach an `error` listener** - A failed operation now rejects unless an `error` listener is attached, and the `throwOnErrors` option was removed. To get failures back as fallback values, as most v5 methods returned them, add `keyv.on('error', ...)`. See [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed).
 
 For detailed information on each change, see the sections below.
 
@@ -241,7 +244,7 @@ Keyv now extends [Hookified](https://hookified.org) directly, replacing the cust
 - `keyv.hooks.handlers` is replaced by `keyv.hooks` (a `Map<string, IHook[]>`)
 - Hook names changed from `pre`/`post` to `before:`/`after:` convention
 - The `emitErrors` option has been removed
-- Error handling changed: v6 throws an emitted `error` when there are **no** registered error listeners. With a listener, the listener receives the error and the operation returns its fallback result. Under the current Hookified runtime, this outcome is the same whether `throwOnErrors` is `true` or `false`.
+- Error handling changed, and the `throwOnErrors` option was removed. See [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed).
 
 **Hook Name Migration:**
 
@@ -295,27 +298,46 @@ keyv.on('disconnect', () => {
 });
 ```
 
-**Error Handling:**
-The `throwOnErrors` option still exists, defaults to `false`, and maps to Hookified's `throwOnEmitError`. Hookified currently evaluates that flag only for an `error` event with no listeners. Since Keyv also enables `throwOnEmptyListeners`, setting `throwOnErrors` does not change the listener-dependent outcome shown below.
-
-```javascript
-const keyv = new Keyv({ throwOnErrors: true });
-
-// Error will throw because there is no error listener
-await keyv.get('key'); // throws if the store errors
-
-// Current runtime: the listener handles the error without a throw
-keyv.on('error', (err) => console.error(err));
-await keyv.get('key'); // error passed to listener instead
-```
-
-Additionally, `throwOnEmptyListeners` is now enabled by default. This means that if an error event is emitted with **no** error listeners registered, it will always throw — even without `throwOnErrors` enabled. This is the standard Node.js EventEmitter behavior for unhandled errors. To silently discard errors, register a no-op listener:
-
-```javascript
-keyv.on('error', () => {});
-```
-
 For more about Hookified, visit [https://hookified.org](https://hookified.org).
+
+---
+
+### Error Handling Changed and `throwOnErrors` Was Removed
+
+v6 handles errors the way a Node.js `EventEmitter` does. When an operation fails, Keyv emits an `error` event:
+
+- **With an `error` listener attached**, the listener receives the error and the operation returns a fallback value, such as `undefined` from `get` or `false` from `set`.
+- **With no `error` listener attached**, the operation rejects with the error.
+
+Every method follows this rule. The `throwOnErrors` and `emitErrors` options were removed.
+
+**How v5 behaved:**
+
+v5's event emitter never threw, even with no listener attached, so a listener did not change what a call returned. What happened on a failure depended on the method:
+
+| v5 method | On failure |
+| --- | --- |
+| `set`, `setMany`, `delete`, `deleteMany`, `clear`, `has` | Emitted `error` and returned a fallback value |
+| `get` | Returned `undefined` without emitting `error` |
+| `getMany`, `getRaw`, `getManyRaw`, `hasMany`, `disconnect` | Rejected |
+
+With `throwOnErrors: true`, the first two rows rejected instead of returning a fallback value. `emitErrors: false` turned the `error` events off.
+
+**What to change:**
+
+- **To get failures back as fallback values**, as most v5 methods returned them, attach an `error` listener:
+
+  ```javascript
+  keyv.on('error', (error) => console.error('Keyv error:', error));
+  ```
+
+  A no-op listener, `keyv.on('error', () => {})`, discards errors the way `emitErrors: false` did.
+
+- **If you used `throwOnErrors: true`**, remove it. With no `error` listener attached, failed calls reject. But errors that a storage adapter emits on its own, outside any call, are then thrown too, and nothing catches them. Redis and Memcache, for example, emit them when a connection drops. With those adapters you need a listener, and failed calls then return fallback values. v6 has no option that makes calls reject while a listener is attached.
+
+- **`getMany`, `getRaw`, `getManyRaw`, `hasMany`, and `disconnect`** rejected on a store failure in v5. With a listener attached they now return fallback values like the other methods.
+
+See [Events and Errors](/docs/events-and-errors/) for the fallback value each method returns.
 
 ---
 

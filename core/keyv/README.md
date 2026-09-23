@@ -24,7 +24,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - Handles all JSON types plus `Buffer` and `BigInt` via the built-in `KeyvJsonSerializer`
 - Supports namespaces
 - Wide range of [**efficient, well tested**](#official-storage-adapters) storage adapters
-- Connection errors are passed through (db failures won't kill your app)
+- Connection errors are emitted as `error` events, so with a listener attached a database failure won't crash your app
 - Supports the current active LTS version of Node.js or higher
 
 # Table of Contents
@@ -33,6 +33,7 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
 - [Using Storage Adapters](#using-storage-adapters)
 - [Namespaces](#namespaces)
 - [Events](#events)
+- [Error Handling](#error-handling)
 - [Hooks](#hooks)
 - [Serialization](#serialization)
 - [Official Storage Adapters](#official-storage-adapters)
@@ -49,7 +50,6 @@ There are a few existing modules similar to Keyv, however Keyv is different beca
   - [.serialization](#serialization-1)
   - [.compression](#compression-1)
   - [.encryption](#encryption-1)
-  - [.throwOnErrors](#throwonerrors)
   - [.checkExpired](#checkexpired)
   - [.stats](#stats)
   - [.sanitize](#sanitize)
@@ -194,7 +194,7 @@ await cache.get('foo'); // 'cache'
 
 # Events
 
-Keyv is an `EventEmitter` (built on [hookified](https://github.com/jaredwray/hookified)) and will emit an `'error'` event if there is an error. By default an error is only thrown if there are no listeners attached to the `'error'` event. To always throw on errors regardless of listeners, enable the [`throwOnErrors`](#throwonerrors) option.
+Keyv is an `EventEmitter` (built on [hookified](https://github.com/jaredwray/hookified)) and emits an `'error'` event when an operation fails. Whether the operation also throws depends on whether a listener is attached. See [Error Handling](#error-handling).
 
 ```js
 const keyv = new Keyv();
@@ -213,6 +213,44 @@ keyv.on('error', handleConnectionError);
 keyv.on('clear', handleClear);
 keyv.on('disconnect', handleDisconnect);
 ```
+
+# Error Handling
+
+Keyv handles errors the way a Node.js `EventEmitter` does. When an operation fails, for example because the storage adapter cannot reach its database, Keyv emits an `'error'` event:
+
+- **With an `'error'` listener attached**, the listener receives the error and the operation returns a fallback value instead of throwing.
+- **With no `'error'` listener attached**, the operation rejects with the error.
+
+```js
+const keyv = new Keyv(store); // any storage adapter
+
+// No listener yet: a failed call rejects.
+try {
+  await keyv.get('foo');
+} catch (error) {
+  console.error('get failed', error);
+}
+
+// With a listener: the listener gets the error and the call returns a fallback value.
+keyv.on('error', (error) => console.error('Keyv error', error));
+await keyv.get('foo'); // undefined if the store fails
+```
+
+These are the fallback values a failed call returns when a listener is attached:
+
+| Method | Returns |
+| --- | --- |
+| `get`, `getRaw` | `undefined` |
+| `getMany`, `getManyRaw` | an array of `undefined` |
+| `set`, `setRaw`, `delete`, `has` | `false` |
+| `setMany`, `setManyRaw`, `deleteMany`, `hasMany` | an array of `false` |
+| `clear`, `disconnect` | `undefined` |
+
+A failed read looks the same as a missing key, so use the `'error'` events when you need to tell them apart.
+
+Storage adapters can also emit `'error'` on their own, outside any Keyv call. The Redis client does this when a connection drops, for example. Keyv forwards these errors to its own `'error'` event, and the same rule applies: with no listener attached the error is thrown, and because no call is waiting for it, it can crash your process. Attach an `'error'` listener whenever you use a storage adapter that connects to a server.
+
+Keyv v5's `throwOnErrors` and `emitErrors` options were removed in v6. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#error-handling-changed-and-throwonerrors-was-removed) for how v5 behaved and what to change.
 
 # Hooks
 
@@ -735,7 +773,7 @@ result.methods.decrypt.exists;  // true
 
 Returns a new Keyv instance.
 
-The Keyv instance is also an `EventEmitter` that will emit an `'error'` event if the storage adapter connection fails.
+The Keyv instance is also an `EventEmitter` that will emit an `'error'` event if an operation or the storage adapter connection fails. See [Error Handling](#error-handling).
 
 ## storage-adapter
 
@@ -798,13 +836,6 @@ Type: `Boolean`<br />
 Default: `false`
 
 Enable statistics tracking (hits, misses, sets, deletes, errors). See [.stats](#stats) for details.
-
-## options.throwOnErrors
-
-Type: `Boolean`<br />
-Default: `false`
-
-Throw on all errors instead of only when there are no `'error'` listeners. See [.throwOnErrors](#throwonerrors) for details.
 
 ## options.sanitize
 
@@ -1078,34 +1109,6 @@ console.log(keyv.checkExpired); // true (default)
 const trusting = new Keyv({ checkExpired: false });
 console.log(trusting.checkExpired); // false
 ```
-
-## .throwOnErrors
-
-Type: `Boolean`<br />
-Default: `false`
-
-If set to `true`, Keyv will throw an error if any operation fails. This is useful if you want to ensure that all operations are successful and you want to handle errors.
-
-```js
-const keyv = new Keyv({ throwOnErrors: true });
-console.log(keyv.throwOnErrors); // true
-keyv.throwOnErrors = false;
-console.log(keyv.throwOnErrors); // false
-```
-
-A good example of this is with the `@keyv/redis` storage adapter. If you want to handle connection errors, retries, and timeouts more gracefully, you can use the `throwOnErrors` option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:
-
-```js
-import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
-
-// create redis instance that will throw on connection error
-const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379', { throwOnConnectErrors: true });
-
-const keyv = new Keyv({ store: keyvRedis, throwOnErrors: true });
-```
-
-What this does is it only throw on connection errors with the Redis client.
 
 ## .stats
 Type: `KeyvStats`<br />

@@ -60,7 +60,6 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		super({
 			throwOnHookError: false,
 			throwOnEmptyListeners: true,
-			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
 		});
 
 		this.deprecatedHooks = buildDeprecatedHooks();
@@ -227,24 +226,6 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public set serialization(serialization: KeyvSerializationAdapter | false | undefined) {
 		this._serialization = serialization === false ? undefined : serialization;
-	}
-
-	/**
-	 * Get the current throwOnErrors value. When enabled, all errors with throw. By default, errors
-	 * will only throw if there are no listeners to the error event.
-	 * @return {boolean} The current throwOnErrors value.
-	 */
-	public get throwOnErrors(): boolean {
-		return this.throwOnEmitError;
-	}
-
-	/**
-	 * Set the current throwOnErrors value. When enabled, all errors will throw. By default, errors
-	 * will only throw if there are no listeners to the error event.
-	 * @param {boolean} value The throwOnErrors value to set.
-	 */
-	public set throwOnErrors(value: boolean) {
-		this.throwOnEmitError = value;
 	}
 
 	/**
@@ -467,7 +448,14 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
 
-		const rawData = await this.storeGetMany<Value>(keys);
+		let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
+		try {
+			rawData = await this.storeGetMany<Value>(keys);
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+			rawData = keys.map(() => undefined);
+		}
 
 		let deserialized: Array<KeyvValue<Value> | undefined>;
 		if (this._checkExpired) {
@@ -513,7 +501,13 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
-		const rawData = await this._store.get(key);
+		let rawData: KeyvStorageGetResult<Value>;
+		try {
+			rawData = await this._store.get<Value>(key);
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
+		}
 
 		let data: KeyvValue<Value> | undefined;
 		if (this._checkExpired) {
@@ -569,7 +563,14 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			return result;
 		}
 
-		const rawData = await this.storeGetMany<Value>(keys);
+		let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
+		try {
+			rawData = await this.storeGetMany<Value>(keys);
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+			rawData = keys.map(() => undefined);
+		}
 
 		let result: Array<KeyvValue<Value> | undefined>;
 		if (this._checkExpired) {

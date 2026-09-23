@@ -113,13 +113,6 @@ Subscribe `KeyvStats` to telemetry events (`stat:hit`, `stat:miss`, `stat:set`, 
 const keyv = new Keyv({ stats: true });
 ```
 
-## `throwOnErrors`
-
-Type: `boolean`  
-Default: `false`
-
-Maps to Hookified's `throwOnEmitError`. In the current runtime, this flag is only evaluated for an `'error'` event with no listeners. Because `throwOnEmptyListeners` is enabled by default, unhandled errors already throw; a registered listener prevents the throw even when `throwOnErrors` is `true`. See [Events and Errors](/docs/events-and-errors/).
-
 ## `checkExpired`
 
 Type: `boolean`  
