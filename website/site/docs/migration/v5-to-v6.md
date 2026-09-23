@@ -101,7 +101,7 @@ For most users, migrating from v5 to v6 involves a few key changes:
 
 5. **Handle new return types** - `deleteMany` and `setMany` now return `boolean[]` instead of a single `boolean`
 
-6. **Attach an `error` listener** - A failed operation now rejects unless an `error` listener is attached, and the `throwOnErrors` option was removed. To get failures back as fallback values, as most v5 methods returned them, add `keyv.on('error', ...)`. See [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed).
+6. **Attach an `error` listener** - A failed operation now rejects unless an `error` listener is attached, and the `throwOnErrors` option was removed. To get failures back as fallback values, as many v5 methods returned them, add `keyv.on('error', ...)`. See [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed).
 
 For detailed information on each change, see the sections below.
 
@@ -313,19 +313,22 @@ Every method follows this rule. The `throwOnErrors` and `emitErrors` options wer
 
 **How v5 behaved:**
 
-v5's event emitter never threw, even with no listener attached, so a listener did not change what a call returned. What happened on a failure depended on the method:
+v5's event emitter never threw, even with no listener attached, so a listener did not change what a call returned. What happened on a failure depended on the method, and for some methods on whether the storage adapter had its own version of that method:
 
 | v5 method | On failure |
 | --- | --- |
-| `set`, `setMany`, `delete`, `deleteMany`, `clear`, `has` | Emitted `error` and returned a fallback value |
+| `set`, `setMany`, `delete`, `deleteMany`, `clear` | Emitted `error` and returned a fallback value |
+| `has` | Rejected if the adapter had its own `has`. Otherwise, for example with a `Map`, emitted `error` and returned `false` |
+| `hasMany` | Rejected if the adapter had its own `hasMany`. Otherwise ran `has` for each key |
 | `get` | Returned `undefined` without emitting `error` |
-| `getMany`, `getRaw`, `getManyRaw`, `hasMany`, `disconnect` | Rejected |
+| `getMany`, `getManyRaw` | Rejected if the adapter had its own `getMany`. Otherwise returned `undefined` for each key that failed, without emitting `error` |
+| `getRaw`, `disconnect`, `iterator` | Rejected |
 
-With `throwOnErrors: true`, the first two rows rejected instead of returning a fallback value. `emitErrors: false` turned the `error` events off.
+With `throwOnErrors: true`, `get` and the calls that emitted `error` rejected instead of returning a fallback value. `emitErrors: false` turned the `error` events off.
 
 **What to change:**
 
-- **To get failures back as fallback values**, as most v5 methods returned them, attach an `error` listener:
+- **To get failures back as fallback values**, as many v5 methods returned them, attach an `error` listener:
 
   ```javascript
   keyv.on('error', (error) => console.error('Keyv error:', error));
@@ -335,7 +338,7 @@ With `throwOnErrors: true`, the first two rows rejected instead of returning a f
 
 - **If you used `throwOnErrors: true`**, remove it. With no `error` listener attached, failed calls reject. But errors that a storage adapter emits on its own, outside any call, are then thrown too, and nothing catches them. Redis and Memcache, for example, emit them when a connection drops. With those adapters you need a listener, and failed calls then return fallback values. v6 has no option that makes calls reject while a listener is attached.
 
-- **`getMany`, `getRaw`, `getManyRaw`, `hasMany`, and `disconnect`** rejected on a store failure in v5. With a listener attached they now return fallback values like the other methods.
+- **Calls that rejected in v5 now return fallback values when a listener is attached.** This covers `getRaw`, `disconnect`, and `iterator`, which stops iterating, and `has`, `hasMany`, `getMany`, and `getManyRaw` on adapters that had their own versions of those methods.
 
 See [Events and Errors](/docs/events-and-errors/) for the fallback value each method returns.
 

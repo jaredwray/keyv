@@ -804,14 +804,58 @@ describe("error handling", () => {
 		expect(errors).toHaveLength(10 + testKeys.length);
 	});
 
-	test("should count store errors from getMany, getRaw, and getManyRaw in stats", async () => {
+	test("should count failed reads as errors, not misses, in stats", async () => {
 		const keyv = new Keyv({ store: throwingStore, stats: true });
 		keyv.on("error", () => {});
 
-		await keyv.getMany(["a", "b"]);
-		await keyv.getRaw("c");
-		await keyv.getManyRaw(["d"]);
-		expect(keyv.stats.errors).toBe(4);
+		await keyv.get("a");
+		await keyv.getMany(["b", "c"]);
+		await keyv.getRaw("d");
+		await keyv.getManyRaw(["e"]);
+		expect(keyv.stats.errors).toBe(5);
+		expect(keyv.stats.misses).toBe(0);
+	});
+
+	test("should end the iteration and emit the error when the store fails with a listener attached", async () => {
+		const store = new Map();
+		const keyv = new Keyv({ store, stats: true });
+		await keyv.set("first", "value");
+		const error = new Error("Iterator error");
+		store.entries = function* () {
+			yield* Map.prototype.entries.call(store);
+			throw error;
+		} as typeof store.entries;
+		const errors: unknown[] = [];
+		keyv.on("error", (event) => errors.push(event));
+
+		const entries: Array<[string, unknown]> = [];
+		for await (const entry of keyv.iterator()) {
+			entries.push(entry);
+		}
+
+		expect(entries).toEqual([["first", "value"]]);
+		expect(errors).toEqual([error]);
+		expect(keyv.stats.errors).toBe(1);
+	});
+
+	test("should reject the iteration when the store fails with no listener attached", async () => {
+		const store = new Map();
+		const keyv = new Keyv(store);
+		store.entries = function* () {
+			yield* [];
+			throw new Error("Iterator error");
+		} as typeof store.entries;
+
+		const iterate = async () => {
+			const entries: Array<[string, unknown]> = [];
+			for await (const entry of keyv.iterator()) {
+				entries.push(entry);
+			}
+
+			return entries;
+		};
+
+		await expect(iterate()).rejects.toThrow("Iterator error");
 	});
 });
 

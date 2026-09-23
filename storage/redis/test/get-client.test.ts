@@ -215,6 +215,21 @@ describe("getClient", () => {
 		await keyvRedis.disconnect(true);
 	});
 
+	test("should reject a failed connect with the connection error as its cause without emitting it again", async () => {
+		const client = new FakeRedisClient();
+		client.failConnect = true;
+		const keyvRedis = new KeyvRedis(client as unknown as RedisClientType);
+		const errors: unknown[] = [];
+		keyvRedis.on("error", (error) => errors.push(error));
+
+		const error = (await keyvRedis.getClient().catch((error_: unknown) => error_)) as Error;
+
+		expect(error.message).toBe(RedisErrorMessages.RedisClientNotConnectedThrown);
+		expect((error.cause as Error).message).toBe("connect failed");
+		// The client's own `error` event is forwarded once; the adapter does not emit it a second time.
+		expect(errors).toEqual([error.cause]);
+	});
+
 	test("should throw an error if not connected with Keyv when throwOnErrors is true", async () => {
 		const keyv = createKeyv(redisBadUri, {
 			throwOnErrors: true,

@@ -406,8 +406,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	/**
 	 * Connect the current client, or wait until an already-open client becomes ready.
 	 * Concurrent `getClient()` callers share this promise via `_connectPromise`. On
-	 * failure, abort the in-flight attempt so sockets are not left open, then emit
-	 * `error` and optionally throw.
+	 * failure, abort the in-flight attempt so sockets are not left open, then either throw
+	 * (with the connection error as `cause`) or emit `error`, depending on `throwOnConnectError`.
 	 * @returns {Promise<RedisClientConnectionType>} The client after connect succeeds or is swallowed.
 	 * @throws {Error} When connect fails and `throwOnConnectError` is true.
 	 */
@@ -435,14 +435,15 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			const timedOut = this.isConnectTimeoutError(error);
 			this.abortConnect(client, timedOut);
 
+			// Report the failure once: reject with it as the cause, or emit it and carry on.
+			if (this._throwOnConnectError) {
+				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown, { cause: error });
+			}
+
 			try {
 				this.emit("error", error);
 			} catch {
 				// Keyv forwards store `error` events and may throw when it has no listener.
-			}
-
-			if (this._throwOnConnectError) {
-				throw new Error(RedisErrorMessages.RedisClientNotConnectedThrown);
 			}
 
 			return this._client;
@@ -538,10 +539,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 			return true;
 		} catch (error) {
-			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			/* v8 ignore next -- @preserve */
 			return false;
@@ -616,10 +614,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 			return results;
 		} catch (error) {
-			this.emit("error", error);
-			if (this.shouldRethrow(error)) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			return entries.map(() => false);
 		}
@@ -639,10 +634,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 			return exists === 1;
 		} catch (error) {
-			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			return false; // Return false if an error occurs
 		}
@@ -690,10 +682,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				return results.map((result) => typeof result === "number" && result === 1);
 			}
 		} catch (error) {
-			this.emit("error", error);
-			if (this.shouldRethrow(error)) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			return Array.from({ length: keys.length }).fill(false) as boolean[];
 		}
@@ -713,10 +702,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			const value = await client.get(key);
 			return value === null ? undefined : (value as U);
 		} catch (error) {
-			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			return undefined; // Return undefined if an error occurs
 		}
@@ -738,10 +724,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 			return values;
 		} catch (error) {
-			this.emit("error", error);
-			if (this.shouldRethrow(error)) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			return Array.from({ length: keys.length }).fill(undefined) as Array<U | undefined>;
 		}
@@ -762,10 +745,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 			return deleted > 0;
 		} catch (error) {
-			this.emit("error", error);
-			if (this._throwOnErrors) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			return false; // Return false if an error occurs
 		}
@@ -824,10 +804,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			/* v8 ignore next -- @preserve */
 			return prefixedKeys.map((key) => resultMap.get(key) ?? false);
 		} catch (error) {
-			this.emit("error", error);
-			if (this.shouldRethrow(error)) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 
 			return Array.from({ length: keys.length }).fill(false) as boolean[];
 		}
@@ -1007,10 +984,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				}),
 			);
 		} catch (error) {
-			this.emit("error", error);
-			if (this.shouldRethrow(error)) {
-				throw error;
-			}
+			this.throwOrEmit(error);
 		}
 	}
 
@@ -1406,7 +1380,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Whether an operation error should be re-thrown after being emitted. Connection failures
+	 * Whether an operation error should be rethrown instead of emitted. Connection failures
 	 * honor `throwOnConnectError`; all other failures honor `throwOnErrors`.
 	 * @param {unknown} error - The caught error.
 	 * @returns {boolean} `true` when the caller should rethrow.
@@ -1421,6 +1395,22 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		}
 
 		return this._throwOnErrors;
+	}
+
+	/**
+	 * Report a failed operation once. Rethrows when {@link shouldRethrow} says the caller should see
+	 * a rejection, otherwise emits `error` so the operation can return its fallback value. Doing both
+	 * would report the failure twice through Keyv: once from the forwarded event and once from the
+	 * rejection.
+	 * @param {unknown} error - The caught error.
+	 * @throws {unknown} The same error when it should be rethrown.
+	 */
+	private throwOrEmit(error: unknown): void {
+		if (this.shouldRethrow(error)) {
+			throw error;
+		}
+
+		this.emit("error", error);
 	}
 
 	/**

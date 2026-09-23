@@ -110,8 +110,9 @@ These are the fallback values a failed call returns when a listener is attached:
 | `set`, `setRaw`, `delete`, `has` | `false` |
 | `setMany`, `setManyRaw`, `deleteMany`, `hasMany` | an array of `false` |
 | `clear`, `disconnect` | `undefined` |
+| `iterator` | ends the iteration |
 
-A failed read looks the same as a missing key, so use the `'error'` events when you need to tell them apart. To discard errors without logging them, register a no-op listener:
+A failed read looks the same as a missing key, so use the `'error'` events when you need to tell them apart. It emits `stat:error`, not `stat:miss`. To discard errors without logging them, register a no-op listener:
 
 ```js
 keyv.on("error", () => {});
@@ -121,4 +122,4 @@ Keyv v5's `throwOnErrors` and `emitErrors` options were removed in v6. See the [
 
 ## Adapter-level throw options
 
-Some adapters have their own flags that control whether the adapter itself rejects or emits `'error'` and returns a fallback value, for example `@keyv/redis` `throwOnConnectError` and `throwOnErrors`. When the adapter rejects, Keyv handles the failure like any other: it emits `'error'`, then returns a fallback value if a listener is attached or rejects if none is.
+Some adapters have their own flags that control whether the adapter itself rejects or emits `'error'` and returns a fallback value, for example `@keyv/redis` `throwOnConnectError` and `throwOnErrors`. An adapter should do one or the other for a given failure, not both, so Keyv reports the failure once. When the adapter rejects, Keyv handles the failure like any other: it emits `'error'`, then returns a fallback value if a listener is attached or rejects if none is.

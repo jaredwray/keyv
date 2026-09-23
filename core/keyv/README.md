@@ -245,8 +245,9 @@ These are the fallback values a failed call returns when a listener is attached:
 | `set`, `setRaw`, `delete`, `has` | `false` |
 | `setMany`, `setManyRaw`, `deleteMany`, `hasMany` | an array of `false` |
 | `clear`, `disconnect` | `undefined` |
+| `iterator` | ends the iteration |
 
-A failed read looks the same as a missing key, so use the `'error'` events when you need to tell them apart.
+A failed read looks the same as a missing key, so use the `'error'` events when you need to tell them apart. In [stats](#stats), a failed read counts as an error, not a miss.
 
 Storage adapters can also emit `'error'` on their own, outside any Keyv call. The Redis client does this when a connection drops, for example. Keyv forwards these errors to its own `'error'` event, and the same rule applies: with no listener attached the error is thrown, and because no call is waiting for it, it can crash your process. Attach an `'error'` listener whenever you use a storage adapter that connects to a server.
 
@@ -478,6 +479,8 @@ class MyAdapter {
 A v6 adapter declares `capabilities.expires === true` (the `keyvStorageCapability(this)` helper sets it for you). Keyv then passes the absolute `expires` to it directly — this takes precedence over structural detection, so an adapter whose methods aren't written with `async` is still used directly rather than bridged. Any **legacy** storage adapter that does *not* declare `capabilities.expires` is treated as a relative-TTL adapter and transparently wrapped by [`KeyvBridgeAdapter`](#built-in-adapters-memory-and-bridge), which converts the absolute `expires` back to a relative TTL before delegating (and deletes outright when the deadline has already elapsed) — so existing third-party adapters keep working unchanged. Stores that expose absolute-expiry primitives (e.g. Redis `PXAT`) use `expires` directly. Map-like stores wrapped via `new Keyv({ store: new Map() })` are unaffected.
 
 > **Adapters should enforce expiry — and Keyv double-checks by default.** Declaring `capabilities.expires === true` means a v6 adapter should enforce expiry itself — ideally via a native mechanism (key expiry, TTL index, lease) so the backend reclaims space, and/or a client-side check on read. On top of that, Keyv core filters expired reads at its own layer by default ([`checkExpired`](#checkexpired) is `true`), using the absolute `expires` in the serialized envelope, so `get`/`getMany`/`has` never surface a key past its deadline even on backends whose native expiry is coarse or lazily swept (e.g. Memcached, DynamoDB). Run `@keyv/test-suite`'s `storageTtlTests` against your adapter to verify its own expiry behaviour.
+
+> **Report each failure once.** When an operation fails, an adapter should either reject, and Keyv then emits the error, or emit `'error'` itself and return a fallback value. It should not do both: Keyv forwards the adapter's `'error'` events, so a failure that is emitted and then rejected reaches Keyv's listeners twice. Errors that happen outside any call, such as a dropped connection, should be emitted. See [Error Handling](#error-handling).
 
 # Built-in Adapters: Memory and Bridge
 
@@ -1126,7 +1129,7 @@ console.log(keyv.stats.enabled); // true
 
 **Aggregate counters:**
 - `hits`: Number of successful cache retrievals
-- `misses`: Number of failed cache retrievals
+- `misses`: Number of reads that found no value because the key was missing or expired. A read that fails counts in `errors` instead.
 - `sets`: Number of set operations
 - `deletes`: Number of delete operations
 - `errors`: Number of errors encountered
