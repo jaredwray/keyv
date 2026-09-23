@@ -617,7 +617,7 @@ importers:
   storage/valkey-glide:
     dependencies:
       '@valkey/valkey-glide':
-        specifier: ^2.2.0
+        specifier: ^2.5.2
         version: 2.5.2
       hookified:
         specifier: ^3.0.3

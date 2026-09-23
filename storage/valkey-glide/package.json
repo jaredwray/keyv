@@ -54,7 +54,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"@valkey/valkey-glide": "^2.2.0",
+		"@valkey/valkey-glide": "^2.5.2",
 		"hookified": "^3.0.3"
 	},
 	"devDependencies": {

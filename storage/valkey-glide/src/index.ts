@@ -1,9 +1,12 @@
 import {
+	Batch,
+	ClusterBatch,
 	ClusterScanCursor,
 	Decoder,
 	GlideClient,
 	type GlideClientConfiguration,
 	GlideClusterClient,
+	type GlideReturnType,
 	type GlideString,
 	TimeUnit,
 } from "@valkey/valkey-glide";
@@ -62,7 +65,6 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 				this._namespace = options.namespace;
 			}
 
-			this.emit("connect", this._client);
 			return;
 		}
 
@@ -172,8 +174,15 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return false;
 		}
 
+		let client: KeyvValkeyGlideClient;
 		try {
-			const client = await this.getClient();
+			client = await this.getClient();
+		} catch {
+			// createClient() already emitted "error" for the connect failure.
+			return false;
+		}
+
+		try {
 			const resolved = this.getKeyName(key);
 			await client.set(resolved, toGlideValue(value), setOptions(expires));
 			if (this._useSets) {
@@ -181,37 +190,60 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			}
 
 			return true;
-			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
 			return false;
 		}
-		/* v8 ignore stop -- @preserve */
 	}
 
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (entries.length === 0) {
-			return entries.map(() => true);
+			return [];
 		}
 
-		return Promise.all(
-			entries.map(async ({ key, value, expires }) => this.set(key, value, expires)),
-		);
+		let client: KeyvValkeyGlideClient;
+		try {
+			client = await this.getClient();
+		} catch {
+			return entries.map(() => false);
+		}
+
+		const setKey = this._useSets ? this.getSetKey() : undefined;
+		const batch = this.createBatch(client);
+		const setCommandIndexes: Array<number | undefined> = [];
+		let commandIndex = 0;
+		for (const { key, value, expires } of entries) {
+			if (value === undefined) {
+				setCommandIndexes.push(undefined);
+				continue;
+			}
+
+			const resolved = this.getKeyName(key);
+			batch.set(resolved, toGlideValue(value), setOptions(expires));
+			setCommandIndexes.push(commandIndex);
+			commandIndex += 1;
+			if (setKey) {
+				batch.sadd(setKey, [resolved]);
+				commandIndex += 1;
+			}
+		}
+
+		if (setCommandIndexes.every((index) => index === undefined)) {
+			return entries.map(() => false);
+		}
+
+		try {
+			const results = await this.execBatch(client, batch);
+			return setCommandIndexes.map((index) => index !== undefined && results?.[index] === "OK");
+		} catch (error) {
+			this.emit("error", error);
+			return entries.map(() => false);
+		}
 	}
 
 	public async delete(key: string): Promise<boolean> {
-		const client = await this.getClient();
-		const resolved = this.getKeyName(key);
-		if (this._useSets) {
-			const [unlinked] = await Promise.all([
-				client.unlink([resolved]),
-				client.srem(this.getSetKey(), [resolved]),
-			]);
-			return unlinked > 0;
-		}
-
-		const unlinked = await client.unlink([resolved]);
-		return unlinked > 0;
+		const [deleted] = await this.deleteMany([key]);
+		return deleted;
 	}
 
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
@@ -219,7 +251,25 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return [];
 		}
 
-		return Promise.all(keys.map(async (key) => this.delete(key)));
+		const client = await this.getClient();
+		const resolvedKeys = keys.map((key) => this.getKeyName(key));
+		const batch = this.createBatch(client);
+		for (const resolved of resolvedKeys) {
+			batch.unlink([resolved]);
+		}
+
+		if (this._useSets) {
+			const setKey = this.getSetKey();
+			for (const resolved of resolvedKeys) {
+				batch.srem(setKey, [resolved]);
+			}
+		}
+
+		const results = await this.execBatch(client, batch);
+		return resolvedKeys.map((_, index) => {
+			const result = results?.[index];
+			return typeof result === "number" && result > 0;
+		});
 	}
 
 	public async has(key: string): Promise<boolean> {
@@ -233,15 +283,25 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return [];
 		}
 
-		const values = await this.getMany(keys);
-		return values.map((value) => value !== undefined);
+		const client = await this.getClient();
+		const resolvedKeys = keys.map((key) => this.getKeyName(key));
+		const batch = this.createBatch(client);
+		for (const resolved of resolvedKeys) {
+			batch.exists([resolved]);
+		}
+
+		const results = await this.execBatch(client, batch);
+		return resolvedKeys.map((_, index) => {
+			const result = results?.[index];
+			return typeof result === "number" && result > 0;
+		});
 	}
 
 	public async clear(): Promise<void> {
 		const client = await this.getClient();
 		if (this._useSets) {
 			const setKey = this.getSetKey();
-			const keys = glideSetMembers(await client.smembers(setKey));
+			const keys = glideKeyPage(await client.smembers(setKey));
 			if (keys.length > 0) {
 				await Promise.all([client.unlink(keys), client.srem(setKey, keys)]);
 			}
@@ -250,7 +310,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 				const legacySetKey = `namespace:${this.namespace}`;
 				const legacyKeyType = await client.type(legacySetKey);
 				if (legacyKeyType === "set") {
-					const legacyKeys = glideSetMembers(await client.smembers(legacySetKey));
+					const legacyKeys = glideKeyPage(await client.smembers(legacySetKey));
 					if (legacyKeys.length > 0) {
 						await Promise.all([client.unlink(legacyKeys), client.srem(legacySetKey, legacyKeys)]);
 					}
@@ -263,10 +323,9 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const prefix = this.getKeyPrefix();
-		const pattern = prefix ? `${prefix}*` : "*";
-		const keys = await this.listKeys(client, pattern);
-		if (keys.length > 0) {
-			await client.unlink(keys);
+		const pattern = prefix ? `${prefix}:*` : "*";
+		for await (const page of this.scanPages(client, pattern)) {
+			await client.unlink(page);
 		}
 	}
 
@@ -275,16 +334,13 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		const keyPrefix = this.getKeyPrefix();
 		const prefix = keyPrefix ? `${keyPrefix}:` : "";
 		const match = prefix ? `${prefix}*` : "*";
-		const keys = await this.listKeys(client, match);
-		if (keys.length === 0) {
-			return;
-		}
-
-		const values = await client.mget(keys);
-		for (const [index, storedKey] of keys.entries()) {
-			const key = prefix ? storedKey.slice(prefix.length) : storedKey;
-			const value = asString(values[index]) as Value | undefined;
-			yield [key, value];
+		for await (const page of this.scanPages(client, match)) {
+			const values = await client.mget(page);
+			for (const [index, storedKey] of page.entries()) {
+				const key = prefix ? storedKey.slice(prefix.length) : storedKey;
+				const value = asString(values[index]) as Value | undefined;
+				yield [key, value];
+			}
 		}
 	}
 
@@ -313,6 +369,21 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			this.emit("error", error);
 			throw error;
 		}
+	}
+
+	private createBatch(client: KeyvValkeyGlideClient): Batch | ClusterBatch {
+		return client instanceof GlideClusterClient ? new ClusterBatch(false) : new Batch(false);
+	}
+
+	private async execBatch(
+		client: KeyvValkeyGlideClient,
+		batch: Batch | ClusterBatch,
+	): Promise<GlideReturnType[] | null> {
+		if (client instanceof GlideClusterClient) {
+			return client.exec(batch as ClusterBatch, false);
+		}
+
+		return client.exec(batch as Batch, false);
 	}
 
 	private getSetKey(): string {
@@ -348,46 +419,33 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		return key;
 	}
 
-	private async listKeys(client: KeyvValkeyGlideClient, pattern: string): Promise<string[]> {
+	private async *scanPages(
+		client: KeyvValkeyGlideClient,
+		match: string,
+	): AsyncGenerator<string[], void, unknown> {
 		if (client instanceof GlideClusterClient) {
-			return this.scanClusterKeys(client, pattern);
-		}
-
-		return this.scanStandaloneKeys(client, pattern);
-	}
-
-	private async scanClusterKeys(client: GlideClusterClient, match: string): Promise<string[]> {
-		let cursor = new ClusterScanCursor();
-		const found: string[] = [];
-		while (!cursor.isFinished()) {
-			const [next, keys] = await client.scan(cursor, { match });
-			cursor = next;
-			for (const key of keys) {
-				const asKey = asString(key);
-				if (asKey) {
-					found.push(asKey);
+			let cursor = new ClusterScanCursor();
+			while (!cursor.isFinished()) {
+				const [next, keys] = await client.scan(cursor, { match });
+				cursor = next;
+				const page = glideKeyPage(keys);
+				if (page.length > 0) {
+					yield page;
 				}
 			}
+
+			return;
 		}
 
-		return found;
-	}
-
-	private async scanStandaloneKeys(client: GlideClient, match: string): Promise<string[]> {
 		let cursor = "0";
-		const found: string[] = [];
 		do {
 			const [next, keys] = await client.scan(cursor, { match });
 			cursor = String(next);
-			for (const key of keys) {
-				const asKey = asString(key);
-				if (asKey) {
-					found.push(asKey);
-				}
+			const page = glideKeyPage(keys);
+			if (page.length > 0) {
+				yield page;
 			}
 		} while (cursor !== "0");
-
-		return found;
 	}
 }
 
@@ -434,6 +492,20 @@ function toGlideConfig(options: KeyvValkeyGlideOptions): GlideClientConfiguratio
 	} as GlideClientConfiguration;
 }
 
+function decodeUriComponentSafe(value: string): string {
+	try {
+		return decodeURIComponent(value);
+	} catch {
+		return value;
+	}
+}
+
+/**
+ * Parses `uri` into GLIDE connection fields. Only host, port, `useTLS`,
+ * credentials, and the path-as-database-index are recognized; query
+ * parameters are ignored — pass GLIDE fields (`readFrom`, `requestTimeout`, …)
+ * as constructor options instead of via the URI.
+ */
 function parseConnectionUri(uri: string): Partial<GlideClientConfiguration> {
 	const url = new URL(uri);
 	const protocol = url.protocol.replace(":", "");
@@ -444,11 +516,12 @@ function parseConnectionUri(uri: string): Partial<GlideClientConfiguration> {
 		useTLS,
 	};
 
-	if (url.username || url.password) {
-		config.credentials = {
-			username: url.username ? decodeURIComponent(url.username) : undefined,
-			password: decodeURIComponent(url.password),
-		};
+	// Only authenticate when a password is present; a bare `user@host` URI
+	// would otherwise send an empty-string password and fail auth.
+	if (url.password) {
+		const password = decodeUriComponentSafe(url.password);
+		const username = url.username ? decodeUriComponentSafe(url.username) : undefined;
+		config.credentials = username ? { username, password } : { password };
 	}
 
 	const database = url.pathname.replace(/^\//, "");
@@ -472,22 +545,22 @@ function setOptions(expires?: number) {
 	return undefined;
 }
 
-function toGlideValue(value: KeyvAny): string {
+function toGlideValue(value: KeyvAny): GlideString {
 	if (typeof value === "string") {
 		return value;
 	}
 
 	if (value instanceof Uint8Array) {
-		return Buffer.from(value).toString();
+		return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
 	}
 
 	return String(value);
 }
 
-function glideSetMembers(values: Iterable<GlideString>): string[] {
+function glideKeyPage(values: Iterable<GlideString>): string[] {
 	const keys: string[] = [];
-	for (const member of values) {
-		const asKey = asString(member);
+	for (const value of values) {
+		const asKey = asString(value);
 		if (asKey) {
 			keys.push(asKey);
 		}

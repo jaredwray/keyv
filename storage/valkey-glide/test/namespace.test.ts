@@ -1,7 +1,7 @@
 import process from "node:process";
 import { faker } from "@faker-js/faker";
 import { GlideClient } from "@valkey/valkey-glide";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
 const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
@@ -68,6 +68,47 @@ describe("clear", () => {
 		expect(await store.get(key2)).toBeUndefined();
 		await store.disconnect();
 	});
+
+	test("should track keys under the bare 'sets' key when useSets is true and no namespace is set", async () => {
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true });
+		const client = await GlideClient.createClient({
+			addresses: [{ host: "localhost", port: 6370 }],
+		});
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+
+		expect(await client.exists([`sets:${key}`])).toBe(1);
+		expect(await client.sismember("sets", `sets:${key}`)).toBe(true);
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		client.close();
+		await store.disconnect();
+	});
+
+	test("should not clear keys from a namespace that shares a prefix with another namespace", async () => {
+		const base = faker.string.alphanumeric(8);
+		const namespaceA = base;
+		const namespaceB = `${base}bar`;
+
+		const storeA = new KeyvValkeyGlide(valkeyUri, { namespace: namespaceA });
+		const storeB = new KeyvValkeyGlide(valkeyUri, { namespace: namespaceB });
+
+		const keyA = faker.string.alphanumeric(10);
+		const keyB = faker.string.alphanumeric(10);
+		await storeA.set(keyA, faker.string.alphanumeric(10));
+		await storeB.set(keyB, faker.string.alphanumeric(10));
+
+		await storeA.clear();
+
+		expect(await storeA.get(keyA)).toBeUndefined();
+		expect(await storeB.get(keyB)).not.toBeUndefined();
+
+		await storeB.clear();
+		await storeA.disconnect();
+		await storeB.disconnect();
+	});
 });
 
 describe("useSets", () => {
@@ -105,6 +146,29 @@ describe("useSets", () => {
 
 		expect(await client.exists([`namespace:${namespace}`])).toBe(0);
 		expect(await client.exists([legacyDataKey])).toBe(0);
+		await store.disconnect();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	test("should skip unlinking when the legacy tracking set reports no members", async () => {
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true });
+		store.namespace = faker.string.alphanumeric(8);
+		const client = await store.getClient();
+		vi.spyOn(client, "type").mockResolvedValueOnce("set");
+		await expect(store.clear()).resolves.toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should ignore empty-string members returned from the tracking set", async () => {
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true });
+		const namespace = faker.string.alphanumeric(8);
+		store.namespace = namespace;
+		const client = await store.getClient();
+		await client.sadd(`sets:${namespace}`, [""]);
+		await expect(store.clear()).resolves.toBeUndefined();
 		await store.disconnect();
 	});
 });

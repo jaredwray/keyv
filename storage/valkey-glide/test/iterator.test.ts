@@ -34,6 +34,25 @@ describe("iterator", () => {
 		await store.disconnect();
 	});
 
+	test("should iterate the root keyspace when no namespace or useSets prefix is set", async () => {
+		const store = new KeyvValkeyGlide(valkeyUri);
+		const key = faker.string.alphanumeric(16);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+
+		let found: string | undefined;
+		for await (const [collectedKey, collectedValue] of store.iterator<string>()) {
+			if (collectedKey === key) {
+				found = collectedValue;
+				break;
+			}
+		}
+
+		expect(found).toBe(value);
+		await store.delete(key);
+		await store.disconnect();
+	});
+
 	test("should yield undefined when the namespace is empty", async () => {
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(valkeyUri, { namespace });
