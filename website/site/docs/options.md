@@ -38,7 +38,7 @@ If the value is not a usable store, Keyv emits an `error` and falls back to `Key
 Type: `string`  
 Default: `undefined`
 
-Namespace for this instance. Keyv assigns it on the storage adapter so keys from different instances can share a backend. See [Namespaces](/docs/namespaces/).
+Namespace for this instance. Keyv assigns it on the storage adapter so keys from different instances can share a backend. When omitted, Keyv keeps the namespace set on the adapter, if any. See [Namespaces](/docs/namespaces/).
 
 ## `ttl`
 

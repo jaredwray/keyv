@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, test, vi } from "vitest";
 import { KeyvBridgeAdapter, type KeyvBridgeStore } from "../../src/adapters/bridge.js";
+import { Keyv } from "../../src/keyv.js";
 import { KeyvEvents } from "../../src/types/keyv.js";
 
 function createMinimalStore() {
@@ -591,8 +592,7 @@ describe("KeyvBridgeAdapter - v5 Adapter Compatibility", () => {
 describe("KeyvBridgeAdapter - namespace-managing store", () => {
 	// Simulates a legacy full adapter that scopes its own keys by `namespace` (like the
 	// first-party storage adapters do), including a namespace-scoped clear() and NO iterator().
-	function createNamespacingStore() {
-		const map = new Map<string, unknown>();
+	function createNamespacingStore(map = new Map<string, unknown>()) {
 		const nsKey = (key: string) => (store.namespace ? `${store.namespace}::${key}` : key);
 		const store = {
 			namespace: undefined as string | undefined,
@@ -665,5 +665,47 @@ describe("KeyvBridgeAdapter - namespace-managing store", () => {
 		const bridge = new KeyvBridgeAdapter(store);
 		bridge.namespace = "x";
 		expect(store.namespace).toBe("x");
+	});
+
+	test("keeps the namespace the store was configured with", async () => {
+		const store = createNamespacingStore();
+		store.namespace = "own";
+		const bridge = new KeyvBridgeAdapter(store);
+		expect(bridge.namespace).toBe("own");
+		expect(store.namespace).toBe("own");
+		await bridge.set("k", "v");
+		expect(store._map.has("own::k")).toBe(true);
+	});
+
+	test("replaces the store's namespace with one passed to the bridge", () => {
+		const store = createNamespacingStore();
+		store.namespace = "own";
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "given" });
+		expect(bridge.namespace).toBe("given");
+		expect(store.namespace).toBe("given");
+	});
+
+	test("clears the store's namespace when the bridge is given an empty one", () => {
+		const store = createNamespacingStore();
+		store.namespace = "own";
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "" });
+		expect(bridge.namespace).toBeUndefined();
+		expect(store.namespace).toBeUndefined();
+	});
+
+	test("Keyv keeps the namespace of a wrapped store that has one", async () => {
+		// Two stores on one backend, so only the namespaces keep them apart.
+		const shared = new Map<string, unknown>();
+		const storeA = createNamespacingStore(shared);
+		const storeB = createNamespacingStore(shared);
+		storeA.namespace = "a";
+		storeB.namespace = "b";
+		const keyvA = new Keyv({ store: storeA });
+		const keyvB = new Keyv({ store: storeB });
+		expect(keyvA.namespace).toBe("a");
+		expect(storeA.namespace).toBe("a");
+
+		await keyvA.set("k", "value-a");
+		expect(await keyvB.get("k")).toBeUndefined();
 	});
 });

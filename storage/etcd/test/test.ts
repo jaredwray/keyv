@@ -68,6 +68,11 @@ describe("construction and properties", () => {
 		t.expect(store.lease).toBeDefined();
 	});
 
+	it("should use the namespace option", (t) => {
+		t.expect(new KeyvEtcd({ namespace: "ns" }).namespace).toBe("ns");
+		t.expect(new KeyvEtcd("127.0.0.1:2379", { namespace: "ns" }).namespace).toBe("ns");
+	});
+
 	it("should not enable ttl when it is not a number using a url string and options", (t) => {
 		// @ts-expect-error - ttl is not a number, just for test
 		const store = new KeyvEtcd("127.0.0.1:2379", { ttl: true });
@@ -414,6 +419,12 @@ describe("createKeyv", () => {
 		t.expect(keyv).toBeInstanceOf(Keyv);
 		t.expect(keyv.store).toBeInstanceOf(KeyvEtcd);
 		t.expect((keyv.store as KeyvEtcd).ttl).toBe(3000);
+	});
+
+	it("should keep the namespace passed in the options", (t) => {
+		const keyv = createKeyv(etcdUrl, { namespace: "ns" });
+		t.expect(keyv.namespace).toBe("ns");
+		t.expect((keyv.store as KeyvEtcd).namespace).toBe("ns");
 	});
 
 	it("should set and get a value", async (t) => {

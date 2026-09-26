@@ -13,7 +13,7 @@ Every constructor option is also a live property. Changing a property updates th
 Type: `KeyvStorageAdapter`  
 Default: `KeyvMemoryAdapter` wrapping a `Map`
 
-Get or replace the storage adapter. Setting it resolves Map-like and legacy stores, forwards `'error'` events, and applies the current namespace.
+Get or replace the storage adapter. Setting it resolves Map-like and legacy stores, forwards `'error'` events, and applies Keyv's namespace. When Keyv has no namespace, the new adapter keeps its own.
 
 ```js
 import KeyvSqlite from "@keyv/sqlite";
@@ -27,7 +27,7 @@ keyv.store = new KeyvSqlite("sqlite://./cache.sqlite");
 Type: `string | undefined`  
 Default: `undefined`
 
-When set, Keyv sanitizes it (if sanitization is on) and writes it to `store.namespace`. Setting `undefined` stops namespacing. See [Namespaces](/docs/namespaces/).
+When set, Keyv sanitizes it (if sanitization is on) and writes it to `store.namespace`. Setting `undefined` stops namespacing. When Keyv has no namespace of its own, this returns the adapter's. See [Namespaces](/docs/namespaces/).
 
 ```js
 const keyv = new Keyv({ namespace: "users" });

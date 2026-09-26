@@ -117,6 +117,7 @@ We have finalized the transition (started in v5) to move all namespace handling 
 - `useKeyPrefix` property has been removed
 - `keyPrefix` property has been removed
 - Key prefixing is no longer done at the Keyv layer
+- A namespace set on the storage adapter is kept when Keyv has none. v5 replaced it with Keyv's namespace, `keyv` by default. A namespace passed to Keyv still wins.
 
 **v5 (before):**
 ```javascript
@@ -155,7 +156,7 @@ const keyv = new Keyv(store);
 const keyv = new Keyv(store, { namespace: 'keyv' });
 ```
 
-If your v5 code set a namespace, pass that value instead of `keyv`. Set it in Keyv's options as shown, not on the adapter.
+If your v5 code passed a namespace to Keyv, use that value instead of `keyv`. Pass it in Keyv's options as shown, where it takes precedence over any namespace on the adapter. v5 replaced a namespace set on the adapter with Keyv's, so the adapter's namespace was never the one v5 used.
 
 Some v5 adapters added their own prefix on top of Keyv's, and some v5 `createKeyv` helpers turned Keyv's prefix off, so the stored key depends on the adapter and how you created it. In this table, `ns` is the namespace your v5 instance used, which is `keyv` unless you set one. "Default" means `new Keyv(store)` or `new Keyv(store, { namespace })`.
 

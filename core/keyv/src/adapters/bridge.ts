@@ -125,9 +125,14 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 			this._namespace = options.namespace;
 		}
 
-		// Hand our namespace to a store that scopes its own keys.
 		if (this._storeHandlesNamespace) {
-			this._store.namespace = this._namespace;
+			if (options?.namespace === undefined) {
+				// Keep the namespace the store was configured with instead of clearing it.
+				this._namespace = this._store.namespace;
+			} else {
+				// Hand our namespace to a store that scopes its own keys. An empty one clears it.
+				this._store.namespace = this._namespace;
+			}
 		}
 
 		// Forward error events from the underlying store

@@ -178,11 +178,12 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Get the current namespace.
+	 * Get the current namespace. When Keyv has no namespace of its own, this is the namespace
+	 * configured on the storage adapter.
 	 * @returns {string | undefined} The current namespace.
 	 */
 	public get namespace(): string | undefined {
-		return this._namespace;
+		return this._namespace ?? this._store.namespace;
 	}
 
 	/**
@@ -239,16 +240,18 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Set the sanitize adapter directly and will run sanitization on namespace.
+	 * Set the sanitize adapter directly and will run sanitization on namespace, including a
+	 * namespace kept from the storage adapter, and apply the result to the adapter.
 	 * @param {KeyvSanitizeAdapter} value The sanitize adapter to use.
 	 */
 	public set sanitize(value: KeyvSanitizeAdapter) {
 		this._sanitize = value;
-		/* v8 ignore next -- @preserve */
-		this._namespace =
-			this._namespace && this._sanitize.enabled
-				? this._sanitize.cleanNamespace(this._namespace)
-				: this._namespace;
+		if (this._namespace && this._sanitize.enabled) {
+			this._namespace = this._sanitize.cleanNamespace(this._namespace);
+			this._store.namespace = this._namespace;
+		}
+
+		this.sanitizeStoreNamespace();
 	}
 
 	/**
@@ -331,7 +334,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 
 	/**
 	 * Sets the storage adapter by resolving it via {@link resolveStore}, then wires up
-	 * error forwarding and namespace propagation.
+	 * error forwarding and namespace propagation. Keyv's namespace, when set, is applied to the
+	 * adapter. Without one, the adapter keeps the namespace it was configured with.
 	 * @param {KeyvStorageAdapter | Map<any, any> | any} store The storage adapter to set.
 	 */
 	public setStore(store: KeyvStorageAdapter | KeyvMapAny): void {
@@ -340,7 +344,11 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			this._store.on(KeyvEvents.ERROR, (error: KeyvAny) => this.emit(KeyvEvents.ERROR, error));
 		}
 
-		this._store.namespace = this._namespace;
+		if (this._namespace !== undefined) {
+			this._store.namespace = this._namespace;
+		} else {
+			this.sanitizeStoreNamespace();
+		}
 	}
 
 	/**
@@ -991,7 +999,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	public async clear(): Promise<void> {
 		this.emit("clear");
 
-		await this.hook(KeyvHooks.BEFORE_CLEAR, { namespace: this._namespace });
+		await this.hook(KeyvHooks.BEFORE_CLEAR, { namespace: this.namespace });
 
 		try {
 			await this._store.clear();
@@ -1000,7 +1008,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			this.emitTelemetry(KeyvEvents.STAT_ERROR);
 		}
 
-		await this.hook(KeyvHooks.AFTER_CLEAR, { namespace: this._namespace });
+		await this.hook(KeyvHooks.AFTER_CLEAR, { namespace: this.namespace });
 	}
 
 	/**
@@ -1010,7 +1018,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	public async disconnect(): Promise<void> {
 		this.emit("disconnect");
 
-		await this.hook(KeyvHooks.BEFORE_DISCONNECT, { namespace: this._namespace });
+		await this.hook(KeyvHooks.BEFORE_DISCONNECT, { namespace: this.namespace });
 
 		try {
 			if (this._store.disconnect) {
@@ -1020,7 +1028,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			this.emit(KeyvEvents.ERROR, error);
 		}
 
-		await this.hook(KeyvHooks.AFTER_DISCONNECT, { namespace: this._namespace });
+		await this.hook(KeyvHooks.AFTER_DISCONNECT, { namespace: this.namespace });
 	}
 
 	/**
@@ -1175,7 +1183,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		if (key === undefined) {
 			this.emit(event, {
 				event: event.replace("stat:", ""),
-				namespace: this._namespace,
+				namespace: this.namespace,
 				timestamp: Date.now(),
 			} as KeyvTelemetryEvent);
 			return;
@@ -1186,7 +1194,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			this.emit(event, {
 				event: event.replace("stat:", ""),
 				key: k,
-				namespace: this._namespace,
+				namespace: this.namespace,
 				timestamp: Date.now(),
 			} as KeyvTelemetryEvent);
 		}
@@ -1252,6 +1260,15 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		this._namespace = namespace;
 		if (this._namespace && this._sanitize.enabled) {
 			this._namespace = this._sanitize.cleanNamespace(this._namespace);
+		}
+	}
+
+	/**
+	 * Sanitizes the namespace kept from the storage adapter when Keyv has none of its own.
+	 */
+	private sanitizeStoreNamespace(): void {
+		if (this._namespace === undefined && this._store.namespace && this._sanitize.enabled) {
+			this._store.namespace = this._sanitize.cleanNamespace(this._store.namespace);
 		}
 	}
 }

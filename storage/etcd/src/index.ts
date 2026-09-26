@@ -80,6 +80,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 
 		this._ttl = typeof merged.ttl === "number" ? merged.ttl : undefined;
 		this._busyTimeout = merged.busyTimeout;
+		this._namespace = merged.namespace;
 
 		this._client = new EtcdClient({
 			url: this._url,

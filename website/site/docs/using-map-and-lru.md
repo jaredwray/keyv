@@ -22,7 +22,7 @@ const store = new Map();
 const keyv = new Keyv({ store });
 ```
 
-You rarely need `new KeyvMemoryAdapter(...)` yourself. Keyv does it when it detects `store: "mapLike"`. Put `namespace` on the **Keyv** options; Keyv overwrites any namespace set on the adapter.
+You rarely need `new KeyvMemoryAdapter(...)` yourself. Keyv does it when it detects `store: "mapLike"`. Set `namespace` on the **Keyv** options or on the adapter. When both are set, Keyv's wins.
 
 ```js
 import Keyv, { KeyvMemoryAdapter } from "keyv";
