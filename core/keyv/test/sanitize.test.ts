@@ -36,6 +36,26 @@ describe("KeyvSanitize", () => {
 		expect(s.cleanKey(";--\0\n\r")).toBe("");
 	});
 
+	test("patterns formed by stripping another pattern are stripped too", () => {
+		const s = new KeyvSanitize({ keys: true, namespace: true });
+		expect(s.cleanKey("..././etc/passwd")).toBe("etc/passwd");
+		expect(s.cleanKey("$$where")).toBe("where");
+		expect(s.cleanKey("{$$gt")).toBe("gt");
+		expect(s.cleanKey("-\0-")).toBe("");
+		expect(s.cleanKey("/\0*")).toBe("");
+		expect(s.cleanKey("-../-")).toBe("");
+		expect(s.cleanKey("../$where")).toBe("where");
+		expect(s.cleanNamespace("..././ns")).toBe("ns");
+	});
+
+	test("cleaning a cleaned value changes nothing", () => {
+		const s = new KeyvSanitize({ keys: true, namespace: true });
+		for (const input of ["..././etc/passwd", "$$where", "-\0-", "key;--value", "clean-key"]) {
+			const cleaned = s.cleanKey(input);
+			expect(s.cleanKey(cleaned)).toBe(cleaned);
+		}
+	});
+
 	test("cleanKeys() sanitizes arrays and respects disabled state", () => {
 		const s = new KeyvSanitize({ keys: true, namespace: true });
 		expect(s.cleanKeys(["clean", "key;evil", "$bad"])).toEqual(["clean", "keyevil", "bad"]);

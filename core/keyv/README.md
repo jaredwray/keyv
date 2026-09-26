@@ -1201,7 +1201,7 @@ Default: disabled
 
 The `.sanitize` property is a `KeyvSanitize` adapter. It is configured through the `sanitize` constructor option (`true`, or a `KeyvSanitizeOptions` object) and disabled by default.
 
-It detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped.
+It detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped. Stripping repeats until nothing matches, so `..././etc` becomes `etc` rather than `../etc`.
 
 Results are cached in an LRU cache (10,000 entries) for fast repeated lookups.
 

@@ -113,13 +113,19 @@ function buildPatterns(options: KeyvSanitizePatterns): RegExp[] | undefined {
 }
 
 /**
- * Run all patterns against a string, stripping matched sequences.
+ * Run all patterns against a string, stripping matched sequences. Stripping one match can form
+ * another, as `..././` becomes `../`, so repeat until the string stops changing. Each pass that
+ * changes the string shortens it, so this always ends.
  */
 function applyPatterns(value: string, patterns: RegExp[]): string {
-	for (const pattern of patterns) {
-		pattern.lastIndex = 0;
-		value = value.replace(pattern, "");
-	}
+	let previous: string;
+	do {
+		previous = value;
+		for (const pattern of patterns) {
+			pattern.lastIndex = 0;
+			value = value.replace(pattern, "");
+		}
+	} while (value !== previous);
 
 	return value;
 }

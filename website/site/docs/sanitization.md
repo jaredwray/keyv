@@ -35,6 +35,8 @@ Omitting `sanitize`, or setting both targets to `false`, leaves keys and namespa
 | `escape` | `\0` `\r` `\n` | Null bytes and CRLF |
 | `path` | `../` `..\` | Path traversal |
 
+Stripping repeats until nothing matches, so the characters left around a removed pattern can't form a new one. For example, `..././etc` becomes `etc`, not `../etc`, and `$$where` becomes `where`.
+
 ## Targets
 
 | Target | Default when enabled | Applies to |
