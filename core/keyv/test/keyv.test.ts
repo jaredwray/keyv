@@ -169,6 +169,41 @@ describe("namespace", () => {
 		expect(unsanitized.namespace).toBe("ns;evil");
 	});
 
+	test("sanitizes the namespace when a sanitizer is set later", () => {
+		const store = new KeyvMemoryAdapter(new Map(), { namespace: "ns;evil" });
+		const keyv = new Keyv({ store });
+		keyv.sanitize = new KeyvSanitize({ namespace: true });
+		expect(keyv.namespace).toBe("nsevil");
+		expect(store.namespace).toBe("nsevil");
+
+		const own = new Keyv({ store: new KeyvMemoryAdapter(new Map()), namespace: "ns;evil" });
+		own.sanitize = new KeyvSanitize({ namespace: true });
+		expect(own.namespace).toBe("nsevil");
+		expect(own.store.namespace).toBe("nsevil");
+
+		const disabled = new Keyv({
+			store: new KeyvMemoryAdapter(new Map(), { namespace: "ns;evil" }),
+		});
+		disabled.sanitize = new KeyvSanitize();
+		expect(disabled.namespace).toBe("ns;evil");
+
+		const ownDisabled = new Keyv({ namespace: "ns;evil" });
+		ownDisabled.sanitize = new KeyvSanitize();
+		expect(ownDisabled.namespace).toBe("ns;evil");
+
+		const none = new Keyv();
+		none.sanitize = new KeyvSanitize({ namespace: true });
+		expect(none.namespace).toBeUndefined();
+
+		const empty = new Keyv({
+			store: new KeyvMemoryAdapter(new Map(), { namespace: "ns;evil" }),
+			namespace: "",
+		});
+		empty.sanitize = new KeyvSanitize({ namespace: true });
+		expect(empty.namespace).toBe("");
+		expect(empty.store.namespace).toBe("");
+	});
+
 	test("reports the adapter's namespace to hooks and telemetry", async () => {
 		const keyv = new Keyv({ store: new KeyvMemoryAdapter(new Map(), { namespace: "a" }) });
 		const hookNamespaces: unknown[] = [];

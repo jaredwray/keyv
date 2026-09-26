@@ -240,16 +240,18 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Set the sanitize adapter directly and will run sanitization on namespace.
+	 * Set the sanitize adapter directly and will run sanitization on namespace, including a
+	 * namespace kept from the storage adapter, and apply the result to the adapter.
 	 * @param {KeyvSanitizeAdapter} value The sanitize adapter to use.
 	 */
 	public set sanitize(value: KeyvSanitizeAdapter) {
 		this._sanitize = value;
-		/* v8 ignore next -- @preserve */
-		this._namespace =
-			this._namespace && this._sanitize.enabled
-				? this._sanitize.cleanNamespace(this._namespace)
-				: this._namespace;
+		if (this._namespace && this._sanitize.enabled) {
+			this._namespace = this._sanitize.cleanNamespace(this._namespace);
+			this._store.namespace = this._namespace;
+		}
+
+		this.sanitizeStoreNamespace();
 	}
 
 	/**
@@ -344,8 +346,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 
 		if (this._namespace !== undefined) {
 			this._store.namespace = this._namespace;
-		} else if (this._store.namespace && this._sanitize.enabled) {
-			this._store.namespace = this._sanitize.cleanNamespace(this._store.namespace);
+		} else {
+			this.sanitizeStoreNamespace();
 		}
 	}
 
@@ -1258,6 +1260,15 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		this._namespace = namespace;
 		if (this._namespace && this._sanitize.enabled) {
 			this._namespace = this._sanitize.cleanNamespace(this._namespace);
+		}
+	}
+
+	/**
+	 * Sanitizes the namespace kept from the storage adapter when Keyv has none of its own.
+	 */
+	private sanitizeStoreNamespace(): void {
+		if (this._namespace === undefined && this._store.namespace && this._sanitize.enabled) {
+			this._store.namespace = this._sanitize.cleanNamespace(this._store.namespace);
 		}
 	}
 }

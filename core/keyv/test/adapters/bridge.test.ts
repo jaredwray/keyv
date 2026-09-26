@@ -685,6 +685,14 @@ describe("KeyvBridgeAdapter - namespace-managing store", () => {
 		expect(store.namespace).toBe("given");
 	});
 
+	test("clears the store's namespace when the bridge is given an empty one", () => {
+		const store = createNamespacingStore();
+		store.namespace = "own";
+		const bridge = new KeyvBridgeAdapter(store, { namespace: "" });
+		expect(bridge.namespace).toBeUndefined();
+		expect(store.namespace).toBeUndefined();
+	});
+
 	test("Keyv keeps the namespace of a wrapped store that has one", async () => {
 		// Two stores on one backend, so only the namespaces keep them apart.
 		const shared = new Map<string, unknown>();
