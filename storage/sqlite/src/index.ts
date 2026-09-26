@@ -422,16 +422,15 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Gets a value by key from the store.
 	 * @template Value - The type of the stored value.
-	 * @param {string} key - The key to retrieve. If a namespace is set, the namespace prefix is stripped before querying.
+	 * @param {string} key - The key to retrieve.
 	 * @returns {Promise<KeyvStorageGetResult<Value>>} The value associated with the key, or `undefined`
 	 *   if the key does not exist or has expired. A SQL `NULL` value is normalized to `undefined`.
 	 */
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const select = `SELECT * FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
-		const rows = await this.query(select, strippedKey, ns);
+		const rows = await this.query(select, key, ns);
 		const row = rows[0] as { value: Value; expires?: number | null } | undefined;
 		if (row === undefined) {
 			return undefined;
@@ -439,7 +438,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 
 		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
 			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
-			await this.query(del, strippedKey, ns);
+			await this.query(del, key, ns);
 			return undefined;
 		}
 
@@ -457,14 +456,13 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const batchSize = 998; // 999 max params - 1 for namespace
 		const validMap = new Map<string, Value>();
 
-		for (let i = 0; i < strippedKeys.length; i += batchSize) {
-			const batch = strippedKeys.slice(i, i + batchSize);
+		for (let i = 0; i < keys.length; i += batchSize) {
+			const batch = keys.slice(i, i + batchSize);
 			const placeholders = batch.map(() => "?").join(", ");
 			const select = `SELECT * FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ?`;
 			const rows = await this.query(select, ...batch, ns);
@@ -485,7 +483,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 		}
 
 		// Coerce missing keys and SQL NULL values to undefined so the adapter never returns null.
-		return strippedKeys.map(
+		return keys.map(
 			(key) => (validMap.get(key) ?? undefined) as KeyvStorageGetResult<Value | undefined>,
 		);
 	}
@@ -493,20 +491,19 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Sets a key-value pair. Uses an upsert operation via `ON CONFLICT` to
 	 * insert a new entry or update an existing one atomically.
-	 * @param {string} key - The key to set. If a namespace is set, the namespace prefix is stripped before storing.
+	 * @param {string} key - The key to set.
 	 * @param {KeyvAny} value - The value to store.
 	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns {Promise<boolean>} `true` on success, or `false` if an error occurred (an `error` event is also emitted).
 	 */
 	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
-			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
 			const upsert = `INSERT INTO ${this.getCleanTableName()} (key, value, namespace, expires)
 			VALUES(?, ?, ?, ?)
 			ON CONFLICT(key, namespace)
 			DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, strippedKey, value, ns, expires ?? null);
+			await this.query(upsert, key, value, ns, expires ?? null);
 			return true;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
@@ -542,9 +539,8 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			const params: KeyvAnyArray = [];
 
 			for (const { key, value, expires } of batch) {
-				const strippedKey = this.removeKeyPrefix(key);
 				placeholders.push("(?, ?, ?, ?)");
-				params.push(strippedKey, value, ns, expires ?? null);
+				params.push(key, value, ns, expires ?? null);
 			}
 
 			const upsert = `INSERT INTO ${this.getCleanTableName()} (key, value, namespace, expires)
@@ -570,10 +566,9 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` if the key was not found.
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ? RETURNING key`;
-		const result = (await this.query(del, strippedKey, ns)) as Array<{
+		const result = (await this.query(del, key, ns)) as Array<{
 			key: string;
 		}>;
 		return result.length > 0;
@@ -588,13 +583,12 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 *   where `true` indicates the key existed and was deleted, `false` indicates it was not found.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const batchSize = 998; // 999 max params - 1 for namespace
 		const deletedKeys = new Set<string>();
 
-		for (let i = 0; i < strippedKeys.length; i += batchSize) {
-			const batch = strippedKeys.slice(i, i + batchSize);
+		for (let i = 0; i < keys.length; i += batchSize) {
+			const batch = keys.slice(i, i + batchSize);
 			const placeholders = batch.map(() => "?").join(", ");
 			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ? RETURNING key`;
 			const rows = (await this.query(del, ...batch, ns)) as Array<{ key: string }>;
@@ -603,7 +597,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			}
 		}
 
-		return strippedKeys.map((key) => deletedKeys.has(key));
+		return keys.map((key) => deletedKeys.has(key));
 	}
 
 	/**
@@ -622,18 +616,17 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<boolean>} `true` if the key exists, `false` otherwise.
 	 */
 	public async has(key: string): Promise<boolean> {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const select = `SELECT expires FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
-		const rows = (await this.query(select, strippedKey, ns)) as Array<{ expires?: number | null }>;
+		const rows = (await this.query(select, key, ns)) as Array<{ expires?: number | null }>;
 		if (rows.length === 0) {
 			return false;
 		}
 
 		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
 			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
-			await this.query(del, strippedKey, ns);
+			await this.query(del, key, ns);
 			return false;
 		}
 
@@ -648,14 +641,13 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	 *   where `true` indicates the key exists and `false` indicates it does not.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const batchSize = 998; // 999 max params - 1 for namespace
 		const validKeys = new Set<string>();
 
-		for (let i = 0; i < strippedKeys.length; i += batchSize) {
-			const batch = strippedKeys.slice(i, i + batchSize);
+		for (let i = 0; i < keys.length; i += batchSize) {
+			const batch = keys.slice(i, i + batchSize);
 			const placeholders = batch.map(() => "?").join(", ");
 			const select = `SELECT key, expires FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ?`;
 			const rows = await this.query(select, ...batch, ns);
@@ -675,7 +667,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			}
 		}
 
-		return strippedKeys.map((key) => validKeys.has(key));
+		return keys.map((key) => validKeys.has(key));
 	}
 
 	/**
@@ -927,22 +919,6 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			busyTimeout: this._busyTimeout,
 			wal: this._wal,
 		});
-	}
-
-	/**
-	 * Strips the namespace prefix from a key that was added by the Keyv core.
-	 * For example, if namespace is `'ns'` and key is `'ns:foo'`, returns `'foo'`.
-	 * If no namespace is set or the key does not start with the expected prefix,
-	 * the key is returned unchanged.
-	 * @param {string} key - The potentially prefixed key.
-	 * @returns {string} The key without the namespace prefix.
-	 */
-	private removeKeyPrefix(key: string): string {
-		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
-			return key.slice(this._namespace.length + 1);
-		}
-
-		return key;
 	}
 
 	/**

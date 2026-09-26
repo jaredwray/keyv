@@ -486,11 +486,27 @@ describe("namespace", () => {
 		const store2 = new KeyvMongo({ namespace: ns2, ...options });
 
 		const key = faker.string.alphanumeric(10);
-		await store1.set(`${ns1}:${key}`, "value1");
-		await store2.set(`${ns2}:${key}`, "value2");
+		await store1.set(key, "value1");
+		await store2.set(key, "value2");
 
-		expect(await store1.get(`${ns1}:${key}`)).toBe("value1");
-		expect(await store2.get(`${ns2}:${key}`)).toBe("value2");
+		expect(await store1.get(key)).toBe("value1");
+		expect(await store2.get(key)).toBe("value2");
+	});
+
+	test("keeps a key that starts with the namespace apart from the key without it", async () => {
+		const ns = faker.string.alphanumeric(8);
+		const store = new KeyvMongo({ namespace: ns, ...options });
+
+		const key = faker.string.alphanumeric(10);
+		const prefixedKey = `${ns}:${key}`;
+		await store.set(prefixedKey, "prefixed");
+		await store.set(key, "plain");
+
+		expect(await store.get(prefixedKey)).toBe("prefixed");
+		expect(await store.get(key)).toBe("plain");
+		expect(await store.getMany([prefixedKey, key])).toEqual(["prefixed", "plain"]);
+		expect(await store.delete(key)).toBe(true);
+		expect(await store.has(prefixedKey)).toBe(true);
 	});
 
 	test("clear only affects the configured namespace", async () => {
@@ -634,11 +650,26 @@ describe("namespace", () => {
 		const store2 = new KeyvMongo({ namespace: ns2, useGridFS: true, ...options });
 
 		const key = faker.string.alphanumeric(10);
-		await store1.set(`${ns1}:${key}`, "value1");
-		await store2.set(`${ns2}:${key}`, "value2");
+		await store1.set(key, "value1");
+		await store2.set(key, "value2");
 
-		expect(await store1.get(`${ns1}:${key}`)).toBe("value1");
-		expect(await store2.get(`${ns2}:${key}`)).toBe("value2");
+		expect(await store1.get(key)).toBe("value1");
+		expect(await store2.get(key)).toBe("value2");
+	});
+
+	test("keeps a key that starts with the namespace apart from the key without it in GridFS", async () => {
+		const ns = faker.string.alphanumeric(8);
+		const store = new KeyvMongo({ namespace: ns, useGridFS: true, ...options });
+
+		const key = faker.string.alphanumeric(10);
+		const prefixedKey = `${ns}:${key}`;
+		await store.set(prefixedKey, "prefixed");
+		await store.set(key, "plain");
+
+		expect(await store.get(prefixedKey)).toBe("prefixed");
+		expect(await store.get(key)).toBe("plain");
+		expect(await store.delete(key)).toBe(true);
+		expect(await store.has(prefixedKey)).toBe(true);
 	});
 
 	test("clear only affects the configured namespace in GridFS", async () => {
@@ -807,9 +838,10 @@ describe("createKeyv", () => {
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, "bar");
 		expect(await keyv.get(key)).toBe("bar");
-		// The adapter stores the value under the namespaced key.
+		// The adapter stores the key as given, scoped to its namespace.
 		const storeInstance = keyv.store as KeyvMongo;
-		expect(await storeInstance.get(`${ns}:${key}`)).toBeDefined();
+		expect(storeInstance.namespace).toBe(ns);
+		expect(await storeInstance.get(key)).toBeDefined();
 	});
 
 	test("isolates different namespaces", async () => {

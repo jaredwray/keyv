@@ -416,7 +416,7 @@ await store.disconnect();
 
 ### .formatKey(key)
 
-Formats a key by prepending the namespace if one is set. If the key already starts with the namespace prefix, it is returned as-is to avoid double-prefixing.
+Formats a key by prepending the namespace if one is set. A key that already starts with the namespace prefix gets it again, so `myapp:foo` and `foo` stay separate keys.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
@@ -424,7 +424,7 @@ store.formatKey('foo'); // 'foo'
 
 store.namespace = 'myapp';
 store.formatKey('foo'); // 'myapp:foo'
-store.formatKey('myapp:foo'); // 'myapp:foo' (no double-prefix)
+store.formatKey('myapp:foo'); // 'myapp:myapp:foo'
 ```
 
 ### .createKeyPrefix(key, namespace?)
@@ -439,7 +439,7 @@ store.createKeyPrefix('key'); // 'key'
 
 ### .removeKeyPrefix(key, namespace?)
 
-Removes the namespace prefix from a key. Returns the key as-is if no namespace is provided.
+Removes the namespace prefix from the start of a key. Returns the key as-is if no namespace is provided or the key does not start with the prefix.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });

@@ -584,18 +584,42 @@ describe("namespace", () => {
 		const nsKey = faker.string.uuid();
 		const valA = faker.lorem.word();
 		const valB = faker.lorem.word();
-		await storeA.set(`${namespaceA}:${nsKey}`, valA);
-		await storeB.set(`${namespaceB}:${nsKey}`, valB);
+		await storeA.set(nsKey, valA);
+		await storeB.set(nsKey, valB);
 
-		expect(await storeA.get(`${namespaceA}:${nsKey}`)).toBe(valA);
-		expect(await storeB.get(`${namespaceB}:${nsKey}`)).toBe(valB);
+		expect(await storeA.get(nsKey)).toBe(valA);
+		expect(await storeB.get(nsKey)).toBe(valB);
 
 		// Clearing one namespace should not affect the other.
 		await storeA.clear();
-		expect(await storeA.get(`${namespaceA}:${nsKey}`)).toBeUndefined();
-		expect(await storeB.get(`${namespaceB}:${nsKey}`)).toBe(valB);
+		expect(await storeA.get(nsKey)).toBeUndefined();
+		expect(await storeB.get(nsKey)).toBe(valB);
 
 		await storeB.clear();
+	});
+
+	test("should keep a key that starts with the namespace apart from the key without it", async () => {
+		const keyv = store();
+		const namespace = faker.string.alphanumeric(8);
+		keyv.namespace = namespace;
+		const key = faker.string.alphanumeric(10);
+		const prefixedKey = `${namespace}:${key}`;
+
+		await keyv.set(prefixedKey, "prefixed");
+		await keyv.set(key, "plain");
+		expect(await keyv.get(prefixedKey)).toBe("prefixed");
+		expect(await keyv.get(key)).toBe("plain");
+		expect(await keyv.getMany([prefixedKey, key])).toEqual(["prefixed", "plain"]);
+
+		const keys: string[] = [];
+		for await (const [entryKey] of keyv.iterator()) {
+			keys.push(entryKey);
+		}
+		expect(keys.sort()).toEqual([key, prefixedKey].sort());
+
+		expect(await keyv.delete(key)).toBe(true);
+		expect(await keyv.has(prefixedKey)).toBe(true);
+		await keyv.clear();
 	});
 
 	test("should isolate data across multiple Keyv instances", async () => {
@@ -729,8 +753,8 @@ describe("iterator", () => {
 		const key2 = faker.string.uuid();
 		const val1 = faker.lorem.word();
 		const val2 = faker.lorem.word();
-		await keyv.set(`${namespace}:${key1}`, val1);
-		await keyv.set(`${namespace}:${key2}`, val2);
+		await keyv.set(key1, val1);
+		await keyv.set(key2, val2);
 
 		const collected = new Map<string, string>();
 		for await (const [key, value] of keyv.iterator()) {
@@ -750,7 +774,7 @@ describe("iterator", () => {
 		await keyv.clear();
 		const key = faker.string.uuid();
 		const val = faker.lorem.word();
-		await keyv.set(`${namespace}:${key}`, val);
+		await keyv.set(key, val);
 
 		const keys: string[] = [];
 		for await (const [k] of keyv.iterator()) {
@@ -941,6 +965,8 @@ describe("schema migration", () => {
 		const nestedVal = faker.lorem.word();
 		const plainKey = faker.string.alphanumeric(10);
 		const plainVal = faker.lorem.word();
+		const repeatedKey = `${prefixNs}:${faker.string.alphanumeric(6)}`;
+		const repeatedVal = faker.lorem.word();
 
 		const Database = (await import("better-sqlite3")).default;
 		const db = new Database(dbPath);
@@ -954,16 +980,21 @@ describe("schema migration", () => {
 			nestedVal,
 		);
 		db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run(plainKey, plainVal);
+		db.prepare("INSERT INTO keyv (key, value) VALUES (?, ?)").run(
+			`${prefixNs}:${repeatedKey}`,
+			repeatedVal,
+		);
 		db.close();
 
 		const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
 		expect(await keyv.get(plainKey)).toBe(plainVal);
 
 		keyv.namespace = prefixNs;
-		expect(await keyv.get(`${prefixNs}:${prefixKey}`)).toBe(prefixVal);
+		expect(await keyv.get(prefixKey)).toBe(prefixVal);
+		expect(await keyv.get(repeatedKey)).toBe(repeatedVal);
 
 		keyv.namespace = nestedNs;
-		expect(await keyv.get(`${nestedNs}:${nestedKey}`)).toBe(nestedVal);
+		expect(await keyv.get(nestedKey)).toBe(nestedVal);
 		await keyv.disconnect();
 
 		try {
@@ -997,7 +1028,7 @@ describe("schema migration", () => {
 
 		const keyv = new KeyvSqlite({ uri: `sqlite://${dbPath}`, busyTimeout: 3000 });
 		keyv.namespace = namespace;
-		expect(await keyv.get(`${namespace}:${legacyKey}`)).toBe(keptValue);
+		expect(await keyv.get(legacyKey)).toBe(keptValue);
 
 		const leftover = (await keyv.query(
 			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'keyv_migration_old'",

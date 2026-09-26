@@ -148,6 +148,22 @@ describe("namespace and key prefixing", () => {
 		t.expect(await store.get(key)).toBeUndefined();
 	});
 
+	it("should keep a key that starts with the namespace apart from the key without it", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const namespace = faker.string.alphanumeric(10);
+		store.namespace = namespace;
+		const key = faker.string.uuid();
+		const prefixedKey = `${namespace}:${key}`;
+		await store.set(prefixedKey, "prefixed");
+		await store.set(key, "plain");
+
+		t.expect(await store.get(prefixedKey)).toBe("prefixed");
+		t.expect(await store.get(key)).toBe("plain");
+		t.expect(await store.delete(key)).toBe(true);
+		t.expect(await store.has(prefixedKey)).toBe(true);
+		await store.clear();
+	});
+
 	it("should check a value with has when a namespace is set", async (t) => {
 		const store = new KeyvEtcd(etcdUrl);
 		store.namespace = faker.string.alphanumeric(10);
@@ -158,11 +174,11 @@ describe("namespace and key prefixing", () => {
 		t.expect(await store.has(key)).toBe(false);
 	});
 
-	it("should format a key with the namespace and avoid double prefixing", (t) => {
+	it("should format a key with the namespace, even one that already starts with it", (t) => {
 		const store = new KeyvEtcd();
 		store.namespace = "ns";
 		t.expect(store.formatKey("key")).toBe("ns:key");
-		t.expect(store.formatKey("ns:key")).toBe("ns:key");
+		t.expect(store.formatKey("ns:key")).toBe("ns:ns:key");
 		store.namespace = undefined;
 		t.expect(store.formatKey("key")).toBe("key");
 	});
@@ -177,6 +193,8 @@ describe("namespace and key prefixing", () => {
 	it("should remove a key prefix when a namespace is provided", (t) => {
 		const store = new KeyvEtcd();
 		t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
+		t.expect(store.removeKeyPrefix("ns:ns:key", "ns")).toBe("ns:key");
+		t.expect(store.removeKeyPrefix("other:ns:key", "ns")).toBe("other:ns:key");
 		t.expect(store.removeKeyPrefix("key")).toBe("key");
 		t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 	});

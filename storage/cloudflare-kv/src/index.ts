@@ -241,36 +241,30 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Removes the namespace prefix from a key.
+	 * Removes the namespace prefix from the start of a key.
 	 * @param key - The key to strip the prefix from
 	 * @param namespace - The namespace prefix to remove. If not provided, the key is returned as-is.
-	 * @returns The key without the namespace prefix.
+	 * @returns The key without the namespace prefix, or the key unchanged if it does not start with it.
 	 */
 	public removeKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return key.replace(`${namespace}${this._keyPrefixSeparator}`, "");
+			const prefix = `${namespace}${this._keyPrefixSeparator}`;
+			if (key.startsWith(prefix)) {
+				return key.slice(prefix.length);
+			}
 		}
 
 		return key;
 	}
 
 	/**
-	 * Formats a key by prepending the namespace if one is set. Avoids double-prefixing
-	 * by checking if the key already starts with the namespace prefix.
+	 * Formats a key by prepending the namespace if one is set. A key that already starts with the
+	 * namespace prefix gets it again, so it stays distinct from the key without it.
 	 * @param key - The key to format
 	 * @returns The formatted key with namespace prefix, or the original key if no namespace is set.
 	 */
 	public formatKey(key: string): string {
-		if (!this._namespace) {
-			return key;
-		}
-
-		const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
-		if (key.startsWith(prefix)) {
-			return key;
-		}
-
-		return `${prefix}${key}`;
+		return this.createKeyPrefix(key, this._namespace);
 	}
 
 	/**

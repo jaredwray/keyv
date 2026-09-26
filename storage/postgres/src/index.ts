@@ -393,17 +393,15 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * Gets a value by key. Expired entries are deleted on read and reported as missing.
 	 *
 	 * @template Value - The type of the stored value.
-	 * @param {string} key - The key to retrieve. If a namespace is set, the namespace prefix is
-	 * stripped before querying.
+	 * @param {string} key - The key to retrieve.
 	 * @returns {Promise<KeyvStorageGetResult<Value>>} The stored value, or `undefined` if the key
 	 * does not exist, has expired, or the stored value is SQL `NULL`. Never returns `null`.
 	 */
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const select = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [strippedKey, ns]);
+		const rows = await this.query(select, [key, ns]);
 		const row = rows[0];
 		if (row === undefined) {
 			return undefined;
@@ -411,7 +409,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 		if (isExpired(row.expires, now)) {
 			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-			await this.query(del, [strippedKey, ns]);
+			await this.query(del, [key, ns]);
 			return undefined;
 		}
 
@@ -430,11 +428,10 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const getMany = `SELECT * FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(getMany, [strippedKeys, ns]);
+		const rows = await this.query(getMany, [keys, ns]);
 
 		const validMap = new Map<string, KeyvStorageGetResult<Value>>();
 		const expiredKeys: string[] = [];
@@ -451,7 +448,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			await this.query(del, [expiredKeys, ns]);
 		}
 
-		return strippedKeys.map(
+		return keys.map(
 			(key) => (validMap.get(key) ?? undefined) as KeyvStorageGetResult<Value | undefined>,
 		);
 	}
@@ -469,12 +466,11 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
-			const strippedKey = this.removeKeyPrefix(key);
 			const upsert = `INSERT INTO ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} (key, value, namespace, expires)
       VALUES($1, $2, $3, $4)
       ON CONFLICT(key, COALESCE(namespace, ''))
       DO UPDATE SET value=excluded.value, expires=excluded.expires;`;
-			await this.query(upsert, [strippedKey, value, this.getNamespaceValue(), expires ?? null]);
+			await this.query(upsert, [key, value, this.getNamespaceValue(), expires ?? null]);
 			return true;
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
@@ -505,7 +501,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			const values = [];
 			const expiresArray: Array<number | null> = [];
 			for (const { key, value, expires } of entries) {
-				keys.push(this.removeKeyPrefix(key));
+				keys.push(key);
 				values.push(value);
 				expiresArray.push(expires ?? null);
 			}
@@ -528,10 +524,9 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
-		const rows = await this.query(del, [strippedKey, ns]);
+		const rows = await this.query(del, [key, ns]);
 		return rows.length > 0;
 	}
 
@@ -548,12 +543,11 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			return [];
 		}
 
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING key`;
-		const rows = await this.query(del, [strippedKeys, ns]);
+		const rows = await this.query(del, [keys, ns]);
 		const deletedKeys = new Set(rows.map((row) => row.key as string));
-		return strippedKeys.map((key) => deletedKeys.has(key));
+		return keys.map((key) => deletedKeys.has(key));
 	}
 
 	/**
@@ -564,18 +558,17 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<boolean>} `true` if the key exists and has not expired, `false` otherwise.
 	 */
 	public async has(key: string): Promise<boolean> {
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const select = `SELECT expires FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [strippedKey, ns]);
+		const rows = await this.query(select, [key, ns]);
 		if (rows.length === 0) {
 			return false;
 		}
 
 		if (isExpired(rows[0].expires, now)) {
 			const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '')`;
-			await this.query(del, [strippedKey, ns]);
+			await this.query(del, [key, ns]);
 			return false;
 		}
 
@@ -590,11 +583,10 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 * @returns {Promise<boolean[]>} Booleans in the same order as `keys`.
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const now = Date.now();
 		const select = `SELECT key, expires FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '')`;
-		const rows = await this.query(select, [strippedKeys, ns]);
+		const rows = await this.query(select, [keys, ns]);
 
 		const validKeys = new Set<string>();
 		const expiredKeys: string[] = [];
@@ -611,7 +603,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			await this.query(del, [expiredKeys, ns]);
 		}
 
-		return strippedKeys.map((key) => validKeys.has(key));
+		return keys.map((key) => validKeys.has(key));
 	}
 
 	/**
@@ -780,23 +772,6 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 			const data = await conn.query(sql, values);
 			return data.rows;
 		};
-	}
-
-	/**
-	 * Strips the namespace prefix from a key that was added by the Keyv core.
-	 * For example, if namespace is `'ns'` and key is `'ns:foo'`, returns `'foo'`.
-	 * If no namespace is set or the key does not start with the expected prefix,
-	 * the key is returned unchanged.
-	 *
-	 * @param {string} key - The potentially prefixed key.
-	 * @returns {string} The key without the namespace prefix.
-	 */
-	private removeKeyPrefix(key: string): string {
-		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
-			return key.slice(this._namespace.length + 1);
-		}
-
-		return key;
 	}
 
 	/**
