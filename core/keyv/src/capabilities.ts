@@ -161,6 +161,28 @@ function buildMethods<T extends Record<string, KeyvStorageMethod>>(
 	return methods as T;
 }
 
+/** The methods a full storage adapter implements. */
+const keyvStorageRequiredMethods: Array<keyof KeyvStorageMethods> = [
+	"get",
+	"has",
+	"hasMany",
+	"set",
+	"setMany",
+	"delete",
+	"deleteMany",
+	"clear",
+];
+
+/**
+ * Whether a detected store has every method of a full storage adapter, whether or not they are
+ * native `async` functions.
+ * @param capability - The result of {@link detectKeyvStorage}
+ * @returns `true` when all of the full storage adapter's methods exist
+ */
+export function hasKeyvStorageMethods(capability: KeyvStorageCapability): boolean {
+	return keyvStorageRequiredMethods.every((m) => capability.methods[m].exists);
+}
+
 // --- Detect functions ---
 
 /**
@@ -239,44 +261,21 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 	}
 
 	const methods = buildMethods<KeyvStorageMethods>(obj, keyvStorageMethodNames);
-	const isMap = obj instanceof Map;
 
-	// keyvStorage: all required methods present. `methodType` only recognizes native `async`
-	// functions, and an adapter compiled to an older target (such as ES2016) has plain functions
-	// that return promises. So only a Map, which may carry extra synchronous batch methods, needs
-	// them to be async.
-	const requiredKeys: Array<keyof KeyvStorageMethods> = [
-		"get",
-		"has",
-		"hasMany",
-		"set",
-		"setMany",
-		"delete",
-		"deleteMany",
-		"clear",
-	];
-	const hasRequired = requiredKeys.every((k) => methods[k].exists);
-	const allAsync = requiredKeys.every((k) => methods[k].methodType === "async");
+	// keyvStorage: all required methods present and async
+	const isKeyvStorage = keyvStorageRequiredMethods.every(
+		(k) => methods[k].exists && methods[k].methodType === "async",
+	);
 
-	if (hasRequired && (allAsync || !isMap)) {
+	if (isKeyvStorage) {
 		return { compatible: true, store: "keyvStorage", methods };
 	}
 
-	// mapLike: get, set, delete, has are plain functions, on a Map or a store without any of the
-	// methods only storage adapters have. A plain function may still return a promise, so an
-	// adapter-shaped store goes to the async path, where every call is awaited.
+	// mapLike: get, set, delete, has all synchronous
 	const mapLikeMethods: Array<keyof KeyvStorageMethods> = ["get", "set", "delete", "has"];
-	const storageAdapterMethods: Array<keyof KeyvStorageMethods> = [
-		"getMany",
-		"setMany",
-		"hasMany",
-		"deleteMany",
-		"disconnect",
-		"iterator",
-	];
-	const isMapLike =
-		mapLikeMethods.every((m) => methods[m].exists && methods[m].methodType === "sync") &&
-		(isMap || !storageAdapterMethods.some((m) => methods[m].exists));
+	const isMapLike = mapLikeMethods.every(
+		(m) => methods[m].exists && methods[m].methodType === "sync",
+	);
 
 	if (isMapLike) {
 		return { compatible: true, store: "mapLike", methods };

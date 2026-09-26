@@ -1269,15 +1269,53 @@ describe("storage adapter expiry negotiation", () => {
 		expect(legacy.namespace).toBe("ns");
 	});
 
-	test("rejects instead of returning undefined when a promise-based store is used as a Map", async () => {
-		// With no storage-adapter methods, this store is indistinguishable from a synchronous Map.
+	test("uses the bridge for a promise-based store with only Map's methods", async () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
 		const keyv = new Keyv({ store: createNonAsyncV6Adapter() as any });
+		expect(keyv.store).toBeInstanceOf(KeyvBridgeAdapter);
+		await keyv.set("foo", "bar");
+		expect(await keyv.get("foo")).toBe("bar");
+	});
+
+	test("keeps a synchronous store with extra adapter methods on KeyvMemoryAdapter", async () => {
+		const data = new Map<string, unknown>();
+		const store = {
+			get: (key: string) => data.get(key),
+			set: (key: string, value: unknown) => data.set(key, value),
+			delete: (key: string) => data.delete(key),
+			clear: () => data.clear(),
+			has: (key: string) => data.has(key),
+			getMany: (keys: string[]) => keys.map((key) => data.get(key)),
+			disconnect: () => {},
+		};
+		const keyv = new Keyv({ store });
 		expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
-		await expect(keyv.set("foo", "bar")).rejects.toThrow("returned a promise");
-		await expect(keyv.get("foo")).rejects.toThrow(
-			"Wrap a promise-based store in KeyvBridgeAdapter",
-		);
+		await keyv.set("foo", "bar");
+		expect(await keyv.get("foo")).toBe("bar");
+	});
+
+	test("treats a store whose has throws as synchronous", () => {
+		const store = {
+			get: () => undefined,
+			set: () => {},
+			delete: () => true,
+			clear: () => {},
+			has: () => {
+				throw new Error("has failed");
+			},
+		};
+		expect(new Keyv({ store }).store).toBeInstanceOf(KeyvMemoryAdapter);
+	});
+
+	test("does not leave a rejected has() from the check unhandled", () => {
+		const store = {
+			get: () => Promise.resolve(undefined),
+			set: () => Promise.resolve(true),
+			delete: () => Promise.resolve(true),
+			clear: () => Promise.resolve(),
+			has: () => Promise.reject(new Error("store is down")),
+		};
+		expect(new Keyv({ store }).store).toBeInstanceOf(KeyvBridgeAdapter);
 	});
 
 	test("getMany/getManyRaw fall back to single gets when a directly-used adapter lacks getMany", async () => {

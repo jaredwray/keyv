@@ -47,19 +47,17 @@ Returns `{ compatible, store, methods, expires? }`.
 
 | Value | Meaning |
 | --- | --- |
-| `"keyvStorage"` | Full adapter (`get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, `hasMany`). On a `Map` these must be `async` functions. |
-| `"mapLike"` | Plain (not `async`) `get`, `set`, `delete`, `has`, on a `Map` or a store without `getMany`, `setMany`, `hasMany`, `deleteMany`, `disconnect`, or `iterator` |
-| `"asyncMap"` | Any other store with `get`, `set`, `delete`, `clear` |
+| `"keyvStorage"` | Full async adapter (`get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, `hasMany`) |
+| `"mapLike"` | Sync `get`, `set`, `delete`, `has` (a `Map`) |
+| `"asyncMap"` | Async `get`, `set`, `delete`, `clear` |
 | `"none"` | Not a usable store |
-
-`methodType` is `"async"` only for native `async` functions. A method that returns a promise without being `async`, such as one compiled to ES2016, reports `"sync"`, so a store with storage-adapter methods is never map-like.
 
 ```js
 detectKeyvStorage(new Map());
 // { compatible: true, store: 'mapLike', methods: { get: { exists: true, methodType: 'sync' }, ... } }
 ```
 
-Keyv uses this in `resolveStore()` to pick `KeyvMemoryAdapter` vs `KeyvBridgeAdapter`.
+Keyv uses this in `resolveStore()` to pick `KeyvMemoryAdapter` vs `KeyvBridgeAdapter`. `methodType` is `"async"` only for native `async` functions, so for a `"mapLike"` store that isn't a `Map`, `resolveStore()` also calls `has` once. If it returns a promise, the store goes to `KeyvBridgeAdapter`.
 
 ## `keyvStorageCapability(adapter)`
 

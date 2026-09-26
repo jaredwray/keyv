@@ -61,6 +61,30 @@ export function ttlFromExpires(expires: number | undefined): number | undefined 
 }
 
 /**
+ * Calls a store's `has` once to see whether it returns a promise. A method that is not a native
+ * `async` function can still return one, such as an `async` method compiled to an older target.
+ * @param store - The store to check
+ * @returns `true` when `has` returned a promise
+ */
+export function returnsPromise(store: { has: (key: string) => unknown }): boolean {
+	let result: unknown;
+	try {
+		result = store.has("keyv-probe");
+	} catch {
+		// A store that throws here is treated as synchronous.
+		return false;
+	}
+
+	if (typeof (result as PromiseLike<unknown> | null | undefined)?.then !== "function") {
+		return false;
+	}
+
+	// Only the kind of result matters, so don't leave a rejection unhandled.
+	Promise.resolve(result).catch(() => {});
+	return true;
+}
+
+/**
  * Scan parallel `keys` and `data` arrays, nullify any expired entries in
  * `data`, and batch-delete the corresponding keys via `keyv.deleteMany()`.
  */
