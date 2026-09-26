@@ -50,7 +50,7 @@ keyv.namespace = "tenant-42";
 keyv.namespace = undefined; // no isolation
 ```
 
-If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on construct and on the setter. A namespace that Keyv keeps from the adapter is cleaned too.
+If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on construct and on the setter. A namespace that Keyv keeps from the adapter is cleaned too. A namespace that cleaning leaves empty becomes `keyv-sanitized`, so the instance still has a namespace of its own.
 
 ## Memory and Map stores
 

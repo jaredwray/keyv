@@ -1270,6 +1270,10 @@ keyv.sanitize = new KeyvSanitize({ keys: true, namespace: true });
 
 Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`. Namespace sanitization is applied at construction and when the `namespace` setter is used.
 
+A key that is empty after sanitization never reaches the store. `get` and `getRaw` return `undefined`, `set`, `setRaw`, `delete`, and `has` return `false`, and the batch methods put `undefined` or `false` in that key's position.
+
+A namespace that is empty after sanitization, such as `$$` or `;`, becomes `keyv-sanitized`. An empty namespace would turn namespacing off, mixing the instance's keys with unrelated ones and letting `clear()` remove them.
+
 # Bun Support
 
 We make a best effort to support [Bun](https://bun.sh/) as a runtime. Our default and primary target is Node.js, but we run tests against Bun to ensure compatibility. If you encounter any issues while using Keyv with Bun, please report them at our [GitHub issues](https://github.com/jaredwray/keyv/issues).

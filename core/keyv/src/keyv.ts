@@ -35,6 +35,13 @@ import {
 	ttlFromExpires,
 } from "./utils.js";
 
+/**
+ * The namespace Keyv uses when sanitizing a namespace leaves nothing. An empty namespace would
+ * turn namespacing off, mixing the instance's keys with unrelated ones and letting `clear()`
+ * remove them.
+ */
+const emptiedNamespace = "keyv-sanitized";
+
 export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	/**
 	 * Keyv Constructor
@@ -193,7 +200,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public set namespace(namespace: string | undefined) {
 		this._namespace =
-			namespace && this._sanitize.enabled ? this._sanitize.cleanNamespace(namespace) : namespace;
+			namespace && this._sanitize.enabled ? this.cleanNamespace(namespace) : namespace;
 		this._store.namespace = this._namespace;
 	}
 
@@ -248,7 +255,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	public set sanitize(value: KeyvSanitizeAdapter) {
 		this._sanitize = value;
 		if (this._namespace && this._sanitize.enabled) {
-			this._namespace = this._sanitize.cleanNamespace(this._namespace);
+			this._namespace = this.cleanNamespace(this._namespace);
 			this._store.namespace = this._namespace;
 		}
 
@@ -457,6 +464,31 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
+	 * Runs a batch operation without the keys or entries whose key is empty, then returns its results
+	 * in the original order with `fallback` for each empty key. As with the single-key methods, an
+	 * empty key never reaches hooks, telemetry or the store.
+	 * @param items - the keys or entries of the batch
+	 * @param fallback - the result for an item whose key is empty
+	 * @param run - runs the batch operation on the items whose key is not empty
+	 * @returns one result per item, in the same order as `items`
+	 */
+	private async skipEmptyKeys<Item extends string | { key: string }, Result>(
+		items: Item[],
+		fallback: Result,
+		run: (items: Item[]) => Promise<Result[]>,
+	): Promise<Result[]> {
+		const isEmpty = (item: Item) => (typeof item === "string" ? item : item.key) === "";
+		const kept = items.filter((item) => !isEmpty(item));
+		if (kept.length === items.length) {
+			return run(items);
+		}
+
+		const results = kept.length > 0 ? await run(kept) : [];
+		let next = 0;
+		return items.map((item) => (isEmpty(item) ? fallback : results[next++]));
+	}
+
+	/**
 	 * Get many values for an array of keys.
 	 * @param {string[]} keys the keys to get
 	 * @returns {Promise<Array<Value | undefined>>} an array of values in the same order as the
@@ -464,49 +496,50 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public async getMany<Value = GenericValue>(keys: string[]): Promise<Array<Value | undefined>> {
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
+		return this.skipEmptyKeys(keys, undefined, async (keys) => {
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
 
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
-
-		let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
-		try {
-			rawData = await this.storeGetMany<Value>(keys);
-		} catch (error) {
-			this.emit(KeyvEvents.ERROR, error);
-			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
-			const failed: Array<Value | undefined> = keys.map(() => undefined);
-			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, failed);
-			return failed;
-		}
-
-		let deserialized: Array<KeyvValue<Value> | undefined>;
-		if (this._checkExpired) {
-			deserialized = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
-		} else {
-			deserialized = await Promise.all(
-				(rawData as unknown[]).map(async (row) => {
-					if (row === undefined || row === null) {
-						return undefined;
-					}
-
-					return typeof row === "string" ? this.decode<Value>(row) : (row as KeyvValue<Value>);
-				}),
-			);
-		}
-
-		const result: Array<Value | undefined> = deserialized.map((row) =>
-			row !== undefined ? row.value : undefined,
-		);
-
-		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
-		for (let i = 0; i < result.length; i++) {
-			if (result[i] === undefined) {
-				this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
-			} else {
-				this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+			let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
+			try {
+				rawData = await this.storeGetMany<Value>(keys);
+			} catch (error) {
+				this.emit(KeyvEvents.ERROR, error);
+				this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+				const failed: Array<Value | undefined> = keys.map(() => undefined);
+				await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, failed);
+				return failed;
 			}
-		}
 
-		return result as Array<Value | undefined>;
+			let deserialized: Array<KeyvValue<Value> | undefined>;
+			if (this._checkExpired) {
+				deserialized = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
+			} else {
+				deserialized = await Promise.all(
+					(rawData as unknown[]).map(async (row) => {
+						if (row === undefined || row === null) {
+							return undefined;
+						}
+
+						return typeof row === "string" ? this.decode<Value>(row) : (row as KeyvValue<Value>);
+					}),
+				);
+			}
+
+			const result: Array<Value | undefined> = deserialized.map((row) =>
+				row !== undefined ? row.value : undefined,
+			);
+
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, result);
+			for (let i = 0; i < result.length; i++) {
+				if (result[i] === undefined) {
+					this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+				} else {
+					this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+				}
+			}
+
+			return result as Array<Value | undefined>;
+		});
 	}
 
 	/**
@@ -574,59 +607,60 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	): Promise<Array<KeyvStorageGetResult<Value>>> {
 		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
+		return this.skipEmptyKeys(keys, undefined, async (keys) => {
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY_RAW, { keys });
 
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY_RAW, { keys });
+			if (keys.length === 0) {
+				const result: Array<KeyvStorageGetResult<Value>> = [];
+				await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
+					keys,
+					values: result,
+				});
+				return result;
+			}
 
-		if (keys.length === 0) {
-			const result: Array<KeyvStorageGetResult<Value>> = [];
+			let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
+			try {
+				rawData = await this.storeGetMany<Value>(keys);
+			} catch (error) {
+				this.emit(KeyvEvents.ERROR, error);
+				this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+				const failed: Array<KeyvStorageGetResult<Value>> = keys.map(() => undefined);
+				await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, { keys, values: failed });
+				return failed;
+			}
+
+			let result: Array<KeyvValue<Value> | undefined>;
+			if (this._checkExpired) {
+				result = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
+			} else {
+				result = await Promise.all(
+					(rawData as unknown[]).map(async (row) => {
+						if (row === undefined || row === null) {
+							return undefined;
+						}
+
+						return typeof row === "string" ? this.decode<Value>(row) : (row as KeyvValue<Value>);
+					}),
+				);
+			}
+
+			// Add in hits and misses
+			for (let i = 0; i < result.length; i++) {
+				if (result[i] === undefined) {
+					this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
+				} else {
+					this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
+				}
+			}
+
+			// Trigger the after get many raw hook
 			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
 				keys,
 				values: result,
 			});
-			return result;
-		}
-
-		let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
-		try {
-			rawData = await this.storeGetMany<Value>(keys);
-		} catch (error) {
-			this.emit(KeyvEvents.ERROR, error);
-			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
-			const failed: Array<KeyvStorageGetResult<Value>> = keys.map(() => undefined);
-			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, { keys, values: failed });
-			return failed;
-		}
-
-		let result: Array<KeyvValue<Value> | undefined>;
-		if (this._checkExpired) {
-			result = await this.decodeWithExpire<Value>(keys, rawData as unknown[]);
-		} else {
-			result = await Promise.all(
-				(rawData as unknown[]).map(async (row) => {
-					if (row === undefined || row === null) {
-						return undefined;
-					}
-
-					return typeof row === "string" ? this.decode<Value>(row) : (row as KeyvValue<Value>);
-				}),
-			);
-		}
-
-		// Add in hits and misses
-		for (let i = 0; i < result.length; i++) {
-			if (result[i] === undefined) {
-				this.emitTelemetry(KeyvEvents.STAT_MISS, keys[i]);
-			} else {
-				this.emitTelemetry(KeyvEvents.STAT_HIT, keys[i]);
-			}
-		}
-
-		// Trigger the after get many raw hook
-		await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, {
-			keys,
-			values: result,
+			return result as Array<KeyvStorageGetResult<Value>>;
 		});
-		return result as Array<KeyvStorageGetResult<Value>>;
 	}
 
 	/**
@@ -696,54 +730,55 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			...e,
 			key: this._sanitize.enabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
+		return this.skipEmptyKeys(entries, false, async (entries) => {
+			const data = { entries };
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY, data);
+			entries = data.entries;
 
-		const data = { entries };
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY, data);
-		entries = data.entries;
+			let results: boolean[] = [];
 
-		let results: boolean[] = [];
+			try {
+				const serializedEntries = await Promise.all(
+					entries.map(async ({ key, value, ttl }) => {
+						ttl = resolveTtl(ttl, this._ttl);
 
-		try {
-			const serializedEntries = await Promise.all(
-				entries.map(async ({ key, value, ttl }) => {
-					ttl = resolveTtl(ttl, this._ttl);
+						/* v8 ignore next -- @preserve */
+						const expires = calculateExpires(ttl);
 
-					/* v8 ignore next -- @preserve */
-					const expires = calculateExpires(ttl);
+						/* v8 ignore next -- @preserve */
+						if (typeof value === "symbol") {
+							this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
+							this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
+							throw new Error("symbol cannot be serialized");
+						}
 
-					/* v8 ignore next -- @preserve */
-					if (typeof value === "symbol") {
-						this.emit(KeyvEvents.ERROR, "symbol cannot be serialized");
-						this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
-						throw new Error("symbol cannot be serialized");
-					}
+						const formattedValue = { value, expires };
+						const encodedValue = await this.encode(formattedValue);
+						return { key, value: encodedValue, expires };
+					}),
+				);
+				// biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
+				const storeResult = await this._store.setMany!(serializedEntries);
+				/* v8 ignore next -- @preserve */
+				results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
+				this.emitTelemetry(
+					KeyvEvents.STAT_SET,
+					entries.map((e) => e.key),
+				);
+			} catch (error) {
+				this.emit(KeyvEvents.ERROR, error);
+				this.emitTelemetry(
+					KeyvEvents.STAT_ERROR,
+					entries.map((e) => e.key),
+				);
 
-					const formattedValue = { value, expires };
-					const encodedValue = await this.encode(formattedValue);
-					return { key, value: encodedValue, expires };
-				}),
-			);
-			// biome-ignore lint/style/noNonNullAssertion: guaranteed by resolveStore
-			const storeResult = await this._store.setMany!(serializedEntries);
-			/* v8 ignore next -- @preserve */
-			results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
-			this.emitTelemetry(
-				KeyvEvents.STAT_SET,
-				entries.map((e) => e.key),
-			);
-		} catch (error) {
-			this.emit(KeyvEvents.ERROR, error);
-			this.emitTelemetry(
-				KeyvEvents.STAT_ERROR,
-				entries.map((e) => e.key),
-			);
+				results = entries.map(() => false);
+			}
 
-			results = entries.map(() => false);
-		}
+			await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY, { entries, values: results });
 
-		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY, { entries, values: results });
-
-		return results;
+			return results;
+		});
 	}
 
 	/**
@@ -815,39 +850,41 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			/* v8 ignore next -- @preserve */
 			key: this._sanitize.enabled ? this._sanitize.cleanKey(e.key) : e.key,
 		}));
-		let results: boolean[] = [];
+		return this.skipEmptyKeys(entries, false, async (entries) => {
+			let results: boolean[] = [];
 
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY_RAW, { entries });
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_MANY_RAW, { entries });
 
-		try {
-			const rawEntries = await Promise.all(
-				entries.map(async ({ key, value }) => {
-					const encodedValue = await this.encode(value);
-					return { key, value: encodedValue, expires: value.expires };
-				}),
-			);
-			const storeResult = await this._store.setMany(rawEntries);
-			results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
-			this.emitTelemetry(
-				KeyvEvents.STAT_SET,
-				entries.map((e) => e.key),
-			);
-		} catch (error) {
-			this.emit(KeyvEvents.ERROR, error);
-			this.emitTelemetry(
-				KeyvEvents.STAT_ERROR,
-				entries.map((e) => e.key),
-			);
+			try {
+				const rawEntries = await Promise.all(
+					entries.map(async ({ key, value }) => {
+						const encodedValue = await this.encode(value);
+						return { key, value: encodedValue, expires: value.expires };
+					}),
+				);
+				const storeResult = await this._store.setMany(rawEntries);
+				results = Array.isArray(storeResult) ? (storeResult as boolean[]) : entries.map(() => true);
+				this.emitTelemetry(
+					KeyvEvents.STAT_SET,
+					entries.map((e) => e.key),
+				);
+			} catch (error) {
+				this.emit(KeyvEvents.ERROR, error);
+				this.emitTelemetry(
+					KeyvEvents.STAT_ERROR,
+					entries.map((e) => e.key),
+				);
 
-			results = entries.map(() => false);
-		}
+				results = entries.map(() => false);
+			}
 
-		await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY_RAW, {
-			entries,
-			results,
+			await this.hookWithDeprecated(KeyvHooks.AFTER_SET_MANY_RAW, {
+				entries,
+				results,
+			});
+
+			return results;
 		});
-
-		return results;
 	}
 
 	/**
@@ -902,30 +939,31 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		/* v8 ignore next -- @preserve */
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
+		return this.skipEmptyKeys(keys, false, async (keys) => {
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE_MANY, { keys });
+			// Legacy: keep firing BEFORE_DELETE for backward compat
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
 
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE_MANY, { keys });
-		// Legacy: keep firing BEFORE_DELETE for backward compat
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_DELETE, { key: keys });
+			let results: boolean[];
 
-		let results: boolean[];
+			try {
+				results = await this._store.deleteMany(keys);
+				this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
+			} catch (error) {
+				this.emit(KeyvEvents.ERROR, error);
+				this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+				results = keys.map(() => false);
+			}
 
-		try {
-			results = await this._store.deleteMany(keys);
-			this.emitTelemetry(KeyvEvents.STAT_DELETE, keys);
-		} catch (error) {
-			this.emit(KeyvEvents.ERROR, error);
-			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
-			results = keys.map(() => false);
-		}
+			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE_MANY, { keys, values: results });
+			// Legacy: keep firing AFTER_DELETE for backward compat
+			await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
+				key: keys,
+				value: results,
+			});
 
-		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE_MANY, { keys, values: results });
-		// Legacy: keep firing AFTER_DELETE for backward compat
-		await this.hookWithDeprecated(KeyvHooks.AFTER_DELETE, {
-			key: keys,
-			value: results,
+			return results;
 		});
-
-		return results;
 	}
 
 	/**
@@ -976,28 +1014,29 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		keys = this._sanitize.enabled ? this._sanitize.cleanKeys(keys) : keys;
+		return this.skipEmptyKeys(keys, false, async (keys) => {
+			await this.hookWithDeprecated(KeyvHooks.BEFORE_HAS_MANY, { keys });
 
-		await this.hookWithDeprecated(KeyvHooks.BEFORE_HAS_MANY, { keys });
-
-		let results: boolean[] = [];
-		try {
-			if (this._checkExpired) {
-				// Use storeGetMany (not this._store.getMany directly): a directly-used v6 adapter is
-				// not structurally required to implement getMany, and this branch is now the default.
-				const rawData = await this.storeGetMany(keys);
-				const deserialized = await this.decodeWithExpire(keys, rawData as unknown[]);
-				results = deserialized.map((row) => row !== undefined);
-			} else {
-				results = await this._store.hasMany(keys);
+			let results: boolean[] = [];
+			try {
+				if (this._checkExpired) {
+					// Use storeGetMany (not this._store.getMany directly): a directly-used v6 adapter is
+					// not structurally required to implement getMany, and this branch is now the default.
+					const rawData = await this.storeGetMany(keys);
+					const deserialized = await this.decodeWithExpire(keys, rawData as unknown[]);
+					results = deserialized.map((row) => row !== undefined);
+				} else {
+					results = await this._store.hasMany(keys);
+				}
+			} catch (error) {
+				this.emit(KeyvEvents.ERROR, error);
+				this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+				results = keys.map(() => false);
 			}
-		} catch (error) {
-			this.emit(KeyvEvents.ERROR, error);
-			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
-			results = keys.map(() => false);
-		}
 
-		await this.hookWithDeprecated(KeyvHooks.AFTER_HAS_MANY, { keys, values: results });
-		return results;
+			await this.hookWithDeprecated(KeyvHooks.AFTER_HAS_MANY, { keys, values: results });
+			return results;
+		});
 	}
 
 	/**
@@ -1268,8 +1307,16 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	private initNamespace(namespace?: string): void {
 		this._namespace = namespace;
 		if (this._namespace && this._sanitize.enabled) {
-			this._namespace = this._sanitize.cleanNamespace(this._namespace);
+			this._namespace = this.cleanNamespace(this._namespace);
 		}
+	}
+
+	/**
+	 * Sanitizes a namespace. When sanitizing leaves nothing, it returns {@link emptiedNamespace} so
+	 * the instance keeps a namespace of its own.
+	 */
+	private cleanNamespace(namespace: string): string {
+		return this._sanitize.cleanNamespace(namespace) || emptiedNamespace;
 	}
 
 	/**
@@ -1277,7 +1324,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 */
 	private sanitizeStoreNamespace(): void {
 		if (this._namespace === undefined && this._store.namespace && this._sanitize.enabled) {
-			this._store.namespace = this._sanitize.cleanNamespace(this._store.namespace);
+			this._store.namespace = this.cleanNamespace(this._store.namespace);
 		}
 	}
 }

@@ -39,13 +39,36 @@ describe("KeyvSanitize", () => {
 	test("patterns formed by stripping another pattern are stripped too", () => {
 		const s = new KeyvSanitize({ keys: true, namespace: true });
 		expect(s.cleanKey("..././etc/passwd")).toBe("etc/passwd");
+		expect(s.cleanKey("....\\\\etc")).toBe("etc");
 		expect(s.cleanKey("$$where")).toBe("where");
 		expect(s.cleanKey("{$$gt")).toBe("gt");
+		expect(s.cleanKey("{{$$gt")).toBe("gt");
+		expect(s.cleanKey("{ -\0-$gt")).toBe("gt");
 		expect(s.cleanKey("-\0-")).toBe("");
 		expect(s.cleanKey("/\0*")).toBe("");
 		expect(s.cleanKey("-../-")).toBe("");
 		expect(s.cleanKey("../$where")).toBe("where");
 		expect(s.cleanNamespace("..././ns")).toBe("ns");
+	});
+
+	test("stripping a formed pattern keeps the characters around it", () => {
+		const s = new KeyvSanitize({ keys: true });
+		expect(s.cleanKey("$$a$b")).toBe("a$b");
+		expect(s.cleanKey("$$ $b")).toBe(" $b");
+		expect(s.cleanKey("$$./-*")).toBe("./-*");
+	});
+
+	test("stripping a formed pattern respects disabled categories", () => {
+		expect(new KeyvSanitize({ keys: { sql: false } }).cleanKey("$$--")).toBe("--");
+		expect(new KeyvSanitize({ keys: { mongo: false } }).cleanKey("..././$")).toBe("$");
+		expect(new KeyvSanitize({ keys: { path: false } }).cleanKey("$$../")).toBe("../");
+	});
+
+	test("long runs of nested patterns are cleaned without quadratic slowdown", () => {
+		const s = new KeyvSanitize({ keys: true });
+		expect(s.cleanKey("$".repeat(200_000))).toBe("");
+		expect(s.cleanKey(`${"{".repeat(100_000)}${"$".repeat(100_000)}`)).toBe("");
+		expect(s.cleanKey(`${".".repeat(100_000)}${"/".repeat(50_000)}`)).toBe("");
 	});
 
 	test("cleaning a cleaned value changes nothing", () => {

@@ -46,7 +46,9 @@ Stripping repeats until nothing matches, so the characters left around a removed
 
 Methods that sanitize keys: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, `setManyRaw`.
 
-Empty keys after sanitization cause `set` / `delete` / `has` / `get` to no-op (`false` / `undefined`).
+Empty keys after sanitization cause `set` / `delete` / `has` / `get` to no-op (`false` / `undefined`). The batch methods skip them the same way: an empty key never reaches the store, and its position in the result holds `undefined` or `false`.
+
+A namespace that is empty after sanitization, such as `$$` or `;`, becomes `keyv-sanitized`. An empty namespace would turn namespacing off, mixing the instance's keys with unrelated ones and letting `clear()` remove them.
 
 ## Granular control
 
