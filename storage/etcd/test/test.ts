@@ -34,7 +34,6 @@ describe("construction and properties", () => {
 		t.expect(store.ttl).toBe(1000);
 		t.expect(store.busyTimeout).toBeUndefined();
 		t.expect(store.namespace).toBeUndefined();
-		t.expect(store.lease).toBeDefined();
 	});
 
 	it("should not enable ttl when it is not a number using the default url", (t) => {
@@ -44,7 +43,6 @@ describe("construction and properties", () => {
 		t.expect(store.ttl).toBeUndefined();
 		t.expect(store.busyTimeout).toBeUndefined();
 		t.expect(store.namespace).toBeUndefined();
-		t.expect(store.lease).toBeUndefined();
 	});
 
 	it("should enable ttl using a url option", (t) => {
@@ -56,7 +54,6 @@ describe("construction and properties", () => {
 		t.expect(store.ttl).toBe(1000);
 		t.expect(store.busyTimeout).toBeUndefined();
 		t.expect(store.namespace).toBeUndefined();
-		t.expect(store.lease).toBeDefined();
 	});
 
 	it("should enable ttl using a url string and options", (t) => {
@@ -65,7 +62,6 @@ describe("construction and properties", () => {
 		t.expect(store.ttl).toBe(1000);
 		t.expect(store.busyTimeout).toBeUndefined();
 		t.expect(store.namespace).toBeUndefined();
-		t.expect(store.lease).toBeDefined();
 	});
 
 	it("should use the namespace option", (t) => {
@@ -80,7 +76,6 @@ describe("construction and properties", () => {
 		t.expect(store.ttl).toBeUndefined();
 		t.expect(store.busyTimeout).toBeUndefined();
 		t.expect(store.namespace).toBeUndefined();
-		t.expect(store.lease).toBeUndefined();
 	});
 
 	it("should get and set the url", (t) => {
@@ -119,13 +114,6 @@ describe("construction and properties", () => {
 		store.client = newStore.client;
 		t.expect(store.client).toBe(newStore.client);
 		t.expect(store.client).not.toBe(originalClient);
-	});
-
-	it("should get and set the lease", (t) => {
-		const store = new KeyvEtcd(etcdUrl, { ttl: 1000 });
-		t.expect(store.lease).toBeDefined();
-		store.lease = undefined;
-		t.expect(store.lease).toBeUndefined();
 	});
 });
 
@@ -249,6 +237,46 @@ describe("ttl and expiration", () => {
 		t.expect(await keyv.get(key)).toBeUndefined();
 	});
 
+	it("should count the default ttl from each write", async (t) => {
+		const store = new KeyvEtcd(etcdUrl, { ttl: 5000 });
+		const key = faker.string.uuid();
+		const before = Date.now();
+		await store.set(key, "value");
+		const raw = await store.client.get(store.formatKey(key));
+		const { e } = JSON.parse(raw as string) as { e: number };
+		t.expect(e).toBeGreaterThanOrEqual(before + 5000);
+		t.expect(e).toBeLessThanOrEqual(Date.now() + 5000);
+	});
+
+	it("should keep writing after the lease of an earlier default-ttl write expires", async (t) => {
+		const store = new KeyvEtcd(etcdUrl, { ttl: 1000 });
+		const first = faker.string.uuid();
+		t.expect(await store.set(first, "first")).toBe(true);
+		await sleep(2500);
+		const second = faker.string.uuid();
+		t.expect(await store.set(second, "second")).toBe(true);
+		t.expect(await store.get(second)).toBe("second");
+	});
+
+	it("should apply a default ttl assigned after construction", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		store.ttl = 5000;
+		const key = faker.string.uuid();
+		t.expect(await store.set(key, "value")).toBe(true);
+		t.expect(await store.get(key)).toBe("value");
+		const raw = await store.client.get(store.formatKey(key));
+		t.expect((JSON.parse(raw as string) as { e: number }).e).toBeGreaterThan(Date.now());
+	});
+
+	it("should store a key without expiry when the default ttl is not positive", async (t) => {
+		const store = new KeyvEtcd(etcdUrl, { ttl: 0 });
+		const key = faker.string.uuid();
+		t.expect(await store.set(key, "value")).toBe(true);
+		const raw = await store.client.get(store.formatKey(key));
+		t.expect((JSON.parse(raw as string) as { e: number | null }).e).toBeNull();
+		t.expect(await store.get(key)).toBe("value");
+	});
+
 	it("should respect a per-call absolute expires", async (t) => {
 		const keyv = new KeyvEtcd(etcdUrl);
 		const key = faker.string.uuid();
@@ -308,20 +336,15 @@ describe("ttl and expiration", () => {
 		t.expect(await store.has(key)).toBe(true);
 	});
 
-	it("should cache the granted lease id across concurrent puts", async (t) => {
-		const store = new KeyvEtcd(etcdUrl, { ttl: 5000 });
-		const sharedLease = store.lease;
-		t.expect(sharedLease).toBeDefined();
-		const key1 = faker.string.uuid();
-		const key2 = faker.string.uuid();
-		// Two sequential puts on the same default lease — the second must reuse the
-		// already-granted lease ID rather than minting a fresh grant.
-		await store.set(key1, "a");
-		await store.set(key2, "b");
-		const id1 = await sharedLease?.grant();
-		const id2 = await sharedLease?.grant();
-		t.expect(id1).toBeDefined();
-		t.expect(id1).toBe(id2);
+	it("should grant a lease only once, even for concurrent puts", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const leaseGrant = vi.spyOn(store.client, "leaseGrant");
+		const lease = store.client.lease(5);
+		await Promise.all([
+			lease.put(store.formatKey(faker.string.uuid())).value("a"),
+			lease.put(store.formatKey(faker.string.uuid())).value("b"),
+		]);
+		t.expect(leaseGrant).toHaveBeenCalledTimes(1);
 	});
 });
 

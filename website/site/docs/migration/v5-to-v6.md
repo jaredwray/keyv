@@ -31,6 +31,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Returns `undefined` Instead of `null`](#returns-undefined-instead-of-null)
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
   - [`@keyv/memcache` Moves from `memjs` to `memcache`](#keyvmemcache-moves-from-memjs-to-memcache)
+  - [`@keyv/etcd` Default `ttl` Applies Per Key](#keyvetcd-default-ttl-applies-per-key)
 - [New Features](#new-features)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
@@ -629,6 +630,18 @@ The `@keyv/memcache` package will switch its underlying Memcached client library
 **What this means for you:**
 - If you are using `@keyv/memcache` through Keyv with default settings, **no changes are needed** — the adapter API remains the same
 - If you are passing `memjs`-specific client options through to the underlying client, you will need to update them to match the `memcache` client API
+
+---
+
+### `@keyv/etcd` Default `ttl` Applies Per Key
+
+In v5, the `ttl` option of `@keyv/etcd` created one etcd lease when the store was constructed, and every key written without an expiry was attached to it. The lease started counting at the first write and was never renewed, so every key on it was deleted when it expired, no matter when that key was written. After that, writes without an expiry failed because the lease no longer existed.
+
+In v6, `ttl` applies to each key written without an expiry, counted from that write, and each such key gets its own lease. `ttl` can also be changed on the store at any time.
+
+**What this means for you:**
+- If you set `ttl` on the store, keys now live for `ttl` from their own write, and writes keep working after the first `ttl` has passed
+- The `lease` property is removed. Remove any code that reads or assigns `store.lease`
 
 ---
 
