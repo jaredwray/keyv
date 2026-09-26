@@ -118,6 +118,7 @@ const keyv = new Keyv({ store: keyvRedis});
 * **Keyv no longer prefixes keys.** Namespacing lives on the adapter (`namespace` + `keyPrefixSeparator`, default `::`). You do not need `useKeyPrefix: false` — that option was removed from Keyv.
 * **Keys written by v5 need matching settings.** v5's default setup, `new Keyv(new KeyvRedis(uri))`, applied its default `keyv` namespace twice, once in Keyv and once in the adapter, so `foo` was stored as `keyv::keyv:foo`. Read those keys with `new Keyv(new KeyvRedis(uri, { keyPrefixSeparator: '::keyv:' }), { namespace: 'keyv' })`. The [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) lists the settings for other v5 setups.
 * **`createKeyv` accepts cluster and sentinel options** the same way the `KeyvRedis` constructor does.
+* **A failure is reported once.** When the adapter rejects because of `throwOnConnectError` or `throwOnErrors`, it no longer also emits `error`. A failed connection rejects with the connection error as the rejection's `cause`. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
 
 # Migrating from v4 to v5
 
@@ -226,12 +227,15 @@ const keyv = createKeyv('redis://user:pass@localhost:6379', {namespace: 'my-name
 
 # Using the `createKeyvNonBlocking` function
 
-The `createKeyvNonBlocking` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store does what `createKeyv` does but also disables throwing errors, removes the offline queue redis functionality, and reconnect strategy so that when used as a secondary cache in libraries such as [cacheable](https://npmjs.org/package/cacheable) it does not block the primary cache. This is useful when you want to use Redis as a secondary cache and do not want to block the primary cache on connection errors or timeouts when using `nonBlocking`. Concurrent operations share the in-flight Redis connect so they are not dropped while the client is still opening. Here is an example of how to use it:
+The `createKeyvNonBlocking` function is a convenience function that creates a new `Keyv` instance with the `@keyv/redis` store. It does what `createKeyv` does but also turns off the adapter's `throwOnConnectError` and `throwOnErrors`, the Redis offline queue, and the reconnect strategy, so that when used as a secondary cache in libraries such as [cacheable](https://npmjs.org/package/cacheable) it does not block the primary cache. This is useful when you want to use Redis as a secondary cache and do not want to block the primary cache on connection errors or timeouts when using `nonBlocking`. Concurrent operations share the in-flight Redis connect so they are not dropped while the client is still opening. Here is an example of how to use it:
 
 ```js
 import { createKeyvNonBlocking } from '@keyv/redis';
 const keyv = createKeyvNonBlocking('redis://user:pass@localhost:6379');
+keyv.on('error', (error) => console.error('Redis error', error));
 ```
+
+As with any Keyv instance, attach an `error` listener so a failed operation returns a fallback value instead of rejecting. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
 
 # Namespaces
 
@@ -361,7 +365,12 @@ keyv.store.useUnlink = false;
 
 # Gracefully Handling Errors and Timeouts
 
-When using `@keyv/redis`, it is important to handle connection errors gracefully. You can do this by listening to the `error` event on the `KeyvRedis` instance. Here is an example of how to do that:
+Attach an `error` listener to the Keyv instance when you use `@keyv/redis`. Keyv handles errors the way a Node.js `EventEmitter` does: when an operation fails, it emits `error`, and then
+
+- **with a listener attached**, the operation returns a fallback value, such as `undefined` from `get` or `false` from `set`;
+- **with no listener attached**, the operation rejects with the error.
+
+The Redis client also reports connection problems as `error` events outside any Keyv call, for example when a connection drops. Keyv forwards these to its own `error` event. With no listener attached, such an error is thrown with no call to catch it, which can crash your process.
 
 ```js
 import Keyv from 'keyv';
@@ -372,21 +381,14 @@ keyv.on('error', (error) => {
 });
 ```
 
-By default, the `KeyvRedis` instance will `throw an error` if the connection fails to connect. You can disable this behavior by setting the `throwOnConnectError` option to `false` when creating the `KeyvRedis` instance. If you want this to throw you will need to also set the Keyv instance to `throwOnErrors: true`:
+See [Error Handling](https://github.com/jaredwray/keyv/tree/main/core/keyv#error-handling) in the Keyv README for the fallback value each method returns.
 
-```js
-import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
+The adapter has its own options that decide whether `KeyvRedis` rejects or reports a failure as an `error` event:
 
-const keyv = new Keyv(new KeyvRedis('redis://bad-uri:1111', { throwOnConnectError: false }));
-keyv.throwOnErrors = true; // This will throw an error if the connection fails
+- `throwOnConnectError` (default `true`): reject when the connection fails, with the connection error as the rejection's `cause`. When it is `false`, the adapter emits the connection error as an `error` event instead.
+- `throwOnErrors` (default `false`): reject when an operation fails. When it is `false`, the adapter emits `error` and returns a no-op value on `get`, `getMany`, `set`, `setMany`, `delete`, and `deleteMany` if the connection is lost.
 
-await keyv.set('key', 'value'); // this will throw the connection error only.
-```
-
-On `get`, `getMany`, `set`, `setMany`, `delete`, and `deleteMany`, if the connection is lost, it will emit an error and return a no-op value. You can catch this error and handle it accordingly. This is important to ensure that your application does not crash due to a lost connection to Redis.
-
-If you want to handle connection errors, retries, and timeouts more gracefully, you can use the `throwOnErrors` option. This will throw an error if any operation fails, allowing you to catch it and handle it accordingly:
+The adapter reports each failure once: when it rejects, it does not also emit `error`. Used through Keyv, a rejection from the adapter is handled by the rule above: Keyv emits `error`, then returns a fallback value if a listener is attached or rejects if none is.
 
 There is a default `Reconnect Strategy` if you pass in just a `uri` connection string we will automatically create a Redis client for you with the following reconnect strategy:
 
@@ -527,7 +529,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **clearBatchSize** - `SCAN` / delete batch size. Must be greater than `0` or an `error` event is emitted. Default: `1000`.
 * **useUnlink** - Use `UNLINK` instead of `DEL`. Default: `true`.
 * **noNamespaceAffectsAll** - When no namespace is set, `clear()` / `iterator()` affect all keys (including namespaced ones). Default: `false`.
-* **throwOnConnectError** - Throw when connect fails. Default: `true`.
+* **throwOnConnectError** - Throw when connect fails, with the connection error as the `cause`, instead of emitting `error`. Default: `true`.
 * **throwOnErrors** - Throw on operation failures instead of emitting `error` and returning a no-op. Default: `false`.
 * **connectionTimeout** - Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH). `undefined` uses the Redis client default. On expiry the in-flight connect is aborted so sockets and timers are not left active. When Keyv constructs the client, this is also passed as `socket.connectTimeout` unless that option is already set. Auto-reconnect is disabled unless you pass `socket.reconnectStrategy`.
 
@@ -562,7 +564,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 
 | Event | Payload | When |
 | --- | --- | --- |
-| `error` | `Error` (or a string for invalid `clearBatchSize`) | Client errors, connect failures, operation failures |
+| `error` | `Error` (or a string for invalid `clearBatchSize`) | Client errors, and connect or operation failures that the adapter does not reject (see `throwOnConnectError` and `throwOnErrors`) |
 | `connect` | the Redis connection | The client connects |
 | `disconnect` | the Redis connection | The client disconnects |
 | `reconnecting` | reconnect info from `@redis/client` | The client is reconnecting |

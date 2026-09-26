@@ -20,27 +20,23 @@ import type { KeyvRedisConnect, KeyvRedisOptions } from "./types.js";
 export function createKeyv(connect?: KeyvRedisConnect, options?: KeyvRedisOptions): Keyv {
 	connect ??= "redis://localhost:6379";
 	const adapter = new KeyvRedis(connect, options);
-	const keyv = new Keyv({
+	return new Keyv({
 		store: adapter,
 		namespace: adapter.namespace,
 	});
-
-	if (options?.throwOnConnectError || options?.throwOnErrors) {
-		keyv.throwOnErrors = true;
-	}
-
-	return keyv;
 }
 
 /**
  * Create a non-blocking Keyv instance with the Redis adapter. Same as {@link createKeyv}, then
- * disables throwing, the Redis offline queue, and reconnect so a secondary cache (for example
- * cacheable) does not block the primary cache on connection errors or timeouts.
+ * turns off the adapter's `throwOnConnectError` and `throwOnErrors`, the Redis offline queue, and
+ * reconnect so a secondary cache (for example cacheable) does not block the primary cache on
+ * connection errors or timeouts. As with any Keyv instance, attach an `error` listener so a failed
+ * operation returns a fallback value instead of rejecting.
  *
  * @param {KeyvRedisConnect} [connect] - URI, client/cluster/sentinel options, or an existing
  *   connection. Defaults to `"redis://localhost:6379"`.
  * @param {KeyvRedisOptions} [options] - Adapter options. `throwOnConnectError` and `throwOnErrors`
- *   are forced off on the returned instance.
+ *   are forced off on the returned instance's adapter.
  * @returns {Keyv} A non-blocking Keyv instance using KeyvRedis as the store.
  */
 export function createKeyvNonBlocking(
@@ -62,8 +58,6 @@ export function createKeyvNonBlocking(
 			redisClient.options.socket.reconnectStrategy = false;
 		}
 	}
-
-	keyv.throwOnErrors = false;
 
 	return keyv;
 }

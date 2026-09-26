@@ -208,13 +208,6 @@ export type KeyvOptions = {
 	 */
 	stats?: boolean;
 	/**
-	 * Will throw on all errors if this is enabled to true. By default, errors
-	 * will only throw if there are no listeners to the error event.
-	 * This maps to hookified's `throwOnEmitError` under the hood.
-	 * @default false
-	 */
-	throwOnErrors?: boolean;
-	/**
 	 * Enable sanitization of keys and namespaces by detecting dangerous patterns
 	 * for SQL, MongoDB, or filesystem-based storage backends. Pass a `KeyvSanitizeOptions`
 	 * object for granular control over targets and patterns.

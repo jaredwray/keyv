@@ -20,7 +20,7 @@ Emitted as `KeyvEvents` (see [Events and Errors](/docs/events-and-errors/)):
 | `stat:delete` | `{ event: 'delete', key, namespace, timestamp }` |
 | `stat:error` | `{ event: 'error', key, namespace, timestamp }` |
 
-Batch read, write, and delete methods emit **one event per key**. Successful `has()` and `hasMany()` probes do not emit `stat:hit` or `stat:miss`; failures still emit `stat:error`.
+Batch read, write, and delete methods emit **one event per key**. Successful `has()` and `hasMany()` probes do not emit `stat:hit` or `stat:miss`; failures still emit `stat:error`. A read that fails emits `stat:error` and no `stat:miss`.
 
 ```js
 import Keyv, { KeyvEvents } from "keyv";

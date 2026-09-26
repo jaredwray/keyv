@@ -60,7 +60,6 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		super({
 			throwOnHookError: false,
 			throwOnEmptyListeners: true,
-			throwOnEmitError: mergedOptions.throwOnErrors ?? false,
 		});
 
 		this.deprecatedHooks = buildDeprecatedHooks();
@@ -230,24 +229,6 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Get the current throwOnErrors value. When enabled, all errors with throw. By default, errors
-	 * will only throw if there are no listeners to the error event.
-	 * @return {boolean} The current throwOnErrors value.
-	 */
-	public get throwOnErrors(): boolean {
-		return this.throwOnEmitError;
-	}
-
-	/**
-	 * Set the current throwOnErrors value. When enabled, all errors will throw. By default, errors
-	 * will only throw if there are no listeners to the error event.
-	 * @param {boolean} value The throwOnErrors value to set.
-	 */
-	public set throwOnErrors(value: boolean) {
-		this.throwOnEmitError = value;
-	}
-
-	/**
 	 * Get the current sanitize adapter. Sanitization is disabled by default. To
 	 * enable it `sanitize.keys` or `sanitize.namespace` to true or set KeyvSanitizePatterns
 	 * to each.
@@ -407,6 +388,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		} catch (error) {
 			this.emit(KeyvEvents.ERROR, error);
 			this.emitTelemetry(KeyvEvents.STAT_ERROR, key as string);
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET, { key, value: undefined });
+			return undefined;
 		}
 
 		let data: KeyvValue<Value> | undefined;
@@ -467,7 +450,16 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_MANY, { keys });
 
-		const rawData = await this.storeGetMany<Value>(keys);
+		let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
+		try {
+			rawData = await this.storeGetMany<Value>(keys);
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+			const failed: Array<Value | undefined> = keys.map(() => undefined);
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY, failed);
+			return failed;
+		}
 
 		let deserialized: Array<KeyvValue<Value> | undefined>;
 		if (this._checkExpired) {
@@ -513,7 +505,15 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_GET_RAW, { key });
-		const rawData = await this._store.get(key);
+		let rawData: KeyvStorageGetResult<Value>;
+		try {
+			rawData = await this._store.get<Value>(key);
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, key);
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_RAW, { key, value: undefined });
+			return undefined;
+		}
 
 		let data: KeyvValue<Value> | undefined;
 		if (this._checkExpired) {
@@ -569,7 +569,16 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			return result;
 		}
 
-		const rawData = await this.storeGetMany<Value>(keys);
+		let rawData: Array<KeyvStorageGetResult<Value | undefined>>;
+		try {
+			rawData = await this.storeGetMany<Value>(keys);
+		} catch (error) {
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR, keys);
+			const failed: Array<KeyvStorageGetResult<Value>> = keys.map(() => undefined);
+			await this.hookWithDeprecated(KeyvHooks.AFTER_GET_MANY_RAW, { keys, values: failed });
+			return failed;
+		}
 
 		let result: Array<KeyvValue<Value> | undefined>;
 		if (this._checkExpired) {
@@ -1025,15 +1034,21 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 			return;
 		}
 
-		for await (const [key, raw] of this._store.iterator()) {
-			const data = await this.decode(raw as string);
+		try {
+			for await (const [key, raw] of this._store.iterator()) {
+				const data = await this.decode(raw as string);
 
-			if (this._checkExpired && data && isDataExpired(data)) {
-				await this.delete(key as string);
-				continue;
+				if (this._checkExpired && data && isDataExpired(data)) {
+					await this.delete(key as string);
+					continue;
+				}
+
+				yield [key as string, data?.value];
 			}
-
-			yield [key as string, data?.value];
+		} catch (error) {
+			// Like the other methods: with an `error` listener the iteration ends, without one it rejects.
+			this.emit(KeyvEvents.ERROR, error);
+			this.emitTelemetry(KeyvEvents.STAT_ERROR);
 		}
 	}
 

@@ -2,7 +2,7 @@ import process from "node:process";
 import { faker } from "@faker-js/faker";
 import { delay } from "@keyv/test-suite";
 import { describe, expect, test, vi } from "vitest";
-import KeyvRedis, { RedisErrorMessages } from "../src/index.js";
+import KeyvRedis, { createKeyv, RedisErrorMessages } from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 const redisBadUri = process.env.REDIS_BAD_URI ?? "redis://localhost:6378";
@@ -162,6 +162,45 @@ describe("get", () => {
 		expect(result).toEqual([undefined, undefined]);
 		expect(result[0]).not.toBeNull();
 		vi.spyOn(keyvRedis.client, "mGet").mockRestore();
+	});
+
+	test("should reject without emitting error when throwOnErrors is true", async () => {
+		const keyvRedis = new KeyvRedis(redisUri, { throwOnErrors: true });
+		const errors: unknown[] = [];
+		keyvRedis.on("error", (error) => errors.push(error));
+		await keyvRedis.getClient();
+		const mGet = vi.spyOn(keyvRedis.client, "mGet").mockImplementation(() => {
+			throw new Error("Redis client error");
+		});
+
+		await expect(keyvRedis.getMany(["a", "b"])).rejects.toThrow("Redis client error");
+		expect(errors).toHaveLength(0);
+
+		mGet.mockRestore();
+		await keyvRedis.disconnect();
+	});
+
+	test("should report a failed operation to the Keyv error listener once", async () => {
+		const keyv = createKeyv(redisUri);
+		const store = keyv.store as KeyvRedis<string>;
+		const errors: unknown[] = [];
+		keyv.on("error", (error) => errors.push(error));
+		await store.getClient();
+		const mGet = vi.spyOn(store.client, "mGet").mockImplementation(() => {
+			throw new Error("Redis client error");
+		});
+
+		// The adapter emits the error and returns a fallback value.
+		expect(await keyv.getMany(["a", "b"])).toEqual([undefined, undefined]);
+		expect(errors).toHaveLength(1);
+
+		// The adapter rejects, and Keyv emits the error.
+		store.throwOnErrors = true;
+		expect(await keyv.getMany(["a", "b"])).toEqual([undefined, undefined]);
+		expect(errors).toHaveLength(2);
+
+		mGet.mockRestore();
+		await keyv.disconnect();
 	});
 
 	test("should get many keys including an expired entry", async () => {
