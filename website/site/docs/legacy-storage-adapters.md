@@ -15,10 +15,12 @@ The public API is unchanged. `keyv.set(key, value, ttl)` is still relative milli
 Keyv looks at the store in this order:
 
 1. `store.capabilities.expires === true` → use the adapter as-is (v6 contract).
-2. Full async adapter **without** that flag → `KeyvBridgeAdapter` (legacy relative TTL).
-3. Sync Map-like → `KeyvMemoryAdapter`.
-4. Async Map-like → `KeyvBridgeAdapter`.
+2. Full adapter **without** that flag → `KeyvBridgeAdapter` (legacy relative TTL). Its methods can be `async` functions or plain functions that return promises.
+3. A `Map`, or a store with plain `get`, `set`, `delete`, `has` and none of `getMany`, `setMany`, `hasMany`, `deleteMany`, `disconnect`, `iterator` → `KeyvMemoryAdapter`.
+4. Any other store with `get`, `set`, `delete`, `clear` → `KeyvBridgeAdapter`.
 5. Anything else → `'error'` and fall back to `KeyvMemoryAdapter(new Map())`.
+
+A plain function can return a promise, which is why step 3 excludes stores with storage-adapter methods. A promise-based store with none of them still looks like a `Map`: `KeyvMemoryAdapter`'s `get`, `has`, and `set` throw instead of returning `undefined`. Pass `new KeyvBridgeAdapter(store)` for such a store.
 
 ```js
 import Keyv, { KeyvBridgeAdapter } from "keyv";

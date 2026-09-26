@@ -228,6 +228,38 @@ describe("capabilities", () => {
 			expect(fullResult.methods.iterator.methodType).toBe("sync");
 		});
 
+		test("should not treat an adapter whose methods return promises as map-like", () => {
+			// An adapter compiled to an older target, such as ES2016, has plain functions that
+			// return promises instead of async functions.
+			const legacy = {
+				get: () => Promise.resolve(undefined),
+				set: () => Promise.resolve(true),
+				delete: () => Promise.resolve(true),
+				clear: () => Promise.resolve(),
+				has: () => Promise.resolve(false),
+				getMany: () => Promise.resolve([]),
+				deleteMany: () => Promise.resolve(true),
+			};
+			expect(detectKeyvStorage(legacy).store).toBe("asyncMap");
+
+			const full = {
+				...legacy,
+				hasMany: () => Promise.resolve([]),
+				setMany: () => Promise.resolve(),
+			};
+			expect(detectKeyvStorage(full).store).toBe("keyvStorage");
+
+			// Without any storage-adapter methods, plain functions still mean map-like.
+			const mapLike = {
+				get: () => undefined,
+				set: () => {},
+				delete: () => true,
+				clear: () => {},
+				has: () => false,
+			};
+			expect(detectKeyvStorage(mapLike).store).toBe("mapLike");
+		});
+
 		test("should return none for incomplete objects and non-function properties", () => {
 			const r1 = detectKeyvStorage({ get: () => {}, set: () => {} });
 			expect(r1.compatible).toBe(false);

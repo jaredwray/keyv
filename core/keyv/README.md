@@ -520,8 +520,10 @@ const cache = new Keyv({ store: new KeyvMemoryAdapter(new QuickLRU({ maxSize: 10
 
 `KeyvBridgeAdapter` wraps any **promise-based / async store** and adapts it to the v6 storage contract. Keyv applies it automatically when you pass:
 
-- a **legacy storage adapter** — a full async adapter that does *not* declare `capabilities.expires` (i.e. pre-v6 third-party adapters), or
+- a **legacy storage adapter** — a full adapter that does *not* declare `capabilities.expires` (i.e. pre-v6 third-party adapters), whether its methods are `async` functions or plain functions that return promises, or
 - an **async `Map`-like store** with async `get`, `set`, `delete`, and `clear`. For such a store to actually expire data, its `set(key, value, ttl)` must honor the relative millisecond `ttl` the bridge passes as the third argument — a plain Promise-wrapped `Map` that ignores it won't evict on its own. Keyv's `checkExpired` (on by default) still filters expired entries on read, but they linger in the store until read; for native eviction, prefer a full v6 adapter or a store that honors the `ttl`.
+
+A plain function may return a promise, so Keyv sends any store with a storage-adapter method (`getMany`, `setMany`, `hasMany`, `deleteMany`, `disconnect`, or `iterator`) through the bridge, which awaits every call. A promise-based store with none of those methods looks like a synchronous `Map`. Keyv wraps it in `KeyvMemoryAdapter`, whose `get`, `has`, and `set` then throw instead of returning `undefined` or storing the wrong value. Pass `new KeyvBridgeAdapter(store)` for such a store.
 
 This is why existing third-party adapters keep working unchanged on v6. The bridge:
 
@@ -712,10 +714,12 @@ partial.methods.get.exists;     // true
 
 Returns a `KeyvStorageCapability`: `{ compatible, store, methods }`. `compatible` is `true` when the object is a usable storage adapter, and `store` reports the detected kind:
 
-- **`"keyvStorage"`** — implements the full async storage adapter interface (`get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, `hasMany`, all async)
-- **`"mapLike"`** — has synchronous `get`, `set`, `delete`, and `has` (i.e. it behaves like a `Map`)
-- **`"asyncMap"`** — has at least async `get`, `set`, `delete`, and `clear`
+- **`"keyvStorage"`** — implements the full storage adapter interface (`get`, `set`, `delete`, `clear`, `has`, `setMany`, `deleteMany`, `hasMany`). On a `Map` these must be `async` functions; on anything else, plain functions that return promises count too.
+- **`"mapLike"`** — has `get`, `set`, `delete`, and `has` as plain (not `async`) functions, and is either a `Map` or has none of the methods only storage adapters have (`getMany`, `setMany`, `hasMany`, `deleteMany`, `disconnect`, `iterator`)
+- **`"asyncMap"`** — any other store with at least `get`, `set`, `delete`, and `clear`
 - **`"none"`** — not a usable store
+
+`methodType` is `"async"` only for native `async` functions. A method that returns a promise without being `async`, such as an `async` method compiled to ES2016, reports `"sync"`. That is why a store with storage-adapter methods is never classified as map-like.
 
 ```ts
 import { detectKeyvStorage } from 'keyv';

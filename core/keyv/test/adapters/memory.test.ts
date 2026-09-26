@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, test } from "vitest";
-import { createKeyv, KeyvMemoryAdapter } from "../../src/adapters/memory.js";
+import { createKeyv, type KeyvMapType, KeyvMemoryAdapter } from "../../src/adapters/memory.js";
 import { delay as sleep } from "../test-utils.js";
 
 describe("Keyv Generic Store Options", () => {
@@ -220,6 +220,43 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		const result = await keyv.hasMany(testData.map((d) => d.key));
 		expect(result[0]).toBe(false);
 		expect(result.length).toBe(5);
+	});
+});
+
+describe("Keyv Generic Store with a promise-based store", () => {
+	test("throws instead of reading promises as values", async () => {
+		const store = {
+			get: () => Promise.resolve(undefined),
+			set: () => Promise.resolve(true),
+			delete: () => true,
+			has: () => Promise.resolve(false),
+			clear: () => {},
+		};
+		// A promise-based store doesn't fit KeyvMapType, which is the point of this test.
+		const adapter = new KeyvMemoryAdapter(store as unknown as KeyvMapType);
+		const message = "KeyvMemoryAdapter needs a synchronous Map-like store";
+		await expect(adapter.get("a")).rejects.toThrow(message);
+		await expect(adapter.has("a")).rejects.toThrow(message);
+		await expect(adapter.getMany(["a"])).rejects.toThrow(message);
+		await expect(adapter.set("a", "v")).rejects.toThrow(message);
+		await expect(adapter.setMany([{ key: "a", value: "v" }])).rejects.toThrow(message);
+
+		const errors: unknown[] = [];
+		adapter.on("error", (error) => errors.push(error));
+		expect(await adapter.deleteMany(["a"])).toEqual([false]);
+		expect((errors[0] as Error).message).toContain(message);
+	});
+
+	test("does not leave a rejected store promise unhandled", async () => {
+		const store = {
+			get: () => Promise.reject(new Error("store is down")),
+			set: () => true,
+			delete: () => true,
+			has: () => false,
+			clear: () => {},
+		};
+		const adapter = new KeyvMemoryAdapter(store);
+		await expect(adapter.get("a")).rejects.toThrow("returned a promise");
 	});
 });
 

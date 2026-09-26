@@ -21,6 +21,22 @@ type MemoryEntry = {
 };
 
 /**
+ * Returns a result from the wrapped store, which this adapter calls synchronously. A store that
+ * returns a promise is async, so throw instead of reading the promise as a value.
+ */
+function syncResult<T>(result: T, method: string): T {
+	if (typeof (result as { then?: unknown } | null | undefined)?.then === "function") {
+		// Don't leave the store's promise to reject unhandled.
+		Promise.resolve(result).catch(() => {});
+		throw new TypeError(
+			`The store's ${method}() returned a promise. KeyvMemoryAdapter needs a synchronous Map-like store. Wrap a promise-based store in KeyvBridgeAdapter.`,
+		);
+	}
+
+	return result;
+}
+
+/**
  * Configuration options for KeyvMemoryAdapter.
  */
 export type KeyvMemoryAdapterOptions = {
@@ -194,7 +210,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async get<T>(key: string): Promise<KeyvStorageGetResult<T>> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
+		const entry = syncResult(this._store.get(keyPrefix), "get") as MemoryEntry | undefined;
 		if (entry === undefined || entry === null) {
 			return undefined;
 		}
@@ -221,7 +237,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			expires: typeof expires === "number" ? expires : undefined,
 		};
 		// A Map/LRU underlay (e.g. QuickLRU) expects a relative duration, so derive it here.
-		this._store.set(keyPrefix, entry, ttlFromExpires(expires));
+		syncResult(this._store.set(keyPrefix, entry, ttlFromExpires(expires)), "set");
 		return true;
 	}
 
@@ -237,7 +253,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 				value: entry.value,
 				expires: typeof entry.expires === "number" ? entry.expires : undefined,
 			};
-			this._store.set(keyPrefix, memEntry, ttlFromExpires(entry.expires));
+			syncResult(this._store.set(keyPrefix, memEntry, ttlFromExpires(entry.expires)), "set");
 			results.push(true);
 		}
 
@@ -285,7 +301,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async has(key: string): Promise<boolean> {
 		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
+		const entry = syncResult(this._store.get(keyPrefix), "get") as MemoryEntry | undefined;
 		if (entry === undefined || entry === null) {
 			return false;
 		}
@@ -321,7 +337,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const values: Array<KeyvStorageGetResult<T | undefined>> = [];
 		for (const key of keys) {
 			const keyPrefix = this.getKeyPrefix(key, this._namespace);
-			const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
+			const entry = syncResult(this._store.get(keyPrefix), "get") as MemoryEntry | undefined;
 			if (entry === undefined || entry === null) {
 				values.push(undefined as KeyvStorageGetResult<T | undefined>);
 				continue;
@@ -349,7 +365,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		for (const key of keys) {
 			try {
 				const keyPrefix = this.getKeyPrefix(key, this._namespace);
-				const existed = this._store.has(keyPrefix);
+				const existed = syncResult(this._store.has(keyPrefix), "has");
 				this._store.delete(keyPrefix);
 				results.push(existed);
 			} catch (error) {

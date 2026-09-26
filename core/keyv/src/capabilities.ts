@@ -239,8 +239,12 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 	}
 
 	const methods = buildMethods<KeyvStorageMethods>(obj, keyvStorageMethodNames);
+	const isMap = obj instanceof Map;
 
-	// keyvStorage: all required methods present and async
+	// keyvStorage: all required methods present. `methodType` only recognizes native `async`
+	// functions, and an adapter compiled to an older target (such as ES2016) has plain functions
+	// that return promises. So only a Map, which may carry extra synchronous batch methods, needs
+	// them to be async.
 	const requiredKeys: Array<keyof KeyvStorageMethods> = [
 		"get",
 		"has",
@@ -251,19 +255,28 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 		"deleteMany",
 		"clear",
 	];
-	const isKeyvStorage = requiredKeys.every(
-		(k) => methods[k].exists && methods[k].methodType === "async",
-	);
+	const hasRequired = requiredKeys.every((k) => methods[k].exists);
+	const allAsync = requiredKeys.every((k) => methods[k].methodType === "async");
 
-	if (isKeyvStorage) {
+	if (hasRequired && (allAsync || !isMap)) {
 		return { compatible: true, store: "keyvStorage", methods };
 	}
 
-	// mapLike: get, set, delete, has all synchronous
+	// mapLike: get, set, delete, has are plain functions, on a Map or a store without any of the
+	// methods only storage adapters have. A plain function may still return a promise, so an
+	// adapter-shaped store goes to the async path, where every call is awaited.
 	const mapLikeMethods: Array<keyof KeyvStorageMethods> = ["get", "set", "delete", "has"];
-	const isMapLike = mapLikeMethods.every(
-		(m) => methods[m].exists && methods[m].methodType === "sync",
-	);
+	const storageAdapterMethods: Array<keyof KeyvStorageMethods> = [
+		"getMany",
+		"setMany",
+		"hasMany",
+		"deleteMany",
+		"disconnect",
+		"iterator",
+	];
+	const isMapLike =
+		mapLikeMethods.every((m) => methods[m].exists && methods[m].methodType === "sync") &&
+		(isMap || !storageAdapterMethods.some((m) => methods[m].exists));
 
 	if (isMapLike) {
 		return { compatible: true, store: "mapLike", methods };
