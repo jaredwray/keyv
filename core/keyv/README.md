@@ -192,6 +192,13 @@ await users.get('foo'); // undefined
 await cache.get('foo'); // 'cache'
 ```
 
+You can also set the namespace on the storage adapter. Keyv uses it when Keyv has no namespace of its own. When both are set, Keyv's namespace wins and is applied to the adapter.
+
+```js
+const users = new Keyv(new KeyvRedis('redis://user:pass@localhost:6379', { namespace: 'users' }));
+users.namespace; // 'users'
+```
+
 # Events
 
 Keyv is an `EventEmitter` (built on [hookified](https://github.com/jaredwray/hookified)) and emits an `'error'` event when an operation fails. Whether the operation also throws depends on whether a listener is attached. See [Error Handling](#error-handling).
@@ -500,8 +507,8 @@ It adds the pieces a raw `Map` does not have:
 ```js
 import Keyv, { KeyvMemoryAdapter } from 'keyv';
 
-// Wrap any Map-like store. Put the namespace on the Keyv options, not the adapter: Keyv
-// propagates its own namespace to the store, overwriting any namespace set on the adapter.
+// Wrap any Map-like store. Set the namespace on Keyv or on the adapter. When both are set,
+// Keyv's namespace wins and is applied to the adapter.
 const keyv = new Keyv({ store: new KeyvMemoryAdapter(new Map()), namespace: 'cache' });
 
 // Or wrap an LRU to bound memory usage
@@ -520,7 +527,7 @@ This is why existing third-party adapters keep working unchanged on v6. The brid
 
 - **Converts expiry** — Keyv passes an absolute `expires` timestamp; the bridge converts it back to the relative TTL the wrapped store expects. A write whose deadline has already elapsed is deleted instead of stored, so a past `expires` becomes an absent key — matching how the native adapters treat an already-expired write.
 - **Delegates when it can** — if the wrapped store implements `getMany`, `setMany`, `has`, `hasMany`, `deleteMany`, `iterator`, or `disconnect`, the bridge calls them directly; otherwise it falls back to looping over the single-key primitives.
-- **Handles namespacing both ways** — if the wrapped store manages its own namespace (a full adapter exposing a `namespace` property), the bridge propagates its namespace to the store and does *not* prefix keys, avoiding double-namespacing, so the store's native scoped `clear()` and `iterator()` are used. Otherwise the bridge prefixes keys itself, letting one shared store host multiple namespaces.
+- **Handles namespacing both ways** — if the wrapped store manages its own namespace (a full adapter exposing a `namespace` property), the bridge propagates its namespace to the store (or keeps the store's own namespace when the bridge has none) and does *not* prefix keys, avoiding double-namespacing, so the store's native scoped `clear()` and `iterator()` are used. Otherwise the bridge prefixes keys itself, letting one shared store host multiple namespaces.
 - **Forwards errors** — re-emits `error` events from the wrapped store so connection failures surface on the Keyv instance.
 
 ```js
@@ -529,8 +536,8 @@ import Keyv, { KeyvBridgeAdapter } from 'keyv';
 // Usually automatic — just pass the store:
 const keyv = new Keyv({ store: myAsyncStore });
 
-// ...which is equivalent to wrapping it explicitly. Put the namespace on the Keyv options —
-// Keyv overwrites any namespace set on the adapter directly:
+// ...which is equivalent to wrapping it explicitly. A namespace on the Keyv options is applied
+// to the adapter. Without one, Keyv keeps the adapter's own namespace:
 const explicit = new Keyv({ store: new KeyvBridgeAdapter(myAsyncStore), namespace: 'cache' });
 ```
 
@@ -790,7 +797,7 @@ The storage adapter instance to be used by Keyv.
 Type: `String`
 Default: `undefined`
 
-This is the namespace for the current instance. When you set it it will set it also on the storage adapter.
+This is the namespace for the current instance. When you set it, Keyv also sets it on the storage adapter. When Keyv has no namespace of its own, this returns the namespace set on the storage adapter.
 
 ## options
 
@@ -803,7 +810,7 @@ The options object is also passed through to the storage adapter. Check your sto
 Type: `String`<br />
 Default: `undefined`
 
-Namespace for the current instance.
+Namespace for the current instance. When omitted, Keyv uses the namespace set on the storage adapter, if any.
 
 ## options.ttl
 
@@ -1002,7 +1009,7 @@ The iterator works with any storage backend:
 
 Type: `String`
 
-The namespace for the current instance. This will define the namespace for the current instance and the storage adapter. If you set the namespace to `undefined` it will no longer do key prefixing.
+The namespace for the current instance. This will define the namespace for the current instance and the storage adapter. If you set the namespace to `undefined` it will no longer do key prefixing. When Keyv has no namespace of its own, it uses the namespace set on the storage adapter, and this property returns it.
 
 ```js
 const keyv = new Keyv({ namespace: 'my-namespace' });

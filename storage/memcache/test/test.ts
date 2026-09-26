@@ -444,6 +444,12 @@ describe("createKeyv", () => {
 	test("returns a Keyv instance from an options object", () => {
 		expect(createKeyv({ nodes: [uri], timeout: 3000 })).toBeInstanceOf(Keyv);
 	});
+
+	test("keeps the namespace passed in the options", () => {
+		const keyv = createKeyv(uri, { namespace: "ns" });
+		expect(keyv.namespace).toBe("ns");
+		expect((keyv.store as KeyvMemcache).namespace).toBe("ns");
+	});
 });
 
 const store = () => keyvMemcache;

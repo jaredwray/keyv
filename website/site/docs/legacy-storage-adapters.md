@@ -31,13 +31,13 @@ const explicit = new Keyv({
 });
 ```
 
-Put `namespace` on the Keyv options. Keyv overwrites namespace on the adapter.
+A `namespace` on the Keyv options is applied to the adapter. Without one, Keyv keeps the namespace the adapter was configured with.
 
 ## What the bridge does
 
 - **Converts expiry** — absolute `expires` → relative `ttl` for the wrapped `set`. If the deadline is already past, it **deletes** instead of writing.
 - **Delegates batch methods** — `getMany`, `setMany`, `has`, `hasMany`, `deleteMany`, `iterator`, `disconnect` when present; otherwise loops over single-key methods.
-- **Namespaces** — if the store has a `namespace` property, the bridge assigns it and does not prefix keys (avoids double-prefixing). Otherwise the bridge prefixes `namespace:key`.
+- **Namespaces** — if the store has a `namespace` property, the bridge assigns it and does not prefix keys (avoids double-prefixing). When the bridge has no namespace, the store keeps its own. Otherwise the bridge prefixes `namespace:key`.
 - **Forwards `'error'`** from the wrapped store onto the bridge (and then onto Keyv).
 
 ## Writing a v6 adapter instead

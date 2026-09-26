@@ -30,6 +30,17 @@ await cache.get("foo"); // 'cache'
 
 Keyv core does **not** prefix keys itself. It sets `store.namespace`. Official adapters apply that namespace with their own prefixing (Redis `namespace:key`, SQL `WHERE namespace = …`, and so on).
 
+You can set the namespace on Keyv or on the adapter:
+
+- A namespace passed to Keyv wins. Keyv writes it to the adapter, replacing any namespace the adapter had.
+- When Keyv has no namespace, it keeps the adapter's and `keyv.namespace` returns it.
+
+```js
+const store = new KeyvRedis(redis, { namespace: "users" });
+const users = new Keyv(store);
+users.namespace; // 'users'
+```
+
 That is why `useKeyPrefix` / `keyPrefix` from v5 are gone. See the [v5 → v6 Migration](/docs/migration/v5-to-v6/) guide.
 
 Set or clear the namespace later via the property:
@@ -39,7 +50,7 @@ keyv.namespace = "tenant-42";
 keyv.namespace = undefined; // no isolation
 ```
 
-If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on construct and on the setter.
+If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on construct and on the setter. A namespace that Keyv keeps from the adapter is cleaned too.
 
 ## Memory and Map stores
 
@@ -49,7 +60,7 @@ If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on c
 
 `KeyvBridgeAdapter` does one of two things:
 
-- If the wrapped store already has a `namespace` property (a full adapter), the bridge **propagates** namespace and does not prefix again.
+- If the wrapped store already has a `namespace` property (a full adapter), the bridge **propagates** namespace and does not prefix again. When the bridge has no namespace of its own, it keeps the one the store was configured with.
 - Otherwise it prefixes keys itself so one shared async store can host multiple namespaces.
 
 See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
