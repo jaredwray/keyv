@@ -523,6 +523,8 @@ const cache = new Keyv({ store: new KeyvMemoryAdapter(new QuickLRU({ maxSize: 10
 - a **legacy storage adapter** — a full async adapter that does *not* declare `capabilities.expires` (i.e. pre-v6 third-party adapters), or
 - an **async `Map`-like store** with async `get`, `set`, `delete`, and `clear`. For such a store to actually expire data, its `set(key, value, ttl)` must honor the relative millisecond `ttl` the bridge passes as the third argument — a plain Promise-wrapped `Map` that ignores it won't evict on its own. Keyv's `checkExpired` (on by default) still filters expired entries on read, but they linger in the store until read; for native eviction, prefer a full v6 adapter or a store that honors the `ttl`.
 
+A method that isn't a native `async` function can still return a promise, such as an `async` method compiled to an older target or one written without `async`. So when a store isn't a `Map` and its methods aren't native `async` functions, Keyv calls its `has` once when the store is set. If that returns a promise, the store goes through the bridge. Otherwise Keyv wraps it in `KeyvMemoryAdapter`.
+
 This is why existing third-party adapters keep working unchanged on v6. The bridge:
 
 - **Converts expiry** — Keyv passes an absolute `expires` timestamp; the bridge converts it back to the relative TTL the wrapped store expects. A write whose deadline has already elapsed is deleted instead of stored, so a past `expires` becomes an absent key — matching how the native adapters treat an already-expired write.
@@ -716,6 +718,8 @@ Returns a `KeyvStorageCapability`: `{ compatible, store, methods }`. `compatible
 - **`"mapLike"`** — has synchronous `get`, `set`, `delete`, and `has` (i.e. it behaves like a `Map`)
 - **`"asyncMap"`** — has at least async `get`, `set`, `delete`, and `clear`
 - **`"none"`** — not a usable store
+
+`methodType` is `"async"` only for native `async` functions, so a store whose methods return promises without being `async` is reported as `"mapLike"`. Keyv still sends such a store through [`KeyvBridgeAdapter`](#keyvbridgeadapter).
 
 ```ts
 import { detectKeyvStorage } from 'keyv';

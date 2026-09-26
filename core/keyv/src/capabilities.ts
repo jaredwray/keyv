@@ -161,6 +161,28 @@ function buildMethods<T extends Record<string, KeyvStorageMethod>>(
 	return methods as T;
 }
 
+/** The methods a full storage adapter implements. */
+const keyvStorageRequiredMethods: Array<keyof KeyvStorageMethods> = [
+	"get",
+	"has",
+	"hasMany",
+	"set",
+	"setMany",
+	"delete",
+	"deleteMany",
+	"clear",
+];
+
+/**
+ * Whether a detected store has every method of a full storage adapter, whether or not they are
+ * native `async` functions.
+ * @param capability - The result of {@link detectKeyvStorage}
+ * @returns `true` when all of the full storage adapter's methods exist
+ */
+export function hasKeyvStorageMethods(capability: KeyvStorageCapability): boolean {
+	return keyvStorageRequiredMethods.every((m) => capability.methods[m].exists);
+}
+
 // --- Detect functions ---
 
 /**
@@ -241,17 +263,7 @@ export function detectKeyvStorage(obj: unknown): KeyvStorageCapability {
 	const methods = buildMethods<KeyvStorageMethods>(obj, keyvStorageMethodNames);
 
 	// keyvStorage: all required methods present and async
-	const requiredKeys: Array<keyof KeyvStorageMethods> = [
-		"get",
-		"has",
-		"hasMany",
-		"set",
-		"setMany",
-		"delete",
-		"deleteMany",
-		"clear",
-	];
-	const isKeyvStorage = requiredKeys.every(
+	const isKeyvStorage = keyvStorageRequiredMethods.every(
 		(k) => methods[k].exists && methods[k].methodType === "async",
 	);
 

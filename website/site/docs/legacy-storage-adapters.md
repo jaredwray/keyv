@@ -16,7 +16,7 @@ Keyv looks at the store in this order:
 
 1. `store.capabilities.expires === true` → use the adapter as-is (v6 contract).
 2. Full async adapter **without** that flag → `KeyvBridgeAdapter` (legacy relative TTL).
-3. Sync Map-like → `KeyvMemoryAdapter`.
+3. Map-like, with methods that aren't native `async` functions → `KeyvMemoryAdapter`. If the store isn't a `Map`, Keyv first calls its `has` once, and if that returns a promise the store goes to `KeyvBridgeAdapter` instead. That covers adapters compiled to an older target and methods written without `async`.
 4. Async Map-like → `KeyvBridgeAdapter`.
 5. Anything else → `'error'` and fall back to `KeyvMemoryAdapter(new Map())`.
 

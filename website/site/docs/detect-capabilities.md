@@ -57,7 +57,7 @@ detectKeyvStorage(new Map());
 // { compatible: true, store: 'mapLike', methods: { get: { exists: true, methodType: 'sync' }, ... } }
 ```
 
-Keyv uses this in `resolveStore()` to pick `KeyvMemoryAdapter` vs `KeyvBridgeAdapter`.
+Keyv uses this in `resolveStore()` to pick `KeyvMemoryAdapter` vs `KeyvBridgeAdapter`. `methodType` is `"async"` only for native `async` functions, so for a `"mapLike"` store that isn't a `Map`, `resolveStore()` also calls `has` once. If it returns a promise, the store goes to `KeyvBridgeAdapter`.
 
 ## `keyvStorageCapability(adapter)`
 

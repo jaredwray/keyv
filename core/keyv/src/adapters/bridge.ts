@@ -1,5 +1,9 @@
 import { Hookified } from "hookified";
-import { detectKeyvStorage, type KeyvStorageCapability } from "../capabilities.js";
+import {
+	detectKeyvStorage,
+	hasKeyvStorageMethods,
+	type KeyvStorageCapability,
+} from "../capabilities.js";
 import type { KeyvStorageAdapter, KeyvStorageGetResult } from "../types/adapters.js";
 import {
 	type KeyvAny,
@@ -111,11 +115,11 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 
 		// Detect optional methods at construction time
 		this._capabilities = detectKeyvStorage(store);
-		// Only a full storage adapter (keyvStorage) that exposes a `namespace` manages its own
-		// namespacing. asyncMap/map-like stores — even if they expose `namespace` — stay on the
-		// bridge's key-prefixing path so a single shared store can host multiple namespaces.
-		this._storeHandlesNamespace =
-			this._capabilities.store === "keyvStorage" && "namespace" in store;
+		// Only a full storage adapter that exposes a `namespace` manages its own namespacing,
+		// whether or not its methods are native `async` functions. Stores with fewer methods —
+		// even if they expose `namespace` — stay on the bridge's key-prefixing path so a single
+		// shared store can host multiple namespaces.
+		this._storeHandlesNamespace = hasKeyvStorageMethods(this._capabilities) && "namespace" in store;
 
 		if (options?.keySeparator) {
 			this._keySeparator = options.keySeparator;

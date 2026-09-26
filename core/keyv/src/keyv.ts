@@ -31,6 +31,7 @@ import {
 	deprecatedHookAliases,
 	isDataExpired,
 	resolveTtl,
+	returnsPromise,
 	ttlFromExpires,
 } from "./utils.js";
 
@@ -290,7 +291,9 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 *    with the `async` keyword is not mis-bridged).
 	 * 2. If the store implements the full async storage interface (but doesn't declare `expires`),
 	 *    treat it as a legacy relative-`ttl` adapter and wrap it in KeyvBridgeAdapter.
-	 * 3. If the store is map-like (synchronous get/set/delete/has), wrap it in KeyvMemoryAdapter.
+	 * 3. If the store is map-like (get/set/delete/has that aren't native `async` functions), wrap it
+	 *    in KeyvMemoryAdapter. A store other than a Map is first asked once, through `has`, whether
+	 *    it returns promises; if it does, wrap it in KeyvBridgeAdapter instead.
 	 * 4. If the store has async get/set/delete/clear, wrap it in KeyvBridgeAdapter.
 	 * 5. Otherwise, emit an error and fall back to a default in-memory KeyvMemoryAdapter.
 	 *
@@ -316,6 +319,12 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		if (cap.store === "mapLike") {
+			// Map-like only means the methods aren't native `async` functions. They can still return
+			// promises, so unless the store is a Map, ask it once which kind it is.
+			if (!(store instanceof Map) && returnsPromise(store as KeyvMapType)) {
+				return new KeyvBridgeAdapter(store as KeyvBridgeStore);
+			}
+
 			return new KeyvMemoryAdapter(store as KeyvMapType);
 		}
 

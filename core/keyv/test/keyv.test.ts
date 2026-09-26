@@ -1226,6 +1226,98 @@ describe("storage adapter expiry negotiation", () => {
 		expect(v6.calls[0].arg).toBeGreaterThan(1e12);
 	});
 
+	test("uses the bridge for a legacy adapter whose methods return promises without being async", async () => {
+		const data = new Map<string, unknown>();
+		const legacy = {
+			get: (key: string) => Promise.resolve(data.get(key)),
+			set: (key: string, value: unknown) => {
+				data.set(key, value);
+				return Promise.resolve(true);
+			},
+			delete: (key: string) => Promise.resolve(data.delete(key)),
+			clear: () => {
+				data.clear();
+				return Promise.resolve();
+			},
+			has: (key: string) => Promise.resolve(data.has(key)),
+			getMany: (keys: string[]) => Promise.resolve(keys.map((key) => data.get(key))),
+			deleteMany: (keys: string[]) => Promise.resolve(keys.every((key) => data.delete(key))),
+		};
+		const keyv = new Keyv({ store: legacy });
+		expect(keyv.store).toBeInstanceOf(KeyvBridgeAdapter);
+
+		await keyv.set("foo", "bar");
+		expect(await keyv.get("foo")).toBe("bar");
+		// The adapter received the serialized value, not KeyvMemoryAdapter's wrapper object.
+		expect(typeof data.get("foo")).toBe("string");
+	});
+
+	test("hands the namespace to a full legacy adapter whose methods are not async", () => {
+		const legacy = {
+			namespace: undefined as string | undefined,
+			get: () => Promise.resolve(undefined),
+			set: () => Promise.resolve(true),
+			delete: () => Promise.resolve(true),
+			clear: () => Promise.resolve(),
+			has: () => Promise.resolve(false),
+			hasMany: () => Promise.resolve([]),
+			setMany: () => Promise.resolve(),
+			deleteMany: () => Promise.resolve(true),
+		};
+		const keyv = new Keyv({ store: legacy, namespace: "ns" });
+		expect(keyv.store).toBeInstanceOf(KeyvBridgeAdapter);
+		expect(legacy.namespace).toBe("ns");
+	});
+
+	test("uses the bridge for a promise-based store with only Map's methods", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: test stub adapter
+		const keyv = new Keyv({ store: createNonAsyncV6Adapter() as any });
+		expect(keyv.store).toBeInstanceOf(KeyvBridgeAdapter);
+		await keyv.set("foo", "bar");
+		expect(await keyv.get("foo")).toBe("bar");
+	});
+
+	test("keeps a synchronous store with extra adapter methods on KeyvMemoryAdapter", async () => {
+		const data = new Map<string, unknown>();
+		const store = {
+			get: (key: string) => data.get(key),
+			set: (key: string, value: unknown) => data.set(key, value),
+			delete: (key: string) => data.delete(key),
+			clear: () => data.clear(),
+			has: (key: string) => data.has(key),
+			getMany: (keys: string[]) => keys.map((key) => data.get(key)),
+			disconnect: () => {},
+		};
+		const keyv = new Keyv({ store });
+		expect(keyv.store).toBeInstanceOf(KeyvMemoryAdapter);
+		await keyv.set("foo", "bar");
+		expect(await keyv.get("foo")).toBe("bar");
+	});
+
+	test("treats a store whose has throws as synchronous", () => {
+		const store = {
+			get: () => undefined,
+			set: () => {},
+			delete: () => true,
+			clear: () => {},
+			has: () => {
+				throw new Error("has failed");
+			},
+		};
+		expect(new Keyv({ store }).store).toBeInstanceOf(KeyvMemoryAdapter);
+	});
+
+	test("does not leave a rejected has() from the check unhandled", () => {
+		const store = {
+			get: () => Promise.resolve(undefined),
+			set: () => Promise.resolve(true),
+			delete: () => Promise.resolve(true),
+			clear: () => Promise.resolve(),
+			has: () => Promise.reject(new Error("store is down")),
+		};
+		expect(new Keyv({ store }).store).toBeInstanceOf(KeyvBridgeAdapter);
+	});
+
 	test("getMany/getManyRaw fall back to single gets when a directly-used adapter lacks getMany", async () => {
 		const map = new Map<string, unknown>();
 		const adapter = {
