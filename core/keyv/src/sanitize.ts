@@ -113,15 +113,83 @@ function buildPatterns(options: KeyvSanitizePatterns): RegExp[] | undefined {
 }
 
 /**
- * Run all patterns against a string, stripping matched sequences.
+ * Run all patterns against a string, stripping matched sequences. Stripping one match can form
+ * another, as `..././` becomes `../`, so when a match remains, {@link stripRemaining} finishes
+ * the job.
  */
-function applyPatterns(value: string, patterns: RegExp[]): string {
+function applyPatterns(value: string, patterns: RegExp[], options: KeyvSanitizePatterns): string {
 	for (const pattern of patterns) {
 		pattern.lastIndex = 0;
 		value = value.replace(pattern, "");
 	}
 
+	if (patterns.some((pattern) => value.search(pattern) !== -1)) {
+		return stripRemaining(value, options);
+	}
+
 	return value;
+}
+
+/**
+ * Strip the matches a single pass of {@link applyPatterns} left behind. It reads the string once,
+ * left to right, and drops a pattern as soon as its last character arrives, so a pattern formed by
+ * an earlier removal is caught without scanning the string again. The result contains no match.
+ */
+function stripRemaining(value: string, options: KeyvSanitizePatterns): string {
+	const kept: string[] = [];
+	for (const char of value) {
+		const length = matchLength(kept, char, options);
+		if (length === 0) {
+			kept.push(char);
+		} else {
+			kept.length -= length - 1;
+		}
+	}
+
+	return kept.join("");
+}
+
+const whitespace = /\s/;
+
+/**
+ * The length of the pattern that `char` completes at the end of `kept`, counting `char` itself, or
+ * 0 when it completes none. `;`, `\0`, `\r` and `\n` need no check: the single pass before this
+ * removes every one of them, and removing characters never adds one back.
+ */
+function matchLength(kept: string[], char: string, options: KeyvSanitizePatterns): number {
+	const last = kept.length - 1;
+	if (
+		options.sql &&
+		((char === "-" && kept[last] === "-") || (char === "*" && kept[last] === "/"))
+	) {
+		return 2;
+	}
+
+	if (options.mongo && char === "$") {
+		if (kept.length === 0) {
+			return 1;
+		}
+
+		let start = kept.length;
+		while (start > 0 && whitespace.test(kept[start - 1])) {
+			start--;
+		}
+
+		if (kept[start - 1] === "{") {
+			return kept.length - start + 2;
+		}
+	}
+
+	if (
+		options.path &&
+		(char === "/" || char === "\\") &&
+		kept[last] === "." &&
+		kept[last - 1] === "."
+	) {
+		return 3;
+	}
+
+	return 0;
 }
 
 const allOn: KeyvSanitizePatterns = { escape: true, mongo: true, path: true, sql: true };
@@ -196,7 +264,7 @@ export class KeyvSanitize implements KeyvSanitizeAdapter {
 			return cached;
 		}
 
-		const result = applyPatterns(key, this._keyPatterns);
+		const result = applyPatterns(key, this._keyPatterns, this._keys);
 
 		this._cacheKeys.set(key, result);
 		if (this._cacheKeys.size > this._cacheMax) {
@@ -235,7 +303,7 @@ export class KeyvSanitize implements KeyvSanitizeAdapter {
 			return cached;
 		}
 
-		const result = applyPatterns(ns, this._namespacePatterns);
+		const result = applyPatterns(ns, this._namespacePatterns, this._namespace);
 
 		this._cacheNamespaces.set(ns, result);
 		if (this._cacheNamespaces.size > this._cacheMax) {

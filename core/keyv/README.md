@@ -1201,7 +1201,7 @@ Default: disabled
 
 The `.sanitize` property is a `KeyvSanitize` adapter. It is configured through the `sanitize` constructor option (`true`, or a `KeyvSanitizeOptions` object) and disabled by default.
 
-It detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped.
+It detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped. Stripping repeats until nothing matches, so `..././etc` becomes `etc` rather than `../etc`.
 
 Results are cached in an LRU cache (10,000 entries) for fast repeated lookups.
 
@@ -1269,6 +1269,10 @@ keyv.sanitize = new KeyvSanitize({ keys: true, namespace: true });
 ```
 
 Sanitization is applied to all key-accepting methods: `get`, `set`, `delete`, `has`, `getMany`, `setMany`, `deleteMany`, `hasMany`, `getRaw`, `getManyRaw`, `setRaw`, and `setManyRaw`. Namespace sanitization is applied at construction and when the `namespace` setter is used.
+
+A key that is empty after sanitization never reaches the store. `get` and `getRaw` return `undefined`, `set`, `setRaw`, `delete`, and `has` return `false`, and the batch methods put `undefined` or `false` in that key's position.
+
+A namespace that is empty after sanitization, such as `$$` or `;`, becomes `keyv-sanitized`. An empty namespace would turn namespacing off, mixing the instance's keys with unrelated ones and letting `clear()` remove them.
 
 # Bun Support
 

@@ -1060,6 +1060,32 @@ describe("sanitize", () => {
 		expect(keyv3.namespace).toBe("ns;evil");
 	});
 
+	test("a namespace that sanitizing leaves empty keeps a namespace of its own", async () => {
+		const store = new Map();
+		const other = new Keyv({ store, namespace: "other" });
+		await other.set("foo", "kept");
+
+		const keyv = new Keyv({ store, namespace: "$$", sanitize: { namespace: true } });
+		expect(keyv.namespace).toBe("keyv-sanitized");
+		await keyv.set("foo", "bar");
+		expect([...store.keys()]).toEqual(["other:foo", "keyv-sanitized:foo"]);
+		await keyv.clear();
+		expect(await other.get("foo")).toBe("kept");
+
+		keyv.namespace = ";";
+		expect(keyv.namespace).toBe("keyv-sanitized");
+
+		const later = new Keyv({ namespace: "../" });
+		later.sanitize = new KeyvSanitize({ namespace: true });
+		expect(later.namespace).toBe("keyv-sanitized");
+
+		const fromAdapter = new Keyv({
+			store: new KeyvMemoryAdapter(new Map(), { namespace: "--" }),
+			sanitize: { namespace: true },
+		});
+		expect(fromAdapter.namespace).toBe("keyv-sanitized");
+	});
+
 	test("should support independent patterns for keys and namespace", async () => {
 		const keyv = new Keyv({
 			namespace: "ns;../test",
@@ -1078,6 +1104,45 @@ describe("sanitize", () => {
 		expect(await keyv.setRaw(";", { value: "value", expires: undefined })).toBe(false);
 		expect(await keyv.delete(";")).toBe(false);
 		expect(await keyv.has(";")).toBe(false);
+	});
+
+	test("batch methods skip keys that are empty after sanitization", async () => {
+		const store = new Map();
+		const keyv = new Keyv({ store, sanitize: { keys: true } });
+		const hookKeys: string[][] = [];
+		keyv.addHook(KeyvHooks.BEFORE_GET_MANY, (data) => {
+			hookKeys.push(data.keys);
+		});
+
+		expect(
+			await keyv.setMany([
+				{ key: ";", value: "a" },
+				{ key: "k;1", value: "b" },
+				{ key: "-\0-", value: "c" },
+			]),
+		).toEqual([false, true, false]);
+		expect(
+			await keyv.setManyRaw([
+				{ key: "$$", value: { value: "d" } },
+				{ key: "k2", value: { value: "e" } },
+			]),
+		).toEqual([false, true]);
+		expect([...store.keys()]).toEqual(["k1", "k2"]);
+
+		expect(await keyv.getMany([";", "k1", "$$"])).toEqual([undefined, "b", undefined]);
+		expect(await keyv.getManyRaw(["k2", "-\0-"])).toEqual([{ value: "e" }, undefined]);
+		expect(await keyv.hasMany([";", "k1"])).toEqual([false, true]);
+		expect(await keyv.deleteMany([";", "k1"])).toEqual([false, true]);
+		expect(await keyv.getMany([";", "$$"])).toEqual([undefined, undefined]);
+		expect(hookKeys).toEqual([["k1"]]);
+	});
+
+	test("batch methods skip empty keys without sanitization", async () => {
+		const store = new Map();
+		const keyv = new Keyv({ store });
+		expect(await keyv.setMany([{ key: "", value: "a" }])).toEqual([false]);
+		expect(await keyv.getMany(["", "missing"])).toEqual([undefined, undefined]);
+		expect(store.size).toBe(0);
 	});
 });
 
