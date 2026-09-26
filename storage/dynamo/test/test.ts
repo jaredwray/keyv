@@ -80,11 +80,11 @@ describe("construction and properties", () => {
 });
 
 describe("namespace and key prefixing", () => {
-	it("should format a key with the namespace and avoid double prefixing", (t) => {
+	it("should format a key with the namespace, even one that already starts with it", (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		store.namespace = "ns";
 		t.expect(store.formatKey("key")).toBe("ns:key");
-		t.expect(store.formatKey("ns:key")).toBe("ns:key");
+		t.expect(store.formatKey("ns:key")).toBe("ns:ns:key");
 		store.namespace = undefined;
 		t.expect(store.formatKey("key")).toBe("key");
 	});
@@ -99,6 +99,8 @@ describe("namespace and key prefixing", () => {
 	it("should remove a key prefix when a namespace is provided", (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
+		t.expect(store.removeKeyPrefix("ns:ns:key", "ns")).toBe("ns:key");
+		t.expect(store.removeKeyPrefix("other:ns:key", "ns")).toBe("other:ns:key");
 		t.expect(store.removeKeyPrefix("key")).toBe("key");
 		t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 	});
@@ -134,6 +136,21 @@ describe("get, set, and delete", () => {
 	it("should return undefined for a missing key", async (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		t.expect(await store.get(faker.string.uuid())).toBeUndefined();
+	});
+
+	it("should keep a key that starts with the namespace apart from the key without it", async (t) => {
+		const namespace = faker.string.alphanumeric(10);
+		const store = new KeyvDynamo({ endpoint: dynamoURL, namespace });
+		const key = faker.string.uuid();
+		const prefixedKey = `${namespace}:${key}`;
+		await store.set(prefixedKey, "prefixed");
+		await store.set(key, "plain");
+
+		t.expect(await store.get(prefixedKey)).toBe("prefixed");
+		t.expect(await store.get(key)).toBe("plain");
+		t.expect(await store.getMany([prefixedKey, key])).toEqual(["prefixed", "plain"]);
+		t.expect(await store.delete(key)).toBe(true);
+		t.expect(await store.has(prefixedKey)).toBe(true);
 	});
 });
 
@@ -208,6 +225,38 @@ describe("expiration", () => {
 		});
 		const results = await store.hasMany([key1, key2]);
 		t.expect(results).toEqual([false, true]);
+	});
+
+	it("should delete the expired keys that getMany, hasMany, and the iterator find in a namespace", async (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: faker.string.alphanumeric(10) });
+		const keys = [faker.string.uuid(), faker.string.uuid(), faker.string.uuid()];
+		for (const key of keys) {
+			await store.set(key, faker.lorem.word());
+			await store.client.put({
+				TableName: store.tableName,
+				Item: {
+					id: store.formatKey(key),
+					value: faker.lorem.word(),
+					expiresAt: Math.floor(Date.now() / 1000) - 10,
+				},
+			});
+		}
+
+		t.expect(await store.getMany([keys[0]])).toEqual([undefined]);
+		t.expect(await store.hasMany([keys[1]])).toEqual([false]);
+		const entries: unknown[] = [];
+		for await (const entry of store.iterator()) {
+			entries.push(entry);
+		}
+
+		t.expect(entries).toEqual([]);
+		for (const key of keys) {
+			const { Item } = await store.client.get({
+				TableName: store.tableName,
+				Key: { id: store.formatKey(key) },
+			});
+			t.expect(Item).toBeUndefined();
+		}
 	});
 });
 
@@ -375,6 +424,27 @@ describe("clear", () => {
 
 		t.expect(await store.clear()).toBeUndefined();
 		(store as any).client.scan = originalScan;
+	});
+
+	it("should clear only the namespace's keys, including one that starts with the namespace", async (t) => {
+		const tableName = faker.string.uuid();
+		const namespace = faker.string.alphanumeric(10);
+		const store = new KeyvDynamo({ endpoint: dynamoURL, tableName, namespace });
+		const other = new KeyvDynamo({
+			endpoint: dynamoURL,
+			tableName,
+			namespace: faker.string.alphanumeric(10),
+		});
+		const key = faker.string.uuid();
+		await store.set(key, "plain");
+		await store.set(`${namespace}:${key}`, "prefixed");
+		await other.set(key, "other");
+
+		await store.clear();
+
+		t.expect(await store.get(key)).toBeUndefined();
+		t.expect(await store.get(`${namespace}:${key}`)).toBeUndefined();
+		t.expect(await other.get(key)).toBe("other");
 	});
 
 	it("should clear when the namespace is explicitly undefined", async (t) => {

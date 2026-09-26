@@ -170,36 +170,30 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Removes the namespace prefix from a key.
+	 * Removes the namespace prefix from the start of a key.
 	 * @param key - The key to strip the prefix from
 	 * @param namespace - The namespace prefix to remove. If not provided, the key is returned as-is.
-	 * @returns The key without the namespace prefix.
+	 * @returns The key without the namespace prefix, or the key unchanged if it does not start with it.
 	 */
 	public removeKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return key.replace(`${namespace}${this._keyPrefixSeparator}`, "");
+			const prefix = `${namespace}${this._keyPrefixSeparator}`;
+			if (key.startsWith(prefix)) {
+				return key.slice(prefix.length);
+			}
 		}
 
 		return key;
 	}
 
 	/**
-	 * Formats a key by prepending the namespace if one is set. Avoids double-prefixing
-	 * by checking if the key already starts with the namespace prefix.
+	 * Formats a key by prepending the namespace if one is set. A key that already starts with the
+	 * namespace prefix gets it again, so it stays distinct from the key without it.
 	 * @param key - The key to format
 	 * @returns The formatted key with namespace prefix, or the original key if no namespace is set.
 	 */
 	public formatKey(key: string): string {
-		if (!this._namespace) {
-			return key;
-		}
-
-		const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
-		if (key.startsWith(prefix)) {
-			return key;
-		}
-
-		return `${prefix}${key}`;
+		return this.createKeyPrefix(key, this._namespace);
 	}
 
 	/**
@@ -388,14 +382,14 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			const now = Date.now();
 			const itemMap = new Map(allItems.map((item) => [item?.id, item]));
 			const expiredKeys: string[] = [];
-			const results = formattedKeys.map((key) => {
-				const item = itemMap.get(key);
+			const results = formattedKeys.map((formattedKey, index) => {
+				const item = itemMap.get(formattedKey);
 				if (!item) {
 					return undefined as KeyvStorageGetResult<Value>;
 				}
 
 				if (this.isExpired(item, now)) {
-					expiredKeys.push(key);
+					expiredKeys.push(keys[index]);
 					return undefined as KeyvStorageGetResult<Value>;
 				}
 
@@ -480,7 +474,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				TableName: this._opts.tableName,
 			});
 
-			const keys = this.extractKey(scanResult);
+			const keys = this.extractKey(scanResult).map((id) =>
+				this.removeKeyPrefix(id, this._namespace),
+			);
 
 			await this.deleteMany(keys);
 			/* v8 ignore start -- @preserve */
@@ -562,14 +558,14 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			const now = Date.now();
 			const itemMap = new Map(allItems.map((item) => [item?.id, item]));
 			const expiredKeys: string[] = [];
-			const results = formattedKeys.map((key) => {
-				const item = itemMap.get(key);
+			const results = formattedKeys.map((formattedKey, index) => {
+				const item = itemMap.get(formattedKey);
 				if (!item || item.value === undefined) {
 					return false;
 				}
 
 				if (this.isExpired(item, now)) {
-					expiredKeys.push(key);
+					expiredKeys.push(keys[index]);
 					return false;
 				}
 
@@ -632,7 +628,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			for (const item of scanResult.Items ?? []) {
 				/* v8 ignore next 3 -- @preserve */
 				if (this.isExpired(item, now)) {
-					await this.delete(item.id as string);
+					await this.delete(this.removeKeyPrefix(item.id as string, this._namespace));
 					continue;
 				}
 

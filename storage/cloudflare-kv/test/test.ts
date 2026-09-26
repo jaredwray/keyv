@@ -290,11 +290,11 @@ describe("construction", () => {
 });
 
 describe("namespace and key prefixing", () => {
-	it("should format a key with the namespace and avoid double prefixing", () => {
+	it("should format a key with the namespace, even one that already starts with it", () => {
 		const s = new KeyvCloudflareKV({ kvNamespace });
 		s.namespace = "ns";
 		expect(s.formatKey("key")).toBe("ns:key");
-		expect(s.formatKey("ns:key")).toBe("ns:key");
+		expect(s.formatKey("ns:key")).toBe("ns:ns:key");
 		s.namespace = undefined;
 		expect(s.formatKey("key")).toBe("key");
 	});
@@ -304,6 +304,8 @@ describe("namespace and key prefixing", () => {
 		expect(s.createKeyPrefix("key", "ns")).toBe("ns:key");
 		expect(s.createKeyPrefix("key")).toBe("key");
 		expect(s.removeKeyPrefix("ns:key", "ns")).toBe("key");
+		expect(s.removeKeyPrefix("ns:ns:key", "ns")).toBe("ns:key");
+		expect(s.removeKeyPrefix("other:ns:key", "ns")).toBe("other:ns:key");
 		expect(s.removeKeyPrefix("key")).toBe("key");
 	});
 
@@ -322,6 +324,28 @@ describe("namespace and key prefixing", () => {
 		await s2.set(key, "two");
 		expect(await s1.get(key)).toBe("one");
 		expect(await s2.get(key)).toBe("two");
+	});
+
+	it("should keep a key that starts with the namespace apart from the key without it", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const s = new KeyvCloudflareKV({ kvNamespace, namespace });
+		const key = faker.string.uuid();
+		const prefixedKey = `${namespace}:${key}`;
+		await s.set(prefixedKey, "prefixed");
+		await s.set(key, "plain");
+
+		expect(await s.get(prefixedKey)).toBe("prefixed");
+		expect(await s.get(key)).toBe("plain");
+		const keys: string[] = [];
+		for await (const [entryKey] of s.iterator()) {
+			keys.push(entryKey as string);
+		}
+
+		expect(keys.sort()).toEqual([key, prefixedKey].sort());
+		expect(await s.delete(key)).toBe(true);
+		expect(await s.has(prefixedKey)).toBe(true);
+		await s.clear();
+		expect(await s.has(prefixedKey)).toBe(false);
 	});
 });
 

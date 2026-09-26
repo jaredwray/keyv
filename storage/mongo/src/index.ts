@@ -231,12 +231,11 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		const client = await this.connect;
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 
 		if (client.useGridFS) {
 			const file = await client.store.findOne({
-				filename: { $eq: strippedKey },
+				filename: { $eq: key },
 				"metadata.namespace": { $eq: ns },
 			});
 
@@ -280,7 +279,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const document = await client.store.findOne({
-			key: { $eq: strippedKey },
+			key: { $eq: key },
 			namespace: { $eq: ns },
 		});
 
@@ -322,11 +321,10 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const connect = await this.connect;
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 		const cursor = connect.store
 			.find({
-				key: { $in: strippedKeys },
+				key: { $in: keys },
 				namespace: { $eq: ns },
 			})
 			.project({ _id: 1, value: 1, key: 1, expiresAt: 1 });
@@ -347,7 +345,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			await connect.store.deleteMany({ _id: { $in: expiredIds } });
 		}
 
-		return strippedKeys.map((key) => validMap.get(key) as KeyvStorageGetResult<Value>);
+		return keys.map((key) => validMap.get(key) as KeyvStorageGetResult<Value>);
 	}
 
 	/**
@@ -360,12 +358,11 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
 			const expiresAt = typeof expires === "number" ? new Date(expires) : null;
-			const strippedKey = this.removeKeyPrefix(key);
 			const ns = this.getNamespaceValue();
 			const client = await this.connect;
 
 			if (client.useGridFS) {
-				const stream = client.bucket.openUploadStream(strippedKey, {
+				const stream = client.bucket.openUploadStream(key, {
 					metadata: {
 						expiresAt,
 						lastAccessed: new Date(),
@@ -387,8 +384,8 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 			}
 
 			await client.store.updateOne(
-				{ key: { $eq: strippedKey }, namespace: { $eq: ns } },
-				{ $set: { key: strippedKey, value, namespace: ns, expiresAt } },
+				{ key: { $eq: key }, namespace: { $eq: ns } },
+				{ $set: { key, value, namespace: ns, expiresAt } },
 				{ upsert: true },
 			);
 			return true;
@@ -422,13 +419,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const client = await this.connect;
 		const ns = this.getNamespaceValue();
 		const operations = entries.map(({ key, value, expires }) => {
-			const strippedKey = this.removeKeyPrefix(key);
 			const expiresAt = typeof expires === "number" ? new Date(expires) : null;
 			return {
 				updateOne: {
-					filter: { key: { $eq: strippedKey }, namespace: { $eq: ns } },
+					filter: { key: { $eq: key }, namespace: { $eq: ns } },
 					update: {
-						$set: { key: strippedKey, value, namespace: ns, expiresAt },
+						$set: { key, value, namespace: ns, expiresAt },
 					},
 					upsert: true,
 				},
@@ -467,7 +463,6 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const client = await this.connect;
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 
 		if (client.useGridFS) {
@@ -478,7 +473,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				});
 				const files = await bucket
 					.find({
-						filename: { $eq: strippedKey },
+						filename: { $eq: key },
 						"metadata.namespace": { $eq: ns },
 					})
 					.toArray();
@@ -495,7 +490,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const object = await client.store.deleteOne({
-			key: { $eq: strippedKey },
+			key: { $eq: key },
 			namespace: { $eq: ns },
 		});
 		return object.deletedCount > 0;
@@ -659,12 +654,11 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async has(key: string): Promise<boolean> {
 		const client = await this.connect;
-		const strippedKey = this.removeKeyPrefix(key);
 		const ns = this.getNamespaceValue();
 
 		if (this._useGridFS) {
 			const document = await client.store.count({
-				filename: { $eq: strippedKey },
+				filename: { $eq: key },
 				"metadata.namespace": { $eq: ns },
 				$or: [{ "metadata.expiresAt": null }, { "metadata.expiresAt": { $gt: new Date() } }],
 			});
@@ -672,7 +666,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const document = await client.store.count({
-			key: { $eq: strippedKey },
+			key: { $eq: key },
 			namespace: { $eq: ns },
 			$or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
 		});
@@ -686,32 +680,31 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		const client = await this.connect;
-		const strippedKeys = keys.map((k) => this.removeKeyPrefix(k));
 		const ns = this.getNamespaceValue();
 
 		if (this._useGridFS) {
 			const files = await client.store
 				.find({
-					filename: { $in: strippedKeys },
+					filename: { $in: keys },
 					"metadata.namespace": { $eq: ns },
 					$or: [{ "metadata.expiresAt": null }, { "metadata.expiresAt": { $gt: new Date() } }],
 				})
 				.project({ filename: 1 })
 				.toArray();
 			const existingKeys = new Set(files.map((f) => f.filename as string));
-			return strippedKeys.map((key) => existingKeys.has(key));
+			return keys.map((key) => existingKeys.has(key));
 		}
 
 		const docs = await client.store
 			.find({
-				key: { $in: strippedKeys },
+				key: { $in: keys },
 				namespace: { $eq: ns },
 				$or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
 			})
 			.project({ key: 1 })
 			.toArray();
 		const existingKeys = new Set(docs.map((d) => d.key as string));
-		return strippedKeys.map((key) => existingKeys.has(key));
+		return keys.map((key) => existingKeys.has(key));
 	}
 
 	/**
@@ -721,18 +714,6 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	public async disconnect(): Promise<void> {
 		const client = await this.connect;
 		await client.mongoClient.close();
-	}
-
-	/**
-	 * Strips the namespace prefix from a key that was added by the Keyv core.
-	 * For example, if namespace is "ns" and key is "ns:foo", returns "foo".
-	 */
-	private removeKeyPrefix(key: string): string {
-		if (this._namespace && key.startsWith(`${this._namespace}:`)) {
-			return key.slice(this._namespace.length + 1);
-		}
-
-		return key;
 	}
 
 	/**

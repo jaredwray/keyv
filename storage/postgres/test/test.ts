@@ -607,11 +607,28 @@ describe("namespace", () => {
 		const key = faker.string.alphanumeric(10);
 		const val1 = faker.lorem.sentence();
 		const val2 = faker.lorem.sentence();
-		await postgres1.set(`${ns1}:${key}`, val1);
-		await postgres2.set(`${ns2}:${key}`, val2);
+		await postgres1.set(key, val1);
+		await postgres2.set(key, val2);
 
-		expect(await postgres1.get(`${ns1}:${key}`)).toBe(val1);
-		expect(await postgres2.get(`${ns2}:${key}`)).toBe(val2);
+		expect(await postgres1.get(key)).toBe(val1);
+		expect(await postgres2.get(key)).toBe(val2);
+	});
+
+	test("keeps a key that starts with the namespace apart from the key without it", async () => {
+		const ns = faker.string.alphanumeric(8);
+		const postgres = new KeyvPostgres({ uri: postgresUri });
+		postgres.namespace = ns;
+
+		const key = faker.string.alphanumeric(10);
+		const prefixedKey = `${ns}:${key}`;
+		await postgres.set(prefixedKey, "prefixed");
+		await postgres.set(key, "plain");
+
+		expect(await postgres.get(prefixedKey)).toBe("prefixed");
+		expect(await postgres.get(key)).toBe("plain");
+		expect(await postgres.getMany([prefixedKey, key])).toEqual(["prefixed", "plain"]);
+		expect(await postgres.delete(key)).toBe(true);
+		expect(await postgres.has(prefixedKey)).toBe(true);
 	});
 
 	test("stores and retrieves with the default namespace", async () => {
