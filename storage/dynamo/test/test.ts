@@ -70,13 +70,6 @@ describe("construction and properties", () => {
 		store.client = newStore.client;
 		t.expect(store.client).toBe(newStore.client);
 	});
-
-	it("should get and set sixHoursInMilliseconds", (t) => {
-		const store = new KeyvDynamo({ endpoint: dynamoURL });
-		t.expect(store.sixHoursInMilliseconds).toBe(6 * 60 * 60 * 1000);
-		store.sixHoursInMilliseconds = 1000;
-		t.expect(store.sixHoursInMilliseconds).toBe(1000);
-	});
 });
 
 describe("namespace and key prefixing", () => {
@@ -175,6 +168,20 @@ describe("expiration", () => {
 
 		t.expect(typeof result.Item?.expiresAt).toBe("number");
 		t.expect(result.Item?.expiresAt).toBeGreaterThanOrEqual(Math.ceil((beforeSet + 1000) / 1000));
+	});
+
+	it("should store no expiry for keys set without expires", async (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL });
+		const key = faker.string.uuid();
+		const manyKey = faker.string.uuid();
+		const value = faker.lorem.word();
+		await store.set(key, value);
+		await store.setMany([{ key: manyKey, value }]);
+
+		for (const id of [store.formatKey(key), store.formatKey(manyKey)]) {
+			const { Item } = await store.client.get({ TableName: store.tableName, Key: { id } });
+			t.expect(Item).toEqual({ id, value });
+		}
 	});
 
 	it("should return the value for items missing both expiry fields", async (t) => {
@@ -424,6 +431,26 @@ describe("clear", () => {
 
 		t.expect(await store.clear()).toBeUndefined();
 		(store as any).client.scan = originalScan;
+	});
+
+	it("should clear the keys on every page of the scan", async (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL, tableName: faker.string.uuid() });
+		const keys = [faker.string.uuid(), faker.string.uuid(), faker.string.uuid()];
+		for (const key of keys) {
+			await store.set(key, faker.lorem.word());
+		}
+
+		// A scan page holds at most 1 MB. One item per page spans pages without writing that much.
+		const scan = store.client.scan.bind(store.client);
+		const scanSpy = vi
+			.spyOn(store.client as any, "scan")
+			.mockImplementation(async (input: any) => scan({ ...input, Limit: 1 }));
+
+		await store.clear();
+
+		t.expect(scanSpy.mock.calls.length).toBeGreaterThan(1);
+		scanSpy.mockRestore();
+		t.expect(await store.getMany(keys)).toEqual([undefined, undefined, undefined]);
 	});
 
 	it("should clear only the namespace's keys, including one that starts with the namespace", async (t) => {

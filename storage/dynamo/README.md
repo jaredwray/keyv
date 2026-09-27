@@ -11,7 +11,7 @@
 ## Features
 
 - Built on [@aws-sdk/client-dynamodb](https://www.npmjs.com/package/@aws-sdk/client-dynamodb) and [@aws-sdk/lib-dynamodb](https://www.npmjs.com/package/@aws-sdk/lib-dynamodb) with full TypeScript support
-- TTL support via DynamoDB TTL indexes (6-hour default when no TTL is specified)
+- TTL support via DynamoDB TTL on the `expiresAt` attribute. Keys set without a TTL never expire
 - Namespace support for key isolation across multiple Keyv instances
 - Automatic table creation with `PAY_PER_REQUEST` billing mode
 - `setMany`, `getMany`, `deleteMany`, and `hasMany` batch operations
@@ -32,14 +32,13 @@
   - [.client](#client)
   - [.namespace](#namespace)
   - [.keyPrefixSeparator](#keyprefixseparator)
-  - [.sixHoursInMilliseconds](#sixhoursinmilliseconds)
   - [.tableName](#tablename)
   - [.endpoint](#endpoint)
 - [Methods](#methods)
   - [constructor(options?)](#constructoroptions)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -252,14 +251,6 @@ The separator between the namespace and key.
 |---|---|
 | `string` | `':'` |
 
-### .sixHoursInMilliseconds
-
-The default TTL fallback in milliseconds. Used when no TTL is specified in a `set()` call.
-
-| Type | Default |
-|---|---|
-| `number` | `21600000` (6 hours) |
-
 ### .tableName
 
 The DynamoDB table name in use. Read-only.
@@ -315,27 +306,27 @@ await store.set('key2', 'value2');
 const results = await store.getMany(['key1', 'key2']);
 ```
 
-### .set(key, value, ttl?)
+### .set(key, value, expires?)
 
-Stores a value in DynamoDB. Uses a 6-hour default TTL if no TTL is specified. TTL is in milliseconds.
+Stores a value in DynamoDB. With `expires`, the item records it in `expiresAt` (seconds), which DynamoDB TTL uses to delete the item, and in `expiresAtMs` (milliseconds), which reads check so an expired item is never returned. Without `expires`, the item has no expiry and is kept until it is deleted. Returns `true` on success, `false` on failure.
+
+> When you call the adapter directly, the third argument is an **absolute** `expires` timestamp (Unix ms since epoch), not a relative duration. Through Keyv (`keyv.set(key, value, ttl)`) you still pass a relative TTL — Keyv converts it to `expires` for you.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
-await store.set('foo', 'bar');
-
-// with TTL (milliseconds)
-await store.set('foo', 'bar', 60000);
+await store.set('foo', 'bar'); // never expires
+await store.set('foo', 'bar', Date.now() + 60000); // expires in ~60 seconds
 ```
 
 ### .setMany(entries)
 
-Stores multiple values in DynamoDB using `BatchWriteItem` in chunks of 25. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` with per-entry success tracking — any items reported as `UnprocessedItems` by DynamoDB are marked as `false`.
+Stores multiple values in DynamoDB using `BatchWriteItem` in chunks of 25. Each entry is a `KeyvStorageEntry<Value>` object (`{ key: string, value: Value, expires?: number }`), where `expires` is an absolute Unix ms timestamp as in `.set()`, and `Value` is inferred from the entries provided. Returns a `boolean[]` with per-entry success tracking — any items reported as `UnprocessedItems` by DynamoDB are marked as `false`.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
 const results = await store.setMany([
   { key: 'key1', value: 'value1' },
-  { key: 'key2', value: 'value2', ttl: 60000 },
+  { key: 'key2', value: 'value2', expires: Date.now() + 60000 },
 ]); // [true, true]
 ```
 
@@ -362,7 +353,7 @@ const results = await store.deleteMany(['key1', 'key2']); // [true, true]
 
 ### .clear()
 
-Clears data from DynamoDB. If a namespace is set, only keys with the namespace prefix are deleted. Otherwise, all keys are deleted.
+Clears data from DynamoDB. If a namespace is set, only keys with the namespace prefix are deleted. Otherwise, all keys are deleted. It scans the whole table, one page per 1 MB of data, so it reads every item in the table even when a namespace is set.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });

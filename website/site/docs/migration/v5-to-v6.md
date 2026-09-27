@@ -32,6 +32,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
   - [`@keyv/memcache` Moves from `memjs` to `memcache`](#keyvmemcache-moves-from-memjs-to-memcache)
   - [`@keyv/etcd` Default `ttl` Applies Per Key](#keyvetcd-default-ttl-applies-per-key)
+  - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
 - [New Features](#new-features)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
@@ -642,6 +643,19 @@ In v6, `ttl` applies to each key written without an expiry, counted from that wr
 **What this means for you:**
 - If you set `ttl` on the store, keys now live for `ttl` from their own write, and writes keep working after the first `ttl` has passed
 - The `lease` property is removed. Remove any code that reads or assigns `store.lease`
+
+---
+
+### `@keyv/dynamo` Keys Without a TTL No Longer Expire
+
+In v5, `@keyv/dynamo` gave every key written without a TTL an expiry six hours after the write, and DynamoDB's TTL process deleted the key some time after that. No other adapter expires keys that were written without a TTL.
+
+In v6, a key written without a TTL has no expiry and is kept until it is deleted. The `sixHoursInMilliseconds` property is removed.
+
+**What this means for you:**
+- To give keys a default expiry, set Keyv's `ttl` option, such as `new Keyv(store, { ttl: 6 * 60 * 60 * 1000 })`
+- Remove any code that reads or assigns `store.sixHoursInMilliseconds`
+- A key written by v5 keeps the expiry it was written with until it is written again
 
 ---
 

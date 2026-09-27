@@ -33,7 +33,6 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 		return keyvStorageCapability(this);
 	}
 
-	private _sixHoursInMilliseconds = 6 * 60 * 60 * 1000;
 	private _namespace?: string;
 	private _opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
 	private _client: DynamoDBDocument;
@@ -72,22 +71,6 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 		this._tableReady = this.ensureTable(this._opts.tableName).catch((error: unknown) => {
 			this.emit("error", error);
 		});
-	}
-
-	/**
-	 * Gets the default TTL fallback in milliseconds (6 hours).
-	 * @returns The default TTL fallback, in milliseconds.
-	 */
-	public get sixHoursInMilliseconds(): number {
-		return this._sixHoursInMilliseconds;
-	}
-
-	/**
-	 * Sets the default TTL fallback in milliseconds.
-	 * @param value - The default TTL fallback, in milliseconds.
-	 */
-	public set sixHoursInMilliseconds(value: number) {
-		this._sixHoursInMilliseconds = value;
 	}
 
 	/**
@@ -197,28 +180,19 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Stores a value in DynamoDB. Uses a 6-hour default expiry if no expiry is specified.
+	 * Stores a value in DynamoDB.
 	 * @param key - The key to store
 	 * @param value - The value to store
-	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for the 6-hour default.
+	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
 	 * @returns `true` if the value was stored, `false` if the write failed.
 	 */
 	public async set(key: string, value: unknown, expires?: number): Promise<boolean> {
 		try {
 			await this._tableReady;
 
-			const expiresAtMs =
-				typeof expires === "number" ? expires : Date.now() + this._sixHoursInMilliseconds;
-			const expiresAt = Math.ceil(expiresAtMs / 1000);
-
 			const putInput: PutCommandInput = {
 				TableName: this._opts.tableName,
-				Item: {
-					id: this.formatKey(key),
-					value,
-					expiresAt,
-					expiresAtMs,
-				},
+				Item: this.createItem(key, value, expires),
 			};
 
 			await this._client.put(putInput);
@@ -235,7 +209,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple values in DynamoDB.
 	 * @template Value - The type of the values being stored.
 	 * @param entries - An array of `{ key, value, expires? }` entries, where `expires` is an
-	 * absolute Unix ms timestamp (or `undefined` for the 6-hour default).
+	 * absolute Unix ms timestamp (or `undefined` for no expiry).
 	 * @returns An array of booleans, one per entry, indicating which writes succeeded.
 	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
@@ -246,22 +220,9 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				return entries.map(() => true);
 			}
 
-			const putRequests = entries.map(({ key, value, expires }) => {
-				const expiresAtMs =
-					typeof expires === "number" ? expires : Date.now() + this._sixHoursInMilliseconds;
-				const expiresAt = Math.ceil(expiresAtMs / 1000);
-
-				return {
-					PutRequest: {
-						Item: {
-							id: this.formatKey(key),
-							value,
-							expiresAt,
-							expiresAtMs,
-						},
-					},
-				};
-			});
+			const putRequests = entries.map(({ key, value, expires }) => ({
+				PutRequest: { Item: this.createItem(key, value, expires) },
+			}));
 
 			const results = new Array<boolean>(entries.length).fill(true);
 
@@ -464,21 +425,29 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Clears data from DynamoDB. If a namespace is set, only keys with
 	 * the namespace prefix are deleted. Otherwise, all keys are deleted.
+	 * The whole table is scanned, one page at a time, since a single scan returns at most 1 MB.
 	 * @returns A promise that resolves once the matching keys have been deleted.
 	 */
 	public async clear(): Promise<void> {
 		try {
 			await this._tableReady;
 
-			const scanResult = await this._client.scan({
-				TableName: this._opts.tableName,
-			});
+			let lastEvaluatedKey: Record<string, unknown> | undefined;
+			do {
+				const scanResult = await this._client.scan({
+					TableName: this._opts.tableName,
+					ProjectionExpression: "id",
+					ExclusiveStartKey: lastEvaluatedKey,
+				});
 
-			const keys = this.extractKey(scanResult).map((id) =>
-				this.removeKeyPrefix(id, this._namespace),
-			);
+				lastEvaluatedKey = scanResult.LastEvaluatedKey as Record<string, unknown> | undefined;
 
-			await this.deleteMany(keys);
+				const keys = this.extractKey(scanResult).map((id) =>
+					this.removeKeyPrefix(id, this._namespace),
+				);
+
+				await this.deleteMany(keys);
+			} while (lastEvaluatedKey);
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
@@ -768,6 +737,25 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 				throw error;
 			}
 		}
+	}
+
+	/**
+	 * Builds the DynamoDB item stored for a key. An item with an expiry records it twice:
+	 * `expiresAt` in seconds, which DynamoDB TTL reads, and `expiresAtMs` in milliseconds. An item
+	 * without an expiry has neither attribute, so it is kept until it is deleted.
+	 * @param key - The key, before the namespace prefix is added.
+	 * @param value - The value to store.
+	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
+	 * @returns The item to write.
+	 */
+	private createItem(key: string, value: unknown, expires?: number): Record<string, unknown> {
+		const item: Record<string, unknown> = { id: this.formatKey(key), value };
+		if (typeof expires === "number") {
+			item.expiresAt = Math.ceil(expires / 1000);
+			item.expiresAtMs = expires;
+		}
+
+		return item;
 	}
 
 	/**
