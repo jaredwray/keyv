@@ -1,6 +1,6 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
-import Redis, { type Cluster } from "iovalkey";
+import Redis, { type Cluster, type Valkey } from "iovalkey";
 import Keyv, {
 	type KeyvAny,
 	type KeyvStorageAdapter,
@@ -235,33 +235,16 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			return [];
 		}
 
-		const resolvedKeys = keys.map((key) => this.getKeyName(key));
-
-		if (this.isCluster()) {
-			const slotMap = this.getSlotMap(resolvedKeys);
-			const resultMap = new Map<string, KeyvStorageGetResult<Value | undefined>>();
-
-			await Promise.all(
-				Array.from(slotMap.values(), async (slotKeys) => {
-					const values = await this._client.mget(slotKeys);
-					for (const [index, value] of values.entries()) {
-						resultMap.set(slotKeys[index], value ?? undefined);
-					}
-				}),
-			);
-
-			return resolvedKeys.map((k) => resultMap.get(k) as KeyvStorageGetResult<Value | undefined>);
-		}
-
-		const values: Array<string | null> = await this._client.mget(resolvedKeys);
-		return values.map((value) => value ?? undefined);
+		const values = await this.fetchValues(keys.map((key) => this.getKeyName(key)));
+		return values as Array<KeyvStorageGetResult<Value | undefined>>;
 	}
 
 	/**
 	 * Stores a key-value pair in the Valkey store with an optional absolute expiry.
 	 * If the value is `undefined`, the operation is skipped and returns `false`.
 	 * When `useSets` is enabled, the key is also added to the namespace tracking set
-	 * within an atomic transaction.
+	 * within an atomic transaction. In cluster mode, where the two sit in different hash slots,
+	 * the key is added to the set before and after it is written instead.
 	 * @param {string} key - The key under which to store the value.
 	 * @param {KeyvAny} value - The value to store. If `undefined`, the operation is a no-op.
 	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
@@ -285,7 +268,15 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				}
 			};
 
-			if (this._useSets) {
+			if (this._useSets && this.isCluster()) {
+				// The key and the namespace set sit in different hash slots, which a cluster can't
+				// update in one transaction. clear() only removes tracked keys, so the key is tracked
+				// before it is written, in case a later command fails, and again after, in case a
+				// concurrent clear() or delete() untracked it in between.
+				await this._client.sadd(this.getSetKey(), key);
+				await set(this._client);
+				await this._client.sadd(this.getSetKey(), key);
+			} else if (this._useSets) {
 				const trx = await this._client.multi();
 				await set(trx);
 				await trx.sadd(this.getSetKey(), key);
@@ -308,7 +299,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * Entries with `undefined` values are skipped. In cluster mode, entries are grouped by
 	 * hash slot and each group is executed as a separate `MULTI/EXEC` transaction to avoid
 	 * CROSSSLOT errors. When `useSets` is enabled, each key is also added to the namespace
-	 * tracking set within the same transaction.
+	 * tracking set within the same transaction; in cluster mode, where the set sits in another
+	 * hash slot, the keys are added to it before and after the writes instead.
 	 * @template Value - The type of the stored values.
 	 * @param {KeyvStorageEntry<Value>[]} entries - An array of `{ key, value, expires? }` entries where
 	 *   `expires` is an optional absolute expiry as Unix ms since epoch.
@@ -360,7 +352,17 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			slotMap.set(0, resolvedEntries);
 		}
 
+		// A cluster can't update the namespace set in a transaction with keys from other hash
+		// slots, so there the set is updated on its own, before and after the writes; see set().
+		const trackInTransaction = this._useSets && !this.isCluster();
+		const trackSeparately = this._useSets && !trackInTransaction;
+		const trackedKeys = resolvedEntries.map((entry) => entry.k);
+
 		try {
+			if (trackSeparately) {
+				await this._client.sadd(this.getSetKey(), trackedKeys);
+			}
+
 			await Promise.all(
 				Array.from(slotMap.values(), async (group) => {
 					const trx = this._client.multi();
@@ -371,7 +373,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 							trx.set(k, value);
 						}
 
-						if (this._useSets) {
+						if (trackInTransaction) {
 							trx.sadd(this.getSetKey(), k);
 						}
 					}
@@ -379,7 +381,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 					const execResults = await trx.exec();
 					/* v8 ignore next -- @preserve */
 					if (execResults) {
-						const step = this._useSets ? 2 : 1;
+						const step = trackInTransaction ? 2 : 1;
 						for (let j = 0; j < group.length; j++) {
 							const result = execResults[j * step];
 							// ioredis exec returns [error, reply] tuples
@@ -392,6 +394,10 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 					}
 				}),
 			);
+
+			if (trackSeparately) {
+				await this._client.sadd(this.getSetKey(), trackedKeys);
+			}
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -402,7 +408,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes a single key from the Valkey store. Uses `UNLINK` for non-blocking removal.
 	 * When `useSets` is enabled, the key is also removed from the namespace tracking set
-	 * within an atomic transaction.
+	 * within an atomic transaction. In cluster mode, where the two sit in different hash slots,
+	 * the key is removed from the set between two `UNLINK`s instead.
 	 * @param {string} key - The key to delete.
 	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` if the key did not exist.
 	 */
@@ -411,7 +418,14 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 		let items = 0;
 		const unlink = async (redis: KeyvAny) => redis.unlink(key);
 
-		if (this._useSets) {
+		if (this._useSets && this.isCluster()) {
+			// The key and the namespace set sit in different hash slots; see set(). The key is
+			// untracked only once it is gone, and unlinked again after, in case a concurrent set()
+			// wrote it in between.
+			items = await unlink(this._client);
+			await this._client.srem(this.getSetKey(), key);
+			items += await unlink(this._client);
+		} else if (this._useSets) {
 			const trx = this._client.multi();
 			await unlink(trx);
 			await trx.srem(this.getSetKey(), key);
@@ -489,7 +503,9 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Removes all keys belonging to the current namespace from the Valkey store.
 	 * When `useSets` is enabled, retrieves all tracked keys from the namespace set
-	 * and removes them along with the set itself using `UNLINK` and `SREM`.
+	 * and removes them along with the set itself using `UNLINK` and `SREM`. The keys are
+	 * unlinked before and after they leave the set, so a key that a concurrent `set()` writes
+	 * meanwhile is never left stored but untracked.
 	 * When `useSets` is disabled, uses the `KEYS` command with the pattern from
 	 * {@link getKeyPattern} (`namespace:<namespace>:*`, glob metacharacters escaped)
 	 * to find and remove all keys in this namespace. A namespace that merely shares
@@ -497,7 +513,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * extends this namespace with the `:` separator (`users:archive`) is cleared too,
 	 * because a pattern cannot tell it apart from a key that contains `:`; use
 	 * `useSets: true` for that separation. With no namespace this matches every key
-	 * in the current database.
+	 * in the current database. In cluster mode every master node is searched, and keys are
+	 * removed one hash slot at a time.
 	 * @returns {Promise<void>}
 	 */
 	public async clear(): Promise<void> {
@@ -505,7 +522,11 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			const setKey = this.getSetKey();
 			const keys: string[] = await this._client.smembers(setKey);
 			if (keys.length > 0) {
-				await Promise.all([this._client.unlink([...keys]), this._client.srem(setKey, [...keys])]);
+				// Keys are untracked only once they are gone, and unlinked again after, in case a
+				// concurrent set() wrote one in between.
+				await this.unlinkKeys(keys);
+				await this._client.srem(setKey, [...keys]);
+				await this.unlinkKeys(keys);
 			}
 
 			// Legacy cleanup: clear old "namespace:<ns>" SET key from pre-v6 format
@@ -516,7 +537,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 					const legacyKeys: string[] = await this._client.smembers(legacySetKey);
 					if (legacyKeys.length > 0) {
 						await Promise.all([
-							this._client.unlink([...legacyKeys]),
+							this.unlinkKeys(legacyKeys),
 							this._client.srem(legacySetKey, [...legacyKeys]),
 						]);
 					}
@@ -525,10 +546,12 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 		} else {
-			const keys: string[] = await this._client.keys(this.getKeyPattern());
-			if (keys.length > 0) {
-				await this._client.unlink(keys);
-			}
+			await Promise.all(
+				this.getNodes().map(async (node) => {
+					const keys: string[] = await node.keys(this.getKeyPattern());
+					await this.unlinkKeys(keys);
+				}),
+			);
 		}
 	}
 
@@ -538,30 +561,31 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * instance, so only keys for the current namespace are returned (matched with the pattern
 	 * from {@link getKeyPattern}). Uses the `SCAN` command
 	 * for cursor-based iteration to avoid blocking the server, fetching values in batches with `MGET`.
+	 * In cluster mode every master node is scanned, and values are fetched one hash slot at a time.
 	 * @template Value - The type of the stored values.
 	 * @returns {AsyncGenerator<[string, Value | undefined], void, unknown>} An async generator
 	 *   yielding `[key, value]` tuples for each matching entry. The internal namespace prefix is
 	 *   stripped from each yielded key, and missing values are returned as `undefined` (never `null`).
 	 */
 	public async *iterator<Value>(): AsyncGenerator<[string, Value | undefined], void, unknown> {
-		const scan = this._client.scan.bind(this._client);
-		const get = this._client.mget.bind(this._client);
 		const keyPrefix = this.getKeyPrefix();
 		const prefix = keyPrefix ? `${keyPrefix}:` : "";
 		const match = this.getKeyPattern();
-		let cursor = "0";
-		do {
-			const [curs, keys] = await scan(cursor, "MATCH", match);
-			cursor = curs;
-			if (keys.length > 0) {
-				const values = await get(keys);
-				for (const [i] of keys.entries()) {
-					const key = prefix ? keys[i].slice(prefix.length) : keys[i];
-					const value = (values[i] ?? undefined) as Value | undefined;
-					yield [key, value];
+		// In cluster mode each master holds its own keys, so every master is scanned.
+		for (const node of this.getNodes()) {
+			let cursor = "0";
+			do {
+				const [curs, keys] = await node.scan(cursor, "MATCH", match);
+				cursor = curs;
+				if (keys.length > 0) {
+					const values = await this.fetchValues(keys);
+					for (const [i] of keys.entries()) {
+						const key = prefix ? keys[i].slice(prefix.length) : keys[i];
+						yield [key, values[i] as Value | undefined];
+					}
 				}
-			}
-		} while (cursor !== "0");
+			} while (cursor !== "0");
+		}
 	}
 
 	/**
@@ -683,6 +707,49 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 */
 	private isCluster(): boolean {
 		return this._client.isCluster === true;
+	}
+
+	/**
+	 * Returns the clients that together hold every key: each master node in cluster mode, or the
+	 * one client in standalone mode. `KEYS` and `SCAN` only see the node they run on.
+	 * @returns {Valkey[]} The clients to search.
+	 */
+	private getNodes(): Valkey[] {
+		return this.isCluster() ? (this._client as Cluster).nodes("master") : [this._client as Valkey];
+	}
+
+	/**
+	 * Fetches the values of full key names with `MGET`, one command per hash slot in cluster mode.
+	 * @param {string[]} keys - The full key names.
+	 * @returns {Promise<Array<string | undefined>>} The values in key order, `undefined` when missing.
+	 */
+	private async fetchValues(keys: string[]): Promise<Array<string | undefined>> {
+		const values = new Map<string, string | undefined>();
+		await Promise.all(
+			Array.from(this.getSlotMap(keys).values(), async (slotKeys) => {
+				const slotValues: Array<string | null> = await this._client.mget(slotKeys);
+				for (const [index, value] of slotValues.entries()) {
+					values.set(slotKeys[index], value ?? undefined);
+				}
+			}),
+		);
+
+		return keys.map((key) => values.get(key));
+	}
+
+	/**
+	 * Removes full key names with `UNLINK`, one command per hash slot in cluster mode.
+	 * @param {string[]} keys - The full key names.
+	 * @returns {Promise<void>}
+	 */
+	private async unlinkKeys(keys: string[]): Promise<void> {
+		await Promise.all(
+			Array.from(this.getSlotMap(keys).values(), async (slotKeys) => {
+				if (slotKeys.length > 0) {
+					await this._client.unlink(slotKeys);
+				}
+			}),
+		);
 	}
 
 	/**

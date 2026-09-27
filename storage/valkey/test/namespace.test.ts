@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { delay } from "@keyv/test-suite";
 import Redis from "iovalkey";
 import Keyv from "keyv";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import KeyvValkey from "../src/index.js";
 
 const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
@@ -206,6 +206,26 @@ describe("useSets", () => {
 		expect(await client.type("sets")).toBe("set");
 		expect(await client.exists(`sets:${key}`)).toBe(1);
 		expect(await store.get(key)).toBe(value);
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should keep tracking in step when set() runs during clear()", async () => {
+		const client = new Redis(valkeyUri);
+		const store = new KeyvValkey(client, { useSets: true });
+		store.namespace = faker.string.alphanumeric(8);
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "first");
+
+		// Another set() lands between the steps of clear().
+		const srem = client.srem.bind(client) as (...args: unknown[]) => Promise<unknown>;
+		vi.spyOn(client, "srem").mockImplementationOnce(async (...args: unknown[]) => {
+			await store.set(key, "second");
+			return srem(...args);
+		});
+		await store.clear();
 
 		await store.clear();
 		expect(await store.get(key)).toBeUndefined();
