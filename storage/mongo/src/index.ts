@@ -22,9 +22,6 @@ import {
 } from "mongodb";
 import type { KeyvMongoConnect, KeyvMongoConnectGridFS, KeyvMongoOptions } from "./types.js";
 
-/** How many GridFS files a single delete query covers. */
-const deleteBatchSize = 1000;
-
 /**
  * MongoDB storage adapter for Keyv.
  * Provides a persistent key-value store using MongoDB as the backend.
@@ -57,6 +54,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @default false
 	 */
 	private _useGridFS = false;
+
+	/**
+	 * How many GridFS files a single delete query covers.
+	 * @default 1000
+	 */
+	private _deleteBatchSize = 1000;
 
 	/**
 	 * The database name for the MongoDB connection.
@@ -242,36 +245,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 
 		if (client.useGridFS) {
-			// A set that finishes during the read deletes the file being read, so a failed read
-			// looks up the newest file once more.
-			for (let attempt = 0; attempt < 2; attempt++) {
-				const file = await this.findNewestFile(client, key);
-				if (!file) {
-					return undefined;
-				}
-
-				// Delete the expired entry, with any older files for the key
-				if (this.isFileExpired(file)) {
-					await this.deleteFiles(client, this.olderFiles(file, true));
-					return undefined;
-				}
-
-				await client.store.updateOne(
-					{ _id: { $eq: file._id } },
-					{
-						$set: {
-							"metadata.lastAccessed": new Date(),
-						},
-					},
-				);
-
-				const data = await this.readFile(client, file._id);
-				if (data !== undefined) {
-					return data as KeyvStorageGetResult<Value>;
-				}
-			}
-
-			return undefined;
+			return (await this.readKey(client, key)) as KeyvStorageGetResult<Value>;
 		}
 
 		const document = await client.store.findOne({
@@ -381,8 +355,14 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				}
 
 				// The key's older files hold replaced values. Reads use the newest file, so the
-				// new value is served even before they are deleted.
-				await this.deleteFiles(client, this.olderFiles(file, false));
+				// new value is served even before they are deleted, and a failed cleanup doesn't
+				// fail the write: the next set or delete of the key removes them.
+				try {
+					await this.deleteFiles(client, this.olderFiles(file, false));
+				} catch (error) {
+					this.emit("error", error);
+				}
+
 				return true;
 			}
 
@@ -529,14 +509,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const ns = this.getNamespaceValue();
-		const expiredFiles = await client.store
-			.find({
-				"metadata.expiresAt": {
-					$lte: new Date(Date.now()),
-				},
-				"metadata.namespace": { $eq: ns },
-			})
-			.toArray();
+		const expiredFiles = client.store.find({
+			"metadata.expiresAt": {
+				$lte: new Date(Date.now()),
+			},
+			"metadata.namespace": { $eq: ns },
+		});
 
 		await this.deleteWithOlderFiles(client, expiredFiles);
 		return true;
@@ -555,14 +533,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const ns = this.getNamespaceValue();
-		const lastAccessedFiles = await client.store
-			.find({
-				"metadata.lastAccessed": {
-					$lte: new Date(Date.now() - seconds * 1000),
-				},
-				"metadata.namespace": { $eq: ns },
-			})
-			.toArray();
+		const lastAccessedFiles = client.store.find({
+			"metadata.lastAccessed": {
+				$lte: new Date(Date.now() - seconds * 1000),
+			},
+			"metadata.namespace": { $eq: ns },
+		});
 
 		await this.deleteWithOlderFiles(client, lastAccessedFiles);
 		return true;
@@ -597,7 +573,13 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 					continue;
 				}
 
-				yield [file.filename, await this.readFile(client, file._id)];
+				// A set that finished after the cursor found this file deletes it, so a failed read
+				// reads the key's newest file instead. A key that can't be read is skipped.
+				const value =
+					(await this.readFile(client, file._id)) ?? (await this.readKey(client, previousKey));
+				if (value !== undefined) {
+					yield [file.filename, value];
+				}
 			}
 
 			return;
@@ -743,14 +725,13 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		client: KeyvMongoConnectGridFS,
 		filter: Filter<Document>,
 	): Promise<number> {
-		const files = await client.store.find(filter, { projection: { _id: 1 } }).toArray();
 		let deleted = 0;
-		for (let index = 0; index < files.length; index += deleteBatchSize) {
-			const ids = files.slice(index, index + deleteBatchSize).map((file) => file._id);
+		await this.inBatches(client.store.find(filter, { projection: { _id: 1 } }), async (files) => {
+			const ids = files.map((file) => file._id);
 			const { deletedCount } = await client.store.deleteMany({ _id: { $in: ids } });
 			await client.chunks.deleteMany({ files_id: { $in: ids } });
 			deleted += deletedCount;
-		}
+		});
 
 		return deleted;
 	}
@@ -761,11 +742,32 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 */
 	private async deleteWithOlderFiles(
 		client: KeyvMongoConnectGridFS,
-		files: Document[],
+		files: AsyncIterable<Document>,
 	): Promise<void> {
-		for (let index = 0; index < files.length; index += deleteBatchSize) {
-			const batch = files.slice(index, index + deleteBatchSize);
+		await this.inBatches(files, async (batch) => {
 			await this.deleteFiles(client, { $or: batch.map((file) => this.olderFiles(file, true)) });
+		});
+	}
+
+	/**
+	 * Hands the items of `source` to `run` in batches of up to {@link _deleteBatchSize} as they
+	 * arrive, so a large result is never held in memory at once.
+	 */
+	private async inBatches<Item>(
+		source: AsyncIterable<Item>,
+		run: (batch: Item[]) => Promise<void>,
+	): Promise<void> {
+		let batch: Item[] = [];
+		for await (const item of source) {
+			batch.push(item);
+			if (batch.length === this._deleteBatchSize) {
+				await run(batch);
+				batch = [];
+			}
+		}
+
+		if (batch.length > 0) {
+			await run(batch);
 		}
 	}
 
@@ -774,6 +776,43 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 */
 	private isFileExpired(file: Document, now: Date = new Date()): boolean {
 		return Boolean(file.metadata?.expiresAt) && new Date(file.metadata.expiresAt as Date) <= now;
+	}
+
+	/**
+	 * Reads a key's value from its newest GridFS file, and records the read in `lastAccessed`. A set
+	 * that finishes during the read deletes the file being read, so a failed read looks up the
+	 * newest file once more.
+	 * @returns The value, or `undefined` if the key is missing or expired, or both reads fail.
+	 */
+	private async readKey(client: KeyvMongoConnectGridFS, key: string): Promise<string | undefined> {
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const file = await this.findNewestFile(client, key);
+			if (!file) {
+				return undefined;
+			}
+
+			// Delete the expired entry, with any older files for the key
+			if (this.isFileExpired(file)) {
+				await this.deleteFiles(client, this.olderFiles(file, true));
+				return undefined;
+			}
+
+			await client.store.updateOne(
+				{ _id: { $eq: file._id } },
+				{
+					$set: {
+						"metadata.lastAccessed": new Date(),
+					},
+				},
+			);
+
+			const data = await this.readFile(client, file._id);
+			if (data !== undefined) {
+				return data;
+			}
+		}
+
+		return undefined;
 	}
 
 	/**

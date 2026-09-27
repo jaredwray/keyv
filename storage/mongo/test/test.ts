@@ -3,7 +3,7 @@ import { PassThrough, Writable } from "node:stream";
 import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test, vi } from "vitest";
 import KeyvMongo, { createKeyv } from "../src/index.js";
 
 const options = { serverSelectionTimeoutMS: 5000, db: "keyvdb" };
@@ -799,6 +799,13 @@ async function writeFile(
 	});
 }
 
+/** A download stream that fails, as a read does when the file is deleted while it is read. */
+function failingStream(): PassThrough {
+	const stream = new PassThrough();
+	queueMicrotask(() => stream.emit("error", new Error("FileNotFound")));
+	return stream;
+}
+
 /** Counts the GridFS files stored for a key. */
 async function countFiles(store: KeyvMongo, key: string): Promise<number> {
 	const client = (await store.connect) as any;
@@ -928,9 +935,7 @@ describe("GridFS revisions", () => {
 		client.bucket.openDownloadStream = (id: unknown) => {
 			reads++;
 			if (reads === 1) {
-				const failed = new PassThrough();
-				queueMicrotask(() => failed.emit("error", new Error("FileNotFound")));
-				return failed;
+				return failingStream();
 			}
 
 			return openDownloadStream(id);
@@ -951,11 +956,7 @@ describe("GridFS revisions", () => {
 		await store.set(key, "value");
 		const client = (await store.connect) as any;
 		const openDownloadStream = client.bucket.openDownloadStream.bind(client.bucket);
-		client.bucket.openDownloadStream = () => {
-			const failed = new PassThrough();
-			queueMicrotask(() => failed.emit("error", new Error("read failed")));
-			return failed;
-		};
+		client.bucket.openDownloadStream = () => failingStream();
 
 		try {
 			expect(await store.get(key)).toBeUndefined();
@@ -986,6 +987,107 @@ describe("GridFS revisions", () => {
 
 		expect(await store.get(key)).toBe("old");
 		await store.delete(key);
+	});
+
+	test("set returns true and emits the error when deleting the older files fails", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "old");
+		const errors: unknown[] = [];
+		store.on("error", (error: unknown) => errors.push(error));
+		const deleteFiles = vi
+			.spyOn(store as any, "deleteFiles")
+			.mockRejectedValueOnce(new Error("cleanup failed"));
+
+		try {
+			expect(await store.set(key, "new")).toBe(true);
+		} finally {
+			deleteFiles.mockRestore();
+		}
+
+		expect(errors).toHaveLength(1);
+		expect(await store.get(key)).toBe("new");
+		await store.delete(key);
+	});
+
+	test("delete removes a key's files across several batches", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		(store as any)._deleteBatchSize = 2;
+		const key = faker.string.alphanumeric(10);
+		for (const value of ["1", "2", "3", "4", "5"]) {
+			await writeFile(store, key, value);
+		}
+
+		expect(await store.delete(key)).toBe(true);
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
+	test("clearExpired handles more expired keys than one batch", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		(store as any)._deleteBatchSize = 2;
+		const keys = [
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+		];
+		for (const key of keys) {
+			await writeFile(store, key, "old");
+			await writeFile(store, key, "new", { expiresAt: new Date(Date.now() - 1000) });
+		}
+
+		expect(await store.clearExpired()).toBe(true);
+		for (const key of keys) {
+			expect(await countFiles(store, key)).toBe(0);
+		}
+	});
+
+	test("the iterator reads a key's newest file when the file it found can't be read", async () => {
+		const collection = faker.string.alphanumeric(12);
+		const store = new KeyvMongo({ useGridFS: true, collection, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "value");
+		const client = (await store.connect) as any;
+		const openDownloadStream = client.bucket.openDownloadStream.bind(client.bucket);
+		let reads = 0;
+		// The iterator's own read fails, as it does when a set deletes the file first.
+		client.bucket.openDownloadStream = (id: unknown) => {
+			reads++;
+			return reads === 1 ? failingStream() : openDownloadStream(id);
+		};
+
+		try {
+			const entries: unknown[] = [];
+			for await (const entry of store.iterator()) {
+				entries.push(entry);
+			}
+
+			expect(entries).toEqual([[key, "value"]]);
+			expect(reads).toBe(2);
+		} finally {
+			client.bucket.openDownloadStream = openDownloadStream;
+			await store.clear();
+		}
+	});
+
+	test("the iterator skips a key it can't read", async () => {
+		const collection = faker.string.alphanumeric(12);
+		const store = new KeyvMongo({ useGridFS: true, collection, ...options });
+		await store.set(faker.string.alphanumeric(10), "value");
+		const client = (await store.connect) as any;
+		const openDownloadStream = client.bucket.openDownloadStream.bind(client.bucket);
+		client.bucket.openDownloadStream = () => failingStream();
+
+		try {
+			const entries: unknown[] = [];
+			for await (const entry of store.iterator()) {
+				entries.push(entry);
+			}
+
+			expect(entries).toEqual([]);
+		} finally {
+			client.bucket.openDownloadStream = openDownloadStream;
+			await store.clear();
+		}
 	});
 });
 
