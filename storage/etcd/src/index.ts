@@ -7,7 +7,7 @@ import {
 	type KeyvStorageGetResult,
 	keyvStorageCapability,
 } from "keyv";
-import { EtcdClient, type Lease } from "./client.js";
+import { EtcdClient } from "./client.js";
 import type { ClearOutput, DeleteOutput, GetOutput, HasOutput } from "./types.js";
 
 /**
@@ -18,7 +18,10 @@ export type KeyvEtcdOptions = {
 	url?: string;
 	/** Alias for `url` */
 	uri?: string;
-	/** Default TTL in milliseconds for all keys. Converted to seconds internally for etcd leases. */
+	/**
+	 * Default TTL in milliseconds, applied to each key written without an `expires`, counted from
+	 * that write. Each such key gets its own etcd lease.
+	 */
 	ttl?: number;
 	/** Per-request timeout in milliseconds. Aborts hung requests via `AbortSignal.timeout`. */
 	busyTimeout?: number;
@@ -43,7 +46,6 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	private _client!: EtcdClient;
-	private _lease?: Lease;
 	private _url = "127.0.0.1:2379";
 	private _ttl?: number;
 	private _busyTimeout?: number;
@@ -88,12 +90,6 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		});
 
 		this._client.status().catch((error) => this.emit("error", error));
-
-		if (typeof this._ttl === "number") {
-			this._lease = this._client.lease(this._ttl / 1000, {
-				autoKeepAlive: false,
-			});
-		}
 	}
 
 	/**
@@ -108,20 +104,6 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public set client(value: EtcdClient) {
 		this._client = value;
-	}
-
-	/**
-	 * Gets the etcd lease used for TTL support.
-	 */
-	public get lease(): Lease | undefined {
-		return this._lease;
-	}
-
-	/**
-	 * Sets the etcd lease used for TTL support.
-	 */
-	public set lease(value: Lease | undefined) {
-		this._lease = value;
 	}
 
 	/**
@@ -140,7 +122,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Gets the default TTL in milliseconds.
+	 * Gets the default TTL in milliseconds, applied to each key written without an `expires`.
 	 * @default undefined
 	 */
 	public get ttl(): number | undefined {
@@ -290,10 +272,10 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Stores a value in the etcd server. If an absolute `expires` is provided, the value is
-	 * stored with an etcd lease computed from the remaining duration; otherwise the configured
-	 * default TTL lease (if any) is used. etcd leases are second-granular, so the remaining
-	 * duration is clamped to a minimum of one second.
+	 * Stores a value in the etcd server. Without an absolute `expires`, a positive default `ttl`
+	 * sets one, counted from this write. A value with an expiry is stored on its own etcd lease,
+	 * sized from the remaining duration. etcd leases are second-granular, so the remaining
+	 * duration is rounded up to whole seconds, with a minimum of one second.
 	 * @param key - The key to store
 	 * @param value - The value to store
 	 * @param expires - Optional absolute expiry as Unix ms since epoch. `undefined` means no expiry.
@@ -301,24 +283,22 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		try {
+			if (expires === undefined && typeof this._ttl === "number" && this._ttl > 0) {
+				expires = Date.now() + this._ttl;
+			}
+
+			const formattedKey = this.formatKey(key);
+			const wrapped = this.wrapValue(value, expires);
+			if (expires === undefined) {
+				await this._client.put(formattedKey).value(wrapped);
+				return true;
+			}
+
 			// etcd leases are second-granular, so round the duration UP. The lease is only a
 			// server-side GC backstop (precise expiry is enforced client-side via the stored
 			// `expires`); rounding up ensures the key is never reaped before its real deadline.
-			const leaseSec =
-				expires === undefined
-					? typeof this._ttl === "number"
-						? Math.ceil(this._ttl / 1000)
-						: undefined
-					: Math.max(Math.ceil((expires - Date.now()) / 1000), 1);
-
-			const target =
-				leaseSec === undefined
-					? this._client
-					: expires === undefined
-						? this._lease
-						: this._client.lease(leaseSec, { autoKeepAlive: false });
-
-			await target?.put(this.formatKey(key)).value(this.wrapValue(value, expires));
+			const leaseSec = Math.max(Math.ceil((expires - Date.now()) / 1000), 1);
+			await this._client.lease(leaseSec, { autoKeepAlive: false }).put(formattedKey).value(wrapped);
 			return true;
 		} catch (error) {
 			this.emit("error", error);

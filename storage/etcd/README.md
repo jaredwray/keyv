@@ -33,7 +33,6 @@
 - [Options](#options)
 - [Properties](#properties)
   - [.client](#client)
-  - [.lease](#lease)
   - [.url](#url)
   - [.ttl](#ttl)
   - [.busyTimeout](#busytimeout)
@@ -164,7 +163,7 @@ await store.get('foo'); // 'bar'
 |---|---|---|---|
 | `url` | `string` | `'127.0.0.1:2379'` | The etcd server URL. The `etcd://` protocol prefix is automatically stripped. |
 | `uri` | `string` | — | Alias for `url` |
-| `ttl` | `number` | `undefined` | Default TTL in milliseconds for all keys. Uses etcd leases internally. |
+| `ttl` | `number` | `undefined` | Default TTL in milliseconds for keys written without an expiry, counted from each write. Each such key gets its own etcd lease. |
 | `busyTimeout` | `number` | `undefined` | Per-request timeout in milliseconds. Aborts hung requests via `AbortSignal.timeout`. |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
 
@@ -191,14 +190,6 @@ The underlying `EtcdClient` instance — a lightweight wrapper around the etcd v
 |---|---|
 | `EtcdClient` | Created from the `url` option |
 
-### .lease
-
-The etcd lease used for TTL support. Only set when a `ttl` is configured.
-
-| Type | Default |
-|---|---|
-| `Lease \| undefined` | `undefined` |
-
 ### .url
 
 The etcd server URL.
@@ -209,7 +200,7 @@ The etcd server URL.
 
 ### .ttl
 
-Default TTL in milliseconds for all keys. Converted to seconds internally for etcd leases.
+Default TTL in milliseconds for keys written without an expiry, counted from each write. It can be changed at any time, and each such key gets its own etcd lease, rounded up to whole seconds.
 
 | Type | Default |
 |---|---|
@@ -284,7 +275,7 @@ const results = await store.getMany(['key1', 'key2']);
 
 ### .set(key, value, expires?)
 
-Stores a value in the etcd server. If `expires` is provided, a dedicated etcd lease (sized from the remaining time) is created for that key. Otherwise, if a default TTL is configured via the constructor `ttl` option, the shared lease is used. Returns `true` on success, `false` on failure.
+Stores a value in the etcd server. If `expires` is provided, a dedicated etcd lease (sized from the remaining time) is created for that key. Otherwise, a positive default `ttl` expires the key `ttl` milliseconds after this write, on its own lease. Returns `true` on success, `false` on failure.
 
 > When you call the adapter directly, the third argument is an **absolute** `expires` timestamp (Unix ms since epoch), not a relative duration. Through Keyv (`keyv.set(key, value, ttl)`) you still pass a relative TTL — Keyv converts it to `expires` for you.
 
