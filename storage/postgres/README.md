@@ -319,7 +319,7 @@ console.log(store.useUnloggedTable); // true
 
 ## clearExpiredInterval
 
-Get or set the interval in milliseconds between automatic expired-entry cleanup runs. When set to a value greater than 0, the adapter will automatically call `clearExpired()` at the specified interval. The timer uses `unref()` so it won't keep the Node.js process alive. Setting to 0 disables the automatic cleanup.
+Get or set the interval in milliseconds between automatic expired-entry cleanup runs. When set to a value greater than 0, the adapter will automatically call `clearExpired()` at the specified interval. The timer uses `unref()` so it won't keep the Node.js process alive. Setting to 0 disables the automatic cleanup. An interval longer than about 24.8 days (2,147,483,647 ms, the longest delay Node.js timers accept) runs cleanup at that limit.
 
 - Type: `number`
 - Default: `0` (disabled)

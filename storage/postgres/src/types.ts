@@ -23,7 +23,12 @@ export type KeyvPostgresOptions = {
 	iterationLimit?: number;
 	/** Use a PostgreSQL UNLOGGED table for better write performance. @default false */
 	useUnloggedTable?: boolean;
-	/** Interval in milliseconds between automatic expired-entry cleanup runs. `0` disables. @default 0 */
+	/**
+	 * Interval in milliseconds between automatic expired-entry cleanup runs. `0` disables. An
+	 * interval longer than about 24.8 days, the longest delay Node.js timers accept, runs at that
+	 * limit.
+	 * @default 0
+	 */
 	clearExpiredInterval?: number;
 } & PoolConfig;
 
