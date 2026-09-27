@@ -21,6 +21,16 @@ class KeyvMysql extends KeyvMysqlAdapter {
 
 const store = () => new KeyvMysql({ uri, iterationLimit: 2 });
 
+/** Reads the columns of a table's primary key, in order. */
+async function primaryKeyColumns(adapter: KeyvMysqlAdapter, tableEsc: string): Promise<string[]> {
+	const rows = await adapter.query<mysql.RowDataPacket[]>(
+		`SHOW INDEX FROM ${tableEsc} WHERE Key_name = 'PRIMARY'`,
+	);
+	return [...rows]
+		.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+		.map((row) => String(row.Column_name));
+}
+
 keyvTestSuite(test, Keyv, store);
 keyvIteratorTests(test, Keyv, store);
 storageTestSuite(test, store);
@@ -346,6 +356,7 @@ describe("runtime configuration", () => {
 				`SHOW COLUMNS FROM ${legacyTableEsc} WHERE Field IN ('id', 'namespace', 'expires')`,
 			);
 			expect(columns.map((column) => column.Field)).toEqual(["id", "namespace", "expires"]);
+			expect(await primaryKeyColumns(keyv, legacyTableEsc)).toEqual(["namespace", "id"]);
 
 			await admin.query(
 				`CREATE TABLE ${wideTableEsc} (id VARBINARY(2048) NOT NULL, value TEXT, namespace VARBINARY(2048) NOT NULL DEFAULT '')`,
@@ -881,7 +892,7 @@ describe("v6 migration", () => {
 		).rejects.toMatchObject({ stderr: expect.stringContaining("3072-byte composite index limit") });
 	});
 
-	test("preserves widths while migrating one column and replacing the legacy index", async () => {
+	test("preserves widths while migrating one column and replacing the legacy index with a primary key", async () => {
 		const admin = new KeyvMysql(uri);
 		const table = `keyv_index_migration_${faker.string.alphanumeric(12)}`;
 		const tableEsc = `\`${table}\``;
@@ -918,17 +929,14 @@ describe("v6 migration", () => {
 			const indexes = await admin.query<mysql.RowDataPacket[]>(
 				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
 			);
-			const indexColumns = [...indexes]
-				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-				.map((row) => row.Column_name);
-			expect(indexColumns).toEqual(["namespace", "id"]);
-			expect(indexes.every((row) => Number(row.Non_unique) === 0)).toBe(true);
+			expect(indexes).toEqual([]);
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
 		} finally {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 		}
 	});
 
-	test("atomically reorders a legacy index during concurrent initialization", async () => {
+	test("replaces a legacy index with a primary key during concurrent initialization", async () => {
 		const admin = new KeyvMysql(uri);
 		const table = `keyv_concurrent_index_${faker.string.alphanumeric(12)}`;
 		const tableEsc = `\`${table}\``;
@@ -949,11 +957,144 @@ describe("v6 migration", () => {
 			const indexes = await admin.query<mysql.RowDataPacket[]>(
 				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
 			);
-			const indexColumns = [...indexes]
-				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-				.map((row) => row.Column_name);
-			expect(indexColumns).toEqual(["namespace", "id"]);
-			expect(indexes.every((row) => Number(row.Non_unique) === 0)).toBe(true);
+			expect(indexes).toEqual([]);
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+});
+
+describe("primary key", () => {
+	test("creates its table with a primary key on namespace and id", async () => {
+		const table = `keyv_primary_key_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const keyv = new KeyvMysql({ uri, table });
+
+		try {
+			await keyv.query("SELECT 1");
+			expect(await primaryKeyColumns(keyv, tableEsc)).toEqual(["namespace", "id"]);
+			const indexes = await keyv.query<mysql.RowDataPacket[]>(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [
+					`${table}_key_namespace_idx`,
+				]),
+			);
+			expect(indexes).toEqual([]);
+		} finally {
+			await keyv.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("works on a server that requires a primary key on every table", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_require_pk_${faker.string.alphanumeric(12)}`;
+		const legacyTable = `keyv_require_pk_legacy_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const legacyTableEsc = `\`${legacyTable}\``;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${legacyTableEsc} (id VARCHAR(255) NOT NULL PRIMARY KEY, value TEXT)`,
+			);
+			await admin.query("SET GLOBAL sql_require_primary_key = ON");
+
+			const keyv = new KeyvMysql({ uri, table });
+			expect(await keyv.set("key", "value")).toBe(true);
+			expect(await keyv.get("key")).toBe("value");
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
+
+			await keyv.useTable(legacyTable);
+			expect(await primaryKeyColumns(admin, legacyTableEsc)).toEqual(["namespace", "id"]);
+		} finally {
+			await admin.query("SET GLOBAL sql_require_primary_key = OFF");
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+			await admin.query(`DROP TABLE IF EXISTS ${legacyTableEsc}`);
+		}
+	});
+
+	test("replaces a primary key MySQL generated for a table created without one", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_gipk_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexEsc = `\`${table}_key_namespace_idx\``;
+		const connection = mysql.createConnection(uri).promise();
+
+		try {
+			// Earlier v6 releases created the table without a primary key, so a server that
+			// generates invisible primary keys added one.
+			await connection.query("SET SESSION sql_generate_invisible_primary_key = ON");
+			await connection.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexEsc} (namespace, id))`,
+			);
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["my_row_id"]);
+			await admin.query("SET GLOBAL sql_generate_invisible_primary_key = ON");
+
+			const keyv = new KeyvMysql({ uri, table });
+			expect(await keyv.set("key", "value")).toBe(true);
+			const restarted = new KeyvMysql({ uri, table });
+			expect(await restarted.get("key")).toBe("value");
+
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
+			const columns = await admin.query<mysql.RowDataPacket[]>(`SHOW COLUMNS FROM ${tableEsc}`);
+			expect(columns.map((column) => column.Field)).not.toContain("my_row_id");
+		} finally {
+			await admin.query("SET GLOBAL sql_generate_invisible_primary_key = OFF");
+			await connection.end();
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("keeps the primary key another adapter adds while it migrates the table", async () => {
+		const admin = new KeyvMysql(uri);
+		const keyv = new KeyvMysql(uri);
+		const table = `keyv_pk_race_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexEsc = `\`${table}_key_namespace_idx\``;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', UNIQUE INDEX ${indexEsc} (namespace, id))`,
+			);
+			const internals = keyv as unknown as {
+				_connected: Promise<(sql: string) => Promise<unknown>>;
+			};
+			const query = await internals._connected;
+			// Another adapter runs the same migration first, so this adapter's ALTER TABLE fails.
+			internals._connected = Promise.resolve(async (sql: string) => {
+				if (sql.startsWith(`ALTER TABLE ${tableEsc} `) && sql.includes("ADD PRIMARY KEY")) {
+					await admin.query(sql);
+				}
+
+				return query(sql);
+			});
+
+			await keyv.useTable(table);
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("rejects a table whose rows repeat a namespace and id", async () => {
+		const admin = new KeyvMysql(uri);
+		const keyv = new KeyvMysql(uri);
+		const table = `keyv_pk_duplicates_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '')`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${tableEsc} (id, value) VALUES (?, ?), (?, ?)`, [
+					"key",
+					"one",
+					"key",
+					"two",
+				]),
+			);
+
+			await expect(keyv.useTable(table)).rejects.toThrow(/Duplicate entry/);
 		} finally {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 		}
@@ -1116,11 +1257,8 @@ describe("byte-exact keys and namespaces", () => {
 			const indexes = await migrated.query<mysql.RowDataPacket[]>(
 				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
 			);
-			const indexColumns = [...indexes]
-				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-				.map((row) => row.Column_name);
-			expect(indexColumns).toEqual(["namespace", "id"]);
-			expect(indexes.every((row) => Number(row.Non_unique) === 0)).toBe(true);
+			expect(indexes).toEqual([]);
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
 		} finally {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 		}

@@ -201,43 +201,47 @@ async function migrate(options: {
 				);
 			}
 
-			try {
-				await connection.query(`ALTER TABLE ${tableEsc} DROP PRIMARY KEY`);
-			} catch (error) {
-				if ((error as { errno?: number }).errno !== 1091) {
-					throw error;
-				}
-			}
-
+			// Make (namespace, id) the primary key, as the adapter does. One ALTER replaces v5's
+			// primary key on id, a primary key MySQL generated (my_row_id), or the unique
+			// (namespace, id) index, so the table always has a primary key.
+			const readPrimaryKey = async (): Promise<string> => {
+				const [primaryRows] = await connection.query(
+					`SHOW INDEX FROM ${tableEsc} WHERE Key_name = 'PRIMARY'`,
+				);
+				return [...(primaryRows as mysql.RowDataPacket[])]
+					.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+					.map((row) => String(row.Column_name))
+					.join();
+			};
+			const primaryKey = await readPrimaryKey();
 			const indexNameValue = `${table}_key_namespace_idx`;
-			const indexName = `\`${indexNameValue.replace(/`/g, "``")}\``;
 			const [indexRowsResult] = await connection.query(
 				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexNameValue]),
 			);
-			const indexRows = indexRowsResult as mysql.RowDataPacket[];
-			const indexColumns = [...indexRows]
-				.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-				.map((row) => String(row.Column_name));
-			const hasNamespaceFirstUniqueIndex =
-				indexColumns.length === 2 &&
-				indexColumns[0] === "namespace" &&
-				indexColumns[1] === "id" &&
-				indexRows.every((row) => Number(row.Non_unique) === 0);
+			const changes: string[] = [];
+			if (primaryKey !== "namespace,id") {
+				if (primaryKey !== "") {
+					changes.push("DROP PRIMARY KEY");
+				}
 
-			if (!hasNamespaceFirstUniqueIndex) {
-				if (indexRows.length > 0) {
-					await connection.query(
-						`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}, ADD UNIQUE INDEX ${indexName} (namespace, id)`,
-					);
-				} else {
-					try {
-						await connection.query(
-							`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`,
-						);
-					} catch (error) {
-						if ((error as { errno?: number }).errno !== 1061) {
-							throw error;
-						}
+				if (primaryKey === "my_row_id") {
+					changes.push("DROP COLUMN my_row_id");
+				}
+
+				changes.push("ADD PRIMARY KEY (namespace, id)");
+			}
+
+			if ((indexRowsResult as mysql.RowDataPacket[]).length > 0) {
+				changes.push(`DROP INDEX \`${indexNameValue.replace(/`/g, "``")}\``);
+			}
+
+			if (changes.length > 0) {
+				try {
+					await connection.query(`ALTER TABLE ${tableEsc} ${changes.join(", ")}`);
+				} catch (error) {
+					// An adapter connecting at the same time may have migrated the table first.
+					if ((await readPrimaryKey()) !== "namespace,id") {
+						throw error;
 					}
 				}
 			}

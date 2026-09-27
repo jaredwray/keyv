@@ -52,6 +52,68 @@ function validateCompositeIndexLength(keyLength: number, namespaceLength: number
 }
 
 /**
+ * Makes `(namespace, id)` the table's primary key. It replaces the primary key on `id` alone that
+ * Keyv v5 created, the primary key MySQL generates for a table created without one (`my_row_id`),
+ * and the unique `(namespace, id)` index that earlier v6 releases used in place of a primary key.
+ * A single `ALTER TABLE` makes the change, so the table always has a primary key, as servers with
+ * `sql_require_primary_key` or generated invisible primary keys require.
+ * @returns {Promise<void>} Resolves once `(namespace, id)` is the primary key.
+ */
+async function ensurePrimaryKey(
+	query: SqlQuery,
+	tableEsc: string,
+	uniqueIndexName: string,
+): Promise<void> {
+	const primaryKey = await readPrimaryKey(query, tableEsc);
+	const uniqueIndexRows = (await query(
+		mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [uniqueIndexName]),
+	)) as mysql.RowDataPacket[];
+	const changes: string[] = [];
+	if (primaryKey.join() !== "namespace,id") {
+		if (primaryKey.length > 0) {
+			changes.push("DROP PRIMARY KEY");
+		}
+
+		// MySQL won't drop a generated invisible primary key without its column.
+		if (primaryKey.join() === "my_row_id") {
+			changes.push("DROP COLUMN my_row_id");
+		}
+
+		changes.push("ADD PRIMARY KEY (namespace, id)");
+	}
+
+	if (uniqueIndexRows.length > 0) {
+		changes.push(`DROP INDEX \`${uniqueIndexName.replace(/`/g, "``")}\``);
+	}
+
+	if (changes.length === 0) {
+		return;
+	}
+
+	try {
+		await query(`ALTER TABLE ${tableEsc} ${changes.join(", ")}`);
+	} catch (error) {
+		// Another adapter may have migrated the table first.
+		if ((await readPrimaryKey(query, tableEsc)).join() !== "namespace,id") {
+			throw error;
+		}
+	}
+}
+
+/**
+ * Reads the columns of a table's primary key.
+ * @returns {Promise<string[]>} The primary key's columns in order, or `[]` when there is none.
+ */
+async function readPrimaryKey(query: SqlQuery, tableEsc: string): Promise<string[]> {
+	const rows = (await query(
+		`SHOW INDEX FROM ${tableEsc} WHERE Key_name = 'PRIMARY'`,
+	)) as mysql.RowDataPacket[];
+	return [...rows]
+		.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+		.map((row) => String(row.Column_name));
+}
+
+/**
  * Ensures a positive cleanup interval fits within Node.js's timer delay limit.
  * @returns {void}
  */
@@ -850,11 +912,10 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	): Promise<void> {
 		const tableEsc = escapeIdentifier(table);
 		const indexNameValue = `${table}_key_namespace_idx`;
-		const indexName = `\`${indexNameValue.replace(/`/g, "``")}\``;
 		const expiresIndexName = `\`${(`${table}_expires_idx`).replace(/`/g, "``")}\``;
 		const keyByteLength = keyLength * UTF8_MAX_BYTES_PER_CODE_POINT;
 		const namespaceByteLength = namespaceLength * UTF8_MAX_BYTES_PER_CODE_POINT;
-		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARBINARY(${keyByteLength}) NOT NULL, value TEXT, namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexName} (namespace, id), INDEX ${expiresIndexName} (expires))`;
+		const createTable = `CREATE TABLE IF NOT EXISTS ${tableEsc}(id VARBINARY(${keyByteLength}) NOT NULL, value TEXT, namespace VARBINARY(${namespaceByteLength}) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, PRIMARY KEY (namespace, id), INDEX ${expiresIndexName} (expires))`;
 		await query(createTable);
 
 		const existingKeyColumns = (await query(
@@ -961,47 +1022,8 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			await query(`ALTER TABLE ${tableEsc} ${modifyVarbinaryParts.join(", ")}`);
 		}
 
-		// Migration: drop old primary key (id alone)
-		try {
-			await query(`ALTER TABLE ${tableEsc} DROP PRIMARY KEY`);
-		} catch (error) {
-			// Error 1091 = Can't DROP - PK doesn't exist (already migrated), safe to ignore
-			/* v8 ignore next -- @preserve */
-			if ((error as { errno?: number }).errno !== 1091) {
-				throw error;
-			}
-		}
-
-		// Migration: make namespace the leftmost column of the composite unique index.
-		const indexRows = (await query(
-			mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexNameValue]),
-		)) as mysql.RowDataPacket[];
-		const indexColumns = [...indexRows]
-			.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-			.map((row) => String(row.Column_name));
-		const hasNamespaceFirstUniqueIndex =
-			indexColumns.length === 2 &&
-			indexColumns[0] === "namespace" &&
-			indexColumns[1] === "id" &&
-			indexRows.every((row) => Number(row.Non_unique) === 0);
-
-		if (!hasNamespaceFirstUniqueIndex) {
-			if (indexRows.length > 0) {
-				await query(
-					`ALTER TABLE ${tableEsc} DROP INDEX ${indexName}, ADD UNIQUE INDEX ${indexName} (namespace, id)`,
-				);
-			} else {
-				try {
-					await query(`CREATE UNIQUE INDEX ${indexName} ON ${tableEsc} (namespace, id)`);
-				} catch (error) {
-					// Error 1061 = another adapter already created the index.
-					/* v8 ignore next -- @preserve */
-					if ((error as { errno?: number }).errno !== 1061) {
-						throw error;
-					}
-				}
-			}
-		}
+		// Migration: make (namespace, id) the primary key.
+		await ensurePrimaryKey(query, tableEsc, indexNameValue);
 
 		// Migration: add expires column
 		try {
