@@ -68,6 +68,16 @@ describe.skipIf(!hasCredentials)("Cloudflare KV live integration (REST)", () => 
 		await store.delete(key);
 	});
 
+	it("stores a value with a TTL under KV's 60-second minimum", async () => {
+		const key = faker.string.uuid();
+		const value = faker.lorem.word();
+
+		expect(await store.set(key, value, Date.now() + 5000)).toBe(true);
+		expect(await store.get(key)).toBe(value);
+
+		await store.delete(key);
+	});
+
 	it("iterates over namespaced keys", async () => {
 		const key = faker.string.uuid();
 		await store.set(key, "iterated");

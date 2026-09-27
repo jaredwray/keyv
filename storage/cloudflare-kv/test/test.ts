@@ -460,24 +460,46 @@ describe("expiration", () => {
 		expect(entry?.expiration).toBeTypeOf("number");
 	});
 
-	it("should not attach a native KV expiration for short TTLs", async () => {
+	it("should attach KV's minimum native expiration to short TTLs", async () => {
 		const s = store();
 		const key = faker.string.uuid();
-		await s.set(key, "value", Date.now() + 1000);
+		const before = Date.now();
+		await s.set(key, "value", before + 1000);
+		// KV rejects a native TTL under 60 seconds, so the key gets the minimum, and KV removes it
+		// even if it is never read again.
 		const { keys } = await kvNamespace.list({ prefix: key });
 		const entry = keys.find((k) => k.name === key);
-		expect(entry?.expiration).toBeUndefined();
+		expect((entry?.expiration as number) * 1000).toBeGreaterThanOrEqual(before + 60_000);
 	});
 
-	it("should store and serve a key at exactly the 60s minimum without a native expiration", async () => {
+	it("should attach a native KV expiration no earlier than the deadline", async () => {
 		const s = store();
 		const key = faker.string.uuid();
-		// A 60s TTL floors to 60, which is not strictly greater than the minimum, so it is served by
-		// the client-side check only — never sent to KV where latency could reject it.
+		const expires = Date.now() + 90_500;
+		await s.set(key, "value", expires);
+		const { keys } = await kvNamespace.list({ prefix: key });
+		const entry = keys.find((k) => k.name === key);
+		expect((entry?.expiration as number) * 1000).toBeGreaterThanOrEqual(expires);
+	});
+
+	it("should store and serve a key at exactly the 60s minimum", async () => {
+		const s = store();
+		const key = faker.string.uuid();
 		expect(await s.set(key, "value", Date.now() + 60_000)).toBe(true);
 		expect(await s.get(key)).toBe("value");
 		const { keys } = await kvNamespace.list({ prefix: key });
-		expect(keys.find((k) => k.name === key)?.expiration).toBeUndefined();
+		expect(keys.find((k) => k.name === key)?.expiration).toBeTypeOf("number");
+	});
+
+	it("should store a key without an expiry when expires is not finite", async () => {
+		const s = store();
+		const key = faker.string.uuid();
+		expect(await s.set(key, "value", Number.POSITIVE_INFINITY)).toBe(true);
+		expect(await s.get(key)).toBe("value");
+		const { keys } = await kvNamespace.list({ prefix: key });
+		const entry = keys.find((k) => k.name === key);
+		expect(entry?.expiration).toBeUndefined();
+		expect(entry?.metadata).toBeUndefined();
 	});
 });
 
