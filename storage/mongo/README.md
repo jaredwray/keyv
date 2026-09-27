@@ -150,6 +150,8 @@ console.log(store.namespace); // 'my-namespace'
 
 Get whether GridFS is used for storing values. When enabled, values are stored using MongoDB's GridFS specification, which is useful for storing large files. This property is read-only and can only be set via the constructor, because the connection shape differs between GridFS and standard modes.
 
+Each value is a GridFS file named after its key. `set` writes a new file and then deletes the key's older files, so a key keeps a single file. Reads always use the newest file for a key, and `delete` removes every file for it.
+
 - Type: `boolean`
 - Default: `false`
 - Read-only (set via constructor only)

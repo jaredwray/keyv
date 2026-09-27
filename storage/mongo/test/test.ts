@@ -1,8 +1,9 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test file
+import { PassThrough, Writable } from "node:stream";
 import { faker } from "@faker-js/faker";
 import { delay, keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import Keyv from "keyv";
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test, vi } from "vitest";
 import KeyvMongo, { createKeyv } from "../src/index.js";
 
 const options = { serverSelectionTimeoutMS: 5000, db: "keyvdb" };
@@ -774,6 +775,319 @@ describe("GridFS maintenance", () => {
 	test("clearUnusedFor returns false when not in GridFS mode", async () => {
 		const store = new KeyvMongo({ ...options });
 		expect(await store.clearUnusedFor(5)).toBe(false);
+	});
+});
+
+/**
+ * Writes a GridFS file for a key straight through the bucket, as data from an earlier release or
+ * a set that hasn't deleted the older files yet leaves it.
+ */
+async function writeFile(
+	store: KeyvMongo,
+	key: string,
+	value: string,
+	metadata: Record<string, unknown> = {},
+): Promise<void> {
+	const client = (await store.connect) as any;
+	await new Promise<void>((resolve, reject) => {
+		const stream = client.bucket.openUploadStream(key, {
+			metadata: { expiresAt: null, lastAccessed: new Date(), namespace: "", ...metadata },
+		});
+		stream.on("finish", () => resolve());
+		stream.on("error", reject);
+		stream.end(value);
+	});
+}
+
+/** A download stream that fails, as a read does when the file is deleted while it is read. */
+function failingStream(): PassThrough {
+	const stream = new PassThrough();
+	queueMicrotask(() => stream.emit("error", new Error("FileNotFound")));
+	return stream;
+}
+
+/** Counts the GridFS files stored for a key. */
+async function countFiles(store: KeyvMongo, key: string): Promise<number> {
+	const client = (await store.connect) as any;
+	return client.store.countDocuments({ filename: key });
+}
+
+describe("GridFS revisions", () => {
+	test("set replaces the value and leaves one file and its chunks", async () => {
+		const collection = faker.string.alphanumeric(12);
+		const store = new KeyvMongo({ useGridFS: true, collection, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "first");
+		await store.set(key, "second");
+		await store.set(key, "third");
+
+		expect(await store.get(key)).toBe("third");
+		const client = (await store.connect) as any;
+		expect(await client.store.countDocuments({})).toBe(1);
+		expect(await client.chunks.countDocuments({})).toBe(1);
+		await store.clear();
+	});
+
+	test("reads the newest file when a key has several", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "old");
+		await writeFile(store, key, "new");
+
+		expect(await store.get(key)).toBe("new");
+		expect(await store.getMany([key])).toEqual(["new"]);
+		expect(await store.has(key)).toBe(true);
+		expect(await store.hasMany([key])).toEqual([true]);
+		const entries: unknown[] = [];
+		for await (const entry of store.iterator()) {
+			if ((entry as [string, unknown])[0] === key) {
+				entries.push(entry);
+			}
+		}
+
+		expect(entries).toEqual([[key, "new"]]);
+		await store.delete(key);
+	});
+
+	test("reads a key whose newest file has expired as missing, not as an older value", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "old");
+		await writeFile(store, key, "new", { expiresAt: new Date(Date.now() - 1000) });
+
+		expect(await store.has(key)).toBe(false);
+		expect(await store.hasMany([key])).toEqual([false]);
+		expect(await store.get(key)).toBeUndefined();
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
+	test("the iterator deletes an expired key with its older files", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "old");
+		await writeFile(store, key, "new", { expiresAt: new Date(Date.now() - 1000) });
+
+		for await (const entry of store.iterator()) {
+			expect((entry as [string, unknown])[0]).not.toBe(key);
+		}
+
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
+	test("delete removes every file for a key", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "old");
+		await writeFile(store, key, "new");
+
+		expect(await store.delete(key)).toBe(true);
+		expect(await store.get(key)).toBeUndefined();
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
+	test("clearExpired deletes the older files of an expired key", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "old");
+		await writeFile(store, key, "new", { expiresAt: new Date(Date.now() - 1000) });
+
+		expect(await store.clearExpired()).toBe(true);
+		expect(await store.get(key)).toBeUndefined();
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
+	test("clearUnusedFor deletes the older files of an unused key", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "old");
+		await writeFile(store, key, "new", { lastAccessed: new Date(Date.now() - 120_000) });
+
+		expect(await store.clearUnusedFor(60)).toBe(true);
+		expect(await store.get(key)).toBeUndefined();
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
+	test("set keeps a file written after its own", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "later");
+		// Date the file after the set below, as if another set finished writing after it.
+		const client = (await store.connect) as any;
+		await client.store.updateOne(
+			{ filename: key },
+			{ $set: { uploadDate: new Date(Date.now() + 60_000) } },
+		);
+
+		await store.set(key, "earlier");
+		expect(await store.get(key)).toBe("later");
+		expect(await countFiles(store, key)).toBe(2);
+		await store.delete(key);
+	});
+
+	test("get reads the newest file again when a read fails", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "value");
+		const client = (await store.connect) as any;
+		const openDownloadStream = client.bucket.openDownloadStream.bind(client.bucket);
+		let reads = 0;
+		// The first read fails, as it does when a set deletes the file while it is read.
+		client.bucket.openDownloadStream = (id: unknown) => {
+			reads++;
+			if (reads === 1) {
+				return failingStream();
+			}
+
+			return openDownloadStream(id);
+		};
+
+		try {
+			expect(await store.get(key)).toBe("value");
+			expect(reads).toBe(2);
+		} finally {
+			client.bucket.openDownloadStream = openDownloadStream;
+			await store.delete(key);
+		}
+	});
+
+	test("get returns undefined when the read fails twice", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "value");
+		const client = (await store.connect) as any;
+		const openDownloadStream = client.bucket.openDownloadStream.bind(client.bucket);
+		client.bucket.openDownloadStream = () => failingStream();
+
+		try {
+			expect(await store.get(key)).toBeUndefined();
+		} finally {
+			client.bucket.openDownloadStream = openDownloadStream;
+			await store.delete(key);
+		}
+	});
+
+	test("set returns false and keeps the old value when the upload fails", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "old");
+		const client = (await store.connect) as any;
+		const openUploadStream = client.bucket.openUploadStream.bind(client.bucket);
+		client.bucket.openUploadStream = () =>
+			new Writable({
+				write(_chunk, _encoding, callback) {
+					callback(new Error("upload failed"));
+				},
+			});
+
+		try {
+			expect(await store.set(key, "new")).toBe(false);
+		} finally {
+			client.bucket.openUploadStream = openUploadStream;
+		}
+
+		expect(await store.get(key)).toBe("old");
+		await store.delete(key);
+	});
+
+	test("set returns true and emits the error when deleting the older files fails", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "old");
+		const errors: unknown[] = [];
+		store.on("error", (error: unknown) => errors.push(error));
+		const deleteFiles = vi
+			.spyOn(store as any, "deleteFiles")
+			.mockRejectedValueOnce(new Error("cleanup failed"));
+
+		try {
+			expect(await store.set(key, "new")).toBe(true);
+		} finally {
+			deleteFiles.mockRestore();
+		}
+
+		expect(errors).toHaveLength(1);
+		expect(await store.get(key)).toBe("new");
+		await store.delete(key);
+	});
+
+	test("delete removes a key's files across several batches", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		(store as any)._deleteBatchSize = 2;
+		const key = faker.string.alphanumeric(10);
+		for (const value of ["1", "2", "3", "4", "5"]) {
+			await writeFile(store, key, value);
+		}
+
+		expect(await store.delete(key)).toBe(true);
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
+	test("clearExpired handles more expired keys than one batch", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		(store as any)._deleteBatchSize = 2;
+		const keys = [
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+			faker.string.alphanumeric(10),
+		];
+		for (const key of keys) {
+			await writeFile(store, key, "old");
+			await writeFile(store, key, "new", { expiresAt: new Date(Date.now() - 1000) });
+		}
+
+		expect(await store.clearExpired()).toBe(true);
+		for (const key of keys) {
+			expect(await countFiles(store, key)).toBe(0);
+		}
+	});
+
+	test("the iterator reads a key's newest file when the file it found can't be read", async () => {
+		const collection = faker.string.alphanumeric(12);
+		const store = new KeyvMongo({ useGridFS: true, collection, ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "value");
+		const client = (await store.connect) as any;
+		const openDownloadStream = client.bucket.openDownloadStream.bind(client.bucket);
+		let reads = 0;
+		// The iterator's own read fails, as it does when a set deletes the file first.
+		client.bucket.openDownloadStream = (id: unknown) => {
+			reads++;
+			return reads === 1 ? failingStream() : openDownloadStream(id);
+		};
+
+		try {
+			const entries: unknown[] = [];
+			for await (const entry of store.iterator()) {
+				entries.push(entry);
+			}
+
+			expect(entries).toEqual([[key, "value"]]);
+			expect(reads).toBe(2);
+		} finally {
+			client.bucket.openDownloadStream = openDownloadStream;
+			await store.clear();
+		}
+	});
+
+	test("the iterator skips a key it can't read", async () => {
+		const collection = faker.string.alphanumeric(12);
+		const store = new KeyvMongo({ useGridFS: true, collection, ...options });
+		await store.set(faker.string.alphanumeric(10), "value");
+		const client = (await store.connect) as any;
+		const openDownloadStream = client.bucket.openDownloadStream.bind(client.bucket);
+		client.bucket.openDownloadStream = () => failingStream();
+
+		try {
+			const entries: unknown[] = [];
+			for await (const entry of store.iterator()) {
+				entries.push(entry);
+			}
+
+			expect(entries).toEqual([]);
+		} finally {
+			client.bucket.openDownloadStream = openDownloadStream;
+			await store.clear();
+		}
 	});
 });
 

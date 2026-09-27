@@ -9,13 +9,18 @@ import Keyv, {
 	keyvStorageCapability,
 } from "keyv";
 import {
+	type Document,
+	type Filter,
 	GridFSBucket,
+	type GridFSFile,
 	MongoBulkWriteError,
 	type MongoClientOptions,
 	MongoClient as mongoClient,
+	type ObjectId,
 	type ReadPreference,
+	type WithId,
 } from "mongodb";
-import type { KeyvMongoConnect, KeyvMongoOptions } from "./types.js";
+import type { KeyvMongoConnect, KeyvMongoConnectGridFS, KeyvMongoOptions } from "./types.js";
 
 /**
  * MongoDB storage adapter for Keyv.
@@ -49,6 +54,12 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 * @default false
 	 */
 	private _useGridFS = false;
+
+	/**
+	 * How many GridFS files a single delete query covers.
+	 * @default 1000
+	 */
+	private _deleteBatchSize = 1000;
 
 	/**
 	 * The database name for the MongoDB connection.
@@ -234,48 +245,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 
 		if (client.useGridFS) {
-			const file = await client.store.findOne({
-				filename: { $eq: key },
-				"metadata.namespace": { $eq: ns },
-			});
-
-			if (!file) {
-				return undefined;
-			}
-
-			// Delete expired GridFS entry
-			if (file.metadata?.expiresAt && new Date(file.metadata.expiresAt as Date) <= new Date()) {
-				await client.bucket.delete(file._id);
-				return undefined;
-			}
-
-			await client.store.updateOne(
-				{ _id: { $eq: file._id } },
-				{
-					$set: {
-						"metadata.lastAccessed": new Date(),
-					},
-				},
-			);
-
-			const stream = client.bucket.openDownloadStream(file._id);
-
-			return new Promise((resolve) => {
-				const resp: Uint8Array[] = [];
-				/* v8 ignore next -- @preserve */
-				stream.on("error", () => {
-					resolve(undefined);
-				});
-
-				stream.on("end", () => {
-					const data = Buffer.concat(resp).toString("utf8");
-					resolve(data as KeyvStorageGetResult<Value>);
-				});
-
-				stream.on("data", (chunk) => {
-					resp.push(chunk as Uint8Array);
-				});
-			});
+			return (await this.readKey(client, key)) as KeyvStorageGetResult<Value>;
 		}
 
 		const document = await client.store.findOne({
@@ -370,17 +340,30 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 					},
 				});
 
-				return new Promise((resolve) => {
+				const file = await new Promise<GridFSFile | null>((resolve) => {
 					stream.on("finish", () => {
-						resolve(true);
+						resolve(stream.gridFSFile);
 					});
-					/* v8 ignore start -- @preserve */
 					stream.on("error", () => {
-						resolve(false);
+						resolve(null);
 					});
-					/* v8 ignore stop -- @preserve */
 					stream.end(value);
 				});
+
+				if (!file) {
+					return false;
+				}
+
+				// The key's older files hold replaced values. Reads use the newest file, so the
+				// new value is served even before they are deleted, and a failed cleanup doesn't
+				// fail the write: the next set or delete of the key removes them.
+				try {
+					await this.deleteFiles(client, this.olderFiles(file, false));
+				} catch (error) {
+					this.emit("error", error);
+				}
+
+				return true;
 			}
 
 			await client.store.updateOne(
@@ -467,22 +450,11 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 		if (client.useGridFS) {
 			try {
-				const connection = client.db;
-				const bucket = new GridFSBucket(connection, {
-					bucketName: this._collection,
+				const deleted = await this.deleteFiles(client, {
+					filename: { $eq: key },
+					"metadata.namespace": { $eq: ns },
 				});
-				const files = await bucket
-					.find({
-						filename: { $eq: key },
-						"metadata.namespace": { $eq: ns },
-					})
-					.toArray();
-				if (files.length === 0) {
-					return false;
-				}
-
-				await client.bucket.delete(files[0]._id);
-				return true;
+				return deleted > 0;
 			} catch (error) {
 				this.emit("error", error);
 				return false;
@@ -516,17 +488,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const ns = this.getNamespaceValue();
 
 		if (client.useGridFS) {
-			const connection = client.db;
-			const bucket = new GridFSBucket(connection, {
-				bucketName: this._collection,
-			});
-			const files = await bucket
-				.find({
-					"metadata.namespace": { $eq: ns },
-				})
-				.toArray();
-
-			await Promise.all(files.map(async (file) => client.bucket.delete(file._id)));
+			await this.deleteFiles(client, { "metadata.namespace": { $eq: ns } });
 			return;
 		}
 
@@ -547,20 +509,14 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const ns = this.getNamespaceValue();
-		const bucket = new GridFSBucket(client.db, {
-			bucketName: this._collection,
+		const expiredFiles = client.store.find({
+			"metadata.expiresAt": {
+				$lte: new Date(Date.now()),
+			},
+			"metadata.namespace": { $eq: ns },
 		});
 
-		const expiredFiles = await bucket
-			.find({
-				"metadata.expiresAt": {
-					$lte: new Date(Date.now()),
-				},
-				"metadata.namespace": { $eq: ns },
-			})
-			.toArray();
-
-		await Promise.all(expiredFiles.map(async (file) => client.bucket.delete(file._id)));
+		await this.deleteWithOlderFiles(client, expiredFiles);
 		return true;
 	}
 
@@ -577,20 +533,14 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const ns = this.getNamespaceValue();
-		const bucket = new GridFSBucket(client.db, {
-			bucketName: this._collection,
+		const lastAccessedFiles = client.store.find({
+			"metadata.lastAccessed": {
+				$lte: new Date(Date.now() - seconds * 1000),
+			},
+			"metadata.namespace": { $eq: ns },
 		});
 
-		const lastAccessedFiles = await bucket
-			.find({
-				"metadata.lastAccessed": {
-					$lte: new Date(Date.now() - seconds * 1000),
-				},
-				"metadata.namespace": { $eq: ns },
-			})
-			.toArray();
-
-		await Promise.all(lastAccessedFiles.map(async (file) => client.bucket.delete(file._id)));
+		await this.deleteWithOlderFiles(client, lastAccessedFiles);
 		return true;
 	}
 
@@ -606,29 +556,30 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 		if (client.useGridFS) {
 			const now = new Date();
-			const cursor = client.store.find({ "metadata.namespace": { $eq: namespaceValue } });
+			// Each key's newest file comes first, and its older files are skipped.
+			const cursor = client.store
+				.find({ "metadata.namespace": { $eq: namespaceValue } })
+				.sort({ filename: 1, uploadDate: -1, _id: -1 });
 
+			let previousKey: string | undefined;
 			for await (const file of cursor) {
-				if (file.metadata?.expiresAt && new Date(file.metadata.expiresAt as Date) <= now) {
-					await client.bucket.delete(file._id);
+				if (file.filename === previousKey) {
 					continue;
 				}
 
-				const stream = client.bucket.openDownloadStream(file._id);
-				const data = await new Promise<string | undefined>((resolve) => {
-					const resp: Uint8Array[] = [];
-					/* v8 ignore next -- @preserve */
-					stream.on("error", () => {
-						resolve(undefined);
-					});
-					stream.on("end", () => {
-						resolve(Buffer.concat(resp).toString("utf8"));
-					});
-					stream.on("data", (chunk) => {
-						resp.push(chunk as Uint8Array);
-					});
-				});
-				yield [file.filename, data];
+				previousKey = file.filename as string;
+				if (this.isFileExpired(file, now)) {
+					await this.deleteFiles(client, this.olderFiles(file, true));
+					continue;
+				}
+
+				// A set that finished after the cursor found this file deletes it, so a failed read
+				// reads the key's newest file instead. A key that can't be read is skipped.
+				const value =
+					(await this.readFile(client, file._id)) ?? (await this.readKey(client, previousKey));
+				if (value !== undefined) {
+					yield [file.filename, value];
+				}
 			}
 
 			return;
@@ -656,13 +607,9 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const client = await this.connect;
 		const ns = this.getNamespaceValue();
 
-		if (this._useGridFS) {
-			const document = await client.store.count({
-				filename: { $eq: key },
-				"metadata.namespace": { $eq: ns },
-				$or: [{ "metadata.expiresAt": null }, { "metadata.expiresAt": { $gt: new Date() } }],
-			});
-			return document !== 0;
+		if (client.useGridFS) {
+			const file = await this.findNewestFile(client, key);
+			return file !== null && !this.isFileExpired(file);
 		}
 
 		const document = await client.store.count({
@@ -682,17 +629,29 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const client = await this.connect;
 		const ns = this.getNamespaceValue();
 
-		if (this._useGridFS) {
+		if (client.useGridFS) {
 			const files = await client.store
 				.find({
 					filename: { $in: keys },
 					"metadata.namespace": { $eq: ns },
-					$or: [{ "metadata.expiresAt": null }, { "metadata.expiresAt": { $gt: new Date() } }],
 				})
-				.project({ filename: 1 })
+				.sort({ filename: 1, uploadDate: -1, _id: -1 })
+				.project({ filename: 1, "metadata.expiresAt": 1 })
 				.toArray();
-			const existingKeys = new Set(files.map((f) => f.filename as string));
-			return keys.map((key) => existingKeys.has(key));
+
+			// A key exists when its newest file, the first one listed for it, hasn't expired.
+			const newestFiles = new Map<string, Document>();
+			for (const file of files) {
+				if (!newestFiles.has(file.filename as string)) {
+					newestFiles.set(file.filename as string, file);
+				}
+			}
+
+			const now = new Date();
+			return keys.map((key) => {
+				const file = newestFiles.get(key);
+				return file !== undefined && !this.isFileExpired(file, now);
+			});
 		}
 
 		const docs = await client.store
@@ -722,6 +681,161 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	 */
 	private getNamespaceValue(): string {
 		return this._namespace ?? "";
+	}
+
+	/**
+	 * Finds the newest GridFS file for a key in the current namespace, which holds the key's value.
+	 * Every set writes a new file and then deletes the older ones, so a key can briefly have more.
+	 */
+	private async findNewestFile(
+		client: KeyvMongoConnectGridFS,
+		key: string,
+	): Promise<WithId<Document> | null> {
+		return client.store.findOne(
+			{ filename: { $eq: key }, "metadata.namespace": { $eq: this.getNamespaceValue() } },
+			{ sort: { uploadDate: -1, _id: -1 } },
+		);
+	}
+
+	/**
+	 * Builds a filter for the files of `file`'s key that are older than `file`, and for `file`
+	 * itself when `including` is set. Files written after `file` never match.
+	 */
+	private olderFiles(file: Document, including: boolean): Filter<Document> {
+		return {
+			filename: { $eq: file.filename },
+			"metadata.namespace": { $eq: file.metadata?.namespace },
+			$or: [
+				{ uploadDate: { $lt: file.uploadDate } },
+				{
+					uploadDate: { $eq: file.uploadDate },
+					_id: including ? { $lte: file._id } : { $lt: file._id },
+				},
+			],
+		};
+	}
+
+	/**
+	 * Deletes the GridFS files that match a filter, along with their chunks. Unlike deleting each
+	 * file through the bucket, this takes a few queries per batch of files, and it doesn't fail when
+	 * another call has already deleted one of them.
+	 * @returns The number of files deleted.
+	 */
+	private async deleteFiles(
+		client: KeyvMongoConnectGridFS,
+		filter: Filter<Document>,
+	): Promise<number> {
+		let deleted = 0;
+		await this.inBatches(client.store.find(filter, { projection: { _id: 1 } }), async (files) => {
+			const ids = files.map((file) => file._id);
+			const { deletedCount } = await client.store.deleteMany({ _id: { $in: ids } });
+			await client.chunks.deleteMany({ files_id: { $in: ids } });
+			deleted += deletedCount;
+		});
+
+		return deleted;
+	}
+
+	/**
+	 * Deletes each file, with the older files for its key, so an older value can't take its place.
+	 * The filters are sent in batches to keep each query small.
+	 */
+	private async deleteWithOlderFiles(
+		client: KeyvMongoConnectGridFS,
+		files: AsyncIterable<Document>,
+	): Promise<void> {
+		await this.inBatches(files, async (batch) => {
+			await this.deleteFiles(client, { $or: batch.map((file) => this.olderFiles(file, true)) });
+		});
+	}
+
+	/**
+	 * Hands the items of `source` to `run` in batches of up to {@link _deleteBatchSize} as they
+	 * arrive, so a large result is never held in memory at once.
+	 */
+	private async inBatches<Item>(
+		source: AsyncIterable<Item>,
+		run: (batch: Item[]) => Promise<void>,
+	): Promise<void> {
+		let batch: Item[] = [];
+		for await (const item of source) {
+			batch.push(item);
+			if (batch.length === this._deleteBatchSize) {
+				await run(batch);
+				batch = [];
+			}
+		}
+
+		if (batch.length > 0) {
+			await run(batch);
+		}
+	}
+
+	/**
+	 * Determines whether a GridFS file's `metadata.expiresAt` has passed.
+	 */
+	private isFileExpired(file: Document, now: Date = new Date()): boolean {
+		return Boolean(file.metadata?.expiresAt) && new Date(file.metadata.expiresAt as Date) <= now;
+	}
+
+	/**
+	 * Reads a key's value from its newest GridFS file, and records the read in `lastAccessed`. A set
+	 * that finishes during the read deletes the file being read, so a failed read looks up the
+	 * newest file once more.
+	 * @returns The value, or `undefined` if the key is missing or expired, or both reads fail.
+	 */
+	private async readKey(client: KeyvMongoConnectGridFS, key: string): Promise<string | undefined> {
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const file = await this.findNewestFile(client, key);
+			if (!file) {
+				return undefined;
+			}
+
+			// Delete the expired entry, with any older files for the key
+			if (this.isFileExpired(file)) {
+				await this.deleteFiles(client, this.olderFiles(file, true));
+				return undefined;
+			}
+
+			await client.store.updateOne(
+				{ _id: { $eq: file._id } },
+				{
+					$set: {
+						"metadata.lastAccessed": new Date(),
+					},
+				},
+			);
+
+			const data = await this.readFile(client, file._id);
+			if (data !== undefined) {
+				return data;
+			}
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * Reads a GridFS file's contents as a string.
+	 * @returns The contents, or `undefined` if the read fails, as it does when the file was deleted.
+	 */
+	private async readFile(
+		client: KeyvMongoConnectGridFS,
+		id: ObjectId,
+	): Promise<string | undefined> {
+		const stream = client.bucket.openDownloadStream(id);
+		return new Promise((resolve) => {
+			const chunks: Uint8Array[] = [];
+			stream.on("error", () => {
+				resolve(undefined);
+			});
+			stream.on("end", () => {
+				resolve(Buffer.concat(chunks).toString("utf8"));
+			});
+			stream.on("data", (chunk) => {
+				chunks.push(chunk as Uint8Array);
+			});
+		});
 	}
 
 	/**
@@ -780,12 +894,14 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 				await store.createIndex({ "metadata.expiresAt": 1 });
 				await store.createIndex({ "metadata.lastAccessed": 1 });
 				await store.createIndex({ "metadata.filename": 1 });
-				await store.createIndex({ "metadata.namespace": 1 });
+				// Finds a key's files newest first, as reads and the iterator need.
+				await store.createIndex({ "metadata.namespace": 1, filename: 1, uploadDate: -1, _id: -1 });
 
 				return {
 					useGridFS: true,
 					bucket,
 					store,
+					chunks: database.collection(`${this._collection}.chunks`),
 					db: database,
 					mongoClient: client,
 				};
