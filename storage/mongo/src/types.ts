@@ -71,6 +71,8 @@ export type KeyvMongoConnectGridFS = KeyvMongoConnectBase & {
 	useGridFS: true;
 	/** The GridFS bucket. */
 	bucket: GridFSBucket;
+	/** The bucket's `<collection>.chunks` collection, which holds the file contents. */
+	chunks: Collection;
 	/** The database handle. */
 	db: Db;
 };
