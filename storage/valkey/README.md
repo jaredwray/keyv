@@ -415,7 +415,12 @@ Single-key methods (`get`, `set`, `delete`, `has`) work automatically in cluster
 
 ### `useSets` in cluster mode
 
-The tracking set and the data keys hash to different slots, which a cluster can't update in one `MULTI` transaction. In cluster mode the adapter updates them with separate commands instead: a key is added to the set before it is written, and removed from the set after it is deleted. If a write fails, the set can list a key that was never stored, which `clear()` removes harmlessly.
+The tracking set and the data keys hash to different slots, which a cluster can't update in one `MULTI` transaction. In cluster mode the adapter updates them with separate commands instead. The commands run in an order that keeps every stored key in the set, even when another client writes, deletes or clears at the same time, or a command fails part-way:
+
+- `set()` and `setMany()` add keys to the set both before and after writing them.
+- `delete()` removes a key from the set between two `UNLINK`s. `clear()` does the same for every key it removes.
+
+The set can end up listing keys that are no longer stored, which `clear()` removes harmlessly. Each `set()` and `delete()` takes three round trips instead of one transaction. Every write in a namespace also updates the one node that holds the namespace's set.
 
 ## License
 

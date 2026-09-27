@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import Redis, { type Cluster } from "iovalkey";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import KeyvValkey from "../src/index.js";
 
 const clusterNodes = [
@@ -15,6 +15,29 @@ async function createReadyCluster(): Promise<Cluster> {
 		cluster.once("ready", resolve);
 	});
 	return cluster;
+}
+
+/**
+ * Runs `operation` once, just before the cluster sends the next `command` or just after that
+ * command completes, to land it between the steps of the method under test.
+ */
+function interleave(
+	cluster: Cluster,
+	when: "before" | "after",
+	command: "sadd" | "set" | "srem",
+	operation: () => Promise<unknown>,
+): void {
+	const send = cluster[command].bind(cluster) as (...args: unknown[]) => Promise<unknown>;
+	vi.spyOn(cluster, command).mockImplementationOnce(async (...args: unknown[]) => {
+		if (when === "before") {
+			await operation();
+			return send(...args);
+		}
+
+		const result = await send(...args);
+		await operation();
+		return result;
+	});
 }
 
 describe("cluster", () => {
@@ -162,6 +185,74 @@ describe("cluster", () => {
 		await store.clear();
 		expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
 		expect(errors).toEqual([]);
+		await store.disconnect();
+	});
+
+	test("should keep a key tracked when clear() runs during set() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkey(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const key = faker.string.alphanumeric(10);
+
+		interleave(cluster, "before", "set", async () => store.clear());
+		expect(await store.set(key, "value")).toBe(true);
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should keep keys tracked when clear() runs during setMany() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkey(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const keys = Array.from({ length: 4 }, () => faker.string.alphanumeric(10));
+
+		interleave(cluster, "after", "sadd", async () => store.clear());
+		expect(await store.setMany(keys.map((key) => ({ key, value: key })))).toEqual(
+			keys.map(() => true),
+		);
+
+		await store.clear();
+		expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
+		await store.disconnect();
+	});
+
+	test("should keep tracking in step when set() runs during delete() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkey(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "first");
+
+		interleave(cluster, "before", "srem", async () => store.set(key, "second"));
+		await store.delete(key);
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should keep tracking in step when set() runs during clear() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkey(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "first");
+
+		interleave(cluster, "before", "srem", async () => store.set(key, "second"));
+		await store.clear();
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
 		await store.disconnect();
 	});
 });

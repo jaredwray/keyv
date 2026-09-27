@@ -243,7 +243,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * Stores a key-value pair in the Valkey store with an optional absolute expiry.
 	 * If the value is `undefined`, the operation is skipped and returns `false`.
 	 * When `useSets` is enabled, the key is also added to the namespace tracking set
-	 * within an atomic transaction.
+	 * within an atomic transaction. In cluster mode, where the two sit in different hash slots,
+	 * the key is added to the set before and after it is written instead.
 	 * @param {string} key - The key under which to store the value.
 	 * @param {KeyvAny} value - The value to store. If `undefined`, the operation is a no-op.
 	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
@@ -269,10 +270,12 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 
 			if (this._useSets && this.isCluster()) {
 				// The key and the namespace set sit in different hash slots, which a cluster can't
-				// update in one transaction. clear() only removes tracked keys, so the key is
-				// tracked before it is written.
+				// update in one transaction. clear() only removes tracked keys, so the key is tracked
+				// before it is written, in case a later command fails, and again after, in case a
+				// concurrent clear() or delete() untracked it in between.
 				await this._client.sadd(this.getSetKey(), key);
 				await set(this._client);
+				await this._client.sadd(this.getSetKey(), key);
 			} else if (this._useSets) {
 				const trx = await this._client.multi();
 				await set(trx);
@@ -296,7 +299,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * Entries with `undefined` values are skipped. In cluster mode, entries are grouped by
 	 * hash slot and each group is executed as a separate `MULTI/EXEC` transaction to avoid
 	 * CROSSSLOT errors. When `useSets` is enabled, each key is also added to the namespace
-	 * tracking set within the same transaction.
+	 * tracking set within the same transaction; in cluster mode, where the set sits in another
+	 * hash slot, the keys are added to it before and after the writes instead.
 	 * @template Value - The type of the stored values.
 	 * @param {KeyvStorageEntry<Value>[]} entries - An array of `{ key, value, expires? }` entries where
 	 *   `expires` is an optional absolute expiry as Unix ms since epoch.
@@ -349,16 +353,14 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 		}
 
 		// A cluster can't update the namespace set in a transaction with keys from other hash
-		// slots, so there the set is updated first, on its own. clear() only removes tracked keys,
-		// so tracking comes before the write.
+		// slots, so there the set is updated on its own, before and after the writes; see set().
 		const trackInTransaction = this._useSets && !this.isCluster();
+		const trackSeparately = this._useSets && !trackInTransaction;
+		const trackedKeys = resolvedEntries.map((entry) => entry.k);
 
 		try {
-			if (this._useSets && !trackInTransaction) {
-				await this._client.sadd(
-					this.getSetKey(),
-					resolvedEntries.map((entry) => entry.k),
-				);
+			if (trackSeparately) {
+				await this._client.sadd(this.getSetKey(), trackedKeys);
 			}
 
 			await Promise.all(
@@ -392,6 +394,10 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 					}
 				}),
 			);
+
+			if (trackSeparately) {
+				await this._client.sadd(this.getSetKey(), trackedKeys);
+			}
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -402,7 +408,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Deletes a single key from the Valkey store. Uses `UNLINK` for non-blocking removal.
 	 * When `useSets` is enabled, the key is also removed from the namespace tracking set
-	 * within an atomic transaction.
+	 * within an atomic transaction. In cluster mode, where the two sit in different hash slots,
+	 * the key is removed from the set between two `UNLINK`s instead.
 	 * @param {string} key - The key to delete.
 	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` if the key did not exist.
 	 */
@@ -412,9 +419,12 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 		const unlink = async (redis: KeyvAny) => redis.unlink(key);
 
 		if (this._useSets && this.isCluster()) {
-			// The key and the namespace set sit in different hash slots; see set().
+			// The key and the namespace set sit in different hash slots; see set(). The key is
+			// untracked only once it is gone, and unlinked again after, in case a concurrent set()
+			// wrote it in between.
 			items = await unlink(this._client);
 			await this._client.srem(this.getSetKey(), key);
+			items += await unlink(this._client);
 		} else if (this._useSets) {
 			const trx = this._client.multi();
 			await unlink(trx);
@@ -493,7 +503,9 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Removes all keys belonging to the current namespace from the Valkey store.
 	 * When `useSets` is enabled, retrieves all tracked keys from the namespace set
-	 * and removes them along with the set itself using `UNLINK` and `SREM`.
+	 * and removes them along with the set itself using `UNLINK` and `SREM`. The keys are
+	 * unlinked before and after they leave the set, so a key that a concurrent `set()` writes
+	 * meanwhile is never left stored but untracked.
 	 * When `useSets` is disabled, uses the `KEYS` command with the pattern from
 	 * {@link getKeyPattern} (`namespace:<namespace>:*`, glob metacharacters escaped)
 	 * to find and remove all keys in this namespace. A namespace that merely shares
@@ -510,7 +522,11 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			const setKey = this.getSetKey();
 			const keys: string[] = await this._client.smembers(setKey);
 			if (keys.length > 0) {
-				await Promise.all([this.unlinkKeys(keys), this._client.srem(setKey, [...keys])]);
+				// Keys are untracked only once they are gone, and unlinked again after, in case a
+				// concurrent set() wrote one in between.
+				await this.unlinkKeys(keys);
+				await this._client.srem(setKey, [...keys]);
+				await this.unlinkKeys(keys);
 			}
 
 			// Legacy cleanup: clear old "namespace:<ns>" SET key from pre-v6 format
