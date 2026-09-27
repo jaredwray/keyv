@@ -16,7 +16,7 @@ Use [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) as a Keyv sto
 ## Features
 
 - Two transport modes — `bind` (native binding, default) and `rest` (REST API) — selectable via the `mode` option
-- Millisecond-precise TTLs enforced client-side, with a native KV `expirationTtl` set for longer TTLs so Cloudflare reclaims space on its own
+- Millisecond-precise TTLs enforced client-side, with a native KV `expirationTtl` on every expiring key so Cloudflare reclaims space on its own
 - Namespace support for key isolation across multiple Keyv instances
 - `setMany`, `getMany`, `deleteMany`, and `hasMany` batch operations
 - Async `iterator` support with namespace-aware filtering and automatic pagination
@@ -189,8 +189,10 @@ it does not wrap values in its own JSON envelope. The absolute expiry is stored 
 **metadata** (`{ e: <unix-ms> }`) rather than mixed into the value.
 
 Because KV's native expiry has a 60-second minimum, the adapter enforces expiry on every read using
-that metadata, so TTLs are millisecond-precise. For TTLs longer than 60 seconds it additionally
-passes a native KV `expirationTtl`, so Cloudflare reclaims the entry on its own.
+that metadata, so TTLs are millisecond-precise. It also passes a native KV `expirationTtl`, so
+Cloudflare removes the entry on its own, even one that is never read again. A TTL shorter than the
+60-second minimum gets the minimum, so the entry stays in KV for up to about a minute after its
+deadline, but reads already treat it as missing.
 
 > When used directly (not through Keyv), the adapter expects string values, since KV only stores
 > strings. A non-string passed directly is coerced with `String()`. Wrap the adapter in a `Keyv`
