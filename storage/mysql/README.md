@@ -98,7 +98,7 @@ const keyv = new Keyv(new KeyvMysql({
 
 In v5, namespaces were stored as key prefixes in the `id` column (e.g. `id="myns:mykey"` with `namespace=''`). In v6, the namespace is stored in a dedicated `namespace` column (e.g. `id="mykey"`, `namespace="myns"`). This enables more efficient queries and proper namespace isolation.
 
-The adapter automatically adds the `namespace` column and creates the appropriate index when it connects, so no manual schema changes are needed for new installations.
+The adapter automatically adds the `namespace` column and makes `(namespace, id)` the table's primary key when it connects, so no manual schema changes are needed for new installations. v5's primary key on `id` is replaced in the same statement, so the table always has a primary key, as servers with `sql_require_primary_key` or generated invisible primary keys require.
 
 #### `keySize` renamed to `keyLength`
 
