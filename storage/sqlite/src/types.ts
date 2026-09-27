@@ -59,7 +59,9 @@ export type KeyvSqliteOptions = {
 	 */
 	wal?: boolean;
 	/**
-	 * Interval in milliseconds between automatic expired-entry cleanup runs. `0` disables.
+	 * Interval in milliseconds between automatic expired-entry cleanup runs. `0` disables. An
+	 * interval longer than about 24.8 days, the longest delay Node.js timers accept, runs at that
+	 * limit.
 	 * @default 0
 	 */
 	clearExpiredInterval?: number;

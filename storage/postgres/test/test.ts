@@ -541,6 +541,25 @@ describe("clearExpiredInterval", () => {
 		expect(keyv.clearExpiredInterval).toBe(0);
 	});
 
+	test("runs an interval longer than Node's timer limit at the limit, not every millisecond", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const clearExpired = vi.spyOn(keyv, "clearExpired").mockResolvedValue(undefined);
+		const setInterval = vi.spyOn(globalThis, "setInterval");
+
+		try {
+			keyv.clearExpiredInterval = 30 * 24 * 60 * 60 * 1000;
+			expect(keyv.clearExpiredInterval).toBe(30 * 24 * 60 * 60 * 1000);
+			expect(setInterval).toHaveBeenLastCalledWith(expect.any(Function), 2_147_483_647);
+			await new Promise((resolve) => {
+				setTimeout(resolve, 50);
+			});
+			expect(clearExpired).not.toHaveBeenCalled();
+		} finally {
+			keyv.clearExpiredInterval = 0;
+			setInterval.mockRestore();
+		}
+	});
+
 	test("automatically clears expired entries on the configured schedule", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri, clearExpiredInterval: 100 });
 		const expiredKey = faker.string.alphanumeric(10);

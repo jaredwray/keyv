@@ -31,6 +31,12 @@ function escapeIdentifier(identifier: string): string {
 const ignorableInitErrorCodes = new Set(["23505", "42P07", "42710"]);
 
 /**
+ * The longest delay Node.js timers accept, about 24.8 days. Node runs a timer with a longer
+ * delay after 1 ms instead.
+ */
+const maxTimerDelay = 2_147_483_647;
+
+/**
  * Returns true when `expires` is a finite timestamp at or before `now`.
  * PostgreSQL `BIGINT` values may arrive as a string; coerce before comparing.
  * @param {unknown} expires - The stored expiry timestamp, or `null`/`undefined` for no expiry.
@@ -362,7 +368,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Set the interval in milliseconds between automatic expired-entry cleanup runs.
-	 * Setting to 0 disables the automatic cleanup. Takes effect immediately.
+	 * Setting to 0 disables the automatic cleanup. Takes effect immediately. An interval longer
+	 * than about 24.8 days, the longest delay Node.js timers accept, runs at that limit.
 	 * @param {number} value - The cleanup interval in milliseconds (`0` to disable).
 	 */
 	public set clearExpiredInterval(value: number) {
@@ -786,7 +793,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Starts (or restarts) the automatic expired-entry cleanup interval.
-	 * If the interval is `0` or negative, any existing timer is stopped.
+	 * If the interval is `0` or negative, any existing timer is stopped. An interval longer than
+	 * the longest delay Node.js timers accept runs at that limit.
 	 * The timer is unreffed so it does not prevent the Node.js process from exiting.
 	 *
 	 * @returns {void}
@@ -794,6 +802,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	private startClearExpiredTimer(): void {
 		this.stopClearExpiredTimer();
 		if (this._clearExpiredInterval > 0) {
+			const delay = Math.min(this._clearExpiredInterval, maxTimerDelay);
 			this._clearExpiredTimer = setInterval(async () => {
 				if (this._clearExpiredRunning) {
 					return;
@@ -808,7 +817,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 				} finally {
 					this._clearExpiredRunning = false;
 				}
-			}, this._clearExpiredInterval);
+			}, delay);
 			this._clearExpiredTimer.unref();
 		}
 	}
