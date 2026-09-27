@@ -219,7 +219,7 @@ console.log(store.capabilities.expires); // true
 
 ## uri
 
-Get or set the PostgreSQL connection URI.
+Get or set the PostgreSQL connection URI. The URI is used when the connection pool is created, so changing it afterwards does not reconnect; `disconnect()` still releases the pool the adapter connected with.
 
 - Type: `string`
 - Default: `'postgresql://localhost:5432'`
@@ -483,6 +483,8 @@ for await (const [key, value] of iterator) {
 ## .disconnect()
 
 Disconnect from the PostgreSQL database and release this instance's connection-pool reference. The shared `pg.Pool` is closed when the last adapter using it disconnects. Also stops the automatic expired-entry cleanup interval if running.
+
+The reference released is the one taken when the adapter connected, even if `uri` or `ssl` changed since. It is released only once, so calling `disconnect()` again has no further effect.
 
 - Returns: `Promise<void>`
 

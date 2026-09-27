@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createPoolManager } from "../src/pool.js";
+import { createPoolManager, endPool, pool, releasePool } from "../src/pool.js";
 
 describe("pool manager", () => {
 	test("endPool is a no-op when no pool exists", async () => {
@@ -27,6 +27,31 @@ describe("pool manager", () => {
 		const second = manager.getPool(uri, { idleTimeoutMillis: 1000, max: 2 });
 		expect(first).toBe(second);
 		await manager.endAllPools();
+	});
+
+	test("releasePool releases the pool it is given until the last reference", async () => {
+		const manager = createPoolManager();
+		const uri = "postgresql://localhost:5432";
+		const pool = manager.getPool(uri, { max: 2 });
+		manager.getPool(uri, { max: 2 });
+		await manager.releasePool(pool);
+		expect(pool.ended).toBe(false);
+		await manager.releasePool(pool);
+		expect(pool.ended).toBe(true);
+		await manager.releasePool(pool);
+		expect(manager.getPool(uri, { max: 2 })).not.toBe(pool);
+		await manager.endAllPools();
+	});
+
+	test("the shared pool exports take and release references", async () => {
+		const uri = "postgresql://localhost:5432/shared-pool-exports";
+		const first = pool(uri);
+		const second = pool(uri);
+		expect(second).toBe(first);
+		await endPool(uri);
+		expect(first.ended).toBe(false);
+		await releasePool(second);
+		expect(first.ended).toBe(true);
 	});
 
 	test("endAllPools closes remaining pools and can be called when empty", async () => {

@@ -30,10 +30,27 @@ function getCacheKey(uri: string, options: PoolConfig): string {
  * to the same database with the same configuration reuse a single pg.Pool.
  * Each `getPool` call takes a reference; `endPool` releases one. The underlying
  * pool is closed only when the last reference is released.
- * @returns {object} A pool manager exposing `getPool`, `endPool`, and `endAllPools`.
+ * @returns {object} A pool manager exposing `getPool`, `endPool`, `releasePool`, and `endAllPools`.
  */
 export const createPoolManager = () => {
 	const pools = new Map<string, CachedPool>();
+
+	/**
+	 * Releases one reference to a cached pool, ending and removing it when none remain.
+	 * @param {string} key - The pool's cache key.
+	 * @param {CachedPool} cached - The cached pool entry.
+	 * @returns {Promise<void>} Resolves once the pool has been closed, or immediately if other
+	 * references remain.
+	 */
+	const release = async (key: string, cached: CachedPool) => {
+		cached.refs -= 1;
+		if (cached.refs > 0) {
+			return;
+		}
+
+		pools.delete(key);
+		await cached.pool.end();
+	};
 
 	return {
 		/**
@@ -69,13 +86,23 @@ export const createPoolManager = () => {
 				return;
 			}
 
-			existing.refs -= 1;
-			if (existing.refs > 0) {
-				return;
+			await release(key, existing);
+		},
+		/**
+		 * Releases one reference to the given pool, found by identity rather than by URI and
+		 * config, so a caller whose settings changed after `getPool` still releases the pool it
+		 * got. A pool that is not cached is ignored.
+		 * @param {Pool} pool - A pool returned by `getPool`.
+		 * @returns {Promise<void>} Resolves once the pool has been closed, or immediately if other
+		 * references remain.
+		 */
+		async releasePool(pool: Pool) {
+			for (const [key, cached] of pools) {
+				if (cached.pool === pool) {
+					await release(key, cached);
+					return;
+				}
 			}
-
-			pools.delete(key);
-			await existing.pool.end();
 		},
 		/**
 		 * Ends every cached pool and clears the cache.
@@ -116,6 +143,15 @@ export const pool = (uri: string, options: PoolConfig = {}): Pool =>
  */
 export const endPool = async (uri: string, options: PoolConfig = {}) =>
 	poolManager.endPool(uri, options);
+
+/**
+ * Releases one reference to a shared pool returned by {@link pool}, whatever URI and configuration
+ * it was created with. The pool is closed when the last reference is released.
+ * @param {Pool} connection - The pool to release.
+ * @returns {Promise<void>} Resolves once the pool has been closed, or immediately if other
+ * adapters still hold a reference.
+ */
+export const releasePool = async (connection: Pool) => poolManager.releasePool(connection);
 
 /**
  * Ends all shared pools and clears the pool cache.

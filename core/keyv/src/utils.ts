@@ -8,7 +8,7 @@ export function isDataExpired<Value>(data: KeyvValue<Value>): boolean {
 }
 
 /**
- * Calculate an absolute expiry timestamp from a TTL value.
+ * Calculate an absolute expiry timestamp from a TTL value, in whole milliseconds.
  * Returns `undefined` when `ttl` is absent, zero, negative, or non-finite
  * (meaning "no expiry").
  *
@@ -20,7 +20,23 @@ export function calculateExpires(ttl: number | undefined): number | undefined {
 		return undefined;
 	}
 
-	return Date.now() + ttl;
+	return toStoreExpires(Date.now() + ttl);
+}
+
+/**
+ * Convert an absolute expiry into the form stores accept: whole milliseconds, rounded up so an
+ * entry never expires early, or `undefined` (no expiry) when it is not a finite number. Stores
+ * such as PostgreSQL's `BIGINT` column and Redis's `PXAT` reject a fractional timestamp.
+ *
+ * @param expires - Absolute expiry timestamp (ms since epoch), or `undefined`
+ * @returns The expiry in whole milliseconds, or `undefined` for no expiry
+ */
+export function toStoreExpires(expires: number | undefined): number | undefined {
+	if (typeof expires !== "number" || !Number.isFinite(expires)) {
+		return undefined;
+	}
+
+	return Math.ceil(expires);
 }
 
 /**

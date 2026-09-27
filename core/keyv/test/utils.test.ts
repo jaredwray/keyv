@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { calculateExpires, isDataExpired, resolveTtl, ttlFromExpires } from "../src/utils.js";
+import {
+	calculateExpires,
+	isDataExpired,
+	resolveTtl,
+	toStoreExpires,
+	ttlFromExpires,
+} from "../src/utils.js";
 
 describe("isDataExpired", () => {
 	test("should detect expired, non-expired, and undefined expiry correctly", () => {
@@ -18,12 +24,33 @@ describe("calculateExpires", () => {
 		expect(result).toBeLessThanOrEqual(Date.now() + 5000);
 	});
 
+	test("should round a fractional ttl up to a whole millisecond", () => {
+		const before = Date.now();
+		const result = calculateExpires(1500.5);
+		expect(Number.isInteger(result)).toBe(true);
+		expect(result).toBeGreaterThanOrEqual(before + 1501);
+		expect(result).toBeLessThanOrEqual(Date.now() + 1501);
+	});
+
 	test("should return undefined for invalid inputs", () => {
 		expect(calculateExpires(undefined)).toBeUndefined();
 		expect(calculateExpires(0)).toBeUndefined();
 		expect(calculateExpires(-100)).toBeUndefined();
 		expect(calculateExpires(Number.NaN)).toBeUndefined();
 		expect(calculateExpires(Number.POSITIVE_INFINITY)).toBeUndefined();
+	});
+});
+
+describe("toStoreExpires", () => {
+	test("should round a fractional expiry up to a whole millisecond", () => {
+		expect(toStoreExpires(1_000.25)).toBe(1_001);
+		expect(toStoreExpires(1_000)).toBe(1_000);
+	});
+
+	test("should return undefined when there is no finite expiry", () => {
+		expect(toStoreExpires(undefined)).toBeUndefined();
+		expect(toStoreExpires(Number.NaN)).toBeUndefined();
+		expect(toStoreExpires(Number.POSITIVE_INFINITY)).toBeUndefined();
 	});
 });
 

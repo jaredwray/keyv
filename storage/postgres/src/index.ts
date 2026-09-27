@@ -7,8 +7,8 @@ import Keyv, {
 	type KeyvStorageGetResult,
 	keyvStorageCapability,
 } from "keyv";
-import type { DatabaseError, PoolConfig } from "pg";
-import { endPool, pool } from "./pool.js";
+import type { DatabaseError, Pool, PoolConfig } from "pg";
+import { pool, releasePool } from "./pool.js";
 import type { KeyvPostgresOptions, Query } from "./types.js";
 
 /**
@@ -77,6 +77,12 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 	/** Promise that resolves to the query function once initialization completes. */
 	private _connected: Promise<Query>;
+
+	/**
+	 * The shared pool this instance took a reference to, released once by {@link disconnect}
+	 * even if `uri`, `ssl`, or pool options changed after connecting.
+	 */
+	private _pool?: Pool;
 
 	/** The namespace used to prefix keys for multi-tenant separation. */
 	private _namespace?: string;
@@ -227,7 +233,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Set the PostgreSQL connection URI. Applied when the connection pool is created; changing
-	 * this after construction does not reconnect.
+	 * this after construction does not reconnect, and {@link disconnect} still releases the
+	 * original pool.
 	 * @param {string} value - The PostgreSQL connection URI.
 	 */
 	public set uri(value: string) {
@@ -315,7 +322,8 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Set the SSL configuration for the PostgreSQL connection. Applied when the pool is created;
-	 * changing this after construction does not reconnect.
+	 * changing this after construction does not reconnect, and {@link disconnect} still releases
+	 * the original pool.
 	 * @param {boolean | ConnectionOptions | undefined} value - The SSL configuration.
 	 */
 	public set ssl(value: boolean | ConnectionOptions | undefined) {
@@ -719,13 +727,19 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Disconnects from the PostgreSQL database and releases this instance's pool reference.
 	 * Also stops the automatic expired-entry cleanup interval if running. The underlying
-	 * `pg.Pool` is closed only when the last adapter sharing it disconnects.
+	 * `pg.Pool` is closed only when the last adapter sharing it disconnects. The reference is
+	 * the one taken when connecting, whatever `uri` or `ssl` say now, and it is released only
+	 * once, so calling this again has no further effect.
 	 *
 	 * @returns {Promise<void>} Resolves once this instance's pool reference has been released.
 	 */
 	public async disconnect(): Promise<void> {
 		this.stopClearExpiredTimer();
-		await endPool(this._uri, { ...this._poolConfig, ssl: this._ssl });
+		const connection = this._pool;
+		this._pool = undefined;
+		if (connection) {
+			await releasePool(connection);
+		}
 	}
 
 	/**
@@ -775,6 +789,7 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	 */
 	private async connect(): Promise<Query> {
 		const conn = pool(this._uri, { ...this._poolConfig, ssl: this._ssl });
+		this._pool = conn;
 		return async (sql: string, values?: KeyvAny) => {
 			const data = await conn.query(sql, values);
 			return data.rows;

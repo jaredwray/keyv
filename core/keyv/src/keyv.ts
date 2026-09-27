@@ -32,6 +32,7 @@ import {
 	isDataExpired,
 	resolveTtl,
 	returnsPromise,
+	toStoreExpires,
 	ttlFromExpires,
 } from "./utils.js";
 
@@ -785,7 +786,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 * Set a raw value to the store without wrapping or serialization. This is the write-side counterpart to getRaw().
 	 * The value should be a KeyvValue object with { value, expires? }. If you need TTL-based expiration,
 	 * set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`).
-	 * The store-level TTL is derived automatically from `value.expires`.
+	 * The store-level expiry is derived automatically from `value.expires`, rounded up to a whole millisecond
+	 * (a non-finite `expires` means no store-level expiry).
 	 * @param {string} key the key to set
 	 * @param {KeyvValue<Value>} value the raw value envelope to store
 	 * @returns {Promise<boolean>} `true` if it was set successfully, `false` on failure.
@@ -802,9 +804,9 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 		const data = { key, value };
 		await this.hookWithDeprecated(KeyvHooks.BEFORE_SET_RAW, data);
 
-		// `expires` is the canonical value passed to the store; `ttl` is derived
-		// only for the public AFTER_SET_RAW hook payload below.
-		const expires = data.value.expires;
+		// `expires` is the canonical value passed to the store, in whole milliseconds; `ttl` is
+		// derived only for the public AFTER_SET_RAW hook payload below.
+		const expires = toStoreExpires(data.value.expires);
 		const ttl = ttlFromExpires(expires);
 
 		let result = true;
@@ -838,7 +840,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	/**
 	 * Set many raw values to the store without wrapping or serialization. This is the write-side counterpart to getManyRaw().
 	 * Each entry's value should be a KeyvValue object with { value, expires? }. If you need TTL-based expiration,
-	 * set `expires` on each value directly. The store-level TTL is derived automatically from `value.expires`.
+	 * set `expires` on each value directly. The store-level expiry is derived automatically from `value.expires`,
+	 * rounded up to a whole millisecond (a non-finite `expires` means no store-level expiry).
 	 * @param {KeyvEntry<KeyvValue<Value>>[]} entries the raw entries to set
 	 * @returns {Promise<boolean[]>} an array of booleans, one per entry: `true` if set successfully, `false` on failure.
 	 */
@@ -859,7 +862,7 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 				const rawEntries = await Promise.all(
 					entries.map(async ({ key, value }) => {
 						const encodedValue = await this.encode(value);
-						return { key, value: encodedValue, expires: value.expires };
+						return { key, value: encodedValue, expires: toStoreExpires(value.expires) };
 					}),
 				);
 				const storeResult = await this._store.setMany(rawEntries);
