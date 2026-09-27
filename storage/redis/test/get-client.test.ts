@@ -654,6 +654,23 @@ describe("getClient", () => {
 		}
 	});
 
+	test("should not add an error listener to a client passed in on every failed connect", async () => {
+		const client = createClient({
+			url: redisBadUri,
+			socket: { reconnectStrategy: false },
+		}) as RedisClientType;
+		const keyvRedis = new KeyvRedis(client, { throwOnConnectError: false });
+		keyvRedis.on("error", () => {});
+
+		await keyvRedis.get(faker.string.alphanumeric(10));
+		const listeners = client.listenerCount("error");
+		for (let attempt = 0; attempt < 12; attempt++) {
+			await keyvRedis.get(faker.string.alphanumeric(10));
+		}
+
+		expect(client.listenerCount("error")).toBe(listeners);
+	});
+
 	test("should export defaultReconnectStrategy with exponential backoff and jitter", () => {
 		const first = defaultReconnectStrategy(0);
 		expect(first).toBeGreaterThanOrEqual(50);

@@ -1,4 +1,4 @@
-import type { RedisClientType } from "@redis/client";
+import type { RedisClientOptions } from "@redis/client";
 import { Keyv, type KeyvAny } from "keyv";
 import KeyvRedis from "./index.js";
 import type { KeyvRedisConnect, KeyvRedisOptions } from "./types.js";
@@ -33,6 +33,11 @@ export function createKeyv(connect?: KeyvRedisConnect, options?: KeyvRedisOption
  * connection errors or timeouts. As with any Keyv instance, attach an `error` listener so a failed
  * operation returns a fallback value instead of rejecting.
  *
+ * Reconnect is turned off for a standalone client created from a URI or client options. A client
+ * passed in keeps its own reconnect strategy, which node-redis fixes when the client is created,
+ * so create it with `socket: { reconnectStrategy: false }`; its offline queue is still turned off.
+ * Cluster and sentinel connections keep their own offline queue and reconnect settings.
+ *
  * @param {KeyvRedisConnect} [connect] - URI, client/cluster/sentinel options, or an existing
  *   connection. Defaults to `"redis://localhost:6379"`.
  * @param {KeyvRedisOptions} [options] - Adapter options. `throwOnConnectError` and `throwOnErrors`
@@ -43,21 +48,51 @@ export function createKeyvNonBlocking(
 	connect?: KeyvRedisConnect,
 	options?: KeyvRedisOptions,
 ): Keyv {
-	const keyv = createKeyv(connect, options);
+	const keyv = createKeyv(nonBlockingConnect(connect), options);
 
 	const keyvStore = keyv.store as KeyvRedis<KeyvAny>;
 
 	keyvStore.throwOnConnectError = false;
 	keyvStore.throwOnErrors = false;
 
-	const redisClient = keyvStore.client as RedisClientType;
-	/* v8 ignore next -- @preserve */
-	if (redisClient.options) {
-		redisClient.options.disableOfflineQueue = true;
-		if (redisClient.options.socket) {
-			redisClient.options.socket.reconnectStrategy = false;
-		}
+	return keyv;
+}
+
+/**
+ * Turn off the offline queue and reconnect for a standalone client. node-redis reads the reconnect
+ * strategy only when it creates a client, so for a URI or client options both settings go into the
+ * options the adapter creates the client from. A client passed in only has its offline queue turned
+ * off, which node-redis checks on every command. Cluster and sentinel connections are unchanged.
+ * @param {KeyvRedisConnect} [connect] - The `connect` argument given to {@link createKeyvNonBlocking}.
+ * @returns {KeyvRedisConnect} The connect argument to create the adapter with.
+ */
+function nonBlockingConnect(connect?: KeyvRedisConnect): KeyvRedisConnect {
+	if (connect === undefined || typeof connect === "string") {
+		return {
+			url: connect ?? "redis://localhost:6379",
+			disableOfflineQueue: true,
+			socket: { reconnectStrategy: false },
+		};
 	}
 
-	return keyv;
+	const value = connect as KeyvAny;
+	if (value.connect !== undefined) {
+		// An existing connection. Only a standalone client has `options`.
+		if (value.options) {
+			value.options.disableOfflineQueue = true;
+		}
+
+		return connect;
+	}
+
+	if (value.rootNodes !== undefined || value.sentinelRootNodes !== undefined) {
+		return connect;
+	}
+
+	const clientOptions = connect as RedisClientOptions;
+	return {
+		...clientOptions,
+		disableOfflineQueue: true,
+		socket: { ...clientOptions.socket, reconnectStrategy: false },
+	};
 }
