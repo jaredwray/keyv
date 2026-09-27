@@ -326,7 +326,7 @@ const results = await store.hasMany(['foo', 'bar', 'baz']);
 
 ### .clear()
 
-Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared (`namespace:<namespace>:*`, glob characters escaped), so a namespace that merely shares a prefix such as `users-archive` is left alone. A namespace that extends it with the `:` separator, such as `users:archive`, cannot be distinguished from keys containing `:` and is cleared too unless `useSets` is `true`. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database.
+Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared (`namespace:<namespace>:*`, glob characters escaped), so a namespace that merely shares a prefix such as `users-archive` is left alone. A namespace that extends it with the `:` separator, such as `users:archive`, cannot be distinguished from keys containing `:` and is cleared too unless `useSets` is `true`. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database. In cluster mode every master node is searched.
 
 ```js
 await store.clear();
@@ -334,7 +334,7 @@ await store.clear();
 
 ### .iterator()
 
-Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance and the same key pattern as `clear()`. Missing values are yielded as `undefined`, never `null`.
+Returns an async iterator for iterating over all key-value pairs in the store. The iterator uses the namespace configured on the instance and the same key pattern as `clear()`, and in cluster mode it scans every master node. Missing values are yielded as `undefined`, never `null`.
 
 ```js
 for await (const [key, value] of store.iterator()) {
@@ -409,13 +409,13 @@ const store = new KeyvValkey(cluster);
 
 `deleteMany` deletes each key individually, which is also cluster-safe.
 
+`clear()` and `iterator()` search every master node, since `KEYS` and `SCAN` only see the node they run on, and remove or fetch the keys they find one hash slot at a time.
+
 Single-key methods (`get`, `set`, `delete`, `has`) work automatically in cluster mode — iovalkey routes each command to the correct node.
 
-### Cluster gotchas
+### `useSets` in cluster mode
 
-- **`clear()` with `useSets: false` (the default)** uses the `KEYS` command, which only scans the node that receives the command. In cluster mode this may miss keys on other nodes.
-- **`iterator()` in cluster mode** uses `SCAN`, which only iterates keys on the node the command is routed to. It may not return all keys across the cluster.
-- **`useSets: true` is not cluster-safe.** Tracking set members and data keys hash to different slots, so `SET` + `SADD` in a `MULTI` transaction (and bulk `UNLINK` of tracked keys on `clear()`) can raise `CROSSSLOT`. Prefer the default `useSets: false` on a cluster.
+The tracking set and the data keys hash to different slots, which a cluster can't update in one `MULTI` transaction. In cluster mode the adapter updates them with separate commands instead: a key is added to the set before it is written, and removed from the set after it is deleted. If a write fails, the set can list a key that was never stored, which `clear()` removes harmlessly.
 
 ## License
 

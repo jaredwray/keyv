@@ -105,4 +105,63 @@ describe("cluster", () => {
 
 		await store.disconnect();
 	});
+
+	test("should clear the namespace's keys on every master", { retry: 3 }, async () => {
+		const store = new KeyvValkey(await createReadyCluster(), {
+			namespace: faker.string.alphanumeric(10),
+		});
+		const other = new KeyvValkey(await createReadyCluster(), {
+			namespace: faker.string.alphanumeric(10),
+		});
+		const keys = Array.from({ length: 12 }, () => faker.string.alphanumeric(10));
+		await store.setMany(keys.map((key) => ({ key, value: key })));
+		await other.set(keys[0], "other");
+
+		await store.clear();
+
+		expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
+		expect(await other.get(keys[0])).toBe("other");
+		await other.clear();
+		await store.disconnect();
+		await other.disconnect();
+	});
+
+	test("should iterate the namespace's keys on every master", { retry: 3 }, async () => {
+		const store = new KeyvValkey(await createReadyCluster(), {
+			namespace: faker.string.alphanumeric(10),
+		});
+		const keys = Array.from({ length: 12 }, () => faker.string.alphanumeric(10));
+		await store.setMany(keys.map((key) => ({ key, value: `value-${key}` })));
+
+		const entries = new Map<string, unknown>();
+		for await (const [key, value] of store.iterator()) {
+			entries.set(key, value);
+		}
+
+		expect(entries).toEqual(new Map(keys.map((key) => [key, `value-${key}`])));
+		await store.clear();
+		await store.disconnect();
+	});
+
+	test("should track keys with useSets without CROSSSLOT errors", { retry: 3 }, async () => {
+		const store = new KeyvValkey(await createReadyCluster(), {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const errors: unknown[] = [];
+		store.on("error", (error: unknown) => errors.push(error));
+		const keys = Array.from({ length: 12 }, () => faker.string.alphanumeric(10));
+
+		expect(await store.set(keys[0], "value")).toBe(true);
+		expect(await store.setMany(keys.slice(1).map((key) => ({ key, value: key })))).toEqual(
+			keys.slice(1).map(() => true),
+		);
+		expect(await store.delete(keys[0])).toBe(true);
+		expect(await store.get(keys[0])).toBeUndefined();
+
+		await store.clear();
+		expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
+		expect(errors).toEqual([]);
+		await store.disconnect();
+	});
 });
