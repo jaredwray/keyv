@@ -1443,7 +1443,10 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @returns {void}
 	 */
 	private abortConnect(client: RedisClientConnectionType, timedOut: boolean): void {
-		client.on("error", this._swallowClientError);
+		// A client passed in stays in use after a failed connect, so attach this only once.
+		if (!client.listeners("error").includes(this._swallowClientError)) {
+			client.on("error", this._swallowClientError);
+		}
 
 		if (timedOut) {
 			this.closeHungHandshake(client);
@@ -1501,7 +1504,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Copy runtime client option mutations (for example `createKeyvNonBlocking`) onto a replacement client.
+	 * Copy `disableOfflineQueue`, which node-redis reads on every command and so can be changed on a
+	 * live client, onto a replacement client. The reconnect strategy is fixed when a client is
+	 * created, and the replacement is created from the same options as the original.
 	 * @param {RedisClientConnectionType} from - The aborted client.
 	 * @param {RedisClientConnectionType} to - The newly created client.
 	 * @returns {void}
@@ -1518,9 +1523,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		}
 
 		toOptions.disableOfflineQueue = fromOptions.disableOfflineQueue;
-		if (fromOptions.socket && toOptions.socket) {
-			toOptions.socket.reconnectStrategy = fromOptions.socket.reconnectStrategy;
-		}
 	}
 
 	/**

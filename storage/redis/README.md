@@ -237,6 +237,18 @@ keyv.on('error', (error) => console.error('Redis error', error));
 
 As with any Keyv instance, attach an `error` listener so a failed operation returns a fallback value instead of rejecting. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
 
+With a URI or client options, `createKeyvNonBlocking` creates the client with the offline queue and reconnect already off. When Redis is down, an operation fails as soon as its connection attempt does and returns its fallback value, instead of waiting for Redis to come back. A refused connection fails immediately. A host that doesn't respond waits for the socket's `connectTimeout` (5 seconds by default), which the `connectionTimeout` option can shorten.
+
+node-redis fixes a client's reconnect strategy when the client is created, so a client you pass in keeps its own. Create it with `socket: { reconnectStrategy: false }` to get the same behavior. Its offline queue is still turned off:
+
+```js
+import { createClient, createKeyvNonBlocking } from '@keyv/redis';
+const client = createClient({ url: 'redis://localhost:6379', socket: { reconnectStrategy: false } });
+const keyv = createKeyvNonBlocking(client);
+```
+
+Cluster and sentinel connections keep their own offline queue and reconnect settings. Only the throw settings change.
+
 # Namespaces
 
 By default namespacing is turned off, this is done because it causes much more memory / performance usage for Redis.
@@ -555,7 +567,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 
 ## Helpers
 * **createKeyv([connect], [options])** - Keyv instance with this adapter. Applies `namespace` on both Keyv and the store. `connect` accepts the same `KeyvRedisConnect` types as the constructor (including cluster/sentinel). Defaults to `"redis://localhost:6379"` when `connect` is omitted.
-* **createKeyvNonBlocking([connect], [options])** - Same as `createKeyv`, then disables throws, the offline queue, and reconnect for secondary-cache use. Concurrent operations wait for the shared in-flight connect instead of being dropped.
+* **createKeyvNonBlocking([connect], [options])** - Same as `createKeyv`, then disables throws, the offline queue, and reconnect for secondary-cache use. A client passed in keeps its own reconnect strategy, and cluster and sentinel connections only have their throw settings changed. See [Using the `createKeyvNonBlocking` function](#using-the-createkeyvnonblocking-function). Concurrent operations wait for the shared in-flight connect instead of being dropped.
 * **defaultReconnectStrategy(attempts)** - Default socket reconnect delay when a URI string is passed to the constructor. Exponential backoff capped at 2s, plus up to ±50ms of jitter. Returns a delay in milliseconds.
 
 # Events
