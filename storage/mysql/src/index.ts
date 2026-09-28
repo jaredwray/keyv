@@ -51,41 +51,33 @@ function validateCompositeIndexLength(keyLength: number, namespaceLength: number
 	}
 }
 
+/** A column in an index, as `SHOW INDEX` reports it. */
+type IndexColumn = {
+	/** The column's name, in lowercase. */
+	name: string;
+	/** How many leading bytes or characters the index covers, or `null` when it covers all of them. */
+	prefixLength: number | null;
+};
+
 /**
- * Makes `(namespace, id)` the table's primary key. It replaces the primary key on `id` alone that
- * Keyv v5 created, the primary key MySQL generates for a table created without one (`my_row_id`),
- * and the unique `(namespace, id)` index that earlier v6 releases used in place of a primary key.
- * A single `ALTER TABLE` makes the change, so the table always has a primary key, as servers with
- * `sql_require_primary_key` or generated invisible primary keys require.
- * @returns {Promise<void>} Resolves once `(namespace, id)` is the primary key.
+ * Makes `(namespace, id)` unique, so an upsert only replaces the row with the same namespace and
+ * key. The primary key becomes `(namespace, id)` when the table has none, when it is only on
+ * Keyv's own `namespace` and `id` columns (such as the primary key on `id` that Keyv v5 created,
+ * or one that covers only a prefix of the columns), or when it is the primary key MySQL generated
+ * for a table created without one, which is dropped with its `my_row_id` column. The unique
+ * `(namespace, id)` index that earlier v6 releases used in place of a primary key is dropped in the
+ * same `ALTER TABLE`, so the table always has a primary key, as servers with
+ * `sql_require_primary_key` or generated invisible primary keys require. A primary key on any other
+ * column was added by the table's owner, so it and its columns are kept, and `(namespace, id)` gets
+ * a unique index instead.
+ * @returns {Promise<void>} Resolves once `(namespace, id)` is unique.
  */
 async function ensurePrimaryKey(
 	query: SqlQuery,
 	tableEsc: string,
 	uniqueIndexName: string,
 ): Promise<void> {
-	const primaryKey = await readPrimaryKey(query, tableEsc);
-	const uniqueIndexRows = (await query(
-		mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [uniqueIndexName]),
-	)) as mysql.RowDataPacket[];
-	const changes: string[] = [];
-	if (primaryKey.join() !== "namespace,id") {
-		if (primaryKey.length > 0) {
-			changes.push("DROP PRIMARY KEY");
-		}
-
-		// MySQL won't drop a generated invisible primary key without its column.
-		if (primaryKey.join() === "my_row_id") {
-			changes.push("DROP COLUMN my_row_id");
-		}
-
-		changes.push("ADD PRIMARY KEY (namespace, id)");
-	}
-
-	if (uniqueIndexRows.length > 0) {
-		changes.push(`DROP INDEX \`${uniqueIndexName.replace(/`/g, "``")}\``);
-	}
-
+	const changes = await planKeyChanges(query, tableEsc, uniqueIndexName);
 	if (changes.length === 0) {
 		return;
 	}
@@ -94,23 +86,126 @@ async function ensurePrimaryKey(
 		await query(`ALTER TABLE ${tableEsc} ${changes.join(", ")}`);
 	} catch (error) {
 		// Another adapter may have migrated the table first.
-		if ((await readPrimaryKey(query, tableEsc)).join() !== "namespace,id") {
+		if ((await planKeyChanges(query, tableEsc, uniqueIndexName)).length > 0) {
 			throw error;
 		}
 	}
 }
 
 /**
- * Reads the columns of a table's primary key.
- * @returns {Promise<string[]>} The primary key's columns in order, or `[]` when there is none.
+ * Lists the `ALTER TABLE` changes {@link ensurePrimaryKey} makes to a table.
+ * @returns {Promise<string[]>} The changes, or `[]` when `(namespace, id)` is already unique.
  */
-async function readPrimaryKey(query: SqlQuery, tableEsc: string): Promise<string[]> {
+async function planKeyChanges(
+	query: SqlQuery,
+	tableEsc: string,
+	uniqueIndexName: string,
+): Promise<string[]> {
 	const rows = (await query(
-		`SHOW INDEX FROM ${tableEsc} WHERE Key_name = 'PRIMARY'`,
+		mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name IN ('PRIMARY', ?)`, [uniqueIndexName]),
 	)) as mysql.RowDataPacket[];
+	const primaryKeyRows = rows.filter((row) => row.Key_name === "PRIMARY");
+	const uniqueIndexRows = rows.filter((row) => row.Key_name !== "PRIMARY");
+	const primaryKey = readIndexColumns(primaryKeyRows);
+	const uniqueIndexEsc = `\`${uniqueIndexName.replace(/`/g, "``")}\``;
+	const dropUniqueIndex = uniqueIndexRows.length > 0 ? [`DROP INDEX ${uniqueIndexEsc}`] : [];
+	if (isNamespaceIdIndex(primaryKey)) {
+		return dropUniqueIndex;
+	}
+
+	const generated = await hasGeneratedPrimaryKey(query, tableEsc, primaryKey);
+	if (
+		generated ||
+		primaryKey.every((column) => column.name === "namespace" || column.name === "id")
+	) {
+		return [
+			...(primaryKey.length > 0 || generated ? ["DROP PRIMARY KEY"] : []),
+			// MySQL won't drop a generated invisible primary key without its column.
+			...(generated ? ["DROP COLUMN my_row_id"] : []),
+			"ADD PRIMARY KEY (namespace, id)",
+			...dropUniqueIndex,
+		];
+	}
+
+	if (
+		isNamespaceIdIndex(readIndexColumns(uniqueIndexRows)) &&
+		uniqueIndexRows.every((row) => Number(row.Non_unique) === 0)
+	) {
+		return [];
+	}
+
+	return [...dropUniqueIndex, `ADD UNIQUE INDEX ${uniqueIndexEsc} (namespace, id)`];
+}
+
+/**
+ * Reads an index's columns from its `SHOW INDEX` rows.
+ * @returns {IndexColumn[]} The index's columns in order, or `[]` when there are no rows.
+ */
+function readIndexColumns(rows: mysql.RowDataPacket[]): IndexColumn[] {
 	return [...rows]
 		.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-		.map((row) => String(row.Column_name));
+		.map((row) => ({
+			name: String(row.Column_name).toLowerCase(),
+			prefixLength: row.Sub_part === null ? null : Number(row.Sub_part),
+		}));
+}
+
+/**
+ * Checks whether an index covers all of `namespace` and then all of `id`, and nothing else. An
+ * index on a prefix of either column treats different keys that share the prefix as duplicates.
+ * @returns {boolean} `true` for a full `(namespace, id)` index.
+ */
+function isNamespaceIdIndex(columns: IndexColumn[]): boolean {
+	return (
+		columns.length === 2 &&
+		columns[0].name === "namespace" &&
+		columns[1].name === "id" &&
+		columns.every((column) => column.prefixLength === null)
+	);
+}
+
+/**
+ * Checks whether a table's primary key is the one MySQL generates for a table created without one.
+ * MySQL counts a primary key as generated only when its one column is the table's first and is
+ * `my_row_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT INVISIBLE`, so a column the table's owner
+ * added with that name is not one. With `show_gipk_in_create_table_and_information_schema` off,
+ * MySQL leaves a generated key and its column out of `SHOW INDEX` and `SHOW COLUMNS`, so when no
+ * primary key is shown, a `my_row_id` column a query can read but `SHOW COLUMNS` leaves out is one.
+ * @returns {Promise<boolean>} `true` when the primary key is MySQL's generated key.
+ */
+async function hasGeneratedPrimaryKey(
+	query: SqlQuery,
+	tableEsc: string,
+	primaryKey: IndexColumn[],
+): Promise<boolean> {
+	if (primaryKey.length > 1 || (primaryKey.length === 1 && primaryKey[0].name !== "my_row_id")) {
+		return false;
+	}
+
+	const columns = (await query(`SHOW COLUMNS FROM ${tableEsc}`)) as mysql.RowDataPacket[];
+	if (primaryKey.length === 1) {
+		const [first] = columns;
+		const extra = String(first.Extra).toLowerCase().split(" ");
+		return (
+			String(first.Field).toLowerCase() === "my_row_id" &&
+			/^bigint(\(\d+\))? unsigned$/i.test(String(first.Type)) &&
+			first.Null === "NO" &&
+			extra.includes("auto_increment") &&
+			extra.includes("invisible")
+		);
+	}
+
+	if (columns.some((column) => String(column.Field).toLowerCase() === "my_row_id")) {
+		return false;
+	}
+
+	try {
+		await query(`SELECT my_row_id FROM ${tableEsc} LIMIT 0`);
+		return true;
+	} catch {
+		// The table has no my_row_id column.
+		return false;
+	}
 }
 
 /**
@@ -1022,7 +1117,7 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 			await query(`ALTER TABLE ${tableEsc} ${modifyVarbinaryParts.join(", ")}`);
 		}
 
-		// Migration: make (namespace, id) the primary key.
+		// Migration: make (namespace, id) the primary key, or unique beside a primary key the owner added.
 		await ensurePrimaryKey(query, tableEsc, indexNameValue);
 
 		// Migration: add expires column

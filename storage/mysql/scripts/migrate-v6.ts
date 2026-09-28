@@ -23,6 +23,131 @@ function escapeIdentifier(identifier: string): string {
 		.join(".");
 }
 
+type IndexColumn = {
+	/** The column's name, in lowercase. */
+	name: string;
+	/** How many leading bytes or characters the index covers, or `null` when it covers all of them. */
+	prefixLength: number | null;
+};
+
+/**
+ * Lists the ALTER TABLE changes that make (namespace, id) unique, as the adapter does. The primary
+ * key becomes (namespace, id) when the table has none, when it is only on the namespace and id
+ * columns (such as v5's primary key on id, or one that covers only a prefix of the columns), or
+ * when it is the primary key MySQL generated for a table created without one, which is dropped
+ * with its my_row_id column. The unique (namespace, id) index that earlier v6 releases used is
+ * dropped. A primary key on any other column was added by the table's owner, so it and its columns
+ * are kept, and (namespace, id) gets a unique index instead.
+ */
+async function planKeyChanges(
+	connection: mysql.PoolConnection,
+	tableEsc: string,
+	uniqueIndexName: string,
+): Promise<string[]> {
+	const [rowsResult] = await connection.query(
+		mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name IN ('PRIMARY', ?)`, [uniqueIndexName]),
+	);
+	const rows = rowsResult as mysql.RowDataPacket[];
+	const primaryKeyRows = rows.filter((row) => row.Key_name === "PRIMARY");
+	const uniqueIndexRows = rows.filter((row) => row.Key_name !== "PRIMARY");
+	const primaryKey = readIndexColumns(primaryKeyRows);
+	const uniqueIndexEsc = `\`${uniqueIndexName.replace(/`/g, "``")}\``;
+	const dropUniqueIndex = uniqueIndexRows.length > 0 ? [`DROP INDEX ${uniqueIndexEsc}`] : [];
+	if (isNamespaceIdIndex(primaryKey)) {
+		return dropUniqueIndex;
+	}
+
+	const generated = await hasGeneratedPrimaryKey(connection, tableEsc, primaryKey);
+	if (
+		generated ||
+		primaryKey.every((column) => column.name === "namespace" || column.name === "id")
+	) {
+		return [
+			...(primaryKey.length > 0 || generated ? ["DROP PRIMARY KEY"] : []),
+			// MySQL won't drop a generated invisible primary key without its column.
+			...(generated ? ["DROP COLUMN my_row_id"] : []),
+			"ADD PRIMARY KEY (namespace, id)",
+			...dropUniqueIndex,
+		];
+	}
+
+	if (
+		isNamespaceIdIndex(readIndexColumns(uniqueIndexRows)) &&
+		uniqueIndexRows.every((row) => Number(row.Non_unique) === 0)
+	) {
+		return [];
+	}
+
+	return [...dropUniqueIndex, `ADD UNIQUE INDEX ${uniqueIndexEsc} (namespace, id)`];
+}
+
+/** Reads an index's columns, in order, from its SHOW INDEX rows. */
+function readIndexColumns(rows: mysql.RowDataPacket[]): IndexColumn[] {
+	return [...rows]
+		.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
+		.map((row) => ({
+			name: String(row.Column_name).toLowerCase(),
+			prefixLength: row.Sub_part === null ? null : Number(row.Sub_part),
+		}));
+}
+
+/**
+ * Checks whether an index covers all of namespace and then all of id, and nothing else. An index
+ * on a prefix of either column treats different keys that share the prefix as duplicates.
+ */
+function isNamespaceIdIndex(columns: IndexColumn[]): boolean {
+	return (
+		columns.length === 2 &&
+		columns[0].name === "namespace" &&
+		columns[1].name === "id" &&
+		columns.every((column) => column.prefixLength === null)
+	);
+}
+
+/**
+ * Checks whether a table's primary key is the one MySQL generates for a table created without one.
+ * MySQL counts a primary key as generated only when its one column is the table's first and is
+ * my_row_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT INVISIBLE, so a column the table's owner added
+ * with that name is not one. With show_gipk_in_create_table_and_information_schema off, MySQL
+ * leaves a generated key and its column out of SHOW INDEX and SHOW COLUMNS, so when no primary key
+ * is shown, a my_row_id column a query can read but SHOW COLUMNS leaves out is one.
+ */
+async function hasGeneratedPrimaryKey(
+	connection: mysql.PoolConnection,
+	tableEsc: string,
+	primaryKey: IndexColumn[],
+): Promise<boolean> {
+	if (primaryKey.length > 1 || (primaryKey.length === 1 && primaryKey[0].name !== "my_row_id")) {
+		return false;
+	}
+
+	const [columnsResult] = await connection.query(`SHOW COLUMNS FROM ${tableEsc}`);
+	const columns = columnsResult as mysql.RowDataPacket[];
+	if (primaryKey.length === 1) {
+		const [first] = columns;
+		const extra = String(first.Extra).toLowerCase().split(" ");
+		return (
+			String(first.Field).toLowerCase() === "my_row_id" &&
+			/^bigint(\(\d+\))? unsigned$/i.test(String(first.Type)) &&
+			first.Null === "NO" &&
+			extra.includes("auto_increment") &&
+			extra.includes("invisible")
+		);
+	}
+
+	if (columns.some((column) => String(column.Field).toLowerCase() === "my_row_id")) {
+		return false;
+	}
+
+	try {
+		await connection.query(`SELECT my_row_id FROM ${tableEsc} LIMIT 0`);
+		return true;
+	} catch {
+		// The table has no my_row_id column.
+		return false;
+	}
+}
+
 function parseArgs(args: string[]): {
 	uri: string;
 	table: string;
@@ -201,46 +326,16 @@ async function migrate(options: {
 				);
 			}
 
-			// Make (namespace, id) the primary key, as the adapter does. One ALTER replaces v5's
-			// primary key on id, a primary key MySQL generated (my_row_id), or the unique
-			// (namespace, id) index, so the table always has a primary key.
-			const readPrimaryKey = async (): Promise<string> => {
-				const [primaryRows] = await connection.query(
-					`SHOW INDEX FROM ${tableEsc} WHERE Key_name = 'PRIMARY'`,
-				);
-				return [...(primaryRows as mysql.RowDataPacket[])]
-					.sort((a, b) => Number(a.Seq_in_index) - Number(b.Seq_in_index))
-					.map((row) => String(row.Column_name))
-					.join();
-			};
-			const primaryKey = await readPrimaryKey();
+			// Make (namespace, id) unique, as the adapter does. One ALTER makes the change, so the
+			// table always has a primary key.
 			const indexNameValue = `${table}_key_namespace_idx`;
-			const [indexRowsResult] = await connection.query(
-				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexNameValue]),
-			);
-			const changes: string[] = [];
-			if (primaryKey !== "namespace,id") {
-				if (primaryKey !== "") {
-					changes.push("DROP PRIMARY KEY");
-				}
-
-				if (primaryKey === "my_row_id") {
-					changes.push("DROP COLUMN my_row_id");
-				}
-
-				changes.push("ADD PRIMARY KEY (namespace, id)");
-			}
-
-			if ((indexRowsResult as mysql.RowDataPacket[]).length > 0) {
-				changes.push(`DROP INDEX \`${indexNameValue.replace(/`/g, "``")}\``);
-			}
-
+			const changes = await planKeyChanges(connection, tableEsc, indexNameValue);
 			if (changes.length > 0) {
 				try {
 					await connection.query(`ALTER TABLE ${tableEsc} ${changes.join(", ")}`);
 				} catch (error) {
 					// An adapter connecting at the same time may have migrated the table first.
-					if ((await readPrimaryKey()) !== "namespace,id") {
+					if ((await planKeyChanges(connection, tableEsc, indexNameValue)).length > 0) {
 						throw error;
 					}
 				}
