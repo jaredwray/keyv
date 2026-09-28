@@ -114,6 +114,9 @@ website/site/docs/encryption/**
 !website/site/docs/encryption/overview.md
 website/site/docs/test-suite.md
 website/site/.cache
+# website agent skills copied from skills/ by website/src/skills.ts
+website/site/public/skills/
+website/site/public/.well-known/skills/
 core/keyv/test.db
 
 # AI

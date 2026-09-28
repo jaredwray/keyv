@@ -616,15 +616,27 @@ importers:
 
   website:
     devDependencies:
+      '@biomejs/biome':
+        specifier: ^2.5.11
+        version: 2.5.11
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
       docula:
         specifier: ^3.0.0
         version: 3.0.0(supports-color@10.2.2)(zod@4.4.3)
+      js-yaml:
+        specifier: ^5.4.1
+        version: 5.4.1
       rimraf:
         specifier: ^6.1.3
         version: 6.1.3
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@24.13.1)(@vitest/coverage-v8@4.1.11)(happy-dom@20.12.0)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(terser@5.37.0)(tsx@4.23.13))
 
 packages:
 
