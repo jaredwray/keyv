@@ -35,7 +35,7 @@
   - [constructor(uri?, options?)](#constructoruri-options)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -54,6 +54,7 @@
   - [`KeyvMemcacheOptions` Type Changed](#keyvmemcacheoptions-type-changed)
   - [`disconnect()` Method Added](#disconnect-method-added)
   - [`buffer` Dependency Removed](#buffer-dependency-removed)
+  - [`set` Takes an Absolute `expires`](#set-takes-an-absolute-expires)
 - [License](#license)
 
 ## Install
@@ -301,25 +302,25 @@ await memcache.set('key2', 'value2');
 const results = await memcache.getMany(['key1', 'key2', 'key3']); // ['value1', 'value2', undefined]
 ```
 
-### .set(key, value, ttl?)
+### .set(key, value, expires?)
 
-Stores a value in the memcache server. The optional `ttl` parameter is in milliseconds and is converted to seconds internally.
+Stores a value in the memcache server. The optional `expires` parameter is an absolute Unix timestamp in milliseconds (`Date.now() + ttl`). It is converted to Memcached's `exptime` in seconds internally. Through a `Keyv` instance, `keyv.set(key, value, ttl)` still takes a relative `ttl` in milliseconds, and Keyv converts it to `expires` for you.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 await memcache.set('foo', 'bar'); // no expiration
-await memcache.set('foo', 'bar', 5000); // expires in 5 seconds
+await memcache.set('foo', 'bar', Date.now() + 5000); // expires in 5 seconds
 ```
 
 ### .setMany(entries)
 
-Stores multiple values in the memcache server. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
+Stores multiple values in the memcache server. Each entry is a `KeyvStorageEntry<Value>` object (`{ key: string, value: Value, expires?: number }`), where `expires` is an absolute Unix timestamp in milliseconds and `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 const results = await memcache.setMany([
   { key: 'key1', value: 'value1' },
-  { key: 'key2', value: 'value2', ttl: 5000 },
+  { key: 'key2', value: 'value2', expires: Date.now() + 5000 },
 ]); // [true, true]
 ```
 
@@ -477,6 +478,18 @@ await memcache.disconnect();
 ## `buffer` Dependency Removed
 
 The `buffer` polyfill dependency has been removed. Values are now handled as strings instead of Buffers.
+
+## `set` Takes an Absolute `expires`
+
+The third argument of the adapter's `set` is now an absolute Unix timestamp in milliseconds, not a relative `ttl`. This only affects code that calls the adapter directly. `keyv.set(key, value, ttl)` still takes a relative `ttl`.
+
+```js
+// Before (v2)
+await memcache.set('foo', 'bar', 5000);
+
+// After (v6)
+await memcache.set('foo', 'bar', Date.now() + 5000);
+```
 
 ## License
 

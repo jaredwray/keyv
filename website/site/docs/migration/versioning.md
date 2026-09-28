@@ -15,7 +15,7 @@ Since **v6**, all Keyv packages — the core `keyv` package and every official a
 
 ```bash
 pnpm add keyv          # latest stable (recommended)
-pnpm add keyv@beta     # the newest v6 pre-release
+pnpm add keyv@rc       # the newest v6 release candidate
 pnpm add keyv@5        # the newest stable v5 release
 pnpm add keyv@4        # the newest stable v4 release
 ```
@@ -27,22 +27,24 @@ From v6 on, an adapter shares Keyv's version, so `pnpm add @keyv/redis@6` lines 
 | Tag | Points to | Use it for |
 | --- | --- | --- |
 | `latest` | Newest **stable** release of the current major | The default — `pnpm add keyv` |
-| `beta` | Newest **v6 pre-release** | Trying v6 before it ships |
+| `alpha`, `beta`, `rc` | Newest **v6 pre-release** of that kind, such as `rc` → `6.0.0-rc.1` | Trying v6 before it ships |
 | `v5-lts` | Newest **stable v5** release | Pinning the v5 line explicitly (appears once v6 is `latest`) |
 
-> While a major is still in pre-release, `latest` stays on the previous stable major. Today `latest` is **v5** and `beta` is **v6**; when v6 ships stable, `latest` moves to v6 and `v5-lts` tracks the v5 line.
+> While a major is still in pre-release, `latest` stays on the previous stable major. Today `latest` is **v5**, and the v6 pre-releases are on `alpha`, `beta`, and `rc`. When v6 ships stable, `latest` moves to v6 and `v5-lts` tracks the v5 line.
+
+Each pre-release tag moves only when a pre-release of that kind is published, so `beta` can point at an older build than `rc`. Packages that are new in v6, such as `@keyv/serialize-superjson` and `@keyv/encrypt-node`, also have an early pre-release on `latest`, because npm tags a package's first publish as `latest`. Until v6 is stable, check `npm view keyv dist-tags`, then install `keyv` and every `@keyv/*` package at the same exact version, such as `6.0.0-rc.1`.
 
 ## Why keyv@5 works without a special tag
 
 You may notice there is no `v5` or `v6` dist-tag. That is intentional: npm **rejects** dist-tag names that look like a semver version or range, so a tag literally named `v6` is not allowed. Instead, `keyv@5`, `keyv@v5`, and `keyv@6` are interpreted as **semver ranges** (`5.x`, `6.x`) and npm resolves them to the newest matching **stable** release automatically — no tag required.
 
-One consequence: a semver range only matches stable releases. While v6 is in pre-release, `keyv@6` matches nothing, so use **`keyv@beta`** to try it. Once v6 ships a stable release, `keyv@6` starts resolving to it.
+One consequence: a semver range only matches stable releases. While v6 is in pre-release, `keyv@6` matches nothing, so use a pre-release tag such as **`keyv@rc`**, or an exact version, to try it. Once v6 ships a stable release, `keyv@6` starts resolving to it.
 
 ## How releases are tagged
 
 Each release computes its tag from its version:
 
-- **Pre-release** (e.g. `6.0.0-beta.1`) → published under the pre-release channel (`beta`). Never touches `latest`.
+- **Pre-release** → published under a tag named after its pre-release id: `6.0.0-beta.1` goes to `beta`, and `6.0.0-rc.1` goes to `rc`. Never touches `latest`.
 - **Stable, current major** → published under `latest`.
 - **Stable, older major** → published under `v{major}-lts` (e.g. `v5-lts`). An older major can never move `latest`.
 
@@ -75,7 +77,7 @@ Breaking changes — to Keyv's API or to its supported runtimes — only ever la
 
 ### When an underlying dependency releases a breaking major on LTS
 
-Keyv's core has no dependencies, but the storage adapters wrap third-party drivers (for example `@keyv/redis` over its Redis client, `@keyv/sqlite` over its SQLite driver). When one of those drivers ships a breaking major, the question is **not** "did the dependency have a major?" but "**does adopting it change Keyv's own contract?**":
+Keyv's core has a single dependency, `hookified`, but the storage adapters wrap third-party drivers (for example `@keyv/redis` over its Redis client, `@keyv/sqlite` over its SQLite driver). When one of those drivers ships a breaking major, the question is **not** "did the dependency have a major?" but "**does adopting it change Keyv's own contract?**":
 
 - **It can be absorbed** — the adapter handles the difference internally and nothing observable changes for you (same API, same behavior, same supported Node versions). → We ship it as a **minor** release on the LTS line. (A pure security or internal-only fix may be a **patch**.) A dependency major is significant enough that we signal it with a minor rather than a patch, even though your code needs no changes.
 - **It cannot be absorbed** — adopting it would change Keyv's API, alter a default you rely on, or drop a supported runtime (e.g. the driver drops an older Node version). → We **do not** take it on the LTS line. The LTS line stays on the last compatible driver major, and the upgrade lands only on the current development major.

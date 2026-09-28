@@ -11,15 +11,19 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 **Important:** With the release of v6, Keyv v5 is in maintenance mode. v5 only receives security fixes and minor maintenance updates. The previous documentation site is archived at [keyv.org/v5](/v5/). The `v5` branch remains in the monorepo.
 
+> **Using an AI coding agent?** Tell it: *"Upgrade this project to Keyv v6 using https://keyv.org/skills/migrate"*. The skill covers everything on this page and asks before it touches stored data. See [Migrate with an AI Agent](/docs/migration/ai-agent-skill/).
+
 ## Table of Contents
 
 - [Roadmap & Progress](#roadmap--progress)
 - [Quick Migration Guide](#quick-migration-guide)
 - [Breaking Changes](#breaking-changes)
+  - [Node.js 22.19 or Later Is Required](#nodejs-2219-or-later-is-required)
   - [Namespace Overhaul](#namespace-overhaul)
   - [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed)
+  - [`clear()` Without a Namespace Clears More](#clear-without-a-namespace-clears-more)
   - [`opts` Property Removed](#opts-property-removed)
-  - [Serialization Replaces `stringify` and `parse`](#serialization-replaces-stringify-and-parse)
+  - [Serialization Replaces `serialize` and `deserialize`](#serialization-replaces-serialize-and-deserialize)
   - [Hookified for Events and Hooks](#hookified-for-events-and-hooks)
   - [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed)
   - [`deleteMany` Returns `boolean[]`](#deletemany-returns-boolean)
@@ -30,6 +34,9 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Storage Adapters Receive Absolute `expires` Instead of Relative `ttl`](#storage-adapters-receive-absolute-expires-instead-of-relative-ttl)
   - [Returns `undefined` Instead of `null`](#returns-undefined-instead-of-null)
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
+  - [Other Silent Behavior Changes](#other-silent-behavior-changes)
+  - [`@keyv/test-suite` API Changes](#keyvtest-suite-api-changes)
+  - [Libraries That Embed Keyv v5](#libraries-that-embed-keyv-v5)
   - [`@keyv/memcache` Moves from `memjs` to `memcache`](#keyvmemcache-moves-from-memjs-to-memcache)
   - [`@keyv/etcd` Default `ttl` Applies Per Key](#keyvetcd-default-ttl-applies-per-key)
   - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
@@ -82,11 +89,13 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 For most users, migrating from v5 to v6 involves a few key changes:
 
-1. **Keep reading data written by v5** - v5 stored keys under a default `keyv` namespace, and v6 has no default. Without `namespace: 'keyv'`, or the namespace you already used, data written by v5 reads as missing. Redis, Memcache, Valkey, and MongoDB need more than that; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed).
+1. **Upgrade Node.js and pin one version** - v6 requires Node.js 22.19 or later. Install `keyv` and every `@keyv/*` package at the same exact v6 version; see [Versioning & Release Tags](/docs/migration/versioning/).
 
-2. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
+2. **Keep reading data written by v5** - v5 stored keys under a default `keyv` namespace, and v6 has no default. Without `namespace: 'keyv'`, or the namespace you already used, data written by v5 reads as missing. Redis, Memcache, Valkey, and MongoDB need more than that; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed). SQLite converts its table the first time v6 connects, and PostgreSQL, MySQL, and MongoDB have migration scripts. These changes are one-way, so back up first.
 
-3. **Update serialization** - Replace `serialize`/`deserialize` options with the `serialization` adapter. v6 ships a built-in `KeyvJsonSerializer` (no extra package). For SuperJSON or MessagePack, install those packages:
+3. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
+
+4. **Update serialization** - Replace `serialize`/`deserialize` options with the `serialization` adapter. v6 ships a built-in `KeyvJsonSerializer` (no extra package). For SuperJSON or MessagePack, install those packages:
    ```javascript
    // v5
    const keyv = new Keyv({ serialize: JSON.stringify, deserialize: JSON.parse });
@@ -99,11 +108,15 @@ For most users, migrating from v5 to v6 involves a few key changes:
    const keyv = new Keyv({ serialization: superJsonSerializer });
    ```
 
-4. **Update raw value access** - Replace `get(key, { raw: true })` with `getRaw(key)` and `getMany(keys, { raw: true })` with `getManyRaw(keys)`
+5. **Update raw value access** - Replace `get(key, { raw: true })` with `getRaw(key)` and `getMany(keys, { raw: true })` with `getManyRaw(keys)`
 
-5. **Handle new return types** - `deleteMany` and `setMany` now return `boolean[]` instead of a single `boolean`
+6. **Handle new return types** - `deleteMany` and `setMany` now return `boolean[]` instead of a single `boolean`
 
-6. **Attach an `error` listener** - A failed operation now rejects unless an `error` listener is attached, and the `throwOnErrors` option was removed. To get failures back as fallback values, as many v5 methods returned them, add `keyv.on('error', ...)`. See [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed).
+7. **Attach an `error` listener** - A failed operation now rejects unless an `error` listener is attached, and the `throwOnErrors` option was removed. To get failures back as fallback values, as many v5 methods returned them, add `keyv.on('error', ...)`. See [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed).
+
+8. **Check compressed data and libraries built on Keyv v5** - Values that v5 wrote with compression can't be read by v6. Libraries such as `cache-manager` and `cacheable` depend on Keyv v5, so don't hand them a v6 `Keyv` or v6 adapters until they support v6. See [Compression Adapter Interface Change](#compression-adapter-interface-change) and [Libraries That Embed Keyv v5](#libraries-that-embed-keyv-v5).
+
+Many v6 changes don't fail at compile time. In plain JavaScript, removed options are ignored, and `new Keyv('redis://...')` quietly uses an in-memory store. Read [Other Silent Behavior Changes](#other-silent-behavior-changes) before you ship.
 
 For detailed information on each change, see the sections below.
 
@@ -111,13 +124,18 @@ For detailed information on each change, see the sections below.
 
 ## Breaking Changes
 
+### Node.js 22.19 or Later Is Required
+
+Every v6 package declares `"engines": { "node": ">= 22.19.0" }`. v5 had no Node.js floor for `keyv` itself, and most v5 adapters accepted Node.js 18. Update your runtime, your CI matrix, and any `engines`, `.nvmrc`, or Docker base image that pins an older version. See [Browser, Node.js, and Bun](/docs/browser-node-and-bun/) for other runtimes.
+
+---
+
 ### Namespace Overhaul
 
 We have finalized the transition (started in v5) to move all namespace handling to the storage adapters themselves. When you set the namespace on Keyv, it passes it directly to the storage adapter.
 
 **What changed:**
-- `useKeyPrefix` property has been removed
-- `keyPrefix` property has been removed
+- The `useKeyPrefix` option and property have been removed
 - Key prefixing is no longer done at the Keyv layer
 - A namespace set on the storage adapter is kept when Keyv has none. v5 replaced it with Keyv's namespace, `keyv` by default. A namespace passed to Keyv still wins.
 
@@ -127,8 +145,7 @@ import Keyv from 'keyv';
 
 const keyv = new Keyv({
   namespace: 'myapp',
-  useKeyPrefix: true,
-  keyPrefix: 'prefix:'
+  useKeyPrefix: true
 });
 ```
 
@@ -187,13 +204,38 @@ If you are unsure which layout you have, look at one key in your store and choos
 - **Redis:** `<namespace><keyPrefixSeparator><key>`, where the separator defaults to `::`.
 - **Valkey:** `namespace:<namespace>:<key>`, or `sets:<namespace>:<key>` with `useSets: true`.
 
-If the data is a cache you can rebuild, you can skip all of this. The v5 entries stay in the store until they expire or you remove them.
+If the data is a cache you can rebuild, you can skip all of this. The v5 entries stay in the store until they expire or you remove them. On a shared backend, keep a namespace anyway; see [`clear()` Without a Namespace Clears More](#clear-without-a-namespace-clears-more).
+
+**Before you migrate a table or collection:**
+
+- **Back up first.** The SQLite conversion and the PostgreSQL, MySQL, and MongoDB migration scripts rewrite your data in place. None of them can be undone.
+- **SQLite converts on first connect.** The first v6 process that opens a v5 SQLite database rebuilds its table, even a test run or a one-off script. Copy the database file before you point v6 at it.
+- **Stop v5 writers.** v5 and v6 can't share a store. Don't run a rolling deploy where v5 and v6 instances write to the same database at the same time.
+- **Keep `checkExpired` on for converted SQLite rows.** The conversion moves each row's namespace into its own column but doesn't fill the new `expires` column. Converted rows still expire, because Keyv reads the expiry stored inside each value (`checkExpired` defaults to `true`). With `checkExpired: false`, converted rows that had a TTL never expire, and `clearExpired()` skips them until they are written again.
+
+---
+
+### `clear()` Without a Namespace Clears More
+
+In v5 every Keyv instance had a namespace, `keyv` by default, so `clear()` removed only the keys that Keyv wrote. In v6 an instance with no namespace calls the adapter's `clear()` with no namespace, and some adapters then remove much more:
+
+| Adapter | `clear()` with no namespace |
+| --- | --- |
+| Redis | Deletes every string key whose name doesn't contain the separator (`::` by default). With `noNamespaceAffectsAll: true`, runs `FLUSHDB`. |
+| Valkey | Deletes every key in the database. |
+| Etcd | Deletes every key. |
+| DynamoDB | Deletes every item in the table. |
+| Cloudflare KV | Deletes every key in the KV namespace. |
+| Memcache | Flushes the whole server. It did this in v5 too, with or without a namespace. |
+| SQLite, PostgreSQL, MySQL, MongoDB | Deletes only the rows or documents that have no namespace. |
+
+If other data or other apps share the backend, set a namespace on every Keyv instance that calls `clear()`.
 
 ---
 
 ### `opts` Property Removed
 
-In Keyv v5, we began removing `opts` as a passed-around value. In v6, `opts` has been fully removed from the `KeyvStorageAdapter` interface and all storage adapters. The `dialect` property has also been removed. All properties are now directly part of the Keyv class and each storage adapter.
+In Keyv v5, we began removing `opts` as a passed-around value. In v6, `opts` has been removed from the Keyv class and from the `KeyvStorageAdapter` interface. The `dialect` property has also been removed. Settings are now properties on the Keyv class and on each storage adapter. `@keyv/sqlite` still has a deprecated `opts` getter for backward compatibility; don't write new code against it.
 
 **v5 (before):**
 ```javascript
@@ -209,9 +251,11 @@ console.log(keyv.namespace);
 
 ---
 
-### Serialization Replaces `stringify` and `parse`
+### Serialization Replaces `serialize` and `deserialize`
 
-The `stringify` and `parse` options have been replaced with the new `serialization` property that accepts a serialization adapter.
+The `serialize` and `deserialize` options have been replaced with the `serialization` option. It takes a serialization adapter: an object with `stringify` and `parse` methods. A v5 `serialize` function becomes `stringify`, and `deserialize` becomes `parse`. Both still work on the `{ value, expires }` envelope. To turn serialization off, as v5 did with `keyv.serialize = undefined`, pass `serialization: false`.
+
+In plain JavaScript, v6 ignores `serialize` and `deserialize`, so custom functions silently stop running and values are written as JSON. The built-in `KeyvJsonSerializer` writes the same format as v5's `@keyv/serialize` and v4's `json-buffer`, so the switch itself doesn't require rewriting stored data. The `@keyv/serialize` package is not part of v6; remove it from your dependencies.
 
 **v5 (before):**
 ```javascript
@@ -231,6 +275,8 @@ const keyv = new Keyv(); // KeyvJsonSerializer is the default
 // or
 import { superJsonSerializer } from '@keyv/serialize-superjson';
 const keyv = new Keyv({ serialization: superJsonSerializer });
+// or keep your own functions
+const keyv = new Keyv({ serialization: { stringify: mySerialize, parse: myDeserialize } });
 ```
 
 See [Serialization Adapters](#serialization-adapters) for more details.
@@ -242,10 +288,13 @@ See [Serialization Adapters](#serialization-adapters) for more details.
 Keyv now extends [Hookified](https://hookified.org) directly, replacing the custom `EventManager` and `HooksManager` classes. This unifies the event/hook system across Keyv and all storage adapters.
 
 **Breaking Changes:**
-- `keyv.hooks.addHandler(event, fn)` is replaced by `keyv.addHook(event, fn)`
+- `keyv.hooks.addHandler(event, fn)` is replaced by `keyv.onHook(event, fn)` or its alias `keyv.addHook(event, fn)`
 - `keyv.hooks.removeHandler(event, fn)` is replaced by `keyv.removeHook({ event, handler: fn })`
 - `keyv.hooks.handlers` is replaced by `keyv.hooks` (a `Map<string, IHook[]>`)
 - Hook names changed from `pre`/`post` to `before:`/`after:` convention
+- Hook payloads carry the key you passed (`foo`). v5 passed the prefixed key (`keyv:foo`), so code that stripped the prefix must stop
+- Hooks are awaited, so a slow async hook delays the operation it belongs to
+- A hook that throws now emits `error` on Keyv, so the call rejects when no `error` listener is attached. v5 emitted it on `keyv.hooks`, where it was usually ignored
 - The `emitErrors` option has been removed
 - Error handling changed, and the `throwOnErrors` option was removed. See [Error Handling Changed and `throwOnErrors` Was Removed](#error-handling-changed-and-throwonerrors-was-removed).
 
@@ -262,7 +311,7 @@ Keyv now extends [Hookified](https://hookified.org) directly, replacing the cust
 
 The same pattern applies for `GET_MANY`, `GET_RAW`, `GET_MANY_RAW`, `SET_RAW`, `SET_MANY_RAW` hooks.
 
-The old `PRE_`/`POST_` enum values are deprecated but still work. Keyv will emit deprecation warnings when they are used.
+The old `PRE_`/`POST_` enum values are deprecated but still work. When one of them fires, Keyv emits a `warn` event such as `Hook "preSet" is deprecated: Use KeyvHooks.BEFORE_SET ('before:set') instead`. Rename them to silence the warning.
 
 **v5 (before):**
 ```javascript
@@ -342,6 +391,8 @@ With `throwOnErrors: true`, `get` and the calls that emitted `error` rejected in
 - **If you used `throwOnErrors: true`**, remove it. With no `error` listener attached, failed calls reject. But errors that a storage adapter emits on its own, outside any call, are then thrown too, and nothing catches them. Redis and Memcache, for example, emit them when a connection drops. With those adapters you need a listener, and failed calls then return fallback values. v6 has no option that makes calls reject while a listener is attached.
 
 - **Calls that rejected in v5 now return fallback values when a listener is attached.** This covers `getRaw`, `disconnect`, and `iterator`, which stops iterating, and `has`, `hasMany`, `getMany`, and `getManyRaw` on adapters that had their own versions of those methods.
+
+- **`@keyv/redis` keeps its own `throwOnErrors` and `throwOnConnectError` options.** They are adapter options, as in `new KeyvRedis(uri, { throwOnConnectError: true })`, and are unrelated to the removed Keyv option. Keep them if you rely on them. When the adapter rejects because of one of them, it no longer also emits `error`.
 
 See [Events and Errors](/docs/events-and-errors/) for the fallback value each method returns.
 
@@ -450,6 +501,15 @@ const values = await keyv.getMany(['key1', 'key2']);
 const rawValues = await keyv.getManyRaw(['key1', 'key2']);
 ```
 
+In plain JavaScript, `get(key, { raw: true })` doesn't fail. v6 ignores the option and returns the plain value, so code that reads `.expires` from the result gets `undefined`. In TypeScript, `getRaw` is typed `KeyvValue<T> | string | undefined`. Narrow the result before you read `.value` or `.expires` instead of casting it:
+
+```typescript
+const raw = await keyv.getRaw<string>('key');
+if (raw && typeof raw === 'object') {
+  console.log(raw.value, raw.expires);
+}
+```
+
 ---
 
 ### Iterator Changes
@@ -494,7 +554,7 @@ for await (const [key, value] of keyv.iterator()) {
 
 ### Removed `.ttlSupport` from Storage Adapters
 
-The `ttlSupport` property has been removed from storage adapters. Keyv now automatically detects the storage adapter type and uses `KeyvMemoryAdapter` for adapters that don't natively support TTL.
+The `ttlSupport` property has been removed from storage adapters. Keyv now detects what kind of store it was given. It uses a v6 adapter as-is, wraps an older async adapter in `KeyvBridgeAdapter`, and wraps a `Map` or another synchronous Map-like store in `KeyvMemoryAdapter`, which enforces TTLs itself. See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
 
 **v5 (before):**
 ```javascript
@@ -507,7 +567,7 @@ class MyAdapter {
 **v6 (after):**
 ```javascript
 // No need to specify ttlSupport
-// Keyv automatically handles TTL through KeyvMemoryAdapter if needed
+// Keyv wraps adapters that don't declare the v6 contract in KeyvBridgeAdapter
 class MyAdapter {
   // ...
 }
@@ -593,16 +653,20 @@ const value = await keyv.get('nonexistent');
 
 ### Compression Adapter Interface Change
 
-Compression adapters now use a simplified interface:
+Compression adapters now implement the `KeyvCompressionAdapter` interface. Both methods take a string and resolve to a string:
 
 ```typescript
-interface KeyvCompression {
-  compress: (value: string) => string;
-  decompress: (value: string) => T;
-}
+type KeyvCompressionAdapter = {
+  compress(value: string): Promise<string>;
+  decompress(value: string): Promise<string>;
+};
 ```
 
-**Important:** Compression requires `serialization` to be enabled (default) or values must be strings.
+v6 compresses the whole serialized entry, `expires` included, and stores the result as base64. The v5 adapters' `serialize`, `deserialize`, and `opts` members are gone.
+
+**Data compressed by v5 can't be read by v6.** v5 compressed only the `value` field inside a JSON envelope, and v6 expects the whole entry to be compressed. Reading a v5 entry fails with a decompression error, such as `incorrect header check` from `@keyv/compress-gzip`. Keyv emits `error`, and the call returns `undefined` when a listener is attached or rejects when none is. Treat a compressed v5 store as a cache that v6 repopulates, or read the old entries with v5 and write them again with v6.
+
+**Important:** Compression and encryption only run when serialization is enabled, which is the default. With `serialization: false`, Keyv stores values as they are, without compressing or encrypting them.
 
 **v6 usage:**
 ```javascript
@@ -612,11 +676,60 @@ import KeyvGzip from '@keyv/compress-gzip';
 const compression = new KeyvGzip();
 const keyv = new Keyv({ compression });
 
-// Serialization is enabled by default (@keyv/serialize)
+// Serialization is enabled by default (built-in KeyvJsonSerializer)
 await keyv.set('key', { foo: 'bar' });
 ```
 
-> **Note:** Encryption and compression require string values. If your values are not strings, you must use `serialization`.
+---
+
+### Other Silent Behavior Changes
+
+These changes don't cause compile errors, and most of them don't throw. Check your code for each one:
+
+- **A connection string is ignored.** `new Keyv('redis://localhost:6379')` and `new Keyv({ uri: 'redis://localhost:6379' })` don't load an adapter. v6 quietly uses an in-memory store, and TypeScript accepts both forms. Pass an adapter instead: `new Keyv(new KeyvRedis('redis://localhost:6379'))`.
+- **Removed options are ignored.** In plain JavaScript, `serialize`, `deserialize`, `useKeyPrefix`, `emitErrors`, and `throwOnErrors` have no effect.
+- **`keyv.store` returns the wrapper.** For a `Map` or an older adapter, `keyv.store` is the `KeyvMemoryAdapter` or `KeyvBridgeAdapter` that Keyv created, and the object you passed in is at `keyv.store.store`. v5 returned your object.
+- **A `Map` holds different entries.** A `Map` store now holds `{ value, expires }` objects under `namespace:key`, or under the bare key when there is no namespace. v5 stored serialized strings under `keyv:key`. Code that reads the `Map` directly must change.
+- **Array results are always truthy.** `deleteMany` and `delete([...])` return `boolean[]`, so `if (await keyv.deleteMany(keys))` is always true. Check `results.every(Boolean)` instead.
+- **A TTL of zero or less means no TTL.** v5 treated only `0` that way. Fractional TTLs are rounded up to the next millisecond.
+- **Empty-string keys are rejected.** `set('', value)` and `delete('')` return `false`, and `get('')` returns `undefined`.
+- **Symbols can't be stored.** `set(key, Symbol())` emits `error`, so it rejects when no listener is attached and returns `false` when one is.
+- **`has()` reads the value.** With `checkExpired` on, which is the default, `has` reads and decodes the entry so it can skip expired values.
+- **Stats count per key.** `getMany(['a', 'b'])` now records a hit or miss for each key, not one for the call. A failed read counts as an error, not a miss. The v5 `StatsManager` methods `hit()`, `miss()`, `set()`, `delete()`, and `hitsOrMisses()` were removed.
+- **Some exports were removed.** `CompressionAdapter`, `Serialize`, `Deserialize`, `StoredData`, `StoredDataNoRaw`, and `StoredDataRaw` are gone, and `IEventEmitter` now comes from `hookified`. `KeyvStoreAdapter`, `DeserializedData`, and `KeyvCompression` remain as deprecated aliases of `KeyvStorageAdapter`, `KeyvValue`, and `KeyvCompressionAdapter`.
+
+---
+
+### `@keyv/test-suite` API Changes
+
+If you maintain a storage adapter, update its tests:
+
+- The package has no default export. Import the suites by name.
+- The first argument is Vitest's `test` (or `it`) function. v5 took the whole `vitest` module.
+- `keyvNamespaceTest` is now `keyvNamespaceTests`, and `keyvCompresstionTests` is now `compressionTestSuite`.
+- New suites test the adapter directly, without Keyv: `storageTestSuite` runs `storageBasicTests`, `storageBatchTests`, `storageIteratorTests`, `storageTtlTests`, `storageNamespaceTests`, and `storageDisconnectTests`.
+
+```javascript
+import { keyvTestSuite, storageTestSuite } from '@keyv/test-suite';
+import { Keyv } from 'keyv';
+import { test } from 'vitest';
+import MyAdapter from './src/index.js';
+
+const store = () => new MyAdapter();
+keyvTestSuite(test, Keyv, store);
+storageTestSuite(test, store);
+```
+
+---
+
+### Libraries That Embed Keyv v5
+
+Some libraries depend on Keyv v5 and take Keyv instances or adapters from your code. For example, `cache-manager` 7, `cacheable` 2, `@cacheable/memory`, and `cacheable-request` 13 all depend on `keyv` `^5.6.0`. Mixing them with v6 breaks quietly:
+
+- **A v6 `Keyv` passed to a v5 library.** `cache-manager` calls `store.get(key, { raw: true })` and reads `.expires`. v6 ignores `raw`, so `ttl()` and the refresh logic in `wrap()` stop working.
+- **A v6 adapter used by a v5 `Keyv`.** A v5 Keyv passes a relative `ttl` where a v6 adapter expects an absolute `expires` timestamp, so entries expire at the wrong time, usually at once.
+
+Check which Keyv version a library needs with `npm view <package> dependencies.keyv peerDependencies.keyv`. Keep the Keyv instances and adapters you pass to such a library on v5 until it supports v6. If `keyv` appears in your project only as a dependency of another package, you have nothing to migrate. Don't force v6 onto that package with `overrides` or `resolutions`.
 
 ---
 
@@ -676,7 +789,7 @@ keyv: 6.0.0
 @keyv/redis: 6.0.0
 @keyv/sqlite: 6.0.0
 @keyv/postgres: 6.0.0
-@keyv/serialize: 6.0.0
+@keyv/serialize-superjson: 6.0.0
 @keyv/compress-gzip: 6.0.0
 ```
 
@@ -748,13 +861,13 @@ keyv.serialization = undefined;
 
 #### Custom Serialization
 
-Create your own serialization adapter using the `KeyvSerialization` interface:
+Create your own serialization adapter with the `KeyvSerializationAdapter` type. Either method may return a promise:
 
 ```typescript
-interface KeyvSerialization {
-  parse: (value: string) => T;
-  stringify: (value: unknown) => string;
-}
+type KeyvSerializationAdapter = {
+  stringify: (object: unknown) => string | Promise<string>;
+  parse: <T>(data: string) => T | Promise<T>;
+};
 ```
 
 ```javascript
@@ -791,16 +904,16 @@ await keyv.set('sensitive', { password: 'secret' });
 
 #### Custom Encryption
 
-Create your own encryption adapter using the `KeyvEncryption` interface:
+Create your own encryption adapter with the `KeyvEncryptionAdapter` type. Either method may return a promise:
 
 ```typescript
-interface KeyvEncryption {
-  encrypt: (value: string) => string;
-  decrypt: (value: string) => T;
-}
+type KeyvEncryptionAdapter = {
+  encrypt: (data: string) => string | Promise<string>;
+  decrypt: (data: string) => string | Promise<string>;
+};
 ```
 
-> **Note:** Encryption requires string values. Use `serialization` (enabled by default) if your values are not strings.
+> **Note:** Encryption runs on the serialized string, so it only works while `serialization` is enabled, which is the default.
 
 ---
 
@@ -843,9 +956,11 @@ Keyv v6 includes `KeyvMemoryAdapter`, a wrapper class for storage types that don
 
 **Features:**
 - Handles namespacing using key prefixing
-- Extends the adapter with v6 functions: `getMany`, `setMany`, `getRaw`, `getManyRaw`
+- Adds the v6 batch methods the store lacks: `getMany`, `setMany`, `hasMany`, and `deleteMany`
 - Attempts iteration using various strategies
 - Adds TTL support and handles expiration
+
+Older async adapters go through `KeyvBridgeAdapter` instead. See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
 
 ```javascript
 import Keyv, { detectKeyvStorage } from 'keyv';

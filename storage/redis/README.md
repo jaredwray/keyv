@@ -438,6 +438,8 @@ const cache = new Cacheable( { secondary, nonBlocking: true } );
 
 This will make it so that the secondary does not block the primary cache and will be very fast. 🚀
 
+> **Note:** `cacheable` 2 depends on Keyv v5 and wraps a store like this one in its own v5 `Keyv`. A v5 `Keyv` passes a relative `ttl` where a v6 adapter expects an absolute `expires`, so entries expire at the wrong time, usually at once. Check which Keyv version your `cacheable` needs with `npm view cacheable dependencies.keyv`, and keep this setup on v5 until it supports v6. See [Libraries That Embed Keyv v5](https://keyv.org/docs/migration/v5-to-v6/#libraries-that-embed-keyv-v5).
+
 # Clustering
 
 If you are using a Redis Cluster, you can pass in the `redisOptions` directly. Here is an example of how to do that:
@@ -616,6 +618,8 @@ Client events: https://www.npmjs.com/package/redis#events
 
 # Migrating from v3 to v4
 
+> **Note:** This section applies to versions before v6. Keyv v6 removed the `useKeyPrefix` option: TypeScript rejects it and JavaScript ignores it. In v6 the adapter owns namespacing, so leave the option out. See [Fixing Double Prefixing of Keys](#fixing-double-prefixing-of-keys).
+
 Overall the API is the same as v3 with additional options and performance improvements. Here are the main changes:
 * The `ioredis` library has been removed in favor of the `redis` aka `node-redis` library. If you want to use ioredis you can use `@keyv/valkey`
 * The `useUnlink` option has been added to use `UNLINK` instead of `DEL` and set to true by default.
@@ -641,6 +645,8 @@ We no longer support redis sets. This is due to the fact that it caused signific
 # Using with NestJS
 
 > You can integrate `@keyv/redis` with NestJS by creating a custom `CacheModule`. This allows you to use Keyv as a cache store in your application.
+
+> **Note:** `cache-manager` 7 depends on Keyv v5. It reads expiry data with `store.get(key, { raw: true })`, which a v6 `Keyv` ignores, so `ttl()` and the refresh logic in `wrap()` stop working with a v6 store. Check which Keyv version your `cache-manager` needs with `npm view cache-manager dependencies.keyv`. See [Libraries That Embed Keyv v5](https://keyv.org/docs/migration/v5-to-v6/#libraries-that-embed-keyv-v5).
 
 ### 1. Install Dependencies
 

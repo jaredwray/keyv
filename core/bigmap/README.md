@@ -58,6 +58,7 @@
 - [BigMapEvents](#bigmapevents)
 - [defaultHashFunction(key, storeSize)](#defaulthashfunctionkey-storesize)
 - [Benchmark](#benchmark)
+- [Migrating to v6](#migrating-to-v6)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -661,6 +662,18 @@ This benchmark compares `BigMap` against the native JavaScript `Map` for combine
 <!-- BENCHMARK-RESULTS-END -->
 
 If you want to see comparable performance just set the `storeSize: 1` and it is `-1%` off from native `Map`.
+
+# Migrating to v6
+
+Keyv v5 used `@keyv/bigmap` 1.x. Changes in v6:
+
+- **Events.** `BigMap` now emits `set`, `delete` and `clear` through its [Hookified](https://github.com/jaredwray/hookified) base, and the new `BigMapEvents` enum names them. In 1.x, `BigMap` extended Hookified but emitted no events. See [Events](#events).
+- **`MapInterfacee` renamed.** The exported type is now `MapInterface`.
+- **`set()` returns the `BigMap`.** Calls chain like `Map.set`. In 1.x, `set()` returned the internal `Map` that held the key.
+- **Default `storeSize` is `2`.** It was `4` in 1.x. Pass `storeSize: 4` to keep the old layout.
+- **Hashing.** `defaultHashFunction` is now a built-in hash instead of Hashery, so keys land in different internal `Map`s. A custom `storeHashFunction` now receives the real `storeSize` (1.x passed `storeSize - 1`), and an out-of-range result is wrapped into range instead of throwing. This matters only if you read `store`, `getStore()` or `getStoreMap()` directly.
+- **Dependencies.** `hashery` moved from `^1.4` to `^3` and is still re-exported as `Hashery`. `hookified` moved from `^1.15` to `^3`; if you pass Hookified options to `BigMap`, note that `logger` is now `eventLogger`.
+- **`createKeyv`** still returns a `Keyv` instance backed by a new `BigMap`. Keyv v6 wraps the `BigMap` in its `KeyvMemoryAdapter`, which handles TTL and namespaces, so the `BigMap` itself is at `keyv.store.store`.
 
 # Contributing
 

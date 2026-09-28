@@ -213,6 +213,12 @@ All standard options (`wal`, `busyTimeout`, etc.) are supported.
 
 ## Breaking changes
 
+### Driver changed from `sqlite3`
+
+v5 used the callback-based `sqlite3` package. v6 no longer depends on it. It prefers the built-in `node:sqlite` driver on Node.js and `bun:sqlite` on Bun, and falls back to the bundled `better-sqlite3`. See [Multi-Driver Support](#multi-driver-support).
+
+If you must keep `sqlite3`, install it yourself and pass it with `createSqlite3Driver(sqlite3)`. See [Using sqlite3](#using-sqlite3). Otherwise, if your project lists `sqlite3` only for `@keyv/sqlite`, you can remove it.
+
 ### Properties instead of opts
 
 The `opts` getter still exists for backward compatibility and returns all current settings as a plain object. New top-level getters and setters have been added for `namespace` and `clearExpiredInterval`:
@@ -226,11 +232,15 @@ store.clearExpiredInterval = 60_000;
 
 In v5, namespaces were stored as key prefixes in the `key` column (e.g. `key="myns:mykey"` with no namespace column). In v6, the namespace is stored in a dedicated `namespace` column (e.g. `key="mykey"`, `namespace="myns"`). This enables more efficient queries and proper namespace isolation.
 
-The adapter automatically detects old schemas and migrates existing data on connect — no manual migration steps are needed. During migration, prefixed keys like `myns:mykey` are split into `key="mykey"` and `namespace="myns"`.
+The adapter automatically detects old schemas and migrates existing data the first time a v6 `KeyvSqlite` connects to the database. It connects as soon as you create it. No manual migration steps are needed. The migration runs in a single transaction. During migration, prefixed keys like `myns:mykey` are split into `key="mykey"` and `namespace="myns"`.
+
+**The migration is one-way.** Before you upgrade, back up the database file and stop every v5 process that writes to it. Don't run v5 and v6 against the same file.
 
 Keyv v5 used `keyv` as the namespace when none was set, so rows written that way migrate into namespace `keyv`. Pass `namespace: 'keyv'` to Keyv to keep reading them: `new Keyv(new KeyvSqlite(uri), { namespace: 'keyv' })`. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed).
 
 **Colon caveat:** migration splits on the **first** colon. That is correct for v5 namespaced keys (`namespace:actualKey`, including keys that themselves contain colons). It is incorrect for colon-containing keys that v5 stored **without a prefix**, which happens only when v5 ran with `useKeyPrefix: false` or an empty namespace (e.g. `http://example.com` becomes `namespace="http"`, `key="//example.com"`). If you stored colon-containing keys that way, migrate those rows yourself before upgrading.
+
+**Expiry caveat:** migrated rows keep their expiry inside the stored value, but the new `expires` column is left `NULL`. Keyv still enforces that expiry on read through its `checkExpired` option (default `true`), so keep `checkExpired` enabled while you have migrated data. `clearExpired()` and `clearExpiredInterval` only use the `expires` column, so they don't remove migrated rows until those rows are written again.
 
 ### Hookified integration
 
@@ -242,7 +252,7 @@ The adapter now extends [Hookified](https://hookified.org) instead of a custom E
 
 v6 adds an `expires BIGINT` column to the table. Keyv core computes the absolute expiry and passes it to the adapter as the `expires` argument on `set` / `setMany` — the adapter stores that timestamp directly and does **not** parse the serialized value. A partial index is created on the `expires` column for efficient cleanup queries.
 
-The schema migration is automatic on connect — existing tables get the column added via `ALTER TABLE ... ADD COLUMN`.
+The schema migration is automatic on connect. v5 tables get the column when they are rebuilt (see [Native namespace support](#native-namespace-support)). Tables that already have a `namespace` column get it via `ALTER TABLE ... ADD COLUMN`.
 
 ### `clearExpired()` method
 
