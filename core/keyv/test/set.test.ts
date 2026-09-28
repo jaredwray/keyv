@@ -63,6 +63,20 @@ describe("Keyv", async () => {
 });
 
 describe("ttl", () => {
+	test("passes the store whole-millisecond expires for a fractional ttl", async () => {
+		const adapter = new KeyvMemoryAdapter(new Map());
+		const setSpy = vi.spyOn(adapter, "set");
+		const setManySpy = vi.spyOn(adapter, "setMany");
+		const keyv = new Keyv({ store: adapter });
+
+		expect(await keyv.set("single", "value", 1500.5)).toBe(true);
+		expect(await keyv.setMany([{ key: "many", value: "value", ttl: 2500.25 }])).toEqual([true]);
+
+		expect(Number.isInteger(setSpy.mock.calls[0][2])).toBe(true);
+		expect(Number.isInteger(setManySpy.mock.calls[0][0][0].expires)).toBe(true);
+		expect(await keyv.get("single")).toBe("value");
+	});
+
 	test("Keyv passes ttl info to stores", async () => {
 		expect.assertions(1);
 		// Freeze time: the storage boundary now carries an absolute `expires`, and the memory

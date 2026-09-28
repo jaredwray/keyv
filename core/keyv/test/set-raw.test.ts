@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import { describe, expect, test } from "vitest";
-import { Keyv, KeyvHooks } from "../src/index.js";
+import { describe, expect, test, vi } from "vitest";
+import { Keyv, KeyvHooks, KeyvMemoryAdapter } from "../src/index.js";
 import { createStore } from "./test-utils.js";
 
 describe("Keyv Set Raw", async () => {
@@ -74,6 +74,22 @@ describe("Keyv Set Raw", async () => {
 		expect(receivedTtl).toBeDefined();
 		expect(receivedTtl).toBeGreaterThan(59_000);
 		expect(receivedTtl).toBeLessThanOrEqual(60_000);
+	});
+
+	test("should pass the store expires rounded up to a whole millisecond", async () => {
+		const adapter = new KeyvMemoryAdapter(new Map());
+		const setSpy = vi.spyOn(adapter, "set");
+		const keyv = new Keyv({ store: adapter });
+		const expires = Date.now() + 60_000.5;
+
+		expect(await keyv.setRaw(faker.string.alphanumeric(10), { value: "test", expires })).toBe(true);
+		expect(setSpy.mock.calls[0][2]).toBe(Math.ceil(expires));
+
+		await keyv.setRaw(faker.string.alphanumeric(10), {
+			value: "test",
+			expires: Number.POSITIVE_INFINITY,
+		});
+		expect(setSpy.mock.calls[1][2]).toBeUndefined();
 	});
 
 	test("should not pass ttl to store when expires is not set", async () => {
@@ -294,6 +310,20 @@ describe("Keyv Set Many Raw", async () => {
 		}));
 		const results = await keyv.setManyRaw(entries);
 		expect(results).toEqual([true, true]);
+	});
+
+	test("setManyRaw should pass the store expires rounded up to a whole millisecond", async () => {
+		const adapter = new KeyvMemoryAdapter(new Map());
+		const setManySpy = vi.spyOn(adapter, "setMany");
+		const keyv = new Keyv({ store: adapter });
+		const expires = Date.now() + 60_000.5;
+
+		expect(
+			await keyv.setManyRaw([
+				{ key: faker.string.alphanumeric(10), value: { value: "test", expires } },
+			]),
+		).toEqual([true]);
+		expect(setManySpy.mock.calls[0][0][0].expires).toBe(Math.ceil(expires));
 	});
 
 	test("setManyRaw should derive ttl from value.expires per entry", async () => {

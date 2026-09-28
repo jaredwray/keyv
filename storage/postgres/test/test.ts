@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Hookified } from "hookified";
 import Keyv from "keyv";
+import type { Pool } from "pg";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvPostgres, { createKeyv } from "../src/index.js";
 
@@ -245,6 +246,17 @@ describe("getMany", () => {
 });
 
 describe("set and setMany", () => {
+	test("stores values set through Keyv with a fractional ttl", async () => {
+		const keyv = new Keyv({ store: new KeyvPostgres(postgresUri) });
+		const key = faker.string.alphanumeric(10);
+		expect(await keyv.set(key, "value", 1500.5)).toBe(true);
+		expect(await keyv.setMany([{ key: `${key}-many`, value: "value", ttl: 2500.25 }])).toEqual([
+			true,
+		]);
+		expect(await keyv.get(key)).toBe("value");
+		expect(await keyv.get(`${key}-many`)).toBe("value");
+	});
+
 	test("stores and retrieves when constructed with a uri string", async () => {
 		const keyv = new KeyvPostgres(postgresUri);
 		const key = faker.string.alphanumeric(10);
@@ -1050,6 +1062,38 @@ describe("connection", () => {
 		await keyv.get(faker.string.alphanumeric(10));
 		await keyv.disconnect();
 		await keyv.disconnect();
+	});
+
+	test("releases the pool it connected with after uri changes", async () => {
+		const applicationName = `uri-change-${faker.string.alphanumeric(8)}`;
+		const otherUri = `${postgresUri}?application_name=${applicationName}`;
+		const keyv = new KeyvPostgres({ uri: postgresUri, application_name: applicationName });
+		const other = new KeyvPostgres({ uri: otherUri, application_name: applicationName });
+		const connection = (keyv as unknown as { _pool: Pool })._pool;
+		await keyv.get(faker.string.alphanumeric(10));
+
+		keyv.uri = otherUri;
+		await keyv.disconnect();
+
+		const key = faker.string.alphanumeric(10);
+		expect(await other.set(key, "value")).toBe(true);
+		expect(await other.get(key)).toBe("value");
+		expect(connection.ended).toBe(true);
+		await other.disconnect();
+	});
+
+	test("releases a shared pool reference once when disconnect is called twice", async () => {
+		const applicationName = `disconnect-shared-${faker.string.alphanumeric(8)}`;
+		const first = new KeyvPostgres({ uri: postgresUri, application_name: applicationName });
+		const second = new KeyvPostgres({ uri: postgresUri, application_name: applicationName });
+		await first.get(faker.string.alphanumeric(10));
+		await first.disconnect();
+		await first.disconnect();
+
+		const key = faker.string.alphanumeric(10);
+		expect(await second.set(key, "value")).toBe(true);
+		expect(await second.get(key)).toBe("value");
+		await second.disconnect();
 	});
 
 	test("keeps a shared pool open until the last adapter disconnects", async () => {

@@ -880,7 +880,7 @@ Keys must always be strings. Values can be of any type.
 
 Set a value.
 
-By default keys are persistent. You can set an expiry TTL in milliseconds.
+By default keys are persistent. You can set an expiry TTL in milliseconds. A fractional TTL is rounded up to a whole millisecond, since stores such as PostgreSQL and Redis only accept whole-millisecond expiry times.
 
 Returns a promise which resolves to `true`.
 
@@ -906,7 +906,7 @@ Returns a promise which resolves to an array of raw stored data for the keys or 
 
 ## .setRaw(key, value)
 
-Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `KeyvValue` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If you need TTL-based expiration, set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`). The store-level TTL is derived automatically from `value.expires`.
+Sets a raw value in the store without wrapping. This is the write-side counterpart to `.getRaw()`. The caller provides the `KeyvValue` envelope directly (`{ value, expires? }`) instead of having Keyv wrap it. The envelope is still serialized before storing so that all read paths (`get()`, `getRaw()`, `has()`, `getManyRaw()`) work consistently. If you need TTL-based expiration, set `expires` on the value directly (e.g. `{ value: 'bar', expires: Date.now() + 60000 }`). The store-level TTL is derived automatically from `value.expires`, rounded up to a whole millisecond. An `expires` that isn't a finite number gives no store-level expiry.
 
 Returns a promise which resolves to `true`.
 
