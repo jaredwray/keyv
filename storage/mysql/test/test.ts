@@ -963,6 +963,103 @@ describe("v6 migration", () => {
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 		}
 	});
+
+	test("migration script keeps a my_row_id primary key that the table's owner added", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_script_owner_row_id_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexName = `${table}_key_namespace_idx`;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX \`${indexName}\` (namespace, id))`,
+			);
+			await admin.query(
+				`ALTER TABLE ${tableEsc} ADD COLUMN my_row_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${tableEsc} (id, value) VALUES (?, ?)`, ["owned", "row"]),
+			);
+
+			await execFileAsync(
+				process.execPath,
+				["scripts/migrate-v6.ts", "--uri", uri, "--table", table],
+				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			);
+
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["my_row_id"]);
+			const index = await admin.query<mysql.RowDataPacket[]>(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
+			);
+			expect(index.map((row) => row.Column_name)).toEqual(["namespace", "id"]);
+			const rows = await admin.query<mysql.RowDataPacket[]>(
+				`SELECT CONVERT(id USING utf8mb4) AS id, my_row_id FROM ${tableEsc}`,
+			);
+			expect(rows).toEqual([{ id: "owned", my_row_id: 1 }]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("migration script replaces a primary key on a prefix of namespace and id", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_script_prefix_pk_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, PRIMARY KEY (namespace(10), id(10)))`,
+			);
+
+			await execFileAsync(
+				process.execPath,
+				["scripts/migrate-v6.ts", "--uri", uri, "--table", table],
+				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			);
+
+			const primaryKey = await admin.query<mysql.RowDataPacket[]>(
+				`SHOW INDEX FROM ${tableEsc} WHERE Key_name = 'PRIMARY'`,
+			);
+			expect(primaryKey.map((row) => [row.Column_name, row.Sub_part])).toEqual([
+				["namespace", null],
+				["id", null],
+			]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("migration script replaces a generated primary key that SHOW statements hide", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_script_hidden_gipk_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexEsc = `\`${table}_key_namespace_idx\``;
+		const connection = mysql.createConnection(uri).promise();
+
+		try {
+			await connection.query("SET SESSION sql_generate_invisible_primary_key = ON");
+			await connection.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexEsc} (namespace, id))`,
+			);
+			// The script's connection won't show the generated key.
+			await admin.query("SET GLOBAL show_gipk_in_create_table_and_information_schema = OFF");
+
+			await execFileAsync(
+				process.execPath,
+				["scripts/migrate-v6.ts", "--uri", uri, "--table", table],
+				{ cwd: new URL("../", import.meta.url), encoding: "utf8" },
+			);
+
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
+			await expect(connection.query(`SELECT my_row_id FROM ${tableEsc}`)).rejects.toMatchObject({
+				errno: 1054,
+			});
+		} finally {
+			await admin.query("SET GLOBAL show_gipk_in_create_table_and_information_schema = ON");
+			await connection.end();
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
 });
 
 describe("primary key", () => {
@@ -1039,6 +1136,164 @@ describe("primary key", () => {
 			expect(columns.map((column) => column.Field)).not.toContain("my_row_id");
 		} finally {
 			await admin.query("SET GLOBAL sql_generate_invisible_primary_key = OFF");
+			await connection.end();
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("keeps a my_row_id primary key that the table's owner added", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_owner_row_id_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexEsc = `\`${table}_key_namespace_idx\``;
+
+		try {
+			// A table from an earlier v6 release, which had no primary key, and a key its owner added.
+			// MySQL only counts an invisible first column as its generated key, so this is the owner's.
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexEsc} (namespace, id))`,
+			);
+			await admin.query(
+				`ALTER TABLE ${tableEsc} ADD COLUMN my_row_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${tableEsc} (id, value) VALUES (?, ?)`, ["owned", "row"]),
+			);
+
+			const keyv = new KeyvMysql({ uri, table });
+			expect(await keyv.set("key", "value")).toBe(true);
+			expect(await keyv.set("key", "updated")).toBe(true);
+			expect(await keyv.get("key")).toBe("updated");
+
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["my_row_id"]);
+			const rows = await admin.query<mysql.RowDataPacket[]>(
+				`SELECT CONVERT(id USING utf8mb4) AS id, my_row_id FROM ${tableEsc} ORDER BY my_row_id`,
+			);
+			expect(rows).toEqual([
+				{ id: "owned", my_row_id: 1 },
+				{ id: "key", my_row_id: 2 },
+			]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("keeps a my_row_id column the table's owner added to a table without a primary key", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_owner_row_id_column_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexEsc = `\`${table}_key_namespace_idx\``;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, my_row_id BIGINT, UNIQUE INDEX ${indexEsc} (namespace, id))`,
+			);
+			await admin.query(
+				mysql.format(`INSERT INTO ${tableEsc} (id, value, my_row_id) VALUES (?, ?, ?)`, [
+					"owned",
+					"row",
+					42,
+				]),
+			);
+
+			const keyv = new KeyvMysql({ uri, table });
+			expect(await keyv.set("key", "value")).toBe(true);
+
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
+			const rows = await admin.query<mysql.RowDataPacket[]>(
+				mysql.format(`SELECT my_row_id FROM ${tableEsc} WHERE id = ?`, ["owned"]),
+			);
+			expect(rows).toEqual([{ my_row_id: 42 }]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("keeps a primary key the table's owner added and makes namespace and id unique", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_owner_pk_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexName = `${table}_key_namespace_idx`;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(row_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '')`,
+			);
+
+			const keyv = new KeyvMysql({ uri, table });
+			expect(await keyv.set("key", "value")).toBe(true);
+			expect(await keyv.set("key", "updated")).toBe(true);
+			expect(await keyv.get("key")).toBe("updated");
+
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["row_id"]);
+			const index = await admin.query<mysql.RowDataPacket[]>(
+				mysql.format(`SHOW INDEX FROM ${tableEsc} WHERE Key_name = ?`, [indexName]),
+			);
+			expect(index.map((row) => [row.Column_name, row.Non_unique])).toEqual([
+				["namespace", 0],
+				["id", 0],
+			]);
+			const rows = await admin.query<mysql.RowDataPacket[]>(`SELECT id FROM ${tableEsc}`);
+			expect(rows).toHaveLength(1);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("replaces a primary key that covers only a prefix of namespace and id", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_prefix_pk_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+
+		try {
+			await admin.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, PRIMARY KEY (namespace(10), id(10)))`,
+			);
+
+			// Both keys start with the same 10 bytes, which the prefix key treats as one key.
+			const keyv = new KeyvMysql({ uri, table });
+			expect(await keyv.set("shared-prefix-one", "one")).toBe(true);
+			expect(await keyv.set("shared-prefix-two", "two")).toBe(true);
+			expect(await keyv.get("shared-prefix-one")).toBe("one");
+			expect(await keyv.get("shared-prefix-two")).toBe("two");
+
+			const primaryKey = await admin.query<mysql.RowDataPacket[]>(
+				`SHOW INDEX FROM ${tableEsc} WHERE Key_name = 'PRIMARY'`,
+			);
+			expect(primaryKey.map((row) => [row.Column_name, row.Sub_part])).toEqual([
+				["namespace", null],
+				["id", null],
+			]);
+		} finally {
+			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
+		}
+	});
+
+	test("replaces a generated primary key that the server hides from SHOW statements", async () => {
+		const admin = new KeyvMysql(uri);
+		const table = `keyv_hidden_gipk_${faker.string.alphanumeric(12)}`;
+		const tableEsc = `\`${table}\``;
+		const indexEsc = `\`${table}_key_namespace_idx\``;
+		const connection = mysql.createConnection(uri).promise();
+
+		try {
+			await connection.query("SET SESSION sql_generate_invisible_primary_key = ON");
+			await connection.query(
+				`CREATE TABLE ${tableEsc}(id VARBINARY(1020) NOT NULL, value TEXT, namespace VARBINARY(1020) NOT NULL DEFAULT '', expires BIGINT UNSIGNED DEFAULT NULL, UNIQUE INDEX ${indexEsc} (namespace, id))`,
+			);
+			// The adapter's connections won't show the generated key.
+			await admin.query("SET GLOBAL show_gipk_in_create_table_and_information_schema = OFF");
+
+			const keyv = new KeyvMysql({ uri, table });
+			expect(await keyv.set("key", "value")).toBe(true);
+			expect(await keyv.get("key")).toBe("value");
+
+			expect(await primaryKeyColumns(admin, tableEsc)).toEqual(["namespace", "id"]);
+			await expect(connection.query(`SELECT my_row_id FROM ${tableEsc}`)).rejects.toMatchObject({
+				errno: 1054,
+			});
+		} finally {
+			await admin.query("SET GLOBAL show_gipk_in_create_table_and_information_schema = ON");
 			await connection.end();
 			await admin.query(`DROP TABLE IF EXISTS ${tableEsc}`);
 		}
