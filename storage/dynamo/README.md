@@ -99,7 +99,7 @@ import Keyv from 'keyv';
 import KeyvDynamo from '@keyv/dynamo';
 
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
-const keyv = new Keyv(store, { useKeyPrefix: false });
+const keyv = new Keyv(store);
 
 // set a value
 await keyv.set('foo', 'bar');
@@ -123,13 +123,13 @@ await keyv.clear();
 import Keyv from 'keyv';
 import KeyvDynamo from '@keyv/dynamo';
 
+// Keyv passes its namespace to the adapter, which stores `foo` as `namespace1:foo`.
+// Give each Keyv instance its own adapter.
 const store1 = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
-store1.namespace = 'namespace1';
-const keyv1 = new Keyv(store1, { namespace: 'namespace1', useKeyPrefix: false });
+const keyv1 = new Keyv(store1, { namespace: 'namespace1' });
 
 const store2 = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
-store2.namespace = 'namespace2';
-const keyv2 = new Keyv(store2, { namespace: 'namespace2', useKeyPrefix: false });
+const keyv2 = new Keyv(store2, { namespace: 'namespace2' });
 
 // keys are isolated by namespace
 await keyv1.set('foo', 'bar1');

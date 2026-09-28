@@ -31,8 +31,8 @@
  * `v{major}-lts` tag is just the (mandatory) tag the publish runs under, and a
  * self-documenting alias. There is intentionally no `v5`/`v6` tag: npm rejects
  * dist-tag names that look like a semver range, so `keyv@6` is always the range
- * `6.x`, never a tag. See website/site/docs/versioning.md for the user-facing
- * explanation.
+ * `6.x`, never a tag. See website/site/docs/migration/versioning.md for the
+ * user-facing explanation.
  *
  * ## Why everything is a single `stage publish --tag` (no `npm dist-tag add`)
  *
