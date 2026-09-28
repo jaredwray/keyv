@@ -83,7 +83,7 @@ export default {
   async fetch(request, env) {
     // `bind` is the default mode; passing a binding is all you need.
     const store = new KeyvCloudflareKV({ kvNamespace: env.MY_KV });
-    const keyv = new Keyv(store, { useKeyPrefix: false });
+    const keyv = new Keyv(store);
 
     await keyv.set('foo', 'bar');
     return new Response(await keyv.get('foo'));
@@ -113,7 +113,7 @@ const store = new KeyvCloudflareKV({
   apiToken: 'your-api-token',
 });
 
-const keyv = new Keyv(store, { useKeyPrefix: false });
+const keyv = new Keyv(store);
 
 await keyv.set('foo', 'bar');
 const value = await keyv.get('foo'); // 'bar'
@@ -128,11 +128,13 @@ const value = await keyv.get('foo'); // 'bar'
 import Keyv from 'keyv';
 import KeyvCloudflareKV from '@keyv/cloudflare-kv';
 
-const store1 = new KeyvCloudflareKV({ kvNamespace, namespace: 'namespace1' });
-const keyv1 = new Keyv(store1, { namespace: 'namespace1', useKeyPrefix: false });
+// Keyv passes its namespace to the adapter, which stores `foo` as `namespace1:foo`.
+// Give each Keyv instance its own adapter.
+const store1 = new KeyvCloudflareKV({ kvNamespace });
+const keyv1 = new Keyv(store1, { namespace: 'namespace1' });
 
-const store2 = new KeyvCloudflareKV({ kvNamespace, namespace: 'namespace2' });
-const keyv2 = new Keyv(store2, { namespace: 'namespace2', useKeyPrefix: false });
+const store2 = new KeyvCloudflareKV({ kvNamespace });
+const keyv2 = new Keyv(store2, { namespace: 'namespace2' });
 
 // keys are isolated by namespace
 await keyv1.set('foo', 'bar1');
