@@ -121,7 +121,7 @@ const value = await keyv.get('foo');
 // delete a value
 await keyv.delete('foo');
 
-// clear all values
+// clear the values written without a namespace
 await keyv.clear();
 
 // disconnect
@@ -147,6 +147,13 @@ const value1 = await keyv1.get('foo'); // 'bar1'
 const value2 = await keyv2.get('foo'); // 'bar2'
 ```
 
+With no namespace, `clear()` and `iterator()` only touch entries written without a namespace. They leave other namespaces' entries and other applications' keys in etcd alone. Each value records the namespace it was written under. Entries written before that was recorded, and entries Keyv v5 wrote as `{ value, expires }` JSON, count when their key has no `:`. To have `clear()` delete every key in etcd and `iterator()` return every key, set `noNamespaceAffectsAll: true`:
+
+```js
+const store = new KeyvEtcd('etcd://localhost:2379', { noNamespaceAffectsAll: true });
+await store.clear(); // deletes every key in etcd
+```
+
 You can also set the namespace directly on the store:
 
 ```js
@@ -166,6 +173,7 @@ await store.get('foo'); // 'bar'
 | `ttl` | `number` | `undefined` | Default TTL in milliseconds for keys written without an expiry, counted from each write. Each such key gets its own etcd lease. |
 | `busyTimeout` | `number` | `undefined` | Per-request timeout in milliseconds. Aborts hung requests via `AbortSignal.timeout`. |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
+| `noNamespaceAffectsAll` | `boolean` | `false` | With no namespace, whether `clear()` and `iterator()` reach every key in etcd instead of only entries written without a namespace |
 
 ```js
 import KeyvEtcd from '@keyv/etcd';
@@ -229,6 +237,14 @@ The separator between the namespace and key.
 | Type | Default |
 |---|---|
 | `string` | `':'` |
+
+### .noNamespaceAffectsAll
+
+With no namespace set, whether `clear()` and `iterator()` reach every key in etcd. When `false`, they only touch entries written without a namespace. It has no effect when a namespace is set.
+
+| Type | Default |
+|---|---|
+| `boolean` | `false` |
 
 ## Methods
 
@@ -325,7 +341,7 @@ const results = await store.deleteMany(['key1', 'key2']); // [true, true]
 
 ### .clear()
 
-Clears data from the etcd server. If a namespace is set, only keys with the namespace prefix are deleted. Otherwise, all keys are deleted.
+Clears data from the etcd server. If a namespace is set, only keys with the namespace prefix are deleted. Otherwise only entries written without a namespace are deleted, and other namespaces' entries and other applications' keys stay. Set `noNamespaceAffectsAll` to `true` to delete every key in etcd instead. With no namespace, `clear()` reads every key in etcd, a page at a time, to find the entries to delete.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
@@ -356,7 +372,7 @@ const results = await store.hasMany(['key1', 'key2', 'key3']); // [true, true, f
 
 ### .iterator()
 
-Returns an async iterator over `[key, value]` pairs. If a namespace is set, only keys with that namespace are yielded and the namespace prefix is removed from the returned keys. The namespace does not need to be passed in — it uses the namespace configured on the adapter. Expired entries are skipped and deleted.
+Returns an async iterator over `[key, value]` pairs. If a namespace is set, only keys with that namespace are yielded and the namespace prefix is removed from the returned keys. The namespace does not need to be passed in — it uses the namespace configured on the adapter. With no namespace, only entries written without a namespace are yielded, unless `noNamespaceAffectsAll` is `true`, which yields every key in etcd. Expired entries are skipped and deleted.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');

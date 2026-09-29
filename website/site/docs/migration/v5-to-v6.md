@@ -32,6 +32,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Compression Adapter Interface Change](#compression-adapter-interface-change)
   - [`@keyv/memcache` Moves from `memjs` to `memcache`](#keyvmemcache-moves-from-memjs-to-memcache)
   - [`@keyv/etcd` Default `ttl` Applies Per Key](#keyvetcd-default-ttl-applies-per-key)
+  - [`@keyv/etcd` Without a Namespace Only Clears Its Own Entries](#keyvetcd-without-a-namespace-only-clears-its-own-entries)
   - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
 - [New Features](#new-features)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
@@ -643,6 +644,19 @@ In v6, `ttl` applies to each key written without an expiry, counted from that wr
 **What this means for you:**
 - If you set `ttl` on the store, keys now live for `ttl` from their own write, and writes keep working after the first `ttl` has passed
 - The `lease` property is removed. Remove any code that reads or assigns `store.lease`
+
+---
+
+### `@keyv/etcd` Without a Namespace Only Clears Its Own Entries
+
+In v5, `clear()` on a `@keyv/etcd` store with no namespace deleted every key in etcd, including other namespaces' entries and other applications' keys. `iterator()` returned every key too.
+
+In v6, with no namespace, both only touch entries written without a namespace. Each value records the namespace it was written under. Entries written before that was recorded, and entries v5 wrote, count when their key has no `:`. A v5 entry is recognized when it holds Keyv's default JSON, `{ value, expires }`.
+
+**What this means for you:**
+- To have `clear()` delete every key in etcd and `iterator()` return every key, as in v5, set `noNamespaceAffectsAll: true`
+- A v5 entry stored under a namespace, such as `keyv:foo`, is cleared by a store with that namespace
+- A v5 entry written with compression, encryption or a custom serializer isn't recognized. It stays until it expires, or you remove it, for example with `noNamespaceAffectsAll: true` if the etcd holds only Keyv data
 
 ---
 
