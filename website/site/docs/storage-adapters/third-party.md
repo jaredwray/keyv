@@ -232,12 +232,14 @@ npm install --save-dev vitest keyv @keyv/test-suite
 ```
 
 ```javascript
-import { describe } from "vitest";
-import keyvTestSuite from "@keyv/test-suite";
-import Keyv from "keyv";
+import { keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
+import { Keyv } from "keyv";
+import { test } from "vitest";
 import MyCustomStore from "./my-custom-store.js";
 
-keyvTestSuite(describe, Keyv, () => new MyCustomStore());
+const store = () => new MyCustomStore();
+keyvTestSuite(test, Keyv, store);
+storageTestSuite(test, store);
 ```
 
 See the [storage adapters overview](/docs/storage-adapters/overview/) and [legacy adapters](/docs/legacy-storage-adapters/) for the v6 `expires` contract and bridging.

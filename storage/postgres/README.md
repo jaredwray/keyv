@@ -99,6 +99,20 @@ The adapter automatically adds the `namespace` column and creates the appropriat
 
 The adapter now extends [Hookified](https://hookified.org) instead of a custom EventEmitter. Use `on` / `once` / `emit` for events. Connection and query failures emit `error`. Middleware hooks (`onHook`, `hook`) are available but are **not** invoked automatically on `get`/`set` — Keyv core owns those hooks. See [Events and Hooks](#events-and-hooks).
 
+### `keySize` renamed to `keyLength`, `dialect` removed
+
+The v5 `keySize` option is now `keyLength`, and the `dialect` option is gone. TypeScript rejects both old names. In JavaScript, v6 does not read them and passes them on to the `pg` pool config, so an old `keySize` has no effect.
+
+```js
+// v5
+const store = new KeyvPostgres({ uri, keySize: 512 });
+
+// v6
+const store = new KeyvPostgres({ uri, keyLength: 512 });
+```
+
+`keyLength` only sets the key column size when the adapter creates the table. An existing table keeps its current key column. The [migration script](#running-the-migration-script) is different: it resizes the key column to `--keyLength` (default `255`). If you used a custom `keySize` in v5, pass the same value with `--keyLength`.
+
 ## New features
 
 ### Native TTL support with `expires` column

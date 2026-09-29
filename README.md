@@ -110,7 +110,9 @@ We welcome contributions! Here are some ways to get involved:
 
 # Keyv v5 to v6
 
-We are actively working on Keyv v6, which includes several major changes such as improved TypeScript support, enhanced hooks system, and streamlined storage adapter interfaces. You can follow along with the development and see the full migration guide at https://keyv.org/docs/migration/v5-to-v6/
+Keyv v6 is in pre-release. It includes several major changes such as improved TypeScript support, enhanced hooks system, and streamlined storage adapter interfaces. See the full migration guide at https://keyv.org/docs/migration/v5-to-v6/ (coming from v4? start with https://keyv.org/docs/migration/v4-to-v5/).
+
+Using an AI coding agent? Tell it: *"Upgrade this project to Keyv v6 using https://keyv.org/skills/migrate"*. The migration skill lives in [skills/keyv-migrate](skills/keyv-migrate/SKILL.md) and can also be installed with `npx skills add jaredwray/keyv --skill keyv-migrate`.
 
 The previous documentation site is archived at https://keyv.org/v5/.
 

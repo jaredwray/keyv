@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { listDocsUrls, publishSkills } from "./skills.js";
 
 const adapterOrder: Record<string, number> = {
 	redis: 10,
@@ -41,6 +42,18 @@ async function main() {
 	await copyEncryptionDocs(basePath);
 	await copyTestSuite(basePath);
 	await copyBigMap(basePath);
+	await copySkills(basePath);
+}
+
+async function copySkills(basePath: string) {
+	const skills = await publishSkills({
+		skillsDirectory: `${basePath}/skills`,
+		publicDirectory: `${basePath}/website/site/public`,
+		docsUrls: await listDocsUrls(basePath),
+	});
+	for (const skill of skills) {
+		console.log(`Adding agent skill: ${skill.name}`);
+	}
 }
 
 async function copyStorageAdapters(basePath: string) {

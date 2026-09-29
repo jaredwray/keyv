@@ -26,16 +26,17 @@ Then update `keyv` and `@keyv/test-suite` versions to `*` in `package.json` to e
 `test.js`
 
 ```js
-import test from 'vitest';
-import keyvTestSuite from '@keyv/test-suite';
-import Keyv from 'keyv';
-import KeyvStore from './';
+import { keyvTestSuite, storageTestSuite } from '@keyv/test-suite';
+import { Keyv } from 'keyv';
+import { test } from 'vitest';
+import KeyvStore from './src/index.js';
 
 const store = () => new KeyvStore();
 keyvTestSuite(test, Keyv, store);
+storageTestSuite(test, store);
 ```
 
-Where `KeyvStore` is your storage adapter.
+Where `KeyvStore` is your storage adapter. `keyvTestSuite` tests the adapter through a `Keyv` instance, and `storageTestSuite` tests it directly (see [Storage Adapter Tests](#storage-adapter-tests)). If your adapter implements `iterator()`, also import and call `keyvIteratorTests(test, Keyv, store)`.
 
 Set your test script in `package.json` to `vitest`.
 ```json
@@ -55,7 +56,7 @@ To test a storage adapter directly (without the `Keyv` wrapper), use `storageTes
 ```js
 import { it } from 'vitest';
 import { storageTestSuite } from '@keyv/test-suite';
-import KeyvStore from './';
+import KeyvStore from './src/index.js';
 
 const store = () => new KeyvStore();
 storageTestSuite(it, store);
@@ -83,7 +84,7 @@ By default the TTL tests use sub-second TTL values (300ms TTL with a 600ms expir
 ```js
 import { it } from 'vitest';
 import { storageTestSuite } from '@keyv/test-suite';
-import KeyvStore from './';
+import KeyvStore from './src/index.js';
 
 const store = () => new KeyvStore();
 storageTestSuite(it, store, { ttlGranularity: 'seconds' });
@@ -93,16 +94,26 @@ Use `ttl: false` only when the adapter has no storage-level TTL support at all.
 
 ## Testing Compression Adapters
 
-If you're testing a compression adapter, you can use the `keyvCompressionTests` method instead of `keyvTestSuite`.
+If you're testing a compression adapter, use `compressionTestSuite` instead of `keyvTestSuite`. It checks `compress`/`decompress` round trips and that the adapter works with a `Keyv` instance.
 
 ```js
-import test from 'vitest';
-import { keyvCompressionTests, KeyvGzip } from '@keyv/test-suite';
-import Keyv from 'keyv';
+import { compressionTestSuite } from '@keyv/test-suite';
+import { it } from 'vitest';
+import KeyvGzip from '@keyv/compress-gzip';
 
-keyvCompressionTests(test, new KeyvGzip());
+compressionTestSuite(it, new KeyvGzip());
 ```
+
+## Migrating from v5
+
+Keyv v5 adapters used `@keyv/test-suite` 2.x. To move to the v6 test suite:
+
+- There is no default export. Import `keyvTestSuite` and the other suites by name.
+- The first argument is Vitest's `test` (or `it`) function. Version 2.x took the whole Vitest module (`import * as test from 'vitest'`).
+- `keyvNamespaceTest` is now `keyvNamespaceTests`.
+- `keyvCompresstionTests` is now `compressionTestSuite`.
+- New suites: `storageTestSuite` tests an adapter directly, without `Keyv`. It runs `storageBasicTests`, `storageBatchTests`, `storageIteratorTests`, `storageTtlTests`, `storageNamespaceTests` and `storageDisconnectTests`, which are also exported. `encryptionTestSuite(test, adapter)` and `serializationTestSuite(test, adapter)` test encryption and serialization adapters.
 
 ## License
 
-[MIT © Jared Wray](LISCENCE)
+[MIT © Jared Wray](LICENSE)

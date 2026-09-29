@@ -5,3 +5,5 @@
 /.cursor/ @jaredwray
 /.devcontainer/ @jaredwray
 /scripts/ @jaredwray
+# Agent Skills: coding agents follow these instructions in users' projects.
+/skills/ @jaredwray

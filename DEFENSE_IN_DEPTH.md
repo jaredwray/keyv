@@ -10,6 +10,7 @@ Profile: npm library · public
 
 ## 2. CODEOWNERS and cloud bootstrap
 - [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names — PR #2102
+- [x] `.github/CODEOWNERS` also covers `/skills/`: the Agent Skills there (published at keyv.org/skills and installable with `npx skills add`) are instructions coding agents follow in users' projects, and they are Markdown only (no scripts), which `website/test/skills.test.ts` enforces
 - [x] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) — PR #2054
 - [x] Dev Container `image` pinned by digest (`name:<tag>@sha256:<digest>`; not a floating tag) — PR #2082
 

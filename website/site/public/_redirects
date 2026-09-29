@@ -19,4 +19,9 @@
 /docs/encryption/ /docs/encryption/overview/ 301
 /docs/caching https://cacheable.org 301
 /docs/caching/ https://cacheable.org 301
+/skills/migrate /skills/keyv-migrate/SKILL.md 200
+/skills/migrate/ /skills/keyv-migrate/SKILL.md 200
+/skills/keyv-migrate /skills/keyv-migrate/SKILL.md 200
+/skills/keyv-migrate/ /skills/keyv-migrate/SKILL.md 200
 /docs/caching/* https://cacheable.org 301
+/skills/migrate/* /skills/keyv-migrate/:splat 200

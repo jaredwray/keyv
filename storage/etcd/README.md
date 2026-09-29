@@ -20,8 +20,8 @@
 
 ## Requirements
 
-- **etcd v3 or newer** — this adapter uses the etcd v3 API (`/v3/kv/range`, `/v3/kv/put`, `/v3/lease/grant`, etc.) exposed by etcd's built-in HTTP/JSON gateway. etcd v2 is not supported.
-- **Node.js 20 or newer** — the client uses the global `fetch` and `AbortSignal.timeout` APIs.
+- **etcd 3.4 or newer** — this adapter uses the etcd v3 API (`/v3/kv/range`, `/v3/kv/put`, `/v3/lease/grant`, etc.) exposed by etcd's built-in HTTP/JSON gateway. etcd serves these `/v3/` paths from version 3.4 on. etcd v2 is not supported.
+- **Node.js 22.19 or newer** — the client uses the global `fetch` and `AbortSignal.timeout` APIs.
 
 ## Table of Contents
 
@@ -30,6 +30,7 @@
 - [Quick Start with createKeyv](#quick-start-with-createkeyv)
 - [Usage](#usage)
 - [Usage with Namespaces](#usage-with-namespaces)
+- [Migrating to v6](#migrating-to-v6)
 - [Options](#options)
 - [Properties](#properties)
   - [.client](#client)
@@ -62,7 +63,7 @@
 npm install --save keyv @keyv/etcd
 ```
 
-You also need a running etcd v3+ server reachable from your Node process. For local development:
+You also need a running etcd 3.4+ server reachable from your Node process. For local development:
 
 ```shell
 docker run --rm -p 2379:2379 registry.k8s.io/etcd:3.5.15-0 \
@@ -163,6 +164,20 @@ store.namespace = 'myapp';
 await store.set('foo', 'bar'); // stored as 'myapp:foo'
 await store.get('foo'); // 'bar'
 ```
+
+## Migrating to v6
+
+- **The `etcd3` package was replaced by a built-in client.** v5 used the `etcd3` package, which talks gRPC. v6 has no etcd dependency. It sends HTTP/JSON requests to etcd's gRPC gateway, using the `/v3/` endpoints that etcd 3.4 and later serve. etcd turns the gateway on by default, so don't start the server with `--enable-grpc-gateway=false`. `store.client` is now the built-in `EtcdClient`, not an `Etcd3` instance.
+- **The store `ttl` applies per key.** In v5, `ttl` created one etcd lease when the store was constructed, and every key was attached to it. When that lease expired, every key on it was deleted at once, no matter when it was written, and later writes failed. In v6, a key written without an expiry lives for `ttl` from its own write, on its own lease. Keys written with a TTL through Keyv also get their own lease.
+- **The `lease` property was removed.** Remove any code that reads or assigns `store.lease`.
+- **The `ttlSupport` and `opts` properties were removed.** Read settings from the store's own properties instead, such as `store.url`, `store.ttl`, and `store.busyTimeout`.
+- **Keys written by v5 need the same namespace.** v5 stored keys as `<namespace>:<key>`, and Keyv v5 used `keyv` as the namespace when none was set. Keyv v6 has no default namespace. To read those keys, pass the same namespace to Keyv:
+
+```js
+const keyv = new Keyv(new KeyvEtcd('etcd://localhost:2379'), { namespace: 'keyv' });
+```
+
+If v5 ran with `useKeyPrefix: false`, its keys have no prefix, so leave the namespace unset. Without a namespace, `clear()` deletes every key in etcd. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#keyvetcd-default-ttl-applies-per-key) for more.
 
 ## Options
 

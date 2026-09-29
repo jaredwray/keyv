@@ -27,7 +27,7 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 - [Methods](#methods)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -118,7 +118,7 @@ store.keyLength; // 512
 
 #### Native TTL support with `expires` column
 
-v6 adds an `expires BIGINT` column to the table. When values are stored with a TTL via Keyv core, the adapter automatically extracts the `expires` timestamp from the serialized value and stores it in the column. The `intervalExpiration` application timer queries this column directly instead of extracting from JSON, which is significantly more efficient.
+v6 adds an `expires BIGINT` column to the table. When you store a value with a TTL through Keyv core, Keyv passes an absolute `expires` timestamp (Unix ms) to the adapter's `set`, and the adapter stores it in the column. The adapter does not parse the serialized value. The `intervalExpiration` application timer queries this column directly instead of extracting from JSON, which is significantly more efficient.
 
 The schema migration is automatic on connect — existing tables get the column and index added automatically.
 
@@ -371,28 +371,30 @@ Returns an array of values for the given keys. Returns `undefined` for any key t
 const values = await keyvMysql.getMany(['foo', 'bar']);
 ```
 
-### .set(key, value, ttl?)
+### .set(key, value, expires?)
 
 Sets a value for the given key. If the key already exists, it will be updated. Returns `true` on success, `false` on failure.
 
 - `key` *(string)* - The key to set.
 - `value` *(any)* - The value to store.
-- `ttl` *(number, optional)* - Time to live in milliseconds.
+- `expires` *(number, optional)* - Absolute expiry as a Unix timestamp in milliseconds (`Date.now() + ttl`). `undefined` means no expiry.
 - Returns: `Promise<boolean>`
+
+When you call `keyv.set(key, value, ttl)` on a Keyv instance, `ttl` is still relative. Keyv converts it to `expires` before it calls the adapter.
 
 ```js
 await keyvMysql.set('foo', 'bar');
-await keyvMysql.set('foo', 'bar', 5000); // expires in 5 seconds
+await keyvMysql.set('foo', 'bar', Date.now() + 5000); // expires in 5 seconds
 ```
 
 ### .setMany(entries)
 
-Set multiple key-value pairs at once using a single atomic `INSERT ... ON DUPLICATE KEY UPDATE` statement. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
+Set multiple key-value pairs at once using a single atomic `INSERT ... ON DUPLICATE KEY UPDATE` statement. Each entry is a `KeyvStorageEntry<Value>` object (`{ key: string, value: Value, expires?: number }`), where `expires` is an absolute Unix timestamp in milliseconds and `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully. Since the SQL statement is atomic, all entries either succeed (`true`) or all fail (`false`) together. On failure, an `error` event is emitted.
 
 ```js
 const results = await keyvMysql.setMany([
   { key: 'foo', value: 'bar' },
-  { key: 'baz', value: 'qux' },
+  { key: 'baz', value: 'qux', expires: Date.now() + 5000 },
 ]); // [true, true]
 ```
 
@@ -511,4 +513,4 @@ const keyv = new Keyv({ store: keyvMysql });
 
 ## License
 
-[MIT © Jared Wray](LISCENCE)
+[MIT © Jared Wray](LICENSE)

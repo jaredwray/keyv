@@ -109,12 +109,14 @@ If you omit `capabilities.expires`, Keyv wraps you in `KeyvBridgeAdapter` and co
 Test with [@keyv/test-suite](/docs/test-suite/):
 
 ```js
-import { describe } from "vitest";
-import keyvTestSuite from "@keyv/test-suite";
-import Keyv from "keyv";
+import { keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
+import { Keyv } from "keyv";
+import { test } from "vitest";
 import MyAdapter from "./my-adapter.js";
 
-keyvTestSuite(describe, Keyv, () => new MyAdapter());
+const store = () => new MyAdapter();
+keyvTestSuite(test, Keyv, store);
+storageTestSuite(test, store);
 ```
 
 Community adapters are listed on [Third-Party Adapters](/docs/storage-adapters/third-party/).
