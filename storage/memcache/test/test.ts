@@ -278,6 +278,90 @@ describe("namespace", () => {
 	});
 });
 
+describe("keys memcached can't take", () => {
+	test("keeps keys that differ only in surrounding whitespace apart", async () => {
+		const store = new KeyvMemcache(uri, { namespace: `ns-${faker.string.alphanumeric(8)}` });
+		await store.set(" a", "leading");
+		await store.set("a", "plain");
+		await store.set("a ", "trailing");
+
+		expect(await store.get(" a")).toBe("leading");
+		expect(await store.get("a")).toBe("plain");
+		expect(await store.get("a ")).toBe("trailing");
+	});
+
+	test("stores keys with whitespace, control characters, or over 250 bytes", async () => {
+		const store = new KeyvMemcache(uri);
+		const id = faker.string.alphanumeric(8);
+		const keys = [
+			`user name ${id}`,
+			`tab\t${id}`,
+			// A URL cache key over 250 characters, and one under 250 characters but over 250 bytes.
+			`${"https://example.com/search?q=keyv&page=2&".repeat(8)}${id}`,
+			`${"é".repeat(200)}${id}`,
+		];
+
+		for (const key of keys) {
+			expect(await store.set(key, `value-${key.length}`)).toBe(true);
+		}
+
+		for (const key of keys) {
+			expect(await store.get(key)).toBe(`value-${key.length}`);
+			expect(store.formatKey(key)).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
+		}
+
+		expect(await store.has(keys[0])).toBe(true);
+		expect(await store.delete(keys[0])).toBe(true);
+		expect(await store.get(keys[0])).toBeUndefined();
+	});
+
+	test("formats keys memcached takes unchanged and others as a digest of the namespaced key", () => {
+		const store = new KeyvMemcache(uri);
+		expect(store.formatKey("foo")).toBe("foo");
+		expect(store.formatKey("")).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
+		const digest = store.formatKey("a b");
+
+		store.namespace = "ns";
+		expect(store.formatKey("foo")).toBe("ns:foo");
+		expect(store.formatKey("a b")).not.toBe(digest);
+		// 250 bytes is memcached's limit.
+		expect(store.formatKey("a".repeat(247))).toBe(`ns:${"a".repeat(247)}`);
+		expect(store.formatKey("a".repeat(248))).toMatch(/^keyv:sha256:/);
+
+		store.client.maxKeySize = 10;
+		expect(store.formatKey("abcdefgh")).toMatch(/^keyv:sha256:/);
+	});
+});
+
+describe("failed writes", () => {
+	test("set reports false and emits an error when memcached rejects the value", async () => {
+		const store = new KeyvMemcache(uri);
+		const errors: Error[] = [];
+		store.on("error", (error: Error) => {
+			errors.push(error);
+		});
+		const key = faker.string.uuid();
+
+		// Within the client's 1 MiB value limit, but over memcached's 1 MB item limit once the key
+		// and item header are counted.
+		expect(await store.set(key, "x".repeat(1024 * 1024))).toBe(false);
+		expect(await store.get(key)).toBeUndefined();
+		expect(errors.map((error) => error.message)).toContain("Memcache did not store the value");
+	});
+
+	test("clear emits an error when a server does not flush", async () => {
+		const store = new KeyvMemcache(uri);
+		const errors: Error[] = [];
+		store.on("error", (error: Error) => {
+			errors.push(error);
+		});
+		vi.spyOn(store.client, "flush").mockResolvedValue(false);
+
+		await store.clear();
+		expect(errors.map((error) => error.message)).toContain("Memcache did not flush the server");
+	});
+});
+
 describe("ttl and expiration", () => {
 	test("keeps a value that has not yet expired", async () => {
 		const keyv = new Keyv<string>({ store: keyvMemcache });

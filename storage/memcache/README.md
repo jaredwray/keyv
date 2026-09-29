@@ -27,6 +27,7 @@
 - [Quick Start with createKeyv](#quick-start-with-createkeyv)
 - [Usage](#usage)
 - [Usage with Namespaces](#usage-with-namespaces)
+- [Keys Memcached Can't Store](#keys-memcached-cant-store)
 - [Options](#options)
 - [Multiple Nodes](#multiple-nodes)
 - [SASL Authentication](#sasl-authentication)
@@ -35,7 +36,7 @@
   - [constructor(uri?, options?)](#constructoruri-options)
   - [.get(key)](#getkey)
   - [.getMany(keys)](#getmanykeys)
-  - [.set(key, value, ttl?)](#setkey-value-ttl)
+  - [.set(key, value, expires?)](#setkey-value-expires)
   - [.setMany(entries)](#setmanyentries)
   - [.delete(key)](#deletekey)
   - [.deleteMany(keys)](#deletemanykeys)
@@ -158,6 +159,16 @@ const keyv = new Keyv({ store: memcache });
 ```
 
 > **Note:** `clear()` always flushes the entire Memcached server because Memcached cannot enumerate keys, so it is not scoped to a namespace.
+
+## Keys Memcached Can't Store
+
+Memcached only stores keys of up to 250 bytes with no whitespace or control characters. The adapter stores any other key, such as a long URL or a key with a space, under a SHA-256 digest of the namespaced key, `keyv:sha256:<hex>`, so every key works. Keys that Memcached accepts are stored as they are.
+
+```js
+const keyv = new Keyv({ store: new KeyvMemcache('localhost:11211') });
+await keyv.set('user name', 'a key with a space');
+await keyv.set(`https://example.com/search?${'q=keyv&'.repeat(50)}`, 'a key over 250 bytes');
+```
 
 ## Options
 
@@ -301,25 +312,25 @@ await memcache.set('key2', 'value2');
 const results = await memcache.getMany(['key1', 'key2', 'key3']); // ['value1', 'value2', undefined]
 ```
 
-### .set(key, value, ttl?)
+### .set(key, value, expires?)
 
-Stores a value in the memcache server. The optional `ttl` parameter is in milliseconds and is converted to seconds internally.
+Stores a value in the memcache server. The optional `expires` is an absolute Unix timestamp in milliseconds, converted to Memcached's seconds internally. Returns `true` when the value was stored. When Memcached doesn't store it, for example a value over Memcached's item size limit, it returns `false` and emits an error.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 await memcache.set('foo', 'bar'); // no expiration
-await memcache.set('foo', 'bar', 5000); // expires in 5 seconds
+await memcache.set('foo', 'bar', Date.now() + 5000); // expires in 5 seconds
 ```
 
 ### .setMany(entries)
 
-Stores multiple values in the memcache server. Each entry is a `KeyvEntry<Value>` object (`{ key: string, value: Value, ttl?: number }`), where `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
+Stores multiple values in the memcache server. Each entry is a `KeyvStorageEntry<Value>` object (`{ key: string, value: Value, expires?: number }`), where `expires` is an absolute Unix timestamp in milliseconds and `Value` is inferred from the entries provided. Returns a `boolean[]` indicating whether each entry was set successfully.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 const results = await memcache.setMany([
   { key: 'key1', value: 'value1' },
-  { key: 'key2', value: 'value2', ttl: 5000 },
+  { key: 'key2', value: 'value2', expires: Date.now() + 5000 },
 ]); // [true, true]
 ```
 
@@ -346,7 +357,7 @@ const results = await memcache.deleteMany(['key1', 'key2']); // [true, true]
 
 ### .clear()
 
-Flushes all data from the memcache server. Note: this clears the entire server, not just keys within the current namespace.
+Flushes all data from the memcache server. Note: this clears the entire server, not just keys within the current namespace. If a server doesn't flush, an error is emitted.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
@@ -386,7 +397,7 @@ await memcache.disconnect();
 
 ### .formatKey(key)
 
-Formats a key by prepending the namespace if one is set. If no namespace is set, the key is returned as-is.
+Formats a key by prepending the namespace if one is set. A key Memcached can't store, one over 250 bytes or with whitespace or control characters, is formatted as a SHA-256 digest of the namespaced key instead. See [Keys Memcached Can't Store](#keys-memcached-cant-store).
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
@@ -394,6 +405,7 @@ memcache.formatKey('foo'); // 'foo'
 
 memcache.namespace = 'myapp';
 memcache.formatKey('foo'); // 'myapp:foo'
+memcache.formatKey('user name'); // 'keyv:sha256:…'
 ```
 
 ### Properties

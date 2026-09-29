@@ -1,7 +1,12 @@
+import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import { Hookified } from "hookified";
 import type { KeyvStorageAdapter, KeyvStorageEntry, KeyvStorageGetResult } from "keyv";
 import { Keyv, keyvStorageCapability } from "keyv";
 import { Memcache, type MemcacheNode, type MemcacheOptions } from "memcache";
+
+/** Characters memcached doesn't allow in a key: whitespace and control characters. */
+const INVALID_KEY_CHARACTERS = /[\s\p{Cc}]/u;
 
 /**
  * Configuration options for the KeyvMemcache adapter.
@@ -180,8 +185,13 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 					? Math.ceil(expires / 1000)
 					: Math.max(1, Math.ceil((expires - Date.now()) / 1000));
 		try {
-			await this.client.set(this.formatKey(key), value, exptime);
-			return true;
+			// The client reports a write memcached rejected as `false` rather than throwing.
+			const stored = await this.client.set(this.formatKey(key), value as string, exptime);
+			if (!stored) {
+				this.emit("error", new Error("Memcache did not store the value"));
+			}
+
+			return stored;
 		} catch (error) {
 			this.emit("error", error);
 			return false;
@@ -263,7 +273,10 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async clear(): Promise<void> {
 		try {
-			await this.client.flush();
+			// The client reports a flush a server rejected as `false` rather than throwing.
+			if (!(await this.client.flush())) {
+				this.emit("error", new Error("Memcache did not flush the server"));
+			}
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -278,18 +291,24 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Formats a key by prepending the namespace if one is set.
+	 * Formats a key for memcached by prepending the namespace if one is set. memcached only takes a
+	 * non-empty key of up to 250 bytes (the client's `maxKeySize`) with no whitespace or control
+	 * characters, so any other key is stored under a SHA-256 digest of the namespaced key instead,
+	 * `keyv:sha256:<hex>`. Keys memcached takes are returned unchanged.
 	 * @param key - The key to format
-	 * @returns The formatted key (e.g., `'namespace:key'`), or the original key if no namespace is set.
+	 * @returns The key memcached stores the value under (e.g., `'namespace:key'`).
 	 */
 	public formatKey(key: string): string {
-		let result = key;
-
-		if (this.namespace) {
-			result = `${this.namespace.trim()}:${key.trim()}`;
+		const formatted = this.namespace ? `${this.namespace}:${key}` : key;
+		if (
+			formatted.length > 0 &&
+			Buffer.byteLength(formatted) <= this.client.maxKeySize &&
+			!INVALID_KEY_CHARACTERS.test(formatted)
+		) {
+			return formatted;
 		}
 
-		return result;
+		return `keyv:sha256:${createHash("sha256").update(formatted).digest("hex")}`;
 	}
 }
 
