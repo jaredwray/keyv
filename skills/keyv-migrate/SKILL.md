@@ -52,7 +52,7 @@ This step blocks the rest. For each Keyv instance:
 2. Is it a cache that can be rebuilt, or data that must survive the upgrade? Ask the user unless the code makes it obvious.
 3. If the data must survive, find the v6 settings that read the old keys in stored-data.md, based on the adapter, the old Keyv version, and the old namespace setup. Note any migration script the user must run.
 4. If the instance used compression, v6 can't read the old entries. Say so: that data has to be repopulated.
-5. Either way, keep a namespace on shared backends. With no namespace, `clear()` can wipe a whole Redis, Valkey, or Etcd database, or a whole DynamoDB table.
+5. Either way, keep a namespace on shared backends. With no namespace, `clear()` can wipe a whole Redis or Valkey database, or a whole DynamoDB table.
 
 Write down the decision for each instance. You will report it in step 6.
 
@@ -83,7 +83,7 @@ The most common changes:
 | `keyv.hooks.addHandler(KeyvHooks.PRE_SET, fn)` | `keyv.onHook(KeyvHooks.BEFORE_SET, fn)` |
 | `get(key, { raw: true })` | `getRaw(key)` |
 | `getMany(keys, { raw: true })` | `getManyRaw(keys)` |
-| `if (await keyv.deleteMany(keys))` or `delete([…])` used as a boolean | `.some(Boolean)` for "any key deleted" (v5 Redis, SQL, MongoDB), `.every(Boolean)` for "all deleted" (v4, `Map`); `delete(key)` with one key still returns a boolean |
+| `if (await keyv.deleteMany(keys))` or `delete([…])` used as a boolean | `.some(Boolean)` where the old boolean meant "any key deleted" (SQLite, PostgreSQL, MySQL, MongoDB), `.every(Boolean)` where it meant "all deleted" (`Map`, Memcache, Etcd). Redis meant "all" with `@keyv/redis` 2.7 to 3.0 and "any" otherwise. `delete(key)` with one key still returns a boolean |
 | `keyv.iterator(keyv.namespace)` | `keyv.iterator()` |
 | `value === null` after `get` | `value === undefined` |
 | custom adapter `set(key, value, ttl)` | `set(key, value, expires)` with an absolute timestamp, plus the required `has`, `hasMany`, `getMany`, `setMany`, and a `deleteMany` that returns `boolean[]` |

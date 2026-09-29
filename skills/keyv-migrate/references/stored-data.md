@@ -115,7 +115,7 @@ With no namespace, some adapters' `clear()` removes much more than Keyv's entrie
 | --- | --- |
 | Redis | Deletes every string key without the separator (`::` by default) in its name. With `noNamespaceAffectsAll: true`, runs `FLUSHDB` |
 | Valkey | Deletes every key in the database |
-| Etcd | Deletes every key |
+| Etcd | Deletes only the entries v6 wrote with no namespace, and leaves v5's entries. With `noNamespaceAffectsAll: true`, deletes every key |
 | DynamoDB | Deletes every item in the table |
 | Cloudflare KV | Deletes every key in the KV namespace |
 | Memcache | Flushes the whole server, with or without a namespace, as in v5 |

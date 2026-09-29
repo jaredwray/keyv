@@ -67,7 +67,7 @@ function build(options: KeyvOptions) {}
 
 ## Behavior
 
-- **Return values.** v4's `set` always resolved `true`, and `delete(keys)` with an array resolved one boolean (`true` only when every key was deleted). In v6, `set` resolves `false` on a failure (or rejects; see [Errors](#errors)), `delete(key)` with one key still resolves a boolean, and `delete(keys)` with an array and `deleteMany(keys)` resolve `boolean[]`. Code that passes either a key or an array must handle both shapes.
+- **Return values.** v4's `set` always resolved `true`, and `delete(keys)` with an array resolved one boolean. With a `Map`, Memcache, or Etcd it was `true` only when every key was deleted; with SQLite, PostgreSQL, MySQL, or MongoDB it was `true` when any key was. With Redis it depended on the `@keyv/redis` version: 2.7 and later meant every key, 2.6 and earlier any key. In v6, `set` resolves `false` on a failure (or rejects; see [Errors](#errors)), `delete(key)` with one key still resolves a boolean, and `delete(keys)` with an array and `deleteMany(keys)` resolve `boolean[]`. Code that passes either a key or an array must handle both shapes.
 - **Raw values.** v4 stored `expires: null` for entries without a TTL. v6 leaves `expires` out, so compare with `undefined`, and check code that reads `.expires` from raw values. Use `getRaw` instead of `get(key, { raw: true })`.
 - **Construction.** `new Keyv({ store, namespace, ttl })` still works once `store` is an adapter instance.
 - **`has`.** v4 took one key. v6 also takes an array, and adds `hasMany`.
