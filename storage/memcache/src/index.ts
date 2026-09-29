@@ -1,7 +1,21 @@
+import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import { Hookified } from "hookified";
 import type { KeyvStorageAdapter, KeyvStorageEntry, KeyvStorageGetResult } from "keyv";
 import { Keyv, keyvStorageCapability } from "keyv";
 import { Memcache, type MemcacheNode, type MemcacheOptions } from "memcache";
+
+/** Characters memcached doesn't allow in a key: whitespace and control characters. */
+const INVALID_KEY_CHARACTERS = /[\s\p{Cc}]/u;
+
+/**
+ * Prefix of the keys that hold a digest instead of the key itself. A key that already starts with
+ * it is hashed too, so it can't land on the digest of another key.
+ */
+const HASHED_KEY_PREFIX = "keyv:sha256:";
+
+/** The fewest hex characters of the digest a hashed key keeps, 128 bits, when `maxKeySize` is low. */
+const MIN_DIGEST_LENGTH = 32;
 
 /**
  * Configuration options for the KeyvMemcache adapter.
@@ -180,8 +194,13 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 					? Math.ceil(expires / 1000)
 					: Math.max(1, Math.ceil((expires - Date.now()) / 1000));
 		try {
-			await this.client.set(this.formatKey(key), value, exptime);
-			return true;
+			// The client reports a write memcached rejected as `false` rather than throwing.
+			const stored = await this.client.set(this.formatKey(key), value as string, exptime);
+			if (!stored) {
+				this.emit("error", new Error("Memcache did not store the value"));
+			}
+
+			return stored;
 		} catch (error) {
 			this.emit("error", error);
 			return false;
@@ -263,7 +282,10 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async clear(): Promise<void> {
 		try {
-			await this.client.flush();
+			// The client reports a flush a server rejected as `false` rather than throwing.
+			if (!(await this.client.flush())) {
+				this.emit("error", new Error("Memcache did not flush the server"));
+			}
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -278,18 +300,31 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Formats a key by prepending the namespace if one is set.
+	 * Formats a key for memcached by prepending the namespace if one is set. memcached only takes a
+	 * non-empty key of up to 250 bytes (the client's `maxKeySize`) with no whitespace or control
+	 * characters, so any other key is stored under a SHA-256 digest of the namespaced key instead,
+	 * `keyv:sha256:<hex>`. A key that starts with `keyv:sha256:` is hashed as well, so it can't
+	 * overwrite the entry of the key it's the digest of. When `maxKeySize` is below the 76
+	 * characters a digest key takes, the digest is shortened to fit, down to 128 bits. Other keys
+	 * are returned unchanged.
 	 * @param key - The key to format
-	 * @returns The formatted key (e.g., `'namespace:key'`), or the original key if no namespace is set.
+	 * @returns The key memcached stores the value under (e.g., `'namespace:key'`).
 	 */
 	public formatKey(key: string): string {
-		let result = key;
-
-		if (this.namespace) {
-			result = `${this.namespace.trim()}:${key.trim()}`;
+		const formatted = this.namespace ? `${this.namespace}:${key}` : key;
+		const { maxKeySize } = this.client;
+		if (
+			formatted.length > 0 &&
+			Buffer.byteLength(formatted) <= maxKeySize &&
+			!INVALID_KEY_CHARACTERS.test(formatted) &&
+			!formatted.startsWith(HASHED_KEY_PREFIX)
+		) {
+			return formatted;
 		}
 
-		return result;
+		const digest = createHash("sha256").update(formatted).digest("hex");
+		const digestLength = Math.max(maxKeySize - HASHED_KEY_PREFIX.length, MIN_DIGEST_LENGTH);
+		return `${HASHED_KEY_PREFIX}${digest.slice(0, digestLength)}`;
 	}
 }
 
