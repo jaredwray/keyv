@@ -64,6 +64,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - The `etcd3` dependency is gone. The adapter talks to etcd's HTTP/JSON gateway, so it needs etcd 3.4 or later with the gateway on (the default).
 - The `lease` property was removed. The store `ttl` option now applies to each key from its own write. In v5 it created one lease at startup that expired every key at once, after which writes failed.
 - `ttlSupport` and `opts` were removed. `store.client` is the adapter's own `EtcdClient`.
+- With no namespace, `clear()` and `iterator()` touch only the entries v6 wrote without a namespace. In v5 they covered every key in etcd. Entries v5 wrote are left alone. `noNamespaceAffectsAll: true` brings back the v5 behavior.
 
 ## `@keyv/dynamo`
 

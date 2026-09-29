@@ -52,7 +52,7 @@ This step blocks the rest. For each Keyv instance:
 2. Is it a cache that can be rebuilt, or data that must survive the upgrade? Ask the user unless the code makes it obvious.
 3. If the data must survive, find the v6 settings that read the old keys in stored-data.md, based on the adapter, the old Keyv version, and the old namespace setup. Note any migration script the user must run.
 4. If the instance used compression, v6 can't read the old entries. Say so: that data has to be repopulated.
-5. Either way, keep a namespace on shared backends. With no namespace, `clear()` can wipe a whole Redis, Valkey, or Etcd database, or a whole DynamoDB table.
+5. Either way, keep a namespace on shared backends. With no namespace, `clear()` can wipe a whole Redis or Valkey database, or a whole DynamoDB table.
 
 Write down the decision for each instance. You will report it in step 6.
 

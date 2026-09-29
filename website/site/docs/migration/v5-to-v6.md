@@ -224,7 +224,7 @@ In v5 every Keyv instance had a namespace, `keyv` by default, so `clear()` remov
 | --- | --- |
 | Redis | Deletes every string key whose name doesn't contain the separator (`::` by default). With `noNamespaceAffectsAll: true`, runs `FLUSHDB`. |
 | Valkey | Deletes every key in the database. |
-| Etcd | Deletes every key. |
+| Etcd | Deletes only the entries v6 wrote with no namespace, and leaves v5's entries. With `noNamespaceAffectsAll: true`, deletes every key. See [below](#keyvetcd-without-a-namespace-only-clears-its-own-entries). |
 | DynamoDB | Deletes every item in the table. |
 | Cloudflare KV | Deletes every key in the KV namespace. |
 | Memcache | Flushes the whole server. It did this in v5 too, with or without a namespace. |
