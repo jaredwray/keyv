@@ -15,11 +15,13 @@ export type EtcdClientOptions = {
  */
 export type RangeRequest = {
 	/** The key to read, or the start key of a range scan. */
-	key: string;
+	key: string | Buffer;
 	/** Exclusive end of the range scan. When omitted, only `key` is read. */
 	rangeEnd?: string | Buffer;
 	/** When `true`, only keys are returned and values are omitted. */
 	keysOnly?: boolean;
+	/** The most key-value pairs to return. When omitted, every pair in the range is returned. */
+	limit?: number;
 };
 
 /**
@@ -27,7 +29,20 @@ export type RangeRequest = {
  */
 export type RangeResponse = {
 	/** The matched key-value pairs, base64-encoded as returned by the etcd JSON gateway. */
-	kvs?: Array<{ key: string; value: string }>;
+	kvs?: Array<{ key: string; value?: string }>;
+	/** Whether the range holds more pairs than `limit` let the response return. */
+	more?: boolean;
+};
+
+/**
+ * A key-value pair read by {@link EtcdClient.scanAll}. The key stays raw bytes, since etcd keys
+ * written by other clients need not be valid UTF-8.
+ */
+export type ScannedPair = {
+	/** The key, as raw bytes. */
+	key: Buffer;
+	/** The value, decoded as UTF-8. An empty value is `""`. */
+	value: string;
 };
 
 /**
@@ -35,7 +50,7 @@ export type RangeResponse = {
  */
 export type PutRequest = {
 	/** The key to write. */
-	key: string;
+	key: string | Buffer;
 	/** The value to store under the key. */
 	value: string;
 	/** Optional lease ID to associate with the key for TTL support. */
@@ -47,7 +62,7 @@ export type PutRequest = {
  */
 export type DeleteRangeRequest = {
 	/** The key to delete, or the start key of a range delete. */
-	key: string;
+	key: string | Buffer;
 	/** Exclusive end of the range delete. When omitted, only `key` is deleted. */
 	rangeEnd?: string | Buffer;
 };
@@ -187,7 +202,36 @@ export class EtcdClient {
 		if (req.keysOnly) {
 			body.keys_only = true;
 		}
+		if (req.limit !== undefined) {
+			body.limit = req.limit;
+		}
 		return this.request<RangeResponse>("/v3/kv/range", body);
+	}
+
+	/**
+	 * Reads every key-value pair in etcd in key order, one request of up to `pageSize` pairs at a
+	 * time, yielding each page. Each page starts just after the previous page's last key, compared
+	 * as raw bytes, so keys that are not valid UTF-8 can't make it skip or repeat pairs.
+	 * @param pageSize - The most pairs to read per request.
+	 * @yields One page of pairs at a time.
+	 */
+	async *scanAll(pageSize: number): AsyncGenerator<ScannedPair[], void, unknown> {
+		// Key "\0" with range_end "\0" is etcd's idiom for "every key from here on".
+		const rangeEnd = Buffer.from([0x00]);
+		let key = Buffer.from([0x00]);
+		let more = true;
+		while (more) {
+			const result = await this.range({ key, rangeEnd, limit: pageSize });
+			const kvs = result.kvs ?? [];
+			yield kvs.map((kv) => ({
+				key: Buffer.from(kv.key, "base64"),
+				value: kv.value === undefined ? "" : b64decode(kv.value),
+			}));
+			more = result.more === true && kvs.length > 0;
+			if (more) {
+				key = Buffer.concat([Buffer.from(kvs[kvs.length - 1].key, "base64"), rangeEnd]);
+			}
+		}
 	}
 
 	async putRaw(req: PutRequest): Promise<void> {
@@ -263,7 +307,7 @@ export class EtcdPutBuilder {
 export class EtcdDeleteBuilder {
 	constructor(private readonly client: EtcdClient) {}
 
-	async key(key: string): Promise<DeleteRangeResponse> {
+	async key(key: string | Buffer): Promise<DeleteRangeResponse> {
 		return this.client.deleteRangeRaw({ key });
 	}
 

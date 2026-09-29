@@ -27,7 +27,56 @@ export type KeyvEtcdOptions = {
 	busyTimeout?: number;
 	/** Optional namespace for key prefixing */
 	namespace?: string;
+	/**
+	 * With no namespace set, whether `clear()` and `iterator()` reach every key in etcd. By default
+	 * they only touch entries written without a namespace, and leave other namespaces and other
+	 * applications' keys alone.
+	 * @default false
+	 */
+	noNamespaceAffectsAll?: boolean;
 };
+
+/** The most key-value pairs read per request when `clear()` or `iterator()` scans all of etcd. */
+const SCAN_PAGE_SIZE = 100;
+
+/**
+ * The envelope each value is stored in: `v` is the value, `e` its absolute expiry in Unix ms or
+ * `null`, and `n` the namespace it was written under or `null`. Entries written before `n` was
+ * added don't have it.
+ */
+type Envelope = { v: unknown; e: number | null; n?: string | null };
+
+/**
+ * Parses a stored value as a JSON object.
+ * @param raw - The value read from etcd.
+ * @returns The object, or `undefined` when the value is not a JSON object.
+ */
+function parseObject(raw: string): Record<string, unknown> | undefined {
+	try {
+		const parsed = jsonSerializer.parse<unknown>(raw);
+		return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+			? (parsed as Record<string, unknown>)
+			: undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Reads an object as the adapter's envelope. It must hold `v` and `e` and nothing but `v`, `e`
+ * and `n`, with `e` a number or `null` and `n`, when present, a string or `null`.
+ * @param object - A stored value parsed as a JSON object.
+ * @returns The envelope, or `undefined` when the object is not one.
+ */
+function toEnvelope(object: Record<string, unknown>): Envelope | undefined {
+	const { e, n } = object;
+	const valid =
+		"v" in object &&
+		(e === null || typeof e === "number") &&
+		(n === undefined || n === null || typeof n === "string") &&
+		Object.keys(object).every((field) => field === "v" || field === "e" || field === "n");
+	return valid ? (object as Envelope) : undefined;
+}
 
 /**
  * Etcd storage adapter for Keyv.
@@ -51,6 +100,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	private _busyTimeout?: number;
 	private _namespace?: string;
 	private _keyPrefixSeparator = ":";
+	private _noNamespaceAffectsAll = false;
 
 	/**
 	 * Creates a new KeyvEtcd instance.
@@ -83,6 +133,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		this._ttl = typeof merged.ttl === "number" ? merged.ttl : undefined;
 		this._busyTimeout = merged.busyTimeout;
 		this._namespace = merged.namespace;
+		this._noNamespaceAffectsAll = merged.noNamespaceAffectsAll === true;
 
 		this._client = new EtcdClient({
 			url: this._url,
@@ -181,6 +232,22 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public set keyPrefixSeparator(value: string) {
 		this._keyPrefixSeparator = value;
+	}
+
+	/**
+	 * Gets whether `clear()` and `iterator()` reach every key in etcd when no namespace is set. When
+	 * `false`, they only touch entries written without a namespace.
+	 * @default false
+	 */
+	public get noNamespaceAffectsAll(): boolean {
+		return this._noNamespaceAffectsAll;
+	}
+
+	/**
+	 * Sets whether `clear()` and `iterator()` reach every key in etcd when no namespace is set.
+	 */
+	public set noNamespaceAffectsAll(value: boolean) {
+		this._noNamespaceAffectsAll = value;
 	}
 
 	/**
@@ -309,13 +376,19 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	/**
 	 * Wraps an (already-encoded) value with its absolute `expires` so reads can apply a precise,
 	 * millisecond-accurate expiry check independent of etcd's coarser, lazily-revoked leases.
-	 * The expiry comes from the `expires` parameter — the encoded value is never parsed.
+	 * The expiry comes from the `expires` parameter — the encoded value is never parsed. The
+	 * namespace the value is written under is recorded too, so an adapter with no namespace can
+	 * tell its own entries from other namespaces' in `clear()` and `iterator()`.
 	 * @param value - The encoded value to store.
 	 * @param expires - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
-	 * @returns A Keyv-serialized envelope string `{ v, e }`.
+	 * @returns A Keyv-serialized envelope string `{ v, e, n }`.
 	 */
 	private wrapValue(value: unknown, expires?: number): string {
-		return jsonSerializer.stringify({ v: value, e: typeof expires === "number" ? expires : null });
+		return jsonSerializer.stringify({
+			v: value,
+			e: typeof expires === "number" ? expires : null,
+			n: this._namespace || null,
+		});
 	}
 
 	/**
@@ -351,6 +424,28 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 			// Not valid JSON — return as-is.
 			return { value: raw as T, expired: false };
 		}
+	}
+
+	/**
+	 * Reads an entry that belongs to no namespace, as `clear()` and `iterator()` count them when no
+	 * namespace is set. An envelope belongs to no namespace when its `n` is `null`, and an envelope
+	 * written before `n` was added belongs when its key has no namespace separator. Anything else,
+	 * such as another application's key, is left alone. That includes entries Keyv v5 wrote, which
+	 * have no envelope, since nothing tells them apart from another application's JSON.
+	 * @param key - The entry's key.
+	 * @param raw - The entry's value as read from etcd.
+	 * @returns The envelope, or `undefined` when the entry doesn't belong to no namespace.
+	 */
+	private readUnnamespacedEntry(key: string, raw: string): Envelope | undefined {
+		const object = parseObject(raw);
+		const envelope = object && toEnvelope(object);
+		if (!envelope) {
+			return undefined;
+		}
+
+		const unnamespaced =
+			envelope.n === undefined ? !key.includes(this._keyPrefixSeparator) : envelope.n === null;
+		return unnamespaced ? envelope : undefined;
 	}
 
 	/**
@@ -414,16 +509,30 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Clears data from the etcd server. If a namespace is set, only keys with
-	 * the namespace prefix are deleted. Otherwise, all keys are deleted.
+	 * Clears data from the etcd server. If a namespace is set, only keys with the namespace prefix
+	 * are deleted. Otherwise only entries written without a namespace are deleted, which leaves
+	 * other namespaces and other applications' keys in place, unless `noNamespaceAffectsAll` is
+	 * `true`, which deletes every key in etcd.
 	 * @returns A promise that resolves once the matching keys have been deleted.
 	 */
 	public async clear(): ClearOutput {
 		try {
-			const promise = this._namespace
-				? this._client.delete().prefix(`${this._namespace}${this._keyPrefixSeparator}`)
-				: this._client.delete().all();
-			return await promise.then(() => undefined);
+			if (this._namespace) {
+				await this._client.delete().prefix(`${this._namespace}${this._keyPrefixSeparator}`);
+				return;
+			}
+
+			if (this._noNamespaceAffectsAll) {
+				await this._client.delete().all();
+				return;
+			}
+
+			for await (const page of this._client.scanAll(SCAN_PAGE_SIZE)) {
+				const keys = page
+					.filter(({ key, value }) => this.readUnnamespacedEntry(key.toString("utf8"), value))
+					.map(({ key }) => key);
+				await Promise.all(keys.map(async (key) => this._client.delete().key(key)));
+			}
 		} catch (error) {
 			this.emit("error", error);
 		}
@@ -433,10 +542,17 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 * Returns an async iterator over key-value pairs. If a namespace is set,
 	 * only keys matching the namespace prefix are yielded, and the namespace
 	 * prefix is removed from the returned keys. The namespace does not need to
-	 * be passed in — it uses the namespace configured on the adapter.
+	 * be passed in — it uses the namespace configured on the adapter. With no
+	 * namespace, only entries written without a namespace are yielded, unless
+	 * `noNamespaceAffectsAll` is `true`, which yields every key in etcd.
 	 * @yields `[key, value]` pairs as an async generator.
 	 */
 	public async *iterator(): AsyncGenerator<[string, string], void, unknown> {
+		if (!this._namespace && !this._noNamespaceAffectsAll) {
+			yield* this.unnamespacedEntries();
+			return;
+		}
+
 		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
 		const iterator = await this._client.getAll().prefix(prefix).keys();
 
@@ -461,6 +577,35 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 				this.emit("error", error);
 			}
 			/* v8 ignore stop -- @preserve */
+		}
+	}
+
+	/**
+	 * Yields the entries written without a namespace, reading etcd a page at a time. Expired
+	 * entries are skipped and deleted.
+	 * @yields `[key, value]` pairs as an async generator.
+	 */
+	private async *unnamespacedEntries(): AsyncGenerator<[string, string], void, unknown> {
+		for await (const page of this._client.scanAll(SCAN_PAGE_SIZE)) {
+			for (const pair of page) {
+				const key = pair.key.toString("utf8");
+				const entry = this.readUnnamespacedEntry(key, pair.value);
+				if (!entry) {
+					continue;
+				}
+
+				if (entry.e !== null && Date.now() > entry.e) {
+					try {
+						await this._client.delete().key(pair.key);
+					} catch (error) {
+						this.emit("error", error);
+					}
+
+					continue;
+				}
+
+				yield [key, entry.v as string];
+			}
 		}
 	}
 

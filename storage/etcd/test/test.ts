@@ -2,7 +2,12 @@ import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { describe, expect, it, vi } from "vitest";
-import { EtcdClient, type EtcdPutBuilder, prefixEnd } from "../src/client.js";
+import {
+	EtcdClient,
+	type EtcdDeleteBuilder,
+	type EtcdPutBuilder,
+	prefixEnd,
+} from "../src/client.js";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
 
 const etcdUrl = "etcd://127.0.0.1:2379";
@@ -12,6 +17,16 @@ const store = () => new KeyvEtcd({ uri: etcdUrl, busyTimeout: 3000 });
 keyvTestSuite(it, Keyv, store);
 keyvIteratorTests(it, Keyv, store);
 storageTestSuite(it, store, { ttlGranularity: "seconds" });
+
+/** Collects an adapter's iterator into a map from key to value. */
+async function collect(store: KeyvEtcd): Promise<Map<string, string>> {
+	const results = new Map<string, string>();
+	for await (const [key, value] of store.iterator()) {
+		results.set(key, value);
+	}
+
+	return results;
+}
 
 async function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => {
@@ -114,6 +129,16 @@ describe("construction and properties", () => {
 		store.client = newStore.client;
 		t.expect(store.client).toBe(newStore.client);
 		t.expect(store.client).not.toBe(originalClient);
+	});
+
+	it("should only reach its own entries without a namespace by default", (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		t.expect(store.noNamespaceAffectsAll).toBe(false);
+		store.noNamespaceAffectsAll = true;
+		t.expect(store.noNamespaceAffectsAll).toBe(true);
+		t.expect(
+			new KeyvEtcd({ url: etcdUrl, noNamespaceAffectsAll: true }).noNamespaceAffectsAll,
+		).toBe(true);
 	});
 });
 
@@ -474,6 +499,180 @@ describe("iterator", () => {
 	});
 });
 
+describe("clear and iterator without a namespace", () => {
+	/**
+	 * Writes this adapter's entries without a namespace, one of them with a colon in its key,
+	 * another namespace's entry, and other applications' keys, including an empty value and a key
+	 * that isn't valid UTF-8.
+	 */
+	async function seed() {
+		const id = faker.string.alphanumeric(12);
+		const store = new KeyvEtcd(etcdUrl);
+		const namespaced = new KeyvEtcd({ url: etcdUrl, namespace: `ns-${id}` });
+		const own = { plain: `own-${id}`, colon: `user:${id}` };
+		await store.set(own.plain, "plain-value");
+		await store.set(own.colon, "colon-value");
+		await namespaced.set("42", "namespaced-value");
+		const foreign = {
+			json: `/registry/services/${id}`,
+			text: `feature-flags/${id}`,
+			empty: `empty-${id}`,
+			binary: Buffer.concat([Buffer.from(`binary-${id}-`), Buffer.from([0xff, 0xfe])]),
+		};
+		await store.client.putRaw({ key: foreign.json, value: JSON.stringify({ kind: "Service" }) });
+		await store.client.putRaw({ key: foreign.text, value: "on" });
+		await store.client.putRaw({ key: foreign.empty, value: "" });
+		await store.client.putRaw({ key: foreign.binary, value: "binary-value" });
+		return { store, namespaced, own, foreign, namespacedKey: `ns-${id}:42` };
+	}
+
+	it("should record the namespace each value is written under", async (t) => {
+		const id = faker.string.alphanumeric(12);
+		const store = new KeyvEtcd(etcdUrl);
+		const namespaced = new KeyvEtcd({ url: etcdUrl, namespace: `ns-${id}` });
+		await store.set(`plain-${id}`, "a");
+		await namespaced.set("key", "b");
+		t.expect(JSON.parse((await store.client.get(`plain-${id}`)) as string)).toEqual({
+			v: "a",
+			e: null,
+			n: null,
+		});
+		t.expect(JSON.parse((await store.client.get(`ns-${id}:key`)) as string)).toEqual({
+			v: "b",
+			e: null,
+			n: `ns-${id}`,
+		});
+	});
+
+	it("should clear only entries written without a namespace", async (t) => {
+		const { store, namespaced, own, foreign } = await seed();
+		await store.clear();
+
+		t.expect(await store.get(own.plain)).toBeUndefined();
+		t.expect(await store.get(own.colon)).toBeUndefined();
+		t.expect(await namespaced.get("42")).toBe("namespaced-value");
+		t.expect(await store.client.get(foreign.json)).toBe(JSON.stringify({ kind: "Service" }));
+		t.expect(await store.client.get(foreign.text)).toBe("on");
+		t.expect((await store.client.range({ key: foreign.empty })).kvs).toHaveLength(1);
+		t.expect((await store.client.range({ key: foreign.binary })).kvs).toHaveLength(1);
+	});
+
+	it("should iterate only over entries written without a namespace", async (t) => {
+		const { store, own, foreign, namespacedKey } = await seed();
+		const results = await collect(store);
+
+		t.expect(results.get(own.plain)).toBe("plain-value");
+		t.expect(results.get(own.colon)).toBe("colon-value");
+		t.expect(results.has(namespacedKey)).toBe(false);
+		t.expect(results.has(foreign.json)).toBe(false);
+		t.expect(results.has(foreign.text)).toBe(false);
+		t.expect(results.has(foreign.empty)).toBe(false);
+	});
+
+	it("should clear and iterate envelopes written before the namespace was recorded", async (t) => {
+		const id = faker.string.alphanumeric(12);
+		const store = new KeyvEtcd(etcdUrl);
+		// An envelope written before `n` was added counts when its key has no namespace separator.
+		// A `{ value, expires }` object, as Keyv v5 wrote and as another application might, is left
+		// alone, since nothing marks it as Keyv's.
+		const entries = {
+			envelope: [`legacy-${id}`, JSON.stringify({ v: "legacy-value", e: null })],
+			envelopeWithColon: [`legacy:${id}`, JSON.stringify({ v: "prefixed-value", e: null })],
+			valueObject: [`flag-${id}`, JSON.stringify({ value: "enabled" })],
+			v5WithExpiry: [`v5-${id}`, JSON.stringify({ value: "v5", expires: Date.now() + 60_000 })],
+			extraField: [`extra-${id}`, JSON.stringify({ v: "extra", e: null, other: 1 })],
+		};
+		for (const [key, value] of Object.values(entries)) {
+			await store.client.putRaw({ key, value });
+		}
+
+		const results = await collect(store);
+		t.expect(results.get(entries.envelope[0])).toBe("legacy-value");
+		for (const [key] of [
+			entries.envelopeWithColon,
+			entries.valueObject,
+			entries.v5WithExpiry,
+			entries.extraField,
+		]) {
+			t.expect(results.has(key)).toBe(false);
+		}
+
+		await store.clear();
+		t.expect(await store.client.get(entries.envelope[0])).toBeNull();
+		for (const [key, value] of [
+			entries.envelopeWithColon,
+			entries.valueObject,
+			entries.v5WithExpiry,
+			entries.extraField,
+		]) {
+			t.expect(await store.client.get(key)).toBe(value);
+		}
+	});
+
+	it("should skip and delete expired entries while iterating", async (t) => {
+		const id = faker.string.alphanumeric(12);
+		const store = new KeyvEtcd(etcdUrl);
+		const expiredKey = `expired-${id}`;
+		await store.client.putRaw({
+			key: expiredKey,
+			value: JSON.stringify({ v: "stale", e: Date.now() - 1000, n: null }),
+		});
+
+		const results = await collect(store);
+		t.expect(results.has(expiredKey)).toBe(false);
+		t.expect(await store.client.get(expiredKey)).toBeNull();
+	});
+
+	it("should emit an error and keep iterating when deleting an expired entry fails", async (t) => {
+		const id = faker.string.alphanumeric(12);
+		const store = new KeyvEtcd(etcdUrl);
+		const errors: Error[] = [];
+		store.on("error", (error: Error) => {
+			errors.push(error);
+		});
+		await store.client.putRaw({
+			key: `expired-${id}`,
+			value: JSON.stringify({ v: "stale", e: Date.now() - 1000, n: null }),
+		});
+		await store.set(`live-${id}`, "live");
+		vi.spyOn(store.client, "delete").mockReturnValue({
+			key: async () => {
+				throw new Error("delete failed");
+			},
+		} as unknown as EtcdDeleteBuilder);
+
+		const results = await collect(store);
+		t.expect(results.get(`live-${id}`)).toBe("live");
+		t.expect(errors.some((error) => error.message === "delete failed")).toBe(true);
+	});
+
+	it("should page through more entries than one request returns", async (t) => {
+		const id = faker.string.alphanumeric(12);
+		const store = new KeyvEtcd(etcdUrl);
+		const keys = Array.from({ length: 150 }, (_, index) => `page-${id}-${index}`);
+		await store.setMany(keys.map((key) => ({ key, value: "value" })));
+
+		const results = await collect(store);
+		t.expect(keys.every((key) => results.get(key) === "value")).toBe(true);
+
+		await store.clear();
+		t.expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
+	});
+
+	it("should clear and iterate every key when noNamespaceAffectsAll is set", async (t) => {
+		const { store, namespaced, foreign, namespacedKey } = await seed();
+		const everything = new KeyvEtcd({ url: etcdUrl, noNamespaceAffectsAll: true });
+
+		const results = await collect(everything);
+		t.expect(results.get(foreign.text)).toBe("on");
+		t.expect(results.has(namespacedKey)).toBe(true);
+
+		await everything.clear();
+		t.expect(await store.client.get(foreign.text)).toBeNull();
+		t.expect(await namespaced.get("42")).toBeUndefined();
+	});
+});
+
 describe("createKeyv", () => {
 	it("should return a Keyv instance with a KeyvEtcd store", (t) => {
 		const keyv = createKeyv(etcdUrl);
@@ -616,6 +815,25 @@ describe("EtcdClient", () => {
 			code: 5,
 			message: "etcdserver: requested lease not found",
 		});
+	});
+
+	it("should end a scan when etcd returns no pairs", async (t) => {
+		const client = new EtcdClient({ url: "http://127.0.0.1:2379" });
+		vi.stubGlobal(
+			"fetch",
+			async () =>
+				new Response("{}", { status: 200, headers: { "content-type": "application/json" } }),
+		);
+		try {
+			const pages = [];
+			for await (const page of client.scanAll(10)) {
+				pages.push(page);
+			}
+
+			t.expect(pages).toEqual([[]]);
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 
 	it("should preserve raw bytes for non-ASCII prefixes in prefixEnd", (t) => {
