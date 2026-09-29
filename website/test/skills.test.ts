@@ -208,6 +208,16 @@ describe("validateSkill", () => {
 		expect(errors).toEqual([]);
 	});
 
+	test("matches keyv.org by exact origin, not by prefix", async () => {
+		const errors = await validate({
+			"SKILL.md": `${validSkill}\nSee [one](https://keyv.org.example.com/docs/nope/), [two](https://keyv.org@example.com/docs/nope/), and [three](https://KEYV.org/docs/nope/).\n`,
+			"references/guide.md": validGuide,
+		});
+		expect(errors).toEqual([
+			"skills/sample-skill/SKILL.md: https://KEYV.org/docs/nope/ is not a keyv.org docs page",
+		]);
+	});
+
 	test("doesn't check links to other sites", async () => {
 		const errors = await validate({
 			"SKILL.md": `${validSkill}\nSee [the spec](https://agentskills.io/specification) and [mail](mailto:a@b.c).\n`,

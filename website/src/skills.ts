@@ -13,6 +13,7 @@ import { load } from "js-yaml";
  */
 
 export const siteUrl = "https://keyv.org";
+const siteOrigin = new URL(siteUrl).origin;
 
 export type Skill = {
 	/** The skill's `name` from its frontmatter. */
@@ -365,8 +366,13 @@ async function checkLink(
 	docsUrls: Set<string> | undefined,
 	linkedFromSkill: Set<string>,
 ): Promise<string | undefined> {
-	if (target.startsWith(siteUrl)) {
-		const url = new URL(target);
+	const url = parseAbsoluteUrl(target);
+	if (url) {
+		// Compare the parsed origin, not a string prefix: https://keyv.org.example.com is another site.
+		if (url.origin !== siteOrigin) {
+			return undefined;
+		}
+
 		const skillPrefix = `/skills/${skill.folderName}/`;
 		if (url.pathname.startsWith(skillPrefix)) {
 			const skillFile = url.pathname.slice(skillPrefix.length);
@@ -377,10 +383,6 @@ async function checkLink(
 			return `${target} is not a keyv.org docs page`;
 		}
 
-		return undefined;
-	}
-
-	if (/^[a-z][a-z0-9+.-]*:/i.test(target)) {
 		return undefined;
 	}
 
@@ -404,6 +406,19 @@ async function checkLink(
 	}
 
 	return undefined;
+}
+
+/**
+ * Parses an absolute URL, such as `https://keyv.org/docs/` or `mailto:someone@example.com`.
+ * @param {string} target - A link target.
+ * @returns {URL | undefined} The URL, or undefined for a relative link such as `references/guide.md`.
+ */
+function parseAbsoluteUrl(target: string): URL | undefined {
+	try {
+		return new URL(target);
+	} catch {
+		return undefined;
+	}
 }
 
 function stripCodeBlocks(markdown: string): string {
