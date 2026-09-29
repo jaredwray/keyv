@@ -147,7 +147,7 @@ const value1 = await keyv1.get('foo'); // 'bar1'
 const value2 = await keyv2.get('foo'); // 'bar2'
 ```
 
-With no namespace, `clear()` and `iterator()` only touch entries written without a namespace. They leave other namespaces' entries and other applications' keys in etcd alone. Each value records the namespace it was written under. Entries written before that was recorded, and entries Keyv v5 wrote as `{ value, expires }` JSON, count when their key has no `:`. To have `clear()` delete every key in etcd and `iterator()` return every key, set `noNamespaceAffectsAll: true`:
+With no namespace, `clear()` and `iterator()` only touch entries written without a namespace. They leave other namespaces' entries and other applications' keys in etcd alone. Each value records the namespace it was written under, and entries written before that was recorded count when their key has no `:`. Entries Keyv v5 wrote are left alone too, since nothing sets their `{ value, expires }` JSON apart from another application's. To have `clear()` delete every key in etcd and `iterator()` return every key, set `noNamespaceAffectsAll: true`:
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379', { noNamespaceAffectsAll: true });

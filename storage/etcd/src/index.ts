@@ -79,19 +79,6 @@ function toEnvelope(object: Record<string, unknown>): Envelope | undefined {
 }
 
 /**
- * Checks whether an object is an entry Keyv v5 wrote, which stored Keyv's serialized
- * `{ value, expires }` without the adapter's envelope.
- * @param object - A stored value parsed as a JSON object.
- * @returns `true` when the object holds `value` and nothing but `value` and `expires`.
- */
-function isKeyvV5Entry(object: Record<string, unknown>): boolean {
-	return (
-		"value" in object &&
-		Object.keys(object).every((field) => field === "value" || field === "expires")
-	);
-}
-
-/**
  * Etcd storage adapter for Keyv.
  * Talks to etcd over its built-in HTTP/JSON gateway with no third-party client dependency.
  *
@@ -441,37 +428,24 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 
 	/**
 	 * Reads an entry that belongs to no namespace, as `clear()` and `iterator()` count them when no
-	 * namespace is set. An envelope belongs to no namespace when its `n` is `null`. An envelope
-	 * written before `n` was added, or an entry Keyv v5 wrote, belongs when its key has no
-	 * namespace separator. Anything else, such as another application's key, is left alone.
+	 * namespace is set. An envelope belongs to no namespace when its `n` is `null`, and an envelope
+	 * written before `n` was added belongs when its key has no namespace separator. Anything else,
+	 * such as another application's key, is left alone. That includes entries Keyv v5 wrote, which
+	 * have no envelope, since nothing tells them apart from another application's JSON.
 	 * @param key - The entry's key.
 	 * @param raw - The entry's value as read from etcd.
-	 * @returns The value to yield and its absolute expiry, or `undefined` when the entry doesn't belong.
+	 * @returns The envelope, or `undefined` when the entry doesn't belong to no namespace.
 	 */
-	private readUnnamespacedEntry(
-		key: string,
-		raw: string,
-	): { value: unknown; expires: number | null } | undefined {
+	private readUnnamespacedEntry(key: string, raw: string): Envelope | undefined {
 		const object = parseObject(raw);
-		if (!object) {
+		const envelope = object && toEnvelope(object);
+		if (!envelope) {
 			return undefined;
 		}
 
-		const unprefixed = !key.includes(this._keyPrefixSeparator);
-		const envelope = toEnvelope(object);
-		if (envelope) {
-			const unnamespaced = envelope.n === undefined ? unprefixed : envelope.n === null;
-			return unnamespaced ? { value: envelope.v, expires: envelope.e } : undefined;
-		}
-
-		if (unprefixed && isKeyvV5Entry(object)) {
-			return {
-				value: raw,
-				expires: typeof object.expires === "number" ? object.expires : null,
-			};
-		}
-
-		return undefined;
+		const unnamespaced =
+			envelope.n === undefined ? !key.includes(this._keyPrefixSeparator) : envelope.n === null;
+		return unnamespaced ? envelope : undefined;
 	}
 
 	/**
@@ -620,7 +594,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 					continue;
 				}
 
-				if (entry.expires !== null && Date.now() > entry.expires) {
+				if (entry.e !== null && Date.now() > entry.e) {
 					try {
 						await this._client.delete().key(pair.key);
 					} catch (error) {
@@ -630,7 +604,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 					continue;
 				}
 
-				yield [key, entry.value as string];
+				yield [key, entry.v as string];
 			}
 		}
 	}

@@ -651,12 +651,12 @@ In v6, `ttl` applies to each key written without an expiry, counted from that wr
 
 In v5, `clear()` on a `@keyv/etcd` store with no namespace deleted every key in etcd, including other namespaces' entries and other applications' keys. `iterator()` returned every key too.
 
-In v6, with no namespace, both only touch entries written without a namespace. Each value records the namespace it was written under. Entries written before that was recorded, and entries v5 wrote, count when their key has no `:`. A v5 entry is recognized when it holds Keyv's default JSON, `{ value, expires }`.
+In v6, with no namespace, both only touch entries v6 wrote without a namespace. Each value records the namespace it was written under, and entries written before that was recorded count when their key has no `:`. Entries v5 wrote are left alone, since nothing sets their `{ value, expires }` JSON apart from another application's.
 
 **What this means for you:**
 - To have `clear()` delete every key in etcd and `iterator()` return every key, as in v5, set `noNamespaceAffectsAll: true`
 - A v5 entry stored under a namespace, such as `keyv:foo`, is cleared by a store with that namespace
-- A v5 entry written with compression, encryption or a custom serializer isn't recognized. It stays until it expires, or you remove it, for example with `noNamespaceAffectsAll: true` if the etcd holds only Keyv data
+- A v5 entry stored with no namespace stays until it expires or v6 writes that key again. If the etcd holds only Keyv data, `clear()` with `noNamespaceAffectsAll: true` removes it
 
 ---
 

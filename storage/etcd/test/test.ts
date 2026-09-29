@@ -569,17 +569,17 @@ describe("clear and iterator without a namespace", () => {
 		t.expect(results.has(foreign.empty)).toBe(false);
 	});
 
-	it("should clear and iterate entries written before the namespace was recorded", async (t) => {
+	it("should clear and iterate envelopes written before the namespace was recorded", async (t) => {
 		const id = faker.string.alphanumeric(12);
 		const store = new KeyvEtcd(etcdUrl);
-		// Envelopes written before `n` was added count when their key has no namespace
-		// separator, and so do the `{ value, expires }` entries Keyv v5 wrote.
+		// An envelope written before `n` was added counts when its key has no namespace separator.
+		// A `{ value, expires }` object, as Keyv v5 wrote and as another application might, is left
+		// alone, since nothing marks it as Keyv's.
 		const entries = {
 			envelope: [`legacy-${id}`, JSON.stringify({ v: "legacy-value", e: null })],
 			envelopeWithColon: [`legacy:${id}`, JSON.stringify({ v: "prefixed-value", e: null })],
-			v5: [`v5-${id}`, JSON.stringify({ value: "v5-value", expires: null })],
-			v5WithExpiry: [`v5-ttl-${id}`, JSON.stringify({ value: "v5", expires: Date.now() + 60_000 })],
-			v5WithColon: [`v5:${id}`, JSON.stringify({ value: "v5-prefixed", expires: null })],
+			valueObject: [`flag-${id}`, JSON.stringify({ value: "enabled" })],
+			v5WithExpiry: [`v5-${id}`, JSON.stringify({ value: "v5", expires: Date.now() + 60_000 })],
 			extraField: [`extra-${id}`, JSON.stringify({ v: "extra", e: null, other: 1 })],
 		};
 		for (const [key, value] of Object.values(entries)) {
@@ -588,40 +588,39 @@ describe("clear and iterator without a namespace", () => {
 
 		const results = await collect(store);
 		t.expect(results.get(entries.envelope[0])).toBe("legacy-value");
-		t.expect(results.get(entries.v5[0])).toBe(entries.v5[1]);
-		t.expect(results.get(entries.v5WithExpiry[0])).toBe(entries.v5WithExpiry[1]);
-		t.expect(results.has(entries.envelopeWithColon[0])).toBe(false);
-		t.expect(results.has(entries.v5WithColon[0])).toBe(false);
-		t.expect(results.has(entries.extraField[0])).toBe(false);
+		for (const [key] of [
+			entries.envelopeWithColon,
+			entries.valueObject,
+			entries.v5WithExpiry,
+			entries.extraField,
+		]) {
+			t.expect(results.has(key)).toBe(false);
+		}
 
 		await store.clear();
 		t.expect(await store.client.get(entries.envelope[0])).toBeNull();
-		t.expect(await store.client.get(entries.v5[0])).toBeNull();
-		t.expect(await store.client.get(entries.v5WithExpiry[0])).toBeNull();
-		t.expect(await store.client.get(entries.envelopeWithColon[0])).not.toBeNull();
-		t.expect(await store.client.get(entries.v5WithColon[0])).not.toBeNull();
-		t.expect(await store.client.get(entries.extraField[0])).not.toBeNull();
+		for (const [key, value] of [
+			entries.envelopeWithColon,
+			entries.valueObject,
+			entries.v5WithExpiry,
+			entries.extraField,
+		]) {
+			t.expect(await store.client.get(key)).toBe(value);
+		}
 	});
 
 	it("should skip and delete expired entries while iterating", async (t) => {
 		const id = faker.string.alphanumeric(12);
 		const store = new KeyvEtcd(etcdUrl);
 		const expiredKey = `expired-${id}`;
-		const expiredV5Key = `expired-v5-${id}`;
 		await store.client.putRaw({
 			key: expiredKey,
 			value: JSON.stringify({ v: "stale", e: Date.now() - 1000, n: null }),
 		});
-		await store.client.putRaw({
-			key: expiredV5Key,
-			value: JSON.stringify({ value: "stale", expires: Date.now() - 1000 }),
-		});
 
 		const results = await collect(store);
 		t.expect(results.has(expiredKey)).toBe(false);
-		t.expect(results.has(expiredV5Key)).toBe(false);
 		t.expect(await store.client.get(expiredKey)).toBeNull();
-		t.expect(await store.client.get(expiredV5Key)).toBeNull();
 	});
 
 	it("should emit an error and keep iterating when deleting an expired entry fails", async (t) => {
