@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import type { KeyvMemoryAdapter } from "keyv";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { BigMap, BigMapEvents, createKeyv, defaultHashFunction } from "../src/index.js";
 
 enum FakeDataType {
@@ -140,6 +140,26 @@ describe("BigMap Instance", () => {
 		expect(bigMap.storeSize).toBe(4);
 		expect(bigMap.store).toBe(store);
 		expect(bigMap.size).toBe(20);
+		for (const { key, value } of entries) {
+			expect(bigMap.get(key)).toBe(value);
+		}
+	});
+
+	test("should leave the map unchanged when the new stores can't be created", () => {
+		const bigMap = new BigMap<string, number>({ storeSize: 4 });
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 20);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
+
+		const store = bigMap.store;
+		// One more Map than an array can hold.
+		expect(() => {
+			bigMap.storeSize = 2 ** 32;
+		}).toThrow(RangeError);
+
+		expect(bigMap.storeSize).toBe(4);
+		expect(bigMap.store).toBe(store);
 		for (const { key, value } of entries) {
 			expect(bigMap.get(key)).toBe(value);
 		}
@@ -423,6 +443,26 @@ describe("BigMap Hash", () => {
 		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
 		expect(bigMap.store).toBe(store);
 		expect(bigMap.size).toBe(20);
+		for (const { key, value } of entries) {
+			expect(bigMap.get(key)).toBe(value);
+		}
+	});
+
+	test("should keep the old hash function when the new stores can't be created", () => {
+		const bigMap = new BigMap<string, number>({ storeSize: 4 });
+		const entries = fakeEntries<number>(FakeDataType.NUMBER, 20);
+		for (const { key, value } of entries) {
+			bigMap.set(key, value);
+		}
+
+		vi.spyOn(bigMap, "initStore").mockImplementationOnce(() => {
+			throw new Error("init failed");
+		});
+		expect(() => {
+			bigMap.storeHashFunction = (key: string, storeSize: number) => key.charCodeAt(0) % storeSize;
+		}).toThrow("init failed");
+
+		expect(bigMap.storeHashFunction).toBe(defaultHashFunction);
 		for (const { key, value } of entries) {
 			expect(bigMap.get(key)).toBe(value);
 		}

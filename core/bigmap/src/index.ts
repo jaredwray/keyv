@@ -153,8 +153,9 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 	 * are moved into the store their key maps to at the new size, so every entry
 	 * stays reachable.
 	 * @param {number} size - The new size of the store.
-	 * @throws {Error} If the size is less than 1, or if the hash function throws
-	 * while entries are moved. The map is left unchanged in either case.
+	 * @throws {Error} If the size is less than 1, or if creating the new stores or
+	 * moving an entry throws, such as for a size too large to allocate. The map is
+	 * left unchanged in every case.
 	 */
 	public set storeSize(size: number) {
 		if (size < 1) {
@@ -185,8 +186,9 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 	 * are moved into the store the new hash function maps them to, so every entry
 	 * stays reachable.
 	 * @param {StoreHashFunction | undefined} hashFunction - The hash function to use, or `undefined` to reset to the default.
-	 * @throws {Error} If the new hash function throws while entries are moved. The
-	 * map, including its hash function, is left unchanged.
+	 * @throws {Error} If creating the new stores or moving an entry throws, such as
+	 * when the new hash function throws. The map, including its hash function, is
+	 * left unchanged.
 	 */
 	public set storeHashFunction(hashFunction: StoreHashFunction | undefined) {
 		if ((hashFunction ?? defaultHashFunction) === this._storeHashFunction) {
@@ -396,8 +398,9 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 
 	/**
 	 * Applies a change to how keys map to stores, then moves every entry into the
-	 * store its key now maps to. If moving an entry throws, the previous stores and
-	 * settings are restored and the error is rethrown, so the map is left unchanged.
+	 * store its key now maps to. If creating the new stores or moving an entry
+	 * throws, the previous stores and settings are restored and the error is
+	 * rethrown, so the map is left unchanged.
 	 * @param {() => void} applyChange - Updates the store size or hash function.
 	 * @returns {void}
 	 */
@@ -408,10 +411,10 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 		const previousHashFunction = this._storeHashFunction;
 		const previousIsDefaultHash = this._isDefaultHash;
 
-		applyChange();
-		this.initStore();
-
 		try {
+			applyChange();
+			this.initStore();
+
 			for (const store of previousStore) {
 				for (const [key, value] of store) {
 					this.getStore(key).set(key, value);
