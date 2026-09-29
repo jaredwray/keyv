@@ -39,10 +39,11 @@ interface KeyvCompressionAdapter {
 Test with `@keyv/test-suite`:
 
 ```js
-import { keyvCompressionTests } from "@keyv/test-suite";
+import { compressionTestSuite } from "@keyv/test-suite";
+import { it } from "vitest";
 import KeyvGzip from "@keyv/compress-gzip";
 
-keyvCompressionTests(test, new KeyvGzip());
+compressionTestSuite(it, new KeyvGzip());
 ```
 
 Serialization must stay enabled (the default). Disabling serialization bypasses compression regardless of the original value type.

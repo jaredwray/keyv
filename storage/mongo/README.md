@@ -62,7 +62,7 @@ You can specify the collection name, by default `'keyv'` is used.
 e.g:
 
 ```js
-const keyv = new Keyv('mongodb://user:pass@localhost:27017/dbname', { collection: 'cache' });
+const keyv = new Keyv(new KeyvMongo('mongodb://user:pass@localhost:27017/dbname', { collection: 'cache' }));
 ```
 
 You can also use the `createKeyv` helper function to create a `Keyv` instance with `KeyvMongo` as the store:
@@ -97,7 +97,7 @@ const store = new KeyvMongo('mongodb://user:pass@localhost:27017/dbname', { coll
 |---|---|---|---|
 | `url` | `string` | `'mongodb://127.0.0.1:27017'` | MongoDB connection URI |
 | `collection` | `string` | `'keyv'` | Collection name for storage |
-| `namespace` | `string \| undefined` | `undefined` | Namespace prefix for keys |
+| `namespace` | `string \| undefined` | `undefined` | Namespace for keys, stored in each document's `namespace` field |
 | `useGridFS` | `boolean` | `false` | Whether to use GridFS for storing values |
 | `db` | `string \| undefined` | `undefined` | Database name |
 | `readPreference` | `ReadPreference \| undefined` | `undefined` | MongoDB read preference for GridFS operations |
@@ -135,7 +135,7 @@ store.collection = 'cache';
 
 ### namespace
 
-Get or set the namespace for the adapter. Used for key prefixing and scoping operations like `clear()`.
+Get or set the namespace for the adapter. It is stored in each document's `namespace` field (or `metadata.namespace` with GridFS) and scopes operations like `clear()`.
 
 - Type: `string | undefined`
 - Default: `undefined`
@@ -195,27 +195,33 @@ console.log(store.readPreference); // ReadPreference.SECONDARY
 
 ### set
 
-`set(key, value, ttl?)` - Set a value in the store.
+`set(key, value, expires?)` - Set a value in the store.
 
 - `key` *(string)* - The key to set.
 - `value` *(any)* - The value to store.
-- `ttl` *(number, optional)* - Time to live in milliseconds. If specified, the key will expire after this duration.
+- `expires` *(number, optional)* - Absolute expiry time as a Unix timestamp in milliseconds (`Date.now() + ttl`). If specified, the key expires at this time.
 - Returns: `Promise<boolean>`
+
+Through a `Keyv` instance, `keyv.set(key, value, ttl)` still takes a relative `ttl` in milliseconds. Keyv converts it to `expires` before it calls the adapter.
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
 const keyv = new Keyv({ store });
 
 await keyv.set('foo', 'bar');
-await keyv.set('foo', 'bar', 5000); // expires in 5 seconds
+await keyv.set('foo', 'bar', 5000); // Keyv takes a relative ttl: expires in 5 seconds
+
+await store.set('foo', 'bar', Date.now() + 5000); // the adapter takes an absolute expires
 ```
 
 ### setMany
 
 `setMany(entries)` - Set multiple values in the store at once.
 
-- `entries` *(KeyvEntry<Value>[])* - Array of entries to set. Each entry has a `key`, `value`, and optional `ttl` in milliseconds. `Value` is inferred from the entries provided.
+- `entries` *(KeyvStorageEntry<Value>[])* - Array of entries to set. Each entry has a `key`, `value`, and optional `expires` (an absolute Unix timestamp in milliseconds). A `ttl` field is ignored. `Value` is inferred from the entries provided.
 - Returns: `Promise<boolean[]>` - An array of booleans indicating whether each entry was set successfully.
+
+Through a `Keyv` instance, `keyv.setMany()` takes entries with a relative `ttl` (`{ key, value, ttl? }`) and converts them before it calls the adapter.
 
 In standard mode, uses a single unordered MongoDB `bulkWrite` operation for efficiency with per-entry error tracking — if individual writes fail, only those entries return `false`. In GridFS mode, each entry is set individually in parallel using `Promise.allSettled`, providing per-entry success tracking.
 
@@ -224,7 +230,7 @@ const store = new KeyvMongo('mongodb://localhost:27017');
 
 const results = await store.setMany([
   { key: 'key1', value: 'value1' },
-  { key: 'key2', value: 'value2', ttl: 5000 },
+  { key: 'key2', value: 'value2', expires: Date.now() + 5000 },
 ]); // [true, true]
 ```
 
@@ -467,6 +473,18 @@ console.log(store.useGridFS); // true (read-only)
 
 The `ttlSupport` property has been removed. If your code checks for TTL support on the adapter, remove those checks.
 
+#### `set` Takes an Absolute `expires`
+
+The third argument of the adapter's `set` is now an absolute Unix timestamp in milliseconds, not a relative `ttl`. This only affects code that calls the adapter directly. `keyv.set(key, value, ttl)` still takes a relative `ttl`.
+
+```js
+// v3 - relative ttl
+await store.set('foo', 'bar', 5000);
+
+// v6 - absolute expires
+await store.set('foo', 'bar', Date.now() + 5000);
+```
+
 #### Namespaces Are Stored in Their Own Field
 
 v3 stored the namespace as a prefix of each key (`key: "keyv:foo"`) and wrote no namespace field. v6 stores it separately (`key: "foo"`, `namespace: "keyv"`) and only reads documents that have a `namespace` field, so documents written by v3 stay invisible to v6 until you [run the migration script](#running-the-migration-script).
@@ -504,12 +522,12 @@ const keyv = createKeyv({ url: 'mongodb://localhost:27017', namespace: 'my-ns' }
 
 #### `setMany` Method
 
-Batch set multiple key-value pairs in a single operation using MongoDB `bulkWrite`.
+Batch set multiple key-value pairs in a single operation using MongoDB `bulkWrite`. Each entry takes an optional absolute `expires` timestamp (Unix ms).
 
 ```js
 await store.setMany([
   { key: 'key1', value: 'value1' },
-  { key: 'key2', value: 'value2', ttl: 5000 },
+  { key: 'key2', value: 'value2', expires: Date.now() + 5000 },
 ]);
 ```
 

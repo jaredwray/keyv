@@ -27,6 +27,7 @@
 - [Usage](#usage)
 - [Usage with Namespaces](#usage-with-namespaces)
 - [Usage with NestJS](#usage-with-nestjs)
+- [Migrating to v6](#migrating-to-v6)
 - [Options](#options)
 - [Properties](#properties)
   - [.client](#client)
@@ -141,6 +142,8 @@ const value2 = await keyv2.get('foo'); // 'bar2'
 
 ## Usage with NestJS
 
+> **Note:** `cache-manager` 7 depends on Keyv v5. It reads expiry data with `store.get(key, { raw: true })`, which a v6 `Keyv` ignores, so `ttl()` and the refresh logic in `wrap()` stop working with a v6 store. Check which Keyv version your `cache-manager` needs with `npm view cache-manager dependencies.keyv`. See [Libraries That Embed Keyv v5](https://keyv.org/docs/migration/v5-to-v6/#libraries-that-embed-keyv-v5).
+
 Since DynamoDB has a 400KB limit per item, compressing data can help in some cases.
 
 ### With a payload less than or equal to 400KB
@@ -202,6 +205,24 @@ import { Module } from '@nestjs/common'
 })
 export class InfrastructureModule {}
 ```
+
+## Migrating to v6
+
+- **Keys written without a TTL no longer expire.** In v5, every key written without a TTL got an expiry six hours after the write. In v6, such a key has no expiry and is kept until it is deleted. To keep a default expiry, set Keyv's `ttl` option:
+
+```js
+const keyv = new Keyv(store, { ttl: 6 * 60 * 60 * 1000 });
+```
+
+- **`sixHoursInMilliseconds` was removed.** Remove any code that reads or assigns `store.sixHoursInMilliseconds`.
+- **Keys written by v5 keep the expiry they were written with** until they are written again.
+- **The `ttlSupport` and `opts` properties were removed.** Use the `tableName` and `endpoint` properties instead.
+- **The adapter's `set` takes an absolute `expires`.** v5's `set(key, value, ttl)` took a relative `ttl`. This only affects code that calls the adapter directly. See [.set(key, value, expires?)](#setkey-value-expires).
+- **Keys written by v5 need matching namespace settings.** Keyv v6 has no default namespace.
+  - v5's default setup, `new Keyv(new KeyvDynamo(options))`, stored `foo` as `keyv:foo`. Read those keys with `new Keyv(new KeyvDynamo(options), { namespace: 'keyv' })`. If you set your own namespace in v5, pass that one instead.
+  - Keys written through v5's `createKeyv()` were stored without a prefix, even when you passed a `namespace`. The same is true when v5 ran with `useKeyPrefix: false`. Read those keys without a namespace. Without a namespace, `clear()` deletes every item in the table.
+
+See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#keyvdynamo-keys-without-a-ttl-no-longer-expire) for more.
 
 ## Options
 

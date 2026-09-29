@@ -94,4 +94,4 @@ detectKeyvEncryption({ encrypt: (d) => d, decrypt: (d) => d });
 
 `compatible` is `true` when both methods in the pair exist.
 
-These replaced the v5-era `isKeyv` / `isKeyvStorage` helpers. See the [v5 → v6 Migration](/docs/migration/v5-to-v6/) guide.
+Early v6 pre-release docs called these helpers `isKeyv`, `isKeyvStorage` and so on. They were renamed to `detect*` during v6 development. No published v5 release exported the `isKeyv*` names, so v5 code has nothing to rename. See the [v5 → v6 Migration](/docs/migration/v5-to-v6/) guide.

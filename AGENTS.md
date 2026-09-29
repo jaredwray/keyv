@@ -39,27 +39,32 @@ Individual package tests:
 - **serialization/superjson**: SuperJSON serializer (@keyv/serialize-superjson) - optional
 - **serialization/msgpackr**: MessagePack serializer (@keyv/serialize-msgpackr) - optional
 - **core/bigmap**: BigMap - scalable in-memory Map implementation
-- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB
+- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB, Cloudflare KV
 - **compression/**: Compression adapters - Brotli, Gzip, LZ4
+- **encryption/**: Encryption adapters - Node.js crypto (@keyv/encrypt-node), Web Crypto (@keyv/encrypt-web)
+- **skills/**: Agent Skills for coding agents - `keyv-migrate` upgrades user projects from Keyv v4/v5 to v6
 - **website**: Documentation website
 
 ### Key Architecture Concepts
 
-**Core Keyv Class** (`core/keyv/src/index.ts`):
-- Extends EventManager for event emission
-- Uses HooksManager for pre/post operation hooks
-- Includes KeyvStats for usage statistics
-- Supports pluggable storage adapters, serialization, and compression
-- Handles namespacing, TTL, and key prefixing
+**Core Keyv Class** (`core/keyv/src/keyv.ts`, exported from `core/keyv/src/index.ts`):
+- Extends Hookified for events and hooks (`onHook`/`addHook`, `KeyvHooks.BEFORE_*`/`AFTER_*`; the old `PRE_*`/`POST_*` names are deprecated aliases)
+- Includes KeyvStats for usage statistics, driven by `stat:*` events
+- Supports pluggable storage adapters, serialization, compression, and encryption
+- Handles TTL: turns the relative `ttl` users pass into an absolute `expires` timestamp for the adapter
+- Does not prefix keys; namespacing is done by the storage adapters. There is no default namespace
+- A failed operation emits `error`; it resolves to a fallback value when an `error` listener is attached and rejects when none is
 
-**Storage Adapter Interface**:
-- Must implement: `get()`, `set()`, `delete()`, `clear()`
-- Optional: `getMany()`, `setMany()`, `deleteMany()`, `has()`, `hasMany()`, `iterator()`, `disconnect()`
-- Should emit events and extend EventEmitter-like interface
+**Storage Adapter Interface** (`KeyvStorageAdapter` in `core/keyv/src/types/adapters.ts`):
+- Must implement: `get()`, `set(key, value, expires?)`, `delete()`, `clear()`, `has()`, `hasMany()`, `getMany()`, `setMany()`, `deleteMany()`
+- Optional: `iterator()` (no arguments), `disconnect()`
+- `expires` is an absolute Unix timestamp in milliseconds; declare the v6 contract with `get capabilities() { return keyvStorageCapability(this); }`
+- Keyv wraps adapters that don't declare it in `KeyvBridgeAdapter`, and `Map`-like stores in `KeyvMemoryAdapter`
+- Adapters extend Hookified and handle their own `namespace`
 
 **Serialization**:
-- Default uses built-in `KeyvJsonSerializer` with JSON.stringify/parse
-- Compression adapters can be plugged in
+- Default uses built-in `KeyvJsonSerializer` with JSON.stringify/parse (plus `Buffer` and `BigInt` support)
+- Compression and encryption adapters can be plugged in; they run only while serialization is enabled
 - Data format: `{ value: T, expires?: number }`
 
 ### Build Dependencies
@@ -82,9 +87,17 @@ Individual package tests:
 
 ### Package Dependencies
 - Workspace packages use `workspace:^` protocol
-- Core package (`keyv`) has no external dependencies (serializer is built-in)
+- Core package (`keyv`) depends only on `hookified` (serializer is built-in)
 - Storage adapters depend on `keyv` as peer dependency
 - Test suite depends on `keyv` and various testing utilities
+
+## Migration Skill
+
+`skills/keyv-migrate/` is an Agent Skill that coding agents follow to upgrade user projects from Keyv v4 or v5 to v6. It is published at https://keyv.org/skills/migrate (and `/skills/keyv-migrate/`, plus the `/.well-known/skills/` discovery index) by `website/src/skills.ts` during `pnpm website:build`, and can be installed with `npx skills add jaredwray/keyv --skill keyv-migrate`.
+
+- When a change alters a public API, an option, an adapter's behavior, or how an adapter builds storage keys, update `website/site/docs/migration/v5-to-v6.md` and the matching file in `skills/keyv-migrate/references/` in the same PR.
+- Keep the skill Markdown only. Don't add scripts: agents run it in other people's projects, and it can be read straight from a URL.
+- `pnpm --filter @keyv/website test` validates the skill (frontmatter, links, headings, absolute URLs) and the publishing step.
 
 ## Pull Request Guidelines
 

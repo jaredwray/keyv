@@ -29,11 +29,22 @@ const keyv = new Keyv({store: new Map(), compression: new KeyvLz4()});
 
 ## API
 
-### @keyv/compress-lz4(\[options])
+### @keyv/compress-lz4(\[dictionary])
 
-#### options
+#### dictionary
 
-All options for `@keyv/compress-lz4` are based on the package [lz4-napi](https://npmjs.com/package/lz4-napi).
+An optional string that [lz4-napi](https://npmjs.com/package/lz4-napi) uses as the dictionary for both compression and decompression. Use the same dictionary to read values that were written with it.
+
+```javascript
+const keyv = new Keyv({ compression: new KeyvLz4('my-dictionary') });
+```
+
+## Migrating to v6
+
+- `KeyvLz4` implements the v6 `KeyvCompressionAdapter` interface: `compress(value: string): Promise<string>` and `decompress(value: string): Promise<string>`. Keyv passes it the whole serialized entry, and `compress` returns a base64 string instead of a `Uint8Array`.
+- The v5 `serialize` and `deserialize` methods were removed. The constructor still takes an optional dictionary string.
+- Values that Keyv v5 wrote with `@keyv/compress-lz4` can't be read by v6. v5 compressed only the `value` field inside the JSON envelope, so an old entry doesn't decode. Keyv emits `error`, and `get` returns `undefined` when an `error` listener is attached or rejects when none is. Treat a compressed store as a cache that v6 repopulates, or read the old entries with v5 and write them again with v6. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#compression-adapter-interface-change).
+- Compression needs serialization, which is on by default. With `serialization: false`, Keyv stores values without compressing them.
 
 ## License
 

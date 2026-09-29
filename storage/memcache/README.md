@@ -55,6 +55,7 @@
   - [`KeyvMemcacheOptions` Type Changed](#keyvmemcacheoptions-type-changed)
   - [`disconnect()` Method Added](#disconnect-method-added)
   - [`buffer` Dependency Removed](#buffer-dependency-removed)
+  - [`set` Takes an Absolute `expires`](#set-takes-an-absolute-expires)
 - [License](#license)
 
 ## Install
@@ -316,7 +317,7 @@ const results = await memcache.getMany(['key1', 'key2', 'key3']); // ['value1', 
 
 ### .set(key, value, expires?)
 
-Stores a value in the memcache server. The optional `expires` is an absolute Unix timestamp in milliseconds, converted to Memcached's seconds internally. Returns `true` when the value was stored. When Memcached doesn't store it, for example a value over Memcached's item size limit, it returns `false` and emits an error.
+Stores a value in the memcache server. The optional `expires` parameter is an absolute Unix timestamp in milliseconds (`Date.now() + ttl`). It is converted to Memcached's `exptime` in seconds internally. Through a `Keyv` instance, `keyv.set(key, value, ttl)` still takes a relative `ttl` in milliseconds, and Keyv converts it to `expires` for you. Returns `true` when the value was stored. When Memcached doesn't store it, for example a value over Memcached's item size limit, it returns `false` and emits an error.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
@@ -491,6 +492,18 @@ await memcache.disconnect();
 ## `buffer` Dependency Removed
 
 The `buffer` polyfill dependency has been removed. Values are now handled as strings instead of Buffers.
+
+## `set` Takes an Absolute `expires`
+
+The third argument of the adapter's `set` is now an absolute Unix timestamp in milliseconds, not a relative `ttl`. This only affects code that calls the adapter directly. `keyv.set(key, value, ttl)` still takes a relative `ttl`.
+
+```js
+// Before (v2)
+await memcache.set('foo', 'bar', 5000);
+
+// After (v6)
+await memcache.set('foo', 'bar', Date.now() + 5000);
+```
 
 ## License
 

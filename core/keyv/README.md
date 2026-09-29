@@ -603,7 +603,7 @@ For more details about BigMap, see the [@keyv/bigmap documentation](https://gith
 
 # Compression
 
-Keyv supports `gzip`, `brotli` and `lz4` compression. To enable compression, pass the `compress` option to the constructor.
+Keyv supports `gzip`, `brotli` and `lz4` compression. To enable compression, pass the `compression` option to the constructor. Compression runs on the serialized value, so it requires a serializer — the built-in `KeyvJsonSerializer` is enabled by default. With `serialization: false`, values are stored uncompressed.
 
 ```js
 import Keyv from 'keyv';
@@ -637,18 +637,19 @@ Great! Keyv is designed to be easily extended. You can build your own compressio
 
 ```typescript
 interface KeyvCompressionAdapter {
-	compress(value: any, options?: any): Promise<any>;
-	decompress(value: any, options?: any): Promise<any>;
+	compress(value: string): Promise<string>;
+	decompress(value: string): Promise<string>;
 }
 ```
 
 In addition to the interface, you can test it with our compression test suite using @keyv/test-suite:
 
 ```js
-import { keyvCompressionTests } from '@keyv/test-suite';
+import { compressionTestSuite } from '@keyv/test-suite';
+import { it } from 'vitest';
 import KeyvGzip from '@keyv/compress-gzip';
 
-keyvCompressionTests(test, new KeyvGzip());
+compressionTestSuite(it, new KeyvGzip());
 ```
 
 # Encryption
