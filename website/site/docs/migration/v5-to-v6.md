@@ -429,7 +429,7 @@ console.log(results[0]); // true - key1 was deleted
 console.log(results[1]); // true - key2 was deleted
 ```
 
-An array is always truthy, so `if (await keyv.deleteMany(keys))` no longer tells you anything. What the old single boolean meant depended on the store. With a `Map` or Memcache it was `true` only when every key was deleted, as in the example above. With Redis, SQLite, PostgreSQL, and MongoDB it was `true` when any key was deleted. Replace it with `.every(Boolean)` or `.some(Boolean)`, whichever matches what your code meant. `delete(key)` with a single key still returns one boolean, and `delete([...])` with an array now returns `boolean[]` like `deleteMany`.
+An array is always truthy, so `if (await keyv.deleteMany(keys))` no longer tells you anything. What the old single boolean meant depended on the store. With a `Map`, Memcache, or Etcd it was `true` only when every key was deleted, as in the example above. With SQLite, PostgreSQL, MySQL, and MongoDB it was `true` when any key was deleted. With Redis it depended on the `@keyv/redis` version: 2.7 through 3.0 meant every key, and earlier and later versions any key. Replace it with `.every(Boolean)` or `.some(Boolean)`, whichever matches what your code meant. `delete(key)` with a single key still returns one boolean, and `delete([...])` with an array now returns `boolean[]` like `deleteMany`.
 
 ---
 
