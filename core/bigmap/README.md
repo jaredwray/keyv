@@ -108,7 +108,7 @@ By default, BigMap uses 2 internal Map instances. You can configure this:
 const bigMap = new BigMap<string, number>({ storeSize: 10 });
 ```
 
-**Note:** Changing the `storeSize` after initialization will clear all entries.
+Changing `storeSize` after initialization keeps every entry: BigMap moves each one into the internal `Map` its key maps to at the new size. That takes one pass over all entries, so set `storeSize` in the constructor for a large map.
 
 # Custom Hash Function
 
@@ -123,6 +123,8 @@ const bigMap = new BigMap<string, string>({
   storeHashFunction: customHashFunction
 });
 ```
+
+You can also set `storeHashFunction` later. BigMap then moves every existing entry into the `Map` the new function picks, so `get()`, `has()` and `delete()` keep finding them. If the function throws while entries are moved, the setter rethrows and the map is left as it was.
 
 ## Using Hashery for Hash Functions
 
@@ -213,7 +215,7 @@ for (const [key, value] of bigMap.entries()) {
 |-------------------|----------------------|----------------|------------------------------------------------------------------------------|
 | `set`             | `BigMapEvents.SET`   | `(key, value)` | Emitted after a value is set.                                                |
 | `delete`          | `BigMapEvents.DELETE`| `(key)`        | Emitted after an existing entry is removed. Not emitted when the key was absent. |
-| `clear`           | `BigMapEvents.CLEAR` | _(none)_       | Emitted after all entries are cleared, including when `storeSize` changes.    |
+| `clear`           | `BigMapEvents.CLEAR` | _(none)_       | Emitted after all entries are cleared by `clear()`.                            |
 
 ```typescript
 import { BigMap, BigMapEvents } from '@keyv/bigmap';
@@ -397,8 +399,8 @@ const customBigMap = new BigMap<string, number>({
 | Property | Type | Access | Description |
 |----------|------|--------|-------------|
 | `size` | `number` | Read-only | Gets the total number of entries in the BigMap. |
-| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. **Note:** Setting this clears all entries and emits `BigMapEvents.CLEAR`. Default: `2` |
-| `storeHashFunction` | `StoreHashFunction \| undefined` | Read/Write | Gets or sets the hash function used for key distribution. |
+| `storeSize` | `number` | Read/Write | Gets or sets the number of internal Map instances. Setting it moves every entry into the new layout, so no entries are lost. Default: `2` |
+| `storeHashFunction` | `StoreHashFunction \| undefined` | Read/Write | Gets or sets the hash function used for key distribution. Setting it moves every entry into the `Map` the new function picks. |
 | `store` | `Array<Map<K, V>>` | Read-only | Gets the internal array of Map instances. |
 
 **Examples:**
@@ -411,7 +413,7 @@ console.log(bigMap.size); // 1
 
 // storeSize property
 console.log(bigMap.storeSize); // 2 (default)
-bigMap.storeSize = 8; // Changes size and clears all entries
+bigMap.storeSize = 8; // Changes size and keeps every entry
 
 // storeHashFunction property
 bigMap.storeHashFunction = (key, storeSize) => key.length % storeSize;
@@ -672,6 +674,7 @@ Keyv v5 used `@keyv/bigmap` 1.x. Changes in v6:
 - **`set()` returns the `BigMap`.** Calls chain like `Map.set`. In 1.x, `set()` returned the internal `Map` that held the key.
 - **Default `storeSize` is `2`.** It was `4` in 1.x. Pass `storeSize: 4` to keep the old layout.
 - **Hashing.** `defaultHashFunction` is now a built-in hash instead of Hashery, so keys land in different internal `Map`s. A custom `storeHashFunction` now receives the real `storeSize` (1.x passed `storeSize - 1`), and an out-of-range result is wrapped into range instead of throwing. This matters only if you read `store`, `getStore()` or `getStoreMap()` directly.
+- **Changing `storeSize` or `storeHashFunction` keeps your entries.** Both setters move every entry into the internal `Map` its key now maps to. In 1.x, setting `storeSize` removed every entry, and setting `storeHashFunction` left entries where `get()`, `has()` and `delete()` couldn't find them, while `size` still counted them and `set()` added a second copy. If you set `storeSize` to empty the map, call `clear()` as well.
 - **Dependencies.** `hashery` moved from `^1.4` to `^3` and is still re-exported as `Hashery`. `hookified` moved from `^1.15` to `^3`; if you pass Hookified options to `BigMap`, note that `logger` is now `eventLogger`.
 - **`createKeyv`** still returns a `Keyv` instance backed by a new `BigMap`. Keyv v6 wraps the `BigMap` in its `KeyvMemoryAdapter`, which handles TTL and namespaces, so the `BigMap` itself is at `keyv.store.store`.
 

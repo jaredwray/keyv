@@ -77,6 +77,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - Emits Hookified events (`BigMapEvents`). The `MapInterfacee` type is now `MapInterface`.
 - `set()` returns the BigMap, like `Map`.
 - The default `storeSize` changed, and a custom hash function now receives the real `storeSize`. Check any code that depends on how keys are distributed.
+- Setting `storeSize` or `storeHashFunction` keeps every entry. In v5, setting `storeSize` removed them all, and setting `storeHashFunction` left them where `get()` couldn't find them. If code set `storeSize` to empty the map, add a `clear()` call.
 - No default export: `import { BigMap, createKeyv } from '@keyv/bigmap'`.
 
 ## Compression: `@keyv/compress-gzip`, `@keyv/compress-brotli`, `@keyv/compress-lz4`

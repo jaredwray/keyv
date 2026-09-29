@@ -41,6 +41,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`@keyv/etcd` Default `ttl` Applies Per Key](#keyvetcd-default-ttl-applies-per-key)
   - [`@keyv/etcd` Without a Namespace Only Clears Its Own Entries](#keyvetcd-without-a-namespace-only-clears-its-own-entries)
   - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
+  - [`@keyv/bigmap` Keeps Entries When `storeSize` or `storeHashFunction` Changes](#keyvbigmap-keeps-entries-when-storesize-or-storehashfunction-changes)
 - [New Features](#new-features)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
@@ -786,6 +787,18 @@ In v6, a key written without a TTL has no expiry and is kept until it is deleted
 - To give keys a default expiry, set Keyv's `ttl` option, such as `new Keyv(store, { ttl: 6 * 60 * 60 * 1000 })`
 - Remove any code that reads or assigns `store.sixHoursInMilliseconds`
 - A key written by v5 keeps the expiry it was written with until it is written again
+
+---
+
+### `@keyv/bigmap` Keeps Entries When `storeSize` or `storeHashFunction` Changes
+
+In v5, setting `storeSize` on a `BigMap` removed every entry. Setting `storeHashFunction` left each entry in the internal `Map` the old function had picked, so `get()`, `has()` and `delete()` missed most of them, `size` still counted them, and `set()` on one of those keys added a second copy.
+
+In v6, both setters move every entry into the `Map` its key maps to under the new setting, so nothing is lost or duplicated. If a custom hash function throws while entries are moved, the setter rethrows and the map is left as it was.
+
+**What this means for you:**
+- If code sets `storeSize` to empty the map, call `clear()` as well
+- Moving entries takes one pass over the map, so for a large map set `storeSize` and `storeHashFunction` in the constructor
 
 ---
 

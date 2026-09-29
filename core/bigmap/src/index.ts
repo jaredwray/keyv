@@ -149,21 +149,26 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 	}
 
 	/**
-	 * Sets the number of internal `Map` instances in the store.
-	 * Changing the store size clears all existing entries and emits
-	 * {@link BigMapEvents.CLEAR}.
+	 * Sets the number of internal `Map` instances in the store. Existing entries
+	 * are moved into the store their key maps to at the new size, so every entry
+	 * stays reachable.
 	 * @param {number} size - The new size of the store.
-	 * @throws {Error} If the size is less than 1.
+	 * @throws {Error} If the size is less than 1, or if the hash function throws
+	 * while entries are moved. The map is left unchanged in either case.
 	 */
 	public set storeSize(size: number) {
 		if (size < 1) {
 			throw new Error("Store size must be at least 1.");
 		}
 
-		this._storeSize = size;
-		this._isPowerOf2 = (size & (size - 1)) === 0;
-		this.initStore();
-		this.emit(BigMapEvents.CLEAR);
+		if (size === this._storeSize) {
+			return;
+		}
+
+		this._rebuildStore(() => {
+			this._storeSize = size;
+			this._isPowerOf2 = (size & (size - 1)) === 0;
+		});
 	}
 
 	/**
@@ -176,17 +181,27 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 
 	/**
 	 * Sets the hash function used for distributing keys across the store.
-	 * Passing `undefined` restores the {@link defaultHashFunction}.
+	 * Passing `undefined` restores the {@link defaultHashFunction}. Existing entries
+	 * are moved into the store the new hash function maps them to, so every entry
+	 * stays reachable.
 	 * @param {StoreHashFunction | undefined} hashFunction - The hash function to use, or `undefined` to reset to the default.
+	 * @throws {Error} If the new hash function throws while entries are moved. The
+	 * map, including its hash function, is left unchanged.
 	 */
 	public set storeHashFunction(hashFunction: StoreHashFunction | undefined) {
-		if (hashFunction) {
-			this._storeHashFunction = hashFunction;
-			this._isDefaultHash = false;
-		} else {
-			this._storeHashFunction = defaultHashFunction;
-			this._isDefaultHash = true;
+		if ((hashFunction ?? defaultHashFunction) === this._storeHashFunction) {
+			return;
 		}
+
+		this._rebuildStore(() => {
+			if (hashFunction) {
+				this._storeHashFunction = hashFunction;
+				this._isDefaultHash = false;
+			} else {
+				this._storeHashFunction = defaultHashFunction;
+				this._isDefaultHash = true;
+			}
+		});
 	}
 
 	/**
@@ -225,8 +240,10 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 	}
 
 	/**
-	 * Initializes the store with empty `Map` instances.
-	 * Called automatically during construction and whenever `storeSize` changes.
+	 * Initializes the store with empty `Map` instances, removing every entry
+	 * without emitting {@link BigMapEvents.CLEAR}. Called automatically during
+	 * construction, and when `storeSize` or `storeHashFunction` changes, before
+	 * existing entries are moved into the new stores.
 	 * @returns {void}
 	 */
 	public initStore(): void {
@@ -375,6 +392,39 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 		store.set(key, value);
 		this.emit(BigMapEvents.SET, key, value);
 		return this;
+	}
+
+	/**
+	 * Applies a change to how keys map to stores, then moves every entry into the
+	 * store its key now maps to. If moving an entry throws, the previous stores and
+	 * settings are restored and the error is rethrown, so the map is left unchanged.
+	 * @param {() => void} applyChange - Updates the store size or hash function.
+	 * @returns {void}
+	 */
+	private _rebuildStore(applyChange: () => void): void {
+		const previousStore = this._store;
+		const previousStoreSize = this._storeSize;
+		const previousIsPowerOf2 = this._isPowerOf2;
+		const previousHashFunction = this._storeHashFunction;
+		const previousIsDefaultHash = this._isDefaultHash;
+
+		applyChange();
+		this.initStore();
+
+		try {
+			for (const store of previousStore) {
+				for (const [key, value] of store) {
+					this.getStore(key).set(key, value);
+				}
+			}
+		} catch (error) {
+			this._store = previousStore;
+			this._storeSize = previousStoreSize;
+			this._isPowerOf2 = previousIsPowerOf2;
+			this._storeHashFunction = previousHashFunction;
+			this._isDefaultHash = previousIsDefaultHash;
+			throw error;
+		}
 	}
 
 	/**
