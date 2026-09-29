@@ -320,16 +320,65 @@ describe("keys memcached can't take", () => {
 		expect(store.formatKey("foo")).toBe("foo");
 		expect(store.formatKey("")).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
 		const digest = store.formatKey("a b");
+		// A key that already starts like a digest key is hashed too.
+		expect(store.formatKey(digest)).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
+		expect(store.formatKey(digest)).not.toBe(digest);
+		expect(store.formatKey("keyv:sha256:")).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
+		expect(store.formatKey("keyv:sha25")).toBe("keyv:sha25");
 
 		store.namespace = "ns";
 		expect(store.formatKey("foo")).toBe("ns:foo");
 		expect(store.formatKey("a b")).not.toBe(digest);
 		// 250 bytes is memcached's limit.
 		expect(store.formatKey("a".repeat(247))).toBe(`ns:${"a".repeat(247)}`);
-		expect(store.formatKey("a".repeat(248))).toMatch(/^keyv:sha256:/);
+		expect(store.formatKey("a".repeat(248))).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
+	});
 
+	test.each([
+		["no namespace", undefined],
+		["the namespace keyv", "keyv"],
+	])(
+		"keeps a key that spells out another key's digest apart from that key, with %s",
+		async (_label, namespace) => {
+			const store = new KeyvMemcache(uri, { namespace });
+			const key = `a b ${faker.string.alphanumeric(8)}`;
+			// The key that, before the namespace is added, formats to the same string as `key`'s digest.
+			const lookalike = store.formatKey(key).slice(namespace ? namespace.length + 1 : 0);
+			await store.set(key, "original");
+			await store.set(lookalike, "lookalike");
+
+			expect(await store.get(key)).toBe("original");
+			expect(await store.get(lookalike)).toBe("lookalike");
+		},
+	);
+
+	test("shortens digest keys to fit a lowered maxKeySize", async () => {
+		const store = new KeyvMemcache(uri, { maxKeySize: 64 });
+		const id = faker.string.alphanumeric(8);
+		const keys = [`a b ${id}`, `${"x".repeat(100)}${id}`];
+
+		for (const key of keys) {
+			expect(store.formatKey(key)).toMatch(/^keyv:sha256:[0-9a-f]{52}$/);
+			expect(await store.set(key, `value-${key.length}`)).toBe(true);
+		}
+
+		for (const key of keys) {
+			expect(await store.get(key)).toBe(`value-${key.length}`);
+		}
+	});
+
+	test("keeps at least 128 bits of the digest, so a maxKeySize below 44 can't store hashed keys", async () => {
+		const store = new KeyvMemcache(uri, { maxKeySize: 44 });
+		expect(store.formatKey("a b")).toMatch(/^keyv:sha256:[0-9a-f]{32}$/);
+
+		const errors: string[] = [];
+		store.on("error", (error: Error) => {
+			errors.push(error.message);
+		});
 		store.client.maxKeySize = 10;
-		expect(store.formatKey("abcdefgh")).toMatch(/^keyv:sha256:/);
+		expect(store.formatKey("a b")).toMatch(/^keyv:sha256:[0-9a-f]{32}$/);
+		expect(await store.set("a b", "value")).toBe(false);
+		expect(errors).toContain("Key length cannot exceed 10 characters");
 	});
 });
 

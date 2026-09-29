@@ -162,7 +162,9 @@ const keyv = new Keyv({ store: memcache });
 
 ## Keys Memcached Can't Store
 
-Memcached only stores keys of up to 250 bytes with no whitespace or control characters. The adapter stores any other key, such as a long URL or a key with a space, under a SHA-256 digest of the namespaced key, `keyv:sha256:<hex>`, so every key works. Keys that Memcached accepts are stored as they are.
+Memcached only stores keys of up to 250 bytes with no whitespace or control characters. The adapter stores any other key, such as a long URL or a key with a space, under a SHA-256 digest of the namespaced key, `keyv:sha256:<hex>`, so every key works. Keys that Memcached accepts are stored as they are, except a key that already starts with `keyv:sha256:`. It's hashed too, so it can't overwrite the entry of the key it's the digest of.
+
+The 250-byte limit is the client's `maxKeySize` option. If you set it below the 76 characters a digest key takes, the digest is shortened to fit, keeping at least 128 bits. That takes a `maxKeySize` of at least 44. Below that, keys that need hashing fail with the client's key-length error.
 
 ```js
 const keyv = new Keyv({ store: new KeyvMemcache('localhost:11211') });
@@ -397,7 +399,7 @@ await memcache.disconnect();
 
 ### .formatKey(key)
 
-Formats a key by prepending the namespace if one is set. A key Memcached can't store, one over 250 bytes or with whitespace or control characters, is formatted as a SHA-256 digest of the namespaced key instead. See [Keys Memcached Can't Store](#keys-memcached-cant-store).
+Formats a key by prepending the namespace if one is set. A key Memcached can't store, one over 250 bytes or with whitespace or control characters, is formatted as a SHA-256 digest of the namespaced key instead, and so is a key that starts with `keyv:sha256:`. See [Keys Memcached Can't Store](#keys-memcached-cant-store).
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
