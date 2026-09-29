@@ -669,7 +669,7 @@ v6 compresses the whole serialized entry, `expires` included, and stores the res
 
 **Data compressed by v5 can't be read by v6.** v5 compressed only the `value` field inside a JSON envelope, and v6 expects the whole entry to be compressed. Reading a v5 entry fails with a decompression error, such as `incorrect header check` from `@keyv/compress-gzip`. Keyv emits `error`, and the call returns `undefined` when a listener is attached or rejects when none is. Treat a compressed v5 store as a cache that v6 repopulates, or read the old entries with v5 and write them again with v6.
 
-**Important:** Compression and encryption only run when serialization is enabled, which is the default. With `serialization: false`, Keyv stores values as they are, without compressing or encrypting them.
+**Important:** Compression and encryption only run when serialization is enabled, which is the default. With `serialization: false`, Keyv stores values as they are, without compressing them, and with an encryption adapter set, writes fail with an error instead of storing values unencrypted.
 
 **v6 usage:**
 ```javascript
@@ -930,7 +930,7 @@ type KeyvEncryptionAdapter = {
 };
 ```
 
-> **Note:** Encryption runs on the serialized string, so it only works while `serialization` is enabled, which is the default.
+> **Note:** Encryption runs on the serialized string, so it only works while `serialization` is enabled, which is the default. With `serialization: false`, writes fail with an error instead of storing values unencrypted.
 
 ---
 

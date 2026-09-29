@@ -183,7 +183,9 @@ export type KeyvOptions = {
 	 */
 	namespace?: string;
 	/**
-	 * A custom serialization adapter with stringify and parse methods.
+	 * A custom serialization adapter with stringify and parse methods. Pass `false` to store
+	 * values as they are, without compression. Encryption needs serialization, so with an
+	 * encryption adapter set, `false` makes every write fail with an error.
 	 * @default KeyvJsonSerializer (built-in)
 	 */
 	serialization?: KeyvSerializationAdapter | false;
@@ -216,7 +218,9 @@ export type KeyvOptions = {
 	sanitize?: KeyvSanitizeOptions;
 	/**
 	 * Enable encryption of stored values. Pass a `KeyvEncryptionAdapter` with
-	 * `encrypt` and `decrypt` methods.
+	 * `encrypt` and `decrypt` methods. Encryption runs on the serialized value, so it needs
+	 * serialization. With `serialization: false`, writes fail with an error instead of storing
+	 * values unencrypted.
 	 * @default undefined
 	 */
 	encryption?: KeyvEncryptionAdapter;

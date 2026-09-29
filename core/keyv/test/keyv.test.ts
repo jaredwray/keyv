@@ -411,6 +411,66 @@ describe("encryption", () => {
 		expect(await keyvDec.decode("some-data")).toBeUndefined();
 		expect(errorHandler).toHaveBeenCalled();
 	});
+
+	describe("without serialization", () => {
+		const encryptionError =
+			"Encryption needs serialization, which is disabled, so Keyv won't store the value unencrypted. Remove `serialization: false` or the encryption adapter.";
+		const createMockEncryption = () => ({
+			encrypt: vi.fn(async (data: string) => `enc:${data}`),
+			decrypt: vi.fn(async (data: string) => data.slice(4)),
+		});
+
+		test("every write fails with an error instead of storing the value unencrypted", async () => {
+			const store = new Map();
+			const encryption = createMockEncryption();
+			const keyv = new Keyv({ store, serialization: false, encryption });
+			const errors: Error[] = [];
+			keyv.on("error", (error: Error) => {
+				errors.push(error);
+			});
+
+			expect(await keyv.set("card", "4111-1111-1111-1111")).toBe(false);
+			expect(
+				await keyv.setMany([
+					{ key: "a", value: "1" },
+					{ key: "b", value: "2" },
+				]),
+			).toEqual([false, false]);
+			expect(await keyv.setRaw("raw", { value: "secret" })).toBe(false);
+			expect(await keyv.setManyRaw([{ key: "raw-many", value: { value: "secret" } }])).toEqual([
+				false,
+			]);
+
+			expect(store.size).toBe(0);
+			expect(encryption.encrypt).not.toHaveBeenCalled();
+			expect(errors.map((error) => error.message)).toEqual(Array(4).fill(encryptionError));
+		});
+
+		test("set rejects when no error listener is attached", async () => {
+			const store = new Map();
+			const keyv = new Keyv({ store, serialization: false, encryption: createMockEncryption() });
+			await expect(keyv.set("card", "4111-1111-1111-1111")).rejects.toThrow(encryptionError);
+			expect(store.size).toBe(0);
+		});
+
+		test("applies when serialization is turned off after construction", async () => {
+			const store = new Map();
+			const keyv = new Keyv({ store, encryption: createMockEncryption() });
+			keyv.on("error", () => {});
+			expect(await keyv.set("before", "value")).toBe(true);
+
+			keyv.serialization = undefined;
+			expect(await keyv.set("after", "value")).toBe(false);
+			expect(store.size).toBe(1);
+		});
+
+		test("encode rejects instead of returning the value unencrypted", async () => {
+			const keyv = new Keyv({ serialization: false, encryption: createMockEncryption() });
+			await expect(keyv.encode({ value: "hello", expires: undefined })).rejects.toThrow(
+				encryptionError,
+			);
+		});
+	});
 });
 
 describe("delete", () => {

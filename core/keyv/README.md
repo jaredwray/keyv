@@ -410,7 +410,7 @@ When serialization, compression, and/or encryption are configured, Keyv applies 
 
 **On get:** store → decrypt (optional) → decompress (optional) → parse → value
 
-Compression and encryption operate on the serialized string, so they only run when a serializer is configured. The built-in `KeyvJsonSerializer` is enabled by default, so this works out of the box. If you disable serialization with `serialization: false`, values are passed through to the store as-is and compression/encryption are skipped.
+Compression and encryption operate on the serialized string, so they only run when a serializer is configured. The built-in `KeyvJsonSerializer` is enabled by default, so this works out of the box. If you disable serialization with `serialization: false`, values are passed through to the store as-is and compression is skipped. Encryption isn't skipped: with an encryption adapter set, every write fails instead of storing the value unencrypted. Keyv emits `error`, and `set()` returns `false` when a listener is attached or rejects when none is.
 
 # Official Storage Adapters
 
@@ -654,7 +654,7 @@ compressionTestSuite(it, new KeyvGzip());
 
 # Encryption
 
-Keyv supports pluggable encryption of stored values via the `KeyvEncryptionAdapter` interface. Pass an adapter with `encrypt` and `decrypt` methods using the `encryption` option (or set the [`.encryption`](#encryption-1) property). Encryption runs on the serialized (and optionally compressed) value, so it requires a serializer — the built-in `KeyvJsonSerializer` is enabled by default.
+Keyv supports pluggable encryption of stored values via the `KeyvEncryptionAdapter` interface. Pass an adapter with `encrypt` and `decrypt` methods using the `encryption` option (or set the [`.encryption`](#encryption-1) property). Encryption runs on the serialized (and optionally compressed) value, so it requires a serializer — the built-in `KeyvJsonSerializer` is enabled by default. With `serialization: false`, writes fail with an error instead of storing values unencrypted.
 
 ```typescript
 interface KeyvEncryptionAdapter {
