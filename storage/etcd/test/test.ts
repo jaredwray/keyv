@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { describe, expect, it, vi } from "vitest";
-import { EtcdClient, prefixEnd } from "../src/client.js";
+import { EtcdClient, type EtcdPutBuilder, prefixEnd } from "../src/client.js";
 import KeyvEtcd, { createKeyv } from "../src/index.js";
 
 const etcdUrl = "etcd://127.0.0.1:2379";
@@ -373,15 +373,48 @@ describe("batch operations", () => {
 		t.expect(results).toEqual([true, true, false]);
 	});
 
-	it("should emit an error when setMany fails", async (t) => {
+	it("should emit an error and report false when setMany fails", async (t) => {
 		const store = new KeyvEtcd(etcdUrl);
 		await store.disconnect();
 		const errors: unknown[] = [];
 		store.on("error", (error: unknown) => {
 			errors.push(error);
 		});
-		await store.setMany([{ key: "key", value: "value" }]);
+		const results = await store.setMany([
+			{ key: "key", value: "value" },
+			{ key: "key2", value: "value2" },
+		]);
+		t.expect(results).toEqual([false, false]);
 		t.expect(errors.length).toBeGreaterThan(0);
+	});
+
+	it("should report which setMany writes failed", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const keyv = new Keyv({ store });
+		keyv.on("error", () => {});
+		const storedKey = faker.string.uuid();
+		const failedKey = faker.string.uuid();
+		const put = store.client.put.bind(store.client);
+		vi.spyOn(store.client, "put").mockImplementation((key: string) => {
+			if (key !== failedKey) {
+				return put(key);
+			}
+
+			return {
+				value: async () => {
+					throw new Error("put failed");
+				},
+			} as unknown as EtcdPutBuilder;
+		});
+
+		const results = await keyv.setMany([
+			{ key: storedKey, value: "stored" },
+			{ key: failedKey, value: "failed" },
+		]);
+
+		t.expect(results).toEqual([true, false]);
+		t.expect(await keyv.get(storedKey)).toBe("stored");
+		t.expect(await keyv.get(failedKey)).toBeUndefined();
 	});
 });
 
