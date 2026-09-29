@@ -38,7 +38,7 @@ new Keyv({ serialization: false });
 
 If the functions were `JSON.stringify` and `JSON.parse`, or wrappers of `@keyv/serialize`, remove them: the built-in `KeyvJsonSerializer` is the default and writes the format v4 and v5 wrote. `@keyv/serialize-superjson` (`superJsonSerializer`) and `@keyv/serialize-msgpackr` (`msgpackrSerializer`) are optional alternatives, but they don't read data the JSON serializer wrote.
 
-Compression and encryption only run while serialization is on. With `serialization: false`, values are stored as they are.
+Compression and encryption only run while serialization is on. With `serialization: false`, values are stored as they are, uncompressed. With an encryption adapter set, writes fail with an error instead, so keep serialization on when you encrypt.
 
 ## Errors
 

@@ -1113,12 +1113,21 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 
 	/**
 	 * Encodes a value for storage. Pipeline: serialize → compress → encrypt.
-	 * If serialization is not configured, returns the data as-is.
+	 * If serialization is not configured, returns the data as-is, skipping compression. With an
+	 * encryption adapter set, it throws instead, since the value can't be encrypted and storing it
+	 * unencrypted would defeat the adapter.
 	 * @param {KeyvValue<T>} data The value envelope to encode.
-	 * @returns {Promise<unknown>} The encoded value, or the original data on failure.
+	 * @returns {Promise<unknown>} The encoded value.
+	 * @throws {Error} If an encryption adapter is set while serialization is disabled.
 	 */
 	public async encode<T>(data: KeyvValue<T>): Promise<unknown> {
 		if (!this._serialization) {
+			if (this._encryption?.encrypt) {
+				throw new Error(
+					"Encryption needs serialization, which is disabled, so Keyv won't store the value unencrypted. Remove `serialization: false` or the encryption adapter.",
+				);
+			}
+
 			return data;
 		}
 

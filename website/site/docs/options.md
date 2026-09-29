@@ -52,7 +52,7 @@ Default time-to-live for `set()`. A per-call `ttl` overrides this. `0` and negat
 Type: `KeyvSerializationAdapter | false`  
 Default: `KeyvJsonSerializer` (built-in)
 
-Object with `stringify` and `parse`. Set to `false` to store raw objects (in-memory only; compression and encryption are skipped). See [Encode and Decode](/docs/encode-and-decode/).
+Object with `stringify` and `parse`. Set to `false` to store raw objects (in-memory only; compression is skipped, and with an encryption adapter set, writes fail with an error). See [Encode and Decode](/docs/encode-and-decode/).
 
 ```js
 import { superJsonSerializer } from "@keyv/serialize-superjson";
@@ -78,7 +78,7 @@ const keyv = new Keyv({ compression: new KeyvGzip() });
 Type: `KeyvEncryptionAdapter`  
 Default: `undefined`
 
-Adapter with `encrypt` and `decrypt`. Runs after serialize (and optional compress). See [Encryption](/docs/encryption/overview/).
+Adapter with `encrypt` and `decrypt`. Runs after serialize (and optional compress). With `serialization: false`, writes fail with an error instead of storing values unencrypted. See [Encryption](/docs/encryption/overview/).
 
 ```js
 import KeyvEncryptNode from "@keyv/encrypt-node";

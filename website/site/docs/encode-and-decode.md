@@ -16,7 +16,7 @@ Keyv stores an envelope `{ value, expires? }`, not the raw value. `encode()` tur
 
 Compression and encryption operate on the **serialized string**. They only run when a serializer is configured. The built-in `KeyvJsonSerializer` is on by default, so this works out of the box.
 
-If you set `serialization: false`, values go to the store as-is and compression/encryption are skipped.
+If you set `serialization: false`, values go to the store as-is and compression is skipped. With an encryption adapter set, writes fail with an error instead, so nothing is stored unencrypted.
 
 ```js
 const packed = await keyv.encode({ value: { n: 1 }, expires: Date.now() + 1000 });

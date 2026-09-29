@@ -8,7 +8,7 @@ description: Encrypt values at rest with Node.js crypto or the Web Crypto API.
 
 # Encryption
 
-Encryption runs last on write (after serialize and optional compress) and first on read. It requires a serializer — the built-in JSON serializer is enough.
+Encryption runs last on write (after serialize and optional compress) and first on read. It requires a serializer — the built-in JSON serializer is enough. With `serialization: false`, writes fail with an error instead of storing values unencrypted.
 
 ```js
 import Keyv from "keyv";
