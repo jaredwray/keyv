@@ -7,7 +7,11 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - Built on the official `redis` client (`@redis/client` v6). The v4-era 2.x line used `ioredis`; see [v4-to-v5.md](v4-to-v5.md#keyvredis-moved-to-the-official-redis-client).
 - `new KeyvRedis(connect, options)` takes a connection string, `redis` client options, or a client from the exported `createClient`, `createCluster`, or `createSentinel`. `createClient` takes an options object, as in `createClient({ url: 'redis://localhost:6379' })`, not a string.
 - Options: `namespace`, `keyPrefixSeparator` (default `::`), `clearBatchSize`, `useUnlink`, `noNamespaceAffectsAll`, `throwOnConnectError`, `throwOnErrors`, `connectionTimeout`. `throwOnErrors` here is the adapter's own option: keep it. Only the Keyv option of that name was removed.
-- The namespace defaults to `undefined`. With no namespace, `clear()` deletes every string key without the separator in its name.
+  - `throwOnConnectError` (default `true`): a failed connection rejects the operation that tried to connect.
+  - `throwOnErrors` (default `false`): a failed command emits `error` and returns `undefined` or `false`; with `true` it rejects instead.
+  - Either way, Keyv then applies its own error rule; see [v5-to-v6.md](v5-to-v6.md#errors).
+- The client connects on the first command, not when the adapter is created.
+- The namespace defaults to `undefined`. With a namespace, `clear()` and `iterator()` cover the string keys matching `<namespace><keyPrefixSeparator>*`. With no namespace, `clear()` deletes every string key without the separator in its name.
 - A failure is reported once: when the adapter rejects, it no longer also emits `error`.
 - CommonJS: `const KeyvRedis = require('@keyv/redis').default`. There is no named `KeyvRedis` export.
 - `createKeyv(connect, options)` and `createKeyvNonBlocking(connect, options)` return a ready `Keyv`. They no longer set any Keyv error options.
@@ -23,7 +27,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 ## `@keyv/sqlite`
 
 - The driver changed. v6 uses `node:sqlite` on Node.js and `bun:sqlite` on Bun, and falls back to `better-sqlite3`. It no longer uses `sqlite3`. To keep `sqlite3`, pass `createSqlite3Driver(sqlite3)` as the driver; otherwise remove the `sqlite3` dependency.
-- A v4 or v5 table converts on the first connect. It is one-way, so back up first; see [stored-data.md](stored-data.md#sqlite-keyvsqlite).
+- The adapter opens the database when it is created, and a v4 or v5 table converts right then, before any read. It is one-way, so back up first, and keep tests away from a real database file; see [stored-data.md](stored-data.md#sqlite-keyvsqlite).
 - `keySize` still works. `keyLength` is a deprecated alias of it here, the reverse of PostgreSQL and MySQL.
 - A deprecated `opts` getter remains for backward compatibility.
 - New: an `expires` column, `clearExpired()`, the `clearExpiredInterval` option, bulk operations, and `createKeyv()`.

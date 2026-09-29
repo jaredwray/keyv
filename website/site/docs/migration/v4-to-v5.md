@@ -81,6 +81,7 @@ The v4-era `@keyv/redis` 2.x was built on `ioredis`. Since Keyv v5, `@keyv/redis
 - **Serialization.** v4 serialized with `json-buffer`. v5 used `@keyv/serialize`, and v6 has a built-in serializer. All three write the same format, so data v4 wrote without compression can still be read.
 - **Compression.** In v4, a compression adapter replaced `serialize` and `deserialize` entirely. v6 can't read values that v4 compressed.
 - **Events.** v4 extended Node.js's `EventEmitter`. v5 has its own event emitter, and v6 uses [Hookified](https://hookified.org). In v4, `emitErrors` could only be set in the constructor; v6 removed it.
+- **Errors.** In v4, a call rejected whenever the store failed, even with an `error` listener attached; the listener only received errors the store emitted on its own, such as a dropped connection. In v6, attaching a listener makes failed calls return fallback values instead of rejecting. A v4 app that added `keyv.on('error', ...)` for connection errors, and still relies on calls rejecting, changes behavior silently. See [Error Handling Changed](/docs/migration/v5-to-v6/#error-handling-changed-and-throwonerrors-was-removed).
 - **Iterator.** v4 attached `iterator` only for a `Map` and some adapters, and you passed it the namespace: `keyv.iterator(keyv.opts.namespace)`. In v6, `keyv.iterator()` always exists and takes no arguments.
 
 ## Removing support for Nodejs 18 and below

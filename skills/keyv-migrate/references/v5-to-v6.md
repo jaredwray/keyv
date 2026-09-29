@@ -16,6 +16,8 @@ const keyv = new Keyv(store, { namespace: 'keyv' });
 
 A namespace passed to Keyv takes precedence over one set on the adapter. When Keyv has none, the adapter keeps its own.
 
+These forms all still work: `new Keyv(store, options)`, `new Keyv({ store, ...options })`, and in ESM both `import Keyv from 'keyv'` and `import { Keyv } from 'keyv'`. Only the options changed.
+
 ## `opts`
 
 `keyv.opts` is gone, and so are the `opts` and `dialect` properties on adapters. Read the property directly: `keyv.namespace`, `keyv.ttl`, `keyv.store`, `keyv.serialization`, `keyv.compression`, `keyv.encryption`, `keyv.stats`, `keyv.sanitize`, and `keyv.checkExpired` (read-only). `@keyv/sqlite` keeps a deprecated `opts` getter; don't write new code against it.
@@ -45,12 +47,16 @@ v5's emitter never threw. Some methods emitted `error` and returned a fallback v
 - **With an `error` listener attached**, the listener gets the error and the call returns a fallback value (`get` → `undefined`, `set` → `false`, `has` → `false`, and so on).
 - **With no `error` listener**, the call rejects.
 
-The `throwOnErrors` and `emitErrors` options are gone. Decide from what the app relied on:
+Keyv also re-emits every `error` event its adapter emits, so a listener on the adapter alone doesn't help: Keyv emits the error again, and with no listener on Keyv, that throws.
+
+The `throwOnErrors` and `emitErrors` options are gone, and no v6 option makes calls reject while a Keyv `error` listener is attached. Decide from what the app relied on:
 
 - **Failures as fallback values** (most v5 apps): attach a listener, as in `keyv.on('error', (error) => logger.error(error))`. A no-op listener discards errors the way `emitErrors: false` did.
-- **Failures as rejections** (v5 `throwOnErrors: true`): leave the listener off. But adapters that lose a connection, such as Redis and Memcache, emit `error` on their own, outside any call, and with no listener that error is thrown and can crash the process. With those adapters, attach a listener and check return values instead: `set` returns `false`, and a listener can record failed reads.
+- **Failures as rejections** (v5 `throwOnErrors: true`, and every v4 app; see [v4-to-v5.md](v4-to-v5.md#errors)):
+  - With a store that can't fail on its own, such as a `Map` or SQLite, leave the listener off, and calls reject as before.
+  - With a network adapter (Redis, Valkey, Memcache, MongoDB, PostgreSQL, MySQL, Etcd, DynamoDB), connection errors can arrive outside any call, and with no listener they are thrown and can crash the process. You can't have both, so tell the user and let them choose: either leave the listener off and accept the crash risk, or attach a listener and have callers check results (`set` returns `false`; a failed `get` returns `undefined`, the same as a miss, so record failures in the listener if callers must tell them apart).
 
-`@keyv/redis` still has its own `throwOnErrors` and `throwOnConnectError` options. They belong to `new KeyvRedis(uri, options)`; keep them.
+`@keyv/redis` still has its own `throwOnErrors` (default `false`) and `throwOnConnectError` (default `true`) options. They belong to `new KeyvRedis(uri, options)`. They decide whether the adapter rejects or emits, but Keyv then applies the rule above either way. Keep them as they were.
 
 Methods that rejected in v5 (`getRaw`, `disconnect`, `iterator`, and `has`, `hasMany`, `getMany`, `getManyRaw` on adapters that had their own) now return fallback values when a listener is attached.
 
@@ -105,7 +111,7 @@ In TypeScript, `getRaw` returns `KeyvValue<T> | string | undefined`. Narrow it (
 
 ## Return values
 
-- `deleteMany(keys)` and `delete(keys)` with an array return `boolean[]`. `if (await keyv.deleteMany(keys))` is always true; use `.every(Boolean)` or `.some(Boolean)` for what the code meant.
+- `deleteMany(keys)` and `delete(keys)` with an array return `boolean[]`, one entry per key, so `if (await keyv.deleteMany(keys))` is always true. `delete(key)` with a single key still returns a boolean. Use `.some(Boolean)` if the code meant "at least one key was deleted" and `.every(Boolean)` if it meant "every key was deleted". The v5 result depended on the adapter: Redis, SQLite, PostgreSQL, and MongoDB returned `true` when any key was deleted, while a `Map` and Memcache returned `true` only when all were. With an empty list, v6 returns `[]`: `.every` gives `true` and `.some` gives `false`.
 - `setMany(entries)` takes `{ key, value, ttl? }[]` and returns `boolean[]`.
 - `set` returns `boolean`.
 - Missing values are always `undefined`, never `null`.
@@ -126,7 +132,7 @@ for await (const [key, value] of keyv.iterator()) {}
 
 Keyv v6 wraps stores it doesn't use directly:
 
-- A `Map` or another synchronous Map-like store goes in a `KeyvMemoryAdapter`. It now holds `{ value, expires }` objects under `namespace:key`, or under the bare key with no namespace. v5 stored serialized strings under `keyv:key`.
+- A `Map` or another synchronous Map-like store goes in a `KeyvMemoryAdapter`. It now holds `{ value, expires }` objects under `namespace:key`, or under the bare key with no namespace. v5 stored serialized strings under `keyv:key`. With the default serializer, the stored `value` is a JSON string, so `get` still returns a copy, as in v4 and v5. With `serialization: false`, and with `createKeyv` from `keyv`, the object itself is stored and `get` returns the same reference.
 - An older async adapter that doesn't declare the v6 contract goes in a `KeyvBridgeAdapter`.
 
 `keyv.store` returns the wrapper, and the object you passed is at `keyv.store.store`. Fix code that compares `keyv.store` with the original object or reads the `Map` directly.

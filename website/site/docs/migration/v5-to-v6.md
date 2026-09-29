@@ -209,7 +209,7 @@ If the data is a cache you can rebuild, you can skip all of this. The v5 entries
 **Before you migrate a table or collection:**
 
 - **Back up first.** The SQLite conversion and the PostgreSQL, MySQL, and MongoDB migration scripts rewrite your data in place. None of them can be undone.
-- **SQLite converts on first connect.** The first v6 process that opens a v5 SQLite database rebuilds its table, even a test run or a one-off script. Copy the database file before you point v6 at it.
+- **SQLite converts as soon as the adapter is created.** `new KeyvSqlite(...)` opens the database and rebuilds a v5 table right away, before any read. Importing a module that creates one is enough, and so is a test run or a one-off script. Copy the database file before you point v6 at it.
 - **Stop v5 writers.** v5 and v6 can't share a store. Don't run a rolling deploy where v5 and v6 instances write to the same database at the same time.
 - **Keep `checkExpired` on for converted SQLite rows.** The conversion moves each row's namespace into its own column but doesn't fill the new `expires` column. Converted rows still expire, because Keyv reads the expiry stored inside each value (`checkExpired` defaults to `true`). With `checkExpired: false`, converted rows that had a TTL never expire, and `clearExpired()` skips them until they are written again.
 
@@ -361,7 +361,7 @@ v6 handles errors the way a Node.js `EventEmitter` does. When an operation fails
 - **With an `error` listener attached**, the listener receives the error and the operation returns a fallback value, such as `undefined` from `get` or `false` from `set`.
 - **With no `error` listener attached**, the operation rejects with the error.
 
-Every method follows this rule. The `throwOnErrors` and `emitErrors` options were removed.
+Every method follows this rule. The `throwOnErrors` and `emitErrors` options were removed. Keyv also re-emits every `error` event its storage adapter emits, so a listener attached only to the adapter doesn't help: Keyv emits the error again, and with no listener on Keyv, it is thrown.
 
 **How v5 behaved:**
 
@@ -427,6 +427,8 @@ const results = await keyv.deleteMany(['key1', 'key2']);
 console.log(results[0]); // true - key1 was deleted
 console.log(results[1]); // true - key2 was deleted
 ```
+
+An array is always truthy, so `if (await keyv.deleteMany(keys))` no longer tells you anything. What the old single boolean meant depended on the store. With a `Map` or Memcache it was `true` only when every key was deleted, as in the example above. With Redis, SQLite, PostgreSQL, and MongoDB it was `true` when any key was deleted. Replace it with `.every(Boolean)` or `.some(Boolean)`, whichever matches what your code meant. `delete(key)` with a single key still returns one boolean, and `delete([...])` with an array now returns `boolean[]` like `deleteMany`.
 
 ---
 

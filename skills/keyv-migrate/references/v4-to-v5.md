@@ -67,13 +67,20 @@ function build(options: KeyvOptions) {}
 
 ## Behavior
 
-- **Return values.** v4's `set` always resolved `true`, and `delete(keys)` resolved one boolean. In v6, `set` resolves `false` on a failure (or rejects; see [v5-to-v6.md](v5-to-v6.md#errors)), and `delete(keys)` and `deleteMany(keys)` resolve `boolean[]`.
-- **Raw values.** v4 stored `expires: null` for entries without a TTL. v6 leaves `expires` out, so compare with `undefined`. Use `getRaw` instead of `get(key, { raw: true })`.
+- **Return values.** v4's `set` always resolved `true`, and `delete(keys)` with an array resolved one boolean (`true` only when every key was deleted). In v6, `set` resolves `false` on a failure (or rejects; see [Errors](#errors)), `delete(key)` with one key still resolves a boolean, and `delete(keys)` with an array and `deleteMany(keys)` resolve `boolean[]`. Code that passes either a key or an array must handle both shapes.
+- **Raw values.** v4 stored `expires: null` for entries without a TTL. v6 leaves `expires` out, so compare with `undefined`, and check code that reads `.expires` from raw values. Use `getRaw` instead of `get(key, { raw: true })`.
+- **Construction.** `new Keyv({ store, namespace, ttl })` still works once `store` is an adapter instance.
 - **`has`.** v4 took one key. v6 also takes an array, and adds `hasMany`.
 - **Iterator.** v4 attached `iterator` only for a `Map` and some adapters, and you passed the namespace: `keyv.iterator(keyv.opts.namespace)`. In v6, `keyv.iterator()` always exists and takes no arguments.
-- **Events.** v4 extended Node.js `EventEmitter` and had a constructor-only `emitErrors` option. v6 uses Hookified, removes `emitErrors`, and changes when failures throw; see [v5-to-v6.md](v5-to-v6.md#errors).
+- **Events.** v4 extended Node.js `EventEmitter` and had a constructor-only `emitErrors` option. v6 uses Hookified, removes `emitErrors`, and changes when failures throw; see [Errors](#errors).
 - **Serialization.** v4 used `json-buffer`. v6's built-in serializer writes the same format, so uncompressed v4 values stay readable. v4's `serialize` and `deserialize` options become `serialization: { stringify, parse }`.
 - **Compression.** In v4, a compression adapter replaced `serialize` and `deserialize`. v6 compression adapters have a different interface, and v6 can't read values v4 compressed.
+
+## Errors
+
+In v4, a call rejected whenever the store failed, **whether or not an `error` listener was attached**. The listener only received errors the store emitted on its own, such as a dropped connection; with no listener, those crashed the process, as with any Node.js `EventEmitter`. So v4 docs told apps to add `keyv.on('error', handler)` for connection errors, and many did, while still expecting calls to reject.
+
+In v6, a listener changes what calls return: with one attached, a failed call resolves to a fallback value (`get` → `undefined`, `set` → `false`) instead of rejecting. A v4 app that has a listener and relies on calls rejecting (a `try`/`catch` around Keyv calls, or a failed `get` treated differently from a miss) changes behavior silently. See [v5-to-v6.md](v5-to-v6.md#errors) for the options, and tell the user which one you chose.
 
 ## `@keyv/redis` moved to the official Redis client
 
