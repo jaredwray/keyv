@@ -747,7 +747,7 @@ The `@keyv/memcache` package will switch its underlying Memcached client library
 **What this means for you:**
 - If you are using `@keyv/memcache` through Keyv with default settings, **no changes are needed** — the adapter API remains the same
 - If you are passing `memjs`-specific client options through to the underlying client, you will need to update them to match the `memcache` client API
-- Keys Memcached can't store, such as keys over 250 bytes or with whitespace, are now stored under a SHA-256 digest of the namespaced key instead of failing. So are keys that start with `keyv:sha256:`, the prefix of those digest keys. v5 trimmed whitespace from namespaced keys and v6 doesn't, so an entry v5 wrote for a key with leading or trailing whitespace isn't found
+- The `memcache` client uses Memcached's text protocol, which doesn't take keys with whitespace or control characters. v6 stores those keys, and keys over 250 bytes, under a SHA-256 digest of the namespaced key instead of failing. So are keys that start with `keyv:sha256:`, the prefix of those digest keys. `memjs` used the binary protocol, which takes whitespace, and v5 trimmed namespaced keys, so an entry v5 wrote for a key with whitespace or control characters isn't found by v6
 
 ---
 

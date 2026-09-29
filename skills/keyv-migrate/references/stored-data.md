@@ -40,7 +40,7 @@ With a namespace, v6's `clear()` and `iterator()` cover the string keys that mat
 
 ### Memcache (`@keyv/memcache`)
 
-v6 builds `<namespace>:<key>`.
+v6 builds `<namespace>:<key>`. A key with whitespace or control characters, one over 250 bytes, or one that starts with `keyv:sha256:` is stored under `keyv:sha256:<SHA-256 hex>` instead. v4 and v5 used `memjs`, whose binary protocol takes whitespace, and trimmed namespaced keys. So no v6 setting reads an old entry whose key has whitespace or control characters.
 
 | Old setup | Key stored for `foo` | v6 settings |
 | --- | --- | --- |
