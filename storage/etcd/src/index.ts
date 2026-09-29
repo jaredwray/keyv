@@ -369,7 +369,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 				this.emit("error", result.reason);
 				boolResults.push(false);
 			} else {
-				boolResults.push(true);
+				boolResults.push(result.value);
 			}
 		}
 
