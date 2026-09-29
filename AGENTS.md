@@ -64,7 +64,7 @@ Individual package tests:
 
 **Serialization**:
 - Default uses built-in `KeyvJsonSerializer` with JSON.stringify/parse (plus `Buffer` and `BigInt` support)
-- Compression and encryption adapters can be plugged in; they run only while serialization is enabled
+- Compression and encryption adapters can be plugged in; they run only while serialization is enabled. Without it, compression is skipped, and writes with an encryption adapter fail with an error
 - Data format: `{ value: T, expires?: number }`
 
 ### Build Dependencies

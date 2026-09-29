@@ -28,6 +28,8 @@ await keyv.set('foo', 'bar');
 const value = await keyv.get('foo'); // 'bar' (decrypted automatically)
 ```
 
+Encryption runs on the serialized value, so it needs serialization, which is on by default. With `serialization: false`, Keyv doesn't store values unencrypted: writes fail, Keyv emits `error`, and `set()` returns `false` when a listener is attached or rejects when none is.
+
 ## API
 
 ### new KeyvEncryptWeb(options)
