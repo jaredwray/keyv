@@ -38,6 +38,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`@keyv/test-suite` API Changes](#keyvtest-suite-api-changes)
   - [Libraries That Embed Keyv v5](#libraries-that-embed-keyv-v5)
   - [`@keyv/memcache` Moves from `memjs` to `memcache`](#keyvmemcache-moves-from-memjs-to-memcache)
+  - [`@keyv/memcache` `clear()` Only Removes the Store's Own Entries](#keyvmemcache-clear-only-removes-the-stores-own-entries)
   - [`@keyv/etcd` Default `ttl` Applies Per Key](#keyvetcd-default-ttl-applies-per-key)
   - [`@keyv/etcd` Without a Namespace Only Clears Its Own Entries](#keyvetcd-without-a-namespace-only-clears-its-own-entries)
   - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
@@ -93,7 +94,7 @@ For most users, migrating from v5 to v6 involves a few key changes:
 
 1. **Upgrade Node.js and pin one version** - v6 requires Node.js 22.19 or later. Install `keyv` and every `@keyv/*` package at the same exact v6 version; see [Versioning & Release Tags](/docs/migration/versioning/).
 
-2. **Keep reading data written by v5** - v5 stored keys under a default `keyv` namespace, and v6 has no default. Without `namespace: 'keyv'`, or the namespace you already used, data written by v5 reads as missing. Redis, Memcache, Valkey, and MongoDB need more than that; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed). SQLite converts its table the first time v6 connects, and PostgreSQL, MySQL, and MongoDB have migration scripts. These changes are one-way, so back up first.
+2. **Keep reading data written by v5** - v5 stored keys under a default `keyv` namespace, and v6 has no default. Without `namespace: 'keyv'`, or the namespace you already used, data written by v5 reads as missing. Redis, Valkey, and MongoDB need more than that; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed). v6 can't read Memcache entries v5 wrote, so a Memcache cache fills again. SQLite converts its table the first time v6 connects, and PostgreSQL, MySQL, and MongoDB have migration scripts. These changes are one-way, so back up first.
 
 3. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
 
@@ -190,8 +191,7 @@ Some v5 adapters added their own prefix on top of Keyv's, and some v5 `createKey
 | Redis | default | `ns::ns:foo` | `namespace: 'ns'` with `new KeyvRedis(uri, { keyPrefixSeparator: '::ns:' })` |
 | Redis | `useKeyPrefix: false`, or `createKeyv()` with a namespace | `ns::foo` | `namespace: 'ns'` |
 | Redis | `createKeyv()` without a namespace | `foo` | No namespace |
-| Memcache | default | `ns:ns:foo` | `namespace: 'ns:ns'` |
-| Memcache | `useKeyPrefix: false` | `ns:foo` | `namespace: 'ns'` |
+| Memcache | any | `ns:ns:foo`, or `ns:foo` with `useKeyPrefix: false` | None. v6 stores each value after a generation token and reads a value without one as missing, so let the cache fill again. See [below](#keyvmemcache-clear-only-removes-the-stores-own-entries). |
 | Valkey | default, or `createKeyv()` | `ns:foo` | None. v6 cannot build this key, so let the entries repopulate or rename them to the v6 layout. |
 | Valkey | `useRedisSets: false` | `namespace:ns:ns:foo` | `namespace: 'ns:ns'` |
 | MongoDB | default | `ns:foo`, with no `namespace` field | Run the `@keyv/mongo` migration script, then `namespace: 'ns'`. |
@@ -228,7 +228,7 @@ In v5 every Keyv instance had a namespace, `keyv` by default, so `clear()` remov
 | Etcd | Deletes only the entries v6 wrote with no namespace, and leaves v5's entries. With `noNamespaceAffectsAll: true`, deletes every key. See [below](#keyvetcd-without-a-namespace-only-clears-its-own-entries). |
 | DynamoDB | Deletes every item in the table. |
 | Cloudflare KV | Deletes every key in the KV namespace. |
-| Memcache | Flushes the whole server. It did this in v5 too, with or without a namespace. |
+| Memcache | Removes only the entries v6 wrote with no namespace. With `noNamespaceAffectsAll: true`, flushes the whole server, as v5 did with or without a namespace. See [below](#keyvmemcache-clear-only-removes-the-stores-own-entries). |
 | SQLite, PostgreSQL, MySQL, MongoDB | Deletes only the rows or documents that have no namespace. |
 
 If other data or other apps share the backend, set a namespace on every Keyv instance that calls `clear()`.
@@ -749,6 +749,19 @@ The `@keyv/memcache` package will switch its underlying Memcached client library
 - If you are using `@keyv/memcache` through Keyv with default settings, **no changes are needed** — the adapter API remains the same
 - If you are passing `memjs`-specific client options through to the underlying client, you will need to update them to match the `memcache` client API
 - The `memcache` client uses Memcached's text protocol, which doesn't take keys with whitespace or control characters. v6 stores those keys, and keys over 250 bytes, under a SHA-256 digest of the namespaced key instead of failing. So are keys that start with `keyv:sha256:`, the prefix of those digest keys. `memjs` used the binary protocol, which takes whitespace, and v5 trimmed namespaced keys, so an entry v5 wrote for a key with whitespace or control characters isn't found by v6
+
+---
+
+### `@keyv/memcache` `clear()` Only Removes the Store's Own Entries
+
+In v5, `clear()` on a `@keyv/memcache` store flushed the whole Memcached server, with or without a namespace. That removed other namespaces' entries and keys other applications wrote.
+
+In v6, each namespace has a generation token stored in Memcached, and every value is stored after the token it was written under. `clear()` writes a new token, so the namespace's older values read as missing, and Memcached evicts them or lets them expire. Other namespaces and other applications' keys stay. Without a namespace, `clear()` does the same for the entries written with no namespace.
+
+**What this means for you:**
+- Entries v5 wrote have no token, so v6 reads them as missing. Let the cache fill again
+- To flush the whole server from a store without a namespace, as v5 did, set `noNamespaceAffectsAll: true`. That store then also writes values without a token
+- If Memcached loses a namespace's token, because it evicted it or the node holding it restarted, the adapter creates a new one and the namespace reads as empty. It never serves values from before a `clear()`
 
 ---
 

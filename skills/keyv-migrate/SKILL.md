@@ -1,6 +1,6 @@
 ---
 name: keyv-migrate
-description: Migrates a JavaScript or TypeScript project from Keyv v4 or v5 to Keyv v6. Upgrades keyv and every @keyv/* package to one matching v6 version, rewrites removed and changed APIs (connection-string constructors, opts, serialize/deserialize, useKeyPrefix, hooks, throwOnErrors/emitErrors, raw gets, setMany/deleteMany results, iterator, custom storage adapters, @keyv/test-suite), and keeps data already stored in Redis, Valkey, Memcache, SQLite, PostgreSQL, MySQL, MongoDB, Etcd, and DynamoDB readable by choosing matching namespace settings. Use when asked to upgrade, migrate, or bump keyv or @keyv/* packages, or when code breaks or cached data goes missing after installing Keyv v6.
+description: Migrates a JavaScript or TypeScript project from Keyv v4 or v5 to Keyv v6. Upgrades keyv and every @keyv/* package to one matching v6 version, rewrites removed and changed APIs (connection-string constructors, opts, serialize/deserialize, useKeyPrefix, hooks, throwOnErrors/emitErrors, raw gets, setMany/deleteMany results, iterator, custom storage adapters, @keyv/test-suite), and keeps data already stored in Redis, Valkey, SQLite, PostgreSQL, MySQL, MongoDB, Etcd, and DynamoDB readable by choosing matching namespace settings. Use when asked to upgrade, migrate, or bump keyv or @keyv/* packages, or when code breaks or cached data goes missing after installing Keyv v6.
 license: MIT
 metadata:
   author: jaredwray
