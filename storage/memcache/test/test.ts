@@ -1,6 +1,12 @@
 import { EventEmitter } from "node:events";
 import { faker } from "@faker-js/faker";
-import { delay, keyvApiTests, keyvValueTests, storageTestSuite } from "@keyv/test-suite";
+import {
+	delay,
+	keyvApiTests,
+	keyvNamespaceTests,
+	keyvValueTests,
+	storageTestSuite,
+} from "@keyv/test-suite";
 import Keyv from "keyv";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvMemcache, { createKeyv } from "../src/index.js";
@@ -17,7 +23,8 @@ if (process.env.URI) {
 const keyvMemcache = new KeyvMemcache(uri);
 
 beforeEach(async () => {
-	await keyvMemcache.clear();
+	// Start every test from an empty server, including other namespaces and generation keys.
+	await keyvMemcache.client.flush();
 });
 
 describe("constructor", () => {
@@ -90,12 +97,13 @@ describe("get", () => {
 		expect(await keyvMemcache.get(faker.string.uuid())).toBeUndefined();
 	});
 
-	test("returns the raw value the server stores", async () => {
+	test("stores the value after the generation token it was written under", async () => {
 		const key = faker.string.uuid();
 		const value = faker.lorem.word();
-		// The adapter stores the value verbatim, with no envelope wrapping.
 		await keyvMemcache.set(key, value);
-		expect(await keyvMemcache.client.get(keyvMemcache.formatKey(key))).toBe(value);
+		const token = await keyvMemcache.client.get(keyvMemcache.generationKey);
+		expect(token).toMatch(/^[0-9a-f]{16}$/);
+		expect(await keyvMemcache.client.get(keyvMemcache.formatKey(key))).toBe(`${token}:${value}`);
 		expect(await keyvMemcache.get(key)).toBe(value);
 	});
 });
@@ -198,21 +206,133 @@ describe("clear", () => {
 		expect(await keyv.get(key)).toBeUndefined();
 	});
 
-	test("flushes the entire server regardless of namespace", async () => {
-		const store1 = new KeyvMemcache(uri);
-		const store2 = new KeyvMemcache(uri);
-		const keyv1 = new Keyv({ store: store1, namespace: "ns1" });
-		const keyv2 = new Keyv({ store: store2, namespace: "ns2" });
+	test("clearing one namespace keeps other namespaces and keys other clients wrote", async () => {
+		const id = faker.string.alphanumeric(8);
+		const sessions = new KeyvMemcache(uri, { namespace: `sessions-${id}` });
+		const cache = new KeyvMemcache(uri, { namespace: `cache-${id}` });
+		await sessions.set("user", "alice");
+		await cache.set("page", "html");
+		await cache.client.set(`foreign-${id}`, "other app");
 
-		const key = faker.string.uuid();
-		await keyv1.set(key, faker.lorem.word());
-		await keyv2.set(key, faker.lorem.word());
+		await cache.clear();
 
-		// Clearing from one instance flushes everything.
-		await keyv1.clear();
+		expect(await cache.get("page")).toBeUndefined();
+		expect(await cache.has("page")).toBe(false);
+		expect(await sessions.get("user")).toBe("alice");
+		expect(await cache.client.get(`foreign-${id}`)).toBe("other app");
+	});
 
-		expect(await keyv1.get(key)).toBeUndefined();
-		expect(await keyv2.get(key)).toBeUndefined();
+	test("clearing without a namespace keeps namespaced entries and keys other clients wrote", async () => {
+		const id = faker.string.alphanumeric(8);
+		const plain = new KeyvMemcache(uri);
+		const named = new KeyvMemcache(uri, { namespace: `ns-${id}` });
+		await plain.set(`plain-${id}`, "plain");
+		await named.set("named", "named");
+		await plain.client.set(`foreign-${id}`, "other app");
+
+		await plain.clear();
+
+		expect(await plain.get(`plain-${id}`)).toBeUndefined();
+		expect(await named.get("named")).toBe("named");
+		expect(await plain.client.get(`foreign-${id}`)).toBe("other app");
+	});
+
+	test("with noNamespaceAffectsAll and no namespace, clear() flushes the server and values are stored as given", async () => {
+		const id = faker.string.alphanumeric(8);
+		const plain = new KeyvMemcache(uri, { noNamespaceAffectsAll: true });
+		const named = new KeyvMemcache(uri, { namespace: `ns-${id}`, noNamespaceAffectsAll: true });
+		expect(plain.noNamespaceAffectsAll).toBe(true);
+		await plain.set(`plain-${id}`, "plain");
+		await named.set("named", "named");
+		expect(await plain.client.get(`plain-${id}`)).toBe("plain");
+
+		// A namespace still gets its own scoped clear().
+		await named.clear();
+		expect(await plain.get(`plain-${id}`)).toBe("plain");
+
+		await plain.clear();
+		expect(await plain.client.get(`plain-${id}`)).toBeUndefined();
+
+		plain.noNamespaceAffectsAll = false;
+		expect(plain.noNamespaceAffectsAll).toBe(false);
+	});
+
+	test("a store sees another store's clear() on its next read", async () => {
+		const namespace = `shared-${faker.string.alphanumeric(8)}`;
+		const first = new KeyvMemcache(uri, { namespace });
+		const second = new KeyvMemcache(uri, { namespace });
+		await first.set("key", "before");
+		expect(await second.get("key")).toBe("before");
+
+		await second.clear();
+
+		expect(await first.get("key")).toBeUndefined();
+		expect(await first.getMany(["key"])).toEqual([undefined]);
+	});
+
+	test("a write right after another store's clear() is still visible", async () => {
+		const namespace = `shared-${faker.string.alphanumeric(8)}`;
+		const first = new KeyvMemcache(uri, { namespace });
+		const second = new KeyvMemcache(uri, { namespace });
+		await first.set("warm", "value");
+
+		await second.clear();
+		await first.set("key", "after");
+		expect(await first.setMany([{ key: "other", value: "after" }])).toEqual([true]);
+
+		expect(await second.get("key")).toBe("after");
+		expect(await second.get("other")).toBe("after");
+		expect(await second.get("warm")).toBeUndefined();
+	});
+
+	test("losing the generation key hides older entries instead of serving them", async () => {
+		const store = new KeyvMemcache(uri, { namespace: `lost-${faker.string.alphanumeric(8)}` });
+		await store.set("key", "value");
+
+		// What an eviction or a restart of the node holding the generation key does.
+		await store.client.delete(store.generationKey);
+
+		expect(await store.get("key")).toBeUndefined();
+		await store.set("key", "new value");
+		expect(await store.get("key")).toBe("new value");
+	});
+
+	test("a store that loses the race to create the generation uses the winning token", async () => {
+		const namespace = `race-${faker.string.alphanumeric(8)}`;
+		const first = new KeyvMemcache(uri, { namespace });
+		const second = new KeyvMemcache(uri, { namespace });
+		await first.set("key", "value");
+
+		// The second store reads as if the generation key were missing, so it tries to create one,
+		// as it would if another store created the key between its read and its add.
+		const gets = second.client.gets.bind(second.client);
+		vi.spyOn(second.client, "gets").mockImplementationOnce(async (keys: string[]) => {
+			const values = await gets(keys);
+			values.delete(second.generationKey);
+			return values;
+		});
+
+		expect(await second.get("key")).toBe("value");
+	});
+
+	test("entries written before the upgrade read as missing", async () => {
+		const store = new KeyvMemcache(uri, { namespace: `old-${faker.string.alphanumeric(8)}` });
+		// How the adapter stored values before generations: the value as given.
+		await store.client.set(store.formatKey("old"), "untagged");
+
+		expect(await store.get("old")).toBeUndefined();
+		expect(await store.has("old")).toBe(false);
+	});
+
+	test("keeps the generation key out of reach of data keys", () => {
+		const store = new KeyvMemcache(uri, { namespace: "ns" });
+		expect(store.generationKey).toMatch(/^keyv:gen:[0-9a-f]{64}$/);
+		expect(store.generationKey).not.toBe(new KeyvMemcache(uri).generationKey);
+
+		const plain = new KeyvMemcache(uri);
+		expect(plain.formatKey(store.generationKey)).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
+		store.namespace = "keyv";
+		expect(store.formatKey(store.generationKey.slice("keyv:".length))).toMatch(/^keyv:sha256:/);
 	});
 });
 
@@ -391,15 +511,28 @@ describe("failed writes", () => {
 		});
 		const key = faker.string.uuid();
 
-		// Within the client's 1 MiB value limit, but over memcached's 1 MB item limit once the key
-		// and item header are counted.
-		expect(await store.set(key, "x".repeat(1024 * 1024))).toBe(false);
+		// With the 17-character generation token in front, exactly the client's 1 MiB value limit,
+		// but over memcached's 1 MB item limit once the key and item header are counted.
+		expect(await store.set(key, "x".repeat(1024 * 1024 - 17))).toBe(false);
 		expect(await store.get(key)).toBeUndefined();
 		expect(errors.map((error) => error.message)).toContain("Memcache did not store the value");
 	});
 
-	test("clear emits an error when a server does not flush", async () => {
+	test("set reports false and emits the client's error for a value over the client's limit", async () => {
 		const store = new KeyvMemcache(uri);
+		const errors: Error[] = [];
+		store.on("error", (error: Error) => {
+			errors.push(error);
+		});
+
+		expect(await store.set(faker.string.uuid(), "x".repeat(1024 * 1024))).toBe(false);
+		expect(errors.map((error) => error.message)).toEqual([
+			"Value size cannot exceed 1048576 bytes",
+		]);
+	});
+
+	test("clear emits an error when a server does not flush", async () => {
+		const store = new KeyvMemcache(uri, { noNamespaceAffectsAll: true });
 		const errors: Error[] = [];
 		store.on("error", (error: Error) => {
 			errors.push(error);
@@ -408,6 +541,42 @@ describe("failed writes", () => {
 
 		await store.clear();
 		expect(errors.map((error) => error.message)).toContain("Memcache did not flush the server");
+	});
+
+	test("clear emits an error and keeps entries when memcached doesn't store the new generation", async () => {
+		const store = new KeyvMemcache(uri, { namespace: `gen-${faker.string.alphanumeric(8)}` });
+		const errors: Error[] = [];
+		store.on("error", (error: Error) => {
+			errors.push(error);
+		});
+		await store.set("key", "value");
+		vi.spyOn(store.client, "set").mockResolvedValueOnce(false);
+
+		await store.clear();
+		expect(errors.map((error) => error.message)).toContain(
+			"Memcache did not store the new generation",
+		);
+		expect(await store.get("key")).toBe("value");
+	});
+
+	test("reads and writes fail with an error when the generation can't be read or created", async () => {
+		const store = new KeyvMemcache(uri, { namespace: `gen-${faker.string.alphanumeric(8)}` });
+		const errors: Error[] = [];
+		store.on("error", (error: Error) => {
+			errors.push(error);
+		});
+		vi.spyOn(store.client, "gets").mockResolvedValue(new Map());
+		vi.spyOn(store.client, "get").mockResolvedValue(undefined);
+		vi.spyOn(store.client, "add").mockResolvedValue(false);
+
+		expect(await store.set("key", "value")).toBe(false);
+		expect(await store.get("key")).toBeUndefined();
+		expect(await store.getMany(["key"])).toEqual([undefined]);
+		expect(await store.has("key")).toBe(false);
+		expect(await store.hasMany(["key"])).toEqual([false]);
+		expect(errors.map((error) => error.message)).toEqual(
+			Array(5).fill("Memcache could not read or create the generation key"),
+		);
 	});
 });
 
@@ -589,6 +758,8 @@ const store = () => keyvMemcache;
 
 keyvApiTests(test, Keyv, store);
 keyvValueTests(test, Keyv, store);
+// The namespace lives on the adapter, so each Keyv instance needs its own store.
+keyvNamespaceTests(test, Keyv, () => new KeyvMemcache(uri));
 // Memcached does not support key enumeration, so the iterator suite is disabled.
 // Memcached `exptime` has 1-second granularity, so use second-scale expiry deadlines.
 storageTestSuite(test, store, { iterator: false, ttlGranularity: "seconds" });

@@ -40,12 +40,7 @@ With a namespace, v6's `clear()` and `iterator()` cover the string keys that mat
 
 ### Memcache (`@keyv/memcache`)
 
-v6 builds `<namespace>:<key>`. A key with whitespace or control characters, one over 250 bytes, or one that starts with `keyv:sha256:` is stored under `keyv:sha256:<SHA-256 hex>` instead. v4 and v5 used `memjs`, whose binary protocol takes whitespace, and trimmed namespaced keys. So no v6 setting reads an old entry whose key has whitespace or control characters.
-
-| Old setup | Key stored for `foo` | v6 settings |
-| --- | --- | --- |
-| v4 or v5, default | `ns:ns:foo` | `{ namespace: 'ns:ns' }` |
-| v5, `useKeyPrefix: false` | `ns:foo` | `{ namespace: 'ns' }` |
+v6 builds `<namespace>:<key>`, but stores each value after its namespace's generation token and reads a value without one as missing. So no v6 setting reads an entry v4 or v5 wrote: tell the user the cache fills again. A key with whitespace or control characters, one over 250 bytes, or one that starts with `keyv:sha256:` or `keyv:gen:` is stored under `keyv:sha256:<SHA-256 hex>` instead.
 
 ### Etcd and DynamoDB
 
@@ -118,7 +113,7 @@ With no namespace, some adapters' `clear()` removes much more than Keyv's entrie
 | Etcd | Deletes only the entries v6 wrote with no namespace, and leaves v5's entries. With `noNamespaceAffectsAll: true`, deletes every key |
 | DynamoDB | Deletes every item in the table |
 | Cloudflare KV | Deletes every key in the KV namespace |
-| Memcache | Flushes the whole server, with or without a namespace, as in v5 |
+| Memcache | Removes only the entries v6 wrote with no namespace. With `noNamespaceAffectsAll: true`, flushes the whole server, as v5 did with or without a namespace |
 | SQLite, PostgreSQL, MySQL, MongoDB | Deletes only the rows or documents with no namespace |
 
 If the app calls `clear()` and the backend holds anything else, give every Keyv instance a namespace.

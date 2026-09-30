@@ -57,7 +57,8 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - Uses the `memcache` client instead of `memjs`. `store.client` is a `Memcache` instance, and options extend `MemcacheOptions`. Update any `memjs`-specific options.
 - Credentials move out of the server string: `new KeyvMemcache('localhost:11211', { sasl: { username, password } })`.
 - Values are handled as strings, not Buffers. `disconnect()` was added.
-- `clear()` flushes the whole server, as before.
+- `clear()` removes only the store's own entries: each namespace has a generation token, and `clear()` writes a new one. v4 and v5 flushed the whole server. With no namespace, `noNamespaceAffectsAll: true` flushes it, as before.
+- Values v4 and v5 wrote have no generation token, so v6 reads them as missing.
 
 ## `@keyv/etcd`
 
