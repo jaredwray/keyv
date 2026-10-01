@@ -28,9 +28,11 @@ describe("set", () => {
 		const store = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await store.set(key, value, Date.now() + 100);
+		// Valkey expires the key on its own clock, so leave the first read a wide margin to land
+		// before the deadline even when CI is slow.
+		await store.set(key, value, Date.now() + 1000);
 		expect(await store.get(key)).toBe(value);
-		await delay(200);
+		await delay(1200);
 		expect(await store.get(key)).toBeUndefined();
 		await store.disconnect();
 	});
@@ -67,9 +69,11 @@ describe("setMany", () => {
 		const store = new KeyvValkey(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await store.setMany([{ key, value, expires: Date.now() + 100 }]);
+		// Valkey expires the key on its own clock, so leave the first read a wide margin to land
+		// before the deadline even when CI is slow.
+		await store.setMany([{ key, value, expires: Date.now() + 1000 }]);
 		expect(await store.get(key)).toBe(value);
-		await delay(200);
+		await delay(1200);
 		expect(await store.get(key)).toBeUndefined();
 		await store.disconnect();
 	});

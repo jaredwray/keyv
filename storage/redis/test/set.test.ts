@@ -75,7 +75,9 @@ describe("set", () => {
 		const data = {
 			key: faker.string.alphanumeric(10),
 			value: faker.lorem.sentence(),
-			expires: Date.now() + 100, // 100 milliseconds from now
+			// Redis expires the key on its own clock, so leave the read below a wide margin to land
+			// before the deadline even when CI is slow.
+			expires: Date.now() + 1000,
 		};
 
 		await keyvRedis.set(data.key, data.value, data.expires);
@@ -84,7 +86,7 @@ describe("set", () => {
 
 		expect(result).toBe(data.value);
 
-		await delay(300); // Wait for ttl to expire
+		await delay(1200); // Wait for ttl to expire
 
 		const expiredResult = await keyvRedis.get(data.key);
 		expect(expiredResult).toBeUndefined();
