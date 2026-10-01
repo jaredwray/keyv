@@ -1,0 +1,46 @@
+# Cluster for the @keyv/valkey tests. Packages run their tests in parallel, and the @keyv/redis
+# tests flush their cluster (7001-7003) before each test, so the two can't share one.
+services:
+  valkey-1:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-cluster-1
+    command: valkey-server --port 7101 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7101 --cluster-announce-bus-port 17101
+    network_mode: host
+    volumes:
+      - valkey-1-data:/data
+
+  valkey-2:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-cluster-2
+    command: valkey-server --port 7102 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7102 --cluster-announce-bus-port 17102
+    network_mode: host
+    volumes:
+      - valkey-2-data:/data
+
+  valkey-3:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-cluster-3
+    command: valkey-server --port 7103 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7103 --cluster-announce-bus-port 17103
+    network_mode: host
+    volumes:
+      - valkey-3-data:/data
+
+  valkey-cluster-init:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-cluster-init
+    network_mode: host
+    depends_on:
+      - valkey-1
+      - valkey-2
+      - valkey-3
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "sleep 5 && \
+      valkey-cli --cluster create 127.0.0.1:7101 127.0.0.1:7102 127.0.0.1:7103 --cluster-replicas 0 --cluster-yes && \
+      echo 'Cluster created successfully' && \
+      valkey-cli -p 7101 cluster info"
+
+volumes:
+  valkey-1-data:
+  valkey-2-data:
+  valkey-3-data:

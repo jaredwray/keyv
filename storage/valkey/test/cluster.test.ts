@@ -4,9 +4,9 @@ import { describe, expect, test, vi } from "vitest";
 import KeyvValkey from "../src/index.js";
 
 const clusterNodes = [
-	{ host: "127.0.0.1", port: 7001 },
-	{ host: "127.0.0.1", port: 7002 },
-	{ host: "127.0.0.1", port: 7003 },
+	{ host: "127.0.0.1", port: 7101 },
+	{ host: "127.0.0.1", port: 7102 },
+	{ host: "127.0.0.1", port: 7103 },
 ];
 
 async function createReadyCluster(): Promise<Cluster> {
@@ -41,7 +41,7 @@ function interleave(
 }
 
 describe("cluster", () => {
-	test("should setMany without CROSSSLOT errors", { retry: 3 }, async () => {
+	test("should setMany without CROSSSLOT errors", async () => {
 		const cluster = await createReadyCluster();
 		const store = new KeyvValkey(cluster);
 
@@ -66,7 +66,7 @@ describe("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should getMany without CROSSSLOT errors", { retry: 3 }, async () => {
+	test("should getMany without CROSSSLOT errors", async () => {
 		const cluster = await createReadyCluster();
 		const store = new KeyvValkey(cluster);
 
@@ -88,7 +88,7 @@ describe("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should deleteMany without CROSSSLOT errors", { retry: 3 }, async () => {
+	test("should deleteMany without CROSSSLOT errors", async () => {
 		const cluster = await createReadyCluster();
 		const store = new KeyvValkey(cluster);
 
@@ -111,7 +111,7 @@ describe("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should hasMany without CROSSSLOT errors", { retry: 3 }, async () => {
+	test("should hasMany without CROSSSLOT errors", async () => {
 		const cluster = await createReadyCluster();
 		const store = new KeyvValkey(cluster);
 
@@ -129,7 +129,7 @@ describe("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should clear the namespace's keys on every master", { retry: 3 }, async () => {
+	test("should clear the namespace's keys on every master", async () => {
 		const store = new KeyvValkey(await createReadyCluster(), {
 			namespace: faker.string.alphanumeric(10),
 		});
@@ -149,7 +149,7 @@ describe("cluster", () => {
 		await other.disconnect();
 	});
 
-	test("should iterate the namespace's keys on every master", { retry: 3 }, async () => {
+	test("should iterate the namespace's keys on every master", async () => {
 		const store = new KeyvValkey(await createReadyCluster(), {
 			namespace: faker.string.alphanumeric(10),
 		});
@@ -166,7 +166,7 @@ describe("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should track keys with useSets without CROSSSLOT errors", { retry: 3 }, async () => {
+	test("should track keys with useSets without CROSSSLOT errors", async () => {
 		const store = new KeyvValkey(await createReadyCluster(), {
 			namespace: faker.string.alphanumeric(10),
 			useSets: true,
