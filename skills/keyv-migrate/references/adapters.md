@@ -11,7 +11,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
   - `throwOnErrors` (default `false`): a failed command emits `error` and returns `undefined` or `false`; with `true` it rejects instead.
   - Either way, Keyv then applies its own error rule; see [v5-to-v6.md](v5-to-v6.md#errors).
 - The client connects on the first command, not when the adapter is created.
-- The namespace defaults to `undefined`. With a namespace, `clear()` and `iterator()` cover the string keys matching `<namespace><keyPrefixSeparator>*`. With no namespace, `clear()` deletes every string key without the separator in its name.
+- The namespace defaults to `undefined`. With a namespace, `clear()` and `iterator()` cover the string keys that start with `<namespace><keyPrefixSeparator>`, matched literally. In v5 a `*`, `?`, `[`, `]` or `\` in either was read as `SCAN` pattern syntax, so `clear()` on namespace `tenant*` also deleted namespace `tenant-prod`. Code that relied on that must clear each namespace itself. With no namespace, `clear()` deletes every string key without the separator in its name.
 - A failure is reported once: when the adapter rejects, it no longer also emits `error`.
 - CommonJS: `const KeyvRedis = require('@keyv/redis').default`. There is no named `KeyvRedis` export.
 - `createKeyv(connect, options)` and `createKeyvNonBlocking(connect, options)` return a ready `Keyv`. They no longer set any Keyv error options.

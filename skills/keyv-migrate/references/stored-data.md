@@ -29,7 +29,7 @@ v6 builds `<namespace><keyPrefixSeparator><key>`, and the separator defaults to 
 
 v4 also kept a Redis set named `namespace:ns` listing its keys. v6 doesn't use it; the user can delete it once nothing runs v4.
 
-With a namespace, v6's `clear()` and `iterator()` cover the string keys that match `<namespace><keyPrefixSeparator>*`. So with the default separator, namespace `ns` also covers the v5 keys `ns::ns:*`. That matters when those old entries can't be decoded, as with compression: `iterator()` hits them and fails, and `clear()` deletes them. For such a cache, pick a new namespace (such as `ns-v6`) so the old and new entries don't mix, and clean up the old ones separately.
+With a namespace, v6's `clear()` and `iterator()` cover the string keys that start with `<namespace><keyPrefixSeparator>`. So with the default separator, namespace `ns` also covers the v5 keys `ns::ns:*`. That matters when those old entries can't be decoded, as with compression: `iterator()` hits them and fails, and `clear()` deletes them. For such a cache, pick a new namespace (such as `ns-v6`) so the old and new entries don't mix, and clean up the old ones separately.
 
 ### Valkey (`@keyv/valkey`, v5 only)
 

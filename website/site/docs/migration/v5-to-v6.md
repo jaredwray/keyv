@@ -43,6 +43,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`@keyv/etcd` Without a Namespace Only Clears Its Own Entries](#keyvetcd-without-a-namespace-only-clears-its-own-entries)
   - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
   - [`@keyv/bigmap` Keeps Entries When `storeSize` or `storeHashFunction` Changes](#keyvbigmap-keeps-entries-when-storesize-or-storehashfunction-changes)
+  - [`@keyv/redis` Matches the Namespace Literally](#keyvredis-matches-the-namespace-literally)
 - [New Features](#new-features)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
@@ -812,6 +813,18 @@ In v6, both setters move every entry into the `Map` its key maps to under the ne
 **What this means for you:**
 - If code sets `storeSize` to empty the map, call `clear()` as well
 - Moving entries takes one pass over the map, so for a large map set `storeSize` and `storeHashFunction` in the constructor
+
+---
+
+### `@keyv/redis` Matches the Namespace Literally
+
+In v5, `clear()` and `iterator()` on a `@keyv/redis` store with a namespace passed `<namespace><keyPrefixSeparator>*` to `SCAN` without escaping it. A `*`, `?`, `[`, `]` or `\` in the namespace or separator was read as pattern syntax, so `clear()` on namespace `tenant*` also deleted the keys of namespace `tenant-prod`, and `iterator()` returned them. A namespace such as `t[12]` or `a\b` didn't match its own keys, so `clear()` left them in place.
+
+In v6, the namespace and separator are matched literally. `clear()` and `iterator()` only touch keys that start with `<namespace><keyPrefixSeparator>`.
+
+**What this means for you:**
+- Namespaces without those characters behave as before
+- If code used a wildcard namespace to clear or iterate several namespaces at once, call `clear()` or `iterator()` once for each namespace instead
 
 ---
 
