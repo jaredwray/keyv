@@ -425,13 +425,20 @@ describe("batch operations", () => {
 
 describe("expiration", () => {
 	it("should expire values via the client-side check", async () => {
-		const s = store();
-		const key = faker.string.uuid();
-		await s.set(key, "value", Date.now() + 100);
-		expect(await s.get(key)).toBe("value");
-		await new Promise((resolve) => setTimeout(resolve, 200));
-		expect(await s.get(key)).toBeUndefined();
-		expect(await s.has(key)).toBe(false);
+		// The client-side check reads the clock through Date.now(). Freezing it keeps the value
+		// from expiring before the first get(), however slow the round trip is.
+		vi.useFakeTimers({ toFake: ["Date"] });
+		try {
+			const s = store();
+			const key = faker.string.uuid();
+			await s.set(key, "value", Date.now() + 100);
+			expect(await s.get(key)).toBe("value");
+			vi.setSystemTime(Date.now() + 200);
+			expect(await s.get(key)).toBeUndefined();
+			expect(await s.has(key)).toBe(false);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it("should not persist an already-elapsed deadline", async () => {
