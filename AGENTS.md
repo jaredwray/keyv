@@ -39,7 +39,7 @@ Individual package tests:
 - **serialization/superjson**: SuperJSON serializer (@keyv/serialize-superjson) - optional
 - **serialization/msgpackr**: MessagePack serializer (@keyv/serialize-msgpackr) - optional
 - **core/bigmap**: BigMap - scalable in-memory Map implementation
-- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB, Cloudflare KV
+- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, Valkey GLIDE, DynamoDB, Cloudflare KV
 - **compression/**: Compression adapters - Brotli, Gzip, LZ4
 - **encryption/**: Encryption adapters - Node.js crypto (@keyv/encrypt-node), Web Crypto (@keyv/encrypt-web)
 - **skills/**: Agent Skills for coding agents - `keyv-migrate` upgrades user projects from Keyv v4/v5 to v6
