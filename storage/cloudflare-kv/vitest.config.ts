@@ -2,8 +2,7 @@ import {defineConfig} from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // Miniflare spins up a local workerd runtime; give it room and absorb timing races.
-    retry: 2,
+    // Miniflare spins up a local workerd runtime; give it room.
     testTimeout: 30000,
     include: ['test/*.ts'],
     coverage: {

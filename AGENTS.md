@@ -78,6 +78,7 @@ Individual package tests:
 - Test services are managed via scripts in `/scripts/` directory
 - Each storage adapter should use `@keyv/test-suite` for compliance testing
 - Tests use Vitest with coverage reporting
+- Don't set `retry` in a package's Vitest config or on a test to get CI green: a test that only passes on retry is flaky, so fix its cause. The one exception is the Cloudflare KV live config, which calls the real Cloudflare API over the internet
 
 ### Code Style
 - TypeScript with strict mode enabled
