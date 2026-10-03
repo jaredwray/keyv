@@ -23,7 +23,7 @@ Use [Cloudflare Workers KV](https://developers.cloudflare.com/kv/) as a Keyv sto
 - Fully testable locally with Miniflare — no Cloudflare account required
 - `createKeyv` helper for quick setup
 
-> **Note:** Cloudflare KV is eventually consistent. Writes are read-your-write within the location that wrote them but may take up to 60 seconds to propagate globally, and KV's native expiry has a 60-second minimum. This adapter stores an expiry timestamp alongside each value and enforces it on read, so TTLs behave precisely regardless of the native minimum. See the [Cloudflare KV docs](https://developers.cloudflare.com/kv/concepts/how-kv-works/) for details.
+> **Note:** Cloudflare KV is eventually consistent. It caches reads (for 60 seconds by default), so a read after a write or delete can return the previous value until that cache expires. Changes are usually visible straight away in the location that made them, but not always: over the REST API, a `get()` straight after `delete()` can still return the deleted value. KV's native expiry also has a 60-second minimum. This adapter stores an expiry timestamp alongside each value and enforces it on read, so TTLs behave precisely regardless of the native minimum. See the [Cloudflare KV docs](https://developers.cloudflare.com/kv/concepts/how-kv-works/) for details.
 
 ## Table of Contents
 
