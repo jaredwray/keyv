@@ -108,7 +108,7 @@ await keyv.hasMany(["foo", "missing"]); // [true, false]
 
 ## `.clear()`
 
-Delete every key in the **current namespace**. Emits `'clear'`.
+Delete every key in the **current namespace**. Emits `'clear'`. If the store can't limit the delete to the namespace (a `Map`-like store without `keys()`, or an older async store without `iterator()` that doesn't manage its own namespace), nothing is deleted and Keyv emits `'error'`.
 
 ```js
 await keyv.clear();

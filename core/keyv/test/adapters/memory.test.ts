@@ -289,6 +289,40 @@ describe("Keyv Generic Store Iterator", () => {
 		expect(store.has("expired")).toBe(false);
 	});
 
+	test("should refuse a namespaced clear() when the store has no keys()", async () => {
+		const map = new Map<string, unknown>();
+		const store = {
+			get: (key: string) => map.get(key),
+			set: (key: string, value: unknown) => map.set(key, value),
+			delete: (key: string) => map.delete(key),
+			clear: () => map.clear(),
+			has: (key: string) => map.has(key),
+		};
+		const adapter = new KeyvMemoryAdapter(store, { namespace: "ns1" });
+		await adapter.set("key1", "value1");
+		map.set("ns2:key2", { value: "value2" });
+
+		await expect(adapter.clear()).rejects.toThrow(
+			`Can't clear namespace "ns1": the store has no keys()`,
+		);
+		expect(map.size).toBe(2);
+
+		// Through Keyv the error is emitted, and nothing is removed
+		const keyv = createKeyv(store, { namespace: "ns1" });
+		const errors: unknown[] = [];
+		keyv.on("error", (error: unknown) => {
+			errors.push(error);
+		});
+		await keyv.clear();
+		expect(errors).toHaveLength(1);
+		expect(map.size).toBe(2);
+
+		// Without a namespace the whole store is cleared on purpose
+		adapter.namespace = undefined;
+		await adapter.clear();
+		expect(map.size).toBe(0);
+	});
+
 	test("should return empty iterator when store does not support entries", async () => {
 		const customStore = {
 			get: () => undefined,

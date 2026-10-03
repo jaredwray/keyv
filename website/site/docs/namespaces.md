@@ -54,14 +54,14 @@ If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on c
 
 ## Memory and Map stores
 
-`KeyvMemoryAdapter` (the default `Map` / LRU wrapper) prefixes keys as `namespace:key` (customizable `keySeparator`). A namespaced `clear()` removes only those keys **when the underlying store exposes `keys()`** (a standard `Map` does). A minimal Map-like object without `keys()` falls back to wiping the **entire** store — do not share that kind of store across namespaces.
+`KeyvMemoryAdapter` (the default `Map` / LRU wrapper) prefixes keys as `namespace:key` (customizable `keySeparator`). A namespaced `clear()` removes only those keys, which it finds with the underlying store's `keys()` (a standard `Map` has one). A minimal Map-like object without `keys()` can't tell namespaces apart, so a namespaced `clear()` throws instead of wiping the **entire** store.
 
 ## Bridge / legacy adapters
 
 `KeyvBridgeAdapter` does one of two things:
 
 - If the wrapped store already has a `namespace` property (a full adapter), the bridge **propagates** namespace and does not prefix again. When the bridge has no namespace of its own, it keeps the one the store was configured with.
-- Otherwise it prefixes keys itself so one shared async store can host multiple namespaces.
+- Otherwise it prefixes keys itself so one shared async store can host multiple namespaces. A namespaced `clear()` finds those keys with the store's `iterator()`. A store without one can't tell namespaces apart, so `clear()` throws instead of wiping every namespace.
 
 See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
 

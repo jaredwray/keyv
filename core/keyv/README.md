@@ -499,7 +499,7 @@ Keyv ships with two storage adapters built directly into the core package. You r
 
 It adds the pieces a raw `Map` does not have:
 
-- **Namespace prefixing** — keys are prefixed with the `namespace` and `keySeparator` (default `:`), so one underlying store can host multiple namespaces. A namespaced `clear()` removes only the current namespace's keys **when the underlying store exposes a `keys()` method** (a standard `Map` does); a minimal store without `keys()` falls back to wiping the **entire** store, so take care sharing one such store across namespaces.
+- **Namespace prefixing** — keys are prefixed with the `namespace` and `keySeparator` (default `:`), so one underlying store can host multiple namespaces. A namespaced `clear()` removes only the current namespace's keys, which it finds with the underlying store's `keys()` method (a standard `Map` has one). A minimal store without `keys()` can't tell namespaces apart, so a namespaced `clear()` throws instead of wiping the **entire** store; call `clear()` without a namespace to empty it.
 - **TTL expiry** — the adapter keeps a copy of each entry's expiry in its own `{ value, expires }` wrapper *alongside* the stored value, so it can evict expired entries lazily on `get`, `getMany`, `has`, and `iterator()` without decoding the value. This wrapper is **separate from** the `{ value, expires }` envelope Keyv core builds and runs through serialization/compression/encryption — with the default serializer that encoded payload still contains `expires`, so custom serializer/encryption adapters must still handle the `expires` field; only the adapter's outer copy lives outside the payload. When the underlying store accepts a TTL argument (e.g. QuickLRU), the adapter also passes a derived relative duration so the store can evict on its own.
 - **Batch and iteration** — `getMany`, `setMany`, `hasMany`, `deleteMany`, and an async `iterator()` (when the store supports `entries()`).
 - **v6 contract** — declares `capabilities.expires === true`, so Keyv hands it the absolute `expires` timestamp directly and trusts it to enforce expiry.
@@ -529,7 +529,7 @@ This is why existing third-party adapters keep working unchanged on v6. The brid
 
 - **Converts expiry** — Keyv passes an absolute `expires` timestamp; the bridge converts it back to the relative TTL the wrapped store expects. A write whose deadline has already elapsed is deleted instead of stored, so a past `expires` becomes an absent key — matching how the native adapters treat an already-expired write.
 - **Delegates when it can** — if the wrapped store implements `getMany`, `setMany`, `has`, `hasMany`, `deleteMany`, `iterator`, or `disconnect`, the bridge calls them directly; otherwise it falls back to looping over the single-key primitives.
-- **Handles namespacing both ways** — if the wrapped store manages its own namespace (a full adapter exposing a `namespace` property), the bridge propagates its namespace to the store (or keeps the store's own namespace when the bridge has none) and does *not* prefix keys, avoiding double-namespacing, so the store's native scoped `clear()` and `iterator()` are used. Otherwise the bridge prefixes keys itself, letting one shared store host multiple namespaces.
+- **Handles namespacing both ways** — if the wrapped store manages its own namespace (a full adapter exposing a `namespace` property), the bridge propagates its namespace to the store (or keeps the store's own namespace when the bridge has none) and does *not* prefix keys, avoiding double-namespacing, so the store's native scoped `clear()` and `iterator()` are used. Otherwise the bridge prefixes keys itself, letting one shared store host multiple namespaces. A namespaced `clear()` then finds the namespace's keys with the store's `iterator()`; a store without one can't tell namespaces apart, so `clear()` throws instead of wiping every namespace.
 - **Forwards errors** — re-emits `error` events from the wrapped store so connection failures surface on the Keyv instance.
 
 ```js
@@ -957,6 +957,8 @@ Returns a promise which resolves to `true` if all keys were deleted successfully
 Delete all entries in the current namespace.
 
 Returns a promise which is resolved when the entries have been cleared.
+
+If the store can't limit the delete to the namespace, nothing is deleted and Keyv emits `error` instead. That happens with a `Map`-like store that has no `keys()`, and with an older async store that has no `iterator()` and doesn't manage its own namespace.
 
 ## .has(key)
 

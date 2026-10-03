@@ -135,6 +135,8 @@ Keyv v6 wraps stores it doesn't use directly:
 - A `Map` or another synchronous Map-like store goes in a `KeyvMemoryAdapter`. It now holds `{ value, expires }` objects under `namespace:key`, or under the bare key with no namespace. v5 stored serialized strings under `keyv:key`. With the default serializer, the stored `value` is a JSON string, so `get` still returns a copy, as in v4 and v5. With `serialization: false`, and with `createKeyv` from `keyv`, the object itself is stored and `get` returns the same reference.
 - An older async adapter that doesn't declare the v6 contract goes in a `KeyvBridgeAdapter`.
 
+With a namespace, `clear()` on a wrapped store deletes only that namespace's entries; v5 called the store's own `clear()`, which deleted everything. Finding them takes `keys()` on a Map-like store or `iterator()` on an async one, unless an older adapter manages its own namespace. Without that, `clear()` deletes nothing and fails with `error`. Add the method, or call `clear()` on an instance without a namespace to empty the store.
+
 `keyv.store` returns the wrapper, and the object you passed is at `keyv.store.store`. Fix code that compares `keyv.store` with the original object or reads the `Map` directly.
 
 A string, `{ uri }`, or anything else Keyv can't use as a store also ends up in a `KeyvMemoryAdapter`. That is how a leftover connection string fails silently.

@@ -434,7 +434,7 @@ describe("KeyvBridgeAdapter - Iterator", () => {
 });
 
 describe("KeyvBridgeAdapter - Clear with Namespace", () => {
-	test("should clear namespaced keys or entire store depending on config", async () => {
+	test("should clear the namespace, the whole store without one, or refuse when it can't scope", async () => {
 		// With namespace + iterator: only namespaced keys
 		const store1 = createFullStore();
 		const bridge1 = new KeyvBridgeAdapter(store1, { namespace: "ns1" });
@@ -451,13 +451,42 @@ describe("KeyvBridgeAdapter - Clear with Namespace", () => {
 		await bridge2.clear();
 		expect(store2._map.size).toBe(0);
 
-		// With namespace but no iterator: clear all
+		// With namespace but no iterator: refuse rather than wipe every namespace
 		const store3 = createMinimalStore();
 		const bridge3 = new KeyvBridgeAdapter(store3, { namespace: "ns1" });
 		store3._map.set("ns1:key1", "value1");
 		store3._map.set("ns2:key2", "value2");
-		await bridge3.clear();
-		expect(store3._map.size).toBe(0);
+		await expect(bridge3.clear()).rejects.toThrow(
+			`Can't clear namespace "ns1": the store has no iterator()`,
+		);
+		expect(store3._map.size).toBe(2);
+	});
+
+	test("Keyv should keep every entry and emit error when a namespaced clear() can't be scoped", async () => {
+		const store = createMinimalStore();
+		const keyv = new Keyv({ store, namespace: "ns1" });
+		await keyv.set("key1", "value1");
+		store._map.set("ns2:key2", "value2");
+
+		// With no error listener the call rejects
+		await expect(keyv.clear()).rejects.toThrow(
+			`Can't clear namespace "ns1": the store has no iterator()`,
+		);
+		expect(store._map.size).toBe(2);
+
+		const errors: unknown[] = [];
+		keyv.on(KeyvEvents.ERROR, (error: unknown) => {
+			errors.push(error);
+		});
+		await keyv.clear();
+		expect(errors).toHaveLength(1);
+		expect(store._map.size).toBe(2);
+		expect(await keyv.get("key1")).toBe("value1");
+
+		// Without a namespace the whole store is cleared on purpose
+		keyv.namespace = undefined;
+		await keyv.clear();
+		expect(store._map.size).toBe(0);
 	});
 
 	test("should handle non-string and non-array iterator entries during clear", async () => {
