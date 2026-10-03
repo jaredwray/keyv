@@ -27,7 +27,7 @@ await keyv.get("secret"); // decrypted automatically
 | Package | Runtime | Default cipher |
 | --- | --- | --- |
 | [@keyv/encrypt-node](/docs/encryption/encrypt-node/) | Node.js `crypto` | AES-256-GCM (AES-CCM, ChaCha20-Poly1305) |
-| [@keyv/encrypt-web](/docs/encryption/encrypt-web/) | Web Crypto (`crypto.subtle`) | AES-256-GCM (AES-CBC) |
+| [@keyv/encrypt-web](/docs/encryption/encrypt-web/) | Web Crypto (`crypto.subtle`) | AES-256-GCM (AES-128-GCM, AES-192-GCM) |
 
 Use encrypt-web in browsers, Deno, and Cloudflare Workers. Use encrypt-node when you want Node-only ciphers.
 
