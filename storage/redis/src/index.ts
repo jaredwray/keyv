@@ -900,16 +900,17 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Async iterator over keys and values. Uses the instance namespace. With no namespace,
-	 * iterates un-prefixed keys unless `noNamespaceAffectsAll` is true.
+	 * Async iterator over keys and values. Uses the instance namespace, matched literally (see
+	 * {@link getKeyPattern}). With no namespace, iterates un-prefixed keys unless
+	 * `noNamespaceAffectsAll` is true.
 	 * @returns {AsyncGenerator<[string, U | undefined], void, unknown>} Yields `[key, value]` pairs. Missing values are `undefined`.
 	 */
 	public async *iterator<U = T>(): AsyncGenerator<[string, U | undefined], void, unknown> {
 		// When instance is not a cluster, it will only have one client
 		const clients = await this.getMasterNodes();
+		const match = this.getKeyPattern();
 
 		for (const client of clients) {
-			const match = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}*` : "*";
 			let cursor = "0";
 			do {
 				const result = await client.scan(cursor, {
@@ -918,11 +919,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 					TYPE: "string",
 				});
 				cursor = result.cursor.toString();
-				let { keys } = result;
-
-				if (!this._namespace && !this._noNamespaceAffectsAll) {
-					keys = keys.filter((key) => !key.includes(this._keyPrefixSeparator));
-				}
+				const keys = this.filterScannedKeys(result.keys);
 
 				if (keys.length > 0) {
 					const values = await this.mget<U>(keys);
@@ -937,8 +934,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Clear keys in the current namespace. With no namespace, clears un-prefixed keys unless
-	 * `noNamespaceAffectsAll` is true (then `FLUSHDB`). Uses `SCAN` in batches of `clearBatchSize`.
+	 * Clear keys in the current namespace, matched literally (see {@link getKeyPattern}). With no
+	 * namespace, clears un-prefixed keys unless `noNamespaceAffectsAll` is true (then `FLUSHDB`).
+	 * Uses `SCAN` in batches of `clearBatchSize`.
 	 * Can be expensive on large keyspaces and clusters — not recommended in production.
 	 * @returns {Promise<void>} Resolves when the matching keys have been removed.
 	 */
@@ -956,7 +954,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 					let cursor = "0";
 					const batchSize = this._clearBatchSize;
-					const match = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}*` : "*";
+					const match = this.getKeyPattern();
 					const deletePromises = [];
 
 					do {
@@ -967,17 +965,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 						});
 
 						cursor = result.cursor.toString();
-						let { keys } = result;
 
-						if (keys.length === 0) {
+						if (result.keys.length === 0) {
 							continue;
 						}
 
-						if (!this._namespace) {
-							keys = keys.filter((key) => !key.includes(this._keyPrefixSeparator));
-						}
-
-						deletePromises.push(this.clearWithClusterSupport(keys));
+						deletePromises.push(this.clearWithClusterSupport(this.filterScannedKeys(result.keys)));
 					} while (cursor !== "0");
 
 					await Promise.all(deletePromises);
@@ -986,6 +979,46 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 		} catch (error) {
 			this.throwOrEmit(error);
 		}
+	}
+
+	/**
+	 * Builds the `SCAN MATCH` pattern for the keys in the current namespace:
+	 * `<namespace><keyPrefixSeparator>*`, or `*` with no namespace. Glob metacharacters
+	 * (`*`, `?`, `[`, `]`, `\`) in the namespace and separator are escaped so they match
+	 * literally; otherwise `clear()` on namespace `tenant*` would also delete `tenant-prod`'s
+	 * keys. A namespace that extends this one with the separator (`users::archive` under `users`)
+	 * still matches, because a key can contain the separator too.
+	 * @returns {string} The glob pattern, e.g. `"my-namespace::*"`, or `"*"` with no namespace.
+	 */
+	private getKeyPattern(): string {
+		if (!this._namespace) {
+			return "*";
+		}
+
+		const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
+		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}*`;
+	}
+
+	/**
+	 * Keeps the `SCAN` results that belong to this adapter. With a namespace, those are the keys
+	 * that start with `<namespace><keyPrefixSeparator>`, checked here as well as by the pattern so
+	 * `clear()` never deletes another namespace's keys whatever glob syntax the server supports.
+	 * With no namespace, those are the keys without the separator, or every key when
+	 * `noNamespaceAffectsAll` is true.
+	 * @param {string[]} keys - Keys returned by `SCAN`.
+	 * @returns {string[]} The keys `clear()` and `iterator()` may touch.
+	 */
+	private filterScannedKeys(keys: string[]): string[] {
+		if (this._namespace) {
+			const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
+			return keys.filter((key) => key.startsWith(prefix));
+		}
+
+		if (this._noNamespaceAffectsAll) {
+			return keys;
+		}
+
+		return keys.filter((key) => !key.includes(this._keyPrefixSeparator));
 	}
 
 	/**

@@ -283,6 +283,8 @@ This will prefix all keys with `my-namespace::` (the default `keyPrefixSeparator
 keyv.namespace = 'my-namespace';
 ```
 
+`clear()` and `iterator()` only touch keys that start with the namespace and separator (`my-namespace::`). Both are matched literally, so `*`, `?`, `[`, `]` and `\` in them have no special meaning to `SCAN`: clearing `tenant*` leaves `tenant-prod` alone. Clearing `my-namespace` does also clear a namespace that extends it with the separator, such as `my-namespace::archive`, because a key can contain the separator too. Keep the separator out of namespace names if you need them kept apart.
+
 NOTE: If you plan to do many clears or deletes, it is recommended to read the [Performance Considerations](#performance-considerations) section.
 
 # Fixing Double Prefixing of Keys
