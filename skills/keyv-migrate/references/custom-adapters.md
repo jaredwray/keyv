@@ -4,7 +4,7 @@ Use this when the project implements its own storage adapter, or tests one with 
 
 ## Do you have to change it?
 
-No, but you should. An adapter that doesn't declare the v6 contract keeps working: Keyv wraps it in `KeyvBridgeAdapter`, which turns the absolute `expires` back into a relative `ttl` and fills in missing batch methods. A synchronous `Map`-like store goes in a `KeyvMemoryAdapter` instead. Moving to the v6 contract removes the conversion and fixes a v5 problem: adapters that recovered the expiry by parsing the stored value lost it under compression, encryption, or a non-JSON serializer, so those entries never expired.
+No, but you should. An adapter that doesn't declare the v6 contract keeps working: Keyv wraps it in `KeyvBridgeAdapter`, which turns the absolute `expires` back into a relative `ttl` and fills in missing batch methods. A synchronous `Map`-like store goes in a `KeyvMemoryAdapter` instead. One case does need a change: with a namespace, `clear()` on a wrapped store has to find that namespace's keys, through `keys()` on a `Map`-like store or `iterator()` on an async one, unless the adapter manages its own namespace. Without them, `clear()` fails instead of deleting every entry as v5 did. Moving to the v6 contract removes the conversion and fixes a v5 problem: adapters that recovered the expiry by parsing the stored value lost it under compression, encryption, or a non-JSON serializer, so those entries never expired.
 
 Once an adapter implements the v6 contract, it no longer works with Keyv v5: v5 passes a relative `ttl` where the adapter now reads an absolute timestamp, and `keyvStorageCapability` doesn't exist in v5. A published adapter needs a new major version; see [Publishing an adapter](#publishing-an-adapter).
 

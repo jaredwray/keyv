@@ -22,6 +22,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Namespace Overhaul](#namespace-overhaul)
   - [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed)
   - [`clear()` Without a Namespace Clears More](#clear-without-a-namespace-clears-more)
+  - [A Namespaced `clear()` Fails When the Store Can't List Its Keys](#a-namespaced-clear-fails-when-the-store-cant-list-its-keys)
   - [`opts` Property Removed](#opts-property-removed)
   - [Serialization Replaces `serialize` and `deserialize`](#serialization-replaces-serialize-and-deserialize)
   - [Hookified for Events and Hooks](#hookified-for-events-and-hooks)
@@ -233,6 +234,19 @@ In v5 every Keyv instance had a namespace, `keyv` by default, so `clear()` remov
 | SQLite, PostgreSQL, MySQL, MongoDB | Deletes only the rows or documents that have no namespace. |
 
 If other data or other apps share the backend, set a namespace on every Keyv instance that calls `clear()`.
+
+---
+
+### A Namespaced `clear()` Fails When the Store Can't List Its Keys
+
+In v5, `clear()` called the store's own `clear()`. With a `Map`, another `Map`-like store, or an adapter that doesn't manage namespaces, that deleted every entry, whatever the namespace.
+
+In v6, Keyv wraps such a store in `KeyvMemoryAdapter` or `KeyvBridgeAdapter`, which prefix its keys with the namespace, and a namespaced `clear()` deletes only that namespace's entries. To find them it needs the store's `keys()` (a synchronous `Map`-like store) or `iterator()` (an async one). A store without them can't tell namespaces apart, so `clear()` deletes nothing and fails: Keyv emits `error`, and with no `error` listener attached the call rejects.
+
+**What this means for you:**
+- A `Map`, `quick-lru`, `lru.min`, every v6 adapter, and older adapters that manage their own namespace aren't affected
+- For any other custom store, add `keys()` (synchronous) or `iterator()` (async), or move it to the v6 adapter contract
+- To empty such a store on purpose, as v5 did, call `clear()` on a Keyv instance without a namespace
 
 ---
 

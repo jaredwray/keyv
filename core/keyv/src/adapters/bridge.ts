@@ -449,21 +449,25 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Clears entries from the store. If a namespace is set and the store supports
-	 * iteration, only entries within that namespace are removed. Otherwise, the
-	 * entire store is cleared.
+	 * Clears entries from the store. With no namespace, the whole store is cleared. With a
+	 * namespace, only that namespace's entries are removed: a store that manages its own
+	 * namespace clears them itself, and otherwise the bridge finds them with the store's
+	 * `iterator()`. A store with neither can't tell namespaces apart, so this throws rather
+	 * than call the store's `clear()` and delete every namespace's entries.
+	 * @throws {Error} If a namespace is set and the store neither manages it nor has `iterator()`.
 	 */
 	public async clear(): Promise<void> {
-		// A store that manages its own namespace scopes clear() to the namespace the bridge
-		// propagated to it, so delegate directly rather than risk an unscoped wipe of the backend.
-		if (this._namespace && this._storeHandlesNamespace) {
+		// With no namespace the whole store is cleared. A store that manages its own namespace
+		// scopes clear() to the namespace the bridge propagated to it, so delegate directly.
+		if (!this._namespace || this._storeHandlesNamespace) {
 			await this._store.clear();
 			return;
 		}
 
-		if (!this._namespace || !this._capabilities.methods.iterator.exists) {
-			await this._store.clear();
-			return;
+		if (!this._capabilities.methods.iterator.exists) {
+			throw new Error(
+				`Can't clear namespace "${this._namespace}": the store has no iterator() to find that namespace's keys, and its clear() would delete every namespace. Give the store an iterator(), or clear it without a namespace.`,
+			);
 		}
 
 		const prefix = `${this._namespace}${this._keySeparator}`;

@@ -49,7 +49,7 @@ When the underlying store's `set` accepts a TTL argument, the memory adapter als
 
 ## What `KeyvMemoryAdapter` adds
 
-- **Namespace prefixing** — `namespace` + `keySeparator` (default `:`). Namespaced `clear()` only deletes that prefix when the store has `keys()`.
+- **Namespace prefixing** — `namespace` + `keySeparator` (default `:`). Namespaced `clear()` deletes only that prefix, using the store's `keys()`. Without `keys()` it throws rather than wipe the whole store.
 - **TTL** — keeps `{ value, expires }` beside the payload so `get` / `has` / `iterator` can evict lazily without decoding.
 - **Batch + iterator** — `getMany`, `setMany`, `hasMany`, `deleteMany`, and `iterator()` when the store has `entries()`.
 - **v6 contract** — `capabilities.expires === true`, so Keyv passes absolute `expires` directly.
