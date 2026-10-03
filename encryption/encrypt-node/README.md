@@ -61,6 +61,12 @@ Default: `'base64'`
 
 The encoding used for the encrypted output string: `'base64'`, `'base64url'`, or `'hex'`. Other encodings can't hold arbitrary bytes, so they throw when the adapter is created.
 
+## Upgrading from a 6.0.0 pre-release
+
+The 6.0.0 pre-releases accepted any cipher and encoding Node.js offers. This release accepts only those listed above: creating the adapter with any other throws, and values encrypted with one can't be decrypted. To keep those values, re-encrypt them before you upgrade. While still on the pre-release, read each value with your current settings and write it back with a supported algorithm and encoding. A cache can instead start empty and refill.
+
+Values encrypted with a supported algorithm and encoding need no change.
+
 ## License
 
 [MIT © Jared Wray](LICENSE)

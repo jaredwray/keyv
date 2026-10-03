@@ -92,7 +92,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 ## New packages
 
 - Serializers: `@keyv/serialize-superjson` (`superJsonSerializer`) and `@keyv/serialize-msgpackr` (`msgpackrSerializer`). Pass one as `serialization`.
-- Encryption: `@keyv/encrypt-node` (`KeyvEncryptNode`) and `@keyv/encrypt-web` (`KeyvEncryptWeb`). Pass one as `encryption`.
+- Encryption: `@keyv/encrypt-node` (`KeyvEncryptNode`) and `@keyv/encrypt-web` (`KeyvEncryptWeb`). Pass one as `encryption`. encrypt-node accepts only the `algorithm` values `aes-128-gcm`, `aes-192-gcm`, `aes-256-gcm`, `aes-128-ccm`, `aes-192-ccm`, `aes-256-ccm`, and `chacha20-poly1305`, and the `encoding` values `base64`, `base64url`, and `hex`. encrypt-web accepts only `aes-128-gcm`, `aes-192-gcm`, and `aes-256-gcm`. Any other value throws when the adapter is created. The 6.0.0 pre-releases accepted more, and values they encrypted with another algorithm or encoding can't be decrypted after the upgrade: ask the user whether to re-encrypt them on the pre-release first or let a cache refill.
 - Storage: `@keyv/cloudflare-kv` (`KeyvCloudflareKV`).
 
 ## Calling an adapter directly
