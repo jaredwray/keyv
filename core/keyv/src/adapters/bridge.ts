@@ -333,6 +333,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple entries in the store at once.
 	 * Delegates to the store's native setMany if available, otherwise loops over set.
 	 * @param entries - Array of entries containing key, value, and optional absolute `expires`
+	 * @returns One boolean per entry, `false` where the store reported that the write failed
 	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (this._capabilities.methods.setMany.exists) {
@@ -342,8 +343,9 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 			// Already-expired entries must not persist (see `set`); batch the live ones and
 			// delete the elapsed ones rather than writing them with no ttl.
 			const live = entries.filter((entry) => !isExpired(entry));
+			let liveResults: unknown;
 			if (live.length > 0) {
-				await this._store.setMany?.(
+				liveResults = await this._store.setMany?.(
 					live.map((entry) => ({
 						key: this.getKeyPrefix(entry.key, this._namespace),
 						value: entry.value,
@@ -358,13 +360,23 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			return entries.map(() => true);
+			// A legacy store's setMany returns nothing (v5 typed it `Promise<void>`), one boolean for
+			// the batch, or one per entry. Only an explicit `false` counts as a failed write.
+			let liveIndex = 0;
+			return entries.map((entry) => {
+				if (isExpired(entry)) {
+					return true;
+				}
+
+				const result = Array.isArray(liveResults) ? liveResults[liveIndex] : liveResults;
+				liveIndex++;
+				return result !== false;
+			});
 		}
 
 		const results: boolean[] = [];
 		for (const entry of entries) {
-			await this.set(entry.key, entry.value, entry.expires);
-			results.push(true);
+			results.push(await this.set(entry.key, entry.value, entry.expires));
 		}
 
 		return results;

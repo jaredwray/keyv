@@ -375,6 +375,64 @@ describe("KeyvBridgeAdapter - Native Delegation (full store)", () => {
 		expect(setManySpy).not.toHaveBeenCalled();
 		expect(store._map.has("p")).toBe(false);
 	});
+
+	test("setMany should report each entry the store's native setMany rejects", async () => {
+		let reply: unknown;
+		const store: KeyvBridgeStore = { ...createFullStore(), setMany: async () => reply };
+		const bridge = new KeyvBridgeAdapter(store);
+		const entries = [
+			{ key: "a", value: "1" },
+			{ key: "expired", value: "2", expires: Date.now() - 1000 },
+			{ key: "b", value: "3" },
+		];
+
+		// One result per live entry, mapped back past the expired one
+		reply = [true, false];
+		expect(await bridge.setMany(entries)).toEqual([true, true, false]);
+
+		// One boolean for the whole batch
+		reply = false;
+		expect(await bridge.setMany(entries)).toEqual([false, true, false]);
+
+		// Nothing returned, as v5 adapters do, counts as success
+		reply = undefined;
+		expect(await bridge.setMany(entries)).toEqual([true, true, true]);
+	});
+
+	test("setMany should report each entry the store's set rejects when it has no setMany", async () => {
+		const map = new Map<string, unknown>();
+		const store: KeyvBridgeStore = {
+			async get(key: string) {
+				return map.get(key);
+			},
+			async set(key: string, value: unknown) {
+				map.set(key, value);
+				return !key.endsWith("b");
+			},
+			async delete(key: string) {
+				return map.delete(key);
+			},
+			async clear() {
+				map.clear();
+			},
+		};
+		const bridge = new KeyvBridgeAdapter(store);
+		expect(
+			await bridge.setMany([
+				{ key: "a", value: "1" },
+				{ key: "b", value: "2" },
+			]),
+		).toEqual([true, false]);
+
+		// Keyv passes the results through
+		const keyv = new Keyv({ store });
+		expect(
+			await keyv.setMany([
+				{ key: "a", value: "1" },
+				{ key: "b", value: "2" },
+			]),
+		).toEqual([true, false]);
+	});
 });
 
 describe("KeyvBridgeAdapter - Iterator", () => {
