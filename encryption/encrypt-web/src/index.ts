@@ -92,9 +92,6 @@ function concat(...arrays: Uint8Array[]): Uint8Array<ArrayBuffer> {
  * (`crypto.subtle`). Works in browsers, Deno, Cloudflare Workers, and
  * Node.js 18+. Defaults to AES-256-GCM with authenticated encryption.
  *
- * The encrypted output uses the same wire format as `@keyv/encrypt-node`,
- * enabling cross-compatibility between the two packages.
- *
  * Wire format (AEAD): `[IV (12 bytes) || AuthTag (16 bytes) || Ciphertext]`
  * Wire format (non-AEAD): `[IV (16 bytes) || Ciphertext]`
  *

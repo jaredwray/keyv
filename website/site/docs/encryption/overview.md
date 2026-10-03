@@ -26,13 +26,8 @@ await keyv.get("secret"); // decrypted automatically
 
 | Package | Runtime | Default cipher |
 | --- | --- | --- |
-| [@keyv/encrypt-node](/docs/encryption/encrypt-node/) | Node.js `crypto` | AES-256-GCM (AES-CCM, ChaCha20-Poly1305, AES-CBC, …) |
+| [@keyv/encrypt-node](/docs/encryption/encrypt-node/) | Node.js `crypto` | AES-256-GCM (AES-CCM, ChaCha20-Poly1305) |
 | [@keyv/encrypt-web](/docs/encryption/encrypt-web/) | Web Crypto (`crypto.subtle`) | AES-256-GCM (AES-CBC) |
-
-AES-GCM and AES-CBC payloads are **cross-compatible** between the two packages when the key and algorithm match:
-
-- AES-GCM: `base64(IV 12 || AuthTag 16 || Ciphertext)`
-- AES-CBC: `base64(IV 16 || Ciphertext)`
 
 Use encrypt-web in browsers, Deno, and Cloudflare Workers. Use encrypt-node when you want Node-only ciphers.
 

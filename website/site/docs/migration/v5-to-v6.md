@@ -959,7 +959,7 @@ You can now add encryption to values with the following adapters:
 
 | Package | Description |
 |---------|-------------|
-| `@keyv/encrypt-node` | Node.js `crypto` (AES-GCM, ChaCha20-Poly1305, AES-CBC, …) |
+| `@keyv/encrypt-node` | Node.js `crypto` (AES-GCM, AES-CCM, ChaCha20-Poly1305) |
 | `@keyv/encrypt-web` | Web Crypto API for browsers, Workers, and Deno |
 
 ```javascript

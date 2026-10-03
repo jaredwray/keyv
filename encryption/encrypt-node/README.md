@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/@keyv/encrypt-node.svg)](https://www.npmjs.com/package/@keyv/encrypt-node)
 [![npm](https://img.shields.io/npm/dm/@keyv/encrypt-node)](https://npmjs.com/package/@keyv/encrypt-node)
 
-Encrypt and decrypt values stored in [Keyv](https://github.com/jaredwray/keyv) using the Node.js `crypto` module. Supports AES-GCM (default), AES-CCM, ChaCha20-Poly1305, AES-CBC, and any cipher available in your Node.js installation.
+Encrypt and decrypt values stored in [Keyv](https://github.com/jaredwray/keyv) using the Node.js `crypto` module. Supports the authenticated ciphers AES-GCM (default), AES-CCM, and ChaCha20-Poly1305, so a value changed in the store fails to decrypt instead of decrypting to altered data.
 
 ## Install
 
@@ -43,29 +43,23 @@ The encryption key. String keys are hashed with SHA-256 and truncated to the req
 
 #### options.algorithm
 
-Type: `string`\
+Type: `NodeAlgorithm`\
 Default: `'aes-256-gcm'`
 
-The cipher algorithm to use. Supports any algorithm available via Node.js `crypto.getCipherInfo()`, including:
+The cipher algorithm to use. Supported values, all authenticated (AEAD):
 
-- `aes-256-gcm`, `aes-192-gcm`, `aes-128-gcm` (AEAD)
-- `aes-256-ccm`, `aes-192-ccm`, `aes-128-ccm` (AEAD)
-- `chacha20-poly1305` (AEAD)
-- `aes-256-cbc`, `aes-192-cbc`, `aes-128-cbc`
+- `aes-256-gcm`, `aes-192-gcm`, `aes-128-gcm`
+- `aes-256-ccm`, `aes-192-ccm`, `aes-128-ccm`
+- `chacha20-poly1305`
+
+Any other algorithm throws when the adapter is created. AES-CCM can't encrypt a serialized value of 16 MiB or more; writing one fails.
 
 #### options.encoding
 
-Type: `BufferEncoding`\
+Type: `NodeEncoding`\
 Default: `'base64'`
 
-The encoding used for the encrypted output string. Common options: `'base64'`, `'hex'`.
-
-## Cross-Compatibility
-
-Data encrypted with `@keyv/encrypt-node` using AES-GCM or AES-CBC can be decrypted by `@keyv/encrypt-web` (and vice versa) when using the same key and algorithm. Both packages use the same wire format:
-
-- **AES-GCM**: `base64([IV (12 bytes) || AuthTag (16 bytes) || Ciphertext])`
-- **AES-CBC**: `base64([IV (16 bytes) || Ciphertext])`
+The encoding used for the encrypted output string: `'base64'`, `'base64url'`, or `'hex'`. Other encodings can't hold arbitrary bytes, so they throw when the adapter is created.
 
 ## License
 

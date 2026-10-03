@@ -51,13 +51,6 @@ The cipher algorithm to use. Supported values:
 - `aes-256-gcm`, `aes-192-gcm`, `aes-128-gcm` (AEAD, recommended)
 - `aes-256-cbc`, `aes-192-cbc`, `aes-128-cbc`
 
-## Cross-Compatibility
-
-Data encrypted with `@keyv/encrypt-web` using AES-GCM or AES-CBC can be decrypted by `@keyv/encrypt-node` (and vice versa) when using the same key and algorithm. Both packages use the same wire format:
-
-- **AES-GCM**: `base64([IV (12 bytes) || AuthTag (16 bytes) || Ciphertext])`
-- **AES-CBC**: `base64([IV (16 bytes) || Ciphertext])`
-
 ## License
 
 [MIT © Jared Wray](LICENSE)
