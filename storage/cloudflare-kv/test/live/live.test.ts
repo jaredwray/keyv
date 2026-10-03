@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import KeyvCloudflareKV from "../../src/index.js";
 
 // Live integration test against the real Cloudflare KV REST API. It is skipped unless all three
@@ -29,7 +29,7 @@ describe.skipIf(!hasCredentials)("Cloudflare KV live integration (REST)", () => 
 		await store.clear();
 	});
 
-	it("sets, gets, checks, and deletes a value", async () => {
+	it("sets, gets, checks, and deletes a value", { timeout: 90_000 }, async () => {
 		const key = faker.string.uuid();
 		const value = faker.lorem.sentence();
 
@@ -38,8 +38,16 @@ describe.skipIf(!hasCredentials)("Cloudflare KV live integration (REST)", () => 
 		expect(await store.has(key)).toBe(true);
 
 		expect(await store.delete(key)).toBe(true);
-		expect(await store.get(key)).toBeUndefined();
-		expect(await store.has(key)).toBe(false);
+		// KV caches reads for 60 seconds by default, and the reads above (plus the one delete()
+		// makes to report whether the key existed) can leave the value cached. So wait for the
+		// delete to become visible instead of expecting it on the very next read.
+		await vi.waitFor(
+			async () => {
+				expect(await store.get(key)).toBeUndefined();
+				expect(await store.has(key)).toBe(false);
+			},
+			{ timeout: 75_000, interval: 2_000 },
+		);
 	});
 
 	it("handles batch set, get, has, and delete", async () => {
