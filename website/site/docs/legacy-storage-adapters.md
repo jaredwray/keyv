@@ -37,7 +37,7 @@ A `namespace` on the Keyv options is applied to the adapter. Without one, Keyv k
 
 - **Converts expiry** — absolute `expires` → relative `ttl` for the wrapped `set`. If the deadline is already past, it **deletes** instead of writing.
 - **Delegates batch methods** — `getMany`, `setMany`, `has`, `hasMany`, `deleteMany`, `iterator`, `disconnect` when present; otherwise loops over single-key methods.
-- **Namespaces** — if the store has a `namespace` property, the bridge assigns it and does not prefix keys (avoids double-prefixing). When the bridge has no namespace, the store keeps its own. Otherwise the bridge prefixes `namespace:key`, and a namespaced `clear()` finds those keys with the store's `iterator()`. A store without `iterator()` can't tell namespaces apart, so `clear()` throws instead of wiping every namespace.
+- **Namespaces** — if the store has a `namespace` property, the bridge assigns it and does not prefix keys (avoids double-prefixing). When the bridge has no namespace, the store keeps its own. Otherwise the bridge prefixes `namespace::key` (set the separator with `namespaceSeparator`), and a namespaced `clear()` finds those keys with the store's `iterator()`. A store without `iterator()` can't tell namespaces apart, so `clear()` throws instead of wiping every namespace.
 - **Forwards `'error'`** from the wrapped store onto the bridge (and then onto Keyv).
 
 ## Writing a v6 adapter instead

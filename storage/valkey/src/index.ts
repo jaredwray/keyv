@@ -44,6 +44,13 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	private _useSets = false;
 
 	/**
+	 * The separator between the namespace and the key in data keys, as in
+	 * `namespace:<namespace>::<key>` or `sets:<namespace>::<key>`.
+	 * @default "::"
+	 */
+	private _namespaceSeparator = "::";
+
+	/**
 	 * The underlying iovalkey Redis or Cluster client instance used for all
 	 * storage operations. Typed as `KeyvAny` internally to avoid cascading type
 	 * assertions from iovalkey's return types. The public `client` getter/setter
@@ -88,7 +95,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 *
 	 * @param {KeyvUriOptions} uri - Connection URI string (e.g. `"redis://localhost:6379"`),
 	 *   a pre-configured iovalkey Redis/Cluster instance, or an options object.
-	 * @param {KeyvValkeyOptions} [options] - Additional adapter options such as `useSets` and `namespace`.
+	 * @param {KeyvValkeyOptions} [options] - Additional adapter options such as `useSets`, `namespace`,
+	 *   and `namespaceSeparator`.
 	 *   Merged with options derived from `uri` when `uri` is a string or plain options object.
 	 */
 	constructor(uri: KeyvUriOptions, options?: KeyvValkeyOptions) {
@@ -116,6 +124,10 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 
 		if (options !== undefined && options.namespace !== undefined) {
 			this._namespace = options.namespace;
+		}
+
+		if (options !== undefined && options.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = options.namespaceSeparator;
 		}
 
 		this.initClient();
@@ -146,6 +158,23 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
+	}
+
+	/**
+	 * Gets the separator between the namespace and the key in data keys.
+	 * @returns {string} The namespace/key separator.
+	 * @default "::"
+	 */
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
+	}
+
+	/**
+	 * Sets the separator between the namespace and the key in data keys.
+	 * @param {string} value - The separator to place between the namespace and the key.
+	 */
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	/**
@@ -507,12 +536,12 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * unlinked before and after they leave the set, so a key that a concurrent `set()` writes
 	 * meanwhile is never left stored but untracked.
 	 * When `useSets` is disabled, uses the `KEYS` command with the pattern from
-	 * {@link getKeyPattern} (`namespace:<namespace>:*`, glob metacharacters escaped)
+	 * {@link getKeyPattern} (`namespace:<namespace>::*`, glob metacharacters escaped)
 	 * to find and remove all keys in this namespace. A namespace that merely shares
 	 * a prefix (for example `users` vs `users-archive`) is never touched. One that
-	 * extends this namespace with the `:` separator (`users:archive`) is cleared too,
-	 * because a pattern cannot tell it apart from a key that contains `:`, so keep `:`
-	 * out of namespace names that have to stay apart. With no namespace this matches every key
+	 * extends this namespace with the separator (`users::archive`) is cleared too,
+	 * because a pattern cannot tell it apart from a key that contains the separator, so keep
+	 * the separator out of namespace names that have to stay apart. With no namespace this matches every key
 	 * in the current database. In cluster mode every master node is searched, and keys are
 	 * removed one hash slot at a time.
 	 * @returns {Promise<void>}
@@ -569,7 +598,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async *iterator<Value>(): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const keyPrefix = this.getKeyPrefix();
-		const prefix = keyPrefix ? `${keyPrefix}:` : "";
+		const prefix = keyPrefix ? `${keyPrefix}${this._namespaceSeparator}` : "";
 		const match = this.getKeyPattern();
 		// In cluster mode each master holds its own keys, so every master is scanned.
 		for (const node of this.getNodes()) {
@@ -666,7 +695,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Resolves a logical key to its fully qualified storage key by prefixing it
-	 * with the appropriate prefix (e.g. `"sets:myns:mykey"` or `"namespace:myns:mykey"`).
+	 * with the appropriate prefix and {@link namespaceSeparator} (e.g. `"sets:myns::mykey"` or
+	 * `"namespace:myns::mykey"`).
 	 * When no prefix is configured, returns the key as-is.
 	 * @param {string} key - The logical key to resolve.
 	 * @returns {string} The fully qualified key for use in Valkey commands.
@@ -674,7 +704,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	private getKeyName(key: string): string {
 		const prefix = this.getKeyPrefix();
 		if (prefix) {
-			return `${prefix}:${key}`;
+			return `${prefix}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -682,13 +712,13 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Builds the `KEYS` / `SCAN MATCH` pattern that selects every data key in the current
-	 * namespace. Glob metacharacters in the prefix (`*`, `?`, `[`, `]`, `\`) are escaped so
-	 * the namespace is matched literally, and the key separator is part of the pattern so a
+	 * namespace. Glob metacharacters in the prefix and separator (`*`, `?`, `[`, `]`, `\`) are
+	 * escaped so they are matched literally, and the separator is part of the pattern so a
 	 * namespace that merely shares a prefix (for example `users` vs `users-archive`) is never
-	 * selected. Because `:` is also the separator, a namespace that extends this one with `:`
-	 * (`users:archive`) cannot be told apart from a key containing `:`. `iterator()` uses this
-	 * pattern with or without `useSets`. With no prefix this matches every key in the database.
-	 * @returns {string} The glob pattern, e.g. `"namespace:myns:*"`, or `"*"` with no prefix.
+	 * selected. A namespace that extends this one with the separator (`users::archive`) cannot be
+	 * told apart from a key containing the separator. `iterator()` uses this pattern with or
+	 * without `useSets`. With no prefix this matches every key in the database.
+	 * @returns {string} The glob pattern, e.g. `"namespace:myns::*"`, or `"*"` with no prefix.
 	 */
 	private getKeyPattern(): string {
 		const prefix = this.getKeyPrefix();
@@ -696,7 +726,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 			return "*";
 		}
 
-		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}:*`;
+		const literal = `${prefix}${this._namespaceSeparator}`;
+		return `${literal.replace(/[*?[\]\\]/g, "\\$&")}*`;
 	}
 
 	/**

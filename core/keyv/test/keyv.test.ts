@@ -1128,7 +1128,7 @@ describe("sanitize", () => {
 		const keyv = new Keyv({ store, namespace: "$$", sanitize: { namespace: true } });
 		expect(keyv.namespace).toBe("keyv-sanitized");
 		await keyv.set("foo", "bar");
-		expect([...store.keys()]).toEqual(["other:foo", "keyv-sanitized:foo"]);
+		expect([...store.keys()]).toEqual(["other::foo", "keyv-sanitized::foo"]);
 		await keyv.clear();
 		expect(await other.get("foo")).toBe("kept");
 

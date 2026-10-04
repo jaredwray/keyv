@@ -17,13 +17,18 @@ describe("Keyv Generic Store Options", () => {
 		expect(cap.methods.get.methodType).toBe("sync");
 	});
 
-	test("should handle namespace and keySeparator options", () => {
+	test("should handle namespace and namespaceSeparator options", () => {
 		const ns = faker.string.alphanumeric(8);
-		const keyv = new KeyvMemoryAdapter(new Map(), { namespace: ns, keySeparator: "::" });
+		expect(new KeyvMemoryAdapter(new Map()).namespaceSeparator).toBe("::");
+		const keyv = new KeyvMemoryAdapter(new Map(), { namespace: ns, namespaceSeparator: ":" });
 		expect(keyv.namespace).toBe(ns);
-		expect(keyv.keySeparator).toBe("::");
-		keyv.keySeparator = "~";
-		expect(keyv.keySeparator).toBe("~");
+		expect(keyv.namespaceSeparator).toBe(":");
+		keyv.namespaceSeparator = "~";
+		expect(keyv.namespaceSeparator).toBe("~");
+		// An empty separator is kept rather than replaced by the default
+		expect(new KeyvMemoryAdapter(new Map(), { namespaceSeparator: "" }).namespaceSeparator).toBe(
+			"",
+		);
 		keyv.namespace = "new";
 		expect(keyv.namespace).toBe("new");
 	});
@@ -34,12 +39,12 @@ describe("Keyv Generic Store Namespace", () => {
 		const keyv = new KeyvMemoryAdapter(new Map());
 		const key = faker.string.uuid();
 		const ns = faker.string.alphanumeric(8);
-		expect(keyv.getKeyPrefix(key, ns)).toBe(`${ns}:${key}`);
+		expect(keyv.getKeyPrefix(key, ns)).toBe(`${ns}::${key}`);
 		expect(keyv.getKeyPrefix(key)).toBe(key);
 
 		// Key prefix data
 		const keyv2 = new KeyvMemoryAdapter(new Map(), { namespace: ns });
-		expect(keyv2.getKeyPrefixData(`${ns}:${key}`)).toEqual({ key, namespace: ns });
+		expect(keyv2.getKeyPrefixData(`${ns}::${key}`)).toEqual({ key, namespace: ns });
 		expect(keyv2.getKeyPrefixData(key)).toEqual({ key });
 
 		// No namespace configured
@@ -151,9 +156,9 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		expect(await keyv.get(k3)).toBe("v3");
 
 		// Clear namespace only
-		store.set(`${ns2}:other`, { value: "other", expires: undefined });
+		store.set(`${ns2}::other`, { value: "other", expires: undefined });
 		await keyv.clear();
-		expect(store.has(`${ns2}:other`)).toBe(true);
+		expect(store.has(`${ns2}::other`)).toBe(true);
 
 		// Clear entire store when no namespace
 		const keyv2 = new KeyvMemoryAdapter(store);
@@ -233,7 +238,7 @@ describe("createKeyv namespace forwarding", () => {
 		const kv2 = createKeyv(store, { namespace: ns2 });
 		await kv1.set(key, "v1");
 		await kv2.set(key, "v2");
-		expect(store.has(`${ns1}:${key}`)).toBe(true);
+		expect(store.has(`${ns1}::${key}`)).toBe(true);
 		expect(store.has(key)).toBe(false);
 		expect(await kv1.get(key)).toBe("v1");
 		expect(await kv2.get(key)).toBe("v2");
@@ -265,7 +270,7 @@ describe("Keyv Generic Store Iterator", () => {
 		const nk2 = faker.string.uuid();
 		await nsKeyv.set(nk1, "v1");
 		await nsKeyv.set(nk2, "v2");
-		nsKeyv.store.set(`${ns2}:other`, { value: "other", expires: undefined });
+		nsKeyv.store.set(`${ns2}::other`, { value: "other", expires: undefined });
 		const nsEntries: Array<[string, unknown]> = [];
 		for await (const entry of nsKeyv.iterator()) {
 			nsEntries.push(entry as [string, unknown]);
@@ -343,7 +348,7 @@ describe("Keyv Generic Store Iterator", () => {
 		const store = new Map();
 		const ns1 = faker.string.alphanumeric(8);
 		const ns2 = faker.string.alphanumeric(8);
-		const keyv = new KeyvMemoryAdapter(store, { namespace: ns1, keySeparator: ":" });
+		const keyv = new KeyvMemoryAdapter(store, { namespace: ns1, namespaceSeparator: ":" });
 		const k1 = faker.string.uuid();
 		await keyv.set(k1, "v1");
 		store.set(`${ns2}:other`, { value: "other", expires: undefined });

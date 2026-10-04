@@ -9,7 +9,7 @@ import type { KeyvRedisConnect, KeyvRedisOptions } from "./types.js";
  *
  * @param {KeyvRedisConnect} [connect] - URI, client/cluster/sentinel options, or an existing
  *   connection. Defaults to `"redis://localhost:6379"`.
- * @param {KeyvRedisOptions} [options] - Adapter options such as `namespace`, `keyPrefixSeparator`,
+ * @param {KeyvRedisOptions} [options] - Adapter options such as `namespace`, `namespaceSeparator`,
  *   `clearBatchSize`, `throwOnErrors`, and `connectionTimeout`.
  * @returns {Keyv} A Keyv instance using KeyvRedis as the store.
  * @example

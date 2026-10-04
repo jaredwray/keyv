@@ -145,7 +145,7 @@ describe("LRU key frequency maps", () => {
 				namespace: "cache",
 				timestamp: Date.now(),
 			}),
-		).toBe("cache:user:123");
+		).toBe("cache::user:123");
 		expect(stats.buildKeyEventName({ event: "hit", key: "user:123", timestamp: Date.now() })).toBe(
 			"user:123",
 		);
@@ -180,10 +180,10 @@ describe("LRU key frequency maps", () => {
 		await keyv.get("foo");
 		await keyv.get("missing");
 		await keyv.delete("foo");
-		expect(keyv.stats.setKeys.get("myns:foo")).toBe(1);
-		expect(keyv.stats.hitKeys.get("myns:foo")).toBe(1);
-		expect(keyv.stats.missKeys.get("myns:missing")).toBe(1);
-		expect(keyv.stats.deleteKeys.get("myns:foo")).toBe(1);
+		expect(keyv.stats.setKeys.get("myns::foo")).toBe(1);
+		expect(keyv.stats.hitKeys.get("myns::foo")).toBe(1);
+		expect(keyv.stats.missKeys.get("myns::missing")).toBe(1);
+		expect(keyv.stats.deleteKeys.get("myns::foo")).toBe(1);
 	});
 
 	test("should track error keys via subscribe", async () => {

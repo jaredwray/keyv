@@ -332,7 +332,12 @@ describe("clear", () => {
 		const plain = new KeyvMemcache(uri);
 		expect(plain.formatKey(store.generationKey)).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
 		store.namespace = "keyv";
-		expect(store.formatKey(store.generationKey.slice("keyv:".length))).toMatch(/^keyv:sha256:/);
+		const suffix = store.generationKey.slice("keyv:".length);
+		// With the default separator a namespaced key can't spell the generation key.
+		expect(store.formatKey(suffix)).toBe(`keyv::${suffix}`);
+		// With `:` it could, so the key is hashed instead.
+		store.namespaceSeparator = ":";
+		expect(store.formatKey(suffix)).toMatch(/^keyv:sha256:/);
 	});
 });
 
@@ -346,13 +351,26 @@ describe("namespace", () => {
 		const store = new KeyvMemcache(uri);
 		store.namespace = "myapp";
 		const key = faker.string.uuid();
-		expect(store.formatKey(key)).toBe(`myapp:${key}`);
+		expect(store.formatKey(key)).toBe(`myapp::${key}`);
 	});
 
 	test("accepts a namespace through the constructor options", () => {
 		const store = new KeyvMemcache(uri, { namespace: "opt-ns" });
 		expect(store.namespace).toBe("opt-ns");
-		expect(store.formatKey("foo")).toBe("opt-ns:foo");
+		expect(store.formatKey("foo")).toBe("opt-ns::foo");
+	});
+
+	test("joins the namespace and key with namespaceSeparator", () => {
+		const store = new KeyvMemcache(uri, { namespace: "opt-ns" });
+		expect(store.namespaceSeparator).toBe("::");
+		store.namespaceSeparator = "/";
+		expect(store.namespaceSeparator).toBe("/");
+		expect(store.formatKey("foo")).toBe("opt-ns/foo");
+
+		const fromOptions = new KeyvMemcache(uri, { namespace: "opt-ns", namespaceSeparator: ":" });
+		expect(fromOptions.namespaceSeparator).toBe(":");
+		expect(fromOptions.formatKey("foo")).toBe("opt-ns:foo");
+		expect(new KeyvMemcache({ namespaceSeparator: "" }).namespaceSeparator).toBe("");
 	});
 
 	test("prefixes keys natively when a namespace is set", async () => {
@@ -363,7 +381,7 @@ describe("namespace", () => {
 		await store.set(key, value);
 		expect(await store.get(key)).toBe(value);
 		// The underlying client stores the value under the prefixed key.
-		expect(await store.client.get(`native-ns:${key}`)).toBeDefined();
+		expect(await store.client.get(`native-ns::${key}`)).toBeDefined();
 	});
 
 	test("isolates keys across namespaces on the same store", async () => {
@@ -447,11 +465,11 @@ describe("keys memcached can't take", () => {
 		expect(store.formatKey("keyv:sha25")).toBe("keyv:sha25");
 
 		store.namespace = "ns";
-		expect(store.formatKey("foo")).toBe("ns:foo");
+		expect(store.formatKey("foo")).toBe("ns::foo");
 		expect(store.formatKey("a b")).not.toBe(digest);
 		// 250 bytes is memcached's limit.
-		expect(store.formatKey("a".repeat(247))).toBe(`ns:${"a".repeat(247)}`);
-		expect(store.formatKey("a".repeat(248))).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
+		expect(store.formatKey("a".repeat(246))).toBe(`ns::${"a".repeat(246)}`);
+		expect(store.formatKey("a".repeat(247))).toMatch(/^keyv:sha256:[0-9a-f]{64}$/);
 	});
 
 	test.each([

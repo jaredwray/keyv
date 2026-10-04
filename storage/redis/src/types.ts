@@ -22,7 +22,7 @@ export type KeyvRedisOptions = {
 	 * Separator to use between namespace and key.
 	 * @default "::"
 	 */
-	keyPrefixSeparator?: string;
+	namespaceSeparator?: string;
 	/**
 	 * Number of keys to delete in a single batch.
 	 * @default 1000

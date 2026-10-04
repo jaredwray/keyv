@@ -134,7 +134,7 @@ await memcache.disconnect();
 
 ## Usage with Namespaces
 
-The namespace lives on the store adapter, which prefixes every key with `namespace:`. Because the namespace is held on the adapter, give each namespace its own `KeyvMemcache` instance rather than sharing a single store between multiple `Keyv` instances:
+The namespace lives on the store adapter, which prefixes every key with `namespace::` (the separator is the `namespaceSeparator` option). Because the namespace is held on the adapter, give each namespace its own `KeyvMemcache` instance rather than sharing a single store between multiple `Keyv` instances:
 
 ```js
 import Keyv from 'keyv';
@@ -202,11 +202,12 @@ Every store reads the current token when it reads or writes, so a `clear()` in o
 
 ## Options
 
-The `KeyvMemcacheOptions` type extends `MemcacheOptions` from the `memcache` package with `namespace` and `noNamespaceAffectsAll` properties:
+The `KeyvMemcacheOptions` type extends `MemcacheOptions` from the `memcache` package with `namespace`, `namespaceSeparator`, and `noNamespaceAffectsAll` properties:
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
+| `namespaceSeparator` | `string` | `'::'` | Separator placed between the namespace and key |
 | `noNamespaceAffectsAll` | `boolean` | `false` | Without a namespace, flush the whole server on `clear()` and store values without a token. See [How `clear()` Works](#how-clear-works) |
 | `nodes` | `(string \| MemcacheNode)[]` | `['localhost:11211']` | Array of memcache server URIs or MemcacheNode instances |
 | `timeout` | `number` | `5000` | Operation timeout in milliseconds |
@@ -428,14 +429,14 @@ await memcache.disconnect();
 
 ### .formatKey(key)
 
-Formats a key by prepending the namespace if one is set. A key Memcached can't store, one over 250 bytes or with whitespace or control characters, is formatted as a SHA-256 digest of the namespaced key instead, and so is a key that starts with `keyv:sha256:` or `keyv:gen:`. See [Keys Memcached Can't Store](#keys-memcached-cant-store).
+Formats a key by prepending the namespace and `namespaceSeparator` if a namespace is set. A key Memcached can't store, one over 250 bytes or with whitespace or control characters, is formatted as a SHA-256 digest of the namespaced key instead, and so is a key that starts with `keyv:sha256:` or `keyv:gen:`. See [Keys Memcached Can't Store](#keys-memcached-cant-store).
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
 memcache.formatKey('foo'); // 'foo'
 
 memcache.namespace = 'myapp';
-memcache.formatKey('foo'); // 'myapp:foo'
+memcache.formatKey('foo'); // 'myapp::foo'
 memcache.formatKey('user name'); // 'keyv:sha256:…'
 ```
 
@@ -447,6 +448,7 @@ The following public properties are available on a `KeyvMemcache` instance:
 |---|---|---|
 | `client` | `Memcache` | The underlying [memcache](https://github.com/jaredwray/memcache) client instance for advanced use. |
 | `namespace` | `string \| undefined` | The namespace used to prefix keys. Can be read and set directly. |
+| `namespaceSeparator` | `string` | The separator placed between the namespace and key, `'::'` by default. Can be read and set directly. |
 | `noNamespaceAffectsAll` | `boolean` | Without a namespace, whether `clear()` flushes the whole server. Can be read and set directly. |
 | `generationKey` | `string` | The key that holds the current namespace's generation token (read-only). |
 | `nodes` | `(string \| MemcacheNode)[]` | The configured memcache nodes (read-only). |

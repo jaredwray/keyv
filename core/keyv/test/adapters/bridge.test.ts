@@ -89,23 +89,26 @@ describe("KeyvBridgeAdapter - Constructor and Options", () => {
 		expect(fullBridge.capabilities.methods.disconnect.exists).toBe(true);
 	});
 
-	test("namespace and keySeparator options, defaults, and setters", () => {
+	test("namespace and namespaceSeparator options, defaults, and setters", () => {
 		const store = createMinimalStore();
 		const ns = faker.string.alphanumeric(8);
-		const bridge1 = new KeyvBridgeAdapter(store, { namespace: ns, keySeparator: "::" });
+		const bridge1 = new KeyvBridgeAdapter(store, { namespace: ns, namespaceSeparator: ":" });
 		expect(bridge1.namespace).toBe(ns);
-		expect(bridge1.keySeparator).toBe("::");
+		expect(bridge1.namespaceSeparator).toBe(":");
 
 		const bridge2 = new KeyvBridgeAdapter(store);
 		expect(bridge2.namespace).toBeUndefined();
-		expect(bridge2.keySeparator).toBe(":");
+		expect(bridge2.namespaceSeparator).toBe("::");
 
 		bridge2.namespace = "test";
 		expect(bridge2.namespace).toBe("test");
 		bridge2.namespace = undefined;
 		expect(bridge2.namespace).toBeUndefined();
-		bridge2.keySeparator = "::";
-		expect(bridge2.keySeparator).toBe("::");
+		bridge2.namespaceSeparator = "/";
+		expect(bridge2.namespaceSeparator).toBe("/");
+
+		// An empty separator is kept rather than replaced by the default
+		expect(new KeyvBridgeAdapter(store, { namespaceSeparator: "" }).namespaceSeparator).toBe("");
 	});
 });
 
@@ -115,11 +118,11 @@ describe("KeyvBridgeAdapter - Key Prefix", () => {
 		const bridge = new KeyvBridgeAdapter(store);
 		const key = faker.string.uuid();
 		const ns = faker.string.alphanumeric(8);
-		expect(bridge.getKeyPrefix(key, ns)).toBe(`${ns}:${key}`);
+		expect(bridge.getKeyPrefix(key, ns)).toBe(`${ns}::${key}`);
 		expect(bridge.getKeyPrefix(key)).toBe(key);
 
-		const bridge2 = new KeyvBridgeAdapter(store, { keySeparator: "::" });
-		expect(bridge2.getKeyPrefix(key, ns)).toBe(`${ns}::${key}`);
+		const bridge2 = new KeyvBridgeAdapter(store, { namespaceSeparator: ":" });
+		expect(bridge2.getKeyPrefix(key, ns)).toBe(`${ns}:${key}`);
 	});
 
 	test("getKeyPrefixData with and without namespace", () => {
@@ -127,14 +130,14 @@ describe("KeyvBridgeAdapter - Key Prefix", () => {
 		const ns = faker.string.alphanumeric(8);
 		const key = faker.string.uuid();
 		const bridge = new KeyvBridgeAdapter(store, { namespace: ns });
-		expect(bridge.getKeyPrefixData(`${ns}:${key}`)).toEqual({ key, namespace: ns });
+		expect(bridge.getKeyPrefixData(`${ns}::${key}`)).toEqual({ key, namespace: ns });
 
 		const bridge2 = new KeyvBridgeAdapter(store);
 		expect(bridge2.getKeyPrefixData(key)).toEqual({ key });
 
 		// Key that doesn't start with namespace prefix
 		const bridge3 = new KeyvBridgeAdapter(store, { namespace: "ns1" });
-		expect(bridge3.getKeyPrefixData("other:foo")).toEqual({ key: "other:foo" });
+		expect(bridge3.getKeyPrefixData("other::foo")).toEqual({ key: "other::foo" });
 	});
 });
 
@@ -162,7 +165,7 @@ describe("KeyvBridgeAdapter - Core Operations (minimal store)", () => {
 		const nsBridge = new KeyvBridgeAdapter(store, { namespace: ns });
 		await nsBridge.set("k", "v");
 		expect(await nsBridge.get("k")).toBe("v");
-		expect(store._map.has(`${ns}:k`)).toBe(true);
+		expect(store._map.has(`${ns}::k`)).toBe(true);
 	});
 
 	test("should return undefined for missing and null values", async () => {
@@ -292,9 +295,9 @@ describe("KeyvBridgeAdapter - Native Delegation (full store)", () => {
 		const nsHasManySpy = vi.spyOn(nsBridge.store, "hasMany");
 		await nsBridge.set("key1", "value1");
 		await nsBridge.has("key1");
-		expect(nsHasSpy).toHaveBeenCalledWith("ns:key1");
+		expect(nsHasSpy).toHaveBeenCalledWith("ns::key1");
 		await nsBridge.hasMany(["key1", "key2"]);
-		expect(nsHasManySpy).toHaveBeenCalledWith(["ns:key1", "ns:key2"]);
+		expect(nsHasManySpy).toHaveBeenCalledWith(["ns::key1", "ns::key2"]);
 	});
 
 	test("getMany should delegate and handle expired/null data", async () => {
@@ -319,7 +322,7 @@ describe("KeyvBridgeAdapter - Native Delegation (full store)", () => {
 		const nsBridge = new KeyvBridgeAdapter(createFullStore(), { namespace: "ns" });
 		const nsGetManySpy = vi.spyOn(nsBridge.store, "getMany");
 		await nsBridge.getMany(["key1", "key2"]);
-		expect(nsGetManySpy).toHaveBeenCalledWith(["ns:key1", "ns:key2"]);
+		expect(nsGetManySpy).toHaveBeenCalledWith(["ns::key1", "ns::key2"]);
 	});
 
 	test("setMany, deleteMany, disconnect should delegate with correct key prefixes", async () => {
@@ -342,9 +345,9 @@ describe("KeyvBridgeAdapter - Native Delegation (full store)", () => {
 		const nsSetManySpy = vi.spyOn(nsBridge.store, "setMany");
 		const nsDeleteManySpy = vi.spyOn(nsBridge.store, "deleteMany");
 		await nsBridge.setMany([{ key: "key1", value: "value1" }]);
-		expect(nsSetManySpy).toHaveBeenCalledWith([{ key: "ns:key1", value: "value1" }]);
+		expect(nsSetManySpy).toHaveBeenCalledWith([{ key: "ns::key1", value: "value1" }]);
 		await nsBridge.deleteMany(["key1", "key2"]);
-		expect(nsDeleteManySpy).toHaveBeenCalledWith(["ns:key1", "ns:key2"]);
+		expect(nsDeleteManySpy).toHaveBeenCalledWith(["ns::key1", "ns::key2"]);
 	});
 
 	test("setMany should batch only live entries and delete already-expired ones", async () => {
@@ -449,8 +452,8 @@ describe("KeyvBridgeAdapter - Iterator", () => {
 
 		// Namespace filtering
 		const nsBridge = new KeyvBridgeAdapter(createFullStore(), { namespace: "ns1" });
-		nsBridge.store._map.set("ns1:key1", "value1");
-		nsBridge.store._map.set("ns2:key2", "value2");
+		nsBridge.store._map.set("ns1::key1", "value1");
+		nsBridge.store._map.set("ns2::key2", "value2");
 		const nsEntries: unknown[] = [];
 		for await (const entry of nsBridge.iterator()) {
 			nsEntries.push(entry);
@@ -496,11 +499,11 @@ describe("KeyvBridgeAdapter - Clear with Namespace", () => {
 		// With namespace + iterator: only namespaced keys
 		const store1 = createFullStore();
 		const bridge1 = new KeyvBridgeAdapter(store1, { namespace: "ns1" });
-		store1._map.set("ns1:key1", "value1");
-		store1._map.set("ns2:key2", "value2");
+		store1._map.set("ns1::key1", "value1");
+		store1._map.set("ns2::key2", "value2");
 		await bridge1.clear();
-		expect(store1._map.has("ns1:key1")).toBe(false);
-		expect(store1._map.has("ns2:key2")).toBe(true);
+		expect(store1._map.has("ns1::key1")).toBe(false);
+		expect(store1._map.has("ns2::key2")).toBe(true);
 
 		// No namespace: clear all
 		const store2 = createFullStore();
@@ -512,8 +515,8 @@ describe("KeyvBridgeAdapter - Clear with Namespace", () => {
 		// With namespace but no iterator: refuse rather than wipe every namespace
 		const store3 = createMinimalStore();
 		const bridge3 = new KeyvBridgeAdapter(store3, { namespace: "ns1" });
-		store3._map.set("ns1:key1", "value1");
-		store3._map.set("ns2:key2", "value2");
+		store3._map.set("ns1::key1", "value1");
+		store3._map.set("ns2::key2", "value2");
 		await expect(bridge3.clear()).rejects.toThrow(
 			`Can't clear namespace "ns1": the store has no iterator()`,
 		);
@@ -524,7 +527,7 @@ describe("KeyvBridgeAdapter - Clear with Namespace", () => {
 		const store = createMinimalStore();
 		const keyv = new Keyv({ store, namespace: "ns1" });
 		await keyv.set("key1", "value1");
-		store._map.set("ns2:key2", "value2");
+		store._map.set("ns2::key2", "value2");
 
 		// With no error listener the call rejects
 		await expect(keyv.clear()).rejects.toThrow(
@@ -556,13 +559,13 @@ describe("KeyvBridgeAdapter - Clear with Namespace", () => {
 			clear: vi.fn(),
 			async *iterator() {
 				yield [123, "value1"];
-				yield ["ns1:key1", "value1"];
+				yield ["ns1::key1", "value1"];
 			},
 		};
 		const bridge1 = new KeyvBridgeAdapter(store1, { namespace: "ns1" });
 		await bridge1.clear();
 		expect(store1.delete).toHaveBeenCalledTimes(1);
-		expect(store1.delete).toHaveBeenCalledWith("ns1:key1");
+		expect(store1.delete).toHaveBeenCalledWith("ns1::key1");
 
 		// Non-array entries
 		const store2: KeyvBridgeStore = {
@@ -571,9 +574,9 @@ describe("KeyvBridgeAdapter - Clear with Namespace", () => {
 			delete: vi.fn().mockResolvedValue(true),
 			clear: vi.fn(),
 			async *iterator() {
-				yield "ns1:key1";
-				yield "ns1:key2";
-				yield "other:key3";
+				yield "ns1::key1";
+				yield "ns1::key2";
+				yield "other::key3";
 			},
 		};
 		const bridge2 = new KeyvBridgeAdapter(store2, { namespace: "ns1" });
@@ -644,7 +647,7 @@ describe("KeyvBridgeAdapter - v5 Adapter Compatibility", () => {
 
 		// Pass namespace to iterator
 		const iteratorSpy = vi.fn().mockImplementation(function* () {
-			yield ["ns1:key1", "value1"];
+			yield ["ns1::key1", "value1"];
 		});
 		const store2: KeyvBridgeStore = {
 			get: vi.fn(),
@@ -730,7 +733,7 @@ describe("KeyvBridgeAdapter - namespace-managing store", () => {
 		expect(store.namespace).toBe("a");
 		await bridge.set("k", "v");
 		expect(store._map.has("a::k")).toBe(true); // store's own namespacing
-		expect(store._map.has("a:k")).toBe(false); // NOT bridge-prefixed
+		expect(store._map.has("a::a::k")).toBe(false); // NOT also bridge-prefixed
 		expect(await bridge.get("k")).toBe("v");
 	});
 

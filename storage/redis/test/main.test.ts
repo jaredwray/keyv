@@ -95,14 +95,14 @@ describe("KeyvRedis", () => {
 		const uri = "redis://localhost:6379";
 		const options = {
 			namespace: "test",
-			keyPrefixSeparator: "->",
+			namespaceSeparator: "->",
 			clearBatchSize: 100,
 			useUnlink: true,
 			noNamespaceAffectsAll: true,
 		};
 		const keyvRedis = new KeyvRedis(uri, options);
 		expect(keyvRedis.namespace).toBe("test");
-		expect(keyvRedis.keyPrefixSeparator).toBe("->");
+		expect(keyvRedis.namespaceSeparator).toBe("->");
 		expect(keyvRedis.clearBatchSize).toBe(100);
 		expect(keyvRedis.useUnlink).toBe(true);
 		expect(keyvRedis.noNamespaceAffectsAll).toBe(true);
@@ -111,24 +111,24 @@ describe("KeyvRedis", () => {
 	test("should be able to get and set properties", () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.namespace = "test";
-		keyvRedis.keyPrefixSeparator = "->";
+		keyvRedis.namespaceSeparator = "->";
 		keyvRedis.clearBatchSize = 1001;
 		keyvRedis.useUnlink = false;
 		expect(keyvRedis.namespace).toBe("test");
-		expect(keyvRedis.keyPrefixSeparator).toBe("->");
+		expect(keyvRedis.namespaceSeparator).toBe("->");
 		expect(keyvRedis.clearBatchSize).toBe(1001);
 		expect(keyvRedis.useUnlink).toBe(false);
 	});
 
-	test("should allow keyPrefixSeparator to be set to a blank string", () => {
+	test("should allow namespaceSeparator to be set to a blank string", () => {
 		const keyvRedis = new KeyvRedis("redis://localhost:6379", {
-			keyPrefixSeparator: "",
+			namespaceSeparator: "",
 		});
-		expect(keyvRedis.keyPrefixSeparator).toBe("");
-		keyvRedis.keyPrefixSeparator = "->";
-		expect(keyvRedis.keyPrefixSeparator).toBe("->");
-		keyvRedis.keyPrefixSeparator = "";
-		expect(keyvRedis.keyPrefixSeparator).toBe("");
+		expect(keyvRedis.namespaceSeparator).toBe("");
+		keyvRedis.namespaceSeparator = "->";
+		expect(keyvRedis.namespaceSeparator).toBe("->");
+		keyvRedis.namespaceSeparator = "";
+		expect(keyvRedis.namespaceSeparator).toBe("");
 	});
 
 	test("should not set clearBatchSize when the value is 0 or less", () => {
@@ -150,12 +150,12 @@ describe("KeyvRedis", () => {
 	test("should be able to get and set properties individually", async () => {
 		const keyvRedis = new KeyvRedis();
 		keyvRedis.namespace = "test";
-		keyvRedis.keyPrefixSeparator = ":1";
+		keyvRedis.namespaceSeparator = ":1";
 		keyvRedis.clearBatchSize = 2000;
 		keyvRedis.noNamespaceAffectsAll = true;
 
 		expect(keyvRedis.namespace).toBe("test");
-		expect(keyvRedis.keyPrefixSeparator).toBe(":1");
+		expect(keyvRedis.namespaceSeparator).toBe(":1");
 		expect(keyvRedis.clearBatchSize).toBe(2000);
 		expect(keyvRedis.noNamespaceAffectsAll).toBe(true);
 		expect(keyvRedis.throwOnErrors).toBe(false);

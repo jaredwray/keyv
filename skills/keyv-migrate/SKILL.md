@@ -72,12 +72,13 @@ The most common changes:
 
 | v4 or v5 | v6 |
 | --- | --- |
-| `new Keyv('redis://…')` or `new Keyv({ uri })` | `new Keyv(new KeyvRedis('redis://…'), { namespace })` with the step 2 settings; data written by v4 also needs `keyPrefixSeparator: ':'` |
+| `new Keyv('redis://…')` or `new Keyv({ uri })` | `new Keyv(new KeyvRedis('redis://…'), { namespace })` with the step 2 settings; data written by v4 also needs `namespaceSeparator: ':'` |
 | `const Keyv = require('keyv')` | `const { Keyv } = require('keyv')` |
 | no namespace (v4 and v5 used `keyv`) | the namespace from step 2, such as `{ namespace: 'keyv' }` |
 | `keyv.opts.namespace` | `keyv.namespace` |
 | `serialize` / `deserialize` options | `serialization: { stringify, parse }`, or remove them to use the built-in JSON serializer |
 | `useKeyPrefix`, `emitErrors`, `throwOnErrors` options | remove them (keep `throwOnErrors` passed to `KeyvRedis` itself) |
+| `keyPrefixSeparator` on `KeyvRedis` | `namespaceSeparator`, with the same value. v6 ignores the old name in plain JavaScript and uses `::` |
 | no `error` listener | `keyv.on('error', …)` wherever failures should become fallback values |
 | v4 `error` listener, with callers expecting failed calls to reject | v4 rejected even with a listener; in v6 a listener makes calls return fallback values. Choose with the user (see v4-to-v5.md, "Errors") |
 | `keyv.hooks.addHandler(KeyvHooks.PRE_SET, fn)` | `keyv.onHook(KeyvHooks.BEFORE_SET, fn)` |

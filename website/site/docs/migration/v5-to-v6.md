@@ -44,6 +44,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`@keyv/etcd` Without a Namespace Only Clears Its Own Entries](#keyvetcd-without-a-namespace-only-clears-its-own-entries)
   - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
   - [`@keyv/bigmap` Keeps Entries When `storeSize` or `storeHashFunction` Changes](#keyvbigmap-keeps-entries-when-storesize-or-storehashfunction-changes)
+  - [`@keyv/redis` `keyPrefixSeparator` Is Now `namespaceSeparator`](#keyvredis-keyprefixseparator-is-now-namespaceseparator)
   - [`@keyv/redis` Matches the Namespace Literally](#keyvredis-matches-the-namespace-literally)
 - [New Features](#new-features)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
@@ -96,7 +97,7 @@ For most users, migrating from v5 to v6 involves a few key changes:
 
 1. **Upgrade Node.js and pin one version** - v6 requires Node.js 22.19 or later. Install `keyv` and every `@keyv/*` package at the same exact v6 version; see [Versioning & Release Tags](/docs/migration/versioning/).
 
-2. **Keep reading data written by v5** - v5 stored keys under a default `keyv` namespace, and v6 has no default. Without `namespace: 'keyv'`, or the namespace you already used, data written by v5 reads as missing. Redis, Valkey, and MongoDB need more than that; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed). v6 can't read Memcache entries v5 wrote, so a Memcache cache fills again. SQLite converts its table the first time v6 connects, and PostgreSQL, MySQL, and MongoDB have migration scripts. These changes are one-way, so back up first.
+2. **Keep reading data written by v5** - v5 stored keys under a default `keyv` namespace, and v6 has no default. Without `namespace: 'keyv'`, or the namespace you already used, data written by v5 reads as missing. Redis, Valkey, Etcd, DynamoDB, and MongoDB need more than that; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed). v6 can't read Memcache entries v5 wrote, so a Memcache cache fills again. SQLite converts its table the first time v6 connects, and PostgreSQL, MySQL, and MongoDB have migration scripts. These changes are one-way, so back up first.
 
 3. **Update property access** - The `opts` property has been removed. Use direct property access instead (`keyv.namespace` instead of the old `keyv.opts.namespace`)
 
@@ -143,6 +144,7 @@ We have finalized the transition (started in v5) to move all namespace handling 
 - The `useKeyPrefix` option and property have been removed
 - Key prefixing is no longer done at the Keyv layer
 - A namespace set on the storage adapter is kept when Keyv has none. v5 replaced it with Keyv's namespace, `keyv` by default. A namespace passed to Keyv still wins.
+- Adapters that join the namespace and key into one string, including the memory and bridge adapters, put `::` between them by default. v5's Keyv used `:`. Every such adapter takes a `namespaceSeparator` option to change it; see [The Default `keyv` Namespace Was Removed](#the-default-keyv-namespace-was-removed) for reading keys v5 wrote.
 
 **v5 (before):**
 ```javascript
@@ -170,7 +172,7 @@ For legacy storage adapters or `Map`-compatible stores, we have added `KeyvMemor
 
 In v5, a Keyv instance created without a `namespace` used the namespace `keyv`, and Keyv prefixed every key with it. `keyv.set('foo', 'bar')` handed the storage adapter the key `keyv:foo`. v6 has no default namespace and never prefixes keys, so after upgrading, `keyv.get('foo')` looks for `foo` and data written by a default v5 setup reads as missing. The v5 entries are still in your store. v6 just no longer looks for them.
 
-To keep reading v5 data, configure v6 to build the same storage keys v5 did. For most adapters that means passing the namespace v5 used, which is `keyv` if you never set one:
+To keep reading v5 data, configure v6 to build the same storage keys v5 did. That starts with the namespace v5 used, which is `keyv` if you never set one:
 
 ```javascript
 // v5: no namespace set, so `foo` was stored as `keyv:foo`
@@ -180,6 +182,8 @@ const keyv = new Keyv(store);
 const keyv = new Keyv(store, { namespace: 'keyv' });
 ```
 
+Adapters that join the namespace and key into one string, such as Etcd and DynamoDB, also need v5's separator. v5 joined them with `:`, and v6 adapters use `::` by default, so set the adapter's `namespaceSeparator` option as the table shows.
+
 If your v5 code passed a namespace to Keyv, use that value instead of `keyv`. Pass it in Keyv's options as shown, where it takes precedence over any namespace on the adapter. v5 replaced a namespace set on the adapter with Keyv's, so the adapter's namespace was never the one v5 used.
 
 Some v5 adapters added their own prefix on top of Keyv's, and some v5 `createKeyv` helpers turned Keyv's prefix off, so the stored key depends on the adapter and how you created it. In this table, `ns` is the namespace your v5 instance used, which is `keyv` unless you set one. "Default" means `new Keyv(store)` or `new Keyv(store, { namespace })`.
@@ -187,15 +191,15 @@ Some v5 adapters added their own prefix on top of Keyv's, and some v5 `createKey
 | Adapter | v5 setup | Key v5 stored for `foo` | v6 setting that reads it |
 | --- | --- | --- | --- |
 | SQLite, PostgreSQL, MySQL | default | `ns:foo` | Migrate the table, then `namespace: 'ns'`. SQLite migrates on connect. PostgreSQL and MySQL need their migration script. |
-| Etcd | default | `ns:foo` | `namespace: 'ns'` |
-| DynamoDB | default | `ns:foo` | `namespace: 'ns'` |
+| Etcd | default | `ns:foo` | `namespace: 'ns'` with `new KeyvEtcd(uri, { namespaceSeparator: ':' })` |
+| DynamoDB | default | `ns:foo` | `namespace: 'ns'` with `new KeyvDynamo({ namespaceSeparator: ':' })` |
 | DynamoDB | `createKeyv()` | `foo` | No namespace |
-| Redis | default | `ns::ns:foo` | `namespace: 'ns'` with `new KeyvRedis(uri, { keyPrefixSeparator: '::ns:' })` |
+| Redis | default | `ns::ns:foo` | `namespace: 'ns'` with `new KeyvRedis(uri, { namespaceSeparator: '::ns:' })` |
 | Redis | `useKeyPrefix: false`, or `createKeyv()` with a namespace | `ns::foo` | `namespace: 'ns'` |
 | Redis | `createKeyv()` without a namespace | `foo` | No namespace |
 | Memcache | any | `ns:ns:foo`, or `ns:foo` with `useKeyPrefix: false` | None. v6 stores each value after a generation token and reads a value without one as missing, so let the cache fill again. See [below](#keyvmemcache-clear-only-removes-the-stores-own-entries). |
 | Valkey | default, or `createKeyv()` | `ns:foo` | None. v6 cannot build this key, so let the entries repopulate or rename them to the v6 layout. |
-| Valkey | `useRedisSets: false` | `namespace:ns:ns:foo` | `namespace: 'ns:ns'` |
+| Valkey | `useRedisSets: false` | `namespace:ns:ns:foo` | `namespace: 'ns:ns'` with `new KeyvValkey(uri, { namespaceSeparator: ':' })` |
 | MongoDB | default | `ns:foo`, with no `namespace` field | Run the `@keyv/mongo` migration script, then `namespace: 'ns'`. |
 
 With `useKeyPrefix: false`, the SQL, Etcd, DynamoDB, and MongoDB adapters stored plain `foo`. v6 reads it with no namespace, after the table or collection migration where the adapter has one.
@@ -204,9 +208,8 @@ If you are unsure which layout you have, look at one key in your store and choos
 
 - **SQLite, PostgreSQL, MySQL:** a `namespace` column and a key column.
 - **MongoDB:** a `namespace` field and a `key` field, or `metadata.namespace` and `filename` with GridFS.
-- **Etcd, DynamoDB, Memcache:** `<namespace>:<key>`.
-- **Redis:** `<namespace><keyPrefixSeparator><key>`, where the separator defaults to `::`.
-- **Valkey:** `namespace:<namespace>:<key>`, or `sets:<namespace>:<key>` with `useSets: true`.
+- **Etcd, DynamoDB, Memcache, Redis:** `<namespace><namespaceSeparator><key>`, where the separator defaults to `::`.
+- **Valkey:** `namespace:<namespace><namespaceSeparator><key>`, or `sets:<namespace><namespaceSeparator><key>` with `useSets: true`, where the separator defaults to `::`.
 
 If the data is a cache you can rebuild, you can skip all of this. The v5 entries stay in the store until they expire or you remove them. On a shared backend, keep a namespace anyway; see [`clear()` Without a Namespace Clears More](#clear-without-a-namespace-clears-more).
 
@@ -706,9 +709,9 @@ await keyv.set('key', { foo: 'bar' });
 These changes don't cause compile errors, and most of them don't throw. Check your code for each one:
 
 - **A connection string is ignored.** `new Keyv('redis://localhost:6379')` and `new Keyv({ uri: 'redis://localhost:6379' })` don't load an adapter. v6 quietly uses an in-memory store, and TypeScript accepts both forms. Pass an adapter instead: `new Keyv(new KeyvRedis('redis://localhost:6379'))`.
-- **Removed options are ignored.** In plain JavaScript, `serialize`, `deserialize`, `useKeyPrefix`, `emitErrors`, and `throwOnErrors` have no effect.
+- **Removed options are ignored.** In plain JavaScript, `serialize`, `deserialize`, `useKeyPrefix`, `emitErrors`, and `throwOnErrors` have no effect, and neither does `@keyv/redis`'s `keyPrefixSeparator`, now `namespaceSeparator`.
 - **`keyv.store` returns the wrapper.** For a `Map` or an older adapter, `keyv.store` is the `KeyvMemoryAdapter` or `KeyvBridgeAdapter` that Keyv created, and the object you passed in is at `keyv.store.store`. v5 returned your object.
-- **A `Map` holds different entries.** A `Map` store now holds `{ value, expires }` objects under `namespace:key`, or under the bare key when there is no namespace. v5 stored serialized strings under `keyv:key`. Code that reads the `Map` directly must change.
+- **A `Map` holds different entries.** A `Map` store now holds `{ value, expires }` objects under `namespace::key`, or under the bare key when there is no namespace. v5 stored serialized strings under `keyv:key`. Code that reads the `Map` directly must change.
 - **Array results are always truthy.** `deleteMany` and `delete([...])` return `boolean[]`, so `if (await keyv.deleteMany(keys))` is always true. Check `results.every(Boolean)` instead.
 - **A TTL of zero or less means no TTL.** v5 treated only `0` that way. Fractional TTLs are rounded up to the next millisecond.
 - **Empty-string keys are rejected.** `set('', value)` and `delete('')` return `false`, and `get('')` returns `undefined`.
@@ -796,7 +799,7 @@ In v6, `ttl` applies to each key written without an expiry, counted from that wr
 
 In v5, `clear()` on a `@keyv/etcd` store with no namespace deleted every key in etcd, including other namespaces' entries and other applications' keys. `iterator()` returned every key too.
 
-In v6, with no namespace, both only touch entries v6 wrote without a namespace. Each value records the namespace it was written under, and entries written before that was recorded count when their key has no `:`. Entries v5 wrote are left alone, since nothing sets their `{ value, expires }` JSON apart from another application's.
+In v6, with no namespace, both only touch entries v6 wrote without a namespace. Each value records the namespace it was written under, and entries written before that was recorded count when their key has no separator (`::` by default). Entries v5 wrote are left alone, since nothing sets their `{ value, expires }` JSON apart from another application's.
 
 **What this means for you:**
 - To have `clear()` delete every key in etcd and `iterator()` return every key, as in v5, set `noNamespaceAffectsAll: true`
@@ -830,11 +833,31 @@ In v6, both setters move every entry into the `Map` its key maps to under the ne
 
 ---
 
+### `@keyv/redis` `keyPrefixSeparator` Is Now `namespaceSeparator`
+
+The option, getter, and setter for the separator between the namespace and the key are now called `namespaceSeparator`, the same name every other adapter that joins the namespace and key uses. The default is still `::`.
+
+**v5 (before):**
+```javascript
+const store = new KeyvRedis('redis://localhost:6379', { keyPrefixSeparator: ':' });
+```
+
+**v6 (after):**
+```javascript
+const store = new KeyvRedis('redis://localhost:6379', { namespaceSeparator: ':' });
+```
+
+**What this means for you:**
+- Rename `keyPrefixSeparator` to `namespaceSeparator` in your options and code
+- In plain JavaScript an old `keyPrefixSeparator` option is ignored and the store uses `::`. If you set another separator, keys written before the upgrade read as missing until you rename the option. TypeScript reports the old option as an error
+
+---
+
 ### `@keyv/redis` Matches the Namespace Literally
 
 In v5, `clear()` and `iterator()` on a `@keyv/redis` store with a namespace passed `<namespace><keyPrefixSeparator>*` to `SCAN` without escaping it. A `*`, `?`, `[`, `]` or `\` in the namespace or separator was read as pattern syntax, so `clear()` on namespace `tenant*` also deleted the keys of namespace `tenant-prod`, and `iterator()` returned them. A namespace such as `t[12]` or `a\b` didn't match its own keys, so `clear()` left them in place.
 
-In v6, the namespace and separator are matched literally. `clear()` and `iterator()` only touch keys that start with `<namespace><keyPrefixSeparator>`.
+In v6, the namespace and separator are matched literally. `clear()` and `iterator()` only touch keys that start with `<namespace><namespaceSeparator>`.
 
 **What this means for you:**
 - Namespaces without those characters behave as before

@@ -181,7 +181,7 @@ describe("Namespace", () => {
 	});
 
 	test("should escape glob characters in the key prefix separator", async () => {
-		const keyvRedis = new KeyvRedis("redis://localhost:6379", { keyPrefixSeparator: "*" });
+		const keyvRedis = new KeyvRedis("redis://localhost:6379", { namespaceSeparator: "*" });
 		const key = faker.string.uuid();
 		keyvRedis.namespace = "a";
 		await keyvRedis.set(key, "own");

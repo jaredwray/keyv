@@ -28,6 +28,11 @@ export type KeyvEtcdOptions = {
 	/** Optional namespace for key prefixing */
 	namespace?: string;
 	/**
+	 * The separator between the namespace and the key.
+	 * @default "::"
+	 */
+	namespaceSeparator?: string;
+	/**
 	 * With no namespace set, whether `clear()` and `iterator()` reach every key in etcd. By default
 	 * they only touch entries written without a namespace, and leave other namespaces and other
 	 * applications' keys alone.
@@ -99,7 +104,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	private _ttl?: number;
 	private _busyTimeout?: number;
 	private _namespace?: string;
-	private _keyPrefixSeparator = ":";
+	private _namespaceSeparator = "::";
 	private _noNamespaceAffectsAll = false;
 
 	/**
@@ -133,6 +138,10 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		this._ttl = typeof merged.ttl === "number" ? merged.ttl : undefined;
 		this._busyTimeout = merged.busyTimeout;
 		this._namespace = merged.namespace;
+		if (merged.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = merged.namespaceSeparator;
+		}
+
 		this._noNamespaceAffectsAll = merged.noNamespaceAffectsAll === true;
 
 		this._client = new EtcdClient({
@@ -221,17 +230,17 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 
 	/**
 	 * Gets the separator between the namespace and key.
-	 * @default ':'
+	 * @default '::'
 	 */
-	public get keyPrefixSeparator(): string {
-		return this._keyPrefixSeparator;
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
 	}
 
 	/**
 	 * Sets the separator between the namespace and key.
 	 */
-	public set keyPrefixSeparator(value: string) {
-		this._keyPrefixSeparator = value;
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	/**
@@ -254,11 +263,11 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 * Creates a prefixed key by prepending the namespace and separator.
 	 * @param key - The key to prefix
 	 * @param namespace - The namespace to prepend. If not provided, the key is returned as-is.
-	 * @returns The prefixed key (e.g., `'namespace:key'`), or the original key if no namespace is given.
+	 * @returns The prefixed key (e.g., `'namespace::key'`), or the original key if no namespace is given.
 	 */
 	public createKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return `${namespace}${this._keyPrefixSeparator}${key}`;
+			return `${namespace}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -272,7 +281,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	 */
 	public removeKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			const prefix = `${namespace}${this._keyPrefixSeparator}`;
+			const prefix = `${namespace}${this._namespaceSeparator}`;
 			if (key.startsWith(prefix)) {
 				return key.slice(prefix.length);
 			}
@@ -444,7 +453,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		const unnamespaced =
-			envelope.n === undefined ? !key.includes(this._keyPrefixSeparator) : envelope.n === null;
+			envelope.n === undefined ? !key.includes(this._namespaceSeparator) : envelope.n === null;
 		return unnamespaced ? envelope : undefined;
 	}
 
@@ -518,7 +527,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	public async clear(): ClearOutput {
 		try {
 			if (this._namespace) {
-				await this._client.delete().prefix(`${this._namespace}${this._keyPrefixSeparator}`);
+				await this._client.delete().prefix(`${this._namespace}${this._namespaceSeparator}`);
 				return;
 			}
 
@@ -553,7 +562,7 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 			return;
 		}
 
-		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
+		const prefix = this._namespace ? `${this._namespace}${this._namespaceSeparator}` : "";
 		const iterator = await this._client.getAll().prefix(prefix).keys();
 
 		for await (const key of iterator) {

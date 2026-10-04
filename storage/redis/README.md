@@ -87,7 +87,7 @@ const uri = "redis://localhost:6379";
 // NOTE: please use the settings that you need to configure. Check out Keyv Redis Options section
 const options = {
   namespace: "test",
-  keyPrefixSeparator: "->",
+  namespaceSeparator: "->",
   clearBatchSize: 100,
   useUnlink: true,
   noNamespaceAffectsAll: true,
@@ -115,8 +115,9 @@ const keyv = new Keyv({ store: keyvRedis});
 
 * **`@redis/client` is now v6.** `createClient`, `createCluster`, and `createSentinel` are still exported from this package. `createClient` takes a `RedisClientOptions` object (`{ url: 'redis://...' }`), not a URI string.
 * **Adapters receive absolute `expires`, not relative `ttl`.** When you call `keyv.set(key, value, 1000)`, Keyv converts that millisecond ttl to a Unix-ms deadline and passes it to the adapter. Direct adapter calls should pass `expires` (`Date.now() + ttl`), not a relative ttl.
-* **Keyv no longer prefixes keys.** Namespacing lives on the adapter (`namespace` + `keyPrefixSeparator`, default `::`). You do not need `useKeyPrefix: false` — that option was removed from Keyv.
-* **Keys written by v5 need matching settings.** v5's default setup, `new Keyv(new KeyvRedis(uri))`, applied its default `keyv` namespace twice, once in Keyv and once in the adapter, so `foo` was stored as `keyv::keyv:foo`. Read those keys with `new Keyv(new KeyvRedis(uri, { keyPrefixSeparator: '::keyv:' }), { namespace: 'keyv' })`. The [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) lists the settings for other v5 setups.
+* **Keyv no longer prefixes keys.** Namespacing lives on the adapter (`namespace` + `namespaceSeparator`, default `::`). You do not need `useKeyPrefix: false` — that option was removed from Keyv.
+* **`keyPrefixSeparator` is now `namespaceSeparator`.** The option, getter, and setter were renamed to match the other adapters. In plain JavaScript the old option is ignored and the store uses `::`, so rename it wherever you set it.
+* **Keys written by v5 need matching settings.** v5's default setup, `new Keyv(new KeyvRedis(uri))`, applied its default `keyv` namespace twice, once in Keyv and once in the adapter, so `foo` was stored as `keyv::keyv:foo`. Read those keys with `new Keyv(new KeyvRedis(uri, { namespaceSeparator: '::keyv:' }), { namespace: 'keyv' })`. The [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) lists the settings for other v5 setups.
 * **`createKeyv` accepts cluster and sentinel options** the same way the `KeyvRedis` constructor does.
 * **A failure is reported once.** When the adapter rejects because of `throwOnConnectError` or `throwOnErrors`, it no longer also emits `error`. A failed connection rejects with the connection error as the rejection's `cause`. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
 
@@ -137,7 +138,7 @@ export type KeyvRedisOptions = {
 	/**
 	 * Separator to use between namespace and key.
 	 */
-	keyPrefixSeparator?: string;
+	namespaceSeparator?: string;
 	/**
 	 * Number of keys to delete in a single batch.
 	 */
@@ -188,7 +189,7 @@ import KeyvRedis from '@keyv/redis';
 
 const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379', {
   namespace: 'my-namespace',
-  keyPrefixSeparator: ':',
+  namespaceSeparator: ':',
   clearBatchSize: 1000,
   useUnlink: true,
   noNamespaceAffectsAll: false,
@@ -277,7 +278,7 @@ import { createKeyv } from '@keyv/redis';
 const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
 ```
 
-This will prefix all keys with `my-namespace::` (the default `keyPrefixSeparator` is `::`). You can also set the namespace after the fact:
+This will prefix all keys with `my-namespace::` (the default `namespaceSeparator` is `::`). You can also set the namespace after the fact:
 
 ```js
 keyv.namespace = 'my-namespace';
@@ -541,7 +542,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **capabilities** - Adapter capability descriptor. `capabilities.expires` is `true` (absolute Unix-ms `expires` on `set` / `setMany`).
 * **client** - The Redis client, cluster, or sentinel connection. Assigning a new connection re-wires Hookified event listeners and resets PXAT detection. Type: `RedisClientConnectionType`.
 * **namespace** - Namespace used to prefix keys. `undefined` means no prefixing. Default: `undefined`.
-* **keyPrefixSeparator** - Separator between namespace and key. May be `""`. Default: `"::"`.
+* **namespaceSeparator** - Separator between namespace and key. May be `""`. Default: `"::"`.
 * **clearBatchSize** - `SCAN` / delete batch size. Must be greater than `0` or an `error` event is emitted. Default: `1000`.
 * **useUnlink** - Use `UNLINK` instead of `DEL`. Default: `true`.
 * **noNamespaceAffectsAll** - When no namespace is set, `clear()` / `iterator()` affect all keys (including namespaced ones). Default: `false`.
