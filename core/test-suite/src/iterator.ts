@@ -32,7 +32,7 @@ const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: K
 
 		await Promise.all(toResolve);
 		let count = 0;
-		for await (const [key, value] of keyv.iterator(namespace)) {
+		for await (const [key, value] of keyv.iterator()) {
 			const doesKeyExist = map.has(key);
 			const isValueSame = map.get(key) === value;
 			t.expect(doesKeyExist && isValueSame).toBeTruthy();
@@ -74,7 +74,7 @@ const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: K
 
 		await Promise.all(toResolve);
 		let count = 0;
-		for await (const [key, value] of keyv2.iterator(ns2)) {
+		for await (const [key, value] of keyv2.iterator()) {
 			const doesKeyExist = map2.has(key);
 			const isValueSame = map2.get(key) === value;
 			t.expect(doesKeyExist && isValueSame).toBeTruthy();
@@ -115,7 +115,7 @@ const keyvIteratorTests = (test: TestFunction, Keyv: typeof KeyvModule, store: K
 		await keyv.set(nonExpiringKey, nonExpiringValue);
 
 		await delay(300);
-		const iterator = keyv.iterator(namespace);
+		const iterator = keyv.iterator();
 
 		// Collect all yielded entries
 		const keys: string[] = [];

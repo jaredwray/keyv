@@ -1148,7 +1148,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				TypeMapping
 			>;
 			const mainNode = cluster.slots[slot].master;
-			return cluster.nodeClient(mainNode) as RedisClientType;
+			return cluster.nodeClient(mainNode) as Promise<RedisClientType>;
 		}
 
 		return connection as RedisClientType;
@@ -1246,7 +1246,9 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			) as RedisClientType;
 		}
 
-		return createCluster(this.withClusterConnectTimeout(connect as RedisClusterOptions));
+		return createCluster(
+			this.withClusterConnectTimeout(connect as RedisClusterOptions),
+		) as RedisConnectionClusterType;
 	}
 
 	/**
@@ -1262,7 +1264,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			return base;
 		}
 
-		const socket = { ...base };
+		const socket: NonNullable<RedisClientOptions["socket"]> = { ...base };
 		if (socket.connectTimeout === undefined) {
 			socket.connectTimeout = this._connectionTimeout;
 		}
