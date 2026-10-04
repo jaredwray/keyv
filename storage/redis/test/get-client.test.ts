@@ -700,11 +700,14 @@ describe("getClient", () => {
 	});
 
 	test("should keep a successful connection alive after connectionTimeout elapses", async () => {
-		const keyvRedis = new KeyvRedis(redisUri, { connectionTimeout: 50 });
+		// The connect must win the race before the test waits the timeout out, and a busy CI
+		// runner can take longer than 50ms to finish the handshake.
+		const connectionTimeout = 500;
+		const keyvRedis = new KeyvRedis(redisUri, { connectionTimeout });
 		keyvRedis.on("error", () => {});
 		const client = await keyvRedis.getClient();
 		expect(client.isOpen).toBe(true);
-		await delay(120);
+		await delay(connectionTimeout + 100);
 		const key = faker.string.alphanumeric(10);
 		expect(await keyvRedis.set(key, "ok")).toBe(true);
 		expect(await keyvRedis.get(key)).toBe("ok");
