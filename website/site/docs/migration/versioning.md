@@ -14,8 +14,8 @@ Since **v6**, all Keyv packages — the core `keyv` package and every official a
 ## Which version do I get?
 
 ```bash
-pnpm add keyv          # latest stable (recommended)
-pnpm add keyv@rc       # the newest v6 release candidate
+pnpm add keyv          # latest stable, currently v6 (recommended)
+pnpm add keyv@6        # the newest stable v6 release
 pnpm add keyv@5        # the newest stable v5 release
 pnpm add keyv@4        # the newest stable v4 release
 ```
@@ -26,19 +26,19 @@ From v6 on, an adapter shares Keyv's version, so `pnpm add @keyv/redis@6` lines 
 
 | Tag | Points to | Use it for |
 | --- | --- | --- |
-| `latest` | Newest **stable** release of the current major | The default — `pnpm add keyv` |
-| `alpha`, `beta`, `rc` | Newest **v6 pre-release** of that kind, such as `rc` → `6.0.0-rc.1` | Trying v6 before it ships |
-| `v5-lts` | Newest **stable v5** release | Pinning the v5 line explicitly (appears once v6 is `latest`) |
+| `latest` | Newest **stable** release of the current major (v6) | The default — `pnpm add keyv` |
+| `v5-lts` | Newest **stable v5** release | Pinning the v5 line explicitly (`keyv@5` works too) |
+| `alpha`, `beta`, `rc` | Newest **pre-release** of that kind | Trying a release before it ships |
 
-> While a major is still in pre-release, `latest` stays on the previous stable major. Today `latest` is **v5**, and the v6 pre-releases are on `alpha`, `beta`, and `rc`. When v6 ships stable, `latest` moves to v6 and `v5-lts` tracks the v5 line.
+> Stable v6 starts at **6.1.0**; there is no 6.0.0 release. Since 6.1.0, `latest` points to v6 for `keyv` and the rest of the v6 family. Releases from the v5 line no longer move `latest`; they get a `v{major}-lts` tag such as `v5-lts` (see [How releases are tagged](#how-releases-are-tagged)).
 
-Each pre-release tag moves only when a pre-release of that kind is published, so `beta` can point at an older build than `rc`. Packages that are new in v6, such as `@keyv/serialize-superjson` and `@keyv/encrypt-node`, also have an early pre-release on `latest`, because npm tags a package's first publish as `latest`. Until v6 is stable, check `npm view keyv dist-tags`, then install `keyv` and every `@keyv/*` package at the same exact version, such as `6.0.0-rc.1`.
+Each pre-release tag moves only when a pre-release of that kind is published, so it can point at a build older than `latest`: until the next pre-release, `alpha`, `beta`, and `rc` still point at 6.0.0 pre-releases. Keep `keyv` and every `@keyv/*` package on the same version, such as `6.1.0`.
 
 ## Why keyv@5 works without a special tag
 
 You may notice there is no `v5` or `v6` dist-tag. That is intentional: npm **rejects** dist-tag names that look like a semver version or range, so a tag literally named `v6` is not allowed. Instead, `keyv@5`, `keyv@v5`, and `keyv@6` are interpreted as **semver ranges** (`5.x`, `6.x`) and npm resolves them to the newest matching **stable** release automatically — no tag required.
 
-One consequence: a semver range only matches stable releases. While v6 is in pre-release, `keyv@6` matches nothing, so use a pre-release tag such as **`keyv@rc`**, or an exact version, to try it. Once v6 ships a stable release, `keyv@6` starts resolving to it.
+One consequence: a semver range only matches stable releases, so `keyv@6` resolves to the newest stable 6.x release and never to a pre-release. To try a pre-release, use its tag, such as `keyv@rc`, or an exact version.
 
 ## How releases are tagged
 
@@ -71,16 +71,16 @@ These family-wide behaviors — shared versions, and a dist-tag meaning the same
 
 ## Maintenance & breaking changes on LTS
 
-**Our goal: an LTS line never changes its API landscape.** We aim for staying within a major (`keyv@5`) to mean `pnpm update` is safe — your code keeps compiling and behaving the same. "API landscape" here means the public types and method signatures, constructor options, events, runtime behavior, and the supported runtimes (Node.js versions, ESM/CJS). We work to keep all of these stable across an LTS line.
+**Our goal: an LTS line never changes its API landscape.** We aim for staying within a major (`keyv@6`) to mean `pnpm update` is safe — your code keeps compiling and behaving the same. "API landscape" here means the public types and method signatures, constructor options, events, runtime behavior, and the supported runtimes (Node.js versions, ESM/CJS). We work to keep all of these stable across an LTS line.
 
-Breaking changes — to Keyv's API or to its supported runtimes — only ever land on the **current development major** (today, v6).
+Breaking changes — to Keyv's API or to its supported runtimes — only ever land on the **next major**. Since 6.1.0, v6 is an LTS line alongside v5, so the next breaking release is v7.
 
 ### When an underlying dependency releases a breaking major on LTS
 
 Keyv's core has a single dependency, `hookified`, but the storage adapters wrap third-party drivers (for example `@keyv/redis` over its Redis client, `@keyv/sqlite` over its SQLite driver). When one of those drivers ships a breaking major, the question is **not** "did the dependency have a major?" but "**does adopting it change Keyv's own contract?**":
 
 - **It can be absorbed** — the adapter handles the difference internally and nothing observable changes for you (same API, same behavior, same supported Node versions). → We ship it as a **minor** release on the LTS line. (A pure security or internal-only fix may be a **patch**.) A dependency major is significant enough that we signal it with a minor rather than a patch, even though your code needs no changes.
-- **It cannot be absorbed** — adopting it would change Keyv's API, alter a default you rely on, or drop a supported runtime (e.g. the driver drops an older Node version). → We **do not** take it on the LTS line. The LTS line stays on the last compatible driver major, and the upgrade lands only on the current development major.
+- **It cannot be absorbed** — adopting it would change Keyv's API, alter a default you rely on, or drop a supported runtime (e.g. the driver drops an older Node version). → We **do not** take it on the LTS line. The LTS line stays on the last compatible driver major, and the upgrade lands only in the next major.
 
 So a major bump of an inner dependency never forces a major bump of Keyv, and it never forces a breaking change onto LTS. The dependency's version number doesn't drive Keyv's — Keyv's public contract does. That is what semver actually versions: *our* API, not our dependencies' APIs.
 
@@ -91,7 +91,7 @@ So a major bump of an inner dependency never forces a major bump of Keyv, and it
 Raising the minimum supported Node.js version is itself a **breaking change** — it is part of the runtime contract above, even when no code changes. A user on the dropped Node version who runs `pnpm update` would suddenly be unable to install or run Keyv. So we treat a dependency that raises its Node floor exactly like any other change we cannot absorb:
 
 - **On an LTS line (and on any already-released major):** we never raise the Node floor. If a driver's new version requires a newer Node than the line supports, the line stays on the last driver version compatible with its committed Node range. The newer driver is adopted only in the next Keyv major.
-- **Node floor increases happen only at a major boundary.** A new Keyv major may raise its minimum Node version — and is the place where we adopt drivers that did. While that major is still in pre-release the floor can still move; once it ships stable, the floor is fixed for that major's lifetime.
+- **Node floor increases happen only at a major boundary.** A new Keyv major may raise its minimum Node version — and is the place where we adopt drivers that did. While that major is still in pre-release the floor can still move; once it ships stable, the floor is fixed for that major's lifetime. For v6, the floor is Node.js 22.19.0.
 
 In short, `engines.node` on a released line never goes up. We track Node.js's own [release schedule](https://nodejs.org/en/about/previous-releases) and drop end-of-life Node versions only when we cut a new major — never on LTS, and never mid-major.
 
@@ -101,6 +101,6 @@ Security is the one thing that can override "no changes on LTS", and we work har
 
 ### Peer dependencies
 
-Some adapters take their driver as a peer dependency, so you control its version. On an LTS line we keep the supported peer range stable; support for a driver's new breaking major is added on the current development major, not backported.
+Some adapters take their driver as a peer dependency, so you control its version. On an LTS line we keep the supported peer range stable; support for a driver's new breaking major is added in the next major, not backported.
 
 For the v5 → v6 changes themselves, see the [v5 to v6 Migration](/docs/migration/v5-to-v6/) guide. The v5 documentation site is archived at [keyv.org/v5](/v5/).

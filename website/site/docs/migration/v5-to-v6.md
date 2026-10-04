@@ -869,21 +869,21 @@ In v6, the namespace and separator are matched literally. `clear()` and `iterato
 
 ### Keyv v6 Versioning
 
-Starting with v6, all Keyv packages and adapters will use **unified versioning**. This means every package in the Keyv ecosystem will share the same version number and be released together.
+Starting with v6, all Keyv packages and adapters use **unified versioning**. Every package in the Keyv ecosystem shares the same version number and is released together. The first stable v6 release is 6.1.0; there is no 6.0.0 release. See [Versioning & Release Tags](/docs/migration/versioning/) for the npm dist-tags.
 
 **What this means for you:**
-- All `@keyv/*` packages will have the same version (e.g., `keyv@6.0.0`, `@keyv/redis@6.0.0`, `@keyv/sqlite@6.0.0`)
+- All `@keyv/*` packages have the same version (e.g., `keyv@6.1.0`, `@keyv/redis@6.1.0`, `@keyv/sqlite@6.1.0`)
 - When you upgrade Keyv, you can upgrade all adapters to the same version with confidence that they are compatible
 - No more wondering which adapter version works with which Keyv version
 
 **Example of unified versions:**
 ```
-keyv: 6.0.0
-@keyv/redis: 6.0.0
-@keyv/sqlite: 6.0.0
-@keyv/postgres: 6.0.0
-@keyv/serialize-superjson: 6.0.0
-@keyv/compress-gzip: 6.0.0
+keyv: 6.1.0
+@keyv/redis: 6.1.0
+@keyv/sqlite: 6.1.0
+@keyv/postgres: 6.1.0
+@keyv/serialize-superjson: 6.1.0
+@keyv/compress-gzip: 6.1.0
 ```
 
 This approach is used by many popular projects:
@@ -897,7 +897,7 @@ Unified versioning simplifies dependency management and ensures compatibility ac
 
 ### Keyv v5 Maintenance Mode
 
-With the release of Keyv v6, Keyv v5 will move to maintenance mode. No major functionality will be added to Keyv v5. Only maintenance and security fixes will be applied going forward.
+With the release of Keyv v6, Keyv v5 is in maintenance mode. No major functionality will be added to Keyv v5. Only maintenance and security fixes will be applied going forward, and releases from the v5 line no longer move `latest` (see [Versioning & Release Tags](/docs/migration/versioning/)).
 
 We encourage all users to migrate to v6 to take advantage of the latest features and improvements. The `v5` branch will remain available in the mono repo for reference.
 
