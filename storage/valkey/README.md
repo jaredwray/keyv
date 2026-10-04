@@ -229,7 +229,9 @@ console.log(store.useSets); // true
 
 When `useSets` is enabled, all keys use the `sets:` prefix (e.g., `sets:myns:mykey`) to isolate them from non-useSets keys. The SET tracking key is stored at `sets:<namespace>`.
 
-When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS namespace:<namespace>:*`, with any glob characters in the namespace escaped) to find and delete keys, which may be slower on very large databases. A namespace that merely shares a prefix (for example `users` and `users-archive`) is not affected. Because `:` is also the key separator, a namespace that extends another with `:` (for example `users:archive` under `users`) cannot be told apart by the pattern and is cleared along with it; use `useSets: true`, which tracks keys per namespace, if you need that separation. With no namespace this matches every key in the current database.
+When `useSets` is `false`, the `clear()` function uses pattern matching (`KEYS namespace:<namespace>:*`, with any glob characters in the namespace escaped) to find and delete keys, which may be slower on very large databases. A namespace that merely shares a prefix (for example `users` and `users-archive`) is not affected. Because `:` is also the key separator, a namespace that extends another with `:` (for example `users:archive` under `users`) cannot be told apart by the pattern and is cleared along with it. With no namespace this matches every key in the current database.
+
+`useSets: true` doesn't keep such namespaces apart either. `clear()` removes only the keys the namespace's set tracks, but `iterator()` still matches `sets:<namespace>:*`, and the two namespaces build some of the same keys: `archive:x` in `users` and `x` in `users:archive` are both `sets:users:archive:x`. Keep `:` out of namespace names that have to stay apart.
 
 ### useRedisSets (deprecated)
 
@@ -326,7 +328,7 @@ const results = await store.hasMany(['foo', 'bar', 'baz']);
 
 ### .clear()
 
-Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared (`namespace:<namespace>:*`, glob characters escaped), so a namespace that merely shares a prefix such as `users-archive` is left alone. A namespace that extends it with the `:` separator, such as `users:archive`, cannot be distinguished from keys containing `:` and is cleared too unless `useSets` is `true`. If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database. In cluster mode every master node is searched.
+Clears all entries from the store. If a namespace is set, only entries within that namespace are cleared (`namespace:<namespace>:*`, glob characters escaped), so a namespace that merely shares a prefix such as `users-archive` is left alone. A namespace that extends it with the `:` separator, such as `users:archive`, cannot be distinguished from keys containing `:` and is cleared too, so keep `:` out of namespace names that have to stay apart; `useSets` doesn't fully separate them (see [useSets](#usesets)). If no namespace is set and `useSets` is `false`, this uses `KEYS *` and removes every key in the current database. In cluster mode every master node is searched.
 
 ```js
 await store.clear();

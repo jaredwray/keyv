@@ -511,8 +511,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * to find and remove all keys in this namespace. A namespace that merely shares
 	 * a prefix (for example `users` vs `users-archive`) is never touched. One that
 	 * extends this namespace with the `:` separator (`users:archive`) is cleared too,
-	 * because a pattern cannot tell it apart from a key that contains `:`; use
-	 * `useSets: true` for that separation. With no namespace this matches every key
+	 * because a pattern cannot tell it apart from a key that contains `:`, so keep `:`
+	 * out of namespace names that have to stay apart. With no namespace this matches every key
 	 * in the current database. In cluster mode every master node is searched, and keys are
 	 * removed one hash slot at a time.
 	 * @returns {Promise<void>}
@@ -686,8 +686,8 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	 * the namespace is matched literally, and the key separator is part of the pattern so a
 	 * namespace that merely shares a prefix (for example `users` vs `users-archive`) is never
 	 * selected. Because `:` is also the separator, a namespace that extends this one with `:`
-	 * (`users:archive`) cannot be told apart from a key containing `:`; `useSets: true` tracks
-	 * keys per namespace instead. With no prefix this matches every key in the database.
+	 * (`users:archive`) cannot be told apart from a key containing `:`. `iterator()` uses this
+	 * pattern with or without `useSets`. With no prefix this matches every key in the database.
 	 * @returns {string} The glob pattern, e.g. `"namespace:myns:*"`, or `"*"` with no prefix.
 	 */
 	private getKeyPattern(): string {

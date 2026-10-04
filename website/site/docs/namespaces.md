@@ -67,9 +67,16 @@ See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
 
 ## Namespaces that share a prefix
 
-Most adapters store a key as `<namespace><separator><key>` and find a namespace's entries by that prefix. That includes the memory and bridge adapters above, Redis, Valkey, Etcd, DynamoDB, and Cloudflare KV. A namespace that extends another with the separator shares that prefix: with the default `:` separator, clearing or iterating `users` also reaches the entries of `users:archive`. Keep the separator out of namespace names when namespaces have to stay apart. Valkey's `useSets: true` keeps `clear()` separate; see its README.
+Most adapters store a key as `<namespace><separator><key>`: the memory adapter, the bridge adapter when it prefixes keys itself, Redis, Valkey, Etcd, DynamoDB, Cloudflare KV, and Memcache. The separator defaults to `:`, or `::` on Redis.
 
-SQLite, PostgreSQL, MySQL, and MongoDB keep the namespace in its own column or field, and Memcache tracks each namespace separately, so their namespaces never overlap this way.
+A namespace that extends another with the separator isn't kept apart from it:
+
+- Clearing or iterating `users` also reaches the entries of `users:archive` (on Redis, of `users::archive`), because these adapters find a namespace's entries by its prefix. Memcache is the exception: it clears each namespace on its own and has no iterator.
+- The two can build the same stored key. With `:`, `archive:x` in `users` and `x` in `users:archive` are one entry, so writing either replaces the other.
+
+Keep the separator out of namespace names when namespaces have to stay apart. Valkey's `useSets: true` doesn't change this: it builds keys the same way, and its `iterator()` still finds entries by prefix.
+
+SQLite, PostgreSQL, MySQL, and MongoDB keep the namespace in its own column or field, so their namespaces never overlap. A bridge around an adapter that handles its own namespace leaves the keys to that adapter, so it behaves like the adapter it wraps.
 
 ## Embedding Keyv in a library
 
