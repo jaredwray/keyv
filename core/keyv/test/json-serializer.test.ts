@@ -180,3 +180,22 @@ describe("Colon-prefixed keys bug fix", () => {
 		expect(typeof parsed.content).toBe("string");
 	});
 });
+
+describe("Own __proto__ keys", () => {
+	test("should keep an own __proto__ key at any depth without setting a prototype", () => {
+		const serializer = new KeyvJsonSerializer();
+		// JSON.parse creates own `__proto__` keys, as in a parsed request body
+		for (const json of [
+			'{"name":"x","__proto__":{"isAdmin":true}}',
+			'{"__proto__":5}',
+			'{"__proto__":null}',
+			'{"nested":{"__proto__":[1,2]}}',
+		]) {
+			const value = JSON.parse(json);
+			const parsed = serializer.parse<Record<string, unknown>>(serializer.stringify(value));
+			expect(JSON.stringify(parsed)).toBe(JSON.stringify(value));
+			expect(Object.getPrototypeOf(parsed)).toBe(Object.prototype);
+			expect(parsed.isAdmin).toBeUndefined();
+		}
+	});
+});
