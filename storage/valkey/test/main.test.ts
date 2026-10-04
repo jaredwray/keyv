@@ -147,7 +147,7 @@ describe("createKeyv", () => {
 		const value = faker.string.alphanumeric(10);
 		await keyv.set(key, value);
 		const client = new Redis(valkeyUri);
-		expect(await client.exists(`namespace:${namespace}:${key}`)).toBe(1);
+		expect(await client.exists(`namespace:${namespace}::${key}`)).toBe(1);
 		expect(await client.exists(key)).toBe(0);
 		await client.disconnect();
 

@@ -184,11 +184,11 @@ export class KeyvStats {
 
 	/**
 	 * Build a composite key from a telemetry event.
-	 * Format: "namespace:key" if namespace is present, otherwise just "key".
+	 * Format: "namespace::key" if namespace is present, otherwise just "key".
 	 */
 	public buildKeyEventName(event: KeyvTelemetryEvent): string {
 		if (event.namespace && event.key) {
-			return `${event.namespace}:${event.key}`;
+			return `${event.namespace}::${event.key}`;
 		}
 
 		return event.key ?? "";

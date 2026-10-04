@@ -37,7 +37,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	private _opts: Omit<KeyvDynamoOptions, "tableName"> & { tableName: string };
 	private _client: DynamoDBDocument;
 	private readonly _tableReady: Promise<void>;
-	private _keyPrefixSeparator = ":";
+	private _namespaceSeparator = "::";
 
 	/**
 	 * Creates a new KeyvDynamo adapter.
@@ -64,6 +64,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 		if (this._opts.namespace) {
 			this._namespace = this._opts.namespace;
+		}
+
+		if (this._opts.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = this._opts.namespaceSeparator;
 		}
 
 		this._client = DynamoDBDocument.from(new DynamoDB(this._opts));
@@ -123,30 +127,30 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Gets the separator placed between the namespace and key.
-	 * @default ':'
+	 * @default '::'
 	 * @returns The namespace/key separator.
 	 */
-	public get keyPrefixSeparator(): string {
-		return this._keyPrefixSeparator;
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
 	}
 
 	/**
 	 * Sets the separator placed between the namespace and key.
 	 * @param value - The separator to place between the namespace and key.
 	 */
-	public set keyPrefixSeparator(value: string) {
-		this._keyPrefixSeparator = value;
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	/**
 	 * Creates a prefixed key by prepending the namespace and separator.
 	 * @param key - The key to prefix
 	 * @param namespace - The namespace to prepend. If not provided, the key is returned as-is.
-	 * @returns The prefixed key (e.g., `'namespace:key'`), or the original key if no namespace is given.
+	 * @returns The prefixed key (e.g., `'namespace::key'`), or the original key if no namespace is given.
 	 */
 	public createKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return `${namespace}${this._keyPrefixSeparator}${key}`;
+			return `${namespace}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -160,7 +164,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 */
 	public removeKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			const prefix = `${namespace}${this._keyPrefixSeparator}`;
+			const prefix = `${namespace}${this._namespaceSeparator}`;
 			if (key.startsWith(prefix)) {
 				return key.slice(prefix.length);
 			}
@@ -575,7 +579,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	> {
 		await this._tableReady;
 
-		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
+		const prefix = this._namespace ? `${this._namespace}${this._namespaceSeparator}` : "";
 		let lastEvaluatedKey: Record<string, unknown> | undefined;
 
 		do {
@@ -616,7 +620,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	 * @returns An array of matching keys.
 	 */
 	public extractKey(output: ScanCommandOutput, keyProperty = "id"): string[] {
-		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
+		const prefix = this._namespace ? `${this._namespace}${this._namespaceSeparator}` : "";
 		return (output.Items ?? [])
 			.map((item) => item[keyProperty])
 			.filter((key) => key.startsWith(prefix));
@@ -786,6 +790,8 @@ export default KeyvDynamo;
 export type KeyvDynamoOptions = {
 	/** Key prefix used to isolate entries belonging to this instance. */
 	namespace?: string;
+	/** Separator placed between the namespace and key. Defaults to `"::"`. */
+	namespaceSeparator?: string;
 	/** The DynamoDB table name. Created automatically if it does not exist. Defaults to `"keyv"`. */
 	tableName?: string;
 	/** Alias for `endpoint`. `endpoint` takes precedence when both are set. */

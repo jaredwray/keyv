@@ -32,7 +32,7 @@
 - [Properties](#properties)
   - [.client](#client)
   - [.namespace](#namespace)
-  - [.keyPrefixSeparator](#keyprefixseparator)
+  - [.namespaceSeparator](#namespaceseparator)
   - [.tableName](#tablename)
   - [.endpoint](#endpoint)
 - [Methods](#methods)
@@ -219,7 +219,7 @@ const keyv = new Keyv(store, { ttl: 6 * 60 * 60 * 1000 });
 - **The `ttlSupport` and `opts` properties were removed.** Use the `tableName` and `endpoint` properties instead.
 - **The adapter's `set` takes an absolute `expires`.** v5's `set(key, value, ttl)` took a relative `ttl`. This only affects code that calls the adapter directly. See [.set(key, value, expires?)](#setkey-value-expires).
 - **Keys written by v5 need matching namespace settings.** Keyv v6 has no default namespace.
-  - v5's default setup, `new Keyv(new KeyvDynamo(options))`, stored `foo` as `keyv:foo`. Read those keys with `new Keyv(new KeyvDynamo(options), { namespace: 'keyv' })`. If you set your own namespace in v5, pass that one instead.
+  - v5's default setup, `new Keyv(new KeyvDynamo(options))`, stored `foo` as `keyv:foo`. v6 joins the namespace and key with `::`, so read those keys with `new Keyv(new KeyvDynamo({ ...options, namespaceSeparator: ':' }), { namespace: 'keyv' })`. If you set your own namespace in v5, pass that one instead.
   - Keys written through v5's `createKeyv()` were stored without a prefix, even when you passed a `namespace`. The same is true when v5 ran with `useKeyPrefix: false`. Read those keys without a namespace. Without a namespace, `clear()` deletes every item in the table.
 
 See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#keyvdynamo-keys-without-a-ttl-no-longer-expire) for more.
@@ -232,6 +232,7 @@ Options extend [`DynamoDBClientConfig`](https://docs.aws.amazon.com/AWSJavaScrip
 |---|---|---|---|
 | `tableName` | `string` | `'keyv'` | The DynamoDB table name. Created automatically if it doesn't exist. |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
+| `namespaceSeparator` | `string` | `'::'` | Separator placed between the namespace and key |
 | `endpoint` | `string` | — | The DynamoDB endpoint URL (e.g., `'http://localhost:8000'` for local development) |
 | `uri` | `string` | — | Alias for `endpoint` (for consistency with other Keyv adapters). `endpoint` takes precedence when both are set. |
 | `region` | `string` | — | The AWS region (e.g., `'us-east-1'`) |
@@ -264,13 +265,13 @@ Key prefix for namespace isolation. When set, all keys are prefixed with `namesp
 |---|---|
 | `string \| undefined` | `undefined` |
 
-### .keyPrefixSeparator
+### .namespaceSeparator
 
 The separator between the namespace and key.
 
 | Type | Default |
 |---|---|
-| `string` | `':'` |
+| `string` | `'::'` |
 
 ### .tableName
 
@@ -445,7 +446,7 @@ Creates a prefixed key by prepending the namespace and separator. Returns the ke
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
-store.createKeyPrefix('key', 'ns'); // 'ns:key'
+store.createKeyPrefix('key', 'ns'); // 'ns::key'
 store.createKeyPrefix('key'); // 'key'
 ```
 
@@ -455,7 +456,7 @@ Removes the namespace prefix from the start of a key. Returns the key as-is if n
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
-store.removeKeyPrefix('ns:key', 'ns'); // 'key'
+store.removeKeyPrefix('ns::key', 'ns'); // 'key'
 store.removeKeyPrefix('key'); // 'key'
 ```
 

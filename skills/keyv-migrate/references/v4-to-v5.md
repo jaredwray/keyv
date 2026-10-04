@@ -99,7 +99,7 @@ const keyv = new Keyv(new KeyvRedis(createClient({ url: 'redis://localhost:6379'
 const cluster = new Keyv(new KeyvRedis(createCluster({ rootNodes: [{ url: 'redis://127.0.0.1:7000' }] })));
 ```
 
-v4's `useRedisSets` option is gone from `@keyv/redis`. Keys that v4 wrote need a matching `keyPrefixSeparator`; see [stored-data.md](stored-data.md).
+v4's `useRedisSets` option is gone from `@keyv/redis`. Keys that v4 wrote need a matching separator: `keyPrefixSeparator` in v5, `namespaceSeparator` in v6. See [stored-data.md](stored-data.md).
 
 ## Memcache credentials
 

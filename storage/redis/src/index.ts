@@ -79,7 +79,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * Separator placed between the namespace and the key such as 'namespace::key'.
 	 * @default "::"
 	 */
-	private _keyPrefixSeparator = "::";
+	private _namespaceSeparator = "::";
 	/**
 	 * Number of keys to delete in a single batch when clearing.
 	 * @default 1000
@@ -179,7 +179,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 *   Redis client/cluster/sentinel options, or an existing connection. Defaults to
 	 *   a localhost client with {@link defaultReconnectStrategy}.
 	 * @param {KeyvRedisOptions} [options] - Adapter options such as `namespace`,
-	 *   `keyPrefixSeparator`, `clearBatchSize`, `useUnlink`, `throwOnErrors`, and
+	 *   `namespaceSeparator`, `clearBatchSize`, `useUnlink`, `throwOnErrors`, and
 	 *   `connectionTimeout`.
 	 */
 	constructor(connect?: KeyvRedisConnect, options?: KeyvRedisOptions) {
@@ -242,16 +242,16 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * @returns {string} The separator placed between the namespace and key.
 	 * @default '::'
 	 */
-	public get keyPrefixSeparator(): string {
-		return this._keyPrefixSeparator;
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
 	}
 
 	/**
 	 * Set the separator between the namespace and key.
 	 * @param {string} value - The separator to place between the namespace and key.
 	 */
-	public set keyPrefixSeparator(value: string) {
-		this._keyPrefixSeparator = value;
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	/**
@@ -833,14 +833,14 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Prefix a key with the namespace and {@link keyPrefixSeparator}.
+	 * Prefix a key with the namespace and {@link namespaceSeparator}.
 	 * @param {string} key - The key to prefix.
 	 * @param {string} [namespace] - The namespace to prefix the key with.
 	 * @returns {string} `namespace::key` when a namespace is set, otherwise the original key.
 	 */
 	public createKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return `${namespace}${this._keyPrefixSeparator}${key}`;
+			return `${namespace}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -854,7 +854,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 */
 	public getKeyWithoutPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			const prefix = `${namespace}${this._keyPrefixSeparator}`;
+			const prefix = `${namespace}${this._namespaceSeparator}`;
 			if (key.startsWith(prefix)) {
 				return key.slice(prefix.length);
 			}
@@ -983,7 +983,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 	/**
 	 * Builds the `SCAN MATCH` pattern for the keys in the current namespace:
-	 * `<namespace><keyPrefixSeparator>*`, or `*` with no namespace. Glob metacharacters
+	 * `<namespace><namespaceSeparator>*`, or `*` with no namespace. Glob metacharacters
 	 * (`*`, `?`, `[`, `]`, `\`) in the namespace and separator are escaped so they match
 	 * literally; otherwise `clear()` on namespace `tenant*` would also delete `tenant-prod`'s
 	 * keys. A namespace that extends this one with the separator (`users::archive` under `users`)
@@ -995,13 +995,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			return "*";
 		}
 
-		const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
+		const prefix = `${this._namespace}${this._namespaceSeparator}`;
 		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}*`;
 	}
 
 	/**
 	 * Keeps the `SCAN` results that belong to this adapter. With a namespace, those are the keys
-	 * that start with `<namespace><keyPrefixSeparator>`, checked here as well as by the pattern so
+	 * that start with `<namespace><namespaceSeparator>`, checked here as well as by the pattern so
 	 * `clear()` never deletes another namespace's keys whatever glob syntax the server supports.
 	 * With no namespace, those are the keys without the separator, or every key when
 	 * `noNamespaceAffectsAll` is true.
@@ -1010,7 +1010,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 */
 	private filterScannedKeys(keys: string[]): string[] {
 		if (this._namespace) {
-			const prefix = `${this._namespace}${this._keyPrefixSeparator}`;
+			const prefix = `${this._namespace}${this._namespaceSeparator}`;
 			return keys.filter((key) => key.startsWith(prefix));
 		}
 
@@ -1018,7 +1018,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			return keys;
 		}
 
-		return keys.filter((key) => !key.includes(this._keyPrefixSeparator));
+		return keys.filter((key) => !key.includes(this._namespaceSeparator));
 	}
 
 	/**
@@ -1357,8 +1357,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			this._namespace = options.namespace;
 		}
 
-		if (options.keyPrefixSeparator !== undefined) {
-			this._keyPrefixSeparator = options.keyPrefixSeparator;
+		if (options.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = options.namespaceSeparator;
 		}
 
 		if (options.clearBatchSize !== undefined && options.clearBatchSize > 0) {

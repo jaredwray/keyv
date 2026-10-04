@@ -19,13 +19,13 @@ import { isDataExpired, ttlFromExpires } from "../utils.js";
 export type KeyvBridgeAdapterOptions = {
 	/**
 	 * The namespace to use for keys.
-	 * When set, all keys will be prefixed with the namespace followed by the key separator.
+	 * When set, all keys will be prefixed with the namespace followed by the namespace separator.
 	 */
 	namespace?: string;
 	/**
-	 * The separator used between namespace and key. Defaults to ":".
+	 * The separator between the namespace and the key. Defaults to `::`.
 	 */
-	keySeparator?: string;
+	namespaceSeparator?: string;
 };
 
 /**
@@ -95,7 +95,7 @@ export type KeyPrefixData = {
 export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvBridgeStore;
 	private _namespace?: string;
-	private _keySeparator = ":";
+	private _namespaceSeparator = "::";
 	private readonly _capabilities: KeyvStorageCapability;
 	/**
 	 * Whether the wrapped store manages its own namespace (exposes a `namespace` property).
@@ -121,8 +121,8 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		// shared store can host multiple namespaces.
 		this._storeHandlesNamespace = hasKeyvStorageMethods(this._capabilities) && "namespace" in store;
 
-		if (options?.keySeparator) {
-			this._keySeparator = options.keySeparator;
+		if (options?.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = options.namespaceSeparator;
 		}
 
 		if (options?.namespace) {
@@ -169,17 +169,17 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the current key separator used between namespace and key.
+	 * Gets the separator between the namespace and the key. Defaults to `::`.
 	 */
-	public get keySeparator() {
-		return this._keySeparator;
+	public get namespaceSeparator() {
+		return this._namespaceSeparator;
 	}
 
 	/**
-	 * Sets the key separator used between namespace and key.
+	 * Sets the separator between the namespace and the key.
 	 */
-	public set keySeparator(separator: string) {
-		this._keySeparator = separator;
+	public set namespaceSeparator(separator: string) {
+		this._namespaceSeparator = separator;
 	}
 
 	/**
@@ -214,7 +214,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		if (namespace) {
-			return `${namespace}${this._keySeparator}${key}`;
+			return `${namespace}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -226,10 +226,10 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns An object containing the namespace (if present) and the original key
 	 */
 	public getKeyPrefixData(key: string): KeyPrefixData {
-		if (this._namespace && key.startsWith(`${this._namespace}${this._keySeparator}`)) {
+		if (this._namespace && key.startsWith(`${this._namespace}${this._namespaceSeparator}`)) {
 			return {
 				namespace: this._namespace,
-				key: key.slice(this._namespace.length + this._keySeparator.length),
+				key: key.slice(this._namespace.length + this._namespaceSeparator.length),
 			};
 		}
 
@@ -482,7 +482,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 			);
 		}
 
-		const prefix = `${this._namespace}${this._keySeparator}`;
+		const prefix = `${this._namespace}${this._namespaceSeparator}`;
 		const keysToDelete: string[] = [];
 		/* v8 ignore next -- @preserve */
 		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {
@@ -514,7 +514,9 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		// A namespace-managing store already scopes its iterator, so the bridge must not also
 		// filter/strip a prefix it never applied.
 		const prefix =
-			namespace && !this._storeHandlesNamespace ? `${namespace}${this._keySeparator}` : undefined;
+			namespace && !this._storeHandlesNamespace
+				? `${namespace}${this._namespaceSeparator}`
+				: undefined;
 
 		/* v8 ignore next -- @preserve */
 		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {

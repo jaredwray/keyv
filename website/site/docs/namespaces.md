@@ -28,7 +28,7 @@ await cache.get("foo"); // 'cache'
 
 ## How it works in v6
 
-Keyv core does **not** prefix keys itself. It sets `store.namespace`. Official adapters apply that namespace with their own prefixing (Redis `namespace:key`, SQL `WHERE namespace = …`, and so on).
+Keyv core does **not** prefix keys itself. It sets `store.namespace`. Official adapters apply that namespace with their own prefixing (Redis `namespace::key`, SQL `WHERE namespace = …`, and so on).
 
 You can set the namespace on Keyv or on the adapter:
 
@@ -54,7 +54,7 @@ If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on c
 
 ## Memory and Map stores
 
-`KeyvMemoryAdapter` (the default `Map` / LRU wrapper) prefixes keys as `namespace:key` (customizable `keySeparator`). A namespaced `clear()` removes only those keys, which it finds with the underlying store's `keys()` (a standard `Map` has one). A minimal Map-like object without `keys()` can't tell namespaces apart, so a namespaced `clear()` throws instead of wiping the **entire** store.
+`KeyvMemoryAdapter` (the default `Map` / LRU wrapper) prefixes keys as `namespace::key` (customizable `namespaceSeparator`). A namespaced `clear()` removes only those keys, which it finds with the underlying store's `keys()` (a standard `Map` has one). A minimal Map-like object without `keys()` can't tell namespaces apart, so a namespaced `clear()` throws instead of wiping the **entire** store.
 
 ## Bridge / legacy adapters
 
@@ -64,6 +64,24 @@ If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on c
 - Otherwise it prefixes keys itself so one shared async store can host multiple namespaces. A namespaced `clear()` finds those keys with the store's `iterator()`. A store without one can't tell namespaces apart, so `clear()` throws instead of wiping every namespace.
 
 See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
+
+## Namespaces that share a prefix
+
+Most adapters store a key as `<namespace><separator><key>`: the memory adapter, the bridge adapter when it prefixes keys itself, Redis, Valkey, Etcd, DynamoDB, Cloudflare KV, and Memcache. The separator is `::` by default, and each of these adapters takes a `namespaceSeparator` option to change it.
+
+```js
+const store = new KeyvRedis(redis, { namespace: "users", namespaceSeparator: "/" });
+await store.set("foo", "bar"); // stored as users/foo
+```
+
+A namespace that extends another with the separator isn't kept apart from it:
+
+- Clearing or iterating `users` also reaches the entries of `users::archive`, because these adapters find a namespace's entries by its prefix. Memcache is the exception: it clears each namespace on its own and has no iterator.
+- The two can build the same stored key. `archive::x` in `users` and `x` in `users::archive` are one entry, so writing either replaces the other.
+
+Keep the separator out of namespace names when namespaces have to stay apart. With the default `::`, names that contain a single `:`, such as `users:archive`, stay apart from `users`. Valkey's `useSets: true` doesn't change this: it builds keys the same way, and its `iterator()` still finds entries by prefix.
+
+SQLite, PostgreSQL, MySQL, and MongoDB keep the namespace in its own column or field, so their namespaces never overlap. A bridge around an adapter that handles its own namespace leaves the keys to that adapter, so it behaves like the adapter it wraps.
 
 ## Embedding Keyv in a library
 

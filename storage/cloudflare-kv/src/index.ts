@@ -41,8 +41,8 @@ export type KeyvCloudflareKVOptions = {
 	mode?: KeyvCloudflareKVMode;
 	/** Key prefix used to isolate entries belonging to this instance. */
 	namespace?: string;
-	/** Separator placed between the namespace and key. Defaults to `":"`. */
-	keyPrefixSeparator?: string;
+	/** Separator placed between the namespace and key. Defaults to `"::"`. */
+	namespaceSeparator?: string;
 	/**
 	 * A Cloudflare KV binding (the object exposed as `env.MY_KV` in a Worker, or the result of
 	 * Miniflare's `getKVNamespace`). Used by `"bind"` mode.
@@ -94,7 +94,7 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	}
 
 	private _namespace?: string;
-	private _keyPrefixSeparator = ":";
+	private _namespaceSeparator = "::";
 	private _client: CloudflareKVNamespace;
 	private _mode: KeyvCloudflareKVMode;
 	/** Cloudflare rejects native expirations less than 60s in the future. */
@@ -123,8 +123,8 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 			this._namespace = opts.namespace;
 		}
 
-		if (opts.keyPrefixSeparator !== undefined) {
-			this._keyPrefixSeparator = opts.keyPrefixSeparator;
+		if (opts.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = opts.namespaceSeparator;
 		}
 
 		// Resolve the mode: honor an explicit choice, otherwise infer from what was supplied and
@@ -194,19 +194,19 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Gets the separator placed between the namespace and key.
-	 * @default ':'
+	 * @default '::'
 	 * @returns The namespace/key separator.
 	 */
-	public get keyPrefixSeparator(): string {
-		return this._keyPrefixSeparator;
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
 	}
 
 	/**
 	 * Sets the separator placed between the namespace and key.
 	 * @param value - The separator to place between the namespace and key.
 	 */
-	public set keyPrefixSeparator(value: string) {
-		this._keyPrefixSeparator = value;
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	/**
@@ -230,11 +230,11 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	 * Creates a prefixed key by prepending the namespace and separator.
 	 * @param key - The key to prefix
 	 * @param namespace - The namespace to prepend. If not provided, the key is returned as-is.
-	 * @returns The prefixed key (e.g., `'namespace:key'`), or the original key if no namespace is given.
+	 * @returns The prefixed key (e.g., `'namespace::key'`), or the original key if no namespace is given.
 	 */
 	public createKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			return `${namespace}${this._keyPrefixSeparator}${key}`;
+			return `${namespace}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -248,7 +248,7 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	 */
 	public removeKeyPrefix(key: string, namespace?: string): string {
 		if (namespace) {
-			const prefix = `${namespace}${this._keyPrefixSeparator}`;
+			const prefix = `${namespace}${this._namespaceSeparator}`;
 			if (key.startsWith(prefix)) {
 				return key.slice(prefix.length);
 			}
@@ -423,7 +423,7 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	 */
 	public async clear(): Promise<void> {
 		try {
-			const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
+			const prefix = this._namespace ? `${this._namespace}${this._namespaceSeparator}` : "";
 			// Delete in bounded batches so we never buffer every key in memory or fire an
 			// unbounded number of concurrent deletes (which can exhaust sockets or hit KV
 			// rate limits for large namespaces).
@@ -454,7 +454,7 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 		Array<string | Awaited<Value> | undefined>,
 		void
 	> {
-		const prefix = this._namespace ? `${this._namespace}${this._keyPrefixSeparator}` : "";
+		const prefix = this._namespace ? `${this._namespace}${this._namespaceSeparator}` : "";
 
 		for await (const entry of this.listKeys(prefix)) {
 			// The listing already carries metadata, so expired keys are skipped without a read.

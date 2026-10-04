@@ -34,7 +34,7 @@ console.log(keyv.stats.deletes); // 1
 
 ## Per-key LRU maps
 
-Each event type has a `Map<string, number>` capped at `maxEntries` (default **1000**). Keys are `namespace:key` when a namespace is set, otherwise just `key`.
+Each event type has a `Map<string, number>` capped at `maxEntries` (default **1000**). Keys are `namespace::key` when a namespace is set, otherwise just `key`.
 
 | Map | Event |
 | --- | --- |

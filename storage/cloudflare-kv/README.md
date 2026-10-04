@@ -214,7 +214,7 @@ For **`bind`** mode provide a `kvNamespace` binding; for **`rest`** mode provide
 | `apiToken` | `string` | — | Cloudflare API token with Workers KV Edit permission (`rest` mode). |
 | `url` | `string` | `https://api.cloudflare.com/client/v4` | Override the REST base URL (`rest` mode). |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation. |
-| `keyPrefixSeparator` | `string` | `':'` | Separator placed between the namespace and key. |
+| `namespaceSeparator` | `string` | `'::'` | Separator placed between the namespace and key. |
 
 ## Properties
 
@@ -243,13 +243,13 @@ Key prefix for namespace isolation. When set, all keys are prefixed with `namesp
 |---|---|
 | `string \| undefined` | `undefined` |
 
-### .keyPrefixSeparator
+### .namespaceSeparator
 
 The separator between the namespace and key.
 
 | Type | Default |
 |---|---|
-| `string` | `':'` |
+| `string` | `'::'` |
 
 ## Methods
 

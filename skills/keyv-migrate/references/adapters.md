@@ -6,12 +6,12 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 
 - Built on the official `redis` client (`@redis/client` v6). The v4-era 2.x line used `ioredis`; see [v4-to-v5.md](v4-to-v5.md#keyvredis-moved-to-the-official-redis-client).
 - `new KeyvRedis(connect, options)` takes a connection string, `redis` client options, or a client from the exported `createClient`, `createCluster`, or `createSentinel`. `createClient` takes an options object, as in `createClient({ url: 'redis://localhost:6379' })`, not a string.
-- Options: `namespace`, `keyPrefixSeparator` (default `::`), `clearBatchSize`, `useUnlink`, `noNamespaceAffectsAll`, `throwOnConnectError`, `throwOnErrors`, `connectionTimeout`. `throwOnErrors` here is the adapter's own option: keep it. Only the Keyv option of that name was removed.
+- Options: `namespace`, `namespaceSeparator` (default `::`; v5 called it `keyPrefixSeparator`, and v6 ignores that name in plain JavaScript), `clearBatchSize`, `useUnlink`, `noNamespaceAffectsAll`, `throwOnConnectError`, `throwOnErrors`, `connectionTimeout`. `throwOnErrors` here is the adapter's own option: keep it. Only the Keyv option of that name was removed.
   - `throwOnConnectError` (default `true`): a failed connection rejects the operation that tried to connect.
   - `throwOnErrors` (default `false`): a failed command emits `error` and returns `undefined` or `false`; with `true` it rejects instead.
   - Either way, Keyv then applies its own error rule; see [v5-to-v6.md](v5-to-v6.md#errors).
 - The client connects on the first command, not when the adapter is created.
-- The namespace defaults to `undefined`. With a namespace, `clear()` and `iterator()` cover the string keys that start with `<namespace><keyPrefixSeparator>`, matched literally. In v5 a `*`, `?`, `[`, `]` or `\` in either was read as `SCAN` pattern syntax, so `clear()` on namespace `tenant*` also deleted namespace `tenant-prod`. Code that relied on that must clear each namespace itself. With no namespace, `clear()` deletes every string key without the separator in its name.
+- The namespace defaults to `undefined`. With a namespace, `clear()` and `iterator()` cover the string keys that start with `<namespace><namespaceSeparator>`, matched literally. In v5 a `*`, `?`, `[`, `]` or `\` in either was read as `SCAN` pattern syntax, so `clear()` on namespace `tenant*` also deleted namespace `tenant-prod`. Code that relied on that must clear each namespace itself. With no namespace, `clear()` deletes every string key without the separator in its name.
 - A failure is reported once: when the adapter rejects, it no longer also emits `error`.
 - CommonJS: `const KeyvRedis = require('@keyv/redis').default`. There is no named `KeyvRedis` export.
 - `createKeyv(connect, options)` and `createKeyvNonBlocking(connect, options)` return a ready `Keyv`. They no longer set any Keyv error options.
@@ -20,7 +20,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 
 - `useRedisSets` is now `useSets`, and it defaults to `false`. The old name still works as a deprecated getter and setter.
 - The `redis` property is now `client`.
-- Data keys are `namespace:<ns>:<key>`, or `sets:<ns>:<key>` with `useSets: true`. The set that tracks keys is `sets:<ns>` (v5: `namespace:<ns>`).
+- Data keys are `namespace:<ns>::<key>`, or `sets:<ns>::<key>` with `useSets: true`; `namespaceSeparator` (default `::`) sets the separator before the key. The set that tracks keys is `sets:<ns>` (v5: `namespace:<ns>`).
 - Missing values are `undefined`, never `null`.
 - `keyv` is now a peer dependency; install it next to the adapter.
 
@@ -59,9 +59,11 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - Values are handled as strings, not Buffers. `disconnect()` was added.
 - `clear()` removes only the store's own entries: each namespace has a generation token, and `clear()` writes a new one. v4 and v5 flushed the whole server. With no namespace, `noNamespaceAffectsAll: true` flushes it, as before.
 - Values v4 and v5 wrote have no generation token, so v6 reads them as missing.
+- Keys are `<ns>::<key>`. The new `namespaceSeparator` option (default `::`) sets the separator.
 
 ## `@keyv/etcd`
 
+- Keys are `<ns>::<key>`. v4 and v5 used `ns:foo`, so reading their keys needs `namespaceSeparator: ':'`; see [stored-data.md](stored-data.md#etcd-and-dynamodb).
 - The `etcd3` dependency is gone. The adapter talks to etcd's HTTP/JSON gateway, so it needs etcd 3.4 or later with the gateway on (the default).
 - The `lease` property was removed. The store `ttl` option now applies to each key from its own write. In v5 it created one lease at startup that expired every key at once, after which writes failed.
 - `ttlSupport` and `opts` were removed. `store.client` is the adapter's own `EtcdClient`.
@@ -69,6 +71,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 
 ## `@keyv/dynamo`
 
+- Keys are `<ns>::<key>`. v5 used `ns:foo`, so reading its keys needs `namespaceSeparator: ':'`; see [stored-data.md](stored-data.md#etcd-and-dynamodb).
 - Keys written without a TTL no longer get a six-hour expiry. To keep one, set Keyv's `ttl` option: `new Keyv(store, { ttl: 6 * 60 * 60 * 1000 })`.
 - `sixHoursInMilliseconds` was removed. Keys written by v5 keep the expiry they were written with.
 - `ttlSupport` and `opts` were removed.
