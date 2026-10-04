@@ -4,7 +4,7 @@ import process from "node:process";
 import { setTimeout as delay } from "node:timers/promises";
 import { faker } from "@faker-js/faker";
 import type { RedisClientType } from "@redis/client";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import KeyvRedis, {
 	createClient,
 	createKeyv,
@@ -700,19 +700,29 @@ describe("getClient", () => {
 	});
 
 	test("should keep a successful connection alive after connectionTimeout elapses", async () => {
-		// The connect must win the race before the test waits the timeout out, and a busy CI
-		// runner can take longer than 50ms to finish the handshake.
-		const connectionTimeout = 500;
+		// Keyv times the connect with a JS timer, so fake it: the handshake can take as long as a
+		// busy runner needs without losing the race, and the clock jumps past the timeout instead
+		// of the test sleeping through it. node-redis's TCP connectTimeout uses Node's internal
+		// timers, which stay real, so it gets a wide window.
+		const connectionTimeout = 1000;
 		const keyvRedis = new KeyvRedis(redisUri, { connectionTimeout });
 		keyvRedis.on("error", () => {});
-		const client = await keyvRedis.getClient();
-		expect(client.isOpen).toBe(true);
-		await delay(connectionTimeout + 100);
-		const key = faker.string.alphanumeric(10);
-		expect(await keyvRedis.set(key, "ok")).toBe(true);
-		expect(await keyvRedis.get(key)).toBe("ok");
-		await keyvRedis.delete(key);
-		await keyvRedis.disconnect(true);
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		try {
+			const client = await keyvRedis.getClient();
+			await vi.advanceTimersByTimeAsync(connectionTimeout * 2);
+			// The same client, not a reconnect on the next call.
+			expect(client.isOpen).toBe(true);
+			vi.useRealTimers();
+
+			const key = faker.string.alphanumeric(10);
+			expect(await keyvRedis.set(key, "ok")).toBe(true);
+			expect(await keyvRedis.get(key)).toBe("ok");
+			await keyvRedis.delete(key);
+		} finally {
+			vi.useRealTimers();
+			await keyvRedis.disconnect(true);
+		}
 	});
 
 	test("should force disconnect a client that was never opened", async () => {
