@@ -55,7 +55,7 @@ const CIPHER_OPTIONS = { authTagLength: AUTH_TAG_LENGTH } as Record<string, unkn
  * Options for {@link KeyvEncryptNode}.
  */
 export type KeyvEncryptNodeOptions = {
-	/** Encryption key. Strings are hashed with SHA-256 and truncated to the required length. Buffers are used directly and must match the algorithm's key length. */
+	/** Encryption key. Strings are hashed once with SHA-256 (no salt or key stretching) and truncated to the required length, so use a random secret, not a password. Buffers are used directly and must match the algorithm's key length. */
 	key: string | Buffer;
 	/** Cipher algorithm to use. Only authenticated (AEAD) algorithms are supported. @defaultValue `"aes-256-gcm"` */
 	algorithm?: NodeAlgorithm;

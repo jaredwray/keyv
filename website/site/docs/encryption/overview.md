@@ -22,6 +22,8 @@ await keyv.set("secret", { token: "…" });
 await keyv.get("secret"); // decrypted automatically
 ```
 
+Use a random secret as the key, such as the output of `openssl rand -base64 32`, kept out of source control. Both adapters hash a string key once with SHA-256, with no salt or key stretching, so a password or passphrase can be guessed offline from a single stored value. You can also pass the raw key bytes (`Buffer` or `Uint8Array`) at the algorithm's key length. If the key has to come from a password or passphrase, derive those bytes with PBKDF2 first: the [encrypt-node](/docs/encryption/encrypt-node/) and [encrypt-web](/docs/encryption/encrypt-web/) pages show how.
+
 ## Official adapters
 
 | Package | Runtime | Default cipher |

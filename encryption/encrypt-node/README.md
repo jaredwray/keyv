@@ -21,7 +21,8 @@ npm install --save keyv @keyv/encrypt-node
 import Keyv from 'keyv';
 import KeyvEncryptNode from '@keyv/encrypt-node';
 
-const encryption = new KeyvEncryptNode({ key: 'your-secret-key' });
+// A random secret, such as the output of `openssl rand -base64 32` (see options.key)
+const encryption = new KeyvEncryptNode({ key: process.env.KEYV_SECRET });
 const keyv = new Keyv({ encryption });
 
 await keyv.set('foo', 'bar');
@@ -39,7 +40,7 @@ Encryption runs on the serialized value, so it needs serialization, which is on 
 Type: `string | Buffer`\
 **Required**
 
-The encryption key. String keys are hashed with SHA-256 and truncated to the required length for the algorithm. Buffer keys are used directly and must match the expected key length.
+The encryption key. A string key is hashed once with SHA-256, with no salt or key stretching, and truncated to the length the algorithm needs. That's safe for a random secret but not for a password or passphrase: anyone who reads one stored value can test guesses offline at full speed. Use a random secret, such as the output of `openssl rand -base64 32`, and keep it out of source control. Buffer keys are used directly and must match the expected key length. To use a password or passphrase, derive the key with PBKDF2 first; see [Using a password or passphrase](#using-a-password-or-passphrase).
 
 #### options.algorithm
 
@@ -60,6 +61,23 @@ Type: `NodeEncoding`\
 Default: `'base64'`
 
 The encoding used for the encrypted output string: `'base64'`, `'base64url'`, or `'hex'`. Other encodings can't hold arbitrary bytes, so they throw when the adapter is created.
+
+## Using a password or passphrase
+
+If the key has to come from something a person chooses, derive the key bytes with PBKDF2 and pass those instead of the string. PBKDF2 repeats the hash many times, so every guess costs an attacker the same work:
+
+```javascript
+import { pbkdf2Sync } from 'node:crypto';
+import KeyvEncryptNode from '@keyv/encrypt-node';
+
+// Derive the key once at startup: 600,000 iterations of PBKDF2-HMAC-SHA256 take on the order of 100 ms.
+// The salt is a random value you generate once (`openssl rand -base64 16`) and keep with your
+// configuration. It isn't secret, but reading values back needs the same passphrase and salt.
+const key = pbkdf2Sync(process.env.KEYV_PASSPHRASE, process.env.KEYV_SALT, 600_000, 32, 'sha256');
+const encryption = new KeyvEncryptNode({ key });
+```
+
+The key length must match the algorithm: 32 bytes for `aes-256-gcm`, `aes-256-ccm`, and `chacha20-poly1305`, 24 for the `aes-192` algorithms, and 16 for the `aes-128` ones.
 
 ## License
 
