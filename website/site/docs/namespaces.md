@@ -65,6 +65,12 @@ If [sanitization](/docs/sanitization/) is enabled, the namespace is cleaned on c
 
 See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
 
+## Namespaces that share a prefix
+
+Most adapters store a key as `<namespace><separator><key>` and find a namespace's entries by that prefix. That includes the memory and bridge adapters above, Redis, Valkey, Etcd, DynamoDB, and Cloudflare KV. A namespace that extends another with the separator shares that prefix: with the default `:` separator, clearing or iterating `users` also reaches the entries of `users:archive`. Keep the separator out of namespace names when namespaces have to stay apart. Valkey's `useSets: true` keeps `clear()` separate; see its README.
+
+SQLite, PostgreSQL, MySQL, and MongoDB keep the namespace in its own column or field, and Memcache tracks each namespace separately, so their namespaces never overlap this way.
+
 ## Embedding Keyv in a library
 
 Always set a namespace when you wrap Keyv inside another module so callers can `.clear()` without destroying unrelated app data.
