@@ -52,12 +52,6 @@ The cipher algorithm to use. Supported values, all AES-GCM, which is authenticat
 
 Any other algorithm throws when the adapter is created.
 
-## Upgrading from a 6.0.0 pre-release
-
-The 6.0.0 pre-releases also offered AES-CBC (`aes-128-cbc`, `aes-192-cbc`, `aes-256-cbc`). This release accepts only AES-GCM: creating the adapter with AES-CBC throws, and values encrypted with it can't be decrypted. To keep those values, re-encrypt them before you upgrade. While still on the pre-release, read each value with your AES-CBC adapter and write it back with an AES-GCM one. A cache can instead start empty and refill.
-
-Values encrypted with AES-GCM need no change.
-
 ## License
 
 [MIT © Jared Wray](LICENSE)
