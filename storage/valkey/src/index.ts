@@ -1,6 +1,6 @@
 import calculateSlot from "cluster-key-slot";
 import { Hookified } from "hookified";
-import Redis, { type Cluster, type Valkey } from "iovalkey";
+import { type Cluster, Valkey } from "iovalkey";
 import Keyv, {
 	type KeyvAny,
 	type KeyvStorageAdapter,
@@ -107,7 +107,7 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 				...options,
 			};
 			this._client =
-				options.uri === undefined ? new Redis(options) : new Redis(options.uri, options);
+				options.uri === undefined ? new Valkey(options) : new Valkey(options.uri, options);
 		}
 
 		if (options !== undefined && options.useSets !== undefined) {
@@ -188,18 +188,18 @@ export class KeyvValkey extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Gets the underlying iovalkey Redis or Cluster client instance.
 	 * Can be used to access the raw client for advanced operations not exposed by the adapter.
-	 * @returns {Redis | Cluster} The iovalkey Redis or Cluster instance.
+	 * @returns {Valkey | Cluster} The iovalkey Valkey or Cluster instance.
 	 */
-	public get client(): Redis | Cluster {
-		return this._client as Redis | Cluster;
+	public get client(): Valkey | Cluster {
+		return this._client as Valkey | Cluster;
 	}
 
 	/**
 	 * Replaces the underlying iovalkey Redis or Cluster client instance. This re-wires the
 	 * event listeners so errors from the new client continue to be re-emitted on the adapter.
-	 * @param {Redis | Cluster} value - The new iovalkey Redis or Cluster instance to use.
+	 * @param {Valkey | Cluster} value - The new iovalkey Valkey or Cluster instance to use.
 	 */
-	public set client(value: Redis | Cluster) {
+	public set client(value: Valkey | Cluster) {
 		this._client = value;
 		this.initClient();
 	}
