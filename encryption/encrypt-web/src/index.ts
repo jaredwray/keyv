@@ -89,7 +89,7 @@ function concat(...arrays: Uint8Array[]): Uint8Array<ArrayBuffer> {
  * ```
  */
 export class KeyvEncryptWeb implements KeyvEncryptionAdapter {
-	private readonly _keyPromise: Promise<CryptoKey>;
+	private readonly _keyPromise: ReturnType<typeof crypto.subtle.importKey>;
 
 	/**
 	 * Creates a new encryption adapter.
