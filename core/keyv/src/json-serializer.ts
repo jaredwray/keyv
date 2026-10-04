@@ -84,7 +84,9 @@ function prepare(value: KeyvAny): KeyvAny {
 			return prepare(value.toJSON());
 		}
 
-		const result: Record<string, KeyvAny> = {};
+		// No prototype, so an own `__proto__` key (as JSON.parse creates) is copied like any other
+		// key instead of hitting the prototype setter and being dropped.
+		const result: Record<string, KeyvAny> = Object.create(null);
 		for (const key of Object.keys(value)) {
 			if (value[key] !== undefined) {
 				result[key] = prepare(value[key]);

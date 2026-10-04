@@ -46,17 +46,11 @@ The encryption key. String keys are hashed with SHA-256 and truncated to the req
 Type: `WebAlgorithm`\
 Default: `'aes-256-gcm'`
 
-The cipher algorithm to use. Supported values:
+The cipher algorithm to use. Supported values, all AES-GCM, which is authenticated (AEAD):
 
-- `aes-256-gcm`, `aes-192-gcm`, `aes-128-gcm` (AEAD, recommended)
-- `aes-256-cbc`, `aes-192-cbc`, `aes-128-cbc`
+- `aes-256-gcm`, `aes-192-gcm`, `aes-128-gcm`
 
-## Cross-Compatibility
-
-Data encrypted with `@keyv/encrypt-web` using AES-GCM or AES-CBC can be decrypted by `@keyv/encrypt-node` (and vice versa) when using the same key and algorithm. Both packages use the same wire format:
-
-- **AES-GCM**: `base64([IV (12 bytes) || AuthTag (16 bytes) || Ciphertext])`
-- **AES-CBC**: `base64([IV (16 bytes) || Ciphertext])`
+Any other algorithm throws when the adapter is created.
 
 ## License
 
