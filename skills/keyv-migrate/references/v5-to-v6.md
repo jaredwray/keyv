@@ -16,6 +16,8 @@ const keyv = new Keyv(store, { namespace: 'keyv' });
 
 A namespace passed to Keyv takes precedence over one set on the adapter. When Keyv has none, the adapter keeps its own.
 
+Adapters that join the namespace and key into one string put `::` between them by default, and each takes a `namespaceSeparator` option to change it. That covers the `KeyvMemoryAdapter` and `KeyvBridgeAdapter` wrappers, Redis, Valkey, Etcd, DynamoDB, Cloudflare KV, and Memcache. v5's Keyv joined them with `:`, so reading keys v5 wrote to Etcd, DynamoDB, or Valkey also needs `namespaceSeparator: ':'`; see [stored-data.md](stored-data.md). `@keyv/redis` called the option `keyPrefixSeparator`, and v6 ignores that name in plain JavaScript, so rename it.
+
 These forms all still work: `new Keyv(store, options)`, `new Keyv({ store, ...options })`, and in ESM both `import Keyv from 'keyv'` and `import { Keyv } from 'keyv'`. Only the options changed.
 
 ## `opts`
