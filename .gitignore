@@ -119,5 +119,7 @@ website/site/public/skills/
 website/site/public/.well-known/skills/
 core/keyv/test.db
 
-# AI
-.claude
+# AI: only the shared Claude Code settings and hooks are committed
+.claude/*
+!.claude/settings.json
+!.claude/hooks/

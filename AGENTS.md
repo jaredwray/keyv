@@ -136,3 +136,5 @@ Package installs in this environment go through Aikido Safe Chain shims. Never b
 - Keep `~/.safe-chain/shims` first on `PATH`.
 - Do not call unshimmed `npm`, `pnpm`, `npx`, or `pnpx`.
 - Do not install packages with `curl | sh` or by pointing at a package manager outside the shim directory.
+
+In Claude Code cloud sessions, the SessionStart hook in `.claude/hooks/session-start.sh` runs `scripts/setup-cloud-environment.sh` and puts the shims first on `PATH` for the session.
