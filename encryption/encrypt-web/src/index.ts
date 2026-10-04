@@ -17,7 +17,7 @@ export type WebAlgorithm = "aes-128-gcm" | "aes-192-gcm" | "aes-256-gcm";
  * Options for {@link KeyvEncryptWeb}.
  */
 export type KeyvEncryptWebOptions = {
-	/** Encryption key. Strings are hashed with SHA-256 and truncated to the required length. Uint8Array keys are used directly and must match the algorithm's key length. */
+	/** Encryption key. Strings are hashed once with SHA-256 (no salt or key stretching) and truncated to the required length, so use a random secret, not a password. Uint8Array keys are used directly and must match the algorithm's key length. */
 	key: string | Uint8Array<ArrayBuffer>;
 	/** Algorithm. @defaultValue `"aes-256-gcm"` */
 	algorithm?: WebAlgorithm;
