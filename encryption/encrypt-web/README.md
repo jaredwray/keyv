@@ -21,7 +21,9 @@ npm install --save keyv @keyv/encrypt-web
 import Keyv from 'keyv';
 import KeyvEncryptWeb from '@keyv/encrypt-web';
 
-// A random secret, such as the output of `openssl rand -base64 32` (see options.key)
+// Placeholder: use a random secret, such as the output of `openssl rand -base64 32` (see options.key),
+// loaded from your runtime's secrets (an environment variable, a Workers secret) rather than written here.
+const secret = 'replace-with-a-random-secret';
 const encryption = new KeyvEncryptWeb({ key: secret });
 const keyv = new Keyv({ encryption });
 
@@ -60,9 +62,13 @@ If the key has to come from something a person chooses, derive the key bytes wit
 ```javascript
 import KeyvEncryptWeb from '@keyv/encrypt-web';
 
+// Placeholders: load the passphrase from your runtime's secrets. The salt is a random value you
+// generate once (`openssl rand -base64 16`) and keep with your configuration. It isn't secret, but
+// reading values back needs the same passphrase and salt.
+const passphrase = 'replace-with-your-passphrase';
+const salt = 'replace-with-your-salt';
+
 // Derive the key once at startup: 600,000 iterations of PBKDF2-HMAC-SHA256 take on the order of 100 ms.
-// The salt is a random value you generate once (`openssl rand -base64 16`) and keep with your
-// configuration. It isn't secret, but reading values back needs the same passphrase and salt.
 const encoder = new TextEncoder();
 const passphraseKey = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveBits']);
 const bits = await crypto.subtle.deriveBits(
