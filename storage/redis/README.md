@@ -543,7 +543,7 @@ You connect to Redis Cloud the same way you connect to any Redis server, with a 
 
 The database endpoint (host and port) is on the database's **Configuration** tab in the Redis Cloud console: in the **Access** section for Essentials databases, or the **General** section for Pro databases. By default the database has a user named `default`. To see its password, use **Default user** > **Configure** for an Essentials database, or the **Security** section of the **Configuration** tab for a Pro database. If you turned on role-based access control and turned off the default user, use the username and password of a data access role instead.
 
-With TLS turned on, the URI uses the `rediss://` scheme (two `s`'s):
+With TLS turned on, the URI uses the `rediss://` scheme (two `s`'s). Without `redis_ca.pem`, the URI below fails to connect when the database's certificate was issued by a Redis Cloud CA, so trust that CA as shown in [Trusting `redis_ca.pem`](#trusting-redis_capem).
 
 ```js
 import Keyv from 'keyv';
