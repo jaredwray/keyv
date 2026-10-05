@@ -537,20 +537,31 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 
 # Redis Cloud
 
-A Redis Cloud database has an endpoint (a host and a port) on its Configuration tab. The default user is named `default`, and the password is that user's password. If role-based access control is on and the default user is off, use the username and password for the data access role.
+You connect to Redis Cloud the same way you connect to any Redis server, with a URI or with Redis client options. `KeyvRedis` creates a client from a URI string. It passes an options object, unchanged except for `connectionTimeout` when you set it, to `createClient` from `@redis/client`. That means `url`, `username`, `password`, and every `socket` TLS option work exactly as documented for `@redis/client`. `createKeyv` accepts the same arguments.
 
-TLS is off until you enable it. Paid Redis Cloud Essentials and Redis Cloud Pro plans can use it, and Redis Cloud recommends it for a public endpoint. It is not available on the Free plan. Once TLS is enabled, every client connection has to use TLS. This adapter passes a URI or a `@redis/client` options object through to `createClient`. A `rediss://` URL turns TLS on. An options object can set `username`, `password`, and `socket.tls` instead. Download `redis_ca.pem` from the Redis Cloud console and pass the whole file as `socket.ca` (the `ca`, `cert`, and `key` fields from [TLS Support](#tls-support)). The file contains more than one certificate.
+## Endpoint and credentials
 
-Replace `endpoint` and `12345` with the host and port from the console. Percent-encode reserved characters in a password that is embedded in the URI. `createKeyv` accepts the same URI or options object.
+The database endpoint (host and port) is on the database's **Configuration** tab in the Redis Cloud console: in the **Access** section for Essentials databases, or the **General** section for Pro databases. By default the database has a user named `default`. To see its password, use **Default user** > **Configure** for an Essentials database, or the **Security** section of the **Configuration** tab for a Pro database. If you turned on role-based access control and turned off the default user, use the username and password of a data access role instead.
+
+With TLS turned on, the URI uses the `rediss://` scheme (two `s`'s):
 
 ```js
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-const keyv = new Keyv(new KeyvRedis('rediss://default:password@endpoint:12345'));
+const keyv = new Keyv(new KeyvRedis('rediss://default:password@redis-host:12345'));
+keyv.on('error', (error) => console.error('Redis error', error));
 ```
 
-That URI sets the user, password, host, port, and TLS. To trust `redis_ca.pem`, pass client options. Leave `rejectUnauthorized` unset so certificate checks stay on. `socket.tls` has to agree with the URL scheme: `true` with `rediss://`.
+Replace `password`, `redis-host`, and `12345` with your values. Encode a password that contains reserved URI characters, such as `@`, `:`, `/`, or `#`, with `encodeURIComponent`. A `redis://` URI connects without TLS, which a TLS-enabled database refuses.
+
+## Turning on TLS
+
+TLS is off by default. Turn it on from the **Security** section of the database's **Configuration** tab. It is available on paid Essentials and Pro plans, but not on the Free plan. Redis Cloud recommends TLS for any database reached over its public endpoint. Once TLS is on, every connection must use it.
+
+## Trusting `redis_ca.pem`
+
+Download the Redis Cloud CA bundle, `redis_ca.pem`, with **Download server certificate** on the database's **Configuration** tab, or from **Account Settings** > **Security**. The file holds several certificates, including Redis Cloud's own root CAs, which Node.js does not trust by default. Without the bundle, a `rediss://` URI checks the certificate only against Node.js's built-in CAs, which fails for databases whose certificates were issued by a Redis Cloud CA. Pass the whole file as `socket.ca`. Node.js loads every certificate in it.
 
 ```js
 import fs from 'node:fs';
@@ -558,26 +569,23 @@ import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
 const keyv = new Keyv(new KeyvRedis({
-  url: 'rediss://default:password@endpoint:12345',
+  url: 'rediss://default:password@redis-host:12345',
   socket: {
     tls: true,
     ca: fs.readFileSync('/path/to/redis_ca.pem'),
   },
 }));
+keyv.on('error', (error) => console.error('Redis error', error));
 ```
 
-The same options accept a host, port, username, and password instead of a URL:
+You can set the host, port, and credentials as separate options instead of a `url`:
 
 ```js
-import fs from 'node:fs';
-import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
-
 const keyv = new Keyv(new KeyvRedis({
   username: 'default',
   password: 'password',
   socket: {
-    host: 'endpoint',
+    host: 'redis-host',
     port: 12345,
     tls: true,
     ca: fs.readFileSync('/path/to/redis_ca.pem'),
@@ -585,28 +593,33 @@ const keyv = new Keyv(new KeyvRedis({
 }));
 ```
 
-If the database requires client authentication, add the client certificate and private key on that `socket`:
+Keep these points in mind:
+
+- Leave `rejectUnauthorized` unset so Node.js verifies the certificate. The [TLS Support](#tls-support) sample sets it to `false`, which is only suitable for a local server with a self-signed certificate.
+- Connect with the endpoint hostname from the console, not an IP address. The certificate check compares hostnames.
+- `socket.tls` must match the URI scheme, so it must be `true` with `rediss://`. Otherwise `@redis/client` throws.
+- A URI string gets the adapter's [`defaultReconnectStrategy`](#helpers). With an options object, `@redis/client` uses its own reconnect behavior unless you set `socket.reconnectStrategy`, for example to `defaultReconnectStrategy`, which you can import from `@keyv/redis`.
+
+## Mutual TLS
+
+If the database requires client authentication (**Mutual TLS** in the TLS settings), add the client certificate and private key you registered there to the same `socket` options:
 
 ```js
-import fs from 'node:fs';
-import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
-
 const keyv = new Keyv(new KeyvRedis({
   username: 'default',
   password: 'password',
   socket: {
-    host: 'endpoint',
+    host: 'redis-host',
     port: 12345,
     tls: true,
     ca: fs.readFileSync('/path/to/redis_ca.pem'),
-    cert: fs.readFileSync('/path/to/redis_user.crt'),
-    key: fs.readFileSync('/path/to/redis_user_private.key'),
+    cert: fs.readFileSync('/path/to/client.crt'),
+    key: fs.readFileSync('/path/to/client.key'),
   },
 }));
 ```
 
-Other hosted Redis services use this same TLS pattern: a `rediss://` URL, or `socket.tls` set to `true`, plus the CA they provide.
+Other hosted Redis services use the same pattern: a `rediss://` URI or `socket.tls: true`, plus the CA certificate the provider gives you.
 
 # API
 

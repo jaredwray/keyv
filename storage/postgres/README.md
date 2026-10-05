@@ -574,21 +574,28 @@ For more details on SSL configuration, see the [node-postgres SSL documentation]
 
 # Amazon RDS for PostgreSQL
 
-Amazon RDS for PostgreSQL gives the instance an endpoint hostname, such as `mydb.123456789012.us-east-1.rds.amazonaws.com`. Use that hostname, the instance port (`5432` unless you changed it), the database name, and the database user in the same `uri` as a local Postgres URL:
+`@keyv/postgres` connects to Amazon RDS for PostgreSQL with the same `uri` and `ssl` options it uses for any PostgreSQL server. The adapter passes `uri` to `pg` as its `connectionString` and passes `ssl` to `pg` unchanged, so the TLS settings below are standard `pg` settings. `createKeyv` accepts the same options.
+
+## Connection URI
+
+The endpoint and port are on the **Connectivity & security** tab of the DB instance in the RDS console. Put them in a regular PostgreSQL URI along with the database user, password, and database name:
 
 ```js
 const uri = 'postgresql://user:pass@mydb.123456789012.us-east-1.rds.amazonaws.com:5432/dbname';
-const keyvPostgres = new KeyvPostgres({ uri });
-const keyv = new Keyv({ store: keyvPostgres });
 ```
 
-Percent-encode reserved characters in the user or password (`@`, `:`, `/`, `#`) before placing them in the URI.
+If the user name or password contains reserved URI characters such as `@`, `:`, `/`, or `#`, encode it first:
 
-The adapter passes `uri` to `pg` as `connectionString`, and it passes `ssl` through to `pg` unchanged (`true`, `false`, or a Node.js `tls.ConnectionOptions` object). `pg` also reads `sslmode`, `sslrootcert`, and the other SSL query parameters on the URI.
+```js
+const password = encodeURIComponent(process.env.RDS_PASSWORD);
+const uri = `postgresql://keyv:${password}@mydb.123456789012.us-east-1.rds.amazonaws.com:5432/dbname`;
+```
 
-RDS signs the server certificate with the Amazon RDS CA, which is not in Node.js's default trust store. For production, verify that certificate with the RDS CA bundle (`global-bundle.pem`, or the bundle for the instance's region) from [Using SSL/TLS to encrypt a connection to a DB instance](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html). `ssl: { rejectUnauthorized: false }` and `sslmode=no-verify` skip certificate checks. The sample under [SSL/TLS Connections](#ssltls-connections) is for local servers where that is acceptable.
+RDS for PostgreSQL 15 and later reject connections that don't use SSL, because the `rds.force_ssl` parameter defaults to `1`. On earlier versions it defaults to `0`. Encrypt and verify the connection in production either way.
 
-Pass the bundle on `ssl.ca`. The adapter forwards that object to `pg`:
+## Verifying the server certificate with the RDS CA bundle
+
+RDS signs its server certificates with Amazon RDS certificate authorities, and Node.js does not trust those by default. Download the CA bundle from [Using SSL/TLS to encrypt a connection to a DB instance](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html). `global-bundle.pem` covers every commercial AWS Region, and each Region also has its own bundle. Pass the bundle as `ssl.ca`:
 
 ```js
 import fs from 'node:fs';
@@ -604,9 +611,16 @@ const keyvPostgres = new KeyvPostgres({
 const keyv = new Keyv({ store: keyvPostgres });
 ```
 
-With `ca` set and `rejectUnauthorized` left at its default (`true`), the connection checks the server certificate and that the certificate hostname matches the endpoint.
+`rejectUnauthorized` defaults to `true`, so Node.js checks that the certificate was signed by an RDS CA and that it was issued for the hostname in `uri`. Connect with the RDS endpoint hostname. An IP address or your own DNS alias fails the hostname check.
 
-The same settings can live on the URI instead of the `ssl` option. `pg` parses them:
+Don't use these settings for RDS in production:
+
+- `ssl: true` encrypts the connection but checks the certificate only against Node.js's built-in CAs. Verification fails because the RDS CAs aren't among them.
+- `ssl: { rejectUnauthorized: false }` connects, but accepts any certificate, so it does not protect against an attacker in the middle. The [SSL/TLS Connections](#ssltls-connections) sample uses it, and it is only suitable for local or test servers.
+
+## Configuring TLS in the URI
+
+`pg` also reads SSL settings from query parameters on the URI, so you can configure TLS there instead of with the `ssl` option:
 
 ```js
 const keyvPostgres = new KeyvPostgres(
@@ -614,9 +628,9 @@ const keyvPostgres = new KeyvPostgres(
 );
 ```
 
-`sslmode=verify-full` encrypts the connection, verifies the CA, and verifies the endpoint hostname. In current `pg`, `sslmode=prefer`, `sslmode=require`, and `sslmode=verify-ca` are treated as `verify-full` and emit a warning, so set `verify-full` explicitly. `sslrootcert` is a filesystem path to the bundle; `pg` reads that file.
-
-When the URI includes SSL query parameters and you also pass `ssl`, `pg` applies the parameters from the URI. Set TLS in one place: the `ssl` option or the URI.
+- Use `sslmode=verify-full`, which verifies both the CA and the hostname. `pg` 8 treats `prefer`, `require`, and `verify-ca` as `verify-full` and logs a security warning. As a result, `sslmode=require` without `sslrootcert` fails against RDS for the same reason `ssl: true` does.
+- `sslrootcert` is a file path, and `pg` reads the bundle from that file.
+- When the URI has SSL parameters, `pg` builds its SSL settings from the URI and ignores the `ssl` option. Configure TLS in one place, either on the URI or with `ssl`.
 
 # Testing
 
