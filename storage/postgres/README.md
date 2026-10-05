@@ -47,9 +47,6 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 - [Connection Pooling](#connection-pooling)
 - [SSL/TLS Connections](#ssltls-connections)
 - [Amazon RDS for PostgreSQL](#amazon-rds-for-postgresql)
-  - [Connection URI](#connection-uri)
-  - [Verifying the server certificate with the RDS CA bundle](#verifying-the-server-certificate-with-the-rds-ca-bundle)
-  - [Configuring TLS in the URI](#configuring-tls-in-the-uri)
 - [Testing](#testing)
 - [License](#license)
 
