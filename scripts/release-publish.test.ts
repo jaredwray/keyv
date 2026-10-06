@@ -1,5 +1,13 @@
 import { describe, expect, test } from "vitest";
-import { computeDistTag, isVersionGte, packArgs, packedTarballFor, parseVersion, publishArgs } from "./release-publish.ts";
+import {
+	computeDistTag,
+	isVersionGte,
+	oidcExchangeSucceeded,
+	packArgs,
+	packedTarballFor,
+	parseVersion,
+	publishArgs,
+} from "./release-publish.ts";
 
 describe("parseVersion", () => {
 	test("parses a stable version", () => {
@@ -95,23 +103,24 @@ describe("packedTarballFor / packArgs", () => {
 });
 
 describe("publishArgs", () => {
-	test("builds the exact pnpm stage publish command for a tarball + tag", () => {
+	test("builds the exact npm stage publish command for a tarball + tag", () => {
 		expect(publishArgs("./packed/keyv.tgz", "beta")).toEqual([
 			"stage",
 			"publish",
 			"./packed/keyv.tgz",
 			"--tag",
 			"beta",
-			"--no-git-checks",
 			"--access",
 			"public",
 			"--provenance",
+			"--loglevel",
+			"verbose",
 		]);
 	});
 
 	test("uses the given tarball and tag", () => {
-		expect(`pnpm ${publishArgs("./packed/keyv-redis.tgz", "v5-lts").join(" ")}`).toBe(
-			"pnpm stage publish ./packed/keyv-redis.tgz --tag v5-lts --no-git-checks --access public --provenance",
+		expect(`npm ${publishArgs("./packed/keyv-redis.tgz", "v5-lts").join(" ")}`).toBe(
+			"npm stage publish ./packed/keyv-redis.tgz --tag v5-lts --access public --provenance --loglevel verbose",
 		);
 	});
 
@@ -121,5 +130,38 @@ describe("publishArgs", () => {
 	test("always includes --provenance (required for npm provenance attestation)", () => {
 		expect(publishArgs("./packed/keyv.tgz", "latest")).toContain("--provenance");
 		expect(publishArgs("./packed/keyv-redis.tgz", "beta")).toContain("--provenance");
+	});
+});
+
+describe("oidcExchangeSucceeded", () => {
+	test("finds a successful token exchange in npm's verbose log", () => {
+		const log = [
+			"npm verbose cli /usr/local/bin/node /usr/local/bin/npm",
+			"npm http fetch POST 201 https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/keyv 312ms",
+			"npm notice Staging to https://registry.npmjs.org/ with tag latest and public access (dry-run)",
+		].join("\n");
+		expect(oidcExchangeSucceeded(log)).toBe(true);
+	});
+
+	test("accepts an escaped scoped package name", () => {
+		expect(
+			oidcExchangeSucceeded(
+				"npm http fetch POST 200 https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/@keyv%2fredis 98ms",
+			),
+		).toBe(true);
+	});
+
+	test("rejects a failed exchange, such as no trusted publisher allowing the command", () => {
+		const log = [
+			"npm http fetch POST 404 https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/keyv 120ms",
+			"npm verbose oidc Failed token exchange request with body message: Unknown error",
+			"npm warn stage publish This command requires you to be logged in to https://registry.npmjs.org/ (dry-run)",
+		].join("\n");
+		expect(oidcExchangeSucceeded(log)).toBe(false);
+	});
+
+	test("ignores successful requests that are not the token exchange", () => {
+		expect(oidcExchangeSucceeded("npm http fetch POST 201 https://registry.npmjs.org/-/stage/package/keyv 512ms")).toBe(false);
+		expect(oidcExchangeSucceeded("")).toBe(false);
 	});
 });

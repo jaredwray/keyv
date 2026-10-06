@@ -54,7 +54,7 @@ pnpm update
 
 Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** branch (maintenance / LTS). Both publish to npm through the same GitHub Actions workflow file, `.github/workflows/release.yaml` (each branch carries its own copy), using **npm staged publishing** with **OIDC trusted publishing** and **provenance**:
 
-- CI never publishes live. It builds, tests, packs each package and runs `pnpm stage publish … --provenance`, which puts the version in npm's stage queue with a provenance attestation.
+- CI never publishes live. It builds, tests, packs each package with pnpm and runs `npm stage publish … --provenance`, which puts the version in npm's stage queue with a provenance attestation. Staging goes through npm, not pnpm: npm's OIDC token exchange tells the registry the token is for `npm stage publish`, the only command the stage-only trusted publisher allows, and npm logs why an exchange failed.
 - A maintainer then approves each staged version on npm with 2FA; only then does it become installable.
 - There are no npm tokens anywhere. The trusted publisher on npmjs.com (repo `jaredwray/keyv`, workflow `release.yaml`, environment `release`) is configured **stage-only**, and because both branches use the same workflow filename one configuration covers both lines.
 
@@ -73,7 +73,9 @@ Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** 
 2. Create a GitHub Release from a new tag on `main` (for example `v6.1.0` or `v6.1.0-beta.1`). Publishing it runs the `release` workflow from that tag: build, the full test suite, the Aikido release scan, the release-logic tests, then the stage step. Versions already on npm are skipped, and a release that would move `latest` backwards is refused.
 3. Approve the staged versions on npm (see [Approving staged versions](#approving-staged-versions-both-lines)).
 
-To preview without staging anything: Actions → `release` → **Run workflow** (Dry run is on by default).
+To preview without staging anything: Actions → `release` → **Run workflow** (Dry run is on by default). The dry run also runs `npm stage publish --dry-run` for each package that would be staged, which checks that the package's trusted publisher grants a stage token without uploading anything.
+
+If the stage step fails after you publish the GitHub Release, the Release can't be moved to a new commit. Fix the cause on `main`, then run the workflow from `main` with **Dry run** unchecked. It stages the version in `package.json`, and versions already on npm are skipped.
 
 ## Releasing v5 from the `v5` branch
 

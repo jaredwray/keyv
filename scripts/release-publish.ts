@@ -37,12 +37,22 @@
  * ## Why everything is a single `stage publish --tag` (no `npm dist-tag add`)
  *
  * The release workflow authenticates to npm with OIDC trusted publishing (no
- * long-lived NPM_TOKEN). CI packs each package and runs `pnpm stage publish`
- * so the version lands in npm's staging queue, not live on the registry. A
- * maintainer promotes the staged artifact with 2FA. OIDC authorizes the
- * publish/stage command only — it does NOT authorize `npm dist-tag add`
- * (npm/cli#8547). So this script never calls `dist-tag add`; it applies
- * exactly one tag per package via `stage publish --tag`.
+ * long-lived NPM_TOKEN). CI packs each package with pnpm and stages the tarball
+ * with `npm stage publish`, so the version lands in npm's staging queue, not
+ * live on the registry. A maintainer promotes the staged artifact with 2FA.
+ * OIDC authorizes the publish/stage command only — it does NOT authorize
+ * `npm dist-tag add` (npm/cli#8547). So this script never calls `dist-tag add`;
+ * it applies exactly one tag per package via `stage publish --tag`.
+ *
+ * ## Why staging runs through npm, not pnpm
+ *
+ * The trusted publishers on npmjs.com are stage-only: they allow
+ * `npm stage publish` and nothing else. The npm CLI is the client npm documents
+ * for staged publishing, and its OIDC token exchange names the command the token
+ * is for (`npm-command: stage`); pnpm's exchange names none. When an exchange
+ * fails, pnpm only warns and then stages without credentials, so the job shows
+ * a bare 403. npm logs the exchange and its failure at `--loglevel verbose`,
+ * and its dry run runs the same exchange, which the CI dry run checks below.
  *
  * ## Safety properties
  *
@@ -86,7 +96,7 @@
  * when the file is run directly, so importing it for tests has no side effects.
  */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -133,7 +143,7 @@ export function parseVersion(version: string): ParsedVersion {
 }
 
 export type DistTagPlan = {
-	/** The single tag passed to `pnpm stage publish --tag`. */
+	/** The single tag passed to `npm stage publish --tag`. */
 	tag: string;
 	/** Whether this release moves the `latest` tag (triggers the downgrade guard). */
 	setsLatest: boolean;
@@ -342,7 +352,7 @@ function currentLatest(name: string): string | undefined {
 
 /**
  * Relative tarball path for a workspace package (`./` prefix required so
- * `pnpm stage publish` treats it as a local path). Scoped names are flattened
+ * `npm stage publish` treats it as a local path). Scoped names are flattened
  * (`@keyv/redis` -> `keyv-redis`).
  */
 export function packedTarballFor(name: string): string {
@@ -357,15 +367,17 @@ export function packArgs(name: string): string[] {
 }
 
 /**
- * The exact `pnpm` argument list used to stage a packed tarball — the single
- * source of truth so the same command is both printed and executed. Flags:
- * `--no-git-checks` (git-checks run even for a tarball and fail on a detached
- * release-tag checkout and on the untracked pack output),
+ * The exact `npm` argument list used to stage a packed tarball — the single
+ * source of truth so the same command is both printed and executed. It runs
+ * through npm, not pnpm, so the OIDC token exchange asks for a stage token (see
+ * the file header). Flags:
  * `--access public` (required for the scoped `@keyv/*` packages),
  * `--provenance` (REQUIRED: generates the npm provenance attestation from the
  * CI OIDC context so every staged package is verifiably built here; it
  * fails closed when no OIDC context is available, and release-publish.test.ts
- * asserts the flag is always present).
+ * asserts the flag is always present),
+ * `--loglevel verbose` (npm logs the OIDC token exchange, and why it failed,
+ * only at verbose level; the dry run reads that line to check the exchange).
  */
 export function publishArgs(tarball: string, tag: string): string[] {
 	return [
@@ -374,27 +386,77 @@ export function publishArgs(tarball: string, tag: string): string[] {
 		tarball,
 		"--tag",
 		tag,
-		"--no-git-checks",
 		"--access",
 		"public",
 		"--provenance",
+		"--loglevel",
+		"verbose",
 	];
 }
 
 /**
- * Pack a workspace package, then stage the tarball under exactly one dist-tag.
- * Echoes the exact `pnpm` commands first, then runs them inheriting stdio so
- * npm's output streams to the job log. Throws if pack or stage fails.
+ * True when npm's verbose log shows a successful OIDC token exchange, such as
+ * `npm http fetch POST 201 https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/keyv`.
+ * The trusted publishers are stage-only, so a successful exchange from
+ * `npm stage publish` proves the package can be staged from this workflow.
  */
-function publishPackage(name: string, tag: string): void {
+export function oidcExchangeSucceeded(npmLog: string): boolean {
+	return /\bPOST 20\d \S*\/-\/npm\/v1\/oidc\/token\/exchange\/package\//.test(npmLog);
+}
+
+/**
+ * Pack a workspace package to `./packed/`, echoing the exact `pnpm` command
+ * first. Throws if the pack fails.
+ */
+function packPackage(name: string): void {
 	fs.mkdirSync(path.join(rootDir, "packed"), { recursive: true });
 	const pack = packArgs(name);
 	console.log(`  $ pnpm ${pack.join(" ")}`);
 	execFileSync("pnpm", pack, { cwd: rootDir, stdio: "inherit" });
+}
+
+/**
+ * Pack a workspace package, then stage the tarball under exactly one dist-tag.
+ * Echoes the exact commands first, then runs them inheriting stdio so npm's
+ * output streams to the job log. Throws if pack or stage fails.
+ */
+function publishPackage(name: string, tag: string): void {
+	packPackage(name);
 
 	const args = publishArgs(packedTarballFor(name), tag);
-	console.log(`  $ pnpm ${args.join(" ")}`);
-	execFileSync("pnpm", args, { cwd: rootDir, stdio: "inherit" });
+	console.log(`  $ npm ${args.join(" ")}`);
+	execFileSync("npm", args, { cwd: rootDir, stdio: "inherit" });
+}
+
+/**
+ * In GitHub Actions, check that every package's trusted publisher grants a
+ * stage token, without staging anything: `npm stage publish --dry-run` runs the
+ * same OIDC token exchange as a real stage and stops before the upload. Returns
+ * the names of the packages whose exchange failed.
+ */
+function checkOidcExchange(rows: { name: string; tag: string }[]): string[] {
+	const failed: string[] = [];
+	for (const r of rows) {
+		packPackage(r.name);
+		const args = [...publishArgs(packedTarballFor(r.name), r.tag), "--dry-run"];
+		const result = spawnSync("npm", args, { cwd: rootDir, encoding: "utf-8" });
+		const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+		if (result.status === 0 && oidcExchangeSucceeded(output)) {
+			console.log(`OIDC ok: ${r.name} can be staged from this workflow.`);
+			continue;
+		}
+
+		failed.push(r.name);
+		console.error(`✖ OIDC token exchange failed for ${r.name}:`);
+		const lines = output.split("\n").filter((l) => l.trim().length > 0);
+		const relevant = lines.filter((l) => /oidc|token\/exchange|logged in|E40\d/i.test(l));
+		// When nothing mentions the exchange (npm too old for `stage`, say), show npm's last lines.
+		for (const line of relevant.length > 0 ? relevant : lines.slice(-10)) {
+			console.error(`    ${line}`);
+		}
+	}
+
+	return failed;
 }
 
 function appendSummary(markdown: string): void {
@@ -536,10 +598,25 @@ function main(): void {
 			console.log("Commands that would run (in order):");
 			for (const r of ordered) {
 				console.log(`  $ pnpm ${packArgs(r.name).join(" ")}`);
-				console.log(`  $ pnpm ${publishArgs(packedTarballFor(r.name), r.tag).join(" ")}`);
+				console.log(`  $ npm ${publishArgs(packedTarballFor(r.name), r.tag).join(" ")}`);
 			}
 			console.log("");
 		}
+
+		// Outside GitHub Actions there is no OIDC token to exchange, so only CI
+		// dry runs check that each trusted publisher grants a stage token.
+		if (process.env.GITHUB_ACTIONS === "true" && ordered.length > 0) {
+			console.log("Checking the OIDC token exchange for each package (npm stage publish --dry-run):");
+			const failed = checkOidcExchange(ordered);
+			if (failed.length > 0) {
+				console.error(`\n✖ ${failed.length} package(s) can't be staged from this workflow: ${failed.join(", ")}`);
+				console.error("  Check each package's trusted publisher on npmjs.com: repository jaredwray/keyv,");
+				console.error("  workflow release.yaml, environment release, with `npm stage publish` allowed.");
+				process.exit(1);
+			}
+			console.log("");
+		}
+
 		console.log("Dry run complete — nothing staged.");
 		return;
 	}
