@@ -1043,7 +1043,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Clear the store. If a namespace is set only entries in that namespace are removed.
+	 * Clear the store. If a namespace is set only entries in that namespace are removed. When the
+	 * store can't limit the removal to the namespace, nothing is removed and `error` is emitted.
 	 * Emits a `clear` event.
 	 * @returns {Promise<void>} resolves once the entries have been cleared.
 	 */

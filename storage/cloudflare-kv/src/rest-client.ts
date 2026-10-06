@@ -169,7 +169,7 @@ export class CloudflareKVRestClient implements CloudflareKVNamespace {
 		}
 
 		// Metadata must be sent as a multipart form; plain values use a text body.
-		let body: BodyInit;
+		let body: FormData | string;
 		const headers: Record<string, string> = { ...this.authHeaders };
 		if (options?.metadata) {
 			const form = new FormData();

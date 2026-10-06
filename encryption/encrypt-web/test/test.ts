@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { encryptionTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { describe, expect, it } from "vitest";
-import KeyvEncryptWeb from "../src/index.js";
+import KeyvEncryptWeb, { type WebAlgorithm } from "../src/index.js";
 
 const secret = faker.string.alphanumeric(32);
 
@@ -95,20 +95,47 @@ describe("KeyvEncryptWeb", () => {
 			expect(decrypted).toBe(data);
 		});
 
-		it("should work with aes-256-cbc (non-AEAD)", async () => {
-			const bufferKey = crypto.getRandomValues(new Uint8Array(32));
-			const encryption = new KeyvEncryptWeb({ key: bufferKey, algorithm: "aes-256-cbc" });
+		it("should accept an algorithm name in any case", async () => {
+			const encryption = new KeyvEncryptWeb({
+				key: secret,
+				algorithm: "AES-128-GCM" as WebAlgorithm,
+			});
 			const data = faker.lorem.sentence();
-			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
-			expect(decrypted).toBe(data);
+			expect(await encryption.decrypt(await encryption.encrypt(data))).toBe(data);
 		});
 
-		it("should work with aes-128-cbc", async () => {
-			const bufferKey = crypto.getRandomValues(new Uint8Array(16));
-			const encryption = new KeyvEncryptWeb({ key: bufferKey, algorithm: "aes-128-cbc" });
-			const data = faker.lorem.sentence();
-			const decrypted = await encryption.decrypt(await encryption.encrypt(data));
-			expect(decrypted).toBe(data);
+		it("should reject unauthenticated and unknown algorithms when it is created", () => {
+			const names = ["aes-128-cbc", "aes-192-cbc", "aes-256-cbc", "aes-256-ctr", "constructor"];
+			for (const name of [...names, "__proto__", "toString"]) {
+				expect(() => new KeyvEncryptWeb({ key: secret, algorithm: name as WebAlgorithm })).toThrow(
+					`Unsupported cipher algorithm: ${name.toLowerCase()}`,
+				);
+			}
+		});
+
+		it("should decrypt values written by earlier releases", async () => {
+			const plaintext = '{"value":"bar","expires":null}';
+			const written: Array<[WebAlgorithm, string]> = [
+				[
+					"aes-256-gcm",
+					"XgppYlXt4uBeGPMAIv/QRl6G86JDek8mc4g0t7DANZxxaDGJcCGAbEIuucXRhkJf8goY5LZy91aVFA==",
+				],
+				[
+					"aes-128-gcm",
+					"6YrW+NvT69iKX12SkNuu6l5ySyvsENRnHbqsUDlyIVdKuxW/G71tNHADR8t14YRt9BsJAeSx/kFL3g==",
+				],
+			];
+			for (const [algorithm, encrypted] of written) {
+				const encryption = new KeyvEncryptWeb({ key: "keyv-known-answer", algorithm });
+				expect(await encryption.decrypt(encrypted)).toBe(plaintext);
+			}
+		});
+
+		it("should reject a truncated authentication tag", async () => {
+			const encryption = new KeyvEncryptWeb({ key: secret });
+			const encrypted = await encryption.encrypt(faker.lorem.word());
+			// Keep 28 base64 characters: the 12-byte IV and 9 of the tag's 16 bytes
+			await expect(encryption.decrypt(encrypted.slice(0, 28))).rejects.toThrow();
 		});
 
 		it("should throw for unsupported algorithm", () => {

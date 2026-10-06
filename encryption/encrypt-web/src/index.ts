@@ -3,48 +3,32 @@ import type { KeyvEncryptionAdapter } from "keyv";
 /** Length of the GCM authentication tag in bytes. */
 const AUTH_TAG_LENGTH = 16;
 
+/** Length of the GCM initialization vector (IV) in bytes. */
+const IV_LENGTH = 12;
+
 /**
- * Supported cipher algorithms for the Web Crypto API adapter.
+ * Supported cipher algorithms for the Web Crypto API adapter. All of them are AES-GCM, which is
+ * authenticated (AEAD), so a value changed in the store fails to decrypt instead of decrypting
+ * to altered data.
  */
-export type WebAlgorithm =
-	| "aes-128-gcm"
-	| "aes-192-gcm"
-	| "aes-256-gcm"
-	| "aes-128-cbc"
-	| "aes-192-cbc"
-	| "aes-256-cbc";
+export type WebAlgorithm = "aes-128-gcm" | "aes-192-gcm" | "aes-256-gcm";
 
 /**
  * Options for {@link KeyvEncryptWeb}.
  */
 export type KeyvEncryptWebOptions = {
-	/** Encryption key. Strings are hashed with SHA-256 and truncated to the required length. Uint8Array keys are used directly and must match the algorithm's key length. */
+	/** Encryption key. Strings are hashed once with SHA-256 (no salt or key stretching) and truncated to the required length, so use a random secret, not a password. Uint8Array keys are used directly and must match the algorithm's key length. */
 	key: string | Uint8Array<ArrayBuffer>;
 	/** Algorithm. @defaultValue `"aes-256-gcm"` */
 	algorithm?: WebAlgorithm;
 };
 
-/** Internal configuration derived from a {@link WebAlgorithm} value. */
-type AlgorithmConfig = {
-	/** The Web Crypto API algorithm name. */
-	webCryptoName: "AES-GCM" | "AES-CBC";
-	/** Required key length in bytes. */
-	keyLength: number;
-	/** Required initialization vector (IV) length in bytes. The IV is a random value generated for each encryption operation to ensure identical plaintexts produce different ciphertexts. GCM uses 12 bytes, CBC uses 16 bytes. */
-	ivLength: number;
-	/** Whether the algorithm provides Authenticated Encryption with Associated Data (AEAD). AEAD algorithms like AES-GCM include a built-in authentication tag that detects tampering or corruption of the ciphertext. Non-AEAD algorithms like AES-CBC encrypt data but do not verify its integrity. */
-	isAead: boolean;
-};
-
-/** Maps each supported algorithm string to its Web Crypto configuration. */
-const ALGORITHM_MAP: Record<WebAlgorithm, AlgorithmConfig> = {
-	"aes-128-gcm": { webCryptoName: "AES-GCM", keyLength: 16, ivLength: 12, isAead: true },
-	"aes-192-gcm": { webCryptoName: "AES-GCM", keyLength: 24, ivLength: 12, isAead: true },
-	"aes-256-gcm": { webCryptoName: "AES-GCM", keyLength: 32, ivLength: 12, isAead: true },
-	"aes-128-cbc": { webCryptoName: "AES-CBC", keyLength: 16, ivLength: 16, isAead: false },
-	"aes-192-cbc": { webCryptoName: "AES-CBC", keyLength: 24, ivLength: 16, isAead: false },
-	"aes-256-cbc": { webCryptoName: "AES-CBC", keyLength: 32, ivLength: 16, isAead: false },
-};
+/** Key length in bytes for each supported algorithm. */
+const KEY_LENGTHS = new Map<string, number>([
+	["aes-128-gcm", 16],
+	["aes-192-gcm", 24],
+	["aes-256-gcm", 32],
+]);
 
 /** Encodes a Uint8Array to a base64 string using chunked `String.fromCharCode` to avoid call-stack limits. */
 function uint8ArrayToBase64(bytes: Uint8Array): string {
@@ -90,13 +74,9 @@ function concat(...arrays: Uint8Array[]): Uint8Array<ArrayBuffer> {
  *
  * Encrypts and decrypts string values using the Web Crypto API
  * (`crypto.subtle`). Works in browsers, Deno, Cloudflare Workers, and
- * Node.js 18+. Defaults to AES-256-GCM with authenticated encryption.
+ * Node.js 18+. Uses AES-GCM, which is authenticated, and defaults to AES-256-GCM.
  *
- * The encrypted output uses the same wire format as `@keyv/encrypt-node`,
- * enabling cross-compatibility between the two packages.
- *
- * Wire format (AEAD): `[IV (12 bytes) || AuthTag (16 bytes) || Ciphertext]`
- * Wire format (non-AEAD): `[IV (16 bytes) || Ciphertext]`
+ * Wire format: `[IV (12 bytes) || AuthTag (16 bytes) || Ciphertext]`
  *
  * @example
  * ```ts
@@ -109,8 +89,7 @@ function concat(...arrays: Uint8Array[]): Uint8Array<ArrayBuffer> {
  * ```
  */
 export class KeyvEncryptWeb implements KeyvEncryptionAdapter {
-	private readonly _config: AlgorithmConfig;
-	private readonly _keyPromise: Promise<CryptoKey>;
+	private readonly _keyPromise: ReturnType<typeof crypto.subtle.importKey>;
 
 	/**
 	 * Creates a new encryption adapter.
@@ -119,31 +98,31 @@ export class KeyvEncryptWeb implements KeyvEncryptionAdapter {
 	 * @throws If a Uint8Array key does not match the expected length for the algorithm.
 	 */
 	constructor(options: KeyvEncryptWebOptions) {
-		const algorithm = (options.algorithm ?? "aes-256-gcm").toLowerCase() as WebAlgorithm;
-		const config = ALGORITHM_MAP[algorithm];
-		if (!config) {
-			throw new Error(`Unsupported cipher algorithm: ${algorithm}`);
+		const algorithm = (options.algorithm ?? "aes-256-gcm").toLowerCase();
+		const keyLength = KEY_LENGTHS.get(algorithm);
+		if (keyLength === undefined) {
+			throw new Error(
+				`Unsupported cipher algorithm: ${algorithm}. Use one of: ${[...KEY_LENGTHS.keys()].join(", ")}`,
+			);
 		}
 
-		this._config = config;
-
 		if (options.key instanceof Uint8Array) {
-			if (options.key.length !== config.keyLength) {
-				throw new Error(`Key must be ${config.keyLength} bytes for ${algorithm}`);
+			if (options.key.length !== keyLength) {
+				throw new Error(`Key must be ${keyLength} bytes for ${algorithm}`);
 			}
 
 			this._keyPromise = crypto.subtle.importKey(
 				"raw",
 				options.key.slice(),
-				{ name: config.webCryptoName },
+				{ name: "AES-GCM" },
 				false,
 				["encrypt", "decrypt"],
 			);
 		} else {
 			const encoded = new TextEncoder().encode(options.key);
 			this._keyPromise = crypto.subtle.digest("SHA-256", encoded).then((hash) => {
-				const keyBytes = new Uint8Array(hash).slice(0, config.keyLength);
-				return crypto.subtle.importKey("raw", keyBytes, { name: config.webCryptoName }, false, [
+				const keyBytes = new Uint8Array(hash).slice(0, keyLength);
+				return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
 					"encrypt",
 					"decrypt",
 				]);
@@ -158,27 +137,19 @@ export class KeyvEncryptWeb implements KeyvEncryptionAdapter {
 	 */
 	async encrypt(data: string): Promise<string> {
 		const cryptoKey = await this._keyPromise;
-		const iv = crypto.getRandomValues(new Uint8Array(this._config.ivLength));
+		const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
 		const encoded = new TextEncoder().encode(data);
+		const ciphertext = await crypto.subtle.encrypt(
+			{ name: "AES-GCM", iv, tagLength: AUTH_TAG_LENGTH * 8 },
+			cryptoKey,
+			encoded,
+		);
 
-		if (this._config.isAead) {
-			const ciphertext = await crypto.subtle.encrypt(
-				{ name: "AES-GCM", iv, tagLength: AUTH_TAG_LENGTH * 8 },
-				cryptoKey,
-				encoded,
-			);
-
-			// Web Crypto returns [ciphertext || authTag], rearrange to [IV || authTag || ciphertext]
-			const combined = new Uint8Array(ciphertext);
-			const actualCiphertext = combined.slice(0, combined.length - AUTH_TAG_LENGTH);
-			const authTag = combined.slice(combined.length - AUTH_TAG_LENGTH);
-			const packed = concat(iv, authTag, actualCiphertext);
-			return uint8ArrayToBase64(packed);
-		}
-
-		const ciphertext = await crypto.subtle.encrypt({ name: "AES-CBC", iv }, cryptoKey, encoded);
-
-		const packed = concat(iv, new Uint8Array(ciphertext));
+		// Web Crypto returns [ciphertext || authTag], rearrange to [IV || authTag || ciphertext]
+		const combined = new Uint8Array(ciphertext);
+		const actualCiphertext = combined.slice(0, combined.length - AUTH_TAG_LENGTH);
+		const authTag = combined.slice(combined.length - AUTH_TAG_LENGTH);
+		const packed = concat(iv, authTag, actualCiphertext);
 		return uint8ArrayToBase64(packed);
 	}
 
@@ -186,32 +157,23 @@ export class KeyvEncryptWeb implements KeyvEncryptionAdapter {
 	 * Decrypts an encrypted string back to its original plaintext.
 	 * @param data - The encrypted base64 string to decrypt.
 	 * @returns The original plaintext string.
-	 * @throws If the ciphertext has been tampered with (AEAD modes).
+	 * @throws If the ciphertext has been changed or truncated.
 	 * @throws If the wrong key is used for decryption.
 	 */
 	async decrypt(data: string): Promise<string> {
 		const cryptoKey = await this._keyPromise;
 		const packed = base64ToUint8Array(data);
+		const iv = packed.slice(0, IV_LENGTH);
+		const authTag = packed.slice(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+		const ciphertext = packed.slice(IV_LENGTH + AUTH_TAG_LENGTH);
 
-		if (this._config.isAead) {
-			const iv = packed.slice(0, this._config.ivLength);
-			const authTag = packed.slice(this._config.ivLength, this._config.ivLength + AUTH_TAG_LENGTH);
-			const ciphertext = packed.slice(this._config.ivLength + AUTH_TAG_LENGTH);
-
-			// Reassemble for Web Crypto: [ciphertext || authTag]
-			const webCombined = concat(ciphertext, authTag);
-			const decrypted = await crypto.subtle.decrypt(
-				{ name: "AES-GCM", iv, tagLength: AUTH_TAG_LENGTH * 8 },
-				cryptoKey,
-				webCombined,
-			);
-
-			return new TextDecoder().decode(decrypted);
-		}
-
-		const iv = packed.slice(0, this._config.ivLength);
-		const ciphertext = packed.slice(this._config.ivLength);
-		const decrypted = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, cryptoKey, ciphertext);
+		// Reassemble for Web Crypto: [ciphertext || authTag]
+		const webCombined = concat(ciphertext, authTag);
+		const decrypted = await crypto.subtle.decrypt(
+			{ name: "AES-GCM", iv, tagLength: AUTH_TAG_LENGTH * 8 },
+			cryptoKey,
+			webCombined,
+		);
 
 		return new TextDecoder().decode(decrypted);
 	}

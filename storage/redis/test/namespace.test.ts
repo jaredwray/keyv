@@ -153,6 +153,50 @@ describe("Namespace", () => {
 		await keyvRedis.disconnect();
 	});
 
+	test("should clear only its own namespace when the namespace contains glob characters", async () => {
+		// Used as an unescaped SCAN pattern, each namespace also matches the one beside it, and the
+		// last two don't match their own keys.
+		const namespaces = [
+			["tenant*", "tenant-prod"],
+			["user?", "users"],
+			["t[12]", "t1"],
+			["a\\b", "ab"],
+		];
+		const keyvRedis = new KeyvRedis();
+		for (const [namespace, other] of namespaces) {
+			const key = faker.string.uuid();
+			keyvRedis.namespace = namespace;
+			await keyvRedis.set(key, "own");
+			keyvRedis.namespace = other;
+			await keyvRedis.set(key, "other");
+
+			keyvRedis.namespace = namespace;
+			await keyvRedis.clear();
+			expect(await keyvRedis.get(key)).toBeUndefined();
+			keyvRedis.namespace = other;
+			expect(await keyvRedis.get(key)).toBe("other");
+		}
+
+		await keyvRedis.disconnect();
+	});
+
+	test("should escape glob characters in the key prefix separator", async () => {
+		const keyvRedis = new KeyvRedis("redis://localhost:6379", { namespaceSeparator: "*" });
+		const key = faker.string.uuid();
+		keyvRedis.namespace = "a";
+		await keyvRedis.set(key, "own");
+		keyvRedis.namespace = "ab";
+		await keyvRedis.set(key, "other");
+
+		// Unescaped, namespace `a` would clear with the pattern `a**`, which matches `ab*<key>` too.
+		keyvRedis.namespace = "a";
+		await keyvRedis.clear();
+		expect(await keyvRedis.get(key)).toBeUndefined();
+		keyvRedis.namespace = "ab";
+		expect(await keyvRedis.get(key)).toBe("other");
+		await keyvRedis.disconnect();
+	});
+
 	test("should be able to set many keys with namespace", async () => {
 		const keyvRedis = new KeyvRedis("redis://localhost:6379", {
 			namespace: "ns-many1",

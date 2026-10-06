@@ -1,11 +1,22 @@
-import { randomBytes } from "node:crypto";
+import { getCiphers, randomBytes } from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { encryptionTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { describe, expect, it } from "vitest";
-import KeyvEncryptNode from "../src/index.js";
+import KeyvEncryptNode, { type NodeAlgorithm, type NodeEncoding } from "../src/index.js";
 
 const secret = faker.string.alphanumeric(32);
+
+const algorithms: Array<[NodeAlgorithm, number]> = [
+	["aes-128-gcm", 16],
+	["aes-192-gcm", 24],
+	["aes-256-gcm", 32],
+	["aes-128-ccm", 16],
+	["aes-192-ccm", 24],
+	["aes-256-ccm", 32],
+	["chacha20-poly1305", 32],
+];
+const encodings: NodeEncoding[] = ["base64", "base64url", "hex"];
 
 // Standard encryption compliance tests
 encryptionTestSuite(it, new KeyvEncryptNode({ key: secret }));
@@ -102,22 +113,76 @@ describe("KeyvEncryptNode", () => {
 			expect(decrypted).toBe(data);
 		});
 
-		it("should work with aes-256-cbc (non-AEAD)", () => {
-			const bufferKey = randomBytes(32);
-			const encryption = new KeyvEncryptNode({ key: bufferKey, algorithm: "aes-256-cbc" });
-			const data = faker.lorem.sentence();
-			const decrypted = encryption.decrypt(encryption.encrypt(data));
-			expect(decrypted).toBe(data);
+		it("should round-trip with every supported algorithm and encoding", () => {
+			for (const [algorithm, keyLength] of algorithms) {
+				for (const encoding of encodings) {
+					for (const key of [faker.string.alphanumeric(20), randomBytes(keyLength)]) {
+						const encryption = new KeyvEncryptNode({ key, algorithm, encoding });
+						const data = faker.lorem.sentence();
+						expect(encryption.decrypt(encryption.encrypt(data))).toBe(data);
+					}
+				}
+			}
 		});
 
-		it("should throw for unsupported algorithm", () => {
-			expect(
-				() =>
-					new KeyvEncryptNode({
-						key: faker.string.alphanumeric(16),
-						algorithm: "invalid-algorithm",
-					}),
-			).toThrow("Unsupported cipher algorithm");
+		it("should accept an algorithm name in any case", () => {
+			const encryption = new KeyvEncryptNode({
+				key: secret,
+				algorithm: "AES-256-GCM" as NodeAlgorithm,
+			});
+			const data = faker.lorem.sentence();
+			expect(encryption.decrypt(encryption.encrypt(data))).toBe(data);
+		});
+
+		it("should reject every other cipher when it is created", () => {
+			const supported = new Set<string>(algorithms.map(([algorithm]) => algorithm));
+			const others = getCiphers().filter((name) => !supported.has(name.toLowerCase()));
+			// Unauthenticated modes, and ciphers that used to be accepted but failed on first use
+			const named = ["aes-256-cbc", "aes-256-ctr", "aes-256-ecb", "aes-256-xts", "chacha20"];
+			for (const name of [...others, ...named, "invalid-algorithm", "constructor", "__proto__"]) {
+				expect(
+					() => new KeyvEncryptNode({ key: secret, algorithm: name as NodeAlgorithm }),
+				).toThrow(`Unsupported cipher algorithm: ${name.toLowerCase()}`);
+			}
+		});
+
+		it("should decrypt values written by earlier releases", () => {
+			const plaintext = '{"value":"bar","expires":null}';
+			const written: Array<[NodeAlgorithm, NodeEncoding, string]> = [
+				[
+					"aes-256-gcm",
+					"base64",
+					"9rW+AqdW2VXONYGhq/vTs6q9+t+KNpmpmcgpxvszz+xLGrHJ6AcJwM9ua0poxgcPGSPtr4sX8WHMeA==",
+				],
+				[
+					"aes-256-gcm",
+					"hex",
+					"a511475426b81cfea3c99d47729459c5b5b6105c2c5d519ff43f84e43b5db579561210b882ec1364a7e20d11cec91aed8a1a566cdfe27a7cb0b9",
+				],
+				[
+					"aes-128-ccm",
+					"base64",
+					"VPRcZfE2i7BwZe/2otB8i5G1enx1DbNU2ER2EN9coWSRZmXZXvaJUWhviBY6w4vidCV3X8caL2oMKA==",
+				],
+				[
+					"chacha20-poly1305",
+					"base64",
+					"thXD+RGfnR+7PdwvjKoF/4UsV53sNxrmPDspralOpW4+Vu+87Pu8hbuN+SFLvkMPLdNsuHhuMRQJaQ==",
+				],
+			];
+			for (const [algorithm, encoding, encrypted] of written) {
+				const encryption = new KeyvEncryptNode({ key: "keyv-known-answer", algorithm, encoding });
+				expect(encryption.decrypt(encrypted)).toBe(plaintext);
+			}
+		});
+
+		it("should reject a truncated authentication tag", () => {
+			for (const [algorithm] of algorithms) {
+				const encryption = new KeyvEncryptNode({ key: secret, algorithm });
+				const packed = Buffer.from(encryption.encrypt(faker.lorem.word()), "base64");
+				const truncated = packed.subarray(0, 12 + 8).toString("base64");
+				expect(() => encryption.decrypt(truncated)).toThrow("Invalid authentication tag length");
+			}
 		});
 	});
 
@@ -129,6 +194,14 @@ describe("KeyvEncryptNode", () => {
 			expect(/^[\da-f]+$/i.test(encrypted)).toBe(true);
 			const decrypted = encryption.decrypt(encrypted);
 			expect(decrypted).toBe(data);
+		});
+
+		it("should reject encodings that can't hold arbitrary bytes", () => {
+			for (const encoding of ["utf8", "utf-8", "ascii", "latin1", "binary", "utf16le", "ucs2"]) {
+				expect(
+					() => new KeyvEncryptNode({ key: secret, encoding: encoding as NodeEncoding }),
+				).toThrow(`Unsupported encoding: ${encoding}`);
+			}
 		});
 	});
 

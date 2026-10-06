@@ -19,13 +19,13 @@ import { isDataExpired, ttlFromExpires } from "../utils.js";
 export type KeyvBridgeAdapterOptions = {
 	/**
 	 * The namespace to use for keys.
-	 * When set, all keys will be prefixed with the namespace followed by the key separator.
+	 * When set, all keys will be prefixed with the namespace followed by the namespace separator.
 	 */
 	namespace?: string;
 	/**
-	 * The separator used between namespace and key. Defaults to ":".
+	 * The separator between the namespace and the key. Defaults to `::`.
 	 */
-	keySeparator?: string;
+	namespaceSeparator?: string;
 };
 
 /**
@@ -95,7 +95,7 @@ export type KeyPrefixData = {
 export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvBridgeStore;
 	private _namespace?: string;
-	private _keySeparator = ":";
+	private _namespaceSeparator = "::";
 	private readonly _capabilities: KeyvStorageCapability;
 	/**
 	 * Whether the wrapped store manages its own namespace (exposes a `namespace` property).
@@ -121,8 +121,8 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		// shared store can host multiple namespaces.
 		this._storeHandlesNamespace = hasKeyvStorageMethods(this._capabilities) && "namespace" in store;
 
-		if (options?.keySeparator) {
-			this._keySeparator = options.keySeparator;
+		if (options?.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = options.namespaceSeparator;
 		}
 
 		if (options?.namespace) {
@@ -169,17 +169,17 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the current key separator used between namespace and key.
+	 * Gets the separator between the namespace and the key. Defaults to `::`.
 	 */
-	public get keySeparator() {
-		return this._keySeparator;
+	public get namespaceSeparator() {
+		return this._namespaceSeparator;
 	}
 
 	/**
-	 * Sets the key separator used between namespace and key.
+	 * Sets the separator between the namespace and the key.
 	 */
-	public set keySeparator(separator: string) {
-		this._keySeparator = separator;
+	public set namespaceSeparator(separator: string) {
+		this._namespaceSeparator = separator;
 	}
 
 	/**
@@ -214,7 +214,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		if (namespace) {
-			return `${namespace}${this._keySeparator}${key}`;
+			return `${namespace}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -226,10 +226,10 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns An object containing the namespace (if present) and the original key
 	 */
 	public getKeyPrefixData(key: string): KeyPrefixData {
-		if (this._namespace && key.startsWith(`${this._namespace}${this._keySeparator}`)) {
+		if (this._namespace && key.startsWith(`${this._namespace}${this._namespaceSeparator}`)) {
 			return {
 				namespace: this._namespace,
-				key: key.slice(this._namespace.length + this._keySeparator.length),
+				key: key.slice(this._namespace.length + this._namespaceSeparator.length),
 			};
 		}
 
@@ -333,6 +333,7 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	 * Stores multiple entries in the store at once.
 	 * Delegates to the store's native setMany if available, otherwise loops over set.
 	 * @param entries - Array of entries containing key, value, and optional absolute `expires`
+	 * @returns One boolean per entry, `false` where the store reported that the write failed
 	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
 		if (this._capabilities.methods.setMany.exists) {
@@ -342,8 +343,9 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 			// Already-expired entries must not persist (see `set`); batch the live ones and
 			// delete the elapsed ones rather than writing them with no ttl.
 			const live = entries.filter((entry) => !isExpired(entry));
+			let liveResults: unknown;
 			if (live.length > 0) {
-				await this._store.setMany?.(
+				liveResults = await this._store.setMany?.(
 					live.map((entry) => ({
 						key: this.getKeyPrefix(entry.key, this._namespace),
 						value: entry.value,
@@ -358,13 +360,23 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 				}
 			}
 
-			return entries.map(() => true);
+			// A legacy store's setMany returns nothing (v5 typed it `Promise<void>`), one boolean for
+			// the batch, or one per entry. Only an explicit `false` counts as a failed write.
+			let liveIndex = 0;
+			return entries.map((entry) => {
+				if (isExpired(entry)) {
+					return true;
+				}
+
+				const result = Array.isArray(liveResults) ? liveResults[liveIndex] : liveResults;
+				liveIndex++;
+				return result !== false;
+			});
 		}
 
 		const results: boolean[] = [];
 		for (const entry of entries) {
-			await this.set(entry.key, entry.value, entry.expires);
-			results.push(true);
+			results.push(await this.set(entry.key, entry.value, entry.expires));
 		}
 
 		return results;
@@ -449,24 +461,28 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Clears entries from the store. If a namespace is set and the store supports
-	 * iteration, only entries within that namespace are removed. Otherwise, the
-	 * entire store is cleared.
+	 * Clears entries from the store. With no namespace, the whole store is cleared. With a
+	 * namespace, only that namespace's entries are removed: a store that manages its own
+	 * namespace clears them itself, and otherwise the bridge finds them with the store's
+	 * `iterator()`. A store with neither can't tell namespaces apart, so this throws rather
+	 * than call the store's `clear()` and delete every namespace's entries.
+	 * @throws {Error} If a namespace is set and the store neither manages it nor has `iterator()`.
 	 */
 	public async clear(): Promise<void> {
-		// A store that manages its own namespace scopes clear() to the namespace the bridge
-		// propagated to it, so delegate directly rather than risk an unscoped wipe of the backend.
-		if (this._namespace && this._storeHandlesNamespace) {
+		// With no namespace the whole store is cleared. A store that manages its own namespace
+		// scopes clear() to the namespace the bridge propagated to it, so delegate directly.
+		if (!this._namespace || this._storeHandlesNamespace) {
 			await this._store.clear();
 			return;
 		}
 
-		if (!this._namespace || !this._capabilities.methods.iterator.exists) {
-			await this._store.clear();
-			return;
+		if (!this._capabilities.methods.iterator.exists) {
+			throw new Error(
+				`Can't clear namespace "${this._namespace}": the store has no iterator() to find that namespace's keys, and its clear() would delete every namespace. Give the store an iterator(), or clear it without a namespace.`,
+			);
 		}
 
-		const prefix = `${this._namespace}${this._keySeparator}`;
+		const prefix = `${this._namespace}${this._namespaceSeparator}`;
 		const keysToDelete: string[] = [];
 		/* v8 ignore next -- @preserve */
 		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {
@@ -498,7 +514,9 @@ export class KeyvBridgeAdapter extends Hookified implements KeyvStorageAdapter {
 		// A namespace-managing store already scopes its iterator, so the bridge must not also
 		// filter/strip a prefix it never applied.
 		const prefix =
-			namespace && !this._storeHandlesNamespace ? `${namespace}${this._keySeparator}` : undefined;
+			namespace && !this._storeHandlesNamespace
+				? `${namespace}${this._namespaceSeparator}`
+				: undefined;
 
 		/* v8 ignore next -- @preserve */
 		for await (const entry of this._store.iterator?.(this._namespace) ?? []) {

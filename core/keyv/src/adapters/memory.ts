@@ -26,13 +26,13 @@ type MemoryEntry = {
 export type KeyvMemoryAdapterOptions = {
 	/**
 	 * The namespace to use for keys.
-	 * When set, all keys will be prefixed with the namespace followed by the key separator.
+	 * When set, all keys will be prefixed with the namespace followed by the namespace separator.
 	 */
 	namespace?: string;
 	/**
-	 * The separator used between namespace and key. Defaults to ":".
+	 * The separator between the namespace and the key. Defaults to `::`.
 	 */
-	keySeparator?: string;
+	namespaceSeparator?: string;
 };
 
 /**
@@ -77,14 +77,14 @@ export type KeyPrefixData = {
  * // Using with a custom store
  * const customStore = new KeyvMemoryAdapter(myCustomMapLikeStore, {
  *   namespace: 'tenant-123',
- *   keySeparator: ':'
+ *   namespaceSeparator: '::'
  * });
  * ```
  */
 export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	private _store: KeyvMapType;
 	private _namespace?: string;
-	private _keySeparator = ":";
+	private _namespaceSeparator = "::";
 	private readonly _capabilities: KeyvStorageCapability;
 
 	/**
@@ -97,8 +97,8 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		this._store = store;
 		this._capabilities = detectKeyvStorage(store);
 
-		if (options?.keySeparator) {
-			this._keySeparator = options.keySeparator;
+		if (options?.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = options.namespaceSeparator;
 		}
 
 		if (options?.namespace) {
@@ -129,17 +129,17 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Gets the current key separator used between namespace and key.
+	 * Gets the separator between the namespace and the key. Defaults to `::`.
 	 */
-	public get keySeparator() {
-		return this._keySeparator;
+	public get namespaceSeparator() {
+		return this._namespaceSeparator;
 	}
 
 	/**
-	 * Sets the key separator used between namespace and key.
+	 * Sets the separator between the namespace and the key.
 	 */
-	public set keySeparator(separator: string) {
-		this._keySeparator = separator;
+	public set namespaceSeparator(separator: string) {
+		this._namespaceSeparator = separator;
 	}
 
 	/**
@@ -164,7 +164,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 */
 	public getKeyPrefix(key: string, namespace?: string) {
 		if (namespace) {
-			return `${namespace}${this._keySeparator}${key}`;
+			return `${namespace}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -176,10 +176,10 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	 * @returns An object containing the namespace (if present) and the original key
 	 */
 	public getKeyPrefixData(key: string) {
-		if (this._namespace && key.startsWith(`${this._namespace}${this._keySeparator}`)) {
+		if (this._namespace && key.startsWith(`${this._namespace}${this._namespaceSeparator}`)) {
 			return {
 				namespace: this._namespace,
-				key: key.slice(this._namespace.length + this._keySeparator.length),
+				key: key.slice(this._namespace.length + this._namespaceSeparator.length),
 			};
 		}
 
@@ -255,17 +255,25 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Clears entries from the store. If a namespace is set, only entries
-	 * within that namespace are removed. Otherwise, the entire store is cleared.
-	 * NOTE: if there is no `keys()` then we just do a full clear.
+	 * Clears entries from the store. With no namespace, the whole store is cleared. With a
+	 * namespace, only that namespace's entries are removed, found through the store's `keys()`.
+	 * A store without `keys()` can't tell namespaces apart, so this throws rather than call the
+	 * store's `clear()` and delete every namespace's entries.
+	 * @throws {Error} If a namespace is set and the store has no `keys()`.
 	 */
 	public async clear(): Promise<void> {
-		if (!this._namespace || typeof (this._store as Map<KeyvAny, KeyvAny>).keys !== "function") {
+		if (!this._namespace) {
 			this._store.clear();
 			return;
 		}
 
-		const prefix = `${this._namespace}${this._keySeparator}`;
+		if (typeof (this._store as Map<KeyvAny, KeyvAny>).keys !== "function") {
+			throw new Error(
+				`Can't clear namespace "${this._namespace}": the store has no keys() to find that namespace's keys, and its clear() would delete every namespace. Use a store with keys(), such as a Map, or clear it without a namespace.`,
+			);
+		}
+
+		const prefix = `${this._namespace}${this._namespaceSeparator}`;
 		const keysToDelete: string[] = [];
 		for (const key of (this._store as Map<KeyvAny, KeyvAny>).keys()) {
 			if (key.startsWith(prefix)) {
@@ -380,7 +388,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		for (const [key, raw] of (this._store as Map<KeyvAny, KeyvAny>).entries()) {
 			// Filter by namespace if set
 			if (namespace) {
-				if (!key.startsWith(`${namespace}${this._keySeparator}`)) {
+				if (!key.startsWith(`${namespace}${this._namespaceSeparator}`)) {
 					continue;
 				}
 			}
@@ -395,7 +403,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 
 			// Extract the key without namespace prefix
 			const keyWithoutPrefix = namespace
-				? key.slice(namespace.length + this._keySeparator.length)
+				? key.slice(namespace.length + this._namespaceSeparator.length)
 				: key;
 
 			yield [keyWithoutPrefix, entry?.value];
@@ -428,7 +436,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
  * // Create with namespace for multi-tenant scenarios
  * const tenantCache = createKeyv(new Map(), {
  *   namespace: 'tenant-123',
- *   keySeparator: ':'
+ *   namespaceSeparator: '::'
  * });
  * ```
  */

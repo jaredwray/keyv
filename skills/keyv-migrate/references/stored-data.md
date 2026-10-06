@@ -17,39 +17,39 @@ In the tables, `ns` is the namespace the old instance used: the Keyv `namespace`
 
 ### Redis (`@keyv/redis`)
 
-v6 builds `<namespace><keyPrefixSeparator><key>`, and the separator defaults to `::`.
+v6 builds `<namespace><namespaceSeparator><key>`, and the separator defaults to `::`.
 
 | Old setup | Key stored for `foo` | v6 settings |
 | --- | --- | --- |
-| v4 (`@keyv/redis` 2.x), default | `ns:foo` | `new Keyv(new KeyvRedis(uri, { keyPrefixSeparator: ':' }), { namespace: 'ns' })` |
-| v4, `useRedisSets: false` | `sets:namespace:ns:ns:foo` | `new Keyv(new KeyvRedis(uri, { keyPrefixSeparator: ':' }), { namespace: 'sets:namespace:ns:ns' })` |
-| v5, default | `ns::ns:foo` | `new Keyv(new KeyvRedis(uri, { keyPrefixSeparator: '::ns:' }), { namespace: 'ns' })` |
+| v4 (`@keyv/redis` 2.x), default | `ns:foo` | `new Keyv(new KeyvRedis(uri, { namespaceSeparator: ':' }), { namespace: 'ns' })` |
+| v4, `useRedisSets: false` | `sets:namespace:ns:ns:foo` | `new Keyv(new KeyvRedis(uri, { namespaceSeparator: ':' }), { namespace: 'sets:namespace:ns:ns' })` |
+| v5, default | `ns::ns:foo` | `new Keyv(new KeyvRedis(uri, { namespaceSeparator: '::ns:' }), { namespace: 'ns' })` |
 | v5, Keyv `useKeyPrefix: false`, or `createKeyv()` with a namespace | `ns::foo` | `new Keyv(new KeyvRedis(uri), { namespace: 'ns' })` |
 | v5, `createKeyv()` without a namespace | `foo` | no namespace |
 
 v4 also kept a Redis set named `namespace:ns` listing its keys. v6 doesn't use it; the user can delete it once nothing runs v4.
 
-With a namespace, v6's `clear()` and `iterator()` cover the string keys that match `<namespace><keyPrefixSeparator>*`. So with the default separator, namespace `ns` also covers the v5 keys `ns::ns:*`. That matters when those old entries can't be decoded, as with compression: `iterator()` hits them and fails, and `clear()` deletes them. For such a cache, pick a new namespace (such as `ns-v6`) so the old and new entries don't mix, and clean up the old ones separately.
+With a namespace, v6's `clear()` and `iterator()` cover the string keys that start with `<namespace><namespaceSeparator>`. So with the default separator, namespace `ns` also covers the v5 keys `ns::ns:*`. That matters when those old entries can't be decoded, as with compression: `iterator()` hits them and fails, and `clear()` deletes them. For such a cache, pick a new namespace (such as `ns-v6`) so the old and new entries don't mix, and clean up the old ones separately.
 
 ### Valkey (`@keyv/valkey`, v5 only)
 
 | Old setup | Key stored for `foo` | v6 settings |
 | --- | --- | --- |
-| default, or `createKeyv()` | `ns:foo` | None. v6 can't build this key. Let the entries repopulate, or have the user rename them to the v6 layout (`namespace:<ns>:<key>`) |
-| `useRedisSets: false` | `namespace:ns:ns:foo` | `new Keyv(new KeyvValkey(uri, { useSets: false }), { namespace: 'ns:ns' })` |
+| default, or `createKeyv()` | `ns:foo` | None. v6 can't build this key. Let the entries repopulate, or have the user rename them to the v6 layout (`namespace:<ns>::<key>`) |
+| `useRedisSets: false` | `namespace:ns:ns:foo` | `new Keyv(new KeyvValkey(uri, { useSets: false, namespaceSeparator: ':' }), { namespace: 'ns:ns' })` |
 
 ### Memcache (`@keyv/memcache`)
 
-v6 builds `<namespace>:<key>`, but stores each value after its namespace's generation token and reads a value without one as missing. So no v6 setting reads an entry v4 or v5 wrote: tell the user the cache fills again. A key with whitespace or control characters, one over 250 bytes, or one that starts with `keyv:sha256:` or `keyv:gen:` is stored under `keyv:sha256:<SHA-256 hex>` instead.
+v6 builds `<namespace><namespaceSeparator><key>`, with `::` as the default separator, but stores each value after its namespace's generation token and reads a value without one as missing. So no v6 setting reads an entry v4 or v5 wrote: tell the user the cache fills again. A key with whitespace or control characters, one over 250 bytes, or one that starts with `keyv:sha256:` or `keyv:gen:` is stored under `keyv:sha256:<SHA-256 hex>` instead.
 
 ### Etcd and DynamoDB
 
-v6 builds `<namespace>:<key>`.
+v6 builds `<namespace><namespaceSeparator><key>`, and the separator defaults to `::`. v4 and v5 joined the namespace and key with `:`, so reading their keys needs `namespaceSeparator: ':'`.
 
 | Old setup | Key stored for `foo` | v6 settings |
 | --- | --- | --- |
-| Etcd v4 or v5, default | `ns:foo` | `{ namespace: 'ns' }` |
-| DynamoDB v5, default | `ns:foo` | `{ namespace: 'ns' }` |
+| Etcd v4 or v5, default | `ns:foo` | `new Keyv(new KeyvEtcd(uri, { namespaceSeparator: ':' }), { namespace: 'ns' })` |
+| DynamoDB v5, default | `ns:foo` | `new Keyv(new KeyvDynamo({ namespaceSeparator: ':' }), { namespace: 'ns' })` |
 | DynamoDB v5, `createKeyv()`, with or without a namespace | `foo` | no namespace |
 | v5, `useKeyPrefix: false` | `foo` | no namespace |
 

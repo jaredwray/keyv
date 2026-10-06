@@ -448,23 +448,30 @@ describe("clearExpired", () => {
 	// value, which silently failed for compressed/encrypted/msgpackr/superjson output and
 	// left the expires column NULL. The contract now passes expires directly.
 	test("populates the expires column for non-JSON encoded values so expiry still works", async () => {
-		const store = new KeyvPostgres({ uri: postgresUri });
-		const serialization = {
-			stringify: (data: unknown) => `RAW:${JSON.stringify(data)}`,
-			parse: <T>(data: string): T => JSON.parse(String(data).slice(4)) as T,
-		};
-		const keyv = new Keyv({ store, serialization });
-		const key = faker.string.uuid();
-		const stored = faker.lorem.word();
-		await keyv.set(key, stored, 100);
-		expect(await keyv.get(key)).toBe(stored);
-		await new Promise((resolve) => {
-			setTimeout(resolve, 200);
-		});
-		expect(await keyv.get(key)).toBeUndefined();
-		await store.clearExpired();
-		expect(await store.has(key)).toBe(false);
-		await keyv.disconnect();
+		// Keyv and the adapter both read the clock through Date.now(). Freezing it keeps the entry
+		// from expiring between set() and the first get(), however slow the round trips are.
+		vi.useFakeTimers({ toFake: ["Date"] });
+		try {
+			const store = new KeyvPostgres({ uri: postgresUri });
+			const serialization = {
+				stringify: (data: unknown) => `RAW:${JSON.stringify(data)}`,
+				parse: <T>(data: string): T => JSON.parse(String(data).slice(4)) as T,
+			};
+			// Opt out of Keyv-layer expiry so this test isolates the store's own expires column.
+			const keyv = new Keyv({ store, serialization, checkExpired: false });
+			const key = faker.string.uuid();
+			const stored = faker.lorem.word();
+			await keyv.set(key, stored, 100);
+			expect(await keyv.get(key)).toBe(stored);
+			vi.setSystemTime(Date.now() + 200);
+			// With checkExpired off, expiry is driven entirely by the store's expires column.
+			expect(await keyv.get(key)).toBeUndefined();
+			await store.clearExpired();
+			expect(await store.has(key)).toBe(false);
+			await keyv.disconnect();
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 

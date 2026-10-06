@@ -283,9 +283,9 @@ describe("construction", () => {
 	});
 
 	it("should set the namespace and separator from options", () => {
-		const s = new KeyvCloudflareKV({ kvNamespace, namespace: "ns", keyPrefixSeparator: "::" });
+		const s = new KeyvCloudflareKV({ kvNamespace, namespace: "ns", namespaceSeparator: ":" });
 		expect(s.namespace).toBe("ns");
-		expect(s.keyPrefixSeparator).toBe("::");
+		expect(s.namespaceSeparator).toBe(":");
 	});
 });
 
@@ -293,27 +293,27 @@ describe("namespace and key prefixing", () => {
 	it("should format a key with the namespace, even one that already starts with it", () => {
 		const s = new KeyvCloudflareKV({ kvNamespace });
 		s.namespace = "ns";
-		expect(s.formatKey("key")).toBe("ns:key");
-		expect(s.formatKey("ns:key")).toBe("ns:ns:key");
+		expect(s.formatKey("key")).toBe("ns::key");
+		expect(s.formatKey("ns::key")).toBe("ns::ns::key");
 		s.namespace = undefined;
 		expect(s.formatKey("key")).toBe("key");
 	});
 
 	it("should create and remove a key prefix when a namespace is provided", () => {
 		const s = new KeyvCloudflareKV({ kvNamespace });
-		expect(s.createKeyPrefix("key", "ns")).toBe("ns:key");
+		expect(s.createKeyPrefix("key", "ns")).toBe("ns::key");
 		expect(s.createKeyPrefix("key")).toBe("key");
-		expect(s.removeKeyPrefix("ns:key", "ns")).toBe("key");
-		expect(s.removeKeyPrefix("ns:ns:key", "ns")).toBe("ns:key");
-		expect(s.removeKeyPrefix("other:ns:key", "ns")).toBe("other:ns:key");
+		expect(s.removeKeyPrefix("ns::key", "ns")).toBe("key");
+		expect(s.removeKeyPrefix("ns::ns::key", "ns")).toBe("ns::key");
+		expect(s.removeKeyPrefix("other::ns::key", "ns")).toBe("other::ns::key");
 		expect(s.removeKeyPrefix("key")).toBe("key");
 	});
 
-	it("should get and set the keyPrefixSeparator", () => {
+	it("should get and set the namespaceSeparator", () => {
 		const s = new KeyvCloudflareKV({ kvNamespace });
-		expect(s.keyPrefixSeparator).toBe(":");
-		s.keyPrefixSeparator = "::";
-		expect(s.createKeyPrefix("key", "ns")).toBe("ns::key");
+		expect(s.namespaceSeparator).toBe("::");
+		s.namespaceSeparator = ":";
+		expect(s.createKeyPrefix("key", "ns")).toBe("ns:key");
 	});
 
 	it("should isolate values across namespaces", async () => {
@@ -425,13 +425,20 @@ describe("batch operations", () => {
 
 describe("expiration", () => {
 	it("should expire values via the client-side check", async () => {
-		const s = store();
-		const key = faker.string.uuid();
-		await s.set(key, "value", Date.now() + 100);
-		expect(await s.get(key)).toBe("value");
-		await new Promise((resolve) => setTimeout(resolve, 200));
-		expect(await s.get(key)).toBeUndefined();
-		expect(await s.has(key)).toBe(false);
+		// The client-side check reads the clock through Date.now(). Freezing it keeps the value
+		// from expiring before the first get(), however slow the round trip is.
+		vi.useFakeTimers({ toFake: ["Date"] });
+		try {
+			const s = store();
+			const key = faker.string.uuid();
+			await s.set(key, "value", Date.now() + 100);
+			expect(await s.get(key)).toBe("value");
+			vi.setSystemTime(Date.now() + 200);
+			expect(await s.get(key)).toBeUndefined();
+			expect(await s.has(key)).toBe(false);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it("should not persist an already-elapsed deadline", async () => {

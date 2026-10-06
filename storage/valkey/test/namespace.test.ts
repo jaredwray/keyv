@@ -34,10 +34,62 @@ describe("namespace", () => {
 		expect(await store.get(key)).toBe(value);
 
 		const client = new Redis(valkeyUri);
-		expect(await client.get(`namespace:${namespace}:${key}`)).toBe(value);
+		expect(await client.get(`namespace:${namespace}::${key}`)).toBe(value);
 		await client.disconnect();
 
 		await store.clear();
+		await store.disconnect();
+	});
+
+	test("should default the namespaceSeparator to :: and take it from the options", async () => {
+		const store = new KeyvValkey(valkeyUri);
+		expect(store.namespaceSeparator).toBe("::");
+		store.namespaceSeparator = ":";
+		expect(store.namespaceSeparator).toBe(":");
+		await store.disconnect();
+
+		const fromOptions = new KeyvValkey(valkeyUri, { namespaceSeparator: "/" });
+		expect(fromOptions.namespaceSeparator).toBe("/");
+		await fromOptions.disconnect();
+	});
+
+	test("should join the namespace and key with the namespaceSeparator", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkey(valkeyUri, { namespace, namespaceSeparator: ":" });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "value");
+
+		const client = new Redis(valkeyUri);
+		expect(await client.get(`namespace:${namespace}:${key}`)).toBe("value");
+		await client.disconnect();
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should match a separator with glob characters literally", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkey(valkeyUri, { namespace, namespaceSeparator: "?" });
+		await store.set("key", "value");
+
+		// `?` matches any one character in a pattern, so `namespace:<ns>Xother` would match an
+		// unescaped `namespace:<ns>?*`.
+		const client = new Redis(valkeyUri);
+		const lookalike = `namespace:${namespace}Xother`;
+		await client.set(lookalike, "untouched");
+
+		const keys: string[] = [];
+		for await (const [key] of store.iterator()) {
+			keys.push(key);
+		}
+
+		expect(keys).toEqual(["key"]);
+		await store.clear();
+		expect(await store.get("key")).toBeUndefined();
+		expect(await client.get(lookalike)).toBe("untouched");
+		await client.del(lookalike);
+		await client.disconnect();
 		await store.disconnect();
 	});
 
@@ -204,7 +256,7 @@ describe("useSets", () => {
 
 		expect(await client.exists("sets")).toBe(1);
 		expect(await client.type("sets")).toBe("set");
-		expect(await client.exists(`sets:${key}`)).toBe(1);
+		expect(await client.exists(`sets::${key}`)).toBe(1);
 		expect(await store.get(key)).toBe(value);
 
 		await store.clear();

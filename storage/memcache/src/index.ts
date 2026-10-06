@@ -66,6 +66,11 @@ export type KeyvMemcacheOptions = {
 	/** Optional namespace used to prefix all keys. */
 	namespace?: string;
 	/**
+	 * The separator between the namespace and the key.
+	 * @default "::"
+	 */
+	namespaceSeparator?: string;
+	/**
 	 * Without a namespace, whether `clear()` flushes the whole memcached server, removing other
 	 * namespaces' entries and keys other clients wrote. By default it only removes the entries this
 	 * adapter wrote without a namespace. When `true` and no namespace is set, values are also stored
@@ -107,6 +112,7 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	private readonly _retries?: number;
 	private readonly _retryDelay?: number;
 	private _noNamespaceAffectsAll: boolean;
+	private _namespaceSeparator = "::";
 	/** The last generation token read or written for each namespace, keyed by namespace. */
 	private readonly _generations = new Map<string, string>();
 
@@ -133,10 +139,15 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 		this._retries = allOptions.retries;
 		this._retryDelay = allOptions.retryDelay;
 		this.namespace = allOptions.namespace;
+		if (allOptions.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = allOptions.namespaceSeparator;
+		}
+
 		this._noNamespaceAffectsAll = allOptions.noNamespaceAffectsAll ?? false;
 
 		const {
 			namespace: _namespace,
+			namespaceSeparator: _namespaceSeparator,
 			noNamespaceAffectsAll: _noNamespaceAffectsAll,
 			...memcacheOptions
 		} = allOptions;
@@ -199,6 +210,23 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	 */
 	public get retryDelay(): number | undefined {
 		return this._retryDelay;
+	}
+
+	/**
+	 * Gets the separator between the namespace and the key.
+	 * @default '::'
+	 * @returns The namespace/key separator.
+	 */
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
+	}
+
+	/**
+	 * Sets the separator between the namespace and the key.
+	 * @param value - The separator to place between the namespace and the key.
+	 */
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	/**
@@ -384,18 +412,19 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Formats a key for memcached by prepending the namespace if one is set. memcached only takes a
-	 * non-empty key of up to 250 bytes (the client's `maxKeySize`) with no whitespace or control
-	 * characters, so any other key is stored under a SHA-256 digest of the namespaced key instead,
+	 * Formats a key for memcached by prepending the namespace and {@link namespaceSeparator} if a
+	 * namespace is set. memcached only takes a non-empty key of up to 250 bytes (the client's
+	 * `maxKeySize`) with no whitespace or control characters, so any other key is stored under a
+	 * SHA-256 digest of the namespaced key instead,
 	 * `keyv:sha256:<hex>`. A key that starts with `keyv:sha256:` or `keyv:gen:` is hashed as well,
 	 * so it can't overwrite the entry of the key it's the digest of or a generation token. When
 	 * `maxKeySize` is below the 76 characters a digest key takes, the digest is shortened to fit,
 	 * down to 128 bits. Other keys are returned unchanged.
 	 * @param key - The key to format
-	 * @returns The key memcached stores the value under (e.g., `'namespace:key'`).
+	 * @returns The key memcached stores the value under (e.g., `'namespace::key'`).
 	 */
 	public formatKey(key: string): string {
-		const formatted = this.namespace ? `${this.namespace}:${key}` : key;
+		const formatted = this.namespace ? `${this.namespace}${this._namespaceSeparator}${key}` : key;
 		if (
 			formatted.length > 0 &&
 			Buffer.byteLength(formatted) <= this.client.maxKeySize &&

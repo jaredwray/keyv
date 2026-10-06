@@ -108,7 +108,7 @@ Enable `{ sanitize: { keys: true, namespace: true } }` to strip SQL comments, Mo
 
 Pass a `KeyvEncryptionAdapter` (`encrypt` / `decrypt`) via the `encryption` option. Official packages:
 
-- [`@keyv/encrypt-node`](/docs/encryption/encrypt-node/) — Node.js `crypto` (AES-GCM, ChaCha20-Poly1305, …)
+- [`@keyv/encrypt-node`](/docs/encryption/encrypt-node/) — Node.js `crypto` (AES-GCM, AES-CCM, ChaCha20-Poly1305)
 - [`@keyv/encrypt-web`](/docs/encryption/encrypt-web/) — Web Crypto API for browsers, Workers, and Deno
 
 Encryption runs on the serialized (and optionally compressed) string. See [Encode and Decode](/docs/encode-and-decode/).

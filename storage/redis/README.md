@@ -40,6 +40,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Clustering](#clustering)
 * [Sentinel](#sentinel)
 * [TLS Support](#tls-support)
+* [Redis Cloud](#redis-cloud)
 * [Keyv Redis Options](#keyv-redis-options)
 * [API](#api)
 * [Events](#events)
@@ -87,7 +88,7 @@ const uri = "redis://localhost:6379";
 // NOTE: please use the settings that you need to configure. Check out Keyv Redis Options section
 const options = {
   namespace: "test",
-  keyPrefixSeparator: "->",
+  namespaceSeparator: "->",
   clearBatchSize: 100,
   useUnlink: true,
   noNamespaceAffectsAll: true,
@@ -115,8 +116,9 @@ const keyv = new Keyv({ store: keyvRedis});
 
 * **`@redis/client` is now v6.** `createClient`, `createCluster`, and `createSentinel` are still exported from this package. `createClient` takes a `RedisClientOptions` object (`{ url: 'redis://...' }`), not a URI string.
 * **Adapters receive absolute `expires`, not relative `ttl`.** When you call `keyv.set(key, value, 1000)`, Keyv converts that millisecond ttl to a Unix-ms deadline and passes it to the adapter. Direct adapter calls should pass `expires` (`Date.now() + ttl`), not a relative ttl.
-* **Keyv no longer prefixes keys.** Namespacing lives on the adapter (`namespace` + `keyPrefixSeparator`, default `::`). You do not need `useKeyPrefix: false` — that option was removed from Keyv.
-* **Keys written by v5 need matching settings.** v5's default setup, `new Keyv(new KeyvRedis(uri))`, applied its default `keyv` namespace twice, once in Keyv and once in the adapter, so `foo` was stored as `keyv::keyv:foo`. Read those keys with `new Keyv(new KeyvRedis(uri, { keyPrefixSeparator: '::keyv:' }), { namespace: 'keyv' })`. The [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) lists the settings for other v5 setups.
+* **Keyv no longer prefixes keys.** Namespacing lives on the adapter (`namespace` + `namespaceSeparator`, default `::`). You do not need `useKeyPrefix: false` — that option was removed from Keyv.
+* **`keyPrefixSeparator` is now `namespaceSeparator`.** The option, getter, and setter were renamed to match the other adapters. In plain JavaScript the old option is ignored and the store uses `::`, so rename it wherever you set it.
+* **Keys written by v5 need matching settings.** v5's default setup, `new Keyv(new KeyvRedis(uri))`, applied its default `keyv` namespace twice, once in Keyv and once in the adapter, so `foo` was stored as `keyv::keyv:foo`. Read those keys with `new Keyv(new KeyvRedis(uri, { namespaceSeparator: '::keyv:' }), { namespace: 'keyv' })`. The [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#the-default-keyv-namespace-was-removed) lists the settings for other v5 setups.
 * **`createKeyv` accepts cluster and sentinel options** the same way the `KeyvRedis` constructor does.
 * **A failure is reported once.** When the adapter rejects because of `throwOnConnectError` or `throwOnErrors`, it no longer also emits `error`. A failed connection rejects with the connection error as the rejection's `cause`. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
 
@@ -137,7 +139,7 @@ export type KeyvRedisOptions = {
 	/**
 	 * Separator to use between namespace and key.
 	 */
-	keyPrefixSeparator?: string;
+	namespaceSeparator?: string;
 	/**
 	 * Number of keys to delete in a single batch.
 	 */
@@ -188,7 +190,7 @@ import KeyvRedis from '@keyv/redis';
 
 const keyvRedis = new KeyvRedis('redis://user:pass@localhost:6379', {
   namespace: 'my-namespace',
-  keyPrefixSeparator: ':',
+  namespaceSeparator: ':',
   clearBatchSize: 1000,
   useUnlink: true,
   noNamespaceAffectsAll: false,
@@ -277,11 +279,13 @@ import { createKeyv } from '@keyv/redis';
 const keyv = createKeyv('redis://user:pass@localhost:6379', { namespace: 'my-namespace' });
 ```
 
-This will prefix all keys with `my-namespace::` (the default `keyPrefixSeparator` is `::`). You can also set the namespace after the fact:
+This will prefix all keys with `my-namespace::` (the default `namespaceSeparator` is `::`). You can also set the namespace after the fact:
 
 ```js
 keyv.namespace = 'my-namespace';
 ```
+
+`clear()` and `iterator()` only touch keys that start with the namespace and separator (`my-namespace::`). Both are matched literally, so `*`, `?`, `[`, `]` and `\` in them have no special meaning to `SCAN`: clearing `tenant*` leaves `tenant-prod` alone. Clearing `my-namespace` does also clear a namespace that extends it with the separator, such as `my-namespace::archive`, because a key can contain the separator too. Keep the separator out of namespace names if you need them kept apart.
 
 NOTE: If you plan to do many clears or deletes, it is recommended to read the [Performance Considerations](#performance-considerations) section.
 
@@ -531,6 +535,92 @@ const tlsOptions = {
 const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 ```
 
+# Redis Cloud
+
+You connect to Redis Cloud the same way you connect to any Redis server, with a URI or with Redis client options. `KeyvRedis` creates a client from a URI string. It passes an options object, unchanged except for `connectionTimeout` when you set it, to `createClient` from `@redis/client`. That means `url`, `username`, `password`, and every `socket` TLS option work exactly as documented for `@redis/client`. `createKeyv` accepts the same arguments.
+
+## Endpoint and credentials
+
+The database endpoint (host and port) is on the database's **Configuration** tab in the Redis Cloud console: in the **Access** section for Essentials databases, or the **General** section for Pro databases. By default the database has a user named `default`. To see its password, use **Default user** > **Configure** for an Essentials database, or the **Security** section of the **Configuration** tab for a Pro database. If you turned on role-based access control and turned off the default user, use the username and password of a data access role instead.
+
+With TLS turned on, the URI uses the `rediss://` scheme (two `s`'s). Without `redis_ca.pem`, the URI below fails to connect when the database's certificate was issued by a Redis Cloud CA, so trust that CA as shown in [Trusting `redis_ca.pem`](#trusting-redis_capem).
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis('rediss://default:password@redis-host:12345'));
+keyv.on('error', (error) => console.error('Redis error', error));
+```
+
+Replace `password`, `redis-host`, and `12345` with your values. Encode a password that contains reserved URI characters, such as `@`, `:`, `/`, or `#`, with `encodeURIComponent`. A `redis://` URI connects without TLS, which a TLS-enabled database refuses.
+
+## Turning on TLS
+
+TLS is off by default. Turn it on from the **Security** section of the database's **Configuration** tab. It is available on paid Essentials and Pro plans, but not on the Free plan. Redis Cloud recommends TLS for any database reached over its public endpoint. Once TLS is on, every connection must use it.
+
+## Trusting `redis_ca.pem`
+
+Download the Redis Cloud CA bundle, `redis_ca.pem`, with **Download server certificate** on the database's **Configuration** tab, or from **Account Settings** > **Security**. The file holds several certificates, including Redis Cloud's own root CAs, which Node.js does not trust by default. Without the bundle, a `rediss://` URI checks the certificate only against Node.js's built-in CAs, which fails for databases whose certificates were issued by a Redis Cloud CA. Pass the whole file as `socket.ca`. Node.js loads every certificate in it.
+
+```js
+import fs from 'node:fs';
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis({
+  url: 'rediss://default:password@redis-host:12345',
+  socket: {
+    tls: true,
+    ca: fs.readFileSync('/path/to/redis_ca.pem'),
+  },
+}));
+keyv.on('error', (error) => console.error('Redis error', error));
+```
+
+You can set the host, port, and credentials as separate options instead of a `url`:
+
+```js
+const keyv = new Keyv(new KeyvRedis({
+  username: 'default',
+  password: 'password',
+  socket: {
+    host: 'redis-host',
+    port: 12345,
+    tls: true,
+    ca: fs.readFileSync('/path/to/redis_ca.pem'),
+  },
+}));
+```
+
+Keep these points in mind:
+
+- Leave `rejectUnauthorized` unset so Node.js verifies the certificate. The [TLS Support](#tls-support) sample sets it to `false`, which is only suitable for a local server with a self-signed certificate.
+- Connect with the endpoint hostname from the console, not an IP address. The certificate check compares hostnames.
+- `socket.tls` must match the URI scheme, so it must be `true` with `rediss://`. Otherwise `@redis/client` throws.
+- A URI string gets the adapter's [`defaultReconnectStrategy`](#helpers). With an options object, `@redis/client` uses its own reconnect behavior unless you set `socket.reconnectStrategy`, for example to `defaultReconnectStrategy`, which you can import from `@keyv/redis`.
+
+## Mutual TLS
+
+If the database requires client authentication (**Mutual TLS** in the TLS settings), add the client certificate and private key you registered there to the same `socket` options:
+
+```js
+const keyv = new Keyv(new KeyvRedis({
+  username: 'default',
+  password: 'password',
+  socket: {
+    host: 'redis-host',
+    port: 12345,
+    tls: true,
+    ca: fs.readFileSync('/path/to/redis_ca.pem'),
+    cert: fs.readFileSync('/path/to/client.crt'),
+    key: fs.readFileSync('/path/to/client.key'),
+  },
+}));
+```
+
+Other hosted Redis services use the same pattern: a `rediss://` URI or `socket.tls: true`, plus the CA certificate the provider gives you.
+
 # API
 
 `KeyvRedis` extends [Hookified](https://hookified.org) (`on`, `once`, `emit`, hooks) and implements the Keyv storage adapter contract. Missing keys and swallowed errors return `undefined` (never `null`).
@@ -539,7 +629,7 @@ const keyv = new Keyv({ store: new KeyvRedis(tlsOptions) });
 * **capabilities** - Adapter capability descriptor. `capabilities.expires` is `true` (absolute Unix-ms `expires` on `set` / `setMany`).
 * **client** - The Redis client, cluster, or sentinel connection. Assigning a new connection re-wires Hookified event listeners and resets PXAT detection. Type: `RedisClientConnectionType`.
 * **namespace** - Namespace used to prefix keys. `undefined` means no prefixing. Default: `undefined`.
-* **keyPrefixSeparator** - Separator between namespace and key. May be `""`. Default: `"::"`.
+* **namespaceSeparator** - Separator between namespace and key. May be `""`. Default: `"::"`.
 * **clearBatchSize** - `SCAN` / delete batch size. Must be greater than `0` or an `error` event is emitted. Default: `1000`.
 * **useUnlink** - Use `UNLINK` instead of `DEL`. Default: `true`.
 * **noNamespaceAffectsAll** - When no namespace is set, `clear()` / `iterator()` affect all keys (including namespaced ones). Default: `false`.

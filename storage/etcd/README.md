@@ -38,7 +38,7 @@
   - [.ttl](#ttl)
   - [.busyTimeout](#busytimeout)
   - [.namespace](#namespace)
-  - [.keyPrefixSeparator](#keyprefixseparator)
+  - [.namespaceSeparator](#namespaceseparator)
 - [Methods](#methods)
   - [constructor(url?, options?)](#constructorurl-options)
   - [.get(key)](#getkey)
@@ -131,7 +131,7 @@ await store.disconnect();
 
 ## Usage with Namespaces
 
-Namespacing is handled natively by the adapter — keys are prefixed with the namespace and separator (`namespace:key`) before being written to etcd, and the prefix is stripped from keys returned by `iterator()`. Setting a `namespace` on a `Keyv` instance propagates it to the underlying store automatically. Use a separate store instance per namespace so each keeps its own prefix:
+Namespacing is handled natively by the adapter — keys are prefixed with the namespace and separator (`namespace::key`, set with `namespaceSeparator`) before being written to etcd, and the prefix is stripped from keys returned by `iterator()`. Setting a `namespace` on a `Keyv` instance propagates it to the underlying store automatically. Use a separate store instance per namespace so each keeps its own prefix:
 
 ```js
 import Keyv from 'keyv';
@@ -171,10 +171,10 @@ await store.get('foo'); // 'bar'
 - **The store `ttl` applies per key.** In v5, `ttl` created one etcd lease when the store was constructed, and every key was attached to it. When that lease expired, every key on it was deleted at once, no matter when it was written, and later writes failed. In v6, a key written without an expiry lives for `ttl` from its own write, on its own lease. Keys written with a TTL through Keyv also get their own lease.
 - **The `lease` property was removed.** Remove any code that reads or assigns `store.lease`.
 - **The `ttlSupport` and `opts` properties were removed.** Read settings from the store's own properties instead, such as `store.url`, `store.ttl`, and `store.busyTimeout`.
-- **Keys written by v5 need the same namespace.** v5 stored keys as `<namespace>:<key>`, and Keyv v5 used `keyv` as the namespace when none was set. Keyv v6 has no default namespace. To read those keys, pass the same namespace to Keyv:
+- **Keys written by v5 need the same namespace and separator.** v5 stored keys as `<namespace>:<key>`, and Keyv v5 used `keyv` as the namespace when none was set. Keyv v6 has no default namespace, and it joins the namespace and key with `::`. To read those keys, pass the same namespace to Keyv and set `namespaceSeparator` to `':'`:
 
 ```js
-const keyv = new Keyv(new KeyvEtcd('etcd://localhost:2379'), { namespace: 'keyv' });
+const keyv = new Keyv(new KeyvEtcd('etcd://localhost:2379', { namespaceSeparator: ':' }), { namespace: 'keyv' });
 ```
 
 If v5 ran with `useKeyPrefix: false`, its keys have no prefix, so leave the namespace unset. Without a namespace, `clear()` deletes every key in etcd. See the [v5 to v6 migration guide](https://keyv.org/docs/migration/v5-to-v6/#keyvetcd-default-ttl-applies-per-key) for more.
@@ -188,6 +188,7 @@ If v5 ran with `useKeyPrefix: false`, its keys have no prefix, so leave the name
 | `ttl` | `number` | `undefined` | Default TTL in milliseconds for keys written without an expiry, counted from each write. Each such key gets its own etcd lease. |
 | `busyTimeout` | `number` | `undefined` | Per-request timeout in milliseconds. Aborts hung requests via `AbortSignal.timeout`. |
 | `namespace` | `string` | `undefined` | Key prefix for namespace isolation |
+| `namespaceSeparator` | `string` | `'::'` | Separator placed between the namespace and key |
 | `noNamespaceAffectsAll` | `boolean` | `false` | With no namespace, whether `clear()` and `iterator()` reach every key in etcd instead of only entries written without a namespace |
 
 ```js
@@ -245,13 +246,13 @@ Key prefix for namespace isolation. When set, all keys are prefixed with `namesp
 |---|---|
 | `string \| undefined` | `undefined` |
 
-### .keyPrefixSeparator
+### .namespaceSeparator
 
 The separator between the namespace and key.
 
 | Type | Default |
 |---|---|
-| `string` | `':'` |
+| `string` | `'::'` |
 
 ### .noNamespaceAffectsAll
 
@@ -427,7 +428,7 @@ Creates a prefixed key by prepending the namespace and separator. If no namespac
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
-store.createKeyPrefix('key', 'ns'); // 'ns:key'
+store.createKeyPrefix('key', 'ns'); // 'ns::key'
 store.createKeyPrefix('key'); // 'key'
 ```
 
@@ -437,7 +438,7 @@ Removes the namespace prefix from the start of a key. If no namespace is provide
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
-store.removeKeyPrefix('ns:key', 'ns'); // 'key'
+store.removeKeyPrefix('ns::key', 'ns'); // 'key'
 store.removeKeyPrefix('key'); // 'key'
 ```
 

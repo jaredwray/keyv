@@ -76,34 +76,43 @@ describe("namespace and key prefixing", () => {
 	it("should format a key with the namespace, even one that already starts with it", (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		store.namespace = "ns";
-		t.expect(store.formatKey("key")).toBe("ns:key");
-		t.expect(store.formatKey("ns:key")).toBe("ns:ns:key");
+		t.expect(store.formatKey("key")).toBe("ns::key");
+		t.expect(store.formatKey("ns::key")).toBe("ns::ns::key");
 		store.namespace = undefined;
 		t.expect(store.formatKey("key")).toBe("key");
 	});
 
 	it("should create a key prefix when a namespace is provided", (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
-		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
+		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
 		t.expect(store.createKeyPrefix("key")).toBe("key");
 		t.expect(store.createKeyPrefix("key", undefined)).toBe("key");
 	});
 
 	it("should remove a key prefix when a namespace is provided", (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
-		t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
-		t.expect(store.removeKeyPrefix("ns:ns:key", "ns")).toBe("ns:key");
-		t.expect(store.removeKeyPrefix("other:ns:key", "ns")).toBe("other:ns:key");
+		t.expect(store.removeKeyPrefix("ns::key", "ns")).toBe("key");
+		t.expect(store.removeKeyPrefix("ns::ns::key", "ns")).toBe("ns::key");
+		t.expect(store.removeKeyPrefix("other::ns::key", "ns")).toBe("other::ns::key");
 		t.expect(store.removeKeyPrefix("key")).toBe("key");
 		t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 	});
 
-	it("should get and set the keyPrefixSeparator", (t) => {
+	it("should get and set the namespaceSeparator", (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
-		t.expect(store.keyPrefixSeparator).toBe(":");
-		store.keyPrefixSeparator = "::";
-		t.expect(store.keyPrefixSeparator).toBe("::");
-		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
+		t.expect(store.namespaceSeparator).toBe("::");
+		store.namespaceSeparator = ":";
+		t.expect(store.namespaceSeparator).toBe(":");
+		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
+	});
+
+	it("should take the namespaceSeparator from the options", (t) => {
+		t.expect(
+			new KeyvDynamo({ endpoint: dynamoURL, namespaceSeparator: ":" }).namespaceSeparator,
+		).toBe(":");
+		t.expect(
+			new KeyvDynamo({ endpoint: dynamoURL, namespaceSeparator: "" }).namespaceSeparator,
+		).toBe("");
 	});
 });
 

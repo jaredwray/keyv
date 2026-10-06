@@ -190,34 +190,40 @@ describe("namespace and key prefixing", () => {
 	it("should format a key with the namespace, even one that already starts with it", (t) => {
 		const store = new KeyvEtcd();
 		store.namespace = "ns";
-		t.expect(store.formatKey("key")).toBe("ns:key");
-		t.expect(store.formatKey("ns:key")).toBe("ns:ns:key");
+		t.expect(store.formatKey("key")).toBe("ns::key");
+		t.expect(store.formatKey("ns::key")).toBe("ns::ns::key");
 		store.namespace = undefined;
 		t.expect(store.formatKey("key")).toBe("key");
 	});
 
 	it("should create a key prefix when a namespace is provided", (t) => {
 		const store = new KeyvEtcd();
-		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
+		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
 		t.expect(store.createKeyPrefix("key")).toBe("key");
 		t.expect(store.createKeyPrefix("key", undefined)).toBe("key");
 	});
 
 	it("should remove a key prefix when a namespace is provided", (t) => {
 		const store = new KeyvEtcd();
-		t.expect(store.removeKeyPrefix("ns:key", "ns")).toBe("key");
-		t.expect(store.removeKeyPrefix("ns:ns:key", "ns")).toBe("ns:key");
-		t.expect(store.removeKeyPrefix("other:ns:key", "ns")).toBe("other:ns:key");
+		t.expect(store.removeKeyPrefix("ns::key", "ns")).toBe("key");
+		t.expect(store.removeKeyPrefix("ns::ns::key", "ns")).toBe("ns::key");
+		t.expect(store.removeKeyPrefix("other::ns::key", "ns")).toBe("other::ns::key");
 		t.expect(store.removeKeyPrefix("key")).toBe("key");
 		t.expect(store.removeKeyPrefix("key", undefined)).toBe("key");
 	});
 
-	it("should get and set the keyPrefixSeparator", (t) => {
+	it("should get and set the namespaceSeparator", (t) => {
 		const store = new KeyvEtcd();
-		t.expect(store.keyPrefixSeparator).toBe(":");
-		store.keyPrefixSeparator = "::";
-		t.expect(store.keyPrefixSeparator).toBe("::");
-		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns::key");
+		t.expect(store.namespaceSeparator).toBe("::");
+		store.namespaceSeparator = ":";
+		t.expect(store.namespaceSeparator).toBe(":");
+		t.expect(store.createKeyPrefix("key", "ns")).toBe("ns:key");
+	});
+
+	it("should take the namespaceSeparator from the options", (t) => {
+		t.expect(new KeyvEtcd({ namespaceSeparator: ":" }).namespaceSeparator).toBe(":");
+		t.expect(new KeyvEtcd(etcdUrl, { namespaceSeparator: "/" }).namespaceSeparator).toBe("/");
+		t.expect(new KeyvEtcd({ namespaceSeparator: "" }).namespaceSeparator).toBe("");
 	});
 });
 
@@ -523,7 +529,7 @@ describe("clear and iterator without a namespace", () => {
 		await store.client.putRaw({ key: foreign.text, value: "on" });
 		await store.client.putRaw({ key: foreign.empty, value: "" });
 		await store.client.putRaw({ key: foreign.binary, value: "binary-value" });
-		return { store, namespaced, own, foreign, namespacedKey: `ns-${id}:42` };
+		return { store, namespaced, own, foreign, namespacedKey: `ns-${id}::42` };
 	}
 
 	it("should record the namespace each value is written under", async (t) => {
@@ -537,7 +543,7 @@ describe("clear and iterator without a namespace", () => {
 			e: null,
 			n: null,
 		});
-		t.expect(JSON.parse((await store.client.get(`ns-${id}:key`)) as string)).toEqual({
+		t.expect(JSON.parse((await store.client.get(`ns-${id}::key`)) as string)).toEqual({
 			v: "b",
 			e: null,
 			n: `ns-${id}`,
@@ -577,7 +583,7 @@ describe("clear and iterator without a namespace", () => {
 		// alone, since nothing marks it as Keyv's.
 		const entries = {
 			envelope: [`legacy-${id}`, JSON.stringify({ v: "legacy-value", e: null })],
-			envelopeWithColon: [`legacy:${id}`, JSON.stringify({ v: "prefixed-value", e: null })],
+			envelopeWithSeparator: [`legacy::${id}`, JSON.stringify({ v: "prefixed-value", e: null })],
 			valueObject: [`flag-${id}`, JSON.stringify({ value: "enabled" })],
 			v5WithExpiry: [`v5-${id}`, JSON.stringify({ value: "v5", expires: Date.now() + 60_000 })],
 			extraField: [`extra-${id}`, JSON.stringify({ v: "extra", e: null, other: 1 })],
@@ -589,7 +595,7 @@ describe("clear and iterator without a namespace", () => {
 		const results = await collect(store);
 		t.expect(results.get(entries.envelope[0])).toBe("legacy-value");
 		for (const [key] of [
-			entries.envelopeWithColon,
+			entries.envelopeWithSeparator,
 			entries.valueObject,
 			entries.v5WithExpiry,
 			entries.extraField,
@@ -600,7 +606,7 @@ describe("clear and iterator without a namespace", () => {
 		await store.clear();
 		t.expect(await store.client.get(entries.envelope[0])).toBeNull();
 		for (const [key, value] of [
-			entries.envelopeWithColon,
+			entries.envelopeWithSeparator,
 			entries.valueObject,
 			entries.v5WithExpiry,
 			entries.extraField,
