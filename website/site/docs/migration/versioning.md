@@ -46,13 +46,13 @@ Each release computes its tag from its version:
 
 - **Pre-release** → published under a tag named after its pre-release id: `6.0.0-beta.1` goes to `beta`, and `6.0.0-rc.1` goes to `rc`. Never touches `latest`.
 - **Stable, current major** → published under `latest`.
-- **Stable, older major** → published under `v{major}-lts` (e.g. `v5-lts`). An older major can never move `latest`.
+- **Stable, older major** → published under `v{major}-lts` (e.g. `v5-lts`). An older major can never move `latest`. Every stable release from the v5 line is tagged this way.
 
 A safety guard refuses any release that would move `latest` backwards, so `pnpm add keyv` always installs a forward-moving stable line.
 
 ## How releases are published
 
-Both release lines publish through the same GitHub Actions workflow (`release.yaml`) using npm [staged publishing](https://docs.npmjs.com/staged-publishing/) with [trusted publishing](https://docs.npmjs.com/trusted-publishers/) and provenance: CI only *stages* a version, and a maintainer approves it with 2FA before it becomes installable. On `main` (v6) a GitHub Release triggers the workflow. On the `v5` branch a maintainer runs it manually from `v5`, and only the packages whose version is ahead of npm are staged, since v5 packages are versioned independently. A GitHub Release named `v5-YYYY-MM-DD` may accompany a v5 cut for release notes. It does not publish anything: a GitHub Release runs the workflow file at the tag's commit, the `v5` branch's workflow has no `release` trigger, and main's release workflow refuses any tag whose commit is not on `main`.
+Each release line publishes through its own GitHub Actions workflow, using npm [staged publishing](https://docs.npmjs.com/staged-publishing/) with [trusted publishing](https://docs.npmjs.com/trusted-publishers/) and provenance: CI only *stages* a version, and a maintainer approves it with 2FA before it becomes installable. On `main` (v6) a GitHub Release triggers `release.yaml`, which stages only from `main`. On the `v5` branch a maintainer runs `release-v5.yaml` manually from `v5`, and only the packages whose version is ahead of npm are staged, since v5 packages are versioned independently. v5 releases never move `latest`. A GitHub Release named `v5-YYYY-MM-DD` may accompany a v5 cut for release notes. It does not publish anything: a GitHub Release runs the workflows at the tag's commit, `release-v5.yaml` has no `release` trigger, and `release.yaml` refuses any tag whose commit is not on `main`.
 
 ## Why all packages share one version
 

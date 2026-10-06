@@ -36,15 +36,15 @@ Profile: npm library · public
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified 2026-08-24
 
 ## 5. npm publishing — npm libraries only
-- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual) — verified 2026-08-25
+- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for `release.yaml` — it can stage, never publish live (manual) — verified 2026-08-25
 - [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2057
 - [x] Maintainer promotes staged versions with 2FA (manual) — verified 2026-08-25
 - [x] Drydock connected — staged releases reviewed before promotion (manual) — verified 2026-08-25
 - [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified 2026-08-25
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified 2026-08-24
-- [x] v5 maintenance line stages through the same `release.yaml` / `release` environment trusted publisher (manual `workflow_dispatch` from `v5` only; `pnpm stage publish … --provenance`, no direct publish) — v5 PR #2119
-- [ ] Stage-only trusted publisher configured for `@keyv/serialize` (v5-only package, not covered by main's setup) (manual)
-- [x] `release` events refuse a tag whose commit is not on `main` (a tag on another branch runs that branch's workflow, and the v5 line has no `release` trigger) — PR #2124
+- [ ] v5 maintenance line stages through its own `release-v5.yaml`, run from the `v5` branch (manual `workflow_dispatch` from `v5` only; `pnpm stage publish … --provenance`, no direct publish; never moves `latest`); the copy on `main` only lists the workflow and refuses to run
+- [ ] Stage-only trusted publisher for `release-v5.yaml` (environment `release`) on every package the v5 line publishes, including the v5-only `@keyv/serialize` (manual)
+- [x] `release.yaml` stages only `main`: `release` events refuse a tag whose commit is not on `main`, and a manual run from any other branch is a dry run — PR #2124
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified 2026-08-24 (PR #2053–#2057: Aikido Security: check code)

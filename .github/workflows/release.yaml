@@ -1,5 +1,11 @@
 name: release
 
+# Stages the packages on `main` to npm; a maintainer approves each staged
+# version with 2FA before it goes live. Only `main` is staged: a GitHub
+# Release must be tagged on a commit on `main`, and a manual run from any
+# other branch is a dry run. The v5 line is staged by its own workflow,
+# release-v5.yaml, run from the `v5` branch.
+
 on:
   workflow_dispatch:
     inputs:
@@ -11,11 +17,10 @@ on:
     types: [published]
 
 # Never run two releases at once; let an in-flight stage finish rather than
-# cancelling it half-way through the package set. The v5 branch's release
-# workflow uses the same group, so the two release lines never stage
-# concurrently either. `queue: max` keeps every queued release pending in
-# FIFO order (up to 100) instead of GitHub's default of a single pending run,
-# where a newly queued release silently cancels the one already waiting.
+# cancelling it half-way through the package set. `queue: max` keeps every
+# queued release pending in FIFO order (up to 100) instead of GitHub's default
+# of a single pending run, where a newly queued release silently cancels the
+# one already waiting.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -155,11 +160,9 @@ jobs:
           # Full history so the release-tag guard below can check ancestry.
           fetch-depth: 0
 
-      # A GitHub Release publishes the v6 line only. The workflow file that
-      # runs for a Release is the one at the tagged commit (a tag on the v5
-      # branch runs v5's dispatch-only workflow, never this file), but refuse
-      # anyway if the released commit is not on main, so a release-notes tag
-      # cut from another branch can never reach npm's stage queue from here.
+      # A GitHub Release runs the copy of this file at the tagged commit, so
+      # refuse a tag whose commit is not on main: a tag cut from any other
+      # branch can never reach npm's stage queue from here.
       - name: Verify the release tag is on main
         if: github.event_name == 'release'
         env:
@@ -204,13 +207,15 @@ jobs:
       # stable current major -> latest; stable old major -> v{major}-lts),
       # skips versions already on the registry, guards `latest` from moving
       # backwards, then packs and stages each package under that tag.
-      # `release` events ignore dry_run (inputs is empty) and stage for real;
-      # manual runs default to dry_run=true. Uses OIDC only — no token.
+      # Uses OIDC only — no token.
       - name: Stage publish (compute dist-tag, skip unchanged, guard latest)
         env:
           # The major that owns npm's `latest`. Bump it in the release PR for the
           # first stable release of a new major; a stable release of any other
           # major is staged under v{major}-lts and never moves `latest`.
           LATEST_MAJOR: 6
-          DRY_RUN: ${{ inputs.dry_run }}
+          # Stages for real on a `release` event (its tag was verified above)
+          # or a manual run from main with Dry run unchecked. A manual run from
+          # any other branch is always a dry run.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run || github.ref != 'refs/heads/main') }}
         run: pnpm tsx scripts/release-publish.ts
