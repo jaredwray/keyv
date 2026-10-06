@@ -7,7 +7,7 @@ import KeyvValkeyGlide, {
 	KeyvValkeyGlide as NamedKeyvValkeyGlide,
 } from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370/1";
 
 describe("KeyvValkeyGlide", () => {
 	test("should be a class", () => {
@@ -40,6 +40,7 @@ describe("KeyvValkeyGlide", () => {
 	test("should reuse an existing glide client", async () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		const store = new KeyvValkeyGlide(client);
 		expect(store.client).toBe(client);
@@ -54,6 +55,7 @@ describe("KeyvValkeyGlide", () => {
 	test("should apply useSets from options when passing in a client", async () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		const store = new KeyvValkeyGlide(client, { useSets: true });
 		expect(store.useSets).toBe(true);
@@ -78,6 +80,7 @@ describe("KeyvValkeyGlide", () => {
 		const previous = await store.getClient();
 		const newClient = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		store.client = newClient;
 		expect(store.client).toBe(newClient);
@@ -133,6 +136,7 @@ describe("createKeyv", () => {
 		await keyv.set(key, value);
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		expect(await client.exists([`namespace:${namespace}:${key}`])).toBe(1);
 		expect(await client.exists([key])).toBe(0);

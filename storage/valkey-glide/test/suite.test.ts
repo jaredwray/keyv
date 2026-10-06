@@ -4,7 +4,7 @@ import Keyv from "keyv";
 import { afterAll, it } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370/1";
 
 const store = () => new KeyvValkeyGlide(valkeyUri);
 

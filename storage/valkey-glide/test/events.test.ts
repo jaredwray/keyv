@@ -4,7 +4,7 @@ import { Hookified } from "hookified";
 import { describe, expect, test } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370/1";
 
 describe("events", () => {
 	test("should extend Hookified", async () => {

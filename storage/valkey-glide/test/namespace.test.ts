@@ -4,7 +4,7 @@ import { GlideClient } from "@valkey/valkey-glide";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370/1";
 
 describe("namespace", () => {
 	test("should default the namespace to undefined", async () => {
@@ -25,6 +25,7 @@ describe("namespace", () => {
 
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		expect(await client.get(`namespace:${namespace}:${key}`)).toBe(value);
 		client.close();
@@ -73,6 +74,7 @@ describe("clear", () => {
 		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true });
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
@@ -138,6 +140,7 @@ describe("useSets", () => {
 	test("should use the sets: prefix for the tracking key", async () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		const store = new KeyvValkeyGlide(client, { useSets: true });
 		const namespace = faker.string.alphanumeric(8);
@@ -155,6 +158,7 @@ describe("useSets", () => {
 	test("should clean up legacy namespace: tracking sets on clear", async () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		const namespace = faker.string.alphanumeric(8);
 		const legacyKey = faker.string.alphanumeric(10);

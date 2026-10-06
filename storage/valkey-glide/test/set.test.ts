@@ -5,7 +5,7 @@ import { Decoder, GlideClient } from "@valkey/valkey-glide";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370/1";
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -44,17 +44,23 @@ describe("set", () => {
 		const store = new KeyvValkeyGlide(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const bytes = Buffer.from([0xff, 0xfe, 0xfd, 0x00, 0x01]);
-		await store.set(key, bytes);
-
 		const rawClient = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 			defaultDecoder: Decoder.Bytes,
 		});
-		const stored = await rawClient.get(key);
-		expect(Buffer.isBuffer(stored)).toBe(true);
-		expect(stored).toEqual(bytes);
-		rawClient.close();
-		await store.disconnect();
+		try {
+			await store.set(key, bytes);
+			const stored = await rawClient.get(key);
+			expect(Buffer.isBuffer(stored)).toBe(true);
+			expect(stored).toEqual(bytes);
+		} finally {
+			// These bytes aren't valid UTF-8, and the default String decoder fails on them.
+			// Delete the key so tests that read every key in the database never see it.
+			await rawClient.del([key]);
+			rawClient.close();
+			await store.disconnect();
+		}
 	});
 
 	test("should stringify non-string, non-buffer values", async () => {

@@ -2,9 +2,8 @@ import {defineConfig} from 'vitest/config';
 
 export default defineConfig({
 	test: {
-		// service-backed suites hit real containers; absorb one-off timing races
-		retry: 2,
-		// suites share a single Valkey instance; run sequentially to avoid cross-file interference
+		// suites share database 1 of the Valkey server (the @keyv/valkey tests use database 0);
+		// run sequentially to avoid cross-file interference
 		fileParallelism: false,
 		maxWorkers: 1,
 		maxConcurrency: 1,

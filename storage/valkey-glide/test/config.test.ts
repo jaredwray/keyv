@@ -4,7 +4,7 @@ import { GlideClient, GlideClusterClient } from "@valkey/valkey-glide";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370/1";
 
 /**
  * Captures the config object passed to `GlideClient`/`GlideClusterClient.createClient`
@@ -147,6 +147,7 @@ describe("connection config", () => {
 	test("should apply namespace and useSets when constructed from an existing client", async () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
 		});
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(client, { namespace, useSets: true });

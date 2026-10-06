@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { describe, expect, test } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370/1";
 
 describe("iterator", () => {
 	test("should iterate over entries within the namespace without passing one in", async () => {
@@ -36,6 +36,7 @@ describe("iterator", () => {
 
 	test("should iterate the root keyspace when no namespace or useSets prefix is set", async () => {
 		const store = new KeyvValkeyGlide(valkeyUri);
+		await store.clear();
 		const key = faker.string.alphanumeric(16);
 		const value = faker.string.alphanumeric(10);
 		await store.set(key, value);
