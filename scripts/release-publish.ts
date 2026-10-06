@@ -4,8 +4,8 @@
  *
  * ## Why this script exists
  *
- * Keyv supports more than one major version at a time (v6 in beta on `main`,
- * v5 stable on the `v5` branch). npm has a single special tag, `latest`, that
+ * Keyv supports more than one major version at a time (v6 on `main`, v5 in
+ * maintenance on the `v5` branch). npm has a single special tag, `latest`, that
  * `npm install keyv` resolves to. If an older major were ever published to
  * `latest`, every default install would break — so the tag each release lands
  * on must be chosen deliberately rather than left to npm's default.
