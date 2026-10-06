@@ -1,3 +1,5 @@
+import { b64decode, b64encode, decodeBase64 } from "./base64.js";
+
 const JSON_HEADERS = { "content-type": "application/json" };
 
 /**
@@ -84,17 +86,6 @@ export type LeaseGrantResponse = {
 	/** The granted TTL in seconds, as a decimal string. */
 	TTL: string;
 };
-
-export function b64encode(input: string | Buffer): string {
-	if (typeof input === "string") {
-		return Buffer.from(input, "utf8").toString("base64");
-	}
-	return input.toString("base64");
-}
-
-export function b64decode(input: string): string {
-	return Buffer.from(input, "base64").toString("utf8");
-}
 
 // Returns the next key after `prefix` in lexicographic byte order as raw
 // bytes, suitable as `range_end` for a prefix scan. Returned as a Buffer so
@@ -224,12 +215,12 @@ export class EtcdClient {
 			const result = await this.range({ key, rangeEnd, limit: pageSize });
 			const kvs = result.kvs ?? [];
 			yield kvs.map((kv) => ({
-				key: Buffer.from(kv.key, "base64"),
+				key: decodeBase64(kv.key),
 				value: kv.value === undefined ? "" : b64decode(kv.value),
 			}));
 			more = result.more === true && kvs.length > 0;
 			if (more) {
-				key = Buffer.concat([Buffer.from(kvs[kvs.length - 1].key, "base64"), rangeEnd]);
+				key = Buffer.concat([decodeBase64(kvs[kvs.length - 1].key), rangeEnd]);
 			}
 		}
 	}
