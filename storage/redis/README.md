@@ -549,11 +549,15 @@ With TLS turned on, the URI uses the `rediss://` scheme (two `s`'s). Without `re
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
-const keyv = new Keyv(new KeyvRedis('rediss://default:password@redis-host:12345'));
+const url = new URL(`rediss://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`);
+url.username = process.env.REDIS_USERNAME;
+url.password = process.env.REDIS_PASSWORD;
+
+const keyv = new Keyv(new KeyvRedis(url.toString()));
 keyv.on('error', (error) => console.error('Redis error', error));
 ```
 
-Replace `password`, `redis-host`, and `12345` with your values. Encode a password that contains reserved URI characters, such as `@`, `:`, `/`, or `#`, with `encodeURIComponent`. A `redis://` URI connects without TLS, which a TLS-enabled database refuses.
+Set `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_HOST`, and `REDIS_PORT` from the console. The username is `default` unless you use a data access role. Setting `url.password` percent-encodes reserved URI characters such as `@`, `:`, `/`, and `#`, so pass the password as stored. A `redis://` URI connects without TLS, which a TLS-enabled database refuses.
 
 ## Turning on TLS
 
@@ -568,8 +572,12 @@ import fs from 'node:fs';
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 
+const url = new URL(`rediss://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`);
+url.username = process.env.REDIS_USERNAME;
+url.password = process.env.REDIS_PASSWORD;
+
 const keyv = new Keyv(new KeyvRedis({
-  url: 'rediss://default:password@redis-host:12345',
+  url: url.toString(),
   socket: {
     tls: true,
     ca: fs.readFileSync('/path/to/redis_ca.pem'),
@@ -578,15 +586,15 @@ const keyv = new Keyv(new KeyvRedis({
 keyv.on('error', (error) => console.error('Redis error', error));
 ```
 
-You can set the host, port, and credentials as separate options instead of a `url`:
+You can set the host, port, and credentials as separate options instead of a `url`. `password` here is the raw password, not percent-encoded, because it is not part of a URI:
 
 ```js
 const keyv = new Keyv(new KeyvRedis({
-  username: 'default',
-  password: 'password',
+  username: process.env.REDIS_USERNAME,
+  password: process.env.REDIS_PASSWORD,
   socket: {
-    host: 'redis-host',
-    port: 12345,
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT),
     tls: true,
     ca: fs.readFileSync('/path/to/redis_ca.pem'),
   },
@@ -606,11 +614,11 @@ If the database requires client authentication (**Mutual TLS** in the TLS settin
 
 ```js
 const keyv = new Keyv(new KeyvRedis({
-  username: 'default',
-  password: 'password',
+  username: process.env.REDIS_USERNAME,
+  password: process.env.REDIS_PASSWORD,
   socket: {
-    host: 'redis-host',
-    port: 12345,
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT),
     tls: true,
     ca: fs.readFileSync('/path/to/redis_ca.pem'),
     cert: fs.readFileSync('/path/to/client.crt'),
