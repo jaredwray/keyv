@@ -44,6 +44,7 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 - [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified 2026-09-09
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified 2026-09-08
 - [x] Nothing is ever staged under `latest`: every stable release stages under `v{major}-lts` (`computeTag`), and `publishArgs` refuses `latest` outright
+- [ ] `release` environment deployment branches limited to `main`, `v5` and `v*` release tags. npm does not check which branch a trusted workflow runs on, and the in-file guards only bind copies that contain them, so this is what stops an older release workflow on any other branch from staging (manual)
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified 2026-09-08 (PR #2127: Aikido Security: check code)

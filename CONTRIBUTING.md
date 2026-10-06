@@ -55,7 +55,7 @@ Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** 
 
 - CI never publishes live. It builds, tests, packs each package and runs `pnpm stage publish … --provenance`, which puts the version in npm's stage queue with a provenance attestation.
 - A maintainer then approves each staged version on npm with 2FA; only then does it become installable.
-- There are no npm tokens anywhere. npm allows several trusted publishers per package, and each workflow has its own **stage-only** one on npmjs.com (repo `jaredwray/keyv`, environment `release`): `release.yaml` on every package released from `main`, and `release-v5.yaml` on every package released from `v5`, including the v5-only `@keyv/serialize`.
+- There are no npm tokens anywhere. npm allows several trusted publishers per package, and each workflow needs its own **stage-only** one on npmjs.com (repo `jaredwray/keyv`, environment `release`) before it can stage: `release.yaml` on every package released from `main`, and `release-v5.yaml` on every package released from `v5`, including the v5-only `@keyv/serialize`.
 
 | | `main` (v6) | `v5` branch |
 | --- | --- | --- |
