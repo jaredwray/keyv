@@ -1,7 +1,9 @@
+import { readFileSync } from "node:fs";
 import { faker } from "@faker-js/faker";
 import { keyvIteratorTests, keyvTestSuite, storageTestSuite } from "@keyv/test-suite";
 import { Keyv } from "keyv";
 import { describe, expect, it, vi } from "vitest";
+import { b64decode, b64encode, decodeBase64 } from "../src/base64.js";
 import {
 	EtcdClient,
 	type EtcdDeleteBuilder,
@@ -771,6 +773,24 @@ describe("disconnect and error handling", () => {
 	});
 });
 
+describe("base64", () => {
+	it("should round-trip text and raw bytes", (t) => {
+		t.expect(b64decode(b64encode("hello"))).toBe("hello");
+		const bytes = Buffer.from([0xff, 0x00, 0xc3]);
+		t.expect(decodeBase64(b64encode(bytes)).equals(bytes)).toBe(true);
+		t.expect(b64decode(b64encode("k"))).toBe("k");
+	});
+
+	it("should keep decoding out of the HTTP client file", () => {
+		const client = readFileSync(new URL("../src/client.ts", import.meta.url), "utf8");
+		const codec = readFileSync(new URL("../src/base64.ts", import.meta.url), "utf8");
+		const build = readFileSync(new URL("../tsdown.config.ts", import.meta.url), "utf8");
+		expect(client).not.toMatch(/Buffer\.from\s*\(\s*[^,\n]+,\s*["']base64["']/);
+		expect(codec).not.toMatch(/(?<![\w$.])fetch\s*\(/);
+		expect(build).toContain("unbundle: true");
+	});
+});
+
 describe("EtcdClient", () => {
 	it("should abort hung requests when a timeout is set", async (t) => {
 		// 192.0.2.1 is RFC 5737 TEST-NET-1 — guaranteed not to route, so the
@@ -837,6 +857,34 @@ describe("EtcdClient", () => {
 			}
 
 			t.expect(pages).toEqual([[]]);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it("should decode each scanned page and continue after the last key", async (t) => {
+		const client = new EtcdClient({ url: "http://127.0.0.1:2379" });
+		const key = Buffer.from("alpha").toString("base64");
+		const value = Buffer.from("beta").toString("base64");
+		const bodies = [
+			JSON.stringify({ kvs: [{ key, value }], more: true }),
+			JSON.stringify({ kvs: [] }),
+		];
+		vi.stubGlobal(
+			"fetch",
+			async () =>
+				new Response(bodies.shift(), {
+					status: 200,
+					headers: { "content-type": "application/json" },
+				}),
+		);
+		try {
+			const pages = [];
+			for await (const page of client.scanAll(1)) {
+				pages.push(page);
+			}
+
+			t.expect(pages).toEqual([[{ key: Buffer.from("alpha"), value: "beta" }], []]);
 		} finally {
 			vi.unstubAllGlobals();
 		}
