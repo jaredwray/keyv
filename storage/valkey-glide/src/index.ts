@@ -8,6 +8,7 @@ import {
 	GlideClusterClient,
 	type GlideReturnType,
 	type GlideString,
+	RequestError,
 	TimeUnit,
 } from "@valkey/valkey-glide";
 import { Hookified } from "hookified";
@@ -232,13 +233,21 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return entries.map(() => false);
 		}
 
+		let results: GlideReturnType[] | null;
 		try {
-			const results = await this.execBatch(client, batch);
-			return setCommandIndexes.map((index) => index !== undefined && results?.[index] === "OK");
+			results = await this.execBatch(client, batch);
 		} catch (error) {
 			this.emit("error", error);
 			return entries.map(() => false);
 		}
+
+		this.emitBatchErrors(results);
+		return setCommandIndexes.map(
+			(index) =>
+				index !== undefined &&
+				results?.[index] === "OK" &&
+				(!setKey || typeof results[index + 1] === "number"),
+		);
 	}
 
 	public async delete(key: string): Promise<boolean> {
@@ -254,11 +263,12 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		const client = await this.getClient();
 		const resolvedKeys = keys.map((key) => this.getKeyName(key));
 		const batch = this.createBatch(client);
+		const useSets = this._useSets;
 		for (const resolved of resolvedKeys) {
 			batch.unlink([resolved]);
 		}
 
-		if (this._useSets) {
+		if (useSets) {
 			const setKey = this.getSetKey();
 			for (const resolved of resolvedKeys) {
 				batch.srem(setKey, [resolved]);
@@ -266,9 +276,14 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const results = await this.execBatch(client, batch);
+		this.emitBatchErrors(results);
 		return resolvedKeys.map((_, index) => {
 			const result = results?.[index];
-			return typeof result === "number" && result > 0;
+			return (
+				typeof result === "number" &&
+				result > 0 &&
+				(!useSets || typeof results?.[resolvedKeys.length + index] === "number")
+			);
 		});
 	}
 
@@ -291,6 +306,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const results = await this.execBatch(client, batch);
+		this.emitBatchErrors(results);
 		return resolvedKeys.map((_, index) => {
 			const result = results?.[index];
 			return typeof result === "number" && result > 0;
@@ -381,6 +397,18 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return client.exec(batch as Batch, false);
+	}
+
+	private emitBatchErrors(results: GlideReturnType[] | null): void {
+		const errors = (results ?? []).filter((result) => result instanceof RequestError);
+		if (errors.length > 0) {
+			this.emit(
+				"error",
+				errors.length === 1
+					? errors[0]
+					: new AggregateError(errors, "Valkey GLIDE batch commands failed"),
+			);
+		}
 	}
 
 	private getSetKey(): string {

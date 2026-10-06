@@ -47,6 +47,7 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`@keyv/redis` `keyPrefixSeparator` Is Now `namespaceSeparator`](#keyvredis-keyprefixseparator-is-now-namespaceseparator)
   - [`@keyv/redis` Matches the Namespace Literally](#keyvredis-matches-the-namespace-literally)
 - [New Features](#new-features)
+  - [Valkey GLIDE Adapter](#valkey-glide-adapter)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
   - [Browser Compatibility](#browser-compatibility)
@@ -866,6 +867,10 @@ In v6, the namespace and separator are matched literally. `clear()` and `iterato
 ---
 
 ## New Features
+
+### Valkey GLIDE Adapter
+
+The new `@keyv/valkey-glide` adapter supports standalone and cluster connections through Valkey GLIDE. When calling the adapter directly, `setMany`, `deleteMany`, and `hasMany` emit one `error` event per batch containing command failures: the original `RequestError` for one failed command, or an `AggregateError` containing all failures. Results preserve input order and return `false` for affected entries, including failed tracking commands with `useSets: true`. Batches are not atomic, so a write or deletion may have completed even if its tracking command failed.
 
 ### Keyv v6 Versioning
 

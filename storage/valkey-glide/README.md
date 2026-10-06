@@ -198,6 +198,8 @@ When `useSets` is `false`, `clear()` and `iterator()` use `SCAN MATCH` with the 
 
 Missing keys are `undefined`, never `null`.
 
+`setMany`, `deleteMany`, and `hasMany` report individual GLIDE command failures through one `error` event per batch and return `false` for affected entries, preserving input order and successful results. The event contains the original `RequestError` for one failed command or an `AggregateError` whose `errors` contains all command failures. With `useSets: true`, a failed tracking command also makes that entry's result `false`. Batches are not atomic: a data write or deletion may have completed even if its tracking command failed.
+
 `disconnect()` calls GLIDE `close()`.
 
 ## Events
@@ -208,7 +210,7 @@ Missing keys are `undefined`, never `null`.
 | --- | --- |
 | `connect` | A client was created or assigned |
 | `disconnect` | `disconnect()` closed the client |
-| `error` | Connect or write failed |
+| `error` | Connection, write, or batch command failed |
 
 GLIDE itself is not an EventEmitter, so connection errors surface through thrown promises and the adapter `error` event rather than client `error` / `reconnecting` listeners.
 
