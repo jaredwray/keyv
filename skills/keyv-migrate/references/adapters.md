@@ -24,6 +24,12 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - Missing values are `undefined`, never `null`.
 - `keyv` is now a peer dependency; install it next to the adapter.
 
+## `@keyv/valkey-glide`
+
+- New in v6: a Valkey adapter on the official GLIDE client (`@valkey/valkey-glide`). It takes the same `namespace`, `namespaceSeparator` and `useSets` options as `@keyv/valkey` and builds the same keys, so either adapter reads the other's data.
+- The client connects on the first command, and the `client` getter throws until then; `await store.getClient()` connects and returns it.
+- `keyv` is a peer dependency; install it next to the adapter.
+
 ## `@keyv/sqlite`
 
 - The driver changed. v6 uses `node:sqlite` on Node.js and `bun:sqlite` on Bun, and falls back to `better-sqlite3`. It no longer uses `sqlite3`. To keep `sqlite3`, pass `createSqlite3Driver(sqlite3)` as the driver; otherwise remove the `sqlite3` dependency.

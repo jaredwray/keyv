@@ -1,6 +1,7 @@
 import process from "node:process";
 import { faker } from "@faker-js/faker";
 import { GlideClient } from "@valkey/valkey-glide";
+import Keyv from "keyv";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
@@ -195,9 +196,95 @@ describe("clear", () => {
 		await storeA.disconnect();
 		await storeB.disconnect();
 	});
+
+	test("should match every glob metacharacter in the namespace literally", async () => {
+		const base = faker.string.alphanumeric(8);
+		// `[a-z]`, `?`, `*` and a trailing backslash would all be glob syntax if left unescaped.
+		const store = new KeyvValkeyGlide(valkeyUri, { namespace: `${base}[a-z]?*\\` });
+		const sibling = new KeyvValkeyGlide(valkeyUri, { namespace: `${base}xy-prod` });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(key, value);
+
+		await store.clear();
+
+		expect(await store.get(key)).toBeUndefined();
+		expect(await sibling.get(key)).toBe(value);
+
+		await sibling.clear();
+		await store.disconnect();
+		await sibling.disconnect();
+	});
+
+	test("should not clear a namespace that shares a prefix when useSets is true", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true, namespace });
+		const sibling = new KeyvValkeyGlide(valkeyUri, {
+			useSets: true,
+			namespace: `${namespace}${faker.string.alphanumeric(3)}`,
+		});
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(key, value);
+
+		await store.clear();
+
+		expect(await store.get(key)).toBeUndefined();
+		expect(await sibling.get(key)).toBe(value);
+
+		await sibling.clear();
+		await store.disconnect();
+		await sibling.disconnect();
+	});
+
+	test("should clear only the Keyv instance's namespace", async () => {
+		const keyv = new Keyv({
+			store: new KeyvValkeyGlide(valkeyUri),
+			namespace: faker.string.alphanumeric(8),
+		});
+		const other = new Keyv({
+			store: new KeyvValkeyGlide(valkeyUri),
+			namespace: faker.string.alphanumeric(8),
+		});
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, faker.string.alphanumeric(10));
+		await other.set(key, "other");
+
+		await keyv.clear();
+
+		expect(await keyv.get(key)).toBeUndefined();
+		expect(await other.get(key)).toBe("other");
+		await other.clear();
+		await keyv.disconnect();
+		await other.disconnect();
+	});
 });
 
 describe("useSets", () => {
+	test("should not collide with a string key at the legacy namespace path", async () => {
+		const client = await GlideClient.createClient({
+			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
+		});
+		const namespace = faker.string.alphanumeric(8);
+		const unmanagedValue = faker.string.alphanumeric(10);
+		await client.set(`namespace:${namespace}`, unmanagedValue);
+
+		const store = new KeyvValkeyGlide(client, { useSets: true, namespace });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		expect(await store.get(key)).toBe(value);
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		expect(await client.get(`namespace:${namespace}`)).toBe(unmanagedValue);
+
+		await client.del([`namespace:${namespace}`]);
+		await store.disconnect();
+	});
+
 	test("should use the sets: prefix for the tracking key", async () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6370 }],
@@ -239,6 +326,28 @@ describe("useSets", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
+	});
+
+	test("should keep tracking in step when set() runs during clear()", async () => {
+		const store = new KeyvValkeyGlide(valkeyUri, {
+			useSets: true,
+			namespace: faker.string.alphanumeric(8),
+		});
+		const client = await store.getClient();
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "first");
+
+		// Another set() lands between the steps of clear().
+		const srem = client.srem.bind(client) as (...args: unknown[]) => Promise<unknown>;
+		vi.spyOn(client, "srem").mockImplementationOnce((async (...args: unknown[]) => {
+			await store.set(key, "second");
+			return srem(...args);
+		}) as never);
+		await store.clear();
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
 	});
 
 	test("should send clear()'s reads through a batch, which goes to the primary", async () => {

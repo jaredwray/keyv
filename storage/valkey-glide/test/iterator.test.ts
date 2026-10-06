@@ -55,6 +55,52 @@ describe("iterator", () => {
 		await store.disconnect();
 	});
 
+	test("should iterate over entries when useSets is true", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true, namespace });
+		await store.clear();
+
+		const entries = new Map<string, string>();
+		for (let i = 0; i < 3; i++) {
+			const key = faker.string.alphanumeric(10);
+			const value = faker.string.alphanumeric(10);
+			entries.set(key, value);
+			await store.set(key, value);
+		}
+
+		const collected = new Map<string, unknown>();
+		for await (const [key, value] of store.iterator()) {
+			collected.set(key, value);
+		}
+
+		expect(collected).toEqual(entries);
+		await store.clear();
+		await store.disconnect();
+	});
+
+	test("should match every glob metacharacter in the namespace literally", async () => {
+		const base = faker.string.alphanumeric(8);
+		// `[a-z]`, `?`, `*` and a trailing backslash would all be glob syntax if left unescaped.
+		const store = new KeyvValkeyGlide(valkeyUri, { namespace: `${base}[a-z]?*\\` });
+		const sibling = new KeyvValkeyGlide(valkeyUri, { namespace: `${base}xy-prod` });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+
+		const collected: Array<[string, unknown]> = [];
+		for await (const entry of store.iterator()) {
+			collected.push(entry);
+		}
+
+		expect(collected).toEqual([[key, value]]);
+
+		await store.clear();
+		await sibling.clear();
+		await store.disconnect();
+		await sibling.disconnect();
+	});
+
 	test("should not yield keys from another namespace when this namespace contains glob metacharacters", async () => {
 		const base = faker.string.alphanumeric(6);
 		const namespaceA = `${base}*`;

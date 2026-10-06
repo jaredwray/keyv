@@ -100,14 +100,29 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		this._glideConfig = toGlideConfig(merged);
 	}
 
+	/**
+	 * Declares the v6 absolute-`expires` storage contract via `capabilities.expires`.
+	 * @returns {KeyvStorageCapability} The adapter capability descriptor, including `expires: true`.
+	 */
 	public get capabilities(): KeyvStorageCapability {
 		return keyvStorageCapability(this);
 	}
 
+	/**
+	 * Gets the namespace for the adapter. When set, all keys are prefixed with
+	 * this namespace to provide multi-tenant isolation within a shared Valkey instance.
+	 * @returns {string | undefined} The current namespace, or `undefined` if no namespace is set.
+	 * @default undefined
+	 */
 	public get namespace(): string | undefined {
 		return this._namespace;
 	}
 
+	/**
+	 * Sets the namespace for the adapter. Used for key prefixing and scoping
+	 * operations like `clear()`, `iterator()`, and set-based key tracking.
+	 * @param {string | undefined} value - The namespace string to use, or `undefined` to remove namespacing.
+	 */
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
 	}
@@ -129,17 +144,31 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		this._namespaceSeparator = value;
 	}
 
+	/**
+	 * Gets whether Valkey sets are used for key management. When enabled, keys are tracked
+	 * in a Valkey set per namespace, allowing `clear()` to remove only the keys belonging to
+	 * that namespace without scanning.
+	 * @returns {boolean} `true` if set-based key tracking is enabled, `false` otherwise.
+	 * @default false
+	 */
 	public get useSets(): boolean {
 		return this._useSets;
 	}
 
+	/**
+	 * Sets whether Valkey sets are used for key management.
+	 * @param {boolean} value - `true` to enable set-based key tracking, `false` to use pattern scanning.
+	 */
 	public set useSets(value: boolean) {
 		this._useSets = value;
 	}
 
 	/**
-	 * The current GLIDE client. Throws if {@link getClient} has not run yet and no
-	 * existing client was passed to the constructor.
+	 * Gets the underlying GLIDE client, for operations the adapter doesn't expose. The adapter
+	 * connects lazily, so there is no client until the first storage call or {@link getClient}
+	 * opens one, unless a client was passed to the constructor.
+	 * @returns {KeyvValkeyGlideClient} The connected `GlideClient` or `GlideClusterClient`.
+	 * @throws {Error} If no client has connected yet. Use {@link getClient} to connect first.
 	 */
 	public get client(): KeyvValkeyGlideClient {
 		if (!this._client) {
@@ -149,6 +178,12 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		return this._client;
 	}
 
+	/**
+	 * Replaces the underlying GLIDE client and emits `connect` with it. The previous client is
+	 * not closed. A connection still opening from the constructor config is closed when it
+	 * finishes, and the assigned client is kept.
+	 * @param {KeyvValkeyGlideClient} value - The `GlideClient` or `GlideClusterClient` to use.
+	 */
 	public set client(value: KeyvValkeyGlideClient) {
 		this._connectPromise = undefined;
 		this._closed = false;
@@ -158,7 +193,10 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Returns a connected GLIDE client, creating one from the constructor config if needed.
+	 * Returns the connected GLIDE client, opening one from the constructor config on first use.
+	 * Concurrent calls share one connection attempt.
+	 * @returns {Promise<KeyvValkeyGlideClient>} The connected `GlideClient` or `GlideClusterClient`.
+	 * @throws {Error} If the adapter was disconnected, or the connection fails.
 	 */
 	public async getClient(): Promise<KeyvValkeyGlideClient> {
 		if (this._client) {
@@ -182,12 +220,30 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		return attempt;
 	}
 
+	/**
+	 * Retrieves the value associated with a key from the Valkey store. The key is resolved through
+	 * the namespace prefix before querying. The value is read as bytes, so a value that isn't valid
+	 * UTF-8 comes back as a `Buffer` instead of failing the read.
+	 * @template Value - The type of the stored value.
+	 * @param {string} key - The key to look up.
+	 * @returns {Promise<KeyvStorageGetResult<Value>>} The stored data if found, or `undefined` if the
+	 *   key does not exist. Never returns `null`.
+	 */
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		const client = await this.getClient();
 		const value = await client.get(this.getKeyName(key), { decoder: Decoder.Bytes });
 		return fromStoredValue(value) as KeyvStorageGetResult<Value>;
 	}
 
+	/**
+	 * Retrieves the values associated with multiple keys in a single `MGET`. GLIDE splits keys from
+	 * different hash slots across the cluster itself.
+	 * @template Value - The type of the stored values.
+	 * @param {string[]} keys - An array of keys to look up.
+	 * @returns {Promise<Array<KeyvStorageGetResult<Value | undefined>>>} An array of stored data in the
+	 *   same order as the input keys. Each element is the stored value or `undefined` if the
+	 *   corresponding key does not exist. Never `null`.
+	 */
 	public async getMany<Value>(
 		keys: string[],
 	): Promise<Array<KeyvStorageGetResult<Value | undefined>>> {
@@ -203,6 +259,19 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		>;
 	}
 
+	/**
+	 * Stores a key-value pair with an optional absolute expiry. If the value is `undefined`, the
+	 * operation is skipped and returns `false`. When `useSets` is enabled, the key is also added to
+	 * the namespace tracking set in the same transaction. In cluster mode, where the two sit in
+	 * different hash slots, the key is added to the set before and after it is written instead.
+	 * @param {string} key - The key under which to store the value.
+	 * @param {KeyvAny} value - The value to store. A `Buffer` or `Uint8Array` is stored as raw bytes.
+	 *   If `undefined`, the operation is a no-op.
+	 * @param {number} [expires] - Absolute expiry as Unix ms since epoch, or `undefined` for no expiry.
+	 *   When provided, the key is set to expire at that timestamp via `PXAT`.
+	 * @returns {Promise<boolean>} `true` if the value was stored, `false` if the value was `undefined`
+	 *   or storing failed, in which case `error` is emitted.
+	 */
 	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
 		if (value === undefined) {
 			return false;
@@ -211,9 +280,24 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		try {
 			const client = await this.getClient();
 			const resolved = this.getKeyName(key);
-			await client.set(resolved, toGlideValue(value), setOptions(expires));
-			if (this._useSets) {
-				await client.sadd(this.getSetKey(), [resolved]);
+			const glideValue = toGlideValue(value);
+			const options = setOptions(expires);
+			if (!this._useSets) {
+				await client.set(resolved, glideValue, options);
+			} else if (client instanceof GlideClusterClient) {
+				// The key and the tracking set sit in different hash slots, which a cluster can't update
+				// in one transaction. clear() only removes tracked keys, so the key is tracked before it
+				// is written, in case a later command fails, and again after, in case a concurrent
+				// clear() or delete() untracked it in between.
+				const setKey = this.getSetKey();
+				await client.sadd(setKey, [resolved]);
+				await client.set(resolved, glideValue, options);
+				await client.sadd(setKey, [resolved]);
+			} else {
+				await client.exec(
+					new Batch(true).set(resolved, glideValue, options).sadd(this.getSetKey(), [resolved]),
+					true,
+				);
 			}
 
 			return true;
@@ -223,9 +307,35 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 	}
 
+	/**
+	 * Stores multiple key-value pairs in one GLIDE batch. Entries with `undefined` values are skipped.
+	 * When `useSets` is enabled, each key is also added to the namespace tracking set in the same
+	 * transaction; in cluster mode, where the set sits in another hash slot, the keys are added to it
+	 * before and after the writes instead.
+	 * @template Value - The type of the stored values.
+	 * @param {KeyvStorageEntry<Value>[]} entries - An array of `{ key, value, expires? }` entries where
+	 *   `expires` is an optional absolute expiry as Unix ms since epoch.
+	 * @returns {Promise<boolean[] | undefined>} An array of booleans in the same order as the input
+	 *   entries. Each element is `true` if the corresponding entry was stored (entries with `undefined`
+	 *   values are reported as `true`), or `false` if it failed, in which case `error` is emitted.
+	 */
 	public async setMany<Value>(entries: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined> {
-		if (entries.length === 0) {
-			return [];
+		// An entry with an undefined value is skipped and reported as stored, as in @keyv/valkey.
+		const results = entries.map(({ value }) => value === undefined);
+		const writes = entries.flatMap(({ key, value, expires }, index) =>
+			value === undefined
+				? []
+				: [
+						{
+							index,
+							key: this.getKeyName(key),
+							value: toGlideValue(value),
+							options: setOptions(expires),
+						},
+					],
+		);
+		if (writes.length === 0) {
+			return results;
 		}
 
 		let client: KeyvValkeyGlideClient;
@@ -233,62 +343,76 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			client = await this.getClient();
 		} catch (error) {
 			this.emit("error", error);
-			return entries.map(() => false);
+			return results;
 		}
 
+		// A standalone server updates the tracking set in the same transaction as the writes. A
+		// cluster can't, since the keys sit in other hash slots, so there the set is updated on its
+		// own, before and after the writes; see set().
 		const setKey = this._useSets ? this.getSetKey() : undefined;
-		const batch = this.createBatch(client);
-		const setCommandIndexes: Array<number | undefined> = [];
-		let commandIndex = 0;
-		for (const { key, value, expires } of entries) {
-			if (value === undefined) {
-				setCommandIndexes.push(undefined);
-				continue;
-			}
-
-			const resolved = this.getKeyName(key);
-			batch.set(resolved, toGlideValue(value), setOptions(expires));
-			setCommandIndexes.push(commandIndex);
-			commandIndex += 1;
-			if (setKey) {
-				batch.sadd(setKey, [resolved]);
-				commandIndex += 1;
+		const clusterSetKey = client instanceof GlideClusterClient ? setKey : undefined;
+		const batchSetKey = clusterSetKey === undefined ? setKey : undefined;
+		const batch = batchSetKey ? new Batch(true) : this.createBatch(client);
+		for (const write of writes) {
+			batch.set(write.key, write.value, write.options);
+			if (batchSetKey) {
+				batch.sadd(batchSetKey, [write.key]);
 			}
 		}
 
-		if (setCommandIndexes.every((index) => index === undefined)) {
-			return entries.map(() => false);
-		}
-
-		let results: GlideReturnType[] | null;
+		const writtenKeys = writes.map((write) => write.key);
+		let batchResults: GlideReturnType[] | null;
 		try {
-			results = await this.execBatch(client, batch, false);
+			if (clusterSetKey) {
+				await client.sadd(clusterSetKey, writtenKeys);
+			}
+
+			batchResults = await this.execBatch(client, batch, false);
+			if (clusterSetKey) {
+				await client.sadd(clusterSetKey, writtenKeys);
+			}
 		} catch (error) {
 			this.emit("error", error);
-			return entries.map(() => false);
+			return results;
 		}
 
 		// A non-raising batch returns a failed command's error in its slot instead of rejecting.
-		const commandError = results?.find((result) => result instanceof Error);
+		const commandError = batchResults?.find((result) => result instanceof Error);
 		if (commandError) {
 			this.emit("error", commandError);
 		}
 
 		// With useSets, an entry only counts as stored if its SADD worked too, since clear()
 		// can't remove a key the tracking set doesn't list.
-		return setCommandIndexes.map(
-			(index) =>
-				index !== undefined &&
-				results?.[index] === "OK" &&
-				!(setKey && results?.[index + 1] instanceof Error),
-		);
+		const step = batchSetKey ? 2 : 1;
+		for (const [position, write] of writes.entries()) {
+			results[write.index] =
+				batchResults?.[position * step] === "OK" &&
+				!(batchSetKey && batchResults?.[position * step + 1] instanceof Error);
+		}
+
+		return results;
 	}
 
+	/**
+	 * Deletes a single key with `UNLINK`. When `useSets` is enabled, the key is also removed from the
+	 * namespace tracking set in the same transaction. In cluster mode, where the two sit in different
+	 * hash slots, the key is removed from the set between two `UNLINK`s instead.
+	 * @param {string} key - The key to delete.
+	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` if it did not exist.
+	 */
 	public async delete(key: string): Promise<boolean> {
 		const [deleted] = await this.deleteMany([key]);
 		return deleted;
 	}
 
+	/**
+	 * Deletes multiple keys in one GLIDE batch, with one `UNLINK` per key so each result says whether
+	 * that key existed. Tracking-set updates follow {@link delete}.
+	 * @param {string[]} keys - An array of keys to delete.
+	 * @returns {Promise<boolean[]>} An array of booleans in the same order as the input keys. Each
+	 *   element is `true` if the corresponding key existed and was deleted, `false` otherwise.
+	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		if (keys.length === 0) {
 			return [];
@@ -296,31 +420,49 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 
 		const client = await this.getClient();
 		const resolvedKeys = keys.map((key) => this.getKeyName(key));
-		const batch = this.createBatch(client);
+		if (!this._useSets) {
+			return this.unlinkEach(client, resolvedKeys);
+		}
+
+		const setKey = this.getSetKey();
+		if (client instanceof GlideClusterClient) {
+			// The keys and the tracking set sit in different hash slots; see set(). A key is
+			// untracked only once it is gone, and unlinked again after, in case a concurrent set()
+			// wrote it in between.
+			const firstPass = await this.unlinkEach(client, resolvedKeys);
+			await client.srem(setKey, resolvedKeys);
+			const secondPass = await this.unlinkEach(client, resolvedKeys);
+			return firstPass.map((deleted, index) => deleted || secondPass[index]);
+		}
+
+		// On a standalone server the keys and the tracking set change in one transaction.
+		const batch = new Batch(true);
 		for (const resolved of resolvedKeys) {
 			batch.unlink([resolved]);
 		}
 
-		if (this._useSets) {
-			const setKey = this.getSetKey();
-			for (const resolved of resolvedKeys) {
-				batch.srem(setKey, [resolved]);
-			}
-		}
-
-		const results = await this.execBatch(client, batch, true);
-		return resolvedKeys.map((_, index) => {
-			const result = results?.[index];
-			return typeof result === "number" && result > 0;
-		});
+		batch.srem(setKey, resolvedKeys);
+		const results = await client.exec(batch, true);
+		return resolvedKeys.map((_, index) => isPositive(results?.[index]));
 	}
 
+	/**
+	 * Checks whether a key exists in the Valkey store.
+	 * @param {string} key - The key to check for existence.
+	 * @returns {Promise<boolean>} `true` if the key exists, `false` otherwise.
+	 */
 	public async has(key: string): Promise<boolean> {
 		const client = await this.getClient();
 		const count = await client.exists([this.getKeyName(key)]);
 		return count !== 0;
 	}
 
+	/**
+	 * Checks whether multiple keys exist, with one `EXISTS` per key in a single GLIDE batch.
+	 * @param {string[]} keys - An array of keys to check for existence.
+	 * @returns {Promise<boolean[]>} An array of booleans in the same order as the input keys. Each
+	 *   element is `true` if the corresponding key exists, `false` otherwise.
+	 */
 	public async hasMany(keys: string[]): Promise<boolean[]> {
 		if (keys.length === 0) {
 			return [];
@@ -334,12 +476,25 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const results = await this.execBatch(client, batch, true);
-		return resolvedKeys.map((_, index) => {
-			const result = results?.[index];
-			return typeof result === "number" && result > 0;
-		});
+		return resolvedKeys.map((_, index) => isPositive(results?.[index]));
 	}
 
+	/**
+	 * Removes all keys belonging to the current namespace. When `useSets` is enabled, the tracked keys
+	 * are read from the namespace set and removed along with their entries in it. They are unlinked
+	 * before and after they leave the set, so a key that a concurrent `set()` writes meanwhile is
+	 * never left stored but untracked.
+	 * When `useSets` is disabled, `SCAN` finds the keys matching {@link getKeyPattern}
+	 * (`namespace:<namespace>::*`, glob metacharacters escaped) and unlinks them page by page. A
+	 * namespace that merely shares a prefix (for example `users` vs `users-archive`) is never
+	 * touched. One that extends this namespace with the separator (`users::archive`) is cleared too,
+	 * because a pattern cannot tell it apart from a key that contains the separator. With no
+	 * namespace this matches every key in the current database.
+	 * The tracking set and the `SCAN` are read from primaries even when `readFrom` sends other reads
+	 * to replicas, since a lagging replica could miss a key written just before. In cluster mode
+	 * every primary is scanned.
+	 * @returns {Promise<void>}
+	 */
 	public async clear(): Promise<void> {
 		const client = await this.getClient();
 		if (this._useSets) {
@@ -348,7 +503,11 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 				(await this.readFromPrimary(client, ["SMEMBERS", setKey], setKey)) as GlideString[],
 			);
 			if (keys.length > 0) {
-				await Promise.all([client.unlink(keys), client.srem(setKey, keys)]);
+				// Keys are untracked only once they are gone, and unlinked again after, in case a
+				// concurrent set() wrote one in between.
+				await client.unlink(keys);
+				await client.srem(setKey, keys);
+				await client.unlink(keys);
 			}
 
 			if (this.namespace) {
@@ -380,6 +539,15 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 	}
 
+	/**
+	 * Iterates over every key-value pair in the adapter's namespace, using `SCAN` with the pattern
+	 * from {@link getKeyPattern} and one `MGET` per page. In cluster mode GLIDE's cluster scan covers
+	 * every node. Reads follow `readFrom`, so with a replica strategy they can lag recent writes.
+	 * @template Value - The type of the stored values.
+	 * @returns {AsyncGenerator<[string, Value | undefined], void, unknown>} An async generator
+	 *   yielding `[key, value]` tuples. The internal namespace prefix is stripped from each key, and
+	 *   missing values are returned as `undefined` (never `null`).
+	 */
 	public async *iterator<Value>(): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const client = await this.getClient();
 		const keyPrefix = this.getKeyPrefix();
@@ -394,6 +562,11 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 	}
 
+	/**
+	 * Closes the GLIDE client and emits `disconnect`. Later calls reject until a client is assigned
+	 * through the `client` setter, and a connection still opening is closed when it finishes.
+	 * @returns {Promise<void>}
+	 */
 	public async disconnect(): Promise<void> {
 		this._connectPromise = undefined;
 		this._closed = true;
@@ -429,6 +602,17 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		this._client = client;
 		this.emit("connect", client);
 		return client;
+	}
+
+	/** Unlinks each key with its own command, so each result says whether that key existed. */
+	private async unlinkEach(client: KeyvValkeyGlideClient, keys: string[]): Promise<boolean[]> {
+		const batch = this.createBatch(client);
+		for (const key of keys) {
+			batch.unlink([key]);
+		}
+
+		const results = await this.execBatch(client, batch, true);
+		return keys.map((_, index) => isPositive(results?.[index]));
 	}
 
 	private createBatch(client: KeyvValkeyGlideClient): Batch | ClusterBatch {
@@ -533,12 +717,11 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	): AsyncGenerator<string[], void, unknown> {
 		const scanArgs = (cursor: string) => ["SCAN", cursor, "MATCH", match];
 		if (client instanceof GlideClusterClient) {
-			// A multi-node customCommand resolves to one `{ key: address, value }` record per node.
-			const firstPages = (await client.customCommand(scanArgs("0"), {
-				route: "allPrimaries",
-			})) as unknown as Array<{ key: GlideString; value: [GlideString, GlideString[]] }>;
-			for (const { key: address, value: firstPage } of firstPages) {
-				const route = { type: "routeByAddress" as const, host: asString(address) };
+			const firstPages = nodeResponses<[GlideString, GlideString[]]>(
+				await client.customCommand(scanArgs("0"), { route: "allPrimaries" }),
+			);
+			for (const [address, firstPage] of firstPages) {
+				const route = { type: "routeByAddress" as const, host: address };
 				let [cursor, keys] = firstPage;
 				while (true) {
 					const page = glideKeyPage(keys);
@@ -604,7 +787,17 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 }
 
 /**
- * Creates a Keyv instance backed by {@link KeyvValkeyGlide}.
+ * Creates a Keyv instance backed by {@link KeyvValkeyGlide}. The adapter's namespace, when set, is
+ * passed to Keyv as well.
+ * @param {KeyvValkeyGlideConnect} [connect] - A URI, an options object, or an existing GLIDE
+ *   client. Defaults to `redis://localhost:6379`.
+ * @param {KeyvValkeyGlideOptions} [options] - Adapter options merged over `connect`.
+ * @returns {Keyv} A Keyv instance that stores data through the adapter.
+ * @example
+ * ```ts
+ * const keyv = createKeyv('redis://localhost:6379', { namespace: 'my-app' });
+ * await keyv.set('foo', 'bar');
+ * ```
  */
 export function createKeyv(
 	connect?: KeyvValkeyGlideConnect,
@@ -666,7 +859,8 @@ function parseConnectionUri(uri: string): Partial<GlideClientConfiguration> {
 	const useTLS = protocol === "rediss" || protocol === "valkeys";
 	const port = url.port ? Number(url.port) : 6379;
 	const config: Partial<GlideClientConfiguration> = {
-		addresses: [{ host: url.hostname || "localhost", port }],
+		// URL keeps the brackets around an IPv6 address; GLIDE wants the bare address.
+		addresses: [{ host: url.hostname.replace(/^\[|\]$/g, "") || "localhost", port }],
 		useTLS,
 	};
 
@@ -748,6 +942,24 @@ function fromStoredValue(value: GlideString | null | undefined): string | Buffer
 	// Values are read with Decoder.Bytes, so this is always a Buffer.
 	const bytes = value as Buffer;
 	return isUtf8(bytes) ? bytes.toString() : bytes;
+}
+
+/**
+ * Lists a multi-node cluster reply as `[address, value]` pairs. GLIDE 2.5's `customCommand`
+ * resolves to one `{ key: address, value }` record per node, while its declared type is an
+ * object keyed by address, so both shapes are accepted.
+ */
+function nodeResponses<T>(response: unknown): Array<[string, T]> {
+	if (Array.isArray(response)) {
+		return response.map(({ key, value }: { key: GlideString; value: T }) => [asString(key), value]);
+	}
+
+	return Object.entries(response as Record<string, T>);
+}
+
+/** Whether a command's reply is a positive count, as from `EXISTS` or `UNLINK` of one key. */
+function isPositive(result: GlideReturnType | undefined): boolean {
+	return typeof result === "number" && result > 0;
 }
 
 /**

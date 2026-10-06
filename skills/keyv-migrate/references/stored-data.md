@@ -38,6 +38,8 @@ With a namespace, v6's `clear()` and `iterator()` cover the string keys that sta
 | default, or `createKeyv()` | `ns:foo` | None. v6 can't build this key. Let the entries repopulate, or have the user rename them to the v6 layout (`namespace:<ns>::<key>`) |
 | `useRedisSets: false` | `namespace:ns:ns:foo` | `new Keyv(new KeyvValkey(uri, { useSets: false, namespaceSeparator: ':' }), { namespace: 'ns:ns' })` |
 
+`@keyv/valkey-glide` builds the same keys as `@keyv/valkey`, so the same v6 settings read this data if the user moves to it.
+
 ### Memcache (`@keyv/memcache`)
 
 v6 builds `<namespace><namespaceSeparator><key>`, with `::` as the default separator, but stores each value after its namespace's generation token and reads a value without one as missing. So no v6 setting reads an entry v4 or v5 wrote: tell the user the cache fills again. A key with whitespace or control characters, one over 250 bytes, or one that starts with `keyv:sha256:` or `keyv:gen:` is stored under `keyv:sha256:<SHA-256 hex>` instead.

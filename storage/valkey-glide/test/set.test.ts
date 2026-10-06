@@ -33,9 +33,11 @@ describe("set", () => {
 		const store = new KeyvValkeyGlide(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await store.set(key, value, Date.now() + 100);
+		// Valkey expires the key on its own clock, so leave the first read a wide margin to land
+		// before the deadline even when CI is slow.
+		await store.set(key, value, Date.now() + 1000);
 		expect(await store.get(key)).toBe(value);
-		await delay(200);
+		await delay(1200);
 		expect(await store.get(key)).toBeUndefined();
 		await store.disconnect();
 	});
@@ -102,9 +104,11 @@ describe("setMany", () => {
 		const store = new KeyvValkeyGlide(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const value = faker.string.alphanumeric(10);
-		await store.setMany([{ key, value, expires: Date.now() + 100 }]);
+		// Valkey expires the key on its own clock, so leave the first read a wide margin to land
+		// before the deadline even when CI is slow.
+		await store.setMany([{ key, value, expires: Date.now() + 1000 }]);
 		expect(await store.get(key)).toBe(value);
-		await delay(200);
+		await delay(1200);
 		expect(await store.get(key)).toBeUndefined();
 		await store.disconnect();
 	});
@@ -120,16 +124,19 @@ describe("setMany", () => {
 		const key1 = faker.string.alphanumeric(10);
 		const key2 = faker.string.alphanumeric(10);
 		const val1 = faker.string.alphanumeric(10);
-		await store.setMany([
-			{ key: key1, value: val1 },
-			{ key: key2, value: undefined },
-		]);
+		// A skipped entry is reported as stored, as in @keyv/valkey.
+		expect(
+			await store.setMany([
+				{ key: key1, value: val1 },
+				{ key: key2, value: undefined },
+			]),
+		).toEqual([true, true]);
 		expect(await store.get(key1)).toBe(val1);
 		expect(await store.get(key2)).toBeUndefined();
 		await store.disconnect();
 	});
 
-	test("should return false for every entry without a batch call when all values are undefined", async () => {
+	test("should report every entry as stored without a batch call when all values are undefined", async () => {
 		const store = new KeyvValkeyGlide(valkeyUri);
 		const client = await store.getClient();
 		const execSpy = vi.spyOn(client, "exec");
@@ -138,7 +145,7 @@ describe("setMany", () => {
 				{ key: faker.string.alphanumeric(10), value: undefined },
 				{ key: faker.string.alphanumeric(10), value: undefined },
 			]),
-		).toEqual([false, false]);
+		).toEqual([true, true]);
 		expect(execSpy).not.toHaveBeenCalled();
 		await store.disconnect();
 	});

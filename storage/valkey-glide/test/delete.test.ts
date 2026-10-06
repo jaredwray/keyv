@@ -55,6 +55,26 @@ describe("deleteMany", () => {
 		await store.disconnect();
 	});
 
+	test("should remove keys from the tracking set when useSets is true", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true, namespace });
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		await store.set(key1, faker.string.alphanumeric(10));
+		await store.set(key2, faker.string.alphanumeric(10));
+
+		expect(await store.deleteMany([key1, key2, faker.string.alphanumeric(10)])).toEqual([
+			true,
+			true,
+			false,
+		]);
+		expect(await store.get(key1)).toBeUndefined();
+		expect(await store.get(key2)).toBeUndefined();
+		const client = await store.getClient();
+		expect(await client.exists([`sets:${namespace}`])).toBe(0);
+		await store.disconnect();
+	});
+
 	test("should reject when a command in the batch fails", async () => {
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true, namespace });

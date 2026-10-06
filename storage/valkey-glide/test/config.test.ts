@@ -84,6 +84,13 @@ describe("connection config", () => {
 		expect(getConfig().databaseId).toBe(2);
 	});
 
+	test("should strip the brackets from an IPv6 host", async () => {
+		const getConfig = captureClientConfig(GlideClient);
+		const store = new KeyvValkeyGlide("redis://[::1]:1234");
+		await store.getClient().catch(() => {});
+		expect(getConfig().addresses).toEqual([{ host: "::1", port: 1234 }]);
+	});
+
 	test("should parse the database id from the uri path", async () => {
 		const getConfig = captureClientConfig(GlideClient);
 		const store = new KeyvValkeyGlide("redis://myhost:1234/7");

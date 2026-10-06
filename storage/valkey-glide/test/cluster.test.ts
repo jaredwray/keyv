@@ -1,7 +1,6 @@
-import net from "node:net";
 import { faker } from "@faker-js/faker";
 import { GlideClusterClient } from "@valkey/valkey-glide";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
 const clusterAddresses = [
@@ -10,31 +9,38 @@ const clusterAddresses = [
 	{ host: "127.0.0.1", port: 7203 },
 ];
 
-async function isPortOpen(port: number): Promise<boolean> {
-	return new Promise((resolve) => {
-		const socket = net.createConnection({ host: "127.0.0.1", port });
-		socket.setTimeout(300);
-		socket.on("connect", () => {
-			socket.end();
-			resolve(true);
-		});
-		socket.on("timeout", () => {
-			socket.destroy();
-			resolve(false);
-		});
-		socket.on("error", () => {
-			resolve(false);
-		});
-	});
-}
-
-const clusterAvailable = await isPortOpen(7201);
-
 async function createReadyCluster(): Promise<GlideClusterClient> {
 	return GlideClusterClient.createClient({ addresses: clusterAddresses });
 }
 
-describe.skipIf(!clusterAvailable)("cluster", () => {
+/**
+ * Runs `operation` once, just before the cluster sends the next `command` or just after that
+ * command completes, to land it between the steps of the method under test.
+ */
+function interleave(
+	cluster: GlideClusterClient,
+	when: "before" | "after",
+	command: "sadd" | "set" | "srem",
+	operation: () => Promise<unknown>,
+): void {
+	const send = cluster[command].bind(cluster) as (...args: unknown[]) => Promise<unknown>;
+	vi.spyOn(cluster, command).mockImplementationOnce((async (...args: unknown[]) => {
+		if (when === "before") {
+			await operation();
+			return send(...args);
+		}
+
+		const result = await send(...args);
+		await operation();
+		return result;
+	}) as never);
+}
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
+describe("cluster", () => {
 	test("should setMany and getMany across slots", async () => {
 		const cluster = await createReadyCluster();
 		const store = new KeyvValkeyGlide(cluster);
@@ -100,9 +106,11 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		);
 
 		const [toDelete, toKeep] = [entries.slice(0, 5), entries.slice(5)];
-		expect(await store.deleteMany(toDelete.map((entry) => entry.key))).toEqual(
-			toDelete.map(() => true),
-		);
+		const missingKey = faker.string.alphanumeric(10);
+		expect(await store.deleteMany([...toDelete.map((entry) => entry.key), missingKey])).toEqual([
+			...toDelete.map(() => true),
+			false,
+		]);
 		expect(await store.hasMany([...toDelete, ...toKeep].map((entry) => entry.key))).toEqual([
 			...toDelete.map(() => false),
 			...toKeep.map(() => true),
@@ -209,7 +217,120 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		});
 		expect(scan).not.toHaveBeenCalled();
 		expect(smembers).not.toHaveBeenCalled();
-		vi.restoreAllMocks();
+		await store.disconnect();
+	});
+
+	test("should clear the namespace's keys on every primary and leave other namespaces", async () => {
+		const store = new KeyvValkeyGlide(await createReadyCluster(), {
+			namespace: faker.string.alphanumeric(10),
+		});
+		const other = new KeyvValkeyGlide(await createReadyCluster(), {
+			namespace: faker.string.alphanumeric(10),
+		});
+		const keys = Array.from({ length: 12 }, () => faker.string.alphanumeric(10));
+		await store.setMany(keys.map((key) => ({ key, value: key })));
+		await other.set(keys[0], "other");
+
+		await store.clear();
+
+		expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
+		expect(await other.get(keys[0])).toBe("other");
+		await other.clear();
+		await store.disconnect();
+		await other.disconnect();
+	});
+
+	test("should clear when a multi-node reply comes back keyed by address", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkeyGlide(cluster, { namespace: faker.string.alphanumeric(10) });
+		const keys = Array.from({ length: 12 }, () => faker.string.alphanumeric(10));
+		await store.setMany(keys.map((key) => ({ key, value: key })));
+
+		// GLIDE declares multi-node replies as an object keyed by address; 2.5 returns records.
+		const customCommand = cluster.customCommand.bind(cluster);
+		vi.spyOn(cluster, "customCommand").mockImplementationOnce((async (
+			...args: Parameters<typeof customCommand>
+		) => {
+			const records = (await customCommand(...args)) as unknown as Array<{
+				key: string;
+				value: unknown;
+			}>;
+			return Object.fromEntries(records.map(({ key, value }) => [key, value]));
+		}) as never);
+		await store.clear();
+
+		expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
+		await store.disconnect();
+	});
+
+	test("should keep a key tracked when clear() runs during set() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkeyGlide(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const key = faker.string.alphanumeric(10);
+
+		interleave(cluster, "before", "set", async () => store.clear());
+		expect(await store.set(key, "value")).toBe(true);
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should keep keys tracked when clear() runs during setMany() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkeyGlide(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const keys = Array.from({ length: 4 }, () => faker.string.alphanumeric(10));
+
+		interleave(cluster, "after", "sadd", async () => store.clear());
+		expect(await store.setMany(keys.map((key) => ({ key, value: key })))).toEqual(
+			keys.map(() => true),
+		);
+		// The keys are tracked before and after the writes, so clear() landed between them.
+		expect(vi.mocked(cluster.sadd)).toHaveBeenCalledTimes(2);
+
+		await store.clear();
+		expect(await store.getMany(keys)).toEqual(keys.map(() => undefined));
+		await store.disconnect();
+	});
+
+	test("should keep tracking in step when set() runs during delete() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkeyGlide(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "first");
+
+		interleave(cluster, "before", "srem", async () => store.set(key, "second"));
+		expect(await store.delete(key)).toBe(true);
+		expect(vi.mocked(cluster.srem)).toHaveBeenCalledTimes(1);
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should keep tracking in step when set() runs during clear() with useSets", async () => {
+		const cluster = await createReadyCluster();
+		const store = new KeyvValkeyGlide(cluster, {
+			namespace: faker.string.alphanumeric(10),
+			useSets: true,
+		});
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "first");
+
+		interleave(cluster, "before", "srem", async () => store.set(key, "second"));
+		await store.clear();
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
 		await store.disconnect();
 	});
 

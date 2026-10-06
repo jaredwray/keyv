@@ -209,7 +209,7 @@ If you are unsure which layout you have, look at one key in your store and choos
 - **SQLite, PostgreSQL, MySQL:** a `namespace` column and a key column.
 - **MongoDB:** a `namespace` field and a `key` field, or `metadata.namespace` and `filename` with GridFS.
 - **Etcd, DynamoDB, Memcache, Redis:** `<namespace><namespaceSeparator><key>`, where the separator defaults to `::`.
-- **Valkey:** `namespace:<namespace><namespaceSeparator><key>`, or `sets:<namespace><namespaceSeparator><key>` with `useSets: true`, where the separator defaults to `::`.
+- **Valkey and Valkey GLIDE:** `namespace:<namespace><namespaceSeparator><key>`, or `sets:<namespace><namespaceSeparator><key>` with `useSets: true`, where the separator defaults to `::`.
 
 If the data is a cache you can rebuild, you can skip all of this. The v5 entries stay in the store until they expire or you remove them. On a shared backend, keep a namespace anyway; see [`clear()` Without a Namespace Clears More](#clear-without-a-namespace-clears-more).
 
@@ -229,7 +229,7 @@ In v5 every Keyv instance had a namespace, `keyv` by default, so `clear()` remov
 | Adapter | `clear()` with no namespace |
 | --- | --- |
 | Redis | Deletes every string key whose name doesn't contain the separator (`::` by default). With `noNamespaceAffectsAll: true`, runs `FLUSHDB`. |
-| Valkey | Deletes every key in the database. |
+| Valkey, Valkey GLIDE | Deletes every key in the database. |
 | Etcd | Deletes only the entries v6 wrote with no namespace, and leaves v5's entries. With `noNamespaceAffectsAll: true`, deletes every key. See [below](#keyvetcd-without-a-namespace-only-clears-its-own-entries). |
 | DynamoDB | Deletes every item in the table. |
 | Cloudflare KV | Deletes every key in the KV namespace. |
