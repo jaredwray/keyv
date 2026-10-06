@@ -29,10 +29,11 @@
  *      version whose major is above MAX_MAJOR (5). 6.0.0, 6.0.0-beta.1 and
  *      anything higher belong to `main`; the run aborts before any registry
  *      call if a manifest crosses the ceiling.
- *   2. `latest` (and every other dist-tag) never moves backwards. Once v6 GA
- *      owns `latest`, v5 releases automatically stage under `v5-lts`
- *      instead — same convention as main's release-publish.ts — with no
- *      workflow variable to flip on this branch.
+ *   2. NEVER `latest` — that tag belongs to the line released from `main`.
+ *      Every stable release from this branch stages under its own major's
+ *      maintenance tag (`v5-lts`, `v4-lts`, `v1-lts`, …) whatever the
+ *      registry's `latest` points at, and no dist-tag ever moves backwards.
+ *      computeTag never returns `latest`, and publishArgs refuses it.
  *
  * ## How "needs staging" is decided
  *
@@ -65,29 +66,30 @@
  *
  * ## The dist-tag model (per package, from the registry's own state)
  *
- *   Local version   Registry `latest`   Resulting tag   Moves `latest`?
- *   -------------   -----------------   -------------   ---------------
- *   5.6.1           5.6.0               latest          YES (forward)
- *   5.6.1           6.0.0 (v6 GA'd)     v5-lts          no
- *   1.1.2           1.1.1               latest          YES (forward)
- *   1.1.2           6.0.0 (synced v6)   v1-lts          no
- *   5.5.0           5.6.0               — refused —     (would roll back)
- *   5.7.0-beta.1    any                 beta            no
- *   5.7.0-beta.1    (beta tag owned     v5-beta         no
- *                    by 6.0.0-beta.x)
+ *   Local version   Registry dist-tags        Resulting tag
+ *   -------------   -----------------------   ---------------------------
+ *   5.6.1           latest 5.6.0              v5-lts
+ *   5.6.1           latest 6.1.0 (v6 GA'd)    v5-lts
+ *   1.1.2           latest 1.1.1              v1-lts
+ *   4.1.0           latest 6.1.0 (synced v6)  v4-lts
+ *   5.5.0           latest 5.6.0              — refused — (rollback in v5)
+ *   5.6.0           v5-lts 5.6.1              — refused — (moves v5-lts back)
+ *   5.7.0-beta.1    (no beta)                 beta
+ *   5.7.0-beta.1    beta 6.0.0-beta.4         v5-beta
  *
- * Every package is tagged from its OWN version against its OWN registry
- * document, so the heterogeneous majors on this branch (keyv 5.x, serialize
- * 1.x, sqlite 4.x, …) each get the right tag without any shared setting.
- * Whatever tag is computed, the stage is refused if it would move that
- * dist-tag backwards on the registry.
+ * Nothing staged from this branch is ever tagged `latest`, so `latest` stays
+ * with the line released from `main` even while the registry's `latest` still
+ * points at a v5-line version. Every package is tagged from its OWN version
+ * against its OWN registry document, so the heterogeneous majors on this
+ * branch (keyv 5.x, serialize 1.x, sqlite 4.x, …) each get the right tag
+ * without any shared setting. Whatever tag is computed, the stage is refused
+ * if it would move that dist-tag backwards on the registry.
  *
  * The tag is fixed when a version is STAGED but only applied when it is
- * APPROVED. If the registry moves in between — e.g. v6 goes GA and takes
- * `latest` while keyv@5.x sits in the queue tagged `latest` — approving would
- * move `latest` backwards. Approve promptly; if the registry moved, reject the
- * staged version (`pnpm stage reject <id>`) and re-run this workflow so the
- * tag is recomputed (`v5-lts`).
+ * APPROVED, and the backwards guard only sees the registry as it was when the
+ * version was staged. Approve promptly; if the registry moved in between,
+ * reject the staged version (`pnpm stage reject <id>`) and re-run this
+ * workflow so the tag is recomputed.
  *
  * ## Stage order, failure policy and authentication
  *
@@ -201,7 +203,8 @@ Usage:
   node scripts/release.mjs --json     Emit the stage plan as JSON
 
 Versions are set manually; this script never bumps them. No version may be
-6.0.0 or higher — v6 is released from the main branch. Nothing goes live from
+6.0.0 or higher — v6 is released from the main branch — and nothing is ever
+tagged latest: stable versions stage under v{major}-lts. Nothing goes live from
 here: staged versions must be approved by a maintainer with 2FA
 (pnpm stage list / pnpm stage view <id> / pnpm stage approve <id>...).`;
 
@@ -291,8 +294,9 @@ export function compareSemver(a, b) {
  *   "beta"). If that channel is currently owned by a NEWER major (e.g. main
  *   publishing 6.0.0-beta.x to `beta`), fall back to the major-scoped
  *   channel `v{major}-{channel}` so the shared channel never moves backwards.
- * - Stable, ahead of (or without) `latest` → `latest`.
- * - Stable, behind a newer-major `latest`   → `v{major}-lts` (maintenance).
+ * - Stable → `v{major}-lts`, always. `latest` belongs to the line released
+ *   from `main`, so this never returns it, even when the version is ahead of
+ *   the registry's `latest` or the package has no `latest` yet.
  * - Stable, behind `latest` within the same major → refused (a rollback).
  *
  * The caller additionally applies a universal backwards guard on whatever tag
@@ -336,24 +340,18 @@ export function computeTag(version, distTags = {}) {
 		return { tag: channel, reason: `pre-release → "${channel}" channel` };
 	}
 
+	// A stable version behind `latest` in its own major would roll that line
+	// back, so it has no safe tag.
 	const latest = distTags.latest;
-	if (!latest || compareSemver(version, latest) >= 0) {
+	if (latest && parseVersion(latest).major === parsed.major && compareSemver(version, latest) < 0) {
 		return {
-			tag: "latest",
-			reason: latest ? `moves latest forward from ${latest}` : "no latest on the registry yet",
-		};
-	}
-
-	const latestMajor = parseVersion(latest).major;
-	if (parsed.major < latestMajor) {
-		return {
-			tag: `v${parsed.major}-lts`,
-			reason: `v${parsed.major} maintenance release behind registry latest ${latest}`,
+			error: `version ${version} is behind registry latest ${latest} within the same major — refusing to stage a rollback`,
 		};
 	}
 
 	return {
-		error: `version ${version} is behind registry latest ${latest} within the same major — refusing to move latest backwards`,
+		tag: `v${parsed.major}-lts`,
+		reason: `v${parsed.major} maintenance release — the v5 branch never moves latest${latest ? ` (registry latest is ${latest})` : ""}`,
 	};
 }
 
@@ -397,9 +395,9 @@ export function resolvePlanAction(pkg, doc) {
 	}
 
 	// Universal backwards guard: whatever tag was computed, refuse to move an
-	// existing dist-tag to a lower version. This is what makes the one
-	// catastrophic mistake — `latest` (or `v5-lts`, or a beta channel) moving
-	// backwards on the registry — mechanically impossible.
+	// existing dist-tag to a lower version. This is what makes a tag this
+	// branch owns — `v5-lts`, or a beta channel — moving backwards on the
+	// registry mechanically impossible (`latest` is never computed at all).
 	const current = distTags[plan.tag];
 	if (current && compareSemver(pkg.version, current) < 0) {
 		return {
@@ -461,8 +459,18 @@ export function packArgs(name) {
  * available, and release.test.mjs asserts the flag is always present on a
  * real stage). A dry run packs then runs `stage publish --dry-run`, which
  * does everything except upload, so packaging is validated without OIDC.
+ *
+ * Every stage command is built here, so this refuses the `latest` tag
+ * outright: nothing from this branch may move `latest`, even if a change to
+ * computeTag ever returned it.
+ *
+ * @throws if `tag` is `latest`.
  */
 export function publishArgs(tarball, tag, { dryRun = false } = {}) {
+	if (tag === "latest") {
+		throw new Error(`refusing to stage ${tarball} under "latest" — the v5 branch never moves latest`);
+	}
+
 	const args = [
 		"stage",
 		"publish",
@@ -702,7 +710,7 @@ function writeResultSummary({ staged, failed, notAttempted, dryRun }) {
 				...APPROVAL_STEPS,
 				"```",
 				"",
-				"Approve promptly: the dist-tag is applied at approval time. If `latest` moved to a newer major since staging, `pnpm stage reject` the staged version and re-run this workflow.",
+				"Approve promptly: the dist-tag is applied at approval time. If the registry moved since staging, `pnpm stage reject` the staged version and re-run this workflow.",
 				"",
 			);
 		}

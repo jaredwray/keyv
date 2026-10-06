@@ -1,4 +1,4 @@
-name: release
+name: release-v5
 
 # Stages v5-branch workspace packages to npm whose manually-set version is
 # ahead of the registry. Versions are never bumped here — a human bumps each
@@ -8,16 +8,19 @@ name: release
 # the right dist-tag. Nothing goes live from CI: a maintainer reviews and
 # approves each staged version with 2FA (`pnpm stage approve` or the "Staged
 # Packages" tab on npmjs.com). See scripts/release.mjs for the decision
-# logic, including the MAJOR CEILING: nothing at or above 6.0.0 (including
-# pre-releases) can ever be staged from the v5 branch — v6 is released from
-# `main`. The full runbook lives in changelog/README.md.
+# logic, including the MAJOR CEILING (nothing at or above 6.0.0, including
+# pre-releases, can ever be staged from the v5 branch — v6 is released from
+# `main`) and NEVER `latest` (every stable release stages under
+# `v{major}-lts`; `latest` belongs to `main`). The full runbook lives in
+# changelog/README.md.
 #
 # How to run it (manual, workflow_dispatch only — by design):
-#   Actions tab → "release" → "Run workflow" → set "Use workflow from" to the
-#   `v5` branch → leave "Dry run" checked to preview the plan, or uncheck it to
-#   stage for real → "Run workflow". The workflow definition on the branch you
-#   pick is the one that runs: the button is listed because main's
-#   release.yaml also has workflow_dispatch, and picking `v5` runs THIS file.
+#   Actions tab → "release-v5" → "Run workflow" → set "Use workflow from" to
+#   the `v5` branch → leave "Dry run" checked to preview the plan, or uncheck
+#   it to stage for real → "Run workflow". The workflow definition on the
+#   branch you pick is the one that runs. GitHub only lists workflow_dispatch
+#   workflows that are on the default branch, so `main` carries a copy of
+#   release-v5.yaml that only refuses to run; picking `v5` runs THIS file.
 #   A real stage only happens from `v5` (any other ref is forced to a dry run
 #   below). GitHub Releases never trigger this workflow — cutting a v5 release
 #   means merging the release PR and dispatching this workflow from `v5`.
@@ -25,12 +28,15 @@ name: release
 # Authentication uses OIDC trusted publishing (tokenless) with provenance:
 #   - `id-token: write` lets GitHub mint the OIDC token pnpm exchanges for a
 #     short-lived npm credential and uses to sign the provenance attestation.
-#   - Each package needs a "Trusted Publisher" on npmjs.com pointing at repo
-#     `jaredwray/keyv` + workflow `release.yaml` (+ environment `release`),
-#     configured STAGE-ONLY: it may `stage publish`, never `publish` live.
-#     This file shares its name with main's release workflow on purpose, so
-#     one trusted-publisher configuration covers both release lines. Note that
-#     `@keyv/serialize` only exists on this branch and needs its own entry.
+#     The attestation records the commit the run started from, which is why
+#     the run starts from `v5` instead of checking v5 out from `main`.
+#   - Each package this branch publishes needs a "Trusted Publisher" on
+#     npmjs.com pointing at repo `jaredwray/keyv` + workflow `release-v5.yaml`
+#     (+ environment `release`), configured STAGE-ONLY: it may
+#     `stage publish`, never `publish` live. npm allows several trusted
+#     publishers per package, so this one sits next to the `release.yaml`
+#     publisher main uses. `@keyv/serialize` only exists on this branch and
+#     needs it too.
 #   - This workflow is fully tokenless: no NPM_TOKEN secret anywhere. npm
 #     cannot stage a brand-new package, so a new package is created on npm
 #     once by a maintainer by hand (the documented exception under "New
@@ -49,14 +55,13 @@ on:
         type: boolean
         default: true
 
-# Never run two releases at once; let an in-flight stage finish rather than
-# cancelling it half-way through the package set. main's release workflow
-# uses the same group, so the two release lines never stage concurrently.
-# `queue: max` keeps every queued release pending in FIFO order (up to 100)
-# instead of GitHub's default of a single pending run, where a newly queued
-# release silently cancels the one already waiting.
+# Never run two v5 releases at once; let an in-flight stage finish rather
+# than cancelling it half-way through the package set. `queue: max` keeps
+# every queued release pending in FIFO order (up to 100) instead of GitHub's
+# default of a single pending run, where a newly queued release silently
+# cancels the one already waiting.
 concurrency:
-  group: release
+  group: release-v5
   cancel-in-progress: false
   queue: max
 
@@ -214,7 +219,7 @@ jobs:
         run: pnpm build
 
       # Verify the release decision logic (major ceiling, dist-tag model,
-      # backwards guards) before any publish runs.
+      # never `latest`, backwards guards) before any publish runs.
       - name: Verify release logic
         run: pnpm test:release
 
@@ -224,8 +229,9 @@ jobs:
       # any ref other than the v5 branch so branch versions can't reach npm's
       # stage queue. A real stage therefore requires dispatching from v5 with
       # dry_run unchecked. The script's own guards still apply on top: the
-      # < 6.0.0 major ceiling, skip-already-published, refuse never-published
-      # packages, and never move a dist-tag backwards.
+      # < 6.0.0 major ceiling, never `latest` (stable → v{major}-lts),
+      # skip-already-published, refuse never-published packages, and never
+      # move a dist-tag backwards.
       - name: Stage release (pack + pnpm stage publish)
         env:
           DRY_RUN: ${{ inputs.dry_run || github.ref != 'refs/heads/v5' }}
