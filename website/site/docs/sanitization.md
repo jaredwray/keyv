@@ -17,8 +17,8 @@ const keyv = new Keyv({
 	sanitize: { keys: true, namespace: true },
 });
 
-await keyv.set("test; DROP TABLE", "value");
-// stored as "test DROP TABLE"
+await keyv.set("user;1--", "value");
+// stored as "user1"
 
 await keyv.set("user's-data", "value");
 // unchanged

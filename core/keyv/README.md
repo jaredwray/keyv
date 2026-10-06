@@ -1202,7 +1202,7 @@ const stats = new KeyvStats({ enabled: true, maxEntries: 500, emitter: keyv });
 Type: `KeyvSanitize` (configured via the `sanitize` option: `KeyvSanitizeOptions`)<br />
 Default: disabled
 
-The `.sanitize` property is a `KeyvSanitize` adapter. It is configured through the `sanitize` constructor option (`true`, or a `KeyvSanitizeOptions` object) and disabled by default.
+The `.sanitize` property is a `KeyvSanitize` adapter. It is configured through the `sanitize` constructor option, a `KeyvSanitizeOptions` object, and is disabled by default.
 
 It detects and strips dangerous patterns from keys and namespaces to protect against SQL injection, MongoDB operator injection, path traversal, and control character attacks. Harmless characters like quotes, slashes, and dollar signs pass through unchanged — only dangerous *patterns* are stripped. Stripping repeats until nothing matches, so `..././etc` becomes `etc` rather than `../etc`.
 
@@ -1228,18 +1228,18 @@ Results are cached in an LRU cache (10,000 entries) for fast repeated lookups.
 
 Enable all sanitization:
 ```js
-const keyv = new Keyv({ sanitize: true });
-await keyv.set("test; DROP TABLE", "value");
-// Key is stored as "test DROP TABLE"
+const keyv = new Keyv({ sanitize: { keys: true, namespace: true } });
+await keyv.set("user;1--", "value");
+// Key is stored as "user1"
 
 // Harmless characters pass through
 await keyv.set("user's-data", "value");
 // Key is stored as "user's-data" (unchanged)
 ```
 
-Disable all sanitization (default):
+Disable all sanitization (default) by omitting `sanitize`, or by setting both targets to `false`:
 ```js
-const keyv = new Keyv({ sanitize: false });
+const keyv = new Keyv({ sanitize: { keys: false, namespace: false } });
 ```
 
 Granular control per target and category:
