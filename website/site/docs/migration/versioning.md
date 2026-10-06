@@ -27,7 +27,7 @@ From v6 on, an adapter shares Keyv's version, so `pnpm add @keyv/redis@6` lines 
 | Tag | Points to | Use it for |
 | --- | --- | --- |
 | `latest` | Newest **stable** release of the current major (v6) | The default — `pnpm add keyv` |
-| `v5-lts` | Newest **stable v5** release | Pinning the v5 line explicitly (`keyv@5` works too) |
+| `v5-lts` | Newest **stable v5** release. Set by the next v5 release; until then use `keyv@5` | Pinning the v5 line explicitly |
 | `alpha`, `beta`, `rc` | Newest **pre-release** of that kind | Trying a release before it ships |
 
 > Stable v6 starts at **6.1.0**; there is no 6.0.0 release. Since 6.1.0, `latest` points to v6 for `keyv` and the rest of the v6 family. Releases from the v5 line no longer move `latest`; they get a `v{major}-lts` tag such as `v5-lts` (see [How releases are tagged](#how-releases-are-tagged)).
