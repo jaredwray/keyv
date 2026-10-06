@@ -51,18 +51,19 @@ pnpm update
 
 # Release Process
 
-Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** branch (maintenance / LTS). Both publish to npm through the same GitHub Actions workflow file, `.github/workflows/release.yaml` (each branch carries its own copy), using **npm staged publishing** with **OIDC trusted publishing** and **provenance**:
+Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** branch (maintenance / LTS). Each line stages to npm through its own GitHub Actions workflow, `.github/workflows/release.yaml` on `main` and `.github/workflows/release-v5.yaml` on `v5`, using **npm staged publishing** with **OIDC trusted publishing** and **provenance**:
 
 - CI never publishes live. It builds, tests, packs each package and runs `pnpm stage publish … --provenance`, which puts the version in npm's stage queue with a provenance attestation.
 - A maintainer then approves each staged version on npm with 2FA; only then does it become installable.
-- There are no npm tokens anywhere. The trusted publisher on npmjs.com (repo `jaredwray/keyv`, workflow `release.yaml`, environment `release`) is configured **stage-only**, and because both branches use the same workflow filename one configuration covers both lines.
+- There are no npm tokens anywhere. npm allows several trusted publishers per package, and each workflow has its own **stage-only** one on npmjs.com (repo `jaredwray/keyv`, environment `release`): `release.yaml` on every package released from `main`, and `release-v5.yaml` on every package released from `v5`, including the v5-only `@keyv/serialize`.
 
 | | `main` (v6) | `v5` branch |
 | --- | --- | --- |
+| Workflow | `release.yaml` | `release-v5.yaml` |
 | Versioning | Every package shares one version (`pnpm version:sync`) | Each package keeps its own version |
 | Trigger | Publishing a GitHub Release from a tag on `main` (`vX.Y.Z`, `vX.Y.Z-beta.N`) | Manual **Run workflow** from the `v5` branch (`workflow_dispatch`); GitHub Releases do not publish |
 | What gets staged | Every package whose exact version is not on npm yet | Only the packages whose version is ahead of npm |
-| Dist-tag | From the version and `LATEST_MAJOR`: pre-release → its channel (`beta`, `rc`), current major → `latest`, older major → `v{major}-lts` | From each package's own registry state, same tag names; a tag is never moved backwards |
+| Dist-tag | From the version and `LATEST_MAJOR`: pre-release → its channel (`beta`, `rc`), current major → `latest`, older major → `v{major}-lts` | Never `latest`: stable → `v{major}-lts`, pre-release → its channel (`v{major}-{channel}` when a newer major owns it); a tag is never moved backwards |
 | Script | `scripts/release-publish.ts` (`pnpm test:scripts`) | `scripts/release.mjs` (`pnpm test:release`, `pnpm release:dry`) |
 | Release notes | The GitHub Release | `changelog/<name>.md` on the `v5` branch |
 
@@ -77,9 +78,9 @@ To preview without staging anything: Actions → `release` → **Run workflow** 
 ## Releasing v5 from the `v5` branch
 
 1. Open a release PR against `v5`: bump `version` in each package that has unreleased changes (never `6.0.0` or higher — the script refuses it), add `changelog/<name>.md`, and merge.
-2. Actions → `release` → **Run workflow** → set "Use workflow from" to **`v5`**. Leave **Dry run** checked first: the job summary shows the stage plan (which packages would be staged, under which dist-tag, and which are skipped) and packaging is validated. Then run it again with Dry run unchecked to stage for real. The run builds, runs the full test suite, the Aikido release scan and the release-logic tests before anything is staged. Any ref other than `v5` is forced to a dry run.
+2. Actions → `release-v5` → **Run workflow** → set "Use workflow from" to **`v5`**. Leave **Dry run** checked first: the job summary shows the stage plan (which packages would be staged, under which dist-tag, and which are skipped) and packaging is validated. Then run it again with Dry run unchecked to stage for real. The run builds, runs the full test suite, the Aikido release scan and the release-logic tests before anything is staged. Any ref other than `v5` is forced to a dry run. GitHub offers **Run workflow** only for workflows on the default branch and runs the copy on the branch you pick, so `main` carries a copy of `release-v5.yaml` just to list it; run from `main`, that copy fails without staging anything.
 3. Approve the staged versions on npm, dependencies first (`@keyv/serialize` → `keyv` → adapters).
-4. Optionally create a GitHub Release tagged `v5-YYYY-MM-DD` for release notes. It publishes nothing: a GitHub Release runs the workflow file at the tag's commit, the `v5` branch's workflow has no `release` trigger, and main's release workflow refuses any tag whose commit is not on `main`.
+4. Optionally create a GitHub Release tagged `v5-YYYY-MM-DD` for release notes. It publishes nothing: a GitHub Release runs the workflows at the tag's commit, `release-v5.yaml` has no `release` trigger, and `release.yaml` refuses any tag whose commit is not on `main`.
 
 The full v5 runbook, including re-run and recovery rules, is in `changelog/README.md` on the `v5` branch.
 
@@ -100,8 +101,8 @@ The **Staged Packages** tab on npmjs.com does the same. A few rules:
 - Never approve a package whose workspace dependency was not staged or approved.
 - Staged versions are not visible in the public registry, so re-running a release before approving reports them as conflicts. Approve or reject them in the queue rather than re-staging.
 - Verify afterwards with `npm view keyv dist-tags` (or the package in question).
-- Release runs on both branches share one concurrency group with a FIFO queue, so a run dispatched while another release is in flight waits for it to finish rather than running alongside it.
-- A brand-new package cannot be staged, and trusted publishing cannot create it. Creating it on npm is the one exception to "never publish directly": a maintainer publishes its first version by hand with 2FA, then adds its stage-only trusted publisher on npmjs.com; every later version goes through the workflow.
+- Each release workflow runs one at a time with a FIFO queue, so a run started while another run of the same workflow is in flight waits for it to finish rather than running alongside it.
+- A brand-new package cannot be staged, and trusted publishing cannot create it. Creating it on npm is the one exception to "never publish directly": a maintainer publishes its first version by hand with 2FA, then adds the stage-only trusted publisher for its line's workflow on npmjs.com; every later version goes through the workflow.
 
 # Code of Conduct
 Please refer to our [Code of Conduct](https://github.com/jaredwray/keyv/blob/main/CODE_OF_CONDUCT.md) readme for how to contribute to this open source project and work within the community. 

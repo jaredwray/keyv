@@ -37,12 +37,13 @@ This checklist is for the `v5` branch. The same catalog is already complete on `
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified 2026-09-09
 
 ## 5. npm publishing — npm libraries only
-- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for the publish workflow — it can stage, never publish live (manual) — verified 2026-09-09
-- [x] `.github/workflows/release.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2142, #2119
+- [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for `release-v5.yaml` on every package this branch publishes, including the v5-only `@keyv/serialize` — it can stage, never publish live (manual)
+- [x] `.github/workflows/release-v5.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2142, #2119
 - [x] Maintainer promotes staged versions with 2FA (manual) — verified 2026-09-09
 - [x] Drydock connected — staged releases reviewed before promotion (manual) — verified 2026-09-09
 - [x] No direct publish rights: package requires 2FA and disallows tokens (manual) — verified 2026-09-09
 - [x] `package.json` `repository.url` accurate so provenance maps to this repo — verified 2026-09-08
+- [x] Nothing is ever staged under `latest`: every stable release stages under `v{major}-lts` (`computeTag`), and `publishArgs` refuses `latest` outright
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified 2026-09-08 (PR #2127: Aikido Security: check code)
