@@ -138,7 +138,7 @@ describe("createKeyv", () => {
 			addresses: [{ host: "localhost", port: 6370 }],
 			databaseId: 1,
 		});
-		expect(await client.exists([`namespace:${namespace}:${key}`])).toBe(1);
+		expect(await client.exists([`namespace:${namespace}::${key}`])).toBe(1);
 		expect(await client.exists([key])).toBe(0);
 		client.close();
 

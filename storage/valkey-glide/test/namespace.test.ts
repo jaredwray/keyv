@@ -27,10 +27,61 @@ describe("namespace", () => {
 			addresses: [{ host: "localhost", port: 6370 }],
 			databaseId: 1,
 		});
-		expect(await client.get(`namespace:${namespace}:${key}`)).toBe(value);
+		expect(await client.get(`namespace:${namespace}::${key}`)).toBe(value);
 		client.close();
 
 		await store.clear();
+		await store.disconnect();
+	});
+
+	test("should default the namespace separator to ::", async () => {
+		const store = new KeyvValkeyGlide(valkeyUri);
+		expect(store.namespaceSeparator).toBe("::");
+		store.namespaceSeparator = ":";
+		expect(store.namespaceSeparator).toBe(":");
+		await store.disconnect();
+	});
+
+	test("should apply namespaceSeparator when passing in a client", async () => {
+		const client = await GlideClient.createClient({
+			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
+		});
+		const store = new KeyvValkeyGlide(client, { namespaceSeparator: "|" });
+		expect(store.namespaceSeparator).toBe("|");
+		await store.disconnect();
+	});
+
+	test("should use a custom namespaceSeparator in keys, iterator and clear", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		// `*` is a glob metacharacter, so the SCAN pattern has to match it literally.
+		const store = new KeyvValkeyGlide(valkeyUri, { namespace, namespaceSeparator: "*" });
+		const sibling = new KeyvValkeyGlide(valkeyUri, { namespace: `${namespace}x` });
+		const key = faker.string.alphanumeric(10);
+		const value = faker.string.alphanumeric(10);
+		const siblingKey = faker.string.alphanumeric(10);
+		await store.set(key, value);
+		await sibling.set(siblingKey, faker.string.alphanumeric(10));
+
+		const client = await GlideClient.createClient({
+			addresses: [{ host: "localhost", port: 6370 }],
+			databaseId: 1,
+		});
+		expect(await client.get(`namespace:${namespace}*${key}`)).toBe(value);
+		const collected = new Map<string, unknown>();
+		for await (const [collectedKey, collectedValue] of store.iterator()) {
+			collected.set(collectedKey, collectedValue);
+		}
+
+		expect([...collected]).toEqual([[key, value]]);
+
+		await store.clear();
+		expect(await store.get(key)).toBeUndefined();
+		expect(await sibling.has(siblingKey)).toBe(true);
+
+		client.close();
+		await sibling.clear();
+		await sibling.disconnect();
 		await store.disconnect();
 	});
 });
@@ -80,12 +131,22 @@ describe("clear", () => {
 		const value = faker.string.alphanumeric(10);
 		await store.set(key, value);
 
-		expect(await client.exists([`sets:${key}`])).toBe(1);
-		expect(await client.sismember("sets", `sets:${key}`)).toBe(true);
+		expect(await client.exists([`sets::${key}`])).toBe(1);
+		expect(await client.sismember("sets", `sets::${key}`)).toBe(true);
 
 		await store.clear();
 		expect(await store.get(key)).toBeUndefined();
 		client.close();
+		await store.disconnect();
+	});
+
+	test("should clear a namespace that spans several SCAN pages", async () => {
+		const store = new KeyvValkeyGlide(valkeyUri, { namespace: faker.string.alphanumeric(8) });
+		// SCAN returns about 10 keys per call, so 60 keys take several pages.
+		const keys = Array.from({ length: 60 }, () => faker.string.alphanumeric(12));
+		await store.setMany(keys.map((key) => ({ key, value: faker.string.alphanumeric(10) })));
+		await store.clear();
+		expect(await store.hasMany(keys)).toEqual(keys.map(() => false));
 		await store.disconnect();
 	});
 
@@ -180,11 +241,38 @@ describe("useSets", () => {
 		vi.restoreAllMocks();
 	});
 
+	test("should send clear()'s reads through a batch, which goes to the primary", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true, namespace });
+		const client = await store.getClient();
+		const exec = vi.spyOn(client, "exec");
+		const smembers = vi.spyOn(client, "smembers");
+		const type = vi.spyOn(client, "type");
+		const scan = vi.spyOn(client, "scan");
+
+		await store.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+		await store.clear();
+		store.useSets = false;
+		await store.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+		await store.clear();
+
+		expect(exec).toHaveBeenCalled();
+		expect(smembers).not.toHaveBeenCalled();
+		expect(type).not.toHaveBeenCalled();
+		expect(scan).not.toHaveBeenCalled();
+		await store.disconnect();
+	});
+
 	test("should skip unlinking when the legacy tracking set reports no members", async () => {
 		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true });
 		store.namespace = faker.string.alphanumeric(8);
 		const client = await store.getClient();
-		vi.spyOn(client, "type").mockResolvedValueOnce("set");
+		// clear() reads through batches: SMEMBERS of the tracking set, then TYPE and SMEMBERS of
+		// the legacy set. A set emptied between those two reads looks like this.
+		vi.spyOn(client, "exec")
+			.mockResolvedValueOnce([new Set()])
+			.mockResolvedValueOnce(["set"])
+			.mockResolvedValueOnce([new Set()]);
 		await expect(store.clear()).resolves.toBeUndefined();
 		await store.disconnect();
 	});

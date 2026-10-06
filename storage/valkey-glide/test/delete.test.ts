@@ -54,4 +54,15 @@ describe("deleteMany", () => {
 		expect(await store.deleteMany([])).toEqual([]);
 		await store.disconnect();
 	});
+
+	test("should reject when a command in the batch fails", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true, namespace });
+		const client = await store.getClient();
+		// A string at the tracking key makes the batch's SREM fail with WRONGTYPE.
+		await client.set(`sets:${namespace}`, faker.string.alphanumeric(10));
+		await expect(store.deleteMany([faker.string.alphanumeric(10)])).rejects.toThrow(/WRONGTYPE/);
+		await client.del([`sets:${namespace}`]);
+		await store.disconnect();
+	});
 });

@@ -1,3 +1,4 @@
+import { isUtf8 } from "node:buffer";
 import {
 	Batch,
 	ClusterBatch,
@@ -25,7 +26,7 @@ import type {
 	KeyvValkeyGlideOptions,
 } from "./types.js";
 
-const adapterOptionKeys = new Set(["uri", "cluster", "useSets", "namespace"]);
+const adapterOptionKeys = new Set(["uri", "cluster", "useSets", "namespace", "namespaceSeparator"]);
 
 /**
  * Valkey GLIDE storage adapter for Keyv. Supports standalone and cluster clients
@@ -37,6 +38,12 @@ const adapterOptionKeys = new Set(["uri", "cluster", "useSets", "namespace"]);
  */
 export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	private _namespace?: string;
+	/**
+	 * The separator between the namespace and the key in data keys, as in
+	 * `namespace:<namespace>::<key>` or `sets:<namespace>::<key>`.
+	 * @default "::"
+	 */
+	private _namespaceSeparator = "::";
 	private _useSets = false;
 	private _cluster = false;
 	private _client?: KeyvValkeyGlideClient;
@@ -65,6 +72,10 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 				this._namespace = options.namespace;
 			}
 
+			if (options?.namespaceSeparator !== undefined) {
+				this._namespaceSeparator = options.namespaceSeparator;
+			}
+
 			return;
 		}
 
@@ -81,6 +92,10 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			this._namespace = merged.namespace;
 		}
 
+		if (merged.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = merged.namespaceSeparator;
+		}
+
 		this._cluster = merged.cluster === true;
 		this._glideConfig = toGlideConfig(merged);
 	}
@@ -95,6 +110,23 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
+	}
+
+	/**
+	 * Gets the separator between the namespace and the key in data keys.
+	 * @returns {string} The namespace/key separator.
+	 * @default "::"
+	 */
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
+	}
+
+	/**
+	 * Sets the separator between the namespace and the key in data keys.
+	 * @param {string} value - The separator to place between the namespace and the key.
+	 */
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	public get useSets(): boolean {
@@ -152,8 +184,8 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 
 	public async get<Value>(key: string): Promise<KeyvStorageGetResult<Value>> {
 		const client = await this.getClient();
-		const value = await client.get(this.getKeyName(key));
-		return asString(value) as KeyvStorageGetResult<Value>;
+		const value = await client.get(this.getKeyName(key), { decoder: Decoder.Bytes });
+		return fromStoredValue(value) as KeyvStorageGetResult<Value>;
 	}
 
 	public async getMany<Value>(
@@ -165,8 +197,10 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 
 		const client = await this.getClient();
 		const resolvedKeys = keys.map((key) => this.getKeyName(key));
-		const values = await client.mget(resolvedKeys);
-		return values.map((value) => asString(value)) as Array<KeyvStorageGetResult<Value | undefined>>;
+		const values = await client.mget(resolvedKeys, { decoder: Decoder.Bytes });
+		return values.map((value) => fromStoredValue(value)) as Array<
+			KeyvStorageGetResult<Value | undefined>
+		>;
 	}
 
 	public async set(key: string, value: KeyvAny, expires?: number): Promise<boolean> {
@@ -174,15 +208,8 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return false;
 		}
 
-		let client: KeyvValkeyGlideClient;
 		try {
-			client = await this.getClient();
-		} catch {
-			// createClient() already emitted "error" for the connect failure.
-			return false;
-		}
-
-		try {
+			const client = await this.getClient();
 			const resolved = this.getKeyName(key);
 			await client.set(resolved, toGlideValue(value), setOptions(expires));
 			if (this._useSets) {
@@ -204,7 +231,8 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		let client: KeyvValkeyGlideClient;
 		try {
 			client = await this.getClient();
-		} catch {
+		} catch (error) {
+			this.emit("error", error);
 			return entries.map(() => false);
 		}
 
@@ -232,13 +260,28 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return entries.map(() => false);
 		}
 
+		let results: GlideReturnType[] | null;
 		try {
-			const results = await this.execBatch(client, batch);
-			return setCommandIndexes.map((index) => index !== undefined && results?.[index] === "OK");
+			results = await this.execBatch(client, batch, false);
 		} catch (error) {
 			this.emit("error", error);
 			return entries.map(() => false);
 		}
+
+		// A non-raising batch returns a failed command's error in its slot instead of rejecting.
+		const commandError = results?.find((result) => result instanceof Error);
+		if (commandError) {
+			this.emit("error", commandError);
+		}
+
+		// With useSets, an entry only counts as stored if its SADD worked too, since clear()
+		// can't remove a key the tracking set doesn't list.
+		return setCommandIndexes.map(
+			(index) =>
+				index !== undefined &&
+				results?.[index] === "OK" &&
+				!(setKey && results?.[index + 1] instanceof Error),
+		);
 	}
 
 	public async delete(key: string): Promise<boolean> {
@@ -265,7 +308,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			}
 		}
 
-		const results = await this.execBatch(client, batch);
+		const results = await this.execBatch(client, batch, true);
 		return resolvedKeys.map((_, index) => {
 			const result = results?.[index];
 			return typeof result === "number" && result > 0;
@@ -290,7 +333,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			batch.exists([resolved]);
 		}
 
-		const results = await this.execBatch(client, batch);
+		const results = await this.execBatch(client, batch, true);
 		return resolvedKeys.map((_, index) => {
 			const result = results?.[index];
 			return typeof result === "number" && result > 0;
@@ -301,16 +344,26 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		const client = await this.getClient();
 		if (this._useSets) {
 			const setKey = this.getSetKey();
-			const keys = glideKeyPage(await client.smembers(setKey));
+			const keys = glideKeyPage(
+				(await this.readFromPrimary(client, ["SMEMBERS", setKey], setKey)) as GlideString[],
+			);
 			if (keys.length > 0) {
 				await Promise.all([client.unlink(keys), client.srem(setKey, keys)]);
 			}
 
 			if (this.namespace) {
 				const legacySetKey = `namespace:${this.namespace}`;
-				const legacyKeyType = await client.type(legacySetKey);
+				const legacyKeyType = asString(
+					(await this.readFromPrimary(client, ["TYPE", legacySetKey], legacySetKey)) as GlideString,
+				);
 				if (legacyKeyType === "set") {
-					const legacyKeys = glideKeyPage(await client.smembers(legacySetKey));
+					const legacyKeys = glideKeyPage(
+						(await this.readFromPrimary(
+							client,
+							["SMEMBERS", legacySetKey],
+							legacySetKey,
+						)) as GlideString[],
+					);
 					if (legacyKeys.length > 0) {
 						await Promise.all([client.unlink(legacyKeys), client.srem(legacySetKey, legacyKeys)]);
 					}
@@ -322,7 +375,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return;
 		}
 
-		for await (const page of this.scanPages(client, this.getKeyPattern())) {
+		for await (const page of this.scanPrimaryPages(client, this.getKeyPattern())) {
 			await client.unlink(page);
 		}
 	}
@@ -330,12 +383,12 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	public async *iterator<Value>(): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const client = await this.getClient();
 		const keyPrefix = this.getKeyPrefix();
-		const prefix = keyPrefix ? `${keyPrefix}:` : "";
+		const prefix = keyPrefix ? `${keyPrefix}${this._namespaceSeparator}` : "";
 		for await (const page of this.scanPages(client, this.getKeyPattern())) {
-			const values = await client.mget(page);
+			const values = await client.mget(page, { decoder: Decoder.Bytes });
 			for (const [index, storedKey] of page.entries()) {
 				const key = prefix ? storedKey.slice(prefix.length) : storedKey;
-				const value = asString(values[index]) as Value | undefined;
+				const value = fromStoredValue(values[index]) as Value | undefined;
 				yield [key, value];
 			}
 		}
@@ -354,33 +407,48 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		this.emit("disconnect", client);
 	}
 
+	/**
+	 * Opens a connection from the constructor config. A connect failure rejects without emitting
+	 * `error`: the operation that asked for the client reports it, so it is reported once.
+	 */
 	private async createClient(): Promise<KeyvValkeyGlideClient> {
-		try {
-			const client = this._cluster
-				? await GlideClusterClient.createClient(this._glideConfig)
-				: await GlideClient.createClient(this._glideConfig);
-			this._client = client;
-			this.emit("connect", client);
-			return client;
-		} catch (error) {
-			this.emit("error", error);
-			throw error;
+		const client = this._cluster
+			? await GlideClusterClient.createClient(this._glideConfig)
+			: await GlideClient.createClient(this._glideConfig);
+		if (this._closed || this._client) {
+			// disconnect() or the client setter ran while this connection was opening, so nothing
+			// will use it. Close it instead of leaking it.
+			client.close();
+			if (this._client) {
+				return this._client;
+			}
+
+			throw new Error("Valkey GLIDE client is disconnected");
 		}
+
+		this._client = client;
+		this.emit("connect", client);
+		return client;
 	}
 
 	private createBatch(client: KeyvValkeyGlideClient): Batch | ClusterBatch {
 		return client instanceof GlideClusterClient ? new ClusterBatch(false) : new Batch(false);
 	}
 
+	/**
+	 * Runs a batch. With `raiseOnError`, the first failed command rejects the call; without
+	 * it, each failed command's error is returned in its slot of the results.
+	 */
 	private async execBatch(
 		client: KeyvValkeyGlideClient,
 		batch: Batch | ClusterBatch,
+		raiseOnError: boolean,
 	): Promise<GlideReturnType[] | null> {
 		if (client instanceof GlideClusterClient) {
-			return client.exec(batch as ClusterBatch, false);
+			return client.exec(batch as ClusterBatch, raiseOnError);
 		}
 
-		return client.exec(batch as Batch, false);
+		return client.exec(batch as Batch, raiseOnError);
 	}
 
 	private getSetKey(): string {
@@ -410,7 +478,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	private getKeyName(key: string): string {
 		const prefix = this.getKeyPrefix();
 		if (prefix) {
-			return `${prefix}:${key}`;
+			return `${prefix}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -418,13 +486,13 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Builds the `SCAN MATCH` pattern that selects every data key in the current
-	 * namespace. Glob metacharacters in the prefix (`*`, `?`, `[`, `]`, `\`) are
-	 * escaped so the namespace is matched literally, and the key separator is part
-	 * of the pattern so a namespace that merely shares a prefix (for example
-	 * `users` vs `users-archive`) is never selected. Because `:` is also the
-	 * separator, a namespace that extends this one with `:` (`users:archive`)
-	 * cannot be told apart from a key containing `:`; `useSets: true` tracks keys
-	 * per namespace instead. With no prefix this matches every key in the database.
+	 * namespace. Glob metacharacters in the prefix and separator (`*`, `?`, `[`, `]`, `\`)
+	 * are escaped so they are matched literally, and the separator is part of the
+	 * pattern so a namespace that merely shares a prefix (for example `users` vs
+	 * `users-archive`) is never selected. A namespace that extends this one with the
+	 * separator (`users::archive`) cannot be told apart from a key containing the
+	 * separator; `useSets: true` tracks keys per namespace instead. With no prefix this
+	 * matches every key in the database.
 	 */
 	private getKeyPattern(): string {
 		const prefix = this.getKeyPrefix();
@@ -432,7 +500,77 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return "*";
 		}
 
-		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}:*`;
+		const literal = `${prefix}${this._namespaceSeparator}`;
+		return `${literal.replace(/[*?[\]\\]/g, "\\$&")}*`;
+	}
+
+	/**
+	 * Runs a read command on the primary that owns `key`, even when `readFrom` sends reads to
+	 * replicas. clear() deletes what these reads return, and a lagging replica could leave out
+	 * a key written just before. A standalone client sends batches to the primary; a cluster
+	 * client needs an explicit route.
+	 */
+	private async readFromPrimary(
+		client: KeyvValkeyGlideClient,
+		args: string[],
+		key: string,
+	): Promise<GlideReturnType> {
+		if (client instanceof GlideClusterClient) {
+			return client.customCommand(args, { route: { type: "primarySlotKey", key } });
+		}
+
+		return readFromStandalonePrimary(client, args);
+	}
+
+	/**
+	 * Yields pages of keys matching `match`, scanning only primaries, for clear(). GLIDE's
+	 * cluster scan and a standalone SCAN both follow `readFrom`, so with a replica strategy they
+	 * could miss a key a replica hasn't received yet. A cluster is scanned one primary at a time.
+	 */
+	private async *scanPrimaryPages(
+		client: KeyvValkeyGlideClient,
+		match: string,
+	): AsyncGenerator<string[], void, unknown> {
+		const scanArgs = (cursor: string) => ["SCAN", cursor, "MATCH", match];
+		if (client instanceof GlideClusterClient) {
+			// A multi-node customCommand resolves to one `{ key: address, value }` record per node.
+			const firstPages = (await client.customCommand(scanArgs("0"), {
+				route: "allPrimaries",
+			})) as unknown as Array<{ key: GlideString; value: [GlideString, GlideString[]] }>;
+			for (const { key: address, value: firstPage } of firstPages) {
+				const route = { type: "routeByAddress" as const, host: asString(address) };
+				let [cursor, keys] = firstPage;
+				while (true) {
+					const page = glideKeyPage(keys);
+					if (page.length > 0) {
+						yield page;
+					}
+
+					if (asString(cursor) === "0") {
+						break;
+					}
+
+					[cursor, keys] = (await client.customCommand(scanArgs(asString(cursor)), {
+						route,
+					})) as [GlideString, GlideString[]];
+				}
+			}
+
+			return;
+		}
+
+		let cursor = "0";
+		do {
+			const [next, keys] = (await readFromStandalonePrimary(client, scanArgs(cursor))) as [
+				GlideString,
+				GlideString[],
+			];
+			cursor = asString(next);
+			const page = glideKeyPage(keys);
+			if (page.length > 0) {
+				yield page;
+			}
+		} while (cursor !== "0");
 	}
 
 	private async *scanPages(
@@ -585,14 +723,45 @@ function glideKeyPage(values: Iterable<GlideString>): string[] {
 	return keys;
 }
 
-function asString(value: GlideString | null | undefined): string | undefined {
-	if (value === null || value === undefined) {
-		return undefined;
-	}
-
+/**
+ * Converts a key, cursor or reply to a string. GLIDE returns these as Buffers when the client's
+ * `defaultDecoder` is `Decoder.Bytes`.
+ */
+function asString(value: GlideString): string {
 	if (typeof value === "string") {
 		return value;
 	}
 
 	return Buffer.from(value).toString();
+}
+
+/**
+ * Converts a value read with `Decoder.Bytes` back to what was stored: a string when the bytes
+ * are valid UTF-8, the Buffer otherwise. Reading as bytes means a binary value can't make a
+ * read fail, and set() of a Buffer reads back as the same bytes.
+ */
+function fromStoredValue(value: GlideString | null | undefined): string | Buffer | undefined {
+	if (value === null || value === undefined) {
+		return undefined;
+	}
+
+	// Values are read with Decoder.Bytes, so this is always a Buffer.
+	const bytes = value as Buffer;
+	return isUtf8(bytes) ? bytes.toString() : bytes;
+}
+
+/**
+ * Runs a read on the primary of a standalone setup. A standalone client sends batches to the
+ * primary even when `readFrom` sends single reads to replicas.
+ */
+async function readFromStandalonePrimary(
+	client: GlideClient,
+	args: string[],
+): Promise<GlideReturnType> {
+	// exec() returns null only for a transaction that WATCH aborted, and this batch is a pipeline.
+	const results = (await client.exec(
+		new Batch(false).customCommand(args),
+		true,
+	)) as GlideReturnType[];
+	return results[0];
 }

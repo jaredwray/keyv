@@ -33,6 +33,11 @@ export type KeyvValkeyGlideOptions = {
 	 * @default undefined
 	 */
 	namespace?: string;
+	/**
+	 * The separator between the namespace and the key, as in `namespace:<namespace>::<key>`.
+	 * @default "::"
+	 */
+	namespaceSeparator?: string;
 } & Partial<GlideClientConfiguration> &
 	Partial<GlideClusterClientConfiguration>;
 

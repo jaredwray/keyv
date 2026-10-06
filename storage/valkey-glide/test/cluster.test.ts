@@ -1,7 +1,7 @@
 import net from "node:net";
 import { faker } from "@faker-js/faker";
 import { GlideClusterClient } from "@valkey/valkey-glide";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
 const clusterAddresses = [
@@ -169,6 +169,47 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 			expect(await store.get(key)).toBeUndefined();
 		}
 
+		await store.disconnect();
+	});
+
+	test("should clear a namespace that spans several SCAN pages on each primary", async () => {
+		const store = new KeyvValkeyGlide(await createReadyCluster(), {
+			namespace: faker.string.alphanumeric(8),
+		});
+		// SCAN returns about 10 keys per call, so 90 keys over three primaries take several pages.
+		const keys = Array.from({ length: 90 }, () => faker.string.alphanumeric(12));
+		await store.setMany(keys.map((key) => ({ key, value: faker.string.alphanumeric(10) })));
+		await store.clear();
+		expect(await store.hasMany(keys)).toEqual(keys.map(() => false));
+		await store.disconnect();
+	});
+
+	test("should send clear()'s reads to primaries rather than follow readFrom", async () => {
+		const cluster = await createReadyCluster();
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkeyGlide(cluster, { namespace });
+		await store.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+		const customCommand = vi.spyOn(cluster, "customCommand");
+		const scan = vi.spyOn(cluster, "scan");
+		const smembers = vi.spyOn(cluster, "smembers");
+
+		await store.clear();
+		expect(customCommand).toHaveBeenCalledWith(
+			["SCAN", "0", "MATCH", `namespace:${namespace}::*`],
+			{
+				route: "allPrimaries",
+			},
+		);
+
+		store.useSets = true;
+		await store.set(faker.string.alphanumeric(10), faker.string.alphanumeric(10));
+		await store.clear();
+		expect(customCommand).toHaveBeenCalledWith(["SMEMBERS", `sets:${namespace}`], {
+			route: { type: "primarySlotKey", key: `sets:${namespace}` },
+		});
+		expect(scan).not.toHaveBeenCalled();
+		expect(smembers).not.toHaveBeenCalled();
+		vi.restoreAllMocks();
 		await store.disconnect();
 	});
 

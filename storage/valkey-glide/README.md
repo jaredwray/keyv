@@ -131,6 +131,8 @@ const store = new KeyvValkeyGlide({
 
 `clientAz` is required when `readFrom` is `AZAffinity` or `AZAffinityReplicasAndPrimary`.
 
+Reads from a replica can lag behind recent writes. `clear()` deletes what it reads, so it always reads the tracking SET and scans keys on the primaries, whatever `readFrom` says. A key written just before `clear()` is never left behind because a replica hadn't received it yet.
+
 ## Constructor Options
 
 `KeyvValkeyGlide` accepts a URI string, an options object, or an existing `GlideClient` / `GlideClusterClient`. Adapter fields:
@@ -141,6 +143,7 @@ const store = new KeyvValkeyGlide({
 | `cluster` | `boolean` | `false` | Create a `GlideClusterClient` instead of `GlideClient` |
 | `useSets` | `boolean` | `false` | Track keys in a Valkey SET for faster namespaced `clear()` |
 | `namespace` | `string` | `undefined` | Prefix keys for multi-tenant isolation |
+| `namespaceSeparator` | `string` | `"::"` | Separator between the namespace and the key, as in `namespace:<namespace>::<key>` |
 
 All other fields are forwarded to GLIDE (`addresses`, `useTLS`, `credentials`, `readFrom`, `clientAz`, `requestTimeout`, `clientName`, `databaseId`, …). See [BaseClientConfiguration](https://glide.valkey.io/languages/nodejs/api/interfaces/BaseClient.BaseClientConfiguration.html).
 
@@ -176,6 +179,10 @@ const store = new KeyvValkeyGlide('redis://localhost:6379', {
 
 Get or set the key namespace.
 
+### namespaceSeparator
+
+Get or set the separator between the namespace and the key. Default `"::"`, so a key is stored as `namespace:<namespace>::<key>`, or `sets:<namespace>::<key>` with `useSets`. That is the same layout as `@keyv/valkey`, so both adapters read each other's data with the same `namespace`, `namespaceSeparator` and `useSets`.
+
 ### useSets
 
 When `true`, data keys and a tracking SET use the `sets:` prefix (same layout as `@keyv/valkey`). Default `false`.
@@ -192,11 +199,15 @@ Replacing `store.client` switches to an existing instance without closing the pr
 
 Same Keyv storage contract as `@keyv/valkey`: `get`, `getMany`, `set`, `setMany`, `delete`, `deleteMany`, `has`, `hasMany`, `clear`, `iterator`, `disconnect`.
 
-When `useSets` is `false`, `clear()` and `iterator()` use `SCAN MATCH` with the pattern `namespace:<namespace>:*` (glob metacharacters in the namespace are escaped), so a namespace that merely shares a prefix — for example `users` vs `users-archive` — is left alone. Because `:` is also the key separator, a namespace that extends another with `:` (for example `users:archive` under `users`) cannot be told apart from a key containing `:` and is matched too; use `useSets: true`, which tracks keys per namespace instead, if you need that separation.
+When `useSets` is `false`, `clear()` and `iterator()` use `SCAN MATCH` with the pattern `namespace:<namespace>::*` (glob metacharacters in the namespace and separator are escaped), so a namespace that merely shares a prefix — for example `users` vs `users-archive` — is left alone. A namespace that extends another with the separator (for example `users::archive` under `users`) cannot be told apart from a key containing the separator and is matched too; use `useSets: true`, which tracks keys per namespace instead, if you need that separation.
 
 `getClient()` returns the connected GLIDE client, creating it if needed.
 
 Missing keys are `undefined`, never `null`.
+
+Values read back as strings. `set()` also accepts a `Buffer` or `Uint8Array` and stores its bytes unchanged. A value whose bytes aren't valid UTF-8 reads back from `get()`, `getMany()` and `iterator()` as a `Buffer` with the same bytes, so one binary value never makes a read fail. Keyv's serializers always store strings, so this only matters when you call the adapter directly or share the database with other clients.
+
+`set()` and `setMany()` report a failed write, including a failed connection, by emitting `error` and returning `false`. The other methods reject. Through Keyv, each failed operation emits one `error` on the Keyv instance, and Keyv rejects instead when nothing listens for `error`.
 
 `disconnect()` calls GLIDE `close()`.
 
@@ -208,7 +219,7 @@ Missing keys are `undefined`, never `null`.
 | --- | --- |
 | `connect` | A client was created or assigned |
 | `disconnect` | `disconnect()` closed the client |
-| `error` | Connect or write failed |
+| `error` | `set()` or `setMany()` failed, including a failed connection |
 
 GLIDE itself is not an EventEmitter, so connection errors surface through thrown promises and the adapter `error` event rather than client `error` / `reconnecting` listeners.
 
@@ -220,7 +231,7 @@ Keyv passes an **absolute** Unix-ms expiry. The adapter writes it with `SET` + `
 
 Pass a `GlideClusterClient` or `{ cluster: true, addresses: [...] }`.
 
-`getMany` uses GLIDE `mget`, which splits cross-slot keys internally. `clear()` and `iterator()` use cluster `SCAN` so they cover every node — unlike `@keyv/valkey`, which documents `KEYS`/`SCAN` as single-node in cluster mode.
+`getMany` uses GLIDE `mget`, which splits cross-slot keys internally. `iterator()` uses GLIDE's cluster `SCAN` and `clear()` scans each primary, so both cover every node.
 
 ### Cluster gotchas
 

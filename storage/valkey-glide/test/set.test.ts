@@ -40,7 +40,7 @@ describe("set", () => {
 		await store.disconnect();
 	});
 
-	test("should store binary values without mangling invalid UTF-8 bytes", async () => {
+	test("should store binary values without mangling invalid UTF-8 bytes and read them back", async () => {
 		const store = new KeyvValkeyGlide(valkeyUri);
 		const key = faker.string.alphanumeric(10);
 		const bytes = Buffer.from([0xff, 0xfe, 0xfd, 0x00, 0x01]);
@@ -54,9 +54,11 @@ describe("set", () => {
 			const stored = await rawClient.get(key);
 			expect(Buffer.isBuffer(stored)).toBe(true);
 			expect(stored).toEqual(bytes);
+			expect(await store.get(key)).toEqual(bytes);
+			expect(await store.getMany([key])).toEqual([bytes]);
 		} finally {
-			// These bytes aren't valid UTF-8, and the default String decoder fails on them.
-			// Delete the key so tests that read every key in the database never see it.
+			// These bytes aren't valid UTF-8, so a client reading them with the String decoder
+			// fails. Delete the key so tests that read every key in the database never see it.
 			await rawClient.del([key]);
 			rawClient.close();
 			await store.disconnect();
@@ -159,6 +161,32 @@ describe("setMany", () => {
 		expect(await store.getMany([key1, key2])).toEqual([val1, val2]);
 		await store.clear();
 		expect(await store.get(key1)).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("should report an entry false and emit when its SADD fails", async () => {
+		const namespace = faker.string.alphanumeric(8);
+		const store = new KeyvValkeyGlide(valkeyUri, { useSets: true, namespace });
+		const client = await store.getClient();
+		// A string at the tracking key makes each SADD in the batch fail with WRONGTYPE.
+		await client.set(`sets:${namespace}`, faker.string.alphanumeric(10));
+		const errors: unknown[] = [];
+		store.on("error", (error) => errors.push(error));
+		const key1 = faker.string.alphanumeric(10);
+		const key2 = faker.string.alphanumeric(10);
+		expect(
+			await store.setMany([
+				{ key: key1, value: faker.string.alphanumeric(10) },
+				{ key: key2, value: faker.string.alphanumeric(10) },
+			]),
+		).toEqual([false, false]);
+		expect(errors).toHaveLength(1);
+		expect(String(errors[0])).toMatch(/WRONGTYPE/);
+		await client.del([
+			`sets:${namespace}`,
+			`sets:${namespace}::${key1}`,
+			`sets:${namespace}::${key2}`,
+		]);
 		await store.disconnect();
 	});
 
