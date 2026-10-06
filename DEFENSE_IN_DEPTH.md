@@ -45,6 +45,7 @@ Profile: npm library · public
 - [ ] v5 maintenance line stages through its own `release-v5.yaml`, run from the `v5` branch (manual `workflow_dispatch` from `v5` only; `pnpm stage publish … --provenance`, no direct publish; never moves `latest`); the copy on `main` only lists the workflow and refuses to run
 - [ ] Stage-only trusted publisher for `release-v5.yaml` (environment `release`) on every package the v5 line publishes, including the v5-only `@keyv/serialize` (manual)
 - [x] `release.yaml` stages only `main`: `release` events refuse a tag whose commit is not on `main`, and a manual run from any other branch is a dry run — PR #2124, PR #2198
+- [ ] `release` environment deployment branches limited to `main`, `v5` and `v*` release tags. npm does not check which branch a trusted workflow runs on, and the in-file guards only bind copies that contain them, so this is what stops an older release workflow on any other branch from staging (manual)
 
 ## 6. Security tooling
 - [x] Aikido runs on every build — verified 2026-08-24 (PR #2053–#2057: Aikido Security: check code)

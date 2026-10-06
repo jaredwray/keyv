@@ -3,8 +3,10 @@ name: release
 # Stages the packages on `main` to npm; a maintainer approves each staged
 # version with 2FA before it goes live. Only `main` is staged: a GitHub
 # Release must be tagged on a commit on `main`, and a manual run from any
-# other branch is a dry run. The v5 line is staged by its own workflow,
-# release-v5.yaml, run from the `v5` branch.
+# other branch is a dry run. Those checks only bind copies of this file that
+# contain them; the `release` environment's deployment-branch rule is what
+# keeps an older copy on another branch from staging. The v5 line is staged
+# by its own workflow, release-v5.yaml, run from the `v5` branch.
 
 on:
   workflow_dispatch:
