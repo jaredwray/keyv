@@ -5,7 +5,7 @@ import { Decoder, GlideClient } from "@valkey/valkey-glide";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6371";
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -47,13 +47,14 @@ describe("set", () => {
 		await store.set(key, bytes);
 
 		const rawClient = await GlideClient.createClient({
-			addresses: [{ host: "localhost", port: 6370 }],
+			addresses: [{ host: "localhost", port: 6371 }],
 			defaultDecoder: Decoder.Bytes,
 		});
 		const stored = await rawClient.get(key);
 		expect(Buffer.isBuffer(stored)).toBe(true);
 		expect(stored).toEqual(bytes);
 		rawClient.close();
+		await store.delete(key);
 		await store.disconnect();
 	});
 

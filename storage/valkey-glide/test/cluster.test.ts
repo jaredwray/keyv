@@ -1,41 +1,20 @@
-import net from "node:net";
 import { faker } from "@faker-js/faker";
 import { GlideClusterClient } from "@valkey/valkey-glide";
 import { describe, expect, test } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
 const clusterAddresses = [
-	{ host: "127.0.0.1", port: 7001 },
-	{ host: "127.0.0.1", port: 7002 },
-	{ host: "127.0.0.1", port: 7003 },
+	{ host: "127.0.0.1", port: 7201 },
+	{ host: "127.0.0.1", port: 7202 },
+	{ host: "127.0.0.1", port: 7203 },
 ];
-
-async function isPortOpen(port: number): Promise<boolean> {
-	return new Promise((resolve) => {
-		const socket = net.createConnection({ host: "127.0.0.1", port });
-		socket.setTimeout(300);
-		socket.on("connect", () => {
-			socket.end();
-			resolve(true);
-		});
-		socket.on("timeout", () => {
-			socket.destroy();
-			resolve(false);
-		});
-		socket.on("error", () => {
-			resolve(false);
-		});
-	});
-}
-
-const clusterAvailable = await isPortOpen(7001);
 
 async function createReadyCluster(): Promise<GlideClusterClient> {
 	return GlideClusterClient.createClient({ addresses: clusterAddresses });
 }
 
-describe.skipIf(!clusterAvailable)("cluster", () => {
-	test("should setMany and getMany across slots", { retry: 3 }, async () => {
+describe("cluster", () => {
+	test("should setMany and getMany across slots", async () => {
 		const cluster = await createReadyCluster();
 		const store = new KeyvValkeyGlide(cluster);
 
@@ -56,7 +35,7 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should deleteMany and hasMany across slots", { retry: 3 }, async () => {
+	test("should deleteMany and hasMany across slots", async () => {
 		const cluster = await createReadyCluster();
 		const store = new KeyvValkeyGlide(cluster);
 
@@ -71,9 +50,7 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should connect via the {cluster: true, addresses} constructor path", {
-		retry: 3,
-	}, async () => {
+	test("should connect via the {cluster: true, addresses} constructor path", async () => {
 		const store = new KeyvValkeyGlide({ cluster: true, addresses: clusterAddresses });
 		const client = await store.getClient();
 		expect(client).toBeInstanceOf(GlideClusterClient);
@@ -86,9 +63,7 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should batch setMany/deleteMany/hasMany with useSets across cluster slots", {
-		retry: 3,
-	}, async () => {
+	test("should batch setMany/deleteMany/hasMany with useSets across cluster slots", async () => {
 		const cluster = await createReadyCluster();
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(cluster, { useSets: true, namespace });
@@ -120,9 +95,7 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should support useSets across cluster slots without a CROSSSLOT error", {
-		retry: 3,
-	}, async () => {
+	test("should support useSets across cluster slots without a CROSSSLOT error", async () => {
 		const cluster = await createReadyCluster();
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(cluster, { useSets: true, namespace });
@@ -147,7 +120,7 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should iterate and clear a namespace across the cluster", { retry: 3 }, async () => {
+	test("should iterate and clear a namespace across the cluster", async () => {
 		const cluster = await createReadyCluster();
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(cluster, { namespace });
@@ -178,7 +151,7 @@ describe.skipIf(!clusterAvailable)("cluster", () => {
 		await store.disconnect();
 	});
 
-	test("should yield nothing when iterating an empty cluster namespace", { retry: 3 }, async () => {
+	test("should yield nothing when iterating an empty cluster namespace", async () => {
 		const cluster = await createReadyCluster();
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(cluster, { namespace });

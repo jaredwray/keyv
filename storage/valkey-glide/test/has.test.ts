@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { describe, expect, test } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6371";
 
 describe("has", () => {
 	test("should return true for an existing key", async () => {

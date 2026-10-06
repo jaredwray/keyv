@@ -4,7 +4,7 @@ import { GlideClient, GlideClusterClient } from "@valkey/valkey-glide";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvValkeyGlide from "../src/index.js";
 
-const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6370";
+const valkeyUri = process.env.VALKEY_URI ?? "redis://localhost:6371";
 
 /**
  * Captures the config object passed to `GlideClient`/`GlideClusterClient.createClient`
@@ -146,7 +146,7 @@ describe("connection config", () => {
 
 	test("should apply namespace and useSets when constructed from an existing client", async () => {
 		const client = await GlideClient.createClient({
-			addresses: [{ host: "localhost", port: 6370 }],
+			addresses: [{ host: "localhost", port: 6371 }],
 		});
 		const namespace = faker.string.alphanumeric(8);
 		const store = new KeyvValkeyGlide(client, { namespace, useSets: true });
@@ -199,6 +199,44 @@ describe("connect failures", () => {
 });
 
 describe("connect bookkeeping", () => {
+	test("should share one connection attempt between concurrent callers", async () => {
+		const client = Object.create(GlideClient.prototype) as GlideClient;
+		let resolveClient!: (value: GlideClient) => void;
+		const connection = new Promise<GlideClient>((resolve) => {
+			resolveClient = resolve;
+		});
+		const createClient = vi.spyOn(GlideClient, "createClient").mockReturnValue(connection);
+		const store = new KeyvValkeyGlide(valkeyUri);
+		const onConnect = vi.fn();
+		store.on("connect", onConnect);
+
+		const first = store.getClient();
+		const second = store.getClient();
+		expect(createClient).toHaveBeenCalledTimes(1);
+		resolveClient(client);
+
+		expect(await Promise.all([first, second])).toEqual([client, client]);
+		expect(store.client).toBe(client);
+		expect(onConnect).toHaveBeenCalledExactlyOnceWith(client);
+	});
+
+	test("should allow a new connection attempt after a failed attempt", async () => {
+		const failure = new Error("connection failed");
+		const client = Object.create(GlideClient.prototype) as GlideClient;
+		const createClient = vi
+			.spyOn(GlideClient, "createClient")
+			.mockRejectedValueOnce(failure)
+			.mockResolvedValueOnce(client);
+		const store = new KeyvValkeyGlide(valkeyUri);
+		const onError = vi.fn();
+		store.on("error", onError);
+
+		await expect(store.getClient()).rejects.toBe(failure);
+		await expect(store.getClient()).resolves.toBe(client);
+		expect(createClient).toHaveBeenCalledTimes(2);
+		expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
+	});
+
 	test("should not clobber connect state cleared by an in-flight disconnect", async () => {
 		const store = new KeyvValkeyGlide(valkeyUri);
 		const pending = store.getClient();
