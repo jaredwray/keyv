@@ -33,6 +33,11 @@ export type KeyvValkeyGlideOptions = {
 	 * @default undefined
 	 */
 	namespace?: string;
+	/**
+	 * Separator between the storage prefix and key. Does not change tracking-set names.
+	 * @default "::"
+	 */
+	namespaceSeparator?: string;
 } & Partial<GlideClientConfiguration> &
 	Partial<GlideClusterClientConfiguration>;
 

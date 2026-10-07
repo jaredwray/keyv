@@ -138,7 +138,7 @@ The tradeoff is more targeted namespace operations: `clear()` reads the tracking
 
 Sets work with both standalone and cluster clients. Tracking updates are **non-atomic**: a data write or deletion can succeed while its tracking command fails. Affected batch entries return `false` and emit an error. Expiring a data key does not automatically remove its tracking-set member; iteration skips missing values, and `clear()` removes the tracked members.
 
-With sets enabled, data keys use `sets:<namespace>:<key>` and the tracking set is `sets:<namespace>`. Without a namespace, these are `sets:<key>` and `sets`. Enabling or disabling `useSets` changes the storage prefix and does not migrate existing keys.
+With sets enabled, data keys use `sets:<namespace>::<key>` and the tracking set is `sets:<namespace>`. Without a namespace, these are `sets::<key>` and `sets`. The separator before the data key is configurable through `namespaceSeparator`; tracking-set names are unchanged. Enabling or disabling `useSets` changes the storage prefix and does not migrate existing keys.
 
 Keep the default `false` when you do not need tracking and want to avoid its write, delete, and memory overhead. Enable it when the benefits of tracked namespace operations justify that cost.
 
@@ -170,6 +170,7 @@ const store = new KeyvValkeyGlide({
 | `cluster` | `boolean` | `false` | Create a `GlideClusterClient` instead of `GlideClient` |
 | `useSets` | `boolean` | `false` | Track keys for namespace operations, adding write/delete and memory overhead; see [Using Sets](#using-sets) |
 | `namespace` | `string` | `undefined` | Prefix keys for multi-tenant isolation |
+| `namespaceSeparator` | `string` | `"::"` | Separator between the storage prefix and data key |
 
 All other fields are forwarded to GLIDE (`addresses`, `useTLS`, `credentials`, `readFrom`, `clientAz`, `requestTimeout`, `clientName`, `databaseId`, …). See [BaseClientConfiguration](https://glide.valkey.io/languages/nodejs/api/interfaces/BaseClient.BaseClientConfiguration.html).
 
@@ -205,6 +206,22 @@ const store = new KeyvValkeyGlide('redis://localhost:6379', {
 
 Get or set the key namespace.
 
+### namespaceSeparator
+
+Get or set the separator between the storage prefix and data key. Defaults to `::`, matching `@keyv/valkey`.
+
+```js
+const store = new KeyvValkeyGlide('redis://localhost:6379', {
+  namespace: 'my-app',
+  namespaceSeparator: '--',
+});
+await store.set('user:123', 'value'); // Stored as namespace:my-app--user:123.
+```
+
+The default key layout is `namespace:<namespace>::<key>`, or `sets:<namespace>::<key>` with `useSets: true`. Without a namespace and with sets disabled, keys are stored unchanged. The option also works with existing GLIDE clients and `createKeyv()`. It can be changed through `store.namespaceSeparator`, but changing it does not rename existing keys. To access keys written with this adapter's earlier single-colon layout, set `namespaceSeparator: ':'`.
+
+An empty string is supported, but removes the boundary between the prefix and key. Choose a nonempty separator that does not appear in namespace names when relying on prefix scanning. Glob characters in the namespace and separator are matched literally by `clear()` and `iterator()`.
+
 ### useSets
 
 Default `false`. When `true`, data keys and a tracking SET use the `sets:` prefix. See [Using Sets](#using-sets) for configuration, performance costs, and non-atomic update behavior.
@@ -219,7 +236,7 @@ Replacing `store.client` switches to an existing instance without closing the pr
 
 Same Keyv storage contract as `@keyv/valkey`: `get`, `getMany`, `set`, `setMany`, `delete`, `deleteMany`, `has`, `hasMany`, `clear`, `iterator`, `disconnect`.
 
-When `useSets` is `false`, `clear()` and `iterator()` use `SCAN MATCH` with the pattern `namespace:<namespace>:*` (glob metacharacters in the namespace are escaped), so a namespace that merely shares a prefix — for example `users` vs `users-archive` — is left alone. Because `:` is also the key separator, a namespace that extends another with `:` (for example `users:archive` under `users`) cannot be told apart from a key containing `:` and is matched too; use `useSets: true`, which tracks keys per namespace instead, if you need that separation.
+When `useSets` is `false`, `clear()` and `iterator()` use `SCAN MATCH` with the pattern `namespace:<namespace><namespaceSeparator>*` (`namespace:<namespace>::*` by default). Glob metacharacters in both the namespace and separator are escaped. With the default separator, `users`, `users-archive`, and `users:archive` stay separate. A namespace containing the full separator, such as `users::archive`, can still match its parent `users`; use `useSets: true`, which selects tracked members instead, when you need that distinction.
 
 `getClient()` returns the connected GLIDE client, creating it if needed.
 

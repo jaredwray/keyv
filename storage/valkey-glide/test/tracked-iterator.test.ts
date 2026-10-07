@@ -40,7 +40,7 @@ describe.each([false, true])("tracked iterator (cluster: %s)", (cluster) => {
 	test("isolates nested namespaces and preserves colons in keys", async () => {
 		const namespace = `${faker.string.alphanumeric(12)}*?[x]\\`;
 		const parent = createStore(namespace);
-		const child = createStore(`${namespace}:archive`);
+		const child = createStore(`${namespace}::archive`);
 		await parent.set("own:key", "parent");
 		await child.set("child:key", "child");
 
@@ -66,7 +66,7 @@ describe.each([false, true])("tracked iterator (cluster: %s)", (cluster) => {
 			{ key: "deleted", value: "removed" },
 			{ key: "live", value: "" },
 		]);
-		await store.client.unlink([`sets:${store.namespace}:deleted`]);
+		await store.client.unlink([`sets:${store.namespace}::deleted`]);
 
 		expect(await collect(store)).toEqual([["live", ""]]);
 		expect(await store.client.scard(`sets:${store.namespace}`)).toBe(3);
@@ -75,7 +75,7 @@ describe.each([false, true])("tracked iterator (cluster: %s)", (cluster) => {
 	test("does not iterate untracked keys even when their prefix matches", async () => {
 		const store = createStore(faker.string.alphanumeric(12));
 		const client = await store.getClient();
-		const untrackedKey = `sets:${store.namespace}:untracked`;
+		const untrackedKey = `sets:${store.namespace}::untracked`;
 		await client.set(untrackedKey, "outside tracking set");
 		try {
 			expect(await collect(store)).toEqual([]);
@@ -96,15 +96,15 @@ describe.each([false, true])("tracked iterator (cluster: %s)", (cluster) => {
 		const smembers = vi.spyOn(client, "smembers");
 		const sscan = vi
 			.spyOn(client, "sscan")
-			.mockResolvedValueOnce([Buffer.from("11"), [Buffer.from(`${setKey}:first`)]])
+			.mockResolvedValueOnce([Buffer.from("11"), [Buffer.from(`${setKey}::first`)]])
 			.mockResolvedValueOnce([Buffer.from("22"), []])
-			.mockResolvedValueOnce([Buffer.from("0"), [Buffer.from(`${setKey}:last`)]]);
+			.mockResolvedValueOnce([Buffer.from("0"), [Buffer.from(`${setKey}::last`)]]);
 		const mget = vi.spyOn(client, "mget");
 		const iterator = store.iterator<string>();
 		expect(sscan).not.toHaveBeenCalled();
 		expect(await iterator.next()).toEqual({ value: ["first", "one"], done: false });
 		expect(sscan).toHaveBeenCalledTimes(1);
-		expect(mget).toHaveBeenCalledExactlyOnceWith([`${setKey}:first`]);
+		expect(mget).toHaveBeenCalledExactlyOnceWith([`${setKey}::first`]);
 		expect(await iterator.next()).toEqual({ value: ["last", "two"], done: false });
 		expect(await iterator.next()).toEqual({ value: undefined, done: true });
 		expect(sscan.mock.calls).toEqual([

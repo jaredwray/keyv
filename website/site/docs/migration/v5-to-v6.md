@@ -874,6 +874,8 @@ The new `@keyv/valkey-glide` adapter supports standalone and cluster connections
 
 With `useSets: true`, the GLIDE adapter's `iterator()` pages through the namespace's tracking set rather than scanning matching key prefixes. It excludes untracked keys and other namespaces, including nested namespaces, and skips tracked keys whose values have expired or been deleted. This also applies when no namespace is configured and on cluster connections.
 
+`namespaceSeparator` defaults to `::` and can be set in constructor options or through the adapter property. Data keys are `namespace:<namespace>::<key>`, or `sets:<namespace>::<key>` with `useSets: true`; tracking-set names remain `sets:<namespace>`. Changing the separator does not rename existing keys. Set `namespaceSeparator: ':'` to access this adapter's earlier single-colon key layout.
+
 Install `keyv` alongside `@keyv/valkey-glide`: it is a peer dependency, and `createKeyv()` uses your installed Keyv package.
 
 Calling `disconnect()` or assigning `store.client` invalidates a pending GLIDE connection attempt. Its waiting `getClient()` calls reject with an `error` event when the attempt completes, and any unused late client is closed without emitting `connect` or replacing the current client. After disconnecting, explicitly assign an existing client to use the adapter again.

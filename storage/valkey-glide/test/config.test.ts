@@ -103,6 +103,7 @@ describe("connection config", () => {
 			addresses: [{ host: "myhost", port: 1234 }],
 			readFrom: "AZAffinity",
 			clientAz: "us-east-1a",
+			namespaceSeparator: "--",
 		});
 		await store.getClient().catch(() => {});
 		const config = getConfig();
@@ -111,6 +112,7 @@ describe("connection config", () => {
 		expect(config).not.toHaveProperty("cluster");
 		expect(config).not.toHaveProperty("useSets");
 		expect(config).not.toHaveProperty("namespace");
+		expect(config).not.toHaveProperty("namespaceSeparator");
 	});
 
 	test("should drop pass-through options explicitly set to undefined", async () => {

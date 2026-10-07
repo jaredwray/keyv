@@ -26,7 +26,7 @@ describe("namespace", () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6371 }],
 		});
-		expect(await client.get(`namespace:${namespace}:${key}`)).toBe(value);
+		expect(await client.get(`namespace:${namespace}::${key}`)).toBe(value);
 		client.close();
 
 		await store.clear();
@@ -78,8 +78,8 @@ describe("clear", () => {
 		const value = faker.string.alphanumeric(10);
 		await store.set(key, value);
 
-		expect(await client.exists([`sets:${key}`])).toBe(1);
-		expect(await client.sismember("sets", `sets:${key}`)).toBe(true);
+		expect(await client.exists([`sets::${key}`])).toBe(1);
+		expect(await client.sismember("sets", `sets::${key}`)).toBe(true);
 
 		await store.clear();
 		expect(await store.get(key)).toBeUndefined();

@@ -27,7 +27,7 @@ import type {
 	KeyvValkeyGlideOptions,
 } from "./types.js";
 
-const adapterOptionKeys = new Set(["uri", "cluster", "useSets", "namespace"]);
+const adapterOptionKeys = new Set(["uri", "cluster", "useSets", "namespace", "namespaceSeparator"]);
 
 /**
  * Valkey GLIDE storage adapter for Keyv. Supports standalone and cluster clients
@@ -39,6 +39,7 @@ const adapterOptionKeys = new Set(["uri", "cluster", "useSets", "namespace"]);
  */
 export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	private _namespace?: string;
+	private _namespaceSeparator = "::";
 	private _useSets = false;
 	private _cluster = false;
 	private _client?: KeyvValkeyGlideClient;
@@ -68,6 +69,10 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 				this._namespace = options.namespace;
 			}
 
+			if (options?.namespaceSeparator !== undefined) {
+				this._namespaceSeparator = options.namespaceSeparator;
+			}
+
 			return;
 		}
 
@@ -84,6 +89,10 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			this._namespace = merged.namespace;
 		}
 
+		if (merged.namespaceSeparator !== undefined) {
+			this._namespaceSeparator = merged.namespaceSeparator;
+		}
+
 		this._cluster = merged.cluster === true;
 		this._glideConfig = toGlideConfig(merged);
 	}
@@ -98,6 +107,14 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 
 	public set namespace(value: string | undefined) {
 		this._namespace = value;
+	}
+
+	public get namespaceSeparator(): string {
+		return this._namespaceSeparator;
+	}
+
+	public set namespaceSeparator(value: string) {
+		this._namespaceSeparator = value;
 	}
 
 	public get useSets(): boolean {
@@ -349,7 +366,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	public async *iterator<Value>(): AsyncGenerator<[string, Value | undefined], void, unknown> {
 		const client = await this.getClient();
 		const keyPrefix = this.getKeyPrefix();
-		const prefix = keyPrefix ? `${keyPrefix}:` : "";
+		const prefix = keyPrefix ? `${keyPrefix}${this._namespaceSeparator}` : "";
 		const useSets = this._useSets;
 		const pages = useSets
 			? this.scanSetPages(client, this.getSetKey())
@@ -458,7 +475,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	private getKeyName(key: string): string {
 		const prefix = this.getKeyPrefix();
 		if (prefix) {
-			return `${prefix}:${key}`;
+			return `${prefix}${this._namespaceSeparator}${key}`;
 		}
 
 		return key;
@@ -466,12 +483,12 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Builds the `SCAN MATCH` pattern that selects every data key in the current
-	 * namespace. Glob metacharacters in the prefix (`*`, `?`, `[`, `]`, `\`) are
-	 * escaped so the namespace is matched literally, and the key separator is part
+	 * namespace. Glob metacharacters in the prefix and separator (`*`, `?`, `[`, `]`, `\`) are
+	 * escaped so both are matched literally, and the key separator is part
 	 * of the pattern so a namespace that merely shares a prefix (for example
-	 * `users` vs `users-archive`) is never selected. Because `:` is also the
-	 * separator, a namespace that extends this one with `:` (`users:archive`)
-	 * cannot be told apart from a key containing `:`; `useSets: true` tracks keys
+	 * `users` vs `users-archive`) is never selected with a nonempty separator.
+	 * A namespace that extends this one with the separator (`users::archive` by default)
+	 * cannot be told apart from a key containing it; `useSets: true` tracks keys
 	 * per namespace instead. With no prefix this matches every key in the database.
 	 */
 	private getKeyPattern(): string {
@@ -480,7 +497,8 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return "*";
 		}
 
-		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}:*`;
+		const literal = `${prefix}${this._namespaceSeparator}`;
+		return `${literal.replace(/[*?[\]\\]/g, "\\$&")}*`;
 	}
 
 	private async *scanSetPages(

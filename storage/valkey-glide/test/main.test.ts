@@ -134,7 +134,7 @@ describe("createKeyv", () => {
 		const client = await GlideClient.createClient({
 			addresses: [{ host: "localhost", port: 6371 }],
 		});
-		expect(await client.exists([`namespace:${namespace}:${key}`])).toBe(1);
+		expect(await client.exists([`namespace:${namespace}::${key}`])).toBe(1);
 		expect(await client.exists([key])).toBe(0);
 		client.close();
 
