@@ -196,6 +196,8 @@ When `useSets` is `false`, `clear()` and `iterator()` use `SCAN MATCH` with the 
 
 `getClient()` returns the connected GLIDE client, creating it if needed.
 
+With `useSets: true`, `iterator()` pages through the namespace's tracking set using `SSCAN` and fetches values one page at a time. It excludes untracked keys and other namespaces, including nested namespaces such as `users:archive` when iterating `users`. Tracked keys whose values have expired or been deleted are skipped.
+
 Missing keys are `undefined`, never `null`.
 
 `setMany`, `deleteMany`, and `hasMany` report individual GLIDE command failures through one `error` event per batch and return `false` for affected entries, preserving input order and successful results. The event contains the original `RequestError` for one failed command or an `AggregateError` whose `errors` contains all command failures. With `useSets: true`, a failed tracking command also makes that entry's result `false`. Batches are not atomic: a data write or deletion may have completed even if its tracking command failed.

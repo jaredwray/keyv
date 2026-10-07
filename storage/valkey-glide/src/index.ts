@@ -347,11 +347,19 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		const client = await this.getClient();
 		const keyPrefix = this.getKeyPrefix();
 		const prefix = keyPrefix ? `${keyPrefix}:` : "";
-		for await (const page of this.scanPages(client, this.getKeyPattern())) {
+		const useSets = this._useSets;
+		const pages = useSets
+			? this.scanSetPages(client, this.getSetKey())
+			: this.scanPages(client, this.getKeyPattern());
+		for await (const page of pages) {
 			const values = await client.mget(page);
 			for (const [index, storedKey] of page.entries()) {
 				const key = prefix ? storedKey.slice(prefix.length) : storedKey;
 				const value = asString(values[index]) as Value | undefined;
+				if (useSets && value === undefined) {
+					continue;
+				}
+
 				yield [key, value];
 			}
 		}
@@ -461,6 +469,21 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return `${prefix.replace(/[*?[\]\\]/g, "\\$&")}:*`;
+	}
+
+	private async *scanSetPages(
+		client: KeyvValkeyGlideClient,
+		setKey: string,
+	): AsyncGenerator<string[], void, unknown> {
+		let cursor = "0";
+		do {
+			const [next, keys] = await client.sscan(setKey, cursor);
+			cursor = String(next);
+			const page = glideKeyPage(keys);
+			if (page.length > 0) {
+				yield page;
+			}
+		} while (cursor !== "0");
 	}
 
 	private async *scanPages(

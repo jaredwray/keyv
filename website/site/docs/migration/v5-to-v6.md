@@ -872,6 +872,8 @@ In v6, the namespace and separator are matched literally. `clear()` and `iterato
 
 The new `@keyv/valkey-glide` adapter supports standalone and cluster connections through Valkey GLIDE. When calling the adapter directly, `setMany`, `deleteMany`, and `hasMany` emit one `error` event per batch containing command failures: the original `RequestError` for one failed command, or an `AggregateError` containing all failures. Results preserve input order and return `false` for affected entries, including failed tracking commands with `useSets: true`. Batches are not atomic, so a write or deletion may have completed even if its tracking command failed.
 
+With `useSets: true`, the GLIDE adapter's `iterator()` pages through the namespace's tracking set rather than scanning matching key prefixes. It excludes untracked keys and other namespaces, including nested namespaces, and skips tracked keys whose values have expired or been deleted. This also applies when no namespace is configured and on cluster connections.
+
 ### Keyv v6 Versioning
 
 Starting with v6, all Keyv packages and adapters use **unified versioning**. Every package in the Keyv ecosystem shares the same version number and is released together. The first stable v6 release is 6.1.0; there is no 6.0.0 release. See [Versioning & Release Tags](/docs/migration/versioning/) for the npm dist-tags.
