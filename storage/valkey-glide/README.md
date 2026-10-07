@@ -35,6 +35,8 @@ GLIDE can route reads with **AZ affinity** (`readFrom` + `clientAz`) and execute
 npm install --save keyv @keyv/valkey-glide
 ```
 
+`keyv` is a peer dependency. The adapter uses your installed Keyv package, including for instances returned by `createKeyv()`.
+
 ## Platform Support
 
 `@valkey/valkey-glide` ships a native (Rust core) binary. It supports Linux (glibc and musl) and macOS — there is no Windows build. Installing it adds roughly 20 MB to `node_modules`.
@@ -186,7 +188,7 @@ Unlike `@keyv/valkey`, this adapter never uses `MULTI`, so `useSets` works fine 
 
 The underlying `GlideClient` or `GlideClusterClient`. Throws if the adapter has not connected yet — call `await store.getClient()` first, or perform any storage operation.
 
-Replacing `store.client` switches to an existing instance without closing the previous one.
+Replacing `store.client` switches to an existing instance without closing the previous one. It invalidates any pending connection attempt so that attempt cannot overwrite the assigned client. Waiting calls to `getClient()` reject and emit one `error` event when the invalidated attempt completes; any unused client it creates is closed.
 
 ## Methods
 
@@ -202,7 +204,7 @@ Missing keys are `undefined`, never `null`.
 
 `setMany`, `deleteMany`, and `hasMany` report individual GLIDE command failures through one `error` event per batch and return `false` for affected entries, preserving input order and successful results. The event contains the original `RequestError` for one failed command or an `AggregateError` whose `errors` contains all command failures. With `useSets: true`, a failed tracking command also makes that entry's result `false`. Batches are not atomic: a data write or deletion may have completed even if its tracking command failed.
 
-`disconnect()` calls GLIDE `close()`.
+`disconnect()` calls GLIDE `close()` and invalidates pending connection attempts. A late connection is closed without emitting `connect`, and waiting calls to `getClient()` reject with an `error` event. The adapter stays disconnected until an existing client is explicitly assigned through `store.client`.
 
 ## Events
 

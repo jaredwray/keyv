@@ -780,6 +780,9 @@ importers:
       hookified:
         specifier: ^3.0.3
         version: 3.0.3
+      keyv:
+        specifier: workspace:^
+        version: link:../../core/keyv
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.11
@@ -793,9 +796,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
-      keyv:
-        specifier: workspace:^
-        version: link:../../core/keyv
       rimraf:
         specifier: ^6.1.3
         version: 6.1.3

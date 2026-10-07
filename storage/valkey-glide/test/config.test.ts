@@ -236,12 +236,4 @@ describe("connect bookkeeping", () => {
 		expect(createClient).toHaveBeenCalledTimes(2);
 		expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
 	});
-
-	test("should not clobber connect state cleared by an in-flight disconnect", async () => {
-		const store = new KeyvValkeyGlide(valkeyUri);
-		const pending = store.getClient();
-		await store.disconnect();
-		const client = await pending;
-		client.close();
-	});
 });

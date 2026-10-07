@@ -874,6 +874,10 @@ The new `@keyv/valkey-glide` adapter supports standalone and cluster connections
 
 With `useSets: true`, the GLIDE adapter's `iterator()` pages through the namespace's tracking set rather than scanning matching key prefixes. It excludes untracked keys and other namespaces, including nested namespaces, and skips tracked keys whose values have expired or been deleted. This also applies when no namespace is configured and on cluster connections.
 
+Install `keyv` alongside `@keyv/valkey-glide`: it is a peer dependency, and `createKeyv()` uses your installed Keyv package.
+
+Calling `disconnect()` or assigning `store.client` invalidates a pending GLIDE connection attempt. Its waiting `getClient()` calls reject with an `error` event when the attempt completes, and any unused late client is closed without emitting `connect` or replacing the current client. After disconnecting, explicitly assign an existing client to use the adapter again.
+
 ### Keyv v6 Versioning
 
 Starting with v6, all Keyv packages and adapters use **unified versioning**. Every package in the Keyv ecosystem shares the same version number and is released together. The first stable v6 release is 6.1.0; there is no 6.0.0 release. See [Versioning & Release Tags](/docs/migration/versioning/) for the npm dist-tags.

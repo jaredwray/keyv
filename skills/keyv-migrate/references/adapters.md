@@ -27,6 +27,8 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 ## `@keyv/valkey-glide`
 
 - This new v6 adapter uses Valkey GLIDE for standalone and cluster connections.
+- `keyv` is a peer dependency; install it next to the adapter. `createKeyv()` uses that installed Keyv package.
+- `disconnect()` and assigning `store.client` invalidate pending connection attempts. Those calls to `getClient()` reject with an `error` event when the attempt completes; unused late clients are closed without replacing the current client or emitting `connect`. After disconnecting, assign an existing client to use the adapter again.
 - With `useSets: true`, `iterator()` pages through the namespace's tracking set, excluding untracked keys and other namespaces (including nested namespaces). Expired or deleted members are skipped. This applies to standalone and cluster connections, including the default tracking set when no namespace is configured.
 - When calling the adapter directly, `setMany`, `deleteMany`, and `hasMany` emit one `error` event per batch containing command failures: a single `RequestError`, or an `AggregateError` containing multiple failures. Their boolean results preserve input order and return `false` for affected entries, including failed tracking commands with `useSets: true`. Successful commands are not rolled back.
 

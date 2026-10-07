@@ -12,7 +12,8 @@ import {
 	TimeUnit,
 } from "@valkey/valkey-glide";
 import { Hookified } from "hookified";
-import Keyv, {
+import {
+	Keyv,
 	type KeyvAny,
 	type KeyvStorageAdapter,
 	type KeyvStorageCapability,
@@ -42,6 +43,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	private _cluster = false;
 	private _client?: KeyvValkeyGlideClient;
 	private _closed = false;
+	private _connectionId = 0;
 	private _connectPromise?: Promise<KeyvValkeyGlideClient>;
 	private readonly _glideConfig: GlideClientConfiguration;
 
@@ -119,6 +121,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	}
 
 	public set client(value: KeyvValkeyGlideClient) {
+		this._connectionId += 1;
 		this._connectPromise = undefined;
 		this._closed = false;
 		this._client = value;
@@ -142,7 +145,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 			return this._connectPromise;
 		}
 
-		const attempt = this.createClient().finally(() => {
+		const attempt = this.createClient(this._connectionId).finally(() => {
 			if (this._connectPromise === attempt) {
 				this._connectPromise = undefined;
 			}
@@ -366,6 +369,7 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 	}
 
 	public async disconnect(): Promise<void> {
+		this._connectionId += 1;
 		this._connectPromise = undefined;
 		this._closed = true;
 		if (!this._client) {
@@ -378,11 +382,19 @@ export class KeyvValkeyGlide extends Hookified implements KeyvStorageAdapter {
 		this.emit("disconnect", client);
 	}
 
-	private async createClient(): Promise<KeyvValkeyGlideClient> {
+	private async createClient(connectionId: number): Promise<KeyvValkeyGlideClient> {
 		try {
 			const client = this._cluster
 				? await GlideClusterClient.createClient(this._glideConfig)
 				: await GlideClient.createClient(this._glideConfig);
+			if (connectionId !== this._connectionId) {
+				if (client !== this._client) {
+					client.close();
+				}
+
+				throw new Error("Valkey GLIDE connection attempt was superseded");
+			}
+
 			this._client = client;
 			this.emit("connect", client);
 			return client;
