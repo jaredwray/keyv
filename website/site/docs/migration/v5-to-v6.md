@@ -7,7 +7,7 @@ order: 2
 
 # Keyv v6
 
-We are pleased to announce Keyv v6 with major enhancements and some breaking changes. This guide will help you understand how to migrate from v5 to v6. For most users, the transition will be straightforward.
+Keyv v6 is the current stable release, starting with 6.1.0. This guide covers the API and storage changes needed to migrate from v5 to v6.
 
 **Important:** With the release of v6, Keyv v5 is in maintenance mode. v5 only receives security fixes and minor maintenance updates. The previous documentation site is archived at [keyv.org/v5](/v5/). The `v5` branch remains in the monorepo.
 
@@ -15,7 +15,6 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 ## Table of Contents
 
-- [Roadmap & Progress](#roadmap--progress)
 - [Quick Migration Guide](#quick-migration-guide)
 - [Breaking Changes](#breaking-changes)
   - [Node.js 22.19 or Later Is Required](#nodejs-2219-or-later-is-required)
@@ -47,7 +46,6 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [`@keyv/redis` `keyPrefixSeparator` Is Now `namespaceSeparator`](#keyvredis-keyprefixseparator-is-now-namespaceseparator)
   - [`@keyv/redis` Matches the Namespace Literally](#keyvredis-matches-the-namespace-literally)
 - [New Features](#new-features)
-  - [Valkey GLIDE Adapter](#valkey-glide-adapter)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
   - [Browser Compatibility](#browser-compatibility)
@@ -55,40 +53,6 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Encryption Adapters](#encryption-adapters)
   - [New Identification Functions](#new-identification-functions)
   - [Memory Adapter](#memory-adapter)
-
----
-
-## Roadmap & Progress
-
-| Task | Status |
-|------|--------|
-| Remove `opts` property in Keyv and Storage Adapters | COMPLETED |
-| Add encryption adapters | COMPLETED |
-| Browser compatibility | COMPLETED |
-| Stats System to be Event Driven | COMPLETED |
-| Test Suite Overhaul | COMPLETED |
-| Refactor iterator implementation | COMPLETED |
-| Update `deleteMany` return type | COMPLETED |
-| Update `setMany` signature and return type | COMPLETED |
-| Add compression interface standardization | COMPLETED |
-| Integrate Hookified library in Keyv | COMPLETE |
-| Keyv core does not do keyPrefixing | COMPLETED |
-| Update `@keyv/sqlite`  | COMPLETE |
-| Update `@keyv/dynamo`  | COMPLETE |
-| Update `@keyv/etcd`  | COMPLETE |
-| Update `@keyv/valkey`  | COMPLETE |
-| Finalize namespace handling in storage adapters | COMPLETE |
-| Add `getRaw` and `getManyRaw` methods | COMPLETE |
-| Implement `KeyvMemoryAdapter` | COMPLETE |
-| Add serialization adapters | COMPLETE |
-| Migrate `@keyv/memcache` from `memjs` to `memcache` | COMPLETE |
-| Update `@keyv/bigmap`  | COMPLETE |
-| Update `@keyv/mongo`  | COMPLETE |
-| Update `@keyv/mysql`  | COMPLETE |
-| Update `@keyv/postgres`  | COMPLETE |
-| Update `@keyv/redis`  | COMPLETE |
-| Add GitHub Actions release workflow | COMPLETE |
-| Storage adapters receive absolute `expires` instead of relative `ttl` | COMPLETE |
 
 ---
 
@@ -867,18 +831,6 @@ In v6, the namespace and separator are matched literally. `clear()` and `iterato
 ---
 
 ## New Features
-
-### Valkey GLIDE Adapter
-
-The new `@keyv/valkey-glide` adapter supports standalone and cluster connections through Valkey GLIDE. When calling the adapter directly, `setMany`, `deleteMany`, and `hasMany` emit one `error` event per batch containing command failures: the original `RequestError` for one failed command, or an `AggregateError` containing all failures. Results preserve input order and return `false` for affected entries, including failed tracking commands with `useSets: true`. Batches are not atomic, so a write or deletion may have completed even if its tracking command failed.
-
-With `useSets: true`, the GLIDE adapter's `iterator()` pages through the namespace's tracking set rather than scanning matching key prefixes. It excludes untracked keys and other namespaces, including nested namespaces, and skips tracked keys whose values have expired or been deleted. This also applies when no namespace is configured and on cluster connections.
-
-`namespaceSeparator` defaults to `::` and can be set in constructor options or through the adapter property. Data keys are `namespace:<namespace>::<key>`, or `sets:<namespace>::<key>` with `useSets: true`; tracking-set names remain `sets:<namespace>`. Changing the separator does not rename existing keys. Set `namespaceSeparator: ':'` to access this adapter's earlier single-colon key layout.
-
-Install `keyv` alongside `@keyv/valkey-glide`: it is a peer dependency, and `createKeyv()` uses your installed Keyv package.
-
-Calling `disconnect()` or assigning `store.client` invalidates a pending GLIDE connection attempt. Its waiting `getClient()` calls reject with an `error` event when the attempt completes, and any unused late client is closed without emitting `connect` or replacing the current client. After disconnecting, explicitly assign an existing client to use the adapter again.
 
 ### Keyv v6 Versioning
 

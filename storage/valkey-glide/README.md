@@ -218,7 +218,7 @@ const store = new KeyvValkeyGlide('redis://localhost:6379', {
 await store.set('user:123', 'value'); // Stored as namespace:my-app--user:123.
 ```
 
-The default key layout is `namespace:<namespace>::<key>`, or `sets:<namespace>::<key>` with `useSets: true`. Without a namespace and with sets disabled, keys are stored unchanged. The option also works with existing GLIDE clients and `createKeyv()`. It can be changed through `store.namespaceSeparator`, but changing it does not rename existing keys. To access keys written with this adapter's earlier single-colon layout, set `namespaceSeparator: ':'`.
+The default key layout is `namespace:<namespace>::<key>`, or `sets:<namespace>::<key>` with `useSets: true`. Without a namespace and with sets disabled, keys are stored unchanged. The option also works with existing GLIDE clients and `createKeyv()`. It can be changed through `store.namespaceSeparator`, but changing it does not rename existing keys. For a single-colon separator, set `namespaceSeparator: ':'`.
 
 An empty string is supported, but removes the boundary between the prefix and key. Choose a nonempty separator that does not appear in namespace names when relying on prefix scanning. Glob characters in the namespace and separator are matched literally by `clear()` and `iterator()`.
 
