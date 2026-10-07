@@ -42,6 +42,8 @@ npm install --save keyv @keyv/valkey-glide
 
 `@valkey/valkey-glide` ships a native (Rust core) binary and supports Linux (glibc and musl) and macOS. **Windows is not supported.** For Windows, use [`@keyv/valkey`](https://github.com/jaredwray/keyv/tree/main/storage/valkey), which uses the `iovalkey` client. Installing GLIDE adds roughly 20 MB to `node_modules`.
 
+To learn more about the project, visit the [Valkey GLIDE GitHub repository](https://github.com/valkey-io/valkey-glide).
+
 ## Usage
 
 `GlideClient.createClient` is async. The adapter constructor is **lazy**: the first command (or `getClient()`) opens the connection.
