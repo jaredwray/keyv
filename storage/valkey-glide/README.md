@@ -40,7 +40,7 @@ npm install --save keyv @keyv/valkey-glide
 
 ## Platform Support
 
-`@valkey/valkey-glide` ships a native (Rust core) binary. It supports Linux (glibc and musl) and macOS — there is no Windows build. Installing it adds roughly 20 MB to `node_modules`.
+`@valkey/valkey-glide` ships a native (Rust core) binary and supports Linux (glibc and musl) and macOS. **Windows is not supported.** For Windows, use [`@keyv/valkey`](https://github.com/jaredwray/keyv/tree/main/storage/valkey), which uses the `iovalkey` client. Installing GLIDE adds roughly 20 MB to `node_modules`.
 
 ## Usage
 
