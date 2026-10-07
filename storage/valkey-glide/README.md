@@ -19,6 +19,7 @@ GLIDE can route reads with **AZ affinity** (`readFrom` + `clientAz`) and execute
 - [Platform Support](#platform-support)
 - [Usage](#usage)
 - [Using the createKeyv function](#using-the-createkeyv-function)
+- [Using Sets](#using-sets)
 - [AZ affinity](#az-affinity)
 - [Constructor Options](#constructor-options)
 - [GLIDE Defaults](#glide-defaults)
@@ -115,6 +116,32 @@ console.log(keyv.store.namespace); // 'my-app'
 
 If no connect argument is provided, the default URI is `redis://localhost:6379`.
 
+## Using Sets
+
+`useSets` is **off by default**. Enable it to track each namespace's keys in a Valkey SET so `clear()` and `iterator()` can select tracked keys without scanning the database for matching prefixes.
+
+```js
+import {createKeyv} from '@keyv/valkey-glide';
+
+const keyv = createKeyv('redis://localhost:6379', {
+  namespace: 'my-app',
+  useSets: true,
+});
+
+await keyv.set('user:123', { name: 'Ada' });
+await keyv.clear(); // Removes keys tracked for my-app.
+```
+
+**Enabling sets has a performance cost.** Each write adds an `SADD` tracking command, and each deletion adds an `SREM` command. A single `set()` waits for `SET` and then `SADD`; batch writes and deletes include the extra commands in their GLIDE batch. This adds server work and can increase latency or reduce throughput, even when commands are batched. The tracking set also uses memory to store key names. The impact depends on your workload; benchmark with your expected key count and write rate.
+
+The tradeoff is more targeted namespace operations: `clear()` reads the tracking set with `SMEMBERS`, while `iterator()` streams its members with `SSCAN` and fetches values one page at a time. This avoids scanning unrelated database keys and prevents a parent namespace from selecting every key under a nested namespace merely because its prefix matches. `clear()` loads the full tracking set into memory, so very large namespaces still have a memory and command-size cost.
+
+Sets work with both standalone and cluster clients. Tracking updates are **non-atomic**: a data write or deletion can succeed while its tracking command fails. Affected batch entries return `false` and emit an error. Expiring a data key does not automatically remove its tracking-set member; iteration skips missing values, and `clear()` removes the tracked members.
+
+With sets enabled, data keys use `sets:<namespace>:<key>` and the tracking set is `sets:<namespace>`. Without a namespace, these are `sets:<key>` and `sets`. Enabling or disabling `useSets` changes the storage prefix and does not migrate existing keys.
+
+Keep the default `false` when you do not need tracking and want to avoid its write, delete, and memory overhead. Enable it when the benefits of tracked namespace operations justify that cost.
+
 ## AZ affinity
 
 Pass GLIDE `readFrom` and `clientAz` so readonly commands prefer replicas in the same availability zone. See [GLIDE read strategies](https://glide.valkey.io/how-to/connections/read-strategy/).
@@ -141,7 +168,7 @@ const store = new KeyvValkeyGlide({
 | --- | --- | --- | --- |
 | `uri` | `string` | `undefined` | Valkey connection URI (`redis://`, `rediss://`, `valkey://`, `valkeys://`) |
 | `cluster` | `boolean` | `false` | Create a `GlideClusterClient` instead of `GlideClient` |
-| `useSets` | `boolean` | `false` | Track keys in a Valkey SET for faster namespaced `clear()` |
+| `useSets` | `boolean` | `false` | Track keys for namespace operations, adding write/delete and memory overhead; see [Using Sets](#using-sets) |
 | `namespace` | `string` | `undefined` | Prefix keys for multi-tenant isolation |
 
 All other fields are forwarded to GLIDE (`addresses`, `useTLS`, `credentials`, `readFrom`, `clientAz`, `requestTimeout`, `clientName`, `databaseId`, …). See [BaseClientConfiguration](https://glide.valkey.io/languages/nodejs/api/interfaces/BaseClient.BaseClientConfiguration.html).
@@ -180,9 +207,7 @@ Get or set the key namespace.
 
 ### useSets
 
-When `true`, data keys and a tracking SET use the `sets:` prefix (same layout as `@keyv/valkey`). Default `false`.
-
-Unlike `@keyv/valkey`, this adapter never uses `MULTI`, so `useSets` works fine on a cluster (verified against a real cluster). The write itself is **non-atomic**: `set()` issues `SET` then `SADD` as two separate commands (and `delete()` issues `UNLINK` then `SREM`), so a crash or connection drop between the two can leave the tracking SET out of sync with the actual keys.
+Default `false`. When `true`, data keys and a tracking SET use the `sets:` prefix. See [Using Sets](#using-sets) for configuration, performance costs, and non-atomic update behavior.
 
 ### client
 
@@ -226,11 +251,11 @@ Keyv passes an **absolute** Unix-ms expiry. The adapter writes it with `SET` + `
 
 Pass a `GlideClusterClient` or `{ cluster: true, addresses: [...] }`.
 
-`getMany` uses GLIDE `mget`, which splits cross-slot keys internally. `clear()` and `iterator()` use cluster `SCAN` so they cover every node — unlike `@keyv/valkey`, which documents `KEYS`/`SCAN` as single-node in cluster mode.
+`getMany` uses GLIDE `mget`, which splits cross-slot keys internally. With `useSets: false`, `clear()` and `iterator()` use cluster `SCAN` to cover every node. With `useSets: true`, they use the namespace's tracking set: `SMEMBERS` for `clear()` and paged `SSCAN` for `iterator()`.
 
 ### Cluster gotchas
 
-- **`useSets: true` is non-atomic**, on a cluster or standalone. See [useSets](#usesets).
+- **`useSets: true` adds tracking overhead and is non-atomic**, on a cluster or standalone. See [Using Sets](#using-sets).
 
 ## License
 
