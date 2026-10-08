@@ -17,13 +17,13 @@ Setting `engines.node` to `>=22.19.0` in a package.json that already declares `e
 
 From v6 on, every Keyv package shares one version, and packages are only tested together at the same version. Don't mix versions.
 
-1. List the v6 versions: `npm view "keyv@>=6.0.0-0 <7" version --json`. Call the highest one `V`. The list is sorted, so it is the last entry.
+1. List the stable v6 versions: `npm view "keyv@>=6.1.0 <7" version --json`. Call the highest one `V`. The list is sorted, so it is the last entry. The first stable v6 release is 6.1.0.
 2. For each `@keyv/*` package the project uses, confirm that `V` exists: `npm view @keyv/<name>@<V> version` must print `V`. If one is missing, use the highest version that every package has.
-3. If `V` contains a hyphen, such as `6.0.0-rc.1`, it is a pre-release. Tell the user and get a go-ahead before installing it.
+3. Use a pre-release only if the user explicitly requests one. Confirm that its exact version exists for every package before installing it.
 
 To find the versions installed now, read the lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, or `bun.lock`). Without one, resolve each range with `npm view <package>@<range> version` and take the highest result, and use npm unless the project names another package manager (the `packageManager` field, or its docs and scripts).
 
-Don't pick the version from dist-tags. While v6 is in pre-release, `latest` points to v5 for most packages but to an early v6 pre-release for packages that are new in v6, and `beta` can be older than `rc`.
+Choose an explicit stable v6 version rather than relying on dist-tags: tags can move to another release line, and `beta` or `rc` can refer to an older pre-release. Verify the same version is available for every package the project uses.
 
 Respect the project's install policies. If pnpm's `minimumReleaseAge`, a trust policy, or a registry proxy blocks `V`, stop and tell the user. Don't weaken the policy to get the install through.
 
@@ -38,7 +38,7 @@ yarn add keyv@V @keyv/redis@V
 bun add keyv@V @keyv/redis@V
 ```
 
-While `V` is a pre-release, save exact versions (`--save-exact`, or `--exact` with yarn and bun) so a later pre-release isn't picked up by accident. Once v6 is stable, follow the project's usual range style, such as `^6.0.0`.
+For stable v6, follow the project's usual range style, such as `^6.1.0`, while resolving every Keyv package to the same version. If the user explicitly chose a pre-release, save exact versions (`--save-exact`, or `--exact` with yarn and bun) so a later pre-release isn't picked up by accident.
 
 Every adapter declares `keyv` as a peer dependency. Keep `keyv` in the dependencies of each package that imports it.
 
@@ -69,7 +69,7 @@ Driver dependencies that change with the adapters:
 
 When the project is a library or adapter that other people install:
 
-- **Peer dependency on `keyv`.** Use a range that accepts `V`. While v6 is a pre-release, `^6.0.0` rejects it, so use `>=V <7` (such as `>=6.0.0-rc.1 <7`), and switch to `^6.0.0` once v6 is stable. Don't pin a peer to an exact version. A package that implements the v6 storage contract can't also support v5, so drop `^5` from the range.
+- **Peer dependency on `keyv`.** Use a stable v6 range that accepts `V`, such as `^6.1.0`, raising the minimum if the package relies on APIs added later. If intentionally targeting a pre-release, use a range that explicitly accepts that version; stable ranges exclude pre-releases. Don't pin a peer to an exact version. A package that implements the v6 storage contract can't also support v5, so drop `^5` from the range.
 - **Development dependencies** (`keyv`, `@keyv/test-suite`): pin them to `V` like the rest of the upgrade.
 - **Version.** The upgrade is a breaking change for the package's users. Suggest a new major version, and let the user decide.
 - **Runtime.** Set `engines.node` to `>=22.19.0`.

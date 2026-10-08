@@ -39,7 +39,7 @@ Individual package tests:
 - **serialization/superjson**: SuperJSON serializer (@keyv/serialize-superjson) - optional
 - **serialization/msgpackr**: MessagePack serializer (@keyv/serialize-msgpackr) - optional
 - **core/bigmap**: BigMap - scalable in-memory Map implementation
-- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, DynamoDB, Cloudflare KV
+- **storage/**: Storage adapters - Redis, MySQL, PostgreSQL, MongoDB, SQLite, Etcd, Memcache, Valkey, Valkey GLIDE, DynamoDB, Cloudflare KV
 - **compression/**: Compression adapters - Brotli, Gzip, LZ4
 - **encryption/**: Encryption adapters - Node.js crypto (@keyv/encrypt-node), Web Crypto (@keyv/encrypt-web)
 - **skills/**: Agent Skills for coding agents - `keyv-migrate` upgrades user projects from Keyv v4/v5 to v6
@@ -74,7 +74,8 @@ Individual package tests:
 ### Testing Requirements
 - Docker is required for integration tests with databases/services
 - Enable "host networking" in Docker settings for the Redis and Valkey cluster tests
-- Packages run their tests in parallel, so they must not share a cluster: `@keyv/redis` flushes its cluster (ports 7001-7003) before each test, and `@keyv/valkey` uses its own (7101-7103). Give a new adapter that needs a cluster its own as well
+- `@keyv/valkey-glide` uses its own standalone Valkey instance on port 6371 so other packages cannot clear its test data
+- Packages run their tests in parallel, so they must not share a cluster: `@keyv/redis` flushes its cluster (ports 7001-7003) before each test, `@keyv/valkey` uses its own (7101-7103), and `@keyv/valkey-glide` uses ports 7201-7203. Give a new adapter that needs a cluster its own as well
 - Test services are managed via scripts in `/scripts/` directory
 - Each storage adapter should use `@keyv/test-suite` for compliance testing
 - Tests use Vitest with coverage reporting

@@ -1,0 +1,51 @@
+# Dedicated services for @keyv/valkey-glide; other adapters clear their own databases.
+services:
+  valkey-glide:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-glide
+    command: valkey-server --port 6371
+    network_mode: host
+
+  valkey-glide-1:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-glide-cluster-1
+    command: valkey-server --port 7201 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7201 --cluster-announce-bus-port 17201
+    network_mode: host
+    volumes:
+      - valkey-glide-1-data:/data
+
+  valkey-glide-2:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-glide-cluster-2
+    command: valkey-server --port 7202 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7202 --cluster-announce-bus-port 17202
+    network_mode: host
+    volumes:
+      - valkey-glide-2-data:/data
+
+  valkey-glide-3:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-glide-cluster-3
+    command: valkey-server --port 7203 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --cluster-announce-ip 127.0.0.1 --cluster-announce-port 7203 --cluster-announce-bus-port 17203
+    network_mode: host
+    volumes:
+      - valkey-glide-3-data:/data
+
+  valkey-glide-cluster-init:
+    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    container_name: valkey-glide-cluster-init
+    network_mode: host
+    depends_on:
+      - valkey-glide-1
+      - valkey-glide-2
+      - valkey-glide-3
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "sleep 5 && \
+      valkey-cli --cluster create 127.0.0.1:7201 127.0.0.1:7202 127.0.0.1:7203 --cluster-replicas 0 --cluster-yes && \
+      echo 'Cluster created successfully' && \
+      valkey-cli -p 7201 cluster info"
+
+volumes:
+  valkey-glide-1-data:
+  valkey-glide-2-data:
+  valkey-glide-3-data:
