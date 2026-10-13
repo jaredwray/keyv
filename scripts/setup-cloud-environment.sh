@@ -40,6 +40,23 @@ sh "$installer" --ci
 
 export PATH="${SAFE_CHAIN_SHIMS}:${SAFE_CHAIN_BIN}:${PATH}"
 
+# pnpm 12 starts from bin/pnpm.mjs, which corepack supports from 0.36.0. The corepack
+# bundled with Node 22 looks for bin/pnpm.cjs and fails, so install a current one through
+# the Safe Chain npm shim and put its pnpm shim in SAFE_CHAIN_BIN, ahead of Node's on PATH.
+if [[ -f package.json ]] && grep -q '"packageManager"' package.json; then
+  corepack_dir="${HOME}/.safe-chain/corepack"
+  npm install --prefix "$corepack_dir" --no-save --no-audit --no-fund corepack@0.36.0
+  "${corepack_dir}/node_modules/.bin/corepack" enable --install-directory "$SAFE_CHAIN_BIN" pnpm
+
+  # An older corepack that already ran this pnpm version cached it with the missing launcher.
+  pnpm_version=$(sed -nE 's/.*"packageManager": *"pnpm@([^+"]+).*/\1/p' package.json)
+  pnpm_cache="${COREPACK_HOME:-${HOME}/.cache/node/corepack}/v1/pnpm/${pnpm_version}"
+  if [[ "$pnpm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && -f "${pnpm_cache}/.corepack" && ! -e "${pnpm_cache}/bin/pnpm.cjs" ]] \
+    && grep -q 'pnpm\.cjs' "${pnpm_cache}/.corepack"; then
+    rm -rf "$pnpm_cache"
+  fi
+fi
+
 persist_shim_path() {
   local rc="$1"
   local line="export PATH=\"${SAFE_CHAIN_SHIMS}:${SAFE_CHAIN_BIN}:\$PATH\""

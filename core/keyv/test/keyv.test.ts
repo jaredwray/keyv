@@ -7,6 +7,7 @@ import Keyv, {
 	KeyvMemoryAdapter,
 	KeyvSanitize,
 	type KeyvTelemetryEvent,
+	keyvStorageCapability,
 } from "../src/index.js";
 import { KeyvStats } from "../src/stats.js";
 import { createMockCompression, createStore, delay } from "./test-utils.js";
@@ -753,46 +754,24 @@ describe("iterator", () => {
 		expect(entries.length).toBe(2);
 	});
 
-	test("deletes expired entries from store with iterator method", async () => {
-		const map = new Map<string, string>();
-		const store = {
-			namespace: undefined as string | undefined,
-			async get(key: string) {
-				return map.get(key);
-			},
-			// biome-ignore lint/suspicious/noExplicitAny: test mock
-			async set(key: string, value: any) {
-				map.set(key, value);
-				return true;
-			},
-			async delete(key: string) {
-				return map.delete(key);
-			},
-			async clear() {
-				map.clear();
-			},
-			async *iterator() {
-				for (const [key, value] of map) {
-					yield [key, value];
-				}
-			},
-			on() {
-				return store;
-			},
-		};
-		// biome-ignore lint/suspicious/noExplicitAny: test mock
-		const keyv = new Keyv({ store: store as any, checkExpired: true });
+	test("deletes expired entries returned by a v6 store iterator and continues to fresh entries", async () => {
+		const store = createStore();
+		store.capabilities = keyvStorageCapability(store);
+		const keyv = new Keyv({ store, checkExpired: true });
+		expect(keyv.store).toBe(store);
+		// Seed an expired record directly: a 1 ms TTL can elapse before a legacy
+		// bridge writes it, leaving no record for Keyv.iterator() to clean up.
+		await store.set("expired", JSON.stringify({ value: "value2", expires: 1 }));
 		await keyv.set("fresh", "value1");
-		await keyv.set("expired", "value2", 1);
-		await delay(10);
+		const deleteSpy = vi.spyOn(store, "delete");
 
 		const entries: Array<[string, unknown]> = [];
 		for await (const entry of keyv.iterator()) {
-			entries.push(entry as [string, unknown]);
+			entries.push(entry);
 		}
-		expect(entries.length).toBe(1);
-		expect(entries[0][0]).toBe("fresh");
-		expect(await keyv.has("expired")).toBe(false);
+		expect(entries).toEqual([["fresh", "value1"]]);
+		expect(deleteSpy).toHaveBeenCalledExactlyOnceWith("expired");
+		expect(await store.get("expired")).toBeUndefined();
 	});
 
 	test("should not increment deletes stat indefinitely", async () => {

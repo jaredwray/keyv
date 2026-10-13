@@ -7,7 +7,7 @@ order: 2
 
 # Keyv v6
 
-We are pleased to announce Keyv v6 with major enhancements and some breaking changes. This guide will help you understand how to migrate from v5 to v6. For most users, the transition will be straightforward.
+Keyv v6 is the current stable release, starting with 6.1.0. This guide covers the API and storage changes needed to migrate from v5 to v6.
 
 **Important:** With the release of v6, Keyv v5 is in maintenance mode. v5 only receives security fixes and minor maintenance updates. The previous documentation site is archived at [keyv.org/v5](/v5/). The `v5` branch remains in the monorepo.
 
@@ -15,7 +15,6 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
 
 ## Table of Contents
 
-- [Roadmap & Progress](#roadmap--progress)
 - [Quick Migration Guide](#quick-migration-guide)
 - [Breaking Changes](#breaking-changes)
   - [Node.js 22.19 or Later Is Required](#nodejs-2219-or-later-is-required)
@@ -54,40 +53,6 @@ We are pleased to announce Keyv v6 with major enhancements and some breaking cha
   - [Encryption Adapters](#encryption-adapters)
   - [New Identification Functions](#new-identification-functions)
   - [Memory Adapter](#memory-adapter)
-
----
-
-## Roadmap & Progress
-
-| Task | Status |
-|------|--------|
-| Remove `opts` property in Keyv and Storage Adapters | COMPLETED |
-| Add encryption adapters | COMPLETED |
-| Browser compatibility | COMPLETED |
-| Stats System to be Event Driven | COMPLETED |
-| Test Suite Overhaul | COMPLETED |
-| Refactor iterator implementation | COMPLETED |
-| Update `deleteMany` return type | COMPLETED |
-| Update `setMany` signature and return type | COMPLETED |
-| Add compression interface standardization | COMPLETED |
-| Integrate Hookified library in Keyv | COMPLETE |
-| Keyv core does not do keyPrefixing | COMPLETED |
-| Update `@keyv/sqlite`  | COMPLETE |
-| Update `@keyv/dynamo`  | COMPLETE |
-| Update `@keyv/etcd`  | COMPLETE |
-| Update `@keyv/valkey`  | COMPLETE |
-| Finalize namespace handling in storage adapters | COMPLETE |
-| Add `getRaw` and `getManyRaw` methods | COMPLETE |
-| Implement `KeyvMemoryAdapter` | COMPLETE |
-| Add serialization adapters | COMPLETE |
-| Migrate `@keyv/memcache` from `memjs` to `memcache` | COMPLETE |
-| Update `@keyv/bigmap`  | COMPLETE |
-| Update `@keyv/mongo`  | COMPLETE |
-| Update `@keyv/mysql`  | COMPLETE |
-| Update `@keyv/postgres`  | COMPLETE |
-| Update `@keyv/redis`  | COMPLETE |
-| Add GitHub Actions release workflow | COMPLETE |
-| Storage adapters receive absolute `expires` instead of relative `ttl` | COMPLETE |
 
 ---
 

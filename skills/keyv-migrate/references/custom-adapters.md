@@ -170,7 +170,7 @@ storageTestSuite(test, store);
 
 ## Publishing an adapter
 
-- **Peer range.** Declare `keyv` as a peer. While v6 is a pre-release, use a range that accepts it, such as `>=6.0.0-rc.1 <7`; `^6.0.0` alone rejects pre-releases. Switch to `^6.0.0` when v6 is stable. Don't keep `^5 ||` in the range once the adapter uses the v6 contract.
+- **Peer range.** Declare `keyv` as a peer using a stable v6 range such as `^6.1.0`, raising the minimum if the adapter relies on APIs added later. If intentionally targeting a pre-release, use a range that explicitly accepts it; stable ranges exclude pre-releases. Don't keep `^5 ||` in the range once the adapter uses the v6 contract.
 - **Version.** Release it as a new major version. Tell users that code calling the adapter directly must now pass an absolute `expires`.
 - **Runtime.** Set `engines.node` to `>=22.19.0` to match Keyv v6.
 - **Dev dependencies.** Pin `keyv` and `@keyv/test-suite` to the same exact version as the rest of the upgrade; see [dependencies.md](dependencies.md).

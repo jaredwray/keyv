@@ -16,7 +16,8 @@ Keyv is a thin API over a store. Performance is almost entirely the backend's; K
 | --- | --- | --- | --- |
 | Memory / Map / LRU | built-in `KeyvMemoryAdapter` | Yes (lazy) | Default. See [Using Map and LRU](/docs/using-map-and-lru/) |
 | Redis | [@keyv/redis](/docs/storage-adapters/redis/) | Yes (`PXAT`, `PX` fallback) | Clusters, Sentinel, TLS |
-| Valkey | [@keyv/valkey](/docs/storage-adapters/valkey/) | Yes (`PXAT`) | Redis-compatible OSS |
+| Valkey | [@keyv/valkey](/docs/storage-adapters/valkey/) | Yes (`PXAT`) | Redis-compatible OSS (`iovalkey`) |
+| Valkey GLIDE | [@keyv/valkey-glide](/docs/storage-adapters/valkey-glide/) | Yes (`PXAT`) | Official GLIDE client, AZ affinity, cluster-aware multi-key |
 | MongoDB | [@keyv/mongo](/docs/storage-adapters/mongo/) | TTL index (lazy sweep) | Revalidated in Keyv |
 | SQLite | [@keyv/sqlite](/docs/storage-adapters/sqlite/) | `expires` column | Node, better-sqlite3, bun:sqlite |
 | PostgreSQL | [@keyv/postgres](/docs/storage-adapters/postgres/) | `expires` column | |

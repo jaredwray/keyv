@@ -56,7 +56,7 @@ compression/      Compression adapters
   compress-lz4/
 storage/          Storage adapters
   redis/  postgres/  mysql/  mongo/  sqlite/
-  memcache/  etcd/  valkey/  dynamo/  cloudflare-kv/
+  memcache/  etcd/  valkey/  valkey-glide/  dynamo/  cloudflare-kv/
 website/          Documentation website (keyv.org)
 ```
 
@@ -77,6 +77,7 @@ website/          Documentation website (keyv.org)
 * [redis](https://github.com/jaredwray/keyv/tree/main/storage/redis) - Redis storage adapter
 * [sqlite](https://github.com/jaredwray/keyv/tree/main/storage/sqlite) - SQLite storage adapter
 * [valkey](https://github.com/jaredwray/keyv/tree/main/storage/valkey) - Valkey (Open Source Redis) storage adapter
+* [valkey-glide](https://github.com/jaredwray/keyv/tree/main/storage/valkey-glide) - Valkey GLIDE storage adapter
 
 ## Compression Adapters
 
