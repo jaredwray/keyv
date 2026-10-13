@@ -78,8 +78,11 @@
  * ## Where it runs
  *
  * Invoked by the `publish` job in .github/workflows/release.yaml as
- * `pnpm tsx scripts/release-publish.ts`. A `release: published` event publishes
- * for real; a manual `workflow_dispatch` defaults to a dry run.
+ * `pnpm tsx scripts/release-publish.ts`. That workflow stages `main` only: a
+ * `release: published` event for a tag on `main` publishes for real; a manual
+ * `workflow_dispatch` defaults to a dry run, and is always one from any other
+ * branch. The v5 line is staged by release-v5.yaml and its own script on the
+ * `v5` branch.
  *
  * The pure helpers below (parseVersion / computeDistTag / isVersionGte) are
  * exported and unit-tested in release-publish.test.ts; `main()` only executes
@@ -421,8 +424,9 @@ function appendSummary(markdown: string): void {
  */
 function main(): void {
 	// --- Step 1: inputs ---
-	// DRY_RUN comes from the workflow input on manual runs; it's empty on real
-	// `release` events, so those publish for real. `--dry-run` is the local
+	// The workflow sets DRY_RUN to "true" for a manual dry run and for any
+	// manual run from a branch other than main, and to "false" on `release`
+	// events, so those publish for real. `--dry-run` is the local
 	// equivalent. LATEST_MAJOR is left undefined when unset/empty so that
 	// computeDistTag can require it only for stable releases.
 	const dryRun = process.env.DRY_RUN === "true" || process.argv.includes("--dry-run");

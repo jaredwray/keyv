@@ -1,0 +1,38 @@
+name: release-v5
+
+# Stages the v5 maintenance line to npm. The workflow that does the work is
+# the copy of this file on the `v5` branch. GitHub only offers "Run workflow"
+# for workflows on the default branch, and it runs the copy on the branch
+# picked under "Use workflow from", so this copy on `main` exists only to list
+# the workflow. Run from any branch other than `v5`, it fails without building
+# or staging anything.
+#
+# To stage a v5 release: Actions → "release-v5" → "Run workflow" → set "Use
+# workflow from" to `v5`. The run has to start from `v5` rather than check v5
+# out from here, because npm provenance records the commit the run started
+# from as the package's source.
+#
+# npm trusts this file name through its own stage-only trusted publisher,
+# separate from release.yaml's. v5 releases never move `latest`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      # Same input as the copy on `v5`.
+      dry_run:
+        description: "Dry run — compute and print the stage plan and validate packaging without staging"
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  require-v5-branch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    name: require-v5-branch
+    steps:
+      - name: Refuse to run outside the v5 branch
+        run: |
+          echo '::error::release-v5 stages the v5 line and only runs from the v5 branch. Run it again with "Use workflow from" set to v5.'
+          exit 1
