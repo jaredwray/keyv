@@ -4,4 +4,6 @@
 /.vscode/ @jaredwray
 /.cursor/ @jaredwray
 /.devcontainer/ @jaredwray
+/.claude/ @jaredwray
+/.codex/ @jaredwray
 /scripts/ @jaredwray

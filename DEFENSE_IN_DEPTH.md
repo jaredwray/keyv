@@ -6,13 +6,17 @@ Profile: npm library · public
 
 This checklist is for the `v5` branch. The same catalog is already complete on `main`.
 
+v5 keeps two catalog modifications. Section 5 names `.github/workflows/release-v5.yaml` instead of `release.yaml`, and it keeps the extra lines that refuse the `latest` dist-tag and limit the `release` environment's deployment branches. A `release.yaml` on this branch could stage a v5 package under `latest`.
+
 ## 1. Security docs
 - [x] `SECURITY.md` present — contact info + "How this repository is secured" summary — PR #2128
 - [x] `DEFENSE_IN_DEPTH.md` present (this file) — PR #2128
 
 ## 2. CODEOWNERS and cloud bootstrap
-- [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/scripts/` with owners the maintainer names — PR #2129
-- [x] Codespaces and Cursor Cloud Agents bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile) — PR #2135
+- [ ] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/.claude/`, `/.codex/`, `/scripts/` with owners the maintainer names (PR #2204 pending)
+- [ ] Codespaces, Cursor Cloud Agents, and Claude Code on the web bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile); Claude Code runs it from `.claude/hooks/session-start.sh` (web sessions only, install log on stderr, 600s timeout) and `.gitignore` keeps `.claude/settings.json` and `.claude/hooks/` tracked
+- [ ] Codex cloud environments use Manual setup with `bash ./scripts/setup-cloud-environment.sh` as the setup and maintenance script (manual)
+- [ ] Claude Code on the web environments allow `malware-list.aikido.dev` (Custom network access plus the default package-manager list) (manual)
 - [x] Dev Container `image` pinned by digest (`name:<tag>@sha256:<digest>`; not a floating tag) — verified 2026-09-09 (greenfield template in PR #2135)
 
 ## 3. Dependencies (pnpm)
