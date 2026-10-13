@@ -96,13 +96,16 @@ describe("compareSemver", () => {
 });
 
 describe("computeTag", () => {
-	it("tags a stable version latest when the registry has no latest yet", () => {
-		expect(computeTag("5.6.1", {})).toMatchObject({ tag: "latest" });
+	it("tags a stable version v{major}-lts even when the registry has no latest yet", () => {
+		expect(computeTag("5.6.1", {})).toMatchObject({ tag: "v5-lts" });
 	});
 
-	it("tags a stable version latest when it moves latest forward", () => {
-		expect(computeTag("5.6.1", { latest: "5.6.0" })).toMatchObject({ tag: "latest" });
-		expect(computeTag("1.1.2", { latest: "1.1.1" })).toMatchObject({ tag: "latest" });
+	it("tags a stable version v{major}-lts even when it is ahead of a v5-line latest", () => {
+		// The live registry today: keyv's latest is still 5.6.0, @keyv/sqlite's
+		// 4.0.8 and @keyv/serialize's 1.1.1. None may be moved from this branch.
+		expect(computeTag("5.6.1", { latest: "5.6.0" })).toMatchObject({ tag: "v5-lts" });
+		expect(computeTag("4.1.0", { latest: "4.0.8" })).toMatchObject({ tag: "v4-lts" });
+		expect(computeTag("1.1.2", { latest: "1.1.1" })).toMatchObject({ tag: "v1-lts" });
 	});
 
 	it("tags a maintenance release v{major}-lts once a newer major owns latest", () => {
@@ -153,6 +156,16 @@ describe("computeTag", () => {
 			expect(plan.tag === "latest").toBe(false);
 		}
 	});
+
+	it("never yields the latest tag for any stable version, whatever the registry holds", () => {
+		const registries = [{}, { latest: "5.6.0" }, { latest: "1.1.1" }, { latest: "6.1.0" }, { latest: "4.0.8", "v4-lts": "4.0.8" }];
+		for (const version of ["5.6.1", "5.999.0", "4.1.0", "2.0.0", "1.1.2"]) {
+			for (const distTags of registries) {
+				const plan = computeTag(version, distTags);
+				expect(plan.tag).toBe(`v${parseVersion(version).major}-lts`);
+			}
+		}
+	});
 });
 
 describe("resolvePlanAction", () => {
@@ -170,13 +183,13 @@ describe("resolvePlanAction", () => {
 		expect(resolvePlanAction(pkg("keyv", "5.6.0"), doc)).toMatchObject({ action: "skip", registryVersion: "5.6.0" });
 	});
 
-	it("publishes a new patch to latest while v5 still owns latest", () => {
+	it("stages a new patch under v5-lts, not latest, even while latest is still on v5", () => {
 		// Mirrors the real keyv document today: latest 5.6.0, beta 6.0.0-beta.4.
 		const doc = {
 			versions: { "5.6.0": {} },
 			"dist-tags": { latest: "5.6.0", beta: "6.0.0-beta.4", alpha: "6.0.0-alpha.3", next: "5.0.0-rc.1" },
 		};
-		expect(resolvePlanAction(pkg("keyv", "5.6.1"), doc)).toMatchObject({ action: "publish", tag: "latest" });
+		expect(resolvePlanAction(pkg("keyv", "5.6.1"), doc)).toMatchObject({ action: "publish", tag: "v5-lts" });
 	});
 
 	it("publishes a new patch to v5-lts once v6 GA owns latest", () => {
@@ -220,7 +233,7 @@ describe("resolvePlanAction", () => {
 
 	it("handles a registry document without dist-tags", () => {
 		const doc = { versions: { "1.0.0": {} } };
-		expect(resolvePlanAction(pkg("@keyv/x", "1.0.1"), doc)).toMatchObject({ action: "publish", tag: "latest" });
+		expect(resolvePlanAction(pkg("@keyv/x", "1.0.1"), doc)).toMatchObject({ action: "publish", tag: "v1-lts" });
 	});
 });
 
@@ -259,12 +272,12 @@ describe("publishArgs", () => {
 	});
 
 	it("always includes --provenance on a real stage (required for npm provenance attestation)", () => {
-		expect(publishArgs("./packed/keyv.tgz", "latest")).toContain("--provenance");
+		expect(publishArgs("./packed/keyv.tgz", "v5-lts")).toContain("--provenance");
 		expect(publishArgs("./packed/keyv-redis.tgz", "beta")).toContain("--provenance");
 	});
 
 	it("uses --dry-run instead of --provenance for a dry run", () => {
-		const args = publishArgs("./packed/keyv.tgz", "latest", { dryRun: true });
+		const args = publishArgs("./packed/keyv.tgz", "v5-lts", { dryRun: true });
 		expect(args).toContain("--dry-run");
 		expect(args).not.toContain("--provenance");
 	});
@@ -273,7 +286,13 @@ describe("publishArgs", () => {
 describe("publishArgs (staging invariants)", () => {
 	it("always stages — never a direct publish", () => {
 		for (const dryRun of [false, true]) {
-			expect(publishArgs("./packed/keyv.tgz", "latest", { dryRun }).slice(0, 2)).toEqual(["stage", "publish"]);
+			expect(publishArgs("./packed/keyv.tgz", "v5-lts", { dryRun }).slice(0, 2)).toEqual(["stage", "publish"]);
+		}
+	});
+
+	it("refuses the latest tag in both modes — the v5 branch never moves latest", () => {
+		for (const dryRun of [false, true]) {
+			expect(() => publishArgs("./packed/keyv.tgz", "latest", { dryRun })).toThrow(/never moves latest/);
 		}
 	});
 
