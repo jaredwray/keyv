@@ -14,9 +14,9 @@ v5 keeps two catalog modifications. Section 5 names `.github/workflows/release-v
 
 ## 2. CODEOWNERS and cloud bootstrap
 - [x] `.github/CODEOWNERS` covers `/.github/`, `/.vscode/`, `/.cursor/`, `/.devcontainer/`, `/.claude/`, `/.codex/`, `/scripts/` with owners the maintainer names — PR #2204
-- [ ] Codespaces, Cursor Cloud Agents, and Claude Code on the web bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile); Claude Code runs it from `.claude/hooks/session-start.sh` (web sessions only, install log on stderr, 600s timeout) and `.gitignore` keeps `.claude/settings.json` and `.claude/hooks/` tracked (PR #2205 pending)
-- [ ] Codex cloud environments use Manual setup with `bash ./scripts/setup-cloud-environment.sh` as the setup and maintenance script (manual)
-- [ ] Claude Code on the web environments allow `malware-list.aikido.dev` (Custom network access plus the default package-manager list) (manual)
+- [x] Codespaces, Cursor Cloud Agents, and Claude Code on the web bootstrap Aikido Safe Chain via scripts/setup-cloud-environment.sh (--ci shims, frozen lockfile); Claude Code runs it from `.claude/hooks/session-start.sh` (web sessions only, install log on stderr, 600s timeout) and `.gitignore` keeps `.claude/settings.json` and `.claude/hooks/` tracked — PR #2205
+- [x] Codex cloud environments use Manual setup with `bash ./scripts/setup-cloud-environment.sh` as the setup and maintenance script (manual) — verified 2026-10-15
+- [x] Claude Code on the web environments allow `malware-list.aikido.dev` (Custom network access plus the default package-manager list) (manual) — verified 2026-10-15
 - [x] Dev Container `image` pinned by digest (`name:<tag>@sha256:<digest>`; not a floating tag) — verified 2026-09-09 (greenfield template in PR #2135)
 
 ## 3. Dependencies (pnpm)
@@ -41,7 +41,7 @@ v5 keeps two catalog modifications. Section 5 names `.github/workflows/release-v
 - [x] No npm tokens (or other registry credentials) in Actions secrets — verified 2026-09-09
 
 ## 5. npm publishing — npm libraries only
-- [ ] OIDC trusted publishing configured **stage-only** on npmjs.com for `release-v5.yaml` on every package this branch publishes, including the v5-only `@keyv/serialize` — it can stage, never publish live (manual)
+- [x] OIDC trusted publishing configured **stage-only** on npmjs.com for `release-v5.yaml` on every package this branch publishes, including the v5-only `@keyv/serialize` — it can stage, never publish live (manual) — verified 2026-10-15
 - [x] `.github/workflows/release-v5.yaml` packs then stages with `pnpm stage publish ./packed/*.tgz --no-git-checks` — PR #2142, #2119
 - [x] Maintainer promotes staged versions with 2FA (manual) — verified 2026-09-09
 - [x] Drydock connected — staged releases reviewed before promotion (manual) — verified 2026-09-09
