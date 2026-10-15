@@ -112,5 +112,7 @@ packages/website/site/docs/**
 packages/third-party/keyv-file.json
 packages/keyv/test.db
 
-# AI
-.claude
+# AI (keep the shared Claude Code settings and hooks; ignore local state)
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
