@@ -198,8 +198,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       hookified:
-        specifier: ^1.15.0
-        version: 1.15.1
+        specifier: ^3.0.4
+        version: 3.0.4
       keyv:
         specifier: workspace:^
         version: link:../keyv
@@ -566,8 +566,8 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2
       hookified:
-        specifier: ^1.13.0
-        version: 1.15.1
+        specifier: ^3.0.4
+        version: 3.0.4
       keyv:
         specifier: workspace:^
         version: link:../keyv
@@ -2641,6 +2641,10 @@ packages:
 
   hookified@3.0.3:
     resolution: {integrity: sha512-ZcbRytYgERoKtosiaXolUIPIWMgUCrSiWQEzFZ0kc8etD/LPgpy4/KOrtssFdK7ZXlTTyb4cob2veqj7osv8yA==}
+    engines: {node: '>=22.18.0'}
+
+  hookified@3.0.4:
+    resolution: {integrity: sha512-Uos6DSO6BKv4DeR1C22UosRpeUaaoQgEQ+eDCyoJRll2OGzGpZc708vL7orIvqrYLo6zhVV+pkwO9zKVCsq3PQ==}
     engines: {node: '>=22.18.0'}
 
   hosted-git-info@2.8.9:
@@ -5878,7 +5882,7 @@ snapshots:
 
   hashery@3.0.3:
     dependencies:
-      hookified: 3.0.3
+      hookified: 3.0.4
 
   hasown@2.0.4:
     dependencies:
@@ -5999,6 +6003,8 @@ snapshots:
   hookified@2.2.0: {}
 
   hookified@3.0.3: {}
+
+  hookified@3.0.4: {}
 
   hosted-git-info@2.8.9: {}
 
