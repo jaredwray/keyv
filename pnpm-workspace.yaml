@@ -26,5 +26,27 @@ blockExoticSubdeps: true
 # semver@5.7.2 fails trustPolicy: no-downgrade (no provenance;
 # later versions of the same package have attestations). Pin to a version that
 # already meets the gate — do not exclude first-party packages.
+#
+# High and critical advisories. Selectors stay on the same major so callers
+# keep a compatible API. Each pin is old enough for minimumReleaseAge.
+# liquidjs stays on 10.29.0 (ecto requires ^10.29.0); versions below the
+# 10.27.2 patches are lifted to that release. vitest is already a direct
+# devDependency at ^4.1.11, which is above 3.2.6.
 overrides:
   semver@5.7.2: 7.7.3
+  "handlebars@<4.7.10": 4.7.10
+  "protobufjs@>=7 <7.6.6": 7.6.6
+  "liquidjs@<10.27.2": 10.27.2
+  "tar@<7.5.22": 7.5.22
+  "fast-xml-parser@>=5 <5.11.2": 5.11.2
+  "undici@>=7 <7.29.1": 7.30.0
+  "undici@>=8 <8.10.2": 8.11.2
+  "minimatch@>=3 <3.1.5": 3.1.5
+  "minimatch@>=5 <5.1.9": 5.1.9
+  "minimatch@>=9 <9.0.9": 9.0.9
+  "minimatch@>=10 <10.2.6": 10.2.6
+  "brace-expansion@>=1 <1.1.21": 1.1.21
+  "brace-expansion@>=2 <2.1.7": 2.1.7
+  "brace-expansion@>=3 <3.0.9": 3.0.9
+  "brace-expansion@>=5 <5.0.12": 5.0.12
+  "@isaacs/brace-expansion@<5.0.1": 5.0.1
