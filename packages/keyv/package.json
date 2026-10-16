@@ -62,7 +62,7 @@
 		"@keyv/serialize": "workspace:^"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.1",
+		"@biomejs/biome": "^2.5.15",
 		"@faker-js/faker": "^10.5.0",
 		"@keyv/compress-brotli": "workspace:^",
 		"@keyv/compress-gzip": "workspace:^",
@@ -71,13 +71,13 @@
 		"@keyv/mongo": "workspace:^",
 		"@keyv/sqlite": "workspace:^",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.1.9",
+		"@vitest/coverage-v8": "^5.0.3",
 		"lru.min": "^1.1.5",
 		"quick-lru": "^7.0.0",
 		"rimraf": "^6.1.2",
 		"timekeeper": "^2.3.1",
 		"tsd": "^0.33.0",
-		"vitest": "^4.1.9"
+		"vitest": "^5.0.3"
 	},
 	"tsd": {
 		"directory": "test"

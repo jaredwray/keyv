@@ -52,12 +52,12 @@
 		"etcd3": "^1.1.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.1",
+		"@biomejs/biome": "^2.5.15",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.1.9",
+		"@vitest/coverage-v8": "^5.0.3",
 		"rimraf": "^6.1.2",
 		"typescript": "^5.9.3",
-		"vitest": "^4.1.9"
+		"vitest": "^5.0.3"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
