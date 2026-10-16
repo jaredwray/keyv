@@ -76,7 +76,7 @@ export default class KeyvRedis<T>
 			| RedisClientConnectionType,
 		options?: KeyvRedisOptions,
 	) {
-		super();
+		super({ throwOnEmptyListeners: false });
 
 		// Build the socket reconnect strategy
 		const socket = {

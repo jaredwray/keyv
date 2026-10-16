@@ -52,7 +52,7 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {BigMapOptions<K, V>} [options] - Optional configuration options for the BigMap.
 	 */
 	constructor(options?: BigMapOptions) {
-		super(options);
+		super({ throwOnEmptyListeners: false, ...options });
 		if (options?.storeSize !== undefined) {
 			if (options.storeSize < 1) {
 				throw new Error("Store size must be at least 1.");
