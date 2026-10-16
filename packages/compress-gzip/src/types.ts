@@ -1,12 +1,11 @@
-import type { Data, DeflateFunctionOptions, InflateOptions } from "pako";
+import type { DeflateOptions, InflateOptions } from "pako";
 
-type PakoDeflateOptions = DeflateFunctionOptions;
-
-type PakoInflateOptions = InflateOptions & { to?: "string" };
-
-export type Options = PakoDeflateOptions & PakoInflateOptions;
+export type Options = DeflateOptions &
+	InflateOptions & {
+		toText?: boolean;
+	};
 
 export type Serialize = {
-	value: string | Data;
+	value: string | Uint8Array | ArrayBuffer;
 	expires?: number;
 };

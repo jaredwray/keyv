@@ -7,23 +7,25 @@ export class KeyvGzip {
 	opts: Options;
 	constructor(options?: Options) {
 		this.opts = {
-			to: "string",
+			toText: true,
 			...options,
 		};
 	}
 
-	async compress(value: pako.Data | string, options?: Options) {
+	async compress(value: string | Uint8Array | ArrayBuffer, options?: Options) {
 		// Wrap in a Buffer so serialization stores the compressed bytes as a
 		// compact `:base64:` string instead of an index-keyed byte object.
 		return Buffer.from(deflate(value, options || this.opts));
 	}
 
-	async decompress(value: pako.Data, options?: Options) {
-		if (options) {
-			options.to = "string";
-		}
-
-		return inflate(value, options || this.opts);
+	async decompress(
+		value: Uint8Array | ArrayBuffer | Record<string, number>,
+		options?: Options,
+	) {
+		return inflate(toInflateInput(value), {
+			...(options || this.opts),
+			toText: true,
+		});
 	}
 
 	async serialize({ value, expires }: Serialize) {
@@ -34,12 +36,34 @@ export class KeyvGzip {
 		/* v8 ignore next -- @preserve */
 		if (data) {
 			const { value, expires }: Serialize = defaultDeserialize(data);
-			return { value: await this.decompress(value as pako.Data), expires };
+			return {
+				value: await this.decompress(
+					value as Uint8Array | ArrayBuffer | Record<string, number>,
+				),
+				expires,
+			};
 		}
 
 		/* v8 ignore next -- @preserve */
 		return { value: undefined, expires: undefined };
 	}
+}
+
+function toInflateInput(
+	value: Uint8Array | ArrayBuffer | Record<string, number>,
+): Uint8Array | ArrayBuffer {
+	if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
+		return value;
+	}
+
+	const keys = Object.keys(value);
+	const bytes = new Uint8Array(keys.length);
+	for (let i = 0; i < keys.length; i++) {
+		const key = keys[i] as string;
+		bytes[Number(key)] = value[key] as number;
+	}
+
+	return bytes;
 }
 
 export default KeyvGzip;

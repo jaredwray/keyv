@@ -51,8 +51,7 @@
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
     "@keyv/serialize": "workspace:^",
-    "@types/pako": "^2.0.4",
-    "pako": "^2.1.0"
+    "pako": "^3.0.2"
   },
   "peerDependencies": {
     "keyv": "workspace:^"
