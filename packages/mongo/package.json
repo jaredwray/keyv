@@ -50,7 +50,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"mongodb": "^7.0.0"
+		"mongodb": "^7.7.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
