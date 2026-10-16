@@ -51,7 +51,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"pg": "^8.17.1"
+		"pg": "^8.23.1"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
