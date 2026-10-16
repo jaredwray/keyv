@@ -704,8 +704,8 @@ importers:
   packages/valkey:
     dependencies:
       iovalkey:
-        specifier: ^0.3.3
-        version: 0.3.3(supports-color@7.2.0)
+        specifier: ^0.4.0
+        version: 0.4.0(supports-color@7.2.0)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.15
@@ -2707,8 +2707,8 @@ packages:
   inline-style-parser@0.2.9:
     resolution: {integrity: sha512-IttN8BqKLxzUrnTqHI+/hwAJQItBAUjdoHERCDv+oOuX48VP6bzW8+QjOXSfoevzq3YrYAwX1uLHp8TqO9yIeg==}
 
-  iovalkey@0.3.3:
-    resolution: {integrity: sha512-4rTJX6Q5wTYEvxboXi8DsEiUo+OvqJGtLYOSGm37KpdRXsG5XJjbVtYKGJpPSWP+QT7rWscA4vsrdmzbEbenpw==}
+  iovalkey@0.4.0:
+    resolution: {integrity: sha512-OSUKxJ+s44CLdUTaicX4+pVrBN/zHKIYwr2oKhRDuczr19FwcSCXEZHzcMUYWZNh1mNSCV9bNJHW/T6cHVm9Aw==}
     engines: {node: '>=18.12.0'}
 
   ipaddr.js@2.5.0:
@@ -6062,7 +6062,7 @@ snapshots:
 
   inline-style-parser@0.2.9: {}
 
-  iovalkey@0.3.3(supports-color@7.2.0):
+  iovalkey@0.4.0(supports-color@7.2.0):
     dependencies:
       '@iovalkey/commands': 0.1.0
       cluster-key-slot: 1.1.2
