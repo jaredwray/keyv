@@ -47,7 +47,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hashery": "^1.4.0",
+		"hashery": "^3.0.3",
 		"hookified": "^1.15.0"
 	},
 	"devDependencies": {
@@ -65,7 +65,7 @@
 		"directory": "test"
 	},
 	"engines": {
-		"node": ">= 18"
+		"node": ">= 22.18"
 	},
 	"files": [
 		"dist",
