@@ -123,6 +123,13 @@ export type RedisConnectionClusterType =
 			RedisScripts,
 			RespVersions,
 			TypeMapping
+	  >
+	| RedisClusterType<
+			RedisModules,
+			RedisFunctions,
+			RedisScripts,
+			3,
+			TypeMapping
 	  >;
 
 export type RedisConnectionSentinelType =
