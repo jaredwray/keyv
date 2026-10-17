@@ -818,6 +818,35 @@ describe("getClient", () => {
 		}
 	});
 
+	test("should not resume an aborted connect on a client passed in when a call is retried at once", async () => {
+		const proxy = await createStallingProxy();
+		const client = createClient({
+			url: `redis://127.0.0.1:${proxy.port}`,
+			socket: { reconnectStrategy: () => 20 },
+		}) as RedisClientType;
+		client.on("error", () => {});
+		const keyvRedis = new KeyvRedis(client, { connectionTimeout: 100 });
+		keyvRedis.on("error", () => {});
+		const key = faker.string.alphanumeric(10);
+
+		try {
+			await keyvRedis.getClient();
+			const stalled = proxy.nextStalled();
+			proxy.stall();
+			await stalled;
+
+			// Chained on the rejection, the retry calls connect() again within microtasks of the abort.
+			await expect(keyvRedis.get(key).catch(async () => keyvRedis.get(key))).rejects.toThrow(
+				RedisErrorMessages.RedisClientNotConnectedThrown,
+			);
+			// Each timed-out connect closes its connection, and no aborted one opens another.
+			await waitForOpenSockets(proxy, 0);
+		} finally {
+			await keyvRedis.disconnect(true);
+			await proxy.close();
+		}
+	});
+
 	test("should clear the ping timer of an owned client after a hung handshake times out", async () => {
 		const proxy = await createStallingProxy();
 		const pingInterval = 1000;

@@ -63,7 +63,8 @@ export type KeyvRedisOptions = {
 	 * queued: a client you passed in connects again on the next operation, and a client Keyv
 	 * constructed is replaced. When Keyv constructs the client, this is also passed as
 	 * `socket.connectTimeout` unless that option is already set. Auto-reconnect is disabled
-	 * unless you pass `socket.reconnectStrategy`.
+	 * unless you pass `socket.reconnectStrategy`. A TCP connect that is still pending can't be
+	 * aborted, so on a client you pass in, set `socket.connectTimeout` no higher than this.
 	 * @default undefined
 	 */
 	connectionTimeout?: number;

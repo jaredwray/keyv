@@ -179,7 +179,8 @@ export type KeyvRedisOptions = {
 	 * queued: a client you passed in connects again on the next operation, and a client Keyv
 	 * constructed is replaced. When Keyv constructs the client, this is also passed as
 	 * `socket.connectTimeout` unless that option is already set. Auto-reconnect is disabled
-	 * unless you pass `socket.reconnectStrategy`.
+	 * unless you pass `socket.reconnectStrategy`. A TCP connect that is still pending can't be
+	 * aborted, so on a client you pass in, set `socket.connectTimeout` no higher than this.
 	 * @default undefined
 	 */
 	connectionTimeout?: number;
@@ -797,7 +798,7 @@ Use your application's security group as the rule's source rather than a CIDR ra
 * **noNamespaceAffectsAll** - When no namespace is set, `clear()` / `iterator()` affect all keys (including namespaced ones). Default: `false`.
 * **throwOnConnectError** - Throw when connect fails, with the connection error as the `cause`, instead of emitting `error`. Default: `true`.
 * **throwOnErrors** - Throw on operation failures instead of emitting `error` and returning a no-op. Default: `false`.
-* **connectionTimeout** - Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH). `undefined` uses the Redis client default. On expiry the in-flight connect is aborted so sockets and timers are not left active. Aborting destroys the client, which rejects the commands it had queued: a client you passed in connects again on the next operation, and a client Keyv constructed is replaced. When Keyv constructs the client, this is also passed as `socket.connectTimeout` unless that option is already set. Auto-reconnect is disabled unless you pass `socket.reconnectStrategy`.
+* **connectionTimeout** - Timeout in milliseconds for the full connect handshake (TCP plus Redis HELLO / AUTH). `undefined` uses the Redis client default. On expiry the in-flight connect is aborted so sockets and timers are not left active. Aborting destroys the client, which rejects the commands it had queued: a client you passed in connects again on the next operation, and a client Keyv constructed is replaced. When Keyv constructs the client, this is also passed as `socket.connectTimeout` unless that option is already set. Auto-reconnect is disabled unless you pass `socket.reconnectStrategy`. A TCP connect that is still pending can't be aborted, so on a client you pass in, set `socket.connectTimeout` no higher than `connectionTimeout`.
 
 ## Methods
 * **constructor([connect], [options])** - `connect` is a URI string, client/cluster/sentinel options (`KeyvRedisConnect`), or an existing connection. See [Keyv Redis Options](#keyv-redis-options).

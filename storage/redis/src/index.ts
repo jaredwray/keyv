@@ -433,6 +433,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			}
 		} catch (error) {
 			this.abortConnect(client);
+			// Wait a macrotask so the aborted node-redis `#connect()` loop sees `isOpen` false and ends.
+			// A caller that calls `connect()` before then, such as a retry chained on this rejection,
+			// would resume that loop and leave a second socket open.
+			await new Promise<void>((resolve) => {
+				setImmediate(resolve);
+			});
 
 			// Report the failure once: reject with it as the cause, or emit it and carry on.
 			if (this._throwOnConnectError) {
@@ -1448,11 +1454,12 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Stop using a failed client. `destroy()` closes the socket of a hung handshake (node-redis 6.2+
-	 * does not reopen it or retry once `isOpen` is false), rejects the commands the client had queued,
-	 * clears its `pingInterval` timer, and leaves `connect()` usable again, so a client passed in keeps
-	 * working after a timed-out connect. Owned clients are replaced so the next `getClient()` starts
-	 * from a fresh client.
+	 * Stop using a failed client. `destroy()` closes the socket of a hung handshake, rejects the
+	 * commands the client had queued, clears its `pingInterval` timer, and leaves `connect()` usable
+	 * again, so a client passed in keeps working after a timed-out connect. With `isOpen` false,
+	 * node-redis 6.2+ ends the aborted `#connect()` loop instead of retrying, as long as nothing calls
+	 * `connect()` before the loop unwinds (see {@link connectClient}). Owned clients are replaced so
+	 * the next `getClient()` starts from a fresh client.
 	 * @param {RedisClientConnectionType} client - The client whose `connect()` failed.
 	 * @returns {void}
 	 */
