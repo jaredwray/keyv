@@ -3,11 +3,12 @@
 Release notes for the **v5 maintenance line** of Keyv, one Markdown file per
 release cut.
 
-`main` (v6) produces its changelog through its own release tooling. The `v5`
-branch does not, so releases here are written by hand in this folder. Each file
-documents a single release cut and may span more than one workspace package —
-each package keeps its own semver (e.g. a cut can ship `keyv@5.6.1` and
-`@keyv/sqlite@4.1.0` together).
+`main` (v6) produces its changelog through its own release tooling. On `v5`,
+[Changesets](https://github.com/changesets/changesets) bumps each public
+package independently and writes that package's `CHANGELOG.md`. This folder
+still holds one hand-written note per release cut, which may span more than
+one workspace package — each package keeps its own semver (e.g. a cut can ship
+`keyv@5.6.1` and `@keyv/sqlite@4.1.0` together). Private packages are ignored.
 
 ## Cutting a v5 release
 
@@ -16,9 +17,16 @@ only ever *stages* packages (with provenance, via OIDC trusted publishing — no
 tokens), and a maintainer approves each staged version with 2FA before it
 becomes installable. GitHub Releases never trigger publishing on this branch.
 
-1. **Release PR into `v5`.** Bump `version` in each package that has unreleased
-   changes (never `6.0.0` or higher — v6 ships from `main`), add
-   `changelog/<name>.md` and link it below, then merge.
+1. **Release PR into `v5`.** Add one changeset per user-facing change
+   (`pnpm changeset`), then run `pnpm exec changeset version`. That bumps
+   `version` in each affected public package (never `6.0.0` or higher — v6
+   ships from `main`; `scripts/release.mjs` refuses it), writes
+   `packages/<name>/CHANGELOG.md`, and deletes the consumed changeset files.
+   Leave `.changeset/config.json`. Do not bump a package for devDependency-only
+   or CI-only changes, and do not leave changeset files that would bump again
+   on the next `changeset version`. Also add `changelog/<name>.md` and link it
+   below, then merge. If `keyv` itself is not part of the cut, name the file
+   for the date or the packages, not `v5.x.y`.
 2. **Run the `release-v5` workflow from `v5`.** Actions → `release-v5` → "Run
    workflow" → set "Use workflow from" to `v5`. Leave **Dry run** checked first:
    the job summary shows the stage plan — which packages would be staged (local
@@ -83,4 +91,5 @@ version of that package goes through the workflow like any other.
 
 ## Releases
 
+- [2026-10-17](./2026-10-17.md) — 2026-10-17 · `@keyv/redis@5.2.0`, `@keyv/bigmap@1.4.0`, `@keyv/compress-gzip@2.0.4`, `@keyv/serialize@1.1.2`, `@keyv/dynamo@1.2.5`, `@keyv/mongo@3.1.1`, `@keyv/mysql@2.1.11`, `@keyv/postgres@2.2.4`, `@keyv/valkey@1.0.12`, `@keyv/test-suite@2.1.3`
 - [v5.6.1](./v5.6.1.md) — 2026-07-03 · `keyv@5.6.1`, `@keyv/sqlite@4.1.0`

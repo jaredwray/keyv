@@ -60,12 +60,12 @@ Keyv has two release lines: **`main`** (v6, the current major) and the **`v5`** 
 | | `main` (v6) | `v5` branch |
 | --- | --- | --- |
 | Workflow | `release.yaml` | `release-v5.yaml` |
-| Versioning | Every package shares one version (`pnpm version:sync`) | Each package keeps its own version |
+| Versioning | Every package shares one version (`pnpm version:sync`) | Each package keeps its own version, bumped with changesets (`pnpm changeset`, then `pnpm exec changeset version`) |
 | Trigger | Publishing a GitHub Release from a tag on `main` (`vX.Y.Z`, `vX.Y.Z-beta.N`) | Manual **Run workflow** from the `v5` branch (`workflow_dispatch`); GitHub Releases do not publish |
 | What gets staged | Every package whose exact version is not on npm yet | Only the packages whose version is ahead of npm |
 | Dist-tag | From the version and `LATEST_MAJOR`: pre-release → its channel (`beta`, `rc`), current major → `latest`, older major → `v{major}-lts` | Never `latest`: stable → `v{major}-lts`, pre-release → its channel (`v{major}-{channel}` when a newer major owns it); a tag is never moved backwards |
 | Script | `scripts/release-publish.ts` (`pnpm test:scripts`) | `scripts/release.mjs` (`pnpm test:release`, `pnpm release:dry`) |
-| Release notes | The GitHub Release | `changelog/<name>.md` on the `v5` branch |
+| Release notes | The GitHub Release | Per-package `CHANGELOG.md` from changesets, plus `changelog/<name>.md` on the `v5` branch |
 
 ## Releasing v6 from `main`
 
@@ -77,7 +77,7 @@ To preview without staging anything: Actions → `release` → **Run workflow** 
 
 ## Releasing v5 from the `v5` branch
 
-1. Open a release PR against `v5`: bump `version` in each package that has unreleased changes (never `6.0.0` or higher — the script refuses it), add `changelog/<name>.md`, and merge.
+1. Open a release PR against `v5`. Add one changeset per user-facing change (`pnpm changeset`), then run `pnpm exec changeset version` so it bumps each affected package (never `6.0.0` or higher — the script refuses it) and writes that package's `CHANGELOG.md`. The command consumes the changeset files; leave `.changeset/config.json`. Do not bump a package for devDependency-only changes, and do not leave changesets that would bump those packages again later. Also add `changelog/<name>.md`, link it from `changelog/README.md`, and merge. If `keyv` is not in the cut, name that file for the date or the packages rather than `v5.x.y`.
 2. Actions → `release-v5` → **Run workflow** → set "Use workflow from" to **`v5`**. Leave **Dry run** checked first: the job summary shows the stage plan (which packages would be staged, under which dist-tag, and which are skipped) and packaging is validated. Then run it again with Dry run unchecked to stage for real. The run builds, runs the full test suite, the Aikido release scan and the release-logic tests before anything is staged. Any ref other than `v5` is forced to a dry run. GitHub offers **Run workflow** only for workflows on the default branch and runs the copy on the branch you pick, so `main` carries a copy of `release-v5.yaml` just to list it; run from `main`, that copy fails without staging anything.
 3. Approve the staged versions on npm, dependencies first (`@keyv/serialize` → `keyv` → adapters).
 4. Optionally create a GitHub Release tagged `v5-YYYY-MM-DD` for release notes. It publishes nothing: a GitHub Release runs the workflows at the tag's commit, `release-v5.yaml` has no `release` trigger, and `release.yaml` refuses any tag whose commit is not on `main`.
