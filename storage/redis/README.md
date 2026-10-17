@@ -41,6 +41,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Sentinel](#sentinel)
 * [TLS Support](#tls-support)
 * [Redis Cloud](#redis-cloud)
+* [Amazon ElastiCache](#amazon-elasticache)
 * [Keyv Redis Options](#keyv-redis-options)
 * [API](#api)
 * [Events](#events)
@@ -627,7 +628,157 @@ const keyv = new Keyv(new KeyvRedis({
 }));
 ```
 
-Other hosted Redis services use the same pattern: a `rediss://` URI or `socket.tls: true`, plus the CA certificate the provider gives you.
+Other hosted Redis services that give you a single, non-cluster endpoint follow the same pattern: a `rediss://` URI or `socket.tls: true`, plus the provider's CA certificate if Node.js doesn't already trust it. Services that run in cluster mode need cluster options instead, even when they show a single endpoint. Amazon ElastiCache Serverless is one of them; see [Amazon ElastiCache](#amazon-elasticache).
+
+# Amazon ElastiCache
+
+`@keyv/redis` connects to Amazon ElastiCache for Valkey and ElastiCache for Redis OSS, on node-based clusters and on Serverless caches. Valkey speaks the Redis protocol, so this adapter works with either engine. `KeyvRedis` passes an options object to `createCluster` from `@redis/client` when it has `rootNodes`, and to `createClient` otherwise, unchanged except for `connectionTimeout` when you set it. So `username`, `password`, `socket`, `defaults`, and `pingInterval` below are standard `@redis/client` options. `createKeyv` accepts the same arguments.
+
+## Node-based or Serverless: which endpoint
+
+The endpoints are on the cache's page in the ElastiCache console. Which one you use, and how you connect, depends on how the cache was created:
+
+| Deployment | Endpoint | Connect with |
+| --- | --- | --- |
+| Node-based, cluster mode disabled | **Primary endpoint** | Client options or a URI |
+| Node-based, cluster mode enabled | **Configuration endpoint** | Cluster options (`rootNodes`) |
+| Serverless | **Endpoint** | Cluster options (`rootNodes`) |
+
+- **Cluster mode disabled.** The primary endpoint always points to the current primary node, including after a failover, so use it for Keyv, which writes as well as reads. The reader endpoint only reaches read replicas, which reject writes, and a node endpoint stays with one node when its role changes. A cluster with a single node has no primary endpoint, so use the node's endpoint.
+- **Cluster mode enabled.** The client sends `CLUSTER SLOTS` to the configuration endpoint to learn which shard owns which hash slots, then connects to each shard's primary.
+- **Serverless.** A Serverless cache always runs in cluster mode and only supports cluster-mode clients. Its endpoint reports a single node that owns every hash slot, so `createCluster` opens one connection, but the cache still enforces cluster rules: a command or transaction whose keys are in different hash slots fails with `CROSSSLOT`. `KeyvRedis` splits `getMany`, `setMany`, `hasMany`, and `deleteMany` into one command per hash slot only when it is connected through `createCluster`. With a URI or client options, those calls fail with `CROSSSLOT`.
+
+The Serverless endpoint takes connections on port 6379. Port 6380 serves reads from replicas. `@redis/client` only connects to the primaries that `CLUSTER SLOTS` lists unless you set `useReplicas: true`.
+
+## TLS and `rediss://`
+
+Serverless caches always encrypt connections with TLS. On a node-based cluster, TLS is the **Encryption in transit** setting, which both AUTH tokens and RBAC users require. With TLS on, connect with a `rediss://` URI (two `s`'s) or `socket.tls: true`. A plain `redis://` connection to a TLS endpoint fails.
+
+ElastiCache certificates are issued through AWS Certificate Manager and chain to public certificate authorities that Node.js trusts by default. Unlike [Redis Cloud](#trusting-redis_capem), you don't pass a `ca`. Leave `rejectUnauthorized` unset so Node.js checks the certificate, and connect with the endpoint hostname, not an IP address, so the hostname check passes. ElastiCache doesn't support mutual TLS, so there is no client certificate to configure.
+
+## AUTH token or RBAC user
+
+ElastiCache has two ways to require a password:
+
+- **AUTH token** (node-based clusters only). A single password that you set when you choose **Valkey AUTH default user access** or **Redis OSS AUTH default user access** as the cluster's access control. Connect with `password` set to the token and no `username`, which authenticates as the `default` user.
+- **Role-based access control (RBAC)** (Valkey 7.2 and later, Redis OSS 6.0 and later, and the only option for Serverless). Create a user under **User group management** > **Users** with password authentication and an access string, add it to a user group, and assign the group to the cache. Connect with the user's **user name** (not its user ID) as `username` and one of its passwords as `password`.
+
+An RBAC user needs to read and write Keyv's keys and run `SCAN`, which `clear()` and `iterator()` use. The access string `on ~* +@all` allows every command on every key. If you set a `namespace`, you can limit the user to its keys with a key pattern such as `on ~cache::* +@all` for the namespace `cache`. Keep access strings in the ElastiCache configuration. They can't contain passwords, so keep the password itself in an environment variable or AWS Secrets Manager.
+
+A node-based cluster without access control, or a Serverless cache without a user group, lets anyone who can reach the endpoint connect as `default` with no password. Only the network rules in [VPC and security groups](#vpc-and-security-groups) protect it. Serverless caches with a public endpoint require IAM authentication, which uses short-lived tokens instead of a password and isn't covered here.
+
+## Node-based cluster with cluster mode disabled
+
+Connect to the primary endpoint with client options:
+
+```ts
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis({
+  username: process.env.ELASTICACHE_USERNAME,
+  password: process.env.ELASTICACHE_PASSWORD,
+  socket: {
+    host: process.env.ELASTICACHE_HOST,
+    port: Number(process.env.ELASTICACHE_PORT ?? 6379),
+    tls: true,
+  },
+}));
+keyv.on('error', (error) => console.error('ElastiCache error', error));
+
+await keyv.set('greeting', 'hello', 60_000);
+console.log(await keyv.get('greeting')); // 'hello'
+await keyv.disconnect();
+```
+
+Set `ELASTICACHE_HOST` to the primary endpoint without the port, such as `master.my-cache.abc123.use1.cache.amazonaws.com`. Set `ELASTICACHE_USERNAME` and `ELASTICACHE_PASSWORD` for an RBAC user, or only `ELASTICACHE_PASSWORD` for an AUTH token.
+
+A URI works too. Setting `url.password` percent-encodes reserved characters such as the `#` an AUTH token may contain, so pass the password as stored:
+
+```ts
+const url = new URL(`rediss://${process.env.ELASTICACHE_HOST}:${process.env.ELASTICACHE_PORT ?? 6379}`);
+url.username = process.env.ELASTICACHE_USERNAME ?? '';
+url.password = process.env.ELASTICACHE_PASSWORD ?? '';
+
+const keyv = new Keyv(new KeyvRedis(url.toString()));
+```
+
+## Cluster mode enabled and Serverless
+
+Use cluster options for a node-based cluster with cluster mode enabled and for every Serverless cache. Put the endpoint in `rootNodes`, and the TLS setting and credentials in `defaults`:
+
+```ts
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis({
+  rootNodes: [{ url: `rediss://${process.env.ELASTICACHE_HOST}:${process.env.ELASTICACHE_PORT ?? 6379}` }],
+  defaults: {
+    username: process.env.ELASTICACHE_USERNAME,
+    password: process.env.ELASTICACHE_PASSWORD,
+    socket: { tls: true },
+  },
+}));
+keyv.on('error', (error) => console.error('ElastiCache error', error));
+
+await keyv.setMany([
+  { key: 'user:1', value: 'Ada' },
+  { key: 'user:2', value: 'Grace' },
+]);
+console.log(await keyv.getMany(['user:1', 'user:2'])); // ['Ada', 'Grace']
+await keyv.disconnect();
+```
+
+Set `ELASTICACHE_HOST` to the configuration endpoint, such as `clustercfg.my-cache.abc123.use1.cache.amazonaws.com`, or the Serverless endpoint, such as `my-cache-abc123.serverless.use1.cache.amazonaws.com`. For a Serverless cache without a user group, leave out `username` and `password`.
+
+- `@redis/client` only uses `rootNodes` to connect to the endpoint and read the slot map. It creates the connections to the shards from `defaults` plus the host and port that `CLUSTER SLOTS` returns, so TLS and credentials only in `rootNodes` aren't used for them. Put them in `defaults`.
+- `socket.tls` in `defaults` matches the `rediss://` scheme in `rootNodes`. If they disagree, `@redis/client` throws.
+- `@redis/client` connects to each node by the hostname ElastiCache reports, so the certificate hostname check passes without any address mapping.
+
+## Failover and unresponsive nodes
+
+During a failover or node replacement, ElastiCache closes connections, and `@redis/client` reconnects. Commands sent before a connection drops reject, and a Keyv instance with an `error` listener returns its fallback value for them, such as `undefined` from `get`.
+
+A node that stops responding while its TCP connection stays open is harder to notice. `@redis/client` does give each command a timeout (`commandOptions.timeout`, 5 seconds by default), but the timeout only covers the time before the command is sent, for example while the client reconnects. Once the command is written to the socket, nothing limits how long it waits for a reply, so Keyv calls wait as long as the node is unresponsive. To bound that wait, set three options together:
+
+- `socket.socketTimeout` closes a connection that receives nothing for that many milliseconds. Commands waiting on it reject with a socket timeout error.
+- `pingInterval` sends `PING` on that schedule, so an idle connection keeps receiving replies. Keep it shorter than `socketTimeout`, or the timeout also closes healthy idle connections.
+- `socket.reconnectStrategy` decides whether to reconnect after a connection closes. By default, `@redis/client` doesn't reconnect after a socket timeout, which leaves a cluster's node connection closed until you restart the client. Pass `defaultReconnectStrategy`, which `@keyv/redis` exports and uses for URI strings, to reconnect with backoff.
+
+For a cluster or Serverless cache, all three go in `defaults`:
+
+```ts
+import Keyv from 'keyv';
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis({
+  rootNodes: [{ url: `rediss://${process.env.ELASTICACHE_HOST}:${process.env.ELASTICACHE_PORT ?? 6379}` }],
+  defaults: {
+    username: process.env.ELASTICACHE_USERNAME,
+    password: process.env.ELASTICACHE_PASSWORD,
+    pingInterval: 1000,
+    socket: {
+      tls: true,
+      socketTimeout: 3000,
+      reconnectStrategy: defaultReconnectStrategy,
+    },
+  },
+}));
+keyv.on('error', (error) => console.error('ElastiCache error', error));
+```
+
+For a cluster with cluster mode disabled, set `pingInterval` next to `username`, and `socketTimeout` and `reconnectStrategy` in `socket`. If Keyv is a cache in front of another data source and should never hold up a request, also see [Using the `createKeyvNonBlocking` function](#using-the-createkeyvnonblocking-function) and [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
+
+## VPC and security groups
+
+Node-based clusters run in subnets of your VPC, and Serverless caches with the VPC connection type are reached through VPC endpoints in subnets you choose. They have no public address, so your application must run in the same VPC or in a network connected to it, for example through VPC peering, AWS Transit Gateway, or a VPN. An AWS Lambda function must be attached to the VPC. Serverless caches running Valkey 9.0 or later can use a public endpoint instead, which requires IAM authentication and TLS 1.3.
+
+The cache's security group must allow inbound TCP from your application:
+
+- **Node-based clusters:** port 6379, or the port you chose when you created the cluster.
+- **Serverless:** ports 6379 and 6380. AWS recommends opening 6380 even if you don't read from replicas, because some clients connect to it anyway.
+
+Use your application's security group as the rule's source rather than a CIDR range, so the rule follows the application as its addresses change. When a security group or route blocks the connection, the connection attempt waits for `socket.connectTimeout` (5 seconds by default) and then fails, and the adapter rejects or emits `error` as described in [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts). Set the adapter's `connectionTimeout` option to fail sooner.
 
 # API
 
