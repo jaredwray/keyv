@@ -79,7 +79,7 @@ services:
     volumes:
       - ../packages/redis/tls:/tls
   keyv_mongo:
-    image: mongo:8.3.8@sha256:5211c51171f57ae60842b11664bb244628971b3d35325762a97888337b9bb0db
+    image: mongo:8.3.11@sha256:d731d77bfd7afd66bd487bdf627b5bf7ce4c3602ec461d635977021db529ebbc
     restart: always
     ports:
       - 27017:27017
