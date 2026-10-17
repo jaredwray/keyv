@@ -442,20 +442,25 @@ The set can end up listing keys that are no longer stored, which `clear()` remov
 
 ## Amazon ElastiCache
 
-For ElastiCache for Valkey or Redis OSS, node-based or Serverless, read the [Amazon ElastiCache guide](https://github.com/jaredwray/keyv/tree/main/storage/redis#amazon-elasticache) in `@keyv/redis`. It covers which endpoint to use, TLS, AUTH tokens and RBAC users, failover, and security groups, and all of it applies to this adapter. Express the connection settings as iovalkey options: a `rediss://` URI or `tls: {}` for TLS, `username` and `password` for the RBAC user, and `Redis.Cluster` for a cluster with cluster mode enabled or any Serverless cache. For a cluster, put TLS and the credentials in `redisOptions`, and pass the `dnsLookup` shown below so iovalkey connects to each node by hostname and the certificate check passes:
+For ElastiCache for Valkey or Redis OSS, node-based or Serverless, read the [Amazon ElastiCache guide](https://github.com/jaredwray/keyv/tree/main/storage/redis#amazon-elasticache) in `@keyv/redis` for which endpoint to use, TLS, AUTH tokens, RBAC users, and security groups. Those apply to this adapter. The failover options in that guide (`commandOptions.timeout`, `socket.socketTimeout`, `pingInterval`, and `defaultReconnectStrategy`) are `@redis/client` settings and are not iovalkey options.
+
+Express the connection as iovalkey options: a `rediss://` URI or `tls: {}` for TLS, `username` and `password` for an RBAC user, and `Redis.Cluster` for a cluster with cluster mode enabled or any Serverless cache. Leave `username` unset for an AUTH token, and leave both unset when the cache has no user group. For a cluster, put TLS and the credentials in `redisOptions`, and pass the `dnsLookup` shown below so iovalkey connects to each node by hostname and the certificate check passes:
 
 ```ts
 import Redis from 'iovalkey';
 import KeyvValkey from '@keyv/valkey';
 
-const cluster = new Redis.Cluster([{ host: process.env.ELASTICACHE_HOST, port: 6379 }], {
-  dnsLookup: (address, callback) => callback(null, address),
-  redisOptions: {
-    tls: {},
-    username: process.env.ELASTICACHE_USERNAME,
-    password: process.env.ELASTICACHE_PASSWORD,
+const cluster = new Redis.Cluster(
+  [{ host: process.env.ELASTICACHE_HOST, port: Number(process.env.ELASTICACHE_PORT ?? 6379) }],
+  {
+    dnsLookup: (address, callback) => callback(null, address),
+    redisOptions: {
+      tls: {},
+      username: process.env.ELASTICACHE_USERNAME,
+      password: process.env.ELASTICACHE_PASSWORD,
+    },
   },
-});
+);
 const store = new KeyvValkey(cluster);
 ```
 

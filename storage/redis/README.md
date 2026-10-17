@@ -661,9 +661,11 @@ ElastiCache certificates are issued through AWS Certificate Manager and chain to
 ElastiCache has two ways to require a password:
 
 - **AUTH token** (node-based clusters only). A single password that you set when you choose **Valkey AUTH default user access** or **Redis OSS AUTH default user access** as the cluster's access control. Connect with `password` set to the token and no `username`, which authenticates as the `default` user.
-- **Role-based access control (RBAC)** (Valkey 7.2 and later, Redis OSS 6.0 and later, and the only option for Serverless). Create a user under **User group management** > **Users** with password authentication and an access string, add it to a user group, and assign the group to the cache. Connect with the user's **user name** (not its user ID) as `username` and one of its passwords as `password`.
+- **Role-based access control (RBAC)** (Valkey 7.2 and later, Redis OSS 6.0 and later, and the only option for Serverless). Create a user in **User management** with password authentication and an access string, add it to a user group in **User group management**, and assign the group to the cache. Connect with the user's **user name** (not its user ID) as `username` and one of its passwords as `password`.
 
-An RBAC user needs to read and write Keyv's keys and run `SCAN`, which `clear()` and `iterator()` use. The access string `on ~* +@all` allows every command on every key. If you set a `namespace`, you can limit the user to its keys with a key pattern such as `on ~cache::* +@all` for the namespace `cache`. Keep access strings in the ElastiCache configuration. They can't contain passwords, so keep the password itself in an environment variable or AWS Secrets Manager.
+An RBAC user needs to read and write Keyv's keys and run `SCAN`, which `clear()` and `iterator()` use. The access string `on ~* +@all` allows every command on every key. To limit a user to one Keyv namespace, set `namespace` on the Keyv instance or as `KeyvRedis`'s second argument. It is not a client option, so putting it next to `username` or in `defaults` does nothing. With the default separator, the namespace `cache` stores keys as `cache::<key>`, which the pattern in `on ~cache::* +@all` matches. Keep access strings in the ElastiCache configuration. They can't contain passwords, so keep the password itself in an environment variable or AWS Secrets Manager.
+
+Redis OSS adds a user named `default` to every user group. That user can run every command on every key and has no password, so a key pattern on your own user is not the only access to the cache until you replace `default` with a disabled user or one that has a password. A Valkey user group turns this `default` user off.
 
 A node-based cluster without access control, or a Serverless cache without a user group, lets anyone who can reach the endpoint connect as `default` with no password. Only the network rules in [VPC and security groups](#vpc-and-security-groups) protect it. Serverless caches with a public endpoint require IAM authentication, which uses short-lived tokens instead of a password and isn't covered here.
 
@@ -739,13 +741,13 @@ Set `ELASTICACHE_HOST` to the configuration endpoint, such as `clustercfg.my-cac
 
 During a failover or node replacement, ElastiCache closes connections, and `@redis/client` reconnects. Commands sent before a connection drops reject, and a Keyv instance with an `error` listener returns its fallback value for them, such as `undefined` from `get`.
 
-A node that stops responding while its TCP connection stays open is harder to notice. `@redis/client` does give each command a timeout (`commandOptions.timeout`, 5 seconds by default), but the timeout only covers the time before the command is sent, for example while the client reconnects. Once the command is written to the socket, nothing limits how long it waits for a reply, so Keyv calls wait as long as the node is unresponsive. To bound that wait, set three options together:
+A node that stops responding while its TCP connection stays open is harder to notice. `@redis/client` gives each command a timeout (`commandOptions.timeout`, 5 seconds by default), but that timeout only covers the time before the command is written to the socket, for example while the client reconnects. Once the command is written, the command timeout does not limit how long the client waits for a reply.
 
-- `socket.socketTimeout` closes a connection that receives nothing for that many milliseconds. Commands waiting on it reject with a socket timeout error.
-- `pingInterval` sends `PING` on that schedule, so an idle connection keeps receiving replies. Keep it shorter than `socketTimeout`, or the timeout also closes healthy idle connections.
-- `socket.reconnectStrategy` decides whether to reconnect after a connection closes. By default, `@redis/client` doesn't reconnect after a socket timeout, which leaves a cluster's node connection closed until you restart the client. Pass `defaultReconnectStrategy`, which `@keyv/redis` exports and uses for URI strings, to reconnect with backoff.
+`socket.socketTimeout` is the idle timeout on the socket. It closes the connection after that many milliseconds with no data sent or received, and commands waiting on it reject with a socket timeout error. A command that has already been written, with nothing else going out, hits this when the node goes quiet. Node.js counts a write as activity, and `pingInterval` writes `PING` on a timer, so each ping refreshes `socketTimeout` even when the node never replies. Leave `pingInterval` unset when you want `socketTimeout` to bound a silent node. It is useful on its own for a server that closes idle clients. ElastiCache's default parameter group leaves idle connections open (`timeout` is `0`).
 
-For a cluster or Serverless cache, all three go in `defaults`:
+`socket.reconnectStrategy` decides whether to reconnect after the socket closes. `@redis/client`'s own strategy does not reconnect after a socket timeout, which leaves a cluster's node connection closed until you restart the client. Pass `defaultReconnectStrategy`, which `@keyv/redis` exports and uses for URI strings. It waits and retries after a socket timeout too.
+
+For a cluster or Serverless cache, both settings go in `defaults`:
 
 ```ts
 import Keyv from 'keyv';
@@ -756,7 +758,6 @@ const keyv = new Keyv(new KeyvRedis({
   defaults: {
     username: process.env.ELASTICACHE_USERNAME,
     password: process.env.ELASTICACHE_PASSWORD,
-    pingInterval: 1000,
     socket: {
       tls: true,
       socketTimeout: 3000,
@@ -767,7 +768,7 @@ const keyv = new Keyv(new KeyvRedis({
 keyv.on('error', (error) => console.error('ElastiCache error', error));
 ```
 
-For a cluster with cluster mode disabled, set `pingInterval` next to `username`, and `socketTimeout` and `reconnectStrategy` in `socket`. If Keyv is a cache in front of another data source and should never hold up a request, also see [Using the `createKeyvNonBlocking` function](#using-the-createkeyvnonblocking-function) and [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
+For a cluster with cluster mode disabled, put `socketTimeout` and `reconnectStrategy` in `socket`. If Keyv is a cache in front of another data source and should never hold up a request, also see [Using the `createKeyvNonBlocking` function](#using-the-createkeyvnonblocking-function) and [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
 
 ## VPC and security groups
 
@@ -778,7 +779,7 @@ The cache's security group must allow inbound TCP from your application:
 - **Node-based clusters:** port 6379, or the port you chose when you created the cluster.
 - **Serverless:** ports 6379 and 6380. AWS recommends opening 6380 even if you don't read from replicas, because some clients connect to it anyway.
 
-Use your application's security group as the rule's source rather than a CIDR range, so the rule follows the application as its addresses change. When a security group or route blocks the connection, the connection attempt waits for `socket.connectTimeout` (5 seconds by default) and then fails, and the adapter rejects or emits `error` as described in [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts). Set the adapter's `connectionTimeout` option to fail sooner.
+Use your application's security group as the rule's source rather than a CIDR range, so the rule follows the application as its addresses change. When a security group or route blocks the connection, the connection attempt waits for `socket.connectTimeout` (5 seconds by default) and then fails, and the adapter rejects or emits `error` as described in [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts). Set the adapter's `connectionTimeout` option to fail sooner. When Keyv builds the client, that value is also written to `socket.connectTimeout`, and `socket.reconnectStrategy` is set to `false` unless you already passed one. Pair it with the `reconnectStrategy` in [Failover and unresponsive nodes](#failover-and-unresponsive-nodes) when the client should reconnect after a later disconnect.
 
 # API
 

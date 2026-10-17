@@ -448,7 +448,7 @@ Click **Connect** on the cluster in the Atlas UI and choose **Drivers**. Atlas s
 mongodb+srv://<db_username>:<db_password>@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 ```
 
-`cluster0.abcde.mongodb.net` is your cluster's hostname. With the `mongodb+srv` scheme, the driver looks up DNS records for that name when it connects: SRV records list the replica set members, and a TXT record sets `authSource=admin` and `replicaSet`. You don't add hosts, ports, or those two options yourself.
+`cluster0.abcde.mongodb.net` is your cluster's hostname. With the `mongodb+srv` scheme, the driver looks up DNS records for that name when it connects: SRV records list the hosts, and a TXT record sets `authSource=admin` and, for a replica set, `replicaSet`. You don't add hosts, ports, or those options yourself.
 
 Pass the database user's credentials with the `auth` option instead of in the URI, so they don't need any encoding:
 
@@ -495,7 +495,7 @@ Atlas database users are separate from the accounts you sign in to Atlas with. T
 2. Under **Specific Privileges**, grant `readWrite` on the database you pass as `db`. The **Read and write to any database** built-in role also works, but it gives access to every database in the project.
 3. Click **Add User**.
 
-The user needs write access to create indexes, not just to store values. When it connects, the adapter creates a unique index on `{ key, namespace }` and a TTL index on `expiresAt` (in GridFS mode, indexes on the bucket's `.files` collection). A user with only `read` fails on the first `createIndexes` command, so the adapter emits `error` and its operations reject.
+The user needs write access to create indexes, not just to store values. In standard mode the adapter creates a unique index on `{ key, namespace }` and a TTL index on `expiresAt` when it connects. In GridFS mode it creates indexes on the bucket's `.files` collection instead, and none of them is a TTL index. A user with only `read` fails on the first `createIndexes` command. The adapter emits `error`, and a Keyv instance with an `error` listener returns its fallback value.
 
 ### IP access list and private endpoints
 
@@ -524,7 +524,7 @@ On dedicated clusters (`M10` and up), you can connect through a private endpoint
 
 Atlas requires TLS on every connection, and a `mongodb+srv` URI turns it on: the driver sets `tls: true` for SRV URIs unless you set `tls` or `ssl` yourself. A standard `mongodb://` Atlas string has `ssl=true` in its query string instead. Atlas certificates are signed by a public certificate authority that Node.js trusts by default, so you don't need a CA file.
 
-Don't set `tlsAllowInvalidCertificates`, `tlsAllowInvalidHostnames`, or `tlsInsecure` for Atlas. They connect, but skip the certificate checks that protect against an attacker in the middle. For X.509 authentication instead of a password, pass the client certificate with `tlsCertificateKeyFile` and set `authMechanism: 'MONGODB-X509'`.
+Don't set `tlsAllowInvalidCertificates`, `tlsAllowInvalidHostnames`, or `tlsInsecure` for Atlas. They connect, but skip the certificate checks that protect against an attacker in the middle. For X.509 authentication instead of a password, pass the client certificate with `tlsCertificateKeyFile`, set `authMechanism: 'MONGODB-X509'`, and set `authSource: '$external'`. The TXT record's `authSource=admin` would otherwise look for that user in `admin`.
 
 ### Expired entries: TTL index and `clearExpired`
 
