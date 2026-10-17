@@ -88,7 +88,7 @@ services:
     ports:
       - "11211:11211"
   keyv_etcd:
-    image: registry.k8s.io/etcd:3.5.33-0@sha256:89e9d4e344864374bf141d10ac90034e50647f58498ef0b5f0d6e4fd328c58b9
+    image: registry.k8s.io/etcd:3.5.34-0@sha256:04726053dabaf26b56ce7ef28c3d20b8b4a4006ed887d30194aa4f0756ee4f8d
     command:
       - etcd
       - --listen-client-urls=http://0.0.0.0:2379
