@@ -109,6 +109,48 @@ describe("KeyvRedis", () => {
 		).toBeUndefined();
 	});
 
+	test("leaves a non-array rootNodes value unchanged", () => {
+		const rootNodes = {
+			map: (
+				fn: (node: { socket?: { host?: string; port?: number } }) => unknown,
+			) => [{ socket: { host: "127.0.0.1", port: 7001 } }].map(fn),
+		};
+		const cluster = new KeyvRedis({
+			rootNodes: rootNodes as unknown as Array<{ url: string }>,
+		});
+		const clusterOptions = (
+			cluster.client as {
+				_options?: {
+					rootNodes?: unknown;
+					RESP?: number;
+				};
+			}
+		)._options;
+		expect(clusterOptions?.rootNodes).toBe(rootNodes);
+		expect(clusterOptions?.RESP).toBe(2);
+	});
+
+	test("keeps hookified v1 logger and throwHookErrors names", () => {
+		const keyvRedis = new KeyvRedis();
+		const logger = {
+			trace: () => undefined,
+			debug: () => undefined,
+			info: () => undefined,
+			warn: () => undefined,
+			error: () => undefined,
+			fatal: () => undefined,
+		};
+		keyvRedis.logger = logger;
+		keyvRedis.throwHookErrors = true;
+		expect(keyvRedis.logger).toBe(logger);
+		expect(keyvRedis.eventLogger).toBe(logger);
+		expect(keyvRedis.throwHookErrors).toBe(true);
+		expect(keyvRedis.throwOnHookError).toBe(true);
+		keyvRedis.throwHookErrors = false;
+		expect(keyvRedis.throwHookErrors).toBe(false);
+		expect(keyvRedis.throwOnHookError).toBe(false);
+	});
+
 	test("should be able to create Keyv instance", async () => {
 		const keyv = createKeyv("redis://localhost:6379", { namespace: "test" });
 		expect(keyv).toBeDefined();
