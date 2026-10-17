@@ -42,6 +42,7 @@ We are using the [iovalkey](https://www.npmjs.com/package/iovalkey) which is a N
 - [Events](#events)
 - [Expiration and TTL](#expiration-and-ttl)
 - [Clustering](#clustering)
+- [Amazon ElastiCache](#amazon-elasticache)
 - [License](#license)
 
 ## Install
@@ -438,6 +439,30 @@ The tracking set and the data keys hash to different slots, which a cluster can'
 - `delete()` removes a key from the set between two `UNLINK`s. `clear()` does the same for every key it removes.
 
 The set can end up listing keys that are no longer stored, which `clear()` removes harmlessly. Each `set()` and `delete()` takes three round trips instead of one transaction. Every write in a namespace also updates the one node that holds the namespace's set.
+
+## Amazon ElastiCache
+
+For ElastiCache for Valkey or Redis OSS, node-based or Serverless, read the [Amazon ElastiCache guide](https://github.com/jaredwray/keyv/tree/main/storage/redis#amazon-elasticache) in `@keyv/redis` for which endpoint to use, TLS, AUTH tokens, RBAC users, and security groups. Those apply to this adapter. The failover options in that guide (`commandOptions.timeout`, `socket.socketTimeout`, `pingInterval`, and `defaultReconnectStrategy`) are `@redis/client` settings and are not iovalkey options.
+
+Express the connection as iovalkey options: a `rediss://` URI or `tls: {}` for TLS, `username` and `password` for an RBAC user, and `Redis.Cluster` for a cluster with cluster mode enabled or any Serverless cache. Leave `username` unset for an AUTH token, and leave both unset when the cache has no user group. For a cluster, put TLS and the credentials in `redisOptions`, and pass the `dnsLookup` shown below so iovalkey connects to each node by hostname and the certificate check passes:
+
+```ts
+import Redis from 'iovalkey';
+import KeyvValkey from '@keyv/valkey';
+
+const cluster = new Redis.Cluster(
+  [{ host: process.env.ELASTICACHE_HOST, port: Number(process.env.ELASTICACHE_PORT ?? 6379) }],
+  {
+    dnsLookup: (address, callback) => callback(null, address),
+    redisOptions: {
+      tls: {},
+      username: process.env.ELASTICACHE_USERNAME,
+      password: process.env.ELASTICACHE_PASSWORD,
+    },
+  },
+);
+const store = new KeyvValkey(cluster);
+```
 
 ## License
 
