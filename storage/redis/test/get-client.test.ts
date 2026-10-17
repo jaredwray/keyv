@@ -174,6 +174,86 @@ async function waitForOpenSockets(
 	expect(server.openServerSockets).toBe(expected);
 }
 
+/**
+ * A proxy to the test Redis. After `stall()` it drops the proxied connections and accepts new ones
+ * without answering, like a Redis that hangs during the handshake. `resume()` proxies new ones again.
+ */
+async function createStallingProxy(): Promise<{
+	port: number;
+	readonly openServerSockets: number;
+	stall: () => void;
+	resume: () => void;
+	close: () => Promise<void>;
+}> {
+	const target = new URL(redisUri);
+	const proxied = new Set<net.Socket>();
+	const stalled = new Set<net.Socket>();
+	let stalling = false;
+	const server = net.createServer((socket) => {
+		socket.on("error", () => {});
+		if (stalling) {
+			stalled.add(socket);
+			socket.on("close", () => {
+				stalled.delete(socket);
+			});
+			// See createHangServer: a paused socket with unread data never emits `close`.
+			socket.resume();
+			return;
+		}
+
+		proxied.add(socket);
+		const upstream = net.connect(Number(target.port || 6379), target.hostname);
+		upstream.on("error", () => {});
+		upstream.on("close", () => {
+			socket.destroy();
+		});
+		socket.on("close", () => {
+			proxied.delete(socket);
+			upstream.destroy();
+		});
+		socket.pipe(upstream).pipe(socket);
+	});
+
+	await new Promise<void>((resolve) => {
+		server.listen(0, "127.0.0.1", () => {
+			resolve();
+		});
+	});
+
+	const address = server.address();
+	if (!address || typeof address === "string") {
+		throw new Error("expected a TCP listen address");
+	}
+
+	return {
+		port: address.port,
+		// Only the stalled connections, which a timed-out connect must close.
+		get openServerSockets() {
+			return stalled.size;
+		},
+		stall() {
+			stalling = true;
+			for (const socket of proxied) {
+				socket.destroy();
+			}
+		},
+		resume() {
+			stalling = false;
+		},
+		async close() {
+			for (const socket of [...proxied, ...stalled]) {
+				socket.destroy();
+			}
+
+			await new Promise<void>((resolve) => {
+				server.close(() => {
+					resolve();
+				});
+			});
+		},
+	};
+}
+
 describe("getClient", () => {
 	test("should get client that is connected", async () => {
 		const keyvRedis = new KeyvRedis(redisUri);
@@ -651,6 +731,80 @@ describe("getClient", () => {
 		} finally {
 			await keyvRedis.disconnect(true);
 			await server.close();
+		}
+	});
+
+	test("should keep a client passed in usable after a hung handshake times out", async () => {
+		const proxy = await createStallingProxy();
+		const client = createClient({ url: `redis://127.0.0.1:${proxy.port}` }) as RedisClientType;
+		client.on("error", () => {});
+		const keyvRedis = new KeyvRedis(client, {
+			throwOnConnectError: false,
+			connectionTimeout: 100,
+		});
+		keyvRedis.on("error", () => {});
+		const key = faker.string.alphanumeric(10);
+
+		try {
+			// Expires so the key does not outlive the test if a later step fails.
+			expect(await keyvRedis.set(key, "value", Date.now() + 60_000)).toBe(true);
+
+			// node-redis reconnects on its own and hangs in the handshake with the stalled proxy.
+			proxy.stall();
+			await waitForOpenSockets(proxy, 1);
+			expect(client.isOpen).toBe(true);
+			expect(client.isReady).toBe(false);
+
+			expect(await keyvRedis.get(key)).toBeUndefined();
+			expect(keyvRedis.client).toBe(client);
+			expect(() => client.isOpen).not.toThrow();
+			expect(() => client.isReady).not.toThrow();
+			// The hung connection is closed, not left open (#2070).
+			await waitForOpenSockets(proxy, 0);
+
+			proxy.resume();
+			expect(await keyvRedis.get(key)).toBe("value");
+			expect(client.isReady).toBe(true);
+		} finally {
+			await keyvRedis.disconnect(true);
+			await proxy.close();
+		}
+	});
+
+	test("should not crash on the ping timer of a client passed in after a hung handshake times out", async () => {
+		const uncaught: unknown[] = [];
+		const onUncaught = (error: unknown) => {
+			uncaught.push(error);
+		};
+		process.on("uncaughtException", onUncaught);
+		const proxy = await createStallingProxy();
+		// The ping timer starts when the client is ready and must still be pending when the
+		// connect times out, so its interval has to outlast the stall and the timeout.
+		const pingInterval = 1000;
+		const client = createClient({
+			url: `redis://127.0.0.1:${proxy.port}`,
+			pingInterval,
+		}) as RedisClientType;
+		client.on("error", () => {});
+		const keyvRedis = new KeyvRedis(client, {
+			throwOnConnectError: false,
+			connectionTimeout: 100,
+		});
+		keyvRedis.on("error", () => {});
+
+		try {
+			await keyvRedis.getClient();
+			proxy.stall();
+			await waitForOpenSockets(proxy, 1);
+			expect(await keyvRedis.get(faker.string.alphanumeric(10))).toBeUndefined();
+
+			// Let the pending ping timer fire.
+			await delay(pingInterval + 200);
+			expect(uncaught).toEqual([]);
+		} finally {
+			process.off("uncaughtException", onUncaught);
+			await keyvRedis.disconnect(true);
+			await proxy.close();
 		}
 	});
 
