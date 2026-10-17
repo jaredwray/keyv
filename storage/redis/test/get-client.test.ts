@@ -1,4 +1,4 @@
-import { EventEmitter } from "node:events";
+import { EventEmitter, once } from "node:events";
 import net from "node:net";
 import process from "node:process";
 import { setTimeout as delay } from "node:timers/promises";
@@ -181,6 +181,7 @@ async function waitForOpenSockets(
 async function createStallingProxy(): Promise<{
 	port: number;
 	readonly openServerSockets: number;
+	nextStalled: () => Promise<void>;
 	stall: () => void;
 	resume: () => void;
 	close: () => Promise<void>;
@@ -188,6 +189,7 @@ async function createStallingProxy(): Promise<{
 	const target = new URL(redisUri);
 	const proxied = new Set<net.Socket>();
 	const stalled = new Set<net.Socket>();
+	const events = new EventEmitter();
 	let stalling = false;
 	const server = net.createServer((socket) => {
 		socket.on("error", () => {});
@@ -198,6 +200,7 @@ async function createStallingProxy(): Promise<{
 			});
 			// See createHangServer: a paused socket with unread data never emits `close`.
 			socket.resume();
+			events.emit("stalled");
 			return;
 		}
 
@@ -230,6 +233,10 @@ async function createStallingProxy(): Promise<{
 		// Only the stalled connections, which a timed-out connect must close.
 		get openServerSockets() {
 			return stalled.size;
+		},
+		// Resolves when the proxy accepts its next stalled connection.
+		async nextStalled() {
+			await once(events, "stalled");
 		},
 		stall() {
 			stalling = true;
@@ -759,6 +766,8 @@ describe("getClient", () => {
 			expect(keyvRedis.client).toBe(client);
 			expect(() => client.isOpen).not.toThrow();
 			expect(() => client.isReady).not.toThrow();
+			// Closed and ready to connect again on the next call.
+			expect(client.isOpen).toBe(false);
 			// The hung connection is closed, not left open (#2070).
 			await waitForOpenSockets(proxy, 0);
 
@@ -771,38 +780,77 @@ describe("getClient", () => {
 		}
 	});
 
-	test("should not crash on the ping timer of a client passed in after a hung handshake times out", async () => {
-		const uncaught: unknown[] = [];
-		const onUncaught = (error: unknown) => {
-			uncaught.push(error);
-		};
-		process.on("uncaughtException", onUncaught);
+	test("should clear the ping timer of a client passed in after a hung handshake times out", async () => {
 		const proxy = await createStallingProxy();
-		// The ping timer starts when the client is ready and must still be pending when the
-		// connect times out, so its interval has to outlast the stall and the timeout.
 		const pingInterval = 1000;
+		const connectionTimeout = 100;
 		const client = createClient({
 			url: `redis://127.0.0.1:${proxy.port}`,
 			pingInterval,
 		}) as RedisClientType;
 		client.on("error", () => {});
-		const keyvRedis = new KeyvRedis(client, {
-			throwOnConnectError: false,
-			connectionTimeout: 100,
-		});
+		const keyvRedis = new KeyvRedis(client, { throwOnConnectError: false, connectionTimeout });
 		keyvRedis.on("error", () => {});
+		// node-redis arms its ping timer with the global setTimeout, so fake it to see that timer
+		// and to fire it on demand. Sockets and node:timers/promises stay real.
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
 		try {
 			await keyvRedis.getClient();
-			proxy.stall();
-			await waitForOpenSockets(proxy, 1);
-			expect(await keyvRedis.get(faker.string.alphanumeric(10))).toBeUndefined();
+			// The ping timer, armed on `ready`.
+			expect(vi.getTimerCount()).toBe(1);
 
-			// Let the pending ping timer fire.
-			await delay(pingInterval + 200);
-			expect(uncaught).toEqual([]);
+			// node-redis reconnects on its own and hangs in the handshake with the stalled proxy.
+			const stalled = proxy.nextStalled();
+			proxy.stall();
+			await stalled;
+			const pending = keyvRedis.get(faker.string.alphanumeric(10));
+			await vi.advanceTimersByTimeAsync(connectionTimeout);
+			expect(await pending).toBeUndefined();
+
+			expect(vi.getTimerCount()).toBe(0);
+			// A ping timer left pending throws an uncaught TypeError here.
+			await vi.advanceTimersByTimeAsync(pingInterval);
 		} finally {
-			process.off("uncaughtException", onUncaught);
+			vi.useRealTimers();
+			await keyvRedis.disconnect(true);
+			await proxy.close();
+		}
+	});
+
+	test("should clear the ping timer of an owned client after a hung handshake times out", async () => {
+		const proxy = await createStallingProxy();
+		const pingInterval = 1000;
+		const connectionTimeout = 100;
+		// A reconnect strategy passed in is kept, so the client reconnects into the stalled proxy.
+		const keyvRedis = new KeyvRedis(
+			{
+				url: `redis://127.0.0.1:${proxy.port}`,
+				pingInterval,
+				socket: { reconnectStrategy: () => 20 },
+			},
+			{ throwOnConnectError: false, connectionTimeout },
+		);
+		keyvRedis.on("error", () => {});
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+		try {
+			const client = await keyvRedis.getClient();
+			expect(vi.getTimerCount()).toBe(1);
+
+			const stalled = proxy.nextStalled();
+			proxy.stall();
+			await stalled;
+			const pending = keyvRedis.get(faker.string.alphanumeric(10));
+			await vi.advanceTimersByTimeAsync(connectionTimeout);
+			expect(await pending).toBeUndefined();
+
+			// Replaced by a new client, and the old one's ping timer is gone with it.
+			expect(keyvRedis.client).not.toBe(client);
+			expect(vi.getTimerCount()).toBe(0);
+			await vi.advanceTimersByTimeAsync(pingInterval);
+		} finally {
+			vi.useRealTimers();
 			await keyvRedis.disconnect(true);
 			await proxy.close();
 		}
