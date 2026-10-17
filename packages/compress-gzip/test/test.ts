@@ -67,6 +67,15 @@ test.it("should not throw error when empty", async (t) => {
 	await t.expect(keyv.get("foo")).resolves.not.toThrowError();
 });
 
+test.it("accepts the pako v2 to: string option", async (t) => {
+	const gzip = new KeyvGzip({ to: "string" });
+	const compressed = await gzip.compress("whatever");
+	t.expect(Buffer.isBuffer(compressed)).toBe(true);
+	t.expect(await gzip.decompress(compressed)).toBe("whatever");
+	t.expect(gzip.opts.to).toBe("string");
+	t.expect(gzip.opts.toText).toBe(true);
+});
+
 // https://github.com/jaredwray/keyv/issues/2007
 test.it(
 	"compress returns a Buffer so compressed data serializes to base64",

@@ -42,6 +42,76 @@ export {
 	RedisErrorMessages,
 };
 
+/**
+ * @redis/client v5 TCP keepalive delay. v6 raised the default to 30s.
+ */
+const V5_KEEP_ALIVE_INITIAL_DELAY_MS = 5000;
+
+function withV5SocketDefaults(socket?: Record<string, any>) {
+	return {
+		keepAliveInitialDelay: V5_KEEP_ALIVE_INITIAL_DELAY_MS,
+		...socket,
+	};
+}
+
+/**
+ * @redis/client v6 defaults to RESP3 and a 5 second command timeout.
+ * Keyv v5 clients used RESP2 and no command timeout. Keep those unless the
+ * caller set them. An existing client is left alone.
+ */
+function withV5ProtocolDefaults<T extends Record<string, any>>(options: T): T {
+	return {
+		...options,
+		RESP: options.RESP ?? 2,
+		commandOptions: {
+			timeout: undefined,
+			...options.commandOptions,
+		},
+	};
+}
+
+function withV5StandaloneDefaults<T extends Record<string, any>>(
+	options: T,
+): T {
+	return withV5ProtocolDefaults({
+		...options,
+		socket: withV5SocketDefaults(options.socket),
+	});
+}
+
+function withV5ClusterDefaults<T extends Record<string, any>>(options: T): T {
+	const defaults = options.defaults ?? {};
+	return withV5ProtocolDefaults({
+		...options,
+		defaults: {
+			...defaults,
+			socket: withV5SocketDefaults(defaults.socket),
+		},
+		rootNodes: Array.isArray(options.rootNodes)
+			? options.rootNodes.map((node: Record<string, any>) => ({
+					...node,
+					socket: withV5SocketDefaults(node.socket),
+				}))
+			: options.rootNodes,
+	});
+}
+
+function withV5SentinelDefaults<T extends Record<string, any>>(options: T): T {
+	const nodeClientOptions = options.nodeClientOptions ?? {};
+	const sentinelClientOptions = options.sentinelClientOptions ?? {};
+	return withV5ProtocolDefaults({
+		...options,
+		nodeClientOptions: {
+			...nodeClientOptions,
+			socket: withV5SocketDefaults(nodeClientOptions.socket),
+		},
+		sentinelClientOptions: {
+			...sentinelClientOptions,
+			socket: withV5SocketDefaults(sentinelClientOptions.socket),
+		},
+	});
+}
+
 export default class KeyvRedis<T>
 	extends Hookified
 	implements KeyvStoreAdapter
@@ -85,10 +155,12 @@ export default class KeyvRedis<T>
 
 		if (connect) {
 			if (typeof connect === "string") {
-				this._client = createClient({
-					url: connect,
-					socket,
-				}) as RedisClientType;
+				this._client = createClient(
+					withV5StandaloneDefaults({
+						url: connect,
+						socket,
+					}),
+				) as RedisClientType;
 			} else if ((connect as any).connect !== undefined) {
 				if (this.isClientSentinel(connect as RedisClientConnectionType)) {
 					this._client = connect as RedisConnectionSentinelType;
@@ -100,19 +172,23 @@ export default class KeyvRedis<T>
 			} else if (connect instanceof Object) {
 				if ((connect as any).sentinelRootNodes !== undefined) {
 					this._client = createSentinel(
-						connect as RedisSentinelOptions,
+						withV5SentinelDefaults(connect as any),
 					) as RedisSentinelType;
 				} else if ((connect as any).rootNodes === undefined) {
 					this._client = createClient(
-						connect as RedisClientOptions,
+						withV5StandaloneDefaults(connect as any),
 					) as RedisClientType;
 				} else {
-					this._client = createCluster(connect as RedisClusterOptions);
+					this._client = createCluster(
+						withV5ClusterDefaults(connect as any),
+					) as RedisConnectionClusterType;
 				}
 			}
 		} else {
 			// No connect provided, create the default client here instead of at class field initialization
-			this._client = createClient({ socket }) as RedisConnectionClientType;
+			this._client = createClient(
+				withV5StandaloneDefaults({ socket }),
+			) as RedisConnectionClientType;
 		}
 
 		this.setOptions(options);
@@ -307,6 +383,28 @@ export default class KeyvRedis<T>
 	 */
 	public set connectionTimeout(value: number | undefined) {
 		this._connectionTimeout = value;
+	}
+
+	/**
+	 * hookified v1 name for `eventLogger`.
+	 */
+	public get logger() {
+		return this.eventLogger;
+	}
+
+	public set logger(logger) {
+		this.eventLogger = logger;
+	}
+
+	/**
+	 * hookified v1 name for `throwOnHookError`.
+	 */
+	public get throwHookErrors(): boolean {
+		return this.throwOnHookError;
+	}
+
+	public set throwHookErrors(value: boolean) {
+		this.throwOnHookError = value;
 	}
 
 	/**

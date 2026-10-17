@@ -1,7 +1,10 @@
 import process from "node:process";
 import { createClient, type RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
-import KeyvRedis, { createKeyv } from "../src/index.js";
+import KeyvRedis, {
+	createKeyv,
+	defaultReconnectStrategy,
+} from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 
@@ -31,6 +34,79 @@ describe("KeyvRedis", () => {
 	test("should have a client property", () => {
 		const keyvRedis = new KeyvRedis();
 		expect(keyvRedis.client).toBeDefined();
+	});
+
+	test("keeps v5 client defaults when KeyvRedis creates the client", () => {
+		const keyvRedis = new KeyvRedis("redis://localhost:6379");
+		const options = (keyvRedis.client as RedisClientType).options;
+		const socket = options?.socket as
+			| { keepAliveInitialDelay?: number; reconnectStrategy?: unknown }
+			| undefined;
+		expect(options?.RESP).toBe(2);
+		expect(options?.commandOptions?.timeout).toBeUndefined();
+		expect(socket?.keepAliveInitialDelay).toBe(5000);
+		expect(socket?.reconnectStrategy).toBe(defaultReconnectStrategy);
+		expect(() => {
+			keyvRedis.emit("error", new Error("no listeners"));
+		}).not.toThrow();
+	});
+
+	test("does not override explicit Redis client options", () => {
+		const keyvRedis = new KeyvRedis({
+			url: "redis://localhost:6379",
+			RESP: 3,
+			commandOptions: { timeout: 1500 },
+			socket: { keepAliveInitialDelay: 1000 },
+		});
+		const options = (keyvRedis.client as RedisClientType).options;
+		const socket = options?.socket as
+			| { keepAliveInitialDelay?: number }
+			| undefined;
+		expect(options?.RESP).toBe(3);
+		expect(options?.commandOptions?.timeout).toBe(1500);
+		expect(socket?.keepAliveInitialDelay).toBe(1000);
+	});
+
+	test("leaves an existing Redis client unchanged", () => {
+		const client = createClient({
+			url: "redis://localhost:6379",
+			RESP: 3,
+		});
+		const keyvRedis = new KeyvRedis(client);
+		expect(keyvRedis.client).toBe(client);
+		expect((keyvRedis.client as RedisClientType).options?.RESP).toBe(3);
+	});
+
+	test("keeps v5 defaults for cluster and sentinel clients it creates", () => {
+		const cluster = new KeyvRedis({
+			rootNodes: [{ url: "redis://127.0.0.1:7001" }],
+		});
+		const clusterOptions = (
+			cluster.client as {
+				_options?: {
+					RESP?: number;
+					commandOptions?: { timeout?: number };
+					defaults?: { socket?: { keepAliveInitialDelay?: number } };
+					rootNodes?: Array<{ socket?: { keepAliveInitialDelay?: number } }>;
+				};
+			}
+		)._options;
+		expect(clusterOptions?.RESP).toBe(2);
+		expect(clusterOptions?.commandOptions?.timeout).toBeUndefined();
+		expect(clusterOptions?.defaults?.socket?.keepAliveInitialDelay).toBe(5000);
+		expect(clusterOptions?.rootNodes?.[0]?.socket?.keepAliveInitialDelay).toBe(
+			5000,
+		);
+
+		const sentinel = new KeyvRedis({
+			name: "mymaster",
+			sentinelRootNodes: [{ host: "127.0.0.1", port: 26379 }],
+		});
+		expect(sentinel.isSentinel()).toBe(true);
+		expect(
+			(sentinel.client as { commandOptions?: { timeout?: number } })
+				.commandOptions?.timeout,
+		).toBeUndefined();
 	});
 
 	test("should be able to create Keyv instance", async () => {

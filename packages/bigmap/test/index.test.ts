@@ -30,6 +30,33 @@ describe("BigMap Instance", () => {
 		expect(bigMap).toBeInstanceOf(BigMap);
 	});
 
+	it("should keep hookified v1 logger and throwHookErrors names", () => {
+		const logger = {
+			trace: () => undefined,
+			debug: () => undefined,
+			info: () => undefined,
+			warn: () => undefined,
+			error: () => undefined,
+			fatal: () => undefined,
+		};
+		const bigMap = new BigMap<string, number>({
+			logger,
+			throwHookErrors: true,
+		});
+		expect(bigMap.eventLogger).toBe(logger);
+		expect(bigMap.logger).toBe(logger);
+		expect(bigMap.throwOnHookError).toBe(true);
+		expect(bigMap.throwHookErrors).toBe(true);
+		const replacement = { ...logger };
+		bigMap.logger = replacement;
+		bigMap.throwHookErrors = false;
+		expect(bigMap.eventLogger).toBe(replacement);
+		expect(bigMap.throwOnHookError).toBe(false);
+		expect(() => {
+			bigMap.emit("error", new Error("no listeners"));
+		}).not.toThrow();
+	});
+
 	it("should initialize with an empty map", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap.size).toBe(0);
