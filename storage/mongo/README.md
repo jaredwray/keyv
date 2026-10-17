@@ -37,6 +37,13 @@ Uses TTL indexes to automatically remove expired documents. However [MongoDB doe
   - [disconnect](#disconnect)
   - [clearExpired](#clearexpired)
   - [clearUnusedFor](#clearunusedfor)
+- [MongoDB Atlas](#mongodb-atlas)
+  - [Connection string](#connection-string)
+  - [Creating a database user](#creating-a-database-user)
+  - [IP access list and private endpoints](#ip-access-list-and-private-endpoints)
+  - [Choosing `db` and `collection`](#choosing-db-and-collection)
+  - [TLS](#tls)
+  - [Expired entries: TTL index and `clearExpired`](#expired-entries-ttl-index-and-clearexpired)
 - [Migration from v3 to v6](#migration-from-v3-to-v6)
   - [Running the migration script](#running-the-migration-script)
 - [License](#license)
@@ -427,6 +434,119 @@ await store.set('foo', 'bar');
 
 // Remove files not accessed in the last hour
 await store.clearUnusedFor(3600);
+```
+
+## MongoDB Atlas
+
+`@keyv/mongo` connects to MongoDB Atlas with the same `url` option it uses for any MongoDB deployment. The adapter calls `new MongoClient(url, options)` from the `mongodb` driver, where `options` is every option you pass that isn't a Keyv option (`url`, `uri`, `collection`, `namespace`, `useGridFS`, `db`, `readPreference`). So `auth`, `tls`, `serverSelectionTimeoutMS`, and the other settings below are standard [`MongoClientOptions`](https://mongodb.github.io/node-mongodb-native/7.0/interfaces/MongoClientOptions.html). `createKeyv` accepts the same options.
+
+### Connection string
+
+Click **Connect** on the cluster in the Atlas UI and choose **Drivers**. Atlas shows a connection string that starts with `mongodb+srv://`:
+
+```
+mongodb+srv://<db_username>:<db_password>@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+```
+
+`cluster0.abcde.mongodb.net` is your cluster's hostname. With the `mongodb+srv` scheme, the driver looks up DNS records for that name when it connects: SRV records list the replica set members, and a TXT record sets `authSource=admin` and `replicaSet`. You don't add hosts, ports, or those two options yourself.
+
+Pass the database user's credentials with the `auth` option instead of in the URI, so they don't need any encoding:
+
+```ts
+import Keyv from 'keyv';
+import KeyvMongo from '@keyv/mongo';
+
+const store = new KeyvMongo({
+  url: `mongodb+srv://${process.env.MONGODB_HOST}/?retryWrites=true&w=majority&appName=keyv`,
+  auth: {
+    username: process.env.MONGODB_USERNAME,
+    password: process.env.MONGODB_PASSWORD,
+  },
+  db: 'keyv',
+  collection: 'cache',
+});
+
+const keyv = new Keyv({ store });
+keyv.on('error', (error) => console.error('MongoDB error', error));
+
+await keyv.set('greeting', 'hello', 60_000);
+console.log(await keyv.get('greeting')); // 'hello'
+await keyv.disconnect();
+```
+
+Set `MONGODB_HOST` to the cluster hostname (`cluster0.abcde.mongodb.net`), and `MONGODB_USERNAME` and `MONGODB_PASSWORD` to the database user from [Creating a database user](#creating-a-database-user).
+
+If you'd rather keep the credentials in the URI, encode them with `encodeURIComponent`. The driver rejects a user name or password that contains an unencoded `:`, `/`, `?`, `#`, `[`, `]`, or `@`, and it percent-decodes both, so a literal `%` must be encoded too:
+
+```ts
+const username = encodeURIComponent(process.env.MONGODB_USERNAME ?? '');
+const password = encodeURIComponent(process.env.MONGODB_PASSWORD ?? '');
+const store = new KeyvMongo(
+  `mongodb+srv://${username}:${password}@${process.env.MONGODB_HOST}/?retryWrites=true&w=majority`,
+  { db: 'keyv', collection: 'cache' },
+);
+```
+
+### Creating a database user
+
+Atlas database users are separate from the accounts you sign in to Atlas with. To create one, go to **Database & Network Access** under **Security**, open **Database Users**, and click **Add New Database User**:
+
+1. Choose **Password** as the authentication method and set a user name and password. Atlas stores password (SCRAM) users in the `admin` database, which is the `authSource` the cluster's TXT record sets.
+2. Under **Specific Privileges**, grant `readWrite` on the database you pass as `db`. The **Read and write to any database** built-in role also works, but it gives access to every database in the project.
+3. Click **Add User**.
+
+The user needs write access to create indexes, not just to store values. When it connects, the adapter creates a unique index on `{ key, namespace }` and a TTL index on `expiresAt` (in GridFS mode, indexes on the bucket's `.files` collection). A user with only `read` fails on the first `createIndexes` command, so the adapter emits `error` and its operations reject.
+
+### IP access list and private endpoints
+
+Atlas only accepts connections from addresses on the project's IP access list. Add yours from **Database & Network Access** > **IP Access List** > **Add IP Address**, using the public IP address or CIDR range your application connects from. For an application in a private subnet that's usually the public IP of its NAT gateway. **Allow access from anywhere** adds `0.0.0.0/0`, which exposes the cluster to the whole internet, so avoid it outside quick tests.
+
+An address that isn't on the list can't reach the cluster. The driver keeps retrying until `serverSelectionTimeoutMS` (30 seconds by default) runs out, then fails with `MongoServerSelectionError`. The adapter emits that as `error`, and a Keyv instance with an `error` listener returns its fallback value, such as `undefined` from `get`. Lower the timeout to find out sooner:
+
+```ts
+const store = new KeyvMongo({
+  url: `mongodb+srv://${process.env.MONGODB_HOST}/`,
+  auth: { username: process.env.MONGODB_USERNAME, password: process.env.MONGODB_PASSWORD },
+  db: 'keyv',
+  serverSelectionTimeoutMS: 5000,
+});
+```
+
+On dedicated clusters (`M10` and up), you can connect through a private endpoint instead, so traffic stays on the cloud provider's network: AWS PrivateLink, Azure Private Link, or Google Cloud Private Service Connect. Set it up under **Database & Network Access** > **Private Endpoint**. Once it's available, the **Connect** dialog offers a **Private Endpoint** connection type with its own hostname, such as `cluster0-pl-0.abcde.mongodb.net` (`-psc-` instead of `-pl-` for Private Service Connect with port mapping). Use that hostname in `url`. Nothing else in the adapter configuration changes, but only clients in a network connected to the endpoint can resolve and reach it. MongoDB recommends the `mongodb+srv` form of the private endpoint string, because the ports behind the endpoint can change and the SRV records follow them. The IP access list still applies to clients that connect over the public internet or through network peering with the standard hostname.
+
+### Choosing `db` and `collection`
+
+- `db` is the database the adapter stores data in. It is passed to `MongoClient.db()`. When you leave it out, the driver uses the database named in the URI path, and `test` when the path is empty, as it is in the strings Atlas generates. Set `db` explicitly. Putting the database in the path (`mongodb+srv://cluster0.abcde.mongodb.net/keyv`) works as well: with `mongodb+srv`, the TXT record's `authSource=admin` still takes precedence over the path.
+- `collection` defaults to `keyv`. MongoDB creates the collection and the adapter's indexes the first time you connect. With `useGridFS: true` it is the bucket name, and data goes to `<collection>.files` and `<collection>.chunks`.
+- Several Keyv instances can share a collection. Give each its own `namespace`, which the adapter stores in a separate field and uses to scope `get`, `clear()`, and `iterator()`. Use separate collections when you want to drop or size one cache without touching the others.
+
+### TLS
+
+Atlas requires TLS on every connection, and a `mongodb+srv` URI turns it on: the driver sets `tls: true` for SRV URIs unless you set `tls` or `ssl` yourself. A standard `mongodb://` Atlas string has `ssl=true` in its query string instead. Atlas certificates are signed by a public certificate authority that Node.js trusts by default, so you don't need a CA file.
+
+Don't set `tlsAllowInvalidCertificates`, `tlsAllowInvalidHostnames`, or `tlsInsecure` for Atlas. They connect, but skip the certificate checks that protect against an attacker in the middle. For X.509 authentication instead of a password, pass the client certificate with `tlsCertificateKeyFile` and set `authMechanism: 'MONGODB-X509'`.
+
+### Expired entries: TTL index and `clearExpired`
+
+In standard mode you don't need to schedule anything. When it connects, the adapter creates a [TTL index](https://www.mongodb.com/docs/manual/core/index-ttl/) on `expiresAt` with `expireAfterSeconds: 0`, and MongoDB's background TTL monitor deletes each document after its `expiresAt` passes. The monitor runs about once a minute, so expired documents can linger for a while, but `get`, `getMany`, `has`, and `iterator()` check `expiresAt` themselves and never return an expired value. `clearExpired()` does nothing in standard mode and returns `false`.
+
+Don't create your own TTL index on `expiresAt` in the adapter's collection. MongoDB names it `expiresAt_1` like the adapter's index, and if its options differ, connecting fails with `An equivalent index already exists with the same name but different options`.
+
+GridFS mode has no TTL index. A TTL index deletes documents only from the collection it is on, so it would remove a file's `.files` document but leave its data in `.chunks`. Expired files stay until a read finds them or you call `clearExpired()`, which deletes expired files and their chunks in the adapter's current namespace. Call it on a schedule:
+
+```ts
+const store = new KeyvMongo({
+  url: `mongodb+srv://${process.env.MONGODB_HOST}/`,
+  auth: { username: process.env.MONGODB_USERNAME, password: process.env.MONGODB_PASSWORD },
+  db: 'keyv',
+  collection: 'files',
+  useGridFS: true,
+});
+
+const timer = setInterval(() => {
+  store.clearExpired().catch((error) => console.error('clearExpired failed', error));
+}, 60 * 60 * 1000);
+timer.unref();
 ```
 
 ## Migration from v3 to v6
