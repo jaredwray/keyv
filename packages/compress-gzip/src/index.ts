@@ -10,12 +10,19 @@ export class KeyvGzip {
 			toText: true,
 			...options,
 		};
+		// `to: "string"` is the pako v2 spelling. Keep it winning over a missing
+		// `toText` so existing KeyvGzip options still decompress to a string.
+		if (this.opts.to === "string") {
+			this.opts.toText = true;
+		}
 	}
 
 	async compress(value: string | Uint8Array | ArrayBuffer, options?: Options) {
 		// Wrap in a Buffer so serialization stores the compressed bytes as a
 		// compact `:base64:` string instead of an index-keyed byte object.
-		return Buffer.from(deflate(value, options || this.opts));
+		// Buffer is a Uint8Array, so callers that treated the result as bytes
+		// keep working. `to` / `toText` are inflate-only and are not passed on.
+		return Buffer.from(deflate(value, deflateOptions(options || this.opts)));
 	}
 
 	async decompress(
@@ -47,6 +54,11 @@ export class KeyvGzip {
 		/* v8 ignore next -- @preserve */
 		return { value: undefined, expires: undefined };
 	}
+}
+
+function deflateOptions(options: Options): Options {
+	const { to: _to, toText: _toText, ...rest } = options;
+	return rest;
 }
 
 function toInflateInput(

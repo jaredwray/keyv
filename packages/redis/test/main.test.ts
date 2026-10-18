@@ -1,7 +1,10 @@
 import process from "node:process";
 import { createClient, type RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
-import KeyvRedis, { createKeyv } from "../src/index.js";
+import KeyvRedis, {
+	createKeyv,
+	defaultReconnectStrategy,
+} from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
 
@@ -31,6 +34,163 @@ describe("KeyvRedis", () => {
 	test("should have a client property", () => {
 		const keyvRedis = new KeyvRedis();
 		expect(keyvRedis.client).toBeDefined();
+	});
+
+	test("keeps v5 client defaults when KeyvRedis creates the client", () => {
+		const keyvRedis = new KeyvRedis("redis://localhost:6379");
+		const options = (keyvRedis.client as RedisClientType).options;
+		const socket = options?.socket as
+			| { keepAliveInitialDelay?: number; reconnectStrategy?: unknown }
+			| undefined;
+		expect(options?.RESP).toBe(2);
+		expect(options?.commandOptions?.timeout).toBeUndefined();
+		expect(socket?.keepAliveInitialDelay).toBe(5000);
+		expect(socket?.reconnectStrategy).toBe(defaultReconnectStrategy);
+		expect(() => {
+			keyvRedis.emit("error", new Error("no listeners"));
+		}).not.toThrow();
+	});
+
+	test("does not override explicit Redis client options", () => {
+		const keyvRedis = new KeyvRedis({
+			url: "redis://localhost:6379",
+			RESP: 3,
+			commandOptions: { timeout: 1500 },
+			socket: { keepAliveInitialDelay: 1000 },
+		});
+		const options = (keyvRedis.client as RedisClientType).options;
+		const socket = options?.socket as
+			| { keepAliveInitialDelay?: number }
+			| undefined;
+		expect(options?.RESP).toBe(3);
+		expect(options?.commandOptions?.timeout).toBe(1500);
+		expect(socket?.keepAliveInitialDelay).toBe(1000);
+	});
+
+	test("leaves an existing Redis client unchanged", () => {
+		const client = createClient({
+			url: "redis://localhost:6379",
+			RESP: 3,
+		});
+		const keyvRedis = new KeyvRedis(client);
+		expect(keyvRedis.client).toBe(client);
+		expect((keyvRedis.client as RedisClientType).options?.RESP).toBe(3);
+	});
+
+	test("keeps v5 defaults for cluster and sentinel clients it creates", () => {
+		const cluster = new KeyvRedis({
+			rootNodes: [{ url: "redis://127.0.0.1:7001" }],
+		});
+		const clusterOptions = (
+			cluster.client as {
+				_options?: {
+					RESP?: number;
+					commandOptions?: { timeout?: number };
+					defaults?: {
+						socket?: { keepAliveInitialDelay?: number };
+						commandOptions?: { timeout?: number };
+					};
+					rootNodes?: Array<{ socket?: { keepAliveInitialDelay?: number } }>;
+				};
+			}
+		)._options;
+		expect(clusterOptions?.RESP).toBe(2);
+		expect(clusterOptions?.commandOptions?.timeout).toBeUndefined();
+		expect(clusterOptions?.defaults?.socket?.keepAliveInitialDelay).toBe(5000);
+		expect(clusterOptions?.defaults?.commandOptions?.timeout).toBeUndefined();
+		expect(clusterOptions?.rootNodes?.[0]?.socket?.keepAliveInitialDelay).toBe(
+			5000,
+		);
+
+		const sentinel = new KeyvRedis({
+			name: "mymaster",
+			sentinelRootNodes: [{ host: "127.0.0.1", port: 26379 }],
+		});
+		expect(sentinel.isSentinel()).toBe(true);
+		expect(
+			(sentinel.client as { commandOptions?: { timeout?: number } })
+				.commandOptions?.timeout,
+		).toBeUndefined();
+	});
+
+	test("leaves a non-array rootNodes value unchanged", () => {
+		const rootNodes = {
+			map: (
+				fn: (node: { socket?: { host?: string; port?: number } }) => unknown,
+			) => [{ socket: { host: "127.0.0.1", port: 7001 } }].map(fn),
+		};
+		const cluster = new KeyvRedis({
+			rootNodes: rootNodes as unknown as Array<{ url: string }>,
+		});
+		const clusterOptions = (
+			cluster.client as {
+				_options?: {
+					rootNodes?: unknown;
+					RESP?: number;
+				};
+			}
+		)._options;
+		expect(clusterOptions?.rootNodes).toBe(rootNodes);
+		expect(clusterOptions?.RESP).toBe(2);
+	});
+
+	test("keeps hookified v1 logger and throwHookErrors names", () => {
+		const keyvRedis = new KeyvRedis();
+		const logger = {
+			trace: () => undefined,
+			debug: () => undefined,
+			info: () => undefined,
+			warn: () => undefined,
+			error: () => undefined,
+			fatal: () => undefined,
+		};
+		keyvRedis.logger = logger;
+		keyvRedis.throwHookErrors = true;
+		expect(keyvRedis.logger).toBe(logger);
+		expect(keyvRedis.eventLogger).toBe(logger);
+		expect(keyvRedis.throwHookErrors).toBe(true);
+		expect(keyvRedis.throwOnHookError).toBe(true);
+		keyvRedis.throwHookErrors = false;
+		expect(keyvRedis.throwHookErrors).toBe(false);
+		expect(keyvRedis.throwOnHookError).toBe(false);
+	});
+
+	test("keeps hookified v1 hook method signatures", async () => {
+		const keyvRedis = new KeyvRedis();
+		const calls: string[] = [];
+		const handler = () => {
+			calls.push("prepend");
+		};
+		const entry = () => {
+			calls.push("entry");
+		};
+		keyvRedis.prependHook("ready", handler);
+		keyvRedis.onceHook("ready", () => {
+			calls.push("once");
+		});
+		keyvRedis.onHookEntry({ event: "ready", handler: entry });
+		expect(keyvRedis.getHooks("ready")?.[0]).toBe(handler);
+		await keyvRedis.hook("ready");
+		await keyvRedis.hook("ready");
+		keyvRedis.removeHook("ready", handler);
+		keyvRedis.removeHook("ready", entry);
+		await keyvRedis.hook("ready");
+		expect(calls).toEqual(["prepend", "once", "entry", "prepend", "entry"]);
+
+		const prependOnce = () => {
+			calls.push("prepend-once");
+		};
+		expect(keyvRedis.hooks.size).toBe(0);
+		expect(keyvRedis.getHooks("missing")).toBeUndefined();
+		keyvRedis.prependOnceHook("ready", prependOnce);
+		keyvRedis.prependHook({ event: "object", handler: entry }, {});
+		keyvRedis.prependOnceHook({ event: "object", handler: prependOnce });
+		keyvRedis.onceHook({ event: "object", handler: entry });
+		keyvRedis.removeHook({ event: "object", handler: entry });
+		expect(keyvRedis.hooks.get("ready")?.[0]).toBeTypeOf("function");
+		expect(() => {
+			keyvRedis.onceHook("bad", undefined as unknown as () => void);
+		}).toThrow(TypeError);
 	});
 
 	test("should be able to create Keyv instance", async () => {

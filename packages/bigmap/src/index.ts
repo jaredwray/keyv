@@ -1,6 +1,7 @@
 import { Hashery } from "hashery";
-import { Hookified, type HookifiedOptions } from "hookified";
+import type { HookifiedOptions, Logger } from "hookified";
 import { Keyv } from "keyv";
+import { HookifiedV1 } from "./hookified-v1.js";
 
 export type MapInterfacee<K, V> = {
 	readonly size: number;
@@ -37,9 +38,17 @@ export type BigMapOptions = {
 	 * @default undefined
 	 */
 	storeHashFunction?: StoreHashFunction;
+	/**
+	 * hookified v1 name for `eventLogger`. Still accepted.
+	 */
+	logger?: Logger;
+	/**
+	 * hookified v1 name for `throwOnHookError`. Still accepted.
+	 */
+	throwHookErrors?: boolean;
 } & HookifiedOptions;
 
-export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
+export class BigMap<K, V> extends HookifiedV1 implements MapInterfacee<K, V> {
 	private _storeSize = 4;
 	private _store = Array.from(
 		{ length: this._storeSize },
@@ -52,7 +61,19 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 	 * @param {BigMapOptions<K, V>} [options] - Optional configuration options for the BigMap.
 	 */
 	constructor(options?: BigMapOptions) {
-		super({ throwOnEmptyListeners: false, ...options });
+		super({
+			throwOnEmptyListeners: false,
+			...options,
+			// hookified v3 renamed these. Map the v1 names when the v3 name was
+			// not set so existing BigMap options keep working.
+			...(options?.eventLogger === undefined && options?.logger !== undefined
+				? { eventLogger: options.logger }
+				: {}),
+			...(options?.throwOnHookError === undefined &&
+			options?.throwHookErrors !== undefined
+				? { throwOnHookError: options.throwHookErrors }
+				: {}),
+		});
 		if (options?.storeSize !== undefined) {
 			if (options.storeSize < 1) {
 				throw new Error("Store size must be at least 1.");
@@ -300,6 +321,28 @@ export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
 		}
 
 		return size;
+	}
+
+	/**
+	 * hookified v1 name for `eventLogger`.
+	 */
+	public get logger(): Logger | undefined {
+		return this.eventLogger;
+	}
+
+	public set logger(logger: Logger | undefined) {
+		this.eventLogger = logger;
+	}
+
+	/**
+	 * hookified v1 name for `throwOnHookError`.
+	 */
+	public get throwHookErrors(): boolean {
+		return this.throwOnHookError;
+	}
+
+	public set throwHookErrors(value: boolean) {
+		this.throwOnHookError = value;
 	}
 }
 

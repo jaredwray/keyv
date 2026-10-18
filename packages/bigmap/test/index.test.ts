@@ -30,6 +30,97 @@ describe("BigMap Instance", () => {
 		expect(bigMap).toBeInstanceOf(BigMap);
 	});
 
+	it("should keep hookified v1 hook method signatures", async () => {
+		const bigMap = new BigMap<string, number>();
+		const calls: string[] = [];
+		const handler = () => {
+			calls.push("prepend");
+		};
+		const once = () => {
+			calls.push("once");
+		};
+		const prependOnce = () => {
+			calls.push("prepend-once");
+		};
+		const entry = () => {
+			calls.push("entry");
+		};
+
+		bigMap.prependHook("ready", handler);
+		bigMap.onceHook("ready", once);
+		bigMap.prependOnceHook("ready", prependOnce);
+		bigMap.onHookEntry({ event: "ready", handler: entry });
+
+		const hooks = bigMap.getHooks("ready");
+		expect(hooks).toHaveLength(4);
+		expect(hooks?.[1]).toBe(handler);
+		expect(hooks?.[3]).toBe(entry);
+		expect(bigMap.hooks.get("ready")?.[1]).toBe(handler);
+
+		await bigMap.hook("ready");
+		await bigMap.hook("ready");
+		expect(calls).toEqual([
+			"prepend-once",
+			"prepend",
+			"once",
+			"entry",
+			"prepend",
+			"entry",
+		]);
+
+		bigMap.removeHook("ready", handler);
+		bigMap.removeHook("ready", entry);
+		await bigMap.hook("ready");
+		expect(calls).toEqual([
+			"prepend-once",
+			"prepend",
+			"once",
+			"entry",
+			"prepend",
+			"entry",
+		]);
+
+		const objectHandler = () => {
+			calls.push("object");
+		};
+		expect(bigMap.hooks.size).toBe(0);
+		expect(bigMap.getHooks("missing")).toBeUndefined();
+		bigMap.prependHook({ event: "object", handler: objectHandler }, {});
+		bigMap.prependOnceHook({ event: "object", handler: objectHandler });
+		bigMap.onceHook({ event: "object", handler: objectHandler });
+		bigMap.removeHook({ event: "object", handler: objectHandler });
+		expect(() => {
+			bigMap.prependHook("bad", undefined as unknown as () => void);
+		}).toThrow(TypeError);
+	});
+
+	it("should keep hookified v1 logger and throwHookErrors names", () => {
+		const logger = {
+			trace: () => undefined,
+			debug: () => undefined,
+			info: () => undefined,
+			warn: () => undefined,
+			error: () => undefined,
+			fatal: () => undefined,
+		};
+		const bigMap = new BigMap<string, number>({
+			logger,
+			throwHookErrors: true,
+		});
+		expect(bigMap.eventLogger).toBe(logger);
+		expect(bigMap.logger).toBe(logger);
+		expect(bigMap.throwOnHookError).toBe(true);
+		expect(bigMap.throwHookErrors).toBe(true);
+		const replacement = { ...logger };
+		bigMap.logger = replacement;
+		bigMap.throwHookErrors = false;
+		expect(bigMap.eventLogger).toBe(replacement);
+		expect(bigMap.throwOnHookError).toBe(false);
+		expect(() => {
+			bigMap.emit("error", new Error("no listeners"));
+		}).not.toThrow();
+	});
+
 	it("should initialize with an empty map", () => {
 		const bigMap = new BigMap<string, number>();
 		expect(bigMap.size).toBe(0);
