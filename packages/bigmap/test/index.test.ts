@@ -79,6 +79,19 @@ describe("BigMap Instance", () => {
 			"prepend",
 			"entry",
 		]);
+
+		const objectHandler = () => {
+			calls.push("object");
+		};
+		expect(bigMap.hooks.size).toBe(0);
+		expect(bigMap.getHooks("missing")).toBeUndefined();
+		bigMap.prependHook({ event: "object", handler: objectHandler }, {});
+		bigMap.prependOnceHook({ event: "object", handler: objectHandler });
+		bigMap.onceHook({ event: "object", handler: objectHandler });
+		bigMap.removeHook({ event: "object", handler: objectHandler });
+		expect(() => {
+			bigMap.prependHook("bad", undefined as unknown as () => void);
+		}).toThrow(TypeError);
 	});
 
 	it("should keep hookified v1 logger and throwHookErrors names", () => {

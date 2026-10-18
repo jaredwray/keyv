@@ -176,6 +176,21 @@ describe("KeyvRedis", () => {
 		keyvRedis.removeHook("ready", entry);
 		await keyvRedis.hook("ready");
 		expect(calls).toEqual(["prepend", "once", "entry", "prepend", "entry"]);
+
+		const prependOnce = () => {
+			calls.push("prepend-once");
+		};
+		expect(keyvRedis.hooks.size).toBe(0);
+		expect(keyvRedis.getHooks("missing")).toBeUndefined();
+		keyvRedis.prependOnceHook("ready", prependOnce);
+		keyvRedis.prependHook({ event: "object", handler: entry }, {});
+		keyvRedis.prependOnceHook({ event: "object", handler: prependOnce });
+		keyvRedis.onceHook({ event: "object", handler: entry });
+		keyvRedis.removeHook({ event: "object", handler: entry });
+		expect(keyvRedis.hooks.get("ready")?.[0]).toBeTypeOf("function");
+		expect(() => {
+			keyvRedis.onceHook("bad", undefined as unknown as () => void);
+		}).toThrow(TypeError);
 	});
 
 	test("should be able to create Keyv instance", async () => {
