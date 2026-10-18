@@ -30,6 +30,57 @@ describe("BigMap Instance", () => {
 		expect(bigMap).toBeInstanceOf(BigMap);
 	});
 
+	it("should keep hookified v1 hook method signatures", async () => {
+		const bigMap = new BigMap<string, number>();
+		const calls: string[] = [];
+		const handler = () => {
+			calls.push("prepend");
+		};
+		const once = () => {
+			calls.push("once");
+		};
+		const prependOnce = () => {
+			calls.push("prepend-once");
+		};
+		const entry = () => {
+			calls.push("entry");
+		};
+
+		bigMap.prependHook("ready", handler);
+		bigMap.onceHook("ready", once);
+		bigMap.prependOnceHook("ready", prependOnce);
+		bigMap.onHookEntry({ event: "ready", handler: entry });
+
+		const hooks = bigMap.getHooks("ready");
+		expect(hooks).toHaveLength(4);
+		expect(hooks?.[1]).toBe(handler);
+		expect(hooks?.[3]).toBe(entry);
+		expect(bigMap.hooks.get("ready")?.[1]).toBe(handler);
+
+		await bigMap.hook("ready");
+		await bigMap.hook("ready");
+		expect(calls).toEqual([
+			"prepend-once",
+			"prepend",
+			"once",
+			"entry",
+			"prepend",
+			"entry",
+		]);
+
+		bigMap.removeHook("ready", handler);
+		bigMap.removeHook("ready", entry);
+		await bigMap.hook("ready");
+		expect(calls).toEqual([
+			"prepend-once",
+			"prepend",
+			"once",
+			"entry",
+			"prepend",
+			"entry",
+		]);
+	});
+
 	it("should keep hookified v1 logger and throwHookErrors names", () => {
 		const logger = {
 			trace: () => undefined,

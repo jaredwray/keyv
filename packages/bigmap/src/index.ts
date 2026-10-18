@@ -1,6 +1,7 @@
 import { Hashery } from "hashery";
-import { Hookified, type HookifiedOptions, type Logger } from "hookified";
+import type { HookifiedOptions, Logger } from "hookified";
 import { Keyv } from "keyv";
+import { HookifiedV1 } from "./hookified-v1.js";
 
 export type MapInterfacee<K, V> = {
 	readonly size: number;
@@ -47,7 +48,7 @@ export type BigMapOptions = {
 	throwHookErrors?: boolean;
 } & HookifiedOptions;
 
-export class BigMap<K, V> extends Hookified implements MapInterfacee<K, V> {
+export class BigMap<K, V> extends HookifiedV1 implements MapInterfacee<K, V> {
 	private _storeSize = 4;
 	private _store = Array.from(
 		{ length: this._storeSize },

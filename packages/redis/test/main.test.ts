@@ -86,7 +86,10 @@ describe("KeyvRedis", () => {
 				_options?: {
 					RESP?: number;
 					commandOptions?: { timeout?: number };
-					defaults?: { socket?: { keepAliveInitialDelay?: number } };
+					defaults?: {
+						socket?: { keepAliveInitialDelay?: number };
+						commandOptions?: { timeout?: number };
+					};
 					rootNodes?: Array<{ socket?: { keepAliveInitialDelay?: number } }>;
 				};
 			}
@@ -94,6 +97,7 @@ describe("KeyvRedis", () => {
 		expect(clusterOptions?.RESP).toBe(2);
 		expect(clusterOptions?.commandOptions?.timeout).toBeUndefined();
 		expect(clusterOptions?.defaults?.socket?.keepAliveInitialDelay).toBe(5000);
+		expect(clusterOptions?.defaults?.commandOptions?.timeout).toBeUndefined();
 		expect(clusterOptions?.rootNodes?.[0]?.socket?.keepAliveInitialDelay).toBe(
 			5000,
 		);
@@ -149,6 +153,29 @@ describe("KeyvRedis", () => {
 		keyvRedis.throwHookErrors = false;
 		expect(keyvRedis.throwHookErrors).toBe(false);
 		expect(keyvRedis.throwOnHookError).toBe(false);
+	});
+
+	test("keeps hookified v1 hook method signatures", async () => {
+		const keyvRedis = new KeyvRedis();
+		const calls: string[] = [];
+		const handler = () => {
+			calls.push("prepend");
+		};
+		const entry = () => {
+			calls.push("entry");
+		};
+		keyvRedis.prependHook("ready", handler);
+		keyvRedis.onceHook("ready", () => {
+			calls.push("once");
+		});
+		keyvRedis.onHookEntry({ event: "ready", handler: entry });
+		expect(keyvRedis.getHooks("ready")?.[0]).toBe(handler);
+		await keyvRedis.hook("ready");
+		await keyvRedis.hook("ready");
+		keyvRedis.removeHook("ready", handler);
+		keyvRedis.removeHook("ready", entry);
+		await keyvRedis.hook("ready");
+		expect(calls).toEqual(["prepend", "once", "entry", "prepend", "entry"]);
 	});
 
 	test("should be able to create Keyv instance", async () => {

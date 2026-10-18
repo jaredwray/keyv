@@ -16,8 +16,8 @@ import {
 	type TypeMapping,
 } from "@redis/client";
 import calculateSlot from "cluster-key-slot";
-import { Hookified } from "hookified";
 import type { KeyvEntry, KeyvStoreAdapter } from "keyv";
+import { HookifiedV1 } from "./hookified-v1.js";
 import {
 	defaultReconnectStrategy,
 	type KeyvRedisEntry,
@@ -86,6 +86,12 @@ function withV5ClusterDefaults<T extends Record<string, any>>(options: T): T {
 		defaults: {
 			...defaults,
 			socket: withV5SocketDefaults(defaults.socket),
+			// Node clients are built from `defaults`, not the cluster-level
+			// commandOptions. Without this they inherit @redis/client 6's 5s timeout.
+			commandOptions: {
+				timeout: undefined,
+				...defaults.commandOptions,
+			},
 		},
 		rootNodes: Array.isArray(options.rootNodes)
 			? options.rootNodes.map((node: Record<string, any>) => ({
@@ -113,7 +119,7 @@ function withV5SentinelDefaults<T extends Record<string, any>>(options: T): T {
 }
 
 export default class KeyvRedis<T>
-	extends Hookified
+	extends HookifiedV1
 	implements KeyvStoreAdapter
 {
 	private _client!: RedisClientConnectionType;
