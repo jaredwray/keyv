@@ -32,6 +32,14 @@ blockExoticSubdeps: true
 # liquidjs stays on 10.29.0 (ecto requires ^10.29.0); versions below the
 # 10.27.2 patches are lifted to that release. vitest is already a direct
 # devDependency at ^4.1.11, which is above 3.2.6.
+#
+# vite is only pulled by vitest (`^6 || ^7 || ^8`). A fresh resolve selects
+# vite 8; these pins keep the 7.x line already in the lockfile (7.3.7 is the
+# newest 7.x inside the cooldown; 7.3.5 is the advisory floor). rollup,
+# postcss, nanoid, picomatch, and source-map-js are transitive and their
+# parents still accept the vulnerable release, so the lockfile kept it.
+# miniflare 4 pins sharp at 0.35.2. No 4.x release depends on sharp >= 0.35.5,
+# and miniflare 5 is still prerelease, so that parent cannot be bumped.
 overrides:
   semver@5.7.2: 7.7.3
   "handlebars@<4.7.10": 4.7.10
@@ -50,3 +58,11 @@ overrides:
   "brace-expansion@>=3 <3.0.9": 3.0.9
   "brace-expansion@>=5 <5.0.12": 5.0.12
   "@isaacs/brace-expansion@<5.0.1": 5.0.1
+  "vite@>=7 <7.3.7": 7.3.7
+  "vite@>=8": 7.3.7
+  "rollup@>=4 <4.64.5": 4.64.5
+  "postcss@>=8 <8.5.29": 8.5.29
+  "nanoid@>=3 <3.3.20": 3.3.20
+  "picomatch@>=2 <2.3.2": 2.3.2
+  "source-map-js@<1.2.2": 1.2.2
+  "sharp@>=0.35 <0.35.5": 0.35.5
