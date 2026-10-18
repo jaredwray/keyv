@@ -122,7 +122,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	 * Swallows Redis client errors while an in-flight connect is being aborted.
 	 */
 	private readonly _swallowClientError = (): void => {
-		// Late errors from an aborted handshake (eject/destroy during HELLO).
+		// Late errors from an aborted handshake (destroy during HELLO).
 	};
 	/**
 	 * Whether the connected server supports the absolute-expiry `PXAT` option (Redis 6.2+).
@@ -432,8 +432,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 				await this.raceWithTimeout(connecting, this._connectionTimeout);
 			}
 		} catch (error) {
-			const timedOut = this.isConnectTimeoutError(error);
-			this.abortConnect(client, timedOut);
+			this.abortConnect(client);
+			// Wait a macrotask so the aborted node-redis `#connect()` loop sees `isOpen` false and ends.
+			// A caller that calls `connect()` before then, such as a retry chained on this rejection,
+			// would resume that loop and leave a second socket open.
+			await new Promise<void>((resolve) => {
+				setImmediate(resolve);
+			});
 
 			// Report the failure once: reject with it as the cause, or emit it and carry on.
 			if (this._throwOnConnectError) {
@@ -1449,45 +1454,22 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Whether a failed `connect()` was a handshake timeout (Keyv race or node-redis socketTimeout).
-	 * `RedisClient.destroy()` during HELLO can leave the TCP socket open, so those errors must not
-	 * use `destroy()`.
-	 * @param {unknown} error - The error from `connect()` or `raceWithTimeout()`.
-	 * @returns {boolean} `true` when the failure is a connect/handshake timeout.
-	 */
-	private isConnectTimeoutError(error: unknown): boolean {
-		if (!(error instanceof Error)) {
-			/* v8 ignore next -- @preserve */
-			return false;
-		}
-
-		return (
-			error.message.startsWith("Redis timed out after") ||
-			error.message.includes("Socket timeout") ||
-			error.message.includes("Connection timeout")
-		);
-	}
-
-	/**
-	 * Stop using a failed client. Timed-out handshakes close via RedisSocket.destroy() (sets
-	 * `isOpen` false and destroys the net.Socket without RedisClient.flushAll). Other failures
-	 * destroy if still open. Owned clients are replaced so a later `getClient()` cannot resume
-	 * the aborted `#connect()` loop.
+	 * Stop using a failed client. `destroy()` closes the socket of a hung handshake, rejects the
+	 * commands the client had queued, clears its `pingInterval` timer, and leaves `connect()` usable
+	 * again, so a client passed in keeps working after a timed-out connect. With `isOpen` false,
+	 * node-redis 6.2+ ends the aborted `#connect()` loop instead of retrying, as long as nothing calls
+	 * `connect()` before the loop unwinds (see {@link connectClient}). Owned clients are replaced so
+	 * the next `getClient()` starts from a fresh client.
 	 * @param {RedisClientConnectionType} client - The client whose `connect()` failed.
-	 * @param {boolean} timedOut - Whether the failure was a handshake timeout.
 	 * @returns {void}
 	 */
-	private abortConnect(client: RedisClientConnectionType, timedOut: boolean): void {
+	private abortConnect(client: RedisClientConnectionType): void {
 		// A client passed in stays in use after a failed connect, so attach this only once.
 		if (!client.listeners("error").includes(this._swallowClientError)) {
 			client.on("error", this._swallowClientError);
 		}
 
-		if (timedOut) {
-			this.closeHungHandshake(client);
-		} else {
-			this.destroyQuietly(client);
-		}
+		this.destroyQuietly(client);
 
 		if (this._ownsClient && this._client === client) {
 			// Recreate after close so retries cannot resume the aborted `#connect()` loop.
@@ -1496,46 +1478,6 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			this._pxatSupported = undefined;
 			this.initClient();
 		}
-	}
-
-	/**
-	 * Close a hung handshake without `RedisClient.destroy()`. That path `flushAll`s pending HELLO
-	 * commands and can leave the TCP connection open. Eject the RedisSocket and destroy the
-	 * underlying `net.Socket` without passing an error.
-	 * @param {RedisClientConnectionType} client - The client whose handshake is hung.
-	 * @returns {void}
-	 */
-	private closeHungHandshake(client: RedisClientConnectionType): void {
-		const maybe = client as KeyvAny;
-		try {
-			if (typeof maybe._ejectSocket === "function") {
-				const redisSocket = maybe._ejectSocket() as {
-					destroy?: () => void;
-					destroySocket?: () => void;
-					isOpen?: boolean;
-				};
-				// RedisSocket.destroy() sets isOpen=false so `#connect` does not open a replacement
-				// socket. RedisClient.destroy() is avoided because flushAll() during HELLO can leak.
-				if (redisSocket.isOpen && typeof redisSocket.destroy === "function") {
-					redisSocket.destroy();
-					return;
-				}
-
-				/* v8 ignore next -- @preserve */
-				if (typeof redisSocket.destroySocket === "function") {
-					/* v8 ignore next -- @preserve */
-					redisSocket.destroySocket();
-					/* v8 ignore next -- @preserve */
-					return;
-				}
-			}
-		} catch {
-			/* v8 ignore next -- @preserve */
-			// Cluster/sentinel clients, or the socket was not assigned yet.
-		}
-
-		/* v8 ignore next -- @preserve */
-		this.destroyQuietly(client);
 	}
 
 	/**
@@ -1561,7 +1503,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 	}
 
 	/**
-	 * Call `destroy()` and ignore already-closed errors.
+	 * Call `destroy()` and ignore already-closed errors. Skips a client that is not open, because
+	 * node-redis 6.2 throws `ClientClosedError` from `destroy()` once the socket is closed.
 	 * @param {RedisClientConnectionType} client - The client to destroy.
 	 * @returns {void}
 	 */
@@ -1573,7 +1516,7 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 			client.destroy();
 		} catch {
-			// Already closed, ejected, or never opened.
+			// Already closed or never opened.
 		}
 	}
 

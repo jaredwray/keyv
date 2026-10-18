@@ -45,6 +45,7 @@ Keyv v6 is the current stable release, starting with 6.1.0. This guide covers th
   - [`@keyv/bigmap` Keeps Entries When `storeSize` or `storeHashFunction` Changes](#keyvbigmap-keeps-entries-when-storesize-or-storehashfunction-changes)
   - [`@keyv/redis` `keyPrefixSeparator` Is Now `namespaceSeparator`](#keyvredis-keyprefixseparator-is-now-namespaceseparator)
   - [`@keyv/redis` Matches the Namespace Literally](#keyvredis-matches-the-namespace-literally)
+  - [`@keyv/redis` `connectionTimeout` Turns Off Auto-Reconnect](#keyvredis-connectiontimeout-turns-off-auto-reconnect)
 - [New Features](#new-features)
   - [Keyv v6 Versioning](#keyv-v6-versioning)
   - [Keyv v5 Maintenance Mode](#keyv-v5-maintenance-mode)
@@ -827,6 +828,29 @@ In v6, the namespace and separator are matched literally. `clear()` and `iterato
 **What this means for you:**
 - Namespaces without those characters behave as before
 - If code used a wildcard namespace to clear or iterate several namespaces at once, call `clear()` or `iterator()` once for each namespace instead
+
+---
+
+### `@keyv/redis` `connectionTimeout` Turns Off Auto-Reconnect
+
+In v5, `connectionTimeout` only limited how long a connect could take, and a client that `KeyvRedis` built still reconnected on its own after a disconnect.
+
+In v6, when `KeyvRedis` builds the client and `connectionTimeout` is set, it also passes the value as `socket.connectTimeout`, unless you set one, and sets `socket.reconnectStrategy` to `false`, unless you pass one. After a disconnect, that client stays closed until the next operation connects it again. When a connect times out or fails, the adapter destroys the client, which rejects the commands it had queued, as v5 did. It then replaces a client it built with a new one, so `store.client` returns a different object. A client you pass in keeps its own options and connects again on the next operation.
+
+**v6 (after):**
+```javascript
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
+
+const store = new KeyvRedis(
+  { url: 'redis://localhost:6379', socket: { reconnectStrategy: defaultReconnectStrategy } },
+  { connectionTimeout: 5000 },
+);
+```
+
+**What this means for you:**
+- If you set `connectionTimeout` and want the client to reconnect on its own, pass `socket.reconnectStrategy` in the client options, as above
+- Read `store.client` again after a failed connect instead of keeping the old reference
+- On a client you pass in, set `socket.connectTimeout` no higher than `connectionTimeout`. A TCP connect that is still pending can't be aborted
 
 ---
 
