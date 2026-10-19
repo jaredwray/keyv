@@ -84,7 +84,7 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - The default `storeSize` changed, and a custom hash function now receives the real `storeSize`. Check any code that depends on how keys are distributed.
 - Setting `storeSize` or `storeHashFunction` keeps every entry. In v5, setting `storeSize` removed them all, and setting `storeHashFunction` left them where `get()` couldn't find them. If code set `storeSize` to empty the map, add a `clear()` call.
 - No default export: `import { BigMap, createKeyv } from '@keyv/bigmap'`.
-- New: `createKeyv()` takes `clearExpiredInterval` to delete expired entries on a timer, one internal `Map` per tick.
+- New: to delete expired entries on a timer, wrap the BigMap in `KeyvMemoryAdapter` from `keyv` and set its `clearExpiredInterval` option. Each tick sweeps one internal `Map`. `createKeyv()` passes the option through too.
 
 ## Compression: `@keyv/compress-gzip`, `@keyv/compress-brotli`, `@keyv/compress-lz4`
 
