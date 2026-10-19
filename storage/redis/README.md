@@ -42,6 +42,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [TLS Support](#tls-support)
 * [Redis Cloud](#redis-cloud)
 * [Amazon ElastiCache](#amazon-elasticache)
+* [Upstash](#upstash)
 * [Keyv Redis Options](#keyv-redis-options)
 * [API](#api)
 * [Events](#events)
@@ -783,6 +784,123 @@ The cache's security group must allow inbound TCP from your application:
 - **Serverless:** ports 6379 and 6380. AWS recommends opening 6380 even if you don't read from replicas, because some clients connect to it anyway.
 
 Use your application's security group as the rule's source rather than a CIDR range, so the rule follows the application as its addresses change. When a security group or route blocks the connection, the connection attempt waits for `socket.connectTimeout` (5 seconds by default) and then fails, and the adapter rejects or emits `error` as described in [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts). Set the adapter's `connectionTimeout` option to fail sooner. When Keyv builds the client, that value is also written to `socket.connectTimeout`, and `socket.reconnectStrategy` is set to `false` unless you already passed one. Pair it with the `reconnectStrategy` in [Failover and unresponsive nodes](#failover-and-unresponsive-nodes) when the client should reconnect after a later disconnect.
+
+# Upstash
+
+`@keyv/redis` connects to Upstash Redis over TCP, the Redis protocol, like any other Redis server. Use a URI or client options. `KeyvRedis` creates a client from a URI string, and passes an options object to `createClient` from `@redis/client`, unchanged except for `connectionTimeout` when you set it. So `url`, `socket`, and `pingInterval` below are standard `@redis/client` options. `createKeyv` accepts the same arguments. Upstash's [Connect Your Client](https://upstash.com/docs/redis/howto/connectclient) page is the reference for the provider details below.
+
+`@keyv/redis` doesn't speak Upstash's HTTP REST API. It can't run where Node.js sockets aren't available, such as Cloudflare Workers, Vercel Edge Functions, and other edge runtimes. See [Edge and serverless runtimes](#edge-and-serverless-runtimes).
+
+## Endpoint and token
+
+Open the database in the Upstash Console. The **Connect** section's **TCP** tab shows the endpoint, the port, and a connection string. The console shows a **Token** and no separate password: the token is the password of the `default` user. The `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` values in the same section are for HTTP clients, not for `@keyv/redis`.
+
+TLS is always on for Upstash Redis and can't be turned off, so the URI uses the `rediss://` scheme (two `s`'s):
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const url = new URL(`rediss://${process.env.UPSTASH_REDIS_HOST}:${process.env.UPSTASH_REDIS_PORT ?? 6379}`);
+url.username = 'default';
+url.password = process.env.UPSTASH_REDIS_TOKEN;
+
+const keyv = new Keyv(new KeyvRedis(url.toString()));
+keyv.on('error', (error) => console.error('Upstash error', error));
+
+await keyv.set('greeting', 'hello', 60_000);
+console.log(await keyv.get('greeting')); // 'hello'
+await keyv.disconnect();
+```
+
+Set `UPSTASH_REDIS_HOST` to the endpoint without the port, and `UPSTASH_REDIS_TOKEN` to the token. You can also keep the whole `rediss://default:<token>@<endpoint>:<port>` string from the **TCP** tab in one environment variable and pass it as the URI.
+
+Keep these points in mind:
+
+- A `redis://` URI connects without TLS, and Upstash resets the connection. Upstash's [ECONNRESET troubleshooting](https://upstash.com/docs/redis/troubleshooting/econn_reset) page covers this.
+- Upstash's own Node.js example connects with a plain `rediss://` URI and no CA file, so you don't pass a `ca`. Leave `rejectUnauthorized` unset so Node.js verifies the certificate, and connect with the endpoint hostname, not an IP address.
+- The **Read-Only Token** option switches the connection string to the `default_ro` user. Keyv writes as well as reads, so use the `default` user, or an ACL user that can run the commands Keyv sends, including `SCAN` for `clear()` and `iterator()`.
+
+## Standalone, not cluster
+
+Upstash [does not support sharding](https://upstash.com/docs/redis/help/faq), so a database is one endpoint that you reach with a URI or client options. Don't pass `rootNodes` or a client from `createCluster`. `KeyvRedis` sends `getMany`, `setMany`, `hasMany`, and `deleteMany` as one command or transaction each, which a standalone server accepts across any keys.
+
+A [Global Database](https://upstash.com/docs/redis/features/globaldatabase) still has a single endpoint. Upstash sends writes to the primary region and can serve reads from a read region, and replication is eventually consistent, so a `get` right after a `set` can briefly return the old value or `undefined`.
+
+## Idle connections and reconnecting
+
+A `KeyvRedis` instance holds one long-lived TCP connection. Upstash doesn't document a fixed idle timeout, but the connection can still close: Upstash notes that clients may disconnect and reconnect when you upgrade the database, and a NAT gateway or load balancer between your application and Upstash can drop a connection that has been quiet. These `@redis/client` settings help:
+
+- **TCP keepalive** is on by default in `@redis/client` (`socket.keepAlive`), and the first probe goes out after 30 seconds of silence (`socket.keepAliveInitialDelay`, `30000`).
+- **`pingInterval`** sends `PING` on that interval, in milliseconds, so the connection carries traffic even when Keyv doesn't. Upstash's [billing page](https://upstash.com/docs/redis/overall/billing) lists `PING` among the commands it doesn't bill.
+- **`socket.reconnectStrategy`** decides whether to reconnect after the connection closes. A URI string gets the adapter's [`defaultReconnectStrategy`](#helpers). With an options object, `@redis/client` uses its own strategy, which doesn't reconnect after a socket timeout. Pass `defaultReconnectStrategy`, which `@keyv/redis` exports, to reconnect in every case.
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
+
+const url = new URL(`rediss://${process.env.UPSTASH_REDIS_HOST}:${process.env.UPSTASH_REDIS_PORT ?? 6379}`);
+url.username = 'default';
+url.password = process.env.UPSTASH_REDIS_TOKEN;
+
+const keyv = new Keyv(new KeyvRedis({
+  url: url.toString(),
+  pingInterval: 60_000,
+  socket: {
+    tls: true,
+    reconnectStrategy: defaultReconnectStrategy,
+  },
+}));
+keyv.on('error', (error) => console.error('Upstash error', error));
+```
+
+`connectionTimeout` is the second argument to `KeyvRedis` and to `createKeyv`, not a field of the client options. Putting it next to `url` or `pingInterval` does nothing: the adapter never reads it from there. When it is set, Keyv writes it to `socket.connectTimeout` unless that is already set, and sets `socket.reconnectStrategy` to `false` unless that is already set. A URI string has no reconnect strategy of its own to keep, so a URI plus `connectionTimeout` does not reconnect. The `defaultReconnectStrategy` a URI would otherwise get is replaced. To bound the handshake and still reconnect, pass client options with `reconnectStrategy` as the first argument and the adapter options as the second:
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
+
+const url = new URL(`rediss://${process.env.UPSTASH_REDIS_HOST}:${process.env.UPSTASH_REDIS_PORT ?? 6379}`);
+url.username = 'default';
+url.password = process.env.UPSTASH_REDIS_TOKEN;
+
+const keyv = new Keyv(new KeyvRedis({
+  url: url.toString(),
+  pingInterval: 60_000,
+  socket: {
+    tls: true,
+    reconnectStrategy: defaultReconnectStrategy,
+  },
+}, {
+  connectionTimeout: 5_000,
+}));
+```
+
+`socket.socketTimeout` is covered in [Failover and unresponsive nodes](#failover-and-unresponsive-nodes). Each `PING` refreshes it, so don't combine it with `pingInterval` when you rely on it to detect a server that stopped responding.
+
+Commands sent while the client reconnects wait in its offline queue. If Keyv is a cache in front of another data source and shouldn't hold up a request, see [Using the `createKeyvNonBlocking` function](#using-the-createkeyvnonblocking-function) and [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
+
+## Free tier and command limits
+
+Upstash bills and limits by the number of commands, and commands sent over TCP count the same as REST requests. Check the [Pricing & Billing](https://upstash.com/docs/redis/overall/billing) page and the [pricing page](https://upstash.com/pricing/redis) for current numbers, since they change. When this guide was written, the free tier allowed one database with 250 MB of data and 500K commands a month, and every plan had a commands-per-second limit above which Upstash throttles requests.
+
+How Keyv's operations count:
+
+- `get`, `set`, `has`, and `delete` send one command each. Before its first `set` with a TTL or its first `setMany`, the adapter also sends `INFO server` once to check for `PXAT` support. Upstash doesn't bill `INFO`.
+- `getMany` sends one `MGET`. `setMany`, `hasMany`, and `deleteMany` send a `MULTI`/`EXEC` transaction with one command per key, and Upstash bills a transaction of N commands as N + 2.
+- `clear()` sends a `SCAN` for each batch of `clearBatchSize` keys plus an `UNLINK` (or `DEL`) for the keys it found. `iterator()` sends a `SCAN` and an `MGET` for each batch. On a large database, these add up.
+
+What happens at a limit depends on which limit it is. The [FAQ](https://upstash.com/docs/redis/help/faq) says a database over its commands-per-second limit is throttled and the commands wait. The same page says commands past a free database's included requests return an exception, but that answer still names 10,000 requests a day, which is not the 500K monthly commands on the billing page. Use the billing page for the number. A pay-as-you-go database with a monthly budget is rate-limited once it reaches the budget. With an `error` listener attached, Keyv turns a failed command into a fallback value, such as `undefined` from `get`, as described in [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
+
+Upstash's eviction is off by default, so a full database rejects writes. Turn eviction on in the console when you use the database only as a cache. See [Eviction](https://upstash.com/docs/redis/features/eviction).
+
+## Edge and serverless runtimes
+
+`@keyv/redis` uses Node.js sockets (`node:net` and `node:tls`) through `@redis/client`. It has no HTTP client, so it can't call Upstash's REST API, and it can't run in edge runtimes that don't provide those modules, including Cloudflare Workers, Vercel Edge Functions, and Fastly Compute. Upstash's client for those runtimes is [`@upstash/redis`](https://upstash.com/docs/redis/sdks/ts/overview). That package is not a Keyv adapter, and this one can't sit in front of it.
+
+[`keyv-upstash`](https://github.com/mahdavipanah/keyv-upstash) is a third-party package that wraps `@upstash/redis` for Keyv. It isn't maintained in this repository, and its last publish predates Keyv v6. It isn't a supported way to reach Upstash from this adapter.
+
+Serverless functions on Node.js, such as AWS Lambda, can use `@keyv/redis` over TCP. Create the Keyv instance once at module scope so warm invocations reuse its connection. Many concurrent instances each hold a connection, and Upstash rejects new ones with `ERR max concurrent connections exceeded` when a database reaches its connection limit. See [max concurrent connections](https://upstash.com/docs/redis/troubleshooting/max_concurrent_connections).
 
 # API
 
