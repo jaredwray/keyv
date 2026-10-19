@@ -606,10 +606,14 @@ await keyv.delete('user:1');
 await keyv.clear();
 ```
 
-To delete expired entries that are never read again, pass `clearExpiredInterval` (milliseconds). Each tick sweeps one of the BigMap's internal Maps, so a tick never walks the whole store:
+To delete expired entries that are never read again, wrap the BigMap in a `KeyvMemoryAdapter` and set its `clearExpiredInterval` option (milliseconds). The option belongs to the memory adapter, so it applies only to `Map`-like stores; other storage adapters handle expiry themselves (`@keyv/sqlite` has its own `clearExpiredInterval`). On a BigMap each tick sweeps one internal Map, so a tick never walks the whole store:
 
 ```js
-const keyv = createKeyv({ storeSize: 16, clearExpiredInterval: 10_000 });
+import Keyv, { KeyvMemoryAdapter } from 'keyv';
+import { BigMap } from '@keyv/bigmap';
+
+const store = new KeyvMemoryAdapter(new BigMap({ storeSize: 16 }), { clearExpiredInterval: 10_000 });
+const keyv = new Keyv({ store });
 ```
 
 For more details about BigMap, see the [@keyv/bigmap documentation](https://github.com/jaredwray/keyv/tree/main/core/bigmap).
