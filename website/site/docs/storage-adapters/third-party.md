@@ -20,7 +20,7 @@ Community adapters let you use backends beyond the [official list](/docs/storage
 | [keyv-browser](https://github.com/zaaack/keyv-browser) | Browser storage adapter including localStorage and indexedDB |
 | [keyv-cloudflare](https://npm.im/keyv-cloudflare) | Storage adapter for Cloudflare Workers KV |
 | [keyv-dynamodb](https://www.npmjs.com/package/keyv-dynamodb) | DynamoDB storage adapter for Keyv |
-| [keyv-file](https://github.com/zaaack/keyv-file) | File system storage adapter for Keyv |
+| [keyv-file](https://github.com/zaaack/keyv-file) | File system storage adapter for Keyv. It runs through Keyv's bridge adapter; [@keyv/fs](/docs/storage-adapters/fs/) is the official file system adapter |
 | [keyv-firestore](https://github.com/goto-bus-stop/keyv-firestore) | Firebase Cloud Firestore adapter for Keyv |
 | [keyv-lru](https://www.npmjs.com/package/keyv-lru) | LRU storage adapter for Keyv |
 | [keyv-momento](https://github.com/momentohq/node-keyv-adaptor/) | Momento storage adapter for Keyv |
