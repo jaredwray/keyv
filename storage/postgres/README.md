@@ -47,6 +47,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 - [Connection Pooling](#connection-pooling)
 - [SSL/TLS Connections](#ssltls-connections)
 - [Amazon RDS for PostgreSQL](#amazon-rds-for-postgresql)
+- [Supabase](#supabase)
 - [Testing](#testing)
 - [License](#license)
 
@@ -631,6 +632,142 @@ const keyvPostgres = new KeyvPostgres(
 - Use `sslmode=verify-full`, which verifies both the CA and the hostname. `pg` 8 treats `prefer`, `require`, and `verify-ca` as `verify-full` and logs a security warning. As a result, `sslmode=require` without `sslrootcert` fails against RDS for the same reason `ssl: true` does.
 - `sslrootcert` is a file path, and `pg` reads the bundle from that file.
 - When the URI has SSL parameters, `pg` builds its SSL settings from the URI and ignores the `ssl` option. Configure TLS in one place, either on the URI or with `ssl`.
+
+# Supabase
+
+`@keyv/postgres` connects to a Supabase project's Postgres database with the same `uri` and `ssl` options it uses for any PostgreSQL server. The adapter passes `uri` to `pg` as its `connectionString`, passes `ssl` to `pg` unchanged, and passes options it doesn't recognize, such as `max`, to `pg.Pool`. `createKeyv` accepts the same options. Supabase's [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres) guide is the reference for the provider details below.
+
+## Connection string
+
+Open your project in the Supabase Dashboard and click **Connect** at the top of the page. Choose a connection method, copy its string, and replace `[YOUR-PASSWORD]` with your database password. Supabase offers these Postgres connection strings:
+
+| Method | Host and port | Username | Network |
+| --- | --- | --- | --- |
+| Direct connection | `db.<project-ref>.supabase.co:5432` | `postgres` | IPv6, or IPv4 with the IPv4 add-on |
+| Shared pooler (Supavisor), session mode | `<pooler-host>:5432` | `postgres.<project-ref>` | IPv4 |
+| Shared pooler (Supavisor), transaction mode | `<pooler-host>:6543` | `postgres.<project-ref>` | IPv4 |
+| Dedicated pooler (paid plans), transaction mode | `db.<project-ref>.supabase.co:6543` | `postgres` | IPv6, or IPv4 with the IPv4 add-on |
+
+Copy the host, port, and username from the dialog instead of typing them. Supabase notes that the shared pooler host can't be worked out from your region, and that pooler connections use a different username from direct connections.
+
+Keep the connection string in an environment variable. If the password contains reserved URI characters such as `@`, `:`, `/`, `#`, `?`, or `&`, percent-encode it first:
+
+```js
+import Keyv from 'keyv';
+import KeyvPostgres from '@keyv/postgres';
+
+const password = encodeURIComponent(process.env.SUPABASE_DB_PASSWORD);
+const uri = `postgresql://${process.env.SUPABASE_DB_USER}:${password}@${process.env.SUPABASE_DB_HOST}:${process.env.SUPABASE_DB_PORT ?? 5432}/postgres`;
+
+const keyv = new Keyv({ store: new KeyvPostgres({ uri, schema: 'keyv' }) });
+keyv.on('error', (error) => console.error('Supabase error', error));
+```
+
+This connects without TLS settings. Add them as shown in [Verifying the server certificate](#verifying-the-server-certificate) before you use it in production.
+
+## Direct connection or Supavisor pooler
+
+Pick the connection method based on where your application runs, as Supabase recommends:
+
+- **A long-running server on a network with IPv6:** use the direct connection. There is no pooler between you and Postgres, and the adapter's own `pg.Pool` keeps connections open and reuses them.
+- **A long-running server on an IPv4-only network:** use the shared pooler in session mode. The direct connection host has only an IPv6 address unless the project has the IPv4 add-on, so it fails to connect from an IPv4-only network.
+- **Serverless functions or many short-lived instances:** use transaction mode, and set a small `max` so each instance holds few connections. Supabase suggests `max: 1` for serverless functions, with the client created once at module scope rather than per request.
+
+Session mode gives each client connection its own Postgres connection for as long as it stays open, so it behaves like the direct connection. Transaction mode returns the Postgres connection to Supavisor's pool after every transaction. Supabase lists what that breaks in [Transaction mode limitations](https://supabase.com/docs/guides/database/connecting-to-postgres#transaction-mode-limitations): prepared statements, session state such as `SET`, session-level advisory locks, `LISTEN`/`NOTIFY` and temporary tables, `WITH HOLD` cursors, and query pipelining.
+
+`@keyv/postgres` works with transaction mode as it is:
+
+- **No prepared statements.** For node-postgres, Supabase's [Disabling prepared statements](https://supabase.com/docs/guides/troubleshooting/disabling-prepared-statements-qL8lEL) says to leave out the query `name`, because only named queries create prepared statements. The adapter runs every statement with `pool.query(text, values)` and never sets `name`.
+- **No session state.** The adapter doesn't use `SET`, `LISTEN`, advisory locks, temporary tables, cursors, or `BEGIN`/`COMMIT`. Each statement runs as its own transaction. `setMany` is a single `INSERT ... SELECT FROM UNNEST(...)` statement, so it stays atomic.
+- **No pipelining.** `pg` waits for each query to finish before it sends the next one on a connection. `pg` 8 has an opt-in `pipeline` client option, and the adapter passes unrecognized options to `pg.Pool`, so don't set `pipeline: true` with transaction mode.
+
+Each adapter that shares a `uri` and pool options uses one `pg.Pool`, as described in [Connection Pooling](#connection-pooling). On a serverless platform, pass `max` with the other options:
+
+```js
+const keyv = new Keyv({
+  store: new KeyvPostgres({
+    uri: process.env.SUPABASE_DB_URL,
+    schema: 'keyv',
+    max: 1,
+  }),
+});
+```
+
+Here `SUPABASE_DB_URL` holds the transaction mode string from the **Connect** dialog, with the password filled in and percent-encoded.
+
+## Verifying the server certificate
+
+Supabase doesn't reject connections without SSL unless you turn on **Enforce SSL on incoming connections** in the **SSL Configuration** section of the database settings. See [Postgres SSL Enforcement](https://supabase.com/docs/guides/platform/ssl-enforcement). Changing that setting restarts the database. Whether or not you turn it on, configure TLS on the client.
+
+Supabase signs its database certificates with its own certificate authority, which Node.js does not trust by default. Download the CA certificate from the same **SSL Configuration** section and pass it as `ssl.ca`:
+
+```js
+import fs from 'node:fs';
+import Keyv from 'keyv';
+import KeyvPostgres from '@keyv/postgres';
+
+const keyv = new Keyv({
+  store: new KeyvPostgres({
+    uri: process.env.SUPABASE_DB_URL,
+    schema: 'keyv',
+    ssl: {
+      ca: fs.readFileSync(process.env.SUPABASE_CA_CERT_PATH).toString(),
+    },
+  }),
+});
+```
+
+`rejectUnauthorized` defaults to `true`, so Node.js checks that the certificate was signed by the Supabase CA and was issued for the host in `uri`. Supabase's docs use the same CA certificate for direct and pooler connections. Use the host from the **Connect** dialog, not an IP address.
+
+Don't use these settings for Supabase in production:
+
+- `ssl: true` checks the certificate only against Node.js's built-in CAs. Verification fails because the Supabase CA isn't among them.
+- `ssl: { rejectUnauthorized: false }` connects, but accepts any certificate, so it does not protect against an attacker in the middle.
+
+### `sslmode` on the connection string
+
+Supabase's docs recommend `sslmode=require`, which in `libpq` encrypts the connection without verifying the server. `pg` 8 reads it differently: it treats `prefer`, `require`, and `verify-ca` as `verify-full`, logs a security warning, and verifies the certificate against Node.js's built-in CAs. So `?sslmode=require` on its own fails against Supabase, the same way `ssl: true` does. To verify against the Supabase CA in the URI, add `sslrootcert`, which is a file path that `pg` reads:
+
+```js
+const keyvPostgres = new KeyvPostgres(
+  `${process.env.SUPABASE_DB_URL}?sslmode=verify-full&sslrootcert=${process.env.SUPABASE_CA_CERT_PATH}`,
+);
+```
+
+When the URI has SSL parameters, `pg` builds its SSL settings from the URI and ignores the `ssl` option, so configure TLS in one place. See [Configuring TLS in the URI](#configuring-tls-in-the-uri).
+
+## Choosing `schema` and `table`
+
+The adapter creates its schema and table when it connects, with `CREATE SCHEMA IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`. It then adds missing columns and creates its indexes, so the database user needs permission to create them. The `postgres` user from the **Connect** dialog has it.
+
+Set `schema` to something other than `public`, such as `keyv`. Supabase's Data API serves tables in the `public` schema over REST, and on existing projects new tables in `public` get privileges for the `anon` and `authenticated` roles by default. Tables created outside the Dashboard don't have Row Level Security turned on. Together, that can make a `public.keyv` table readable and writable by anyone with your project's publishable (anon) key. A schema that you haven't added to the Data API's exposed schemas isn't served at all. See [Securing your API](https://supabase.com/docs/guides/api/securing-your-api).
+
+`table` defaults to `keyv`. Change it if your schema already has a table with that name. The adapter quotes both identifiers, so mixed case and other characters are kept as you write them.
+
+## Expired entries and `clearExpiredInterval`
+
+Keyv stores each entry's absolute expiry time in the `expires` column. Postgres has no TTL, so an expired row stays until something deletes it. The adapter deletes an expired row when `get`, `getMany`, `has`, or `hasMany` reads it. To delete expired rows that are never read again, call `clearExpired()` yourself, or set `clearExpiredInterval` to run it on a timer:
+
+```js
+const keyv = new Keyv({
+  store: new KeyvPostgres({
+    uri: process.env.SUPABASE_DB_URL,
+    schema: 'keyv',
+    clearExpiredInterval: 60 * 60 * 1000, // one hour
+  }),
+});
+```
+
+Each run is one `DELETE` statement, which can use the adapter's partial index on `expires`. Every process with this option set runs its own timer, so with many instances, set it on one of them or use a longer interval. The timer is unreffed, so it doesn't keep a process alive, and it doesn't fire while a serverless function is frozen between invocations.
+
+## `useUnloggedTable` on a managed host
+
+Leave `useUnloggedTable` off on Supabase unless losing every entry at once is acceptable. Postgres doesn't write unlogged tables to the write-ahead log, which makes writes faster, but:
+
+- Postgres empties an unlogged table after a crash or unclean shutdown. On a managed host you don't control when the server restarts or fails over.
+- Standbys and read replicas, which are built from the write-ahead log, have the table but not its rows. Neither does a point-in-time restore.
+
+The option only applies when the adapter creates the table. Setting it on an existing table changes nothing, and turning it off later leaves the table unlogged. See [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance).
 
 # Testing
 
