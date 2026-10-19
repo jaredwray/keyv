@@ -1,7 +1,7 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterAll } from "vitest";
+import { afterAll, vi } from "vitest";
 
 const directories: string[] = [];
 
@@ -16,7 +16,9 @@ afterAll(() => {
  * @param name - A label for the directory name.
  */
 export function tempDir(name = "keyv-fs"): string {
-	const directory = mkdtempSync(path.join(tmpdir(), `${name}-`));
+	// Resolved, because stores use real paths and the temporary directory is a symbolic link on
+	// some systems (macOS).
+	const directory = realpathSync.native(mkdtempSync(path.join(tmpdir(), `${name}-`)));
 	directories.push(directory);
 	return directory;
 }
@@ -42,4 +44,14 @@ export function tick(): Promise<void> {
  */
 export function errno(code: string): NodeJS.ErrnoException {
 	return Object.assign(new Error(`${code}: simulated`), { code });
+}
+
+/**
+ * Moves the clock two minutes ahead, so entries set to expire within a minute have expired.
+ * Only `Date` is faked, so timers and I/O keep running. Call `vi.useRealTimers()` afterwards.
+ */
+export function skipAhead(): void {
+	const now = Date.now();
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(now + 120_000);
 }

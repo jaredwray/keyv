@@ -18,17 +18,25 @@ function state(): RegistryState {
 }
 
 /**
- * The key that identifies a store path in this process: its absolute path with symbolic links
- * in the parent directory resolved, so two spellings of one path share a backend.
+ * The key that identifies a store path in this process: its real absolute path, with symbolic
+ * links resolved, so two spellings of one path share a backend. A path that doesn't exist yet
+ * is resolved through its parent directory.
  * @param storePath - The store file or directory.
  */
 export function registryKey(storePath: string): string {
 	const absolute = path.resolve(storePath);
-	try {
-		return path.join(realpathSync.native(path.dirname(absolute)), path.basename(absolute));
-	} catch {
-		return absolute;
+	for (const resolve of [
+		() => realpathSync.native(absolute),
+		() => path.join(realpathSync.native(path.dirname(absolute)), path.basename(absolute)),
+	]) {
+		try {
+			return resolve();
+		} catch {
+			// Not there yet; try the next way.
+		}
 	}
+
+	return absolute;
 }
 
 /**

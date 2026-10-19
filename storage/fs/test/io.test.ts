@@ -309,3 +309,37 @@ test("a failed cleanup does not hide the error that caused it", async () => {
 	vi.spyOn(fsOps, "unlink").mockRejectedValue(errno("EPERM"));
 	await expect(atomicWriteFile(path.join(tempDir(), "f"), ["x"])).rejects.toThrow("EIO");
 });
+
+describe("Semaphore", () => {
+	test("runs at most its slots at once, in call order", async () => {
+		const { Semaphore } = await import("../src/io.js");
+		const semaphore = new Semaphore(2);
+		let running = 0;
+		let peak = 0;
+		const started: number[] = [];
+		await Promise.all(
+			Array.from({ length: 6 }, (_, index) =>
+				semaphore.run(async () => {
+					started.push(index);
+					running++;
+					peak = Math.max(peak, running);
+					await new Promise((resolve) => setTimeout(resolve, 2));
+					running--;
+				}),
+			),
+		);
+		expect(peak).toBe(2);
+		expect(started).toEqual([0, 1, 2, 3, 4, 5]);
+	});
+
+	test("frees the slot when a call fails", async () => {
+		const { Semaphore } = await import("../src/io.js");
+		const semaphore = new Semaphore(1);
+		await expect(
+			semaphore.run(async () => {
+				throw new Error("boom");
+			}),
+		).rejects.toThrow("boom");
+		expect(await semaphore.run(async () => "next")).toBe("next");
+	});
+});

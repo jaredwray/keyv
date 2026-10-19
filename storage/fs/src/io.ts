@@ -12,6 +12,7 @@ export const fsOps = {
 	readFile: fsp.readFile,
 	writeFile: fsp.writeFile,
 	rename: fsp.rename,
+	link: fsp.link,
 	unlink: fsp.unlink,
 	mkdir: fsp.mkdir,
 	rm: fsp.rm,
@@ -142,6 +143,53 @@ export async function fileMode(file: string): Promise<number | undefined> {
 }
 
 /**
+ * Limits how many calls run at once. Each call waits for a free slot, in call order.
+ */
+export class Semaphore {
+	private _free: number;
+	private readonly _waiting: Array<() => void> = [];
+
+	/**
+	 * @param slots - How many calls may run at once.
+	 */
+	constructor(slots: number) {
+		this._free = slots;
+	}
+
+	/**
+	 * Runs `fn` once a slot is free.
+	 * @param fn - The function to run.
+	 */
+	public async run<T>(fn: () => Promise<T>): Promise<T> {
+		if (this._free > 0) {
+			this._free--;
+		} else {
+			await new Promise<void>((resolve) => {
+				this._waiting.push(resolve);
+			});
+		}
+
+		try {
+			return await fn();
+		} finally {
+			const next = this._waiting.shift();
+			if (next) {
+				next();
+			} else {
+				this._free++;
+			}
+		}
+	}
+}
+
+/**
+ * Bounds the files the directory strategy holds open at once, across the process, so many
+ * concurrent operations don't run out of file descriptors (EMFILE). A slot covers one file
+ * system call and is never held while waiting for anything else.
+ */
+export const fileHandles = new Semaphore(64);
+
+/**
  * Reads a file line by line without loading it into one string. Lines are split on `\n` only.
  * A final line without a newline is returned too.
  * @param file - The file to read.
@@ -176,40 +224,42 @@ export async function* readLines(file: string): AsyncGenerator<string> {
  * @returns The text before the first newline (all of it when there is none), or `undefined` when
  * the file does not exist.
  */
-export async function readFirstLine(file: string): Promise<string | undefined> {
-	let handle: fsp.FileHandle;
-	try {
-		handle = await fsOps.open(file, "r");
-	} catch (error) {
-		if (hasCode(error, "ENOENT", "ENOTDIR")) {
-			return undefined;
-		}
-
-		throw error;
-	}
-
-	try {
-		const parts: Buffer[] = [];
-		const buffer = Buffer.alloc(4096);
-		for (;;) {
-			const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
-			if (bytesRead === 0) {
-				break;
+export function readFirstLine(file: string): Promise<string | undefined> {
+	return fileHandles.run(async () => {
+		let handle: fsp.FileHandle;
+		try {
+			handle = await fsOps.open(file, "r");
+		} catch (error) {
+			if (hasCode(error, "ENOENT", "ENOTDIR")) {
+				return undefined;
 			}
 
-			const newline = buffer.subarray(0, bytesRead).indexOf(10);
-			if (newline !== -1) {
-				parts.push(Buffer.from(buffer.subarray(0, newline)));
-				break;
-			}
-
-			parts.push(Buffer.from(buffer.subarray(0, bytesRead)));
+			throw error;
 		}
 
-		return Buffer.concat(parts).toString("utf8");
-	} finally {
-		await handle.close();
-	}
+		try {
+			const parts: Buffer[] = [];
+			const buffer = Buffer.alloc(4096);
+			for (;;) {
+				const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+				if (bytesRead === 0) {
+					break;
+				}
+
+				const newline = buffer.subarray(0, bytesRead).indexOf(10);
+				if (newline !== -1) {
+					parts.push(Buffer.from(buffer.subarray(0, newline)));
+					break;
+				}
+
+				parts.push(Buffer.from(buffer.subarray(0, bytesRead)));
+			}
+
+			return Buffer.concat(parts).toString("utf8");
+		} finally {
+			await handle.close();
+		}
+	});
 }
 
 /**
@@ -218,7 +268,7 @@ export async function readFirstLine(file: string): Promise<string | undefined> {
  */
 export async function readdirOrEmpty(directory: string): Promise<string[]> {
 	try {
-		return await fsOps.readdir(directory);
+		return await fileHandles.run(() => fsOps.readdir(directory));
 	} catch (error) {
 		if (hasCode(error, "ENOENT", "ENOTDIR")) {
 			return [];

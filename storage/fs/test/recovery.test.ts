@@ -214,16 +214,24 @@ describe("directory strategy recovery", () => {
 		});
 	}
 
-	test("a marker written by another process at the same moment is read", async () => {
+	test("an empty marker, left by an interrupted first open, is written again", async () => {
 		const root = tempDir();
-		const writeFile = fsOps.writeFile;
-		vi.spyOn(fsOps, "writeFile").mockImplementationOnce(async (file, data, options) => {
-			await writeFile(file, data, options);
-			throw errno("EEXIST");
-		});
+		writeFileSync(marker(root), "");
 		const store = new KeyvFs({ path: root, strategy: "directory" });
-		expect(await store.get("k")).toBeUndefined();
+		await store.set("k", "v");
+		expect(await store.get("k")).toBe("v");
+		expect(JSON.parse(readFileSync(marker(root), "utf8")).kind).toBe("directory");
 		await store.disconnect();
+	});
+
+	test("two stores opening a new directory at once both load, and leave no temporary files", async () => {
+		const { DirectoryStrategy } = await import("../src/strategies/directory.js");
+		const root = path.join(tempDir(), "store");
+		const a = new DirectoryStrategy(root, 1000);
+		const b = new DirectoryStrategy(root, 1000);
+		await Promise.all([a.load(), b.load()]);
+		expect(readdirSync(root).sort()).toEqual(["data", "keyv-fs.json", "tmp", "trash"]);
+		await Promise.all([a.close(), b.close()]);
 	});
 
 	test("errors reading or creating the marker reject", async () => {
@@ -231,7 +239,7 @@ describe("directory strategy recovery", () => {
 		const store = new KeyvFs({ path: root, strategy: "directory" });
 		vi.spyOn(fsOps, "readFile").mockRejectedValueOnce(errno("EACCES"));
 		await expect(store.get("k")).rejects.toThrow("EACCES");
-		vi.spyOn(fsOps, "writeFile").mockRejectedValueOnce(errno("EROFS"));
+		vi.spyOn(fsOps, "open").mockRejectedValueOnce(errno("EROFS"));
 		await expect(store.get("k")).rejects.toThrow("EROFS");
 		vi.restoreAllMocks();
 		expect(await store.get("k")).toBeUndefined();

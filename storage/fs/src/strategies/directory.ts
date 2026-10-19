@@ -15,6 +15,8 @@ import {
 } from "../codec.js";
 import { KeyvFsCorruptionError, KeyvFsFormatError } from "../errors.js";
 import {
+	atomicWriteFile,
+	fileHandles,
 	fsOps,
 	hasCode,
 	KeyedMutex,
@@ -76,11 +78,14 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	protected async read(): Promise<void> {
-		await fsOps.mkdir(this.path, { recursive: true });
-		await this.checkMarker();
-		await fsOps.mkdir(this.dataDirectory, { recursive: true });
-		await fsOps.mkdir(this.temporaryDirectory, { recursive: true });
-		await fsOps.mkdir(this.trashDirectory, { recursive: true });
+		if (await this.checkMarker()) {
+			// A new store. In an existing one the directories are already there, and writes and
+			// clears make any that went missing.
+			await fsOps.mkdir(this.dataDirectory, { recursive: true });
+			await fsOps.mkdir(this.temporaryDirectory, { recursive: true });
+			await fsOps.mkdir(this.trashDirectory, { recursive: true });
+		}
+
 		this.inBackground(this.purge());
 	}
 
@@ -91,7 +96,7 @@ export class DirectoryStrategy extends Strategy {
 		}
 
 		if (isExpired(stored.header.expires, Date.now())) {
-			await this.removeIfExpired(ns, key);
+			await this.cleanUp(this.locate(ns, key).file, reports);
 			return undefined;
 		}
 
@@ -110,7 +115,7 @@ export class DirectoryStrategy extends Strategy {
 		}
 
 		if (isExpired(header.expires, Date.now())) {
-			await this.removeIfExpired(ns, key);
+			await this.cleanUp(file, reports);
 			return false;
 		}
 
@@ -208,7 +213,7 @@ export class DirectoryStrategy extends Strategy {
 				}
 
 				if (isExpired(stored.header.expires, Date.now())) {
-					await this.removeIfExpired(ns, stored.header.key);
+					await this.cleanUp(file, reports);
 					continue;
 				}
 
@@ -238,10 +243,9 @@ export class DirectoryStrategy extends Strategy {
 				);
 				await mapLimit(names, CONCURRENCY, async (name) => {
 					const file = path.join(shardDirectory, name);
-					const line = await readFirstLine(file);
-					const header = line === undefined ? undefined : parseEntryHeader(line);
+					const header = parseEntryHeader((await readFirstLine(file)) ?? "");
 					if (header !== undefined && isExpired(header.expires, Date.now())) {
-						await this.removeIfExpired(header.namespace, header.key, file);
+						await this.removeIfExpired(file);
 					}
 				});
 			}
@@ -295,15 +299,16 @@ export class DirectoryStrategy extends Strategy {
 
 	private async writeTemporary(content: string): Promise<string> {
 		const temporary = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.tmp`);
+		const write = () => fileHandles.run(() => fsOps.writeFile(temporary, content, { flag: "wx" }));
 		try {
-			await fsOps.writeFile(temporary, content, { flag: "wx" });
+			await write();
 		} catch (error) {
 			if (!hasCode(error, "ENOENT")) {
 				throw error;
 			}
 
 			await fsOps.mkdir(this.temporaryDirectory, { recursive: true });
-			await fsOps.writeFile(temporary, content, { flag: "wx" });
+			await write();
 		}
 
 		return temporary;
@@ -333,20 +338,58 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Deletes a key's entry if it is still expired. The check and the delete run under the key's
-	 * lock, so a write that replaced the entry in the meantime is kept.
+	 * Deletes a key's expired entry. A failure is reported rather than thrown: the read that
+	 * found the entry already has its answer, and the next sweep tries again.
 	 */
-	private async removeIfExpired(
-		ns: Namespace,
-		key: string,
-		file = this.locate(ns, key).file,
-	): Promise<void> {
+	private async cleanUp(file: string, reports: Reports): Promise<void> {
+		try {
+			await this.removeIfExpired(file);
+		} catch (error) {
+			reports.push(error as Error);
+		}
+	}
+
+	/**
+	 * Deletes a key's entry if it is still expired, without ever deleting a newer write.
+	 *
+	 * Another process may replace the entry between the read that found it expired and the
+	 * delete; the per-key lock only covers this process. So the entry is first moved into `tmp/`,
+	 * where nothing else looks, and checked there. An expired entry is deleted. A live one (a
+	 * newer write) is linked back into place, unless an even newer write already took its place.
+	 * Other readers may miss the key for that moment, but no write is lost.
+	 */
+	private async removeIfExpired(file: string): Promise<void> {
 		await this._mutex.run(file, async () => {
-			const line = await readFirstLine(file);
-			const header = line === undefined ? undefined : parseEntryHeader(line);
-			if (header !== undefined && isExpired(header.expires, Date.now())) {
-				await unlinkIfExists(file);
+			const parked = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.expired`);
+			try {
+				await renameWithRetry(file, parked);
+			} catch (error) {
+				if (hasCode(error, "ENOENT", "ENOTDIR")) {
+					return;
+				}
+
+				throw error;
 			}
+
+			// A missing or damaged file has no header: there is nothing to keep.
+			const header = parseEntryHeader((await readFirstLine(parked)) ?? "");
+			if (header === undefined || isExpired(header.expires, Date.now())) {
+				await unlinkIfExists(parked);
+				return;
+			}
+
+			try {
+				await fsOps.link(parked, file);
+			} catch (error) {
+				// EEXIST: a newer write is already in place. ENOENT: the namespace was cleared.
+				if (!hasCode(error, "EEXIST", "ENOENT", "ENOTDIR")) {
+					// The file system has no hard links (FAT, some network shares): move it back.
+					await renameWithRetry(parked, file);
+					return;
+				}
+			}
+
+			await unlinkIfExists(parked);
 		});
 	}
 
@@ -372,7 +415,7 @@ export class DirectoryStrategy extends Strategy {
 	private async readFile(file: string, reports: Reports): Promise<StoredEntry | undefined> {
 		let text: string;
 		try {
-			text = await fsOps.readFile(file, "utf8");
+			text = await fileHandles.run(() => fsOps.readFile(file, "utf8"));
 		} catch (error) {
 			if (hasCode(error, "ENOENT", "ENOTDIR")) {
 				return undefined;
@@ -460,26 +503,29 @@ export class DirectoryStrategy extends Strategy {
 		return { shard, file: path.join(shard, `${hash}.kv`) };
 	}
 
-	private async checkMarker(): Promise<void> {
+	/**
+	 * Checks the marker file that identifies the directory as a store, creating it (and the
+	 * directory) for a new store.
+	 * @returns Whether the marker was created.
+	 * @throws {KeyvFsFormatError} If the marker belongs to something else or a newer version.
+	 */
+	private async checkMarker(): Promise<boolean> {
 		const marker = path.join(this.path, "keyv-fs.json");
-		let text: string;
+		let text: string | undefined;
 		try {
 			text = await fsOps.readFile(marker, "utf8");
 		} catch (error) {
 			if (!hasCode(error, "ENOENT")) {
 				throw error;
 			}
+		}
 
-			try {
-				await fsOps.writeFile(marker, `${encodeStoreHeader("directory")}\n`, { flag: "wx" });
-				return;
-			} catch (writeError) {
-				if (!hasCode(writeError, "EEXIST")) {
-					throw writeError;
-				}
-
-				text = await fsOps.readFile(marker, "utf8");
-			}
+		// Written atomically, so no one ever reads half a marker. Processes creating it at the same
+		// moment write the same bytes. An empty marker can only be left by an older write that
+		// was cut short, so it is written again.
+		if (text === undefined || text.trim() === "") {
+			await atomicWriteFile(marker, [encodeStoreHeader("directory")]);
+			return true;
 		}
 
 		const header = parseStoreHeader(text.trim());
@@ -496,6 +542,8 @@ export class DirectoryStrategy extends Strategy {
 				`@keyv/fs: ${this.path} was written by a newer version of @keyv/fs (format version ${header.version}). Upgrade @keyv/fs to read it.`,
 			);
 		}
+
+		return false;
 	}
 
 	/**

@@ -4,10 +4,11 @@ import Keyv from "keyv";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvFs from "../src/index.js";
 import { fsOps } from "../src/io.js";
-import { errno, freshLocation, strategies, tempDir } from "./helpers.js";
+import { errno, freshLocation, skipAhead, strategies, tempDir } from "./helpers.js";
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.useRealTimers();
 });
 
 describe.each(strategies)("%s strategy", (strategy) => {
@@ -78,12 +79,12 @@ describe.each(strategies)("%s strategy", (strategy) => {
 		await store.disconnect();
 	});
 
-	test("Keyv.iterator deletes expired entries as it goes", async () => {
+	test("Keyv.iterator skips expired entries", async () => {
 		const store = new KeyvFs({ path: freshLocation(strategy), strategy });
 		const keyv = new Keyv({ store, namespace: "it" });
-		await keyv.set("old", "x", 20);
+		await keyv.set("old", "x", 60_000);
 		await keyv.set("live", "y");
-		await new Promise((resolve) => setTimeout(resolve, 40));
+		skipAhead();
 		const entries: Array<[string, unknown]> = [];
 		for await (const entry of keyv.iterator()) {
 			entries.push(entry);
@@ -95,14 +96,43 @@ describe.each(strategies)("%s strategy", (strategy) => {
 	});
 
 	test("expiry is enforced by the adapter when Keyv's checkExpired is off", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		try {
+			vi.setSystemTime(1_000_000);
+			const store = new KeyvFs({ path: freshLocation(strategy), strategy });
+			const keyv = new Keyv({ store, checkExpired: false });
+			await keyv.set("short", "x", 1000);
+			expect(await keyv.get("short")).toBe("x");
+			vi.setSystemTime(1_001_001);
+			expect(await keyv.get("short")).toBeUndefined();
+			expect(await keyv.has("short")).toBe(false);
+			await keyv.disconnect();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	test("disconnecting twice waits for the first disconnect", async () => {
+		const location = freshLocation(strategy);
+		const store = new KeyvFs({ path: location, strategy, writeDelay: 60_000 });
+		const write = store.set("k", "v");
+		const first = store.disconnect();
+		await store.disconnect();
+		const reopened = new KeyvFs({ path: location, strategy });
+		expect(await reopened.get("k")).toBe("v");
+		await Promise.all([first, write, reopened.disconnect()]);
+	});
+
+	test("an iteration stops with an error when the store is disconnected", async () => {
 		const store = new KeyvFs({ path: freshLocation(strategy), strategy });
-		const keyv = new Keyv({ store, checkExpired: false });
-		await keyv.set("short", "x", 20);
-		expect(await keyv.get("short")).toBe("x");
-		await new Promise((resolve) => setTimeout(resolve, 40));
-		expect(await keyv.get("short")).toBeUndefined();
-		expect(await keyv.has("short")).toBe(false);
-		await keyv.disconnect();
+		await store.setMany([
+			{ key: "a", value: "1" },
+			{ key: "b", value: "2" },
+		]);
+		const iterator = store.iterator();
+		await iterator.next();
+		await store.disconnect();
+		await expect(iterator.next()).rejects.toThrow(/disconnected/);
 	});
 
 	test("disconnect and flush do nothing to a store that was never used", async () => {
@@ -172,7 +202,10 @@ describe("file strategy", () => {
 		await store.get("load");
 		const pending = store.set("k", "v").catch((error: unknown) => error);
 		const rename = vi.spyOn(fsOps, "rename").mockRejectedValue(errno("EIO"));
-		await expect(store.disconnect()).rejects.toThrow("EIO");
+		const first = store.disconnect();
+		const second = store.disconnect();
+		await expect(first).rejects.toThrow("EIO");
+		await expect(second).resolves.toBeUndefined();
 		expect(await pending).toMatchObject({ code: "EIO" });
 		rename.mockRestore();
 

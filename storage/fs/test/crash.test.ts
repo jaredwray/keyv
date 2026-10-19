@@ -20,6 +20,11 @@ describe.each(strategies)("%s strategy", (strategy) => {
 		});
 		await new Promise<void>((resolve, reject) => {
 			child.on("error", reject);
+			child.on("exit", (code, signal) => {
+				if (acknowledged < 200) {
+					reject(new Error(`the writer exited early (${code ?? signal})`));
+				}
+			});
 			child.on("message", (index: number) => {
 				acknowledged = index;
 				if (index === 200) {

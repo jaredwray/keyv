@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import path from "node:path";
 import Keyv from "keyv";
 import { describe, expect, test } from "vitest";
@@ -25,7 +26,9 @@ describe("options", () => {
 
 	test("a relative path is resolved", () => {
 		const store = new KeyvFs({ path: "relative-keyv-fs-test.jsonl", strategy: "file" });
-		expect(store.path).toBe(path.resolve("relative-keyv-fs-test.jsonl"));
+		expect(store.path).toBe(
+			path.join(realpathSync.native(process.cwd()), "relative-keyv-fs-test.jsonl"),
+		);
 	});
 
 	test("options can follow the path, or include it", () => {

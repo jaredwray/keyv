@@ -3,10 +3,11 @@ import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvFs from "../src/index.js";
 import { fsOps } from "../src/io.js";
-import { errno, tempDir } from "./helpers.js";
+import { errno, skipAhead, tempDir } from "./helpers.js";
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.useRealTimers();
 });
 
 describe("file strategy on disk", () => {
@@ -96,14 +97,15 @@ describe("file strategy on disk", () => {
 		await reopened.disconnect();
 	});
 
-	test("writeDelay batches writes made close together into one save", async () => {
+	test("writeDelay batches writes made apart into one save", async () => {
 		const file = path.join(tempDir(), "store.jsonl");
-		const store = new KeyvFs(file, { writeDelay: 30 });
+		const store = new KeyvFs(file, { writeDelay: 60_000 });
 		await store.get("load");
 		const rename = vi.spyOn(fsOps, "rename");
 		const first = store.set("a", "1");
-		await new Promise((resolve) => setTimeout(resolve, 5));
+		await new Promise((resolve) => setImmediate(resolve));
 		const second = store.set("b", "2");
+		await store.flush();
 		await Promise.all([first, second]);
 		expect(rename).toHaveBeenCalledTimes(1);
 		await store.disconnect();
@@ -141,8 +143,8 @@ describe("file strategy edge cases", () => {
 	test("clearing a namespace whose entries all expired saves nothing", async () => {
 		const file = path.join(tempDir(), "store.jsonl");
 		const store = new KeyvFs(file);
-		await store.set("short", "v", Date.now() + 20);
-		await new Promise((resolve) => setTimeout(resolve, 40));
+		await store.set("short", "v", Date.now() + 60_000);
+		skipAhead();
 		expect(await store.get("short")).toBeUndefined();
 		const rename = vi.spyOn(fsOps, "rename");
 		await store.clear();

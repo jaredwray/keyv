@@ -54,6 +54,7 @@ export class KeyvFs extends Hookified implements KeyvStorageAdapter {
 	private readonly _registryKey: string;
 	private readonly _backend: Strategy;
 	private _disconnected = false;
+	private _disconnecting: Promise<void> | undefined;
 	/** Operations called but still waiting for the store to load. */
 	private readonly _handingOver = new Set<Promise<void>>();
 	/** Writes called but not yet settled. */
@@ -251,6 +252,7 @@ export class KeyvFs extends Hookified implements KeyvStorageAdapter {
 		for await (const [key, value] of backend.entries(ns, reports)) {
 			this.report(reports.splice(0));
 			yield [key, value as Awaited<Value>];
+			this.assertConnected();
 		}
 
 		this.report(reports);
@@ -281,13 +283,19 @@ export class KeyvFs extends Hookified implements KeyvStorageAdapter {
 	/**
 	 * Waits for this instance's operations, saves pending writes, and releases this instance.
 	 * The last instance on a path closes the backend. Call it before the process exits so no
-	 * write is lost. Later calls resolve; other methods reject.
+	 * write is lost. Later calls wait for the first one and resolve; other methods reject.
 	 */
-	public async disconnect(): Promise<void> {
-		if (this._disconnected) {
-			return;
+	public disconnect(): Promise<void> {
+		if (this._disconnecting) {
+			// Only the first call reports a failure; later calls wait for it and resolve.
+			return this._disconnecting.catch(() => {});
 		}
 
+		this._disconnecting = this.release();
+		return this._disconnecting;
+	}
+
+	private async release(): Promise<void> {
 		this._disconnected = true;
 		const errors = await this.settle();
 		// Released even when the flush failed, so the path can be opened again.

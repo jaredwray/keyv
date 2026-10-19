@@ -222,7 +222,7 @@ Expired entries are also removed from disk:
 Within one process, every `KeyvFs` on the same path shares one store, so they never overwrite each other. This works across CommonJS and ES module copies of the package too.
 
 - **`"file"` strategy: one process per file.** Each process holds the whole store in memory and saves all of it, so two processes writing one file overwrite each other's changes. There is no lock; give each process its own file, or use the `"directory"` strategy. Worker threads count as separate processes.
-- **`"directory"` strategy: several processes are fine.** Each write replaces one file atomically, and the last write to a key wins. A `clear()` in one process and a `set` in another are not ordered.
+- **`"directory"` strategy: several processes are fine.** Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process, though that process's readers may miss the key for a moment while it is checked. A `clear()` in one process and a `set` in another are not ordered.
 
 Network file systems are not supported.
 
@@ -238,7 +238,7 @@ keyv.on('error', (error) => console.error(error));
 
 **A damaged store file** (cut short, or with a line that doesn't parse) is renamed to `<path>.corrupt-<time>-<random>`, and the store starts empty. A `KeyvFsCorruptionError` with `quarantinePath` is emitted once, during the operation that found it. With an `error` listener that operation then succeeds; with none, that one operation rejects and the next succeeds. Nothing is lost: the damaged file is still there for you to inspect.
 
-**A damaged entry file** (`"directory"` strategy) is treated as missing, and a `KeyvFsCorruptionError` is emitted. The next write of that key replaces it.
+**A damaged entry file** (`"directory"` strategy) is treated as missing, and a `KeyvFsCorruptionError` is emitted each time it is read. The next write of that key replaces it, and deleting the key removes it.
 
 Errors from the background expiry sweep go to `error` listeners, and are dropped when there are none. They never crash the process.
 
