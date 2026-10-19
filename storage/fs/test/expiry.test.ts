@@ -126,7 +126,7 @@ describe.each(strategies)("%s strategy", (strategy) => {
 });
 
 describe("file strategy", () => {
-	test("clearExpired drops expired entries, and the next save leaves them out", async () => {
+	test("clearExpired removes expired entries from the file", async () => {
 		vi.useFakeTimers({ toFake: ["Date"] });
 		vi.setSystemTime(1_000_000);
 		const location = freshLocation("file");
@@ -136,10 +136,10 @@ describe("file strategy", () => {
 		await store.set("short", "v", 1_000_010);
 		vi.setSystemTime(1_000_020);
 		await store.clearExpired();
-		await store.set("other", "v");
-		await store.disconnect();
 		const { readFileSync } = await import("node:fs");
 		expect(readFileSync(location, "utf8")).not.toContain("short");
+		await store.clearExpired();
+		await store.disconnect();
 	});
 });
 

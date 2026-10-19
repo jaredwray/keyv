@@ -77,6 +77,7 @@ describe("file strategy recovery", () => {
 		"a wrong count": `${HEADER}\n${RECORD}\n{"op":"checkpoint","count":2}\n`,
 		"data after the checkpoint": `${HEADER}\n{"op":"checkpoint","count":0}\n${RECORD}\n`,
 		"a blank line": `${HEADER}\n\n{"op":"checkpoint","count":0}\n`,
+		"a value that can't be read": `${HEADER}\n{"op":"set","k":"a","j":"{broken"}\n{"op":"checkpoint","count":1}\n`,
 	};
 
 	for (const [name, content] of Object.entries(damaged)) {

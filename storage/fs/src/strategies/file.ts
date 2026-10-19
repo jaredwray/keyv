@@ -188,16 +188,22 @@ export class FileStrategy extends Strategy {
 
 	protected async sweep(): Promise<void> {
 		const now = Date.now();
+		let removed = false;
 		for (const [ns, map] of this._index) {
 			for (const [key, entry] of map) {
 				if (isExpired(entry.expires, now)) {
 					map.delete(key);
+					removed = true;
 				}
 			}
 
 			if (map.size === 0) {
 				this._index.delete(ns);
 			}
+		}
+
+		if (removed) {
+			await this._commit.wait(this._commit.next());
 		}
 	}
 
@@ -313,6 +319,10 @@ export class FileStrategy extends Strategy {
 				continue;
 			}
 
+			if (record.entry.kind === "j" && !isDecodable(record.entry.data)) {
+				return { line: lineNumber, reason: "its value is not valid" };
+			}
+
 			count++;
 			if (!isExpired(record.entry.expires, now)) {
 				this.namespaceMap(record.namespace).set(record.key, { ...record.entry, line });
@@ -364,4 +374,14 @@ function timestamp(): string {
 		.toISOString()
 		.replace(/[-:]/g, "")
 		.replace(/\.\d{3}/, "");
+}
+
+/** Whether a stored `j` value can be read back. */
+function isDecodable(data: string): boolean {
+	try {
+		decodeValue("j", data);
+		return true;
+	} catch {
+		return false;
+	}
 }

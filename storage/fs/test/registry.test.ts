@@ -50,9 +50,18 @@ describe("registry", () => {
 		expect(linked.path).toBe(absolute.path);
 	});
 
-	test("the key falls back to the absolute path when the parent does not exist", () => {
-		const missing = path.join(tempDir(), "missing", "store.jsonl");
-		expect(registryKey(missing)).toBe(path.resolve(missing));
+	test("paths that don't exist yet resolve through their nearest existing ancestor", () => {
+		const directory = tempDir();
+		const real = path.join(directory, "real");
+		mkdirSync(real);
+		const link = path.join(directory, "link");
+		symlinkSync(real, link);
+		const missing = path.join("missing", "deeper", "store.jsonl");
+		expect(registryKey(path.join(link, missing))).toBe(path.join(real, missing));
+		expect(registryKey(path.join(real, missing))).toBe(path.join(real, missing));
+		const viaLink = new KeyvFs(path.join(link, missing));
+		const viaReal = new KeyvFs(path.join(real, missing));
+		expect(viaLink.path).toBe(viaReal.path);
 	});
 
 	test("the last detach closes the backend, and a reopen waits for the close", async () => {
