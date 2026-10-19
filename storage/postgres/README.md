@@ -648,7 +648,9 @@ Open your project in the Supabase Dashboard and click **Connect** at the top of 
 | Shared pooler (Supavisor), transaction mode | `<pooler-host>:6543` | `postgres.<project-ref>` | IPv4 |
 | Dedicated pooler (paid plans), transaction mode | `db.<project-ref>.supabase.co:6543` | `postgres` | IPv6, or IPv4 with the IPv4 add-on |
 
-Copy the host, port, and username from the dialog instead of typing them. Supabase notes that the shared pooler host can't be worked out from your region, and that pooler connections use a different username from direct connections.
+Copy the host, port, and username from the dialog instead of typing them. The shared pooler host includes a cluster index (`aws-0`, `aws-1`, and so on), so it can't be worked out from the region. Shared pooler usernames are `postgres.<project-ref>`. The direct connection and the dedicated pooler use `postgres`.
+
+The IPv4 add-on is not dual-stack. It replaces the IPv6 address on `db.<project-ref>.supabase.co` with an IPv4 address, for both the direct connection and the dedicated pooler.
 
 Keep the connection string in an environment variable. If the password contains reserved URI characters such as `@`, `:`, `/`, `#`, `?`, or `&`, percent-encode it first:
 
@@ -669,8 +671,8 @@ This connects without TLS settings. Add them as shown in [Verifying the server c
 
 Pick the connection method based on where your application runs, as Supabase recommends:
 
-- **A long-running server on a network with IPv6:** use the direct connection. There is no pooler between you and Postgres, and the adapter's own `pg.Pool` keeps connections open and reuses them.
-- **A long-running server on an IPv4-only network:** use the shared pooler in session mode. The direct connection host has only an IPv6 address unless the project has the IPv4 add-on, so it fails to connect from an IPv4-only network.
+- **A long-running server that can reach the direct host:** use the direct connection. There is no pooler between you and Postgres, and the adapter's own `pg.Pool` keeps connections open and reuses them. Without the IPv4 add-on, that host is IPv6-only. With the add-on it is IPv4-only.
+- **A long-running server on an IPv4-only network, and no IPv4 add-on:** use the shared pooler in session mode. The direct host is IPv6-only, so the connection fails.
 - **Serverless functions or many short-lived instances:** use transaction mode, and set a small `max` so each instance holds few connections. Supabase suggests `max: 1` for serverless functions, with the client created once at module scope rather than per request.
 
 Session mode gives each client connection its own Postgres connection for as long as it stays open, so it behaves like the direct connection. Transaction mode returns the Postgres connection to Supavisor's pool after every transaction. Supabase lists what that breaks in [Transaction mode limitations](https://supabase.com/docs/guides/database/connecting-to-postgres#transaction-mode-limitations): prepared statements, session state such as `SET`, session-level advisory locks, `LISTEN`/`NOTIFY` and temporary tables, `WITH HOLD` cursors, and query pipelining.
@@ -679,7 +681,7 @@ Session mode gives each client connection its own Postgres connection for as lon
 
 - **No prepared statements.** For node-postgres, Supabase's [Disabling prepared statements](https://supabase.com/docs/guides/troubleshooting/disabling-prepared-statements-qL8lEL) says to leave out the query `name`, because only named queries create prepared statements. The adapter runs every statement with `pool.query(text, values)` and never sets `name`.
 - **No session state.** The adapter doesn't use `SET`, `LISTEN`, advisory locks, temporary tables, cursors, or `BEGIN`/`COMMIT`. Each statement runs as its own transaction. `setMany` is a single `INSERT ... SELECT FROM UNNEST(...)` statement, so it stays atomic.
-- **No pipelining.** `pg` waits for each query to finish before it sends the next one on a connection. `pg` 8 has an opt-in `pipeline` client option, and the adapter passes unrecognized options to `pg.Pool`, so don't set `pipeline: true` with transaction mode.
+- **No pipelined statements.** Each call is `pool.query(text, values)`: the pool checks out a client, sends that one statement, and releases the client when it finishes. `pg` 8 pipelines only when several queries are already in flight on one client, which is what `pipeline: true` enables. `pool.query()` never queues a second query on that client, so the option does not change these calls, and transaction mode's pipelining limit does not apply to them. The adapter forwards `pipeline` to `pg.Pool` along with other pool options such as `max`.
 
 Each adapter that shares a `uri` and pool options uses one `pg.Pool`, as described in [Connection Pooling](#connection-pooling). On a serverless platform, pass `max` with the other options:
 
@@ -717,7 +719,7 @@ const keyv = new Keyv({
 });
 ```
 
-`rejectUnauthorized` defaults to `true`, so Node.js checks that the certificate was signed by the Supabase CA and was issued for the host in `uri`. Supabase's docs use the same CA certificate for direct and pooler connections. Use the host from the **Connect** dialog, not an IP address.
+`rejectUnauthorized` defaults to `true`, so Node.js checks that the certificate was signed by the Supabase CA and was issued for the host in `uri`. The dashboard's SSL Configuration section offers one CA certificate, `prod-ca-2021.crt`. Use that file for the direct connection and for either pooler, and connect to the host from the **Connect** dialog, not an IP address.
 
 Don't use these settings for Supabase in production:
 
@@ -729,12 +731,13 @@ Don't use these settings for Supabase in production:
 Supabase's docs recommend `sslmode=require`, which in `libpq` encrypts the connection without verifying the server. `pg` 8 reads it differently: it treats `prefer`, `require`, and `verify-ca` as `verify-full`, logs a security warning, and verifies the certificate against Node.js's built-in CAs. So `?sslmode=require` on its own fails against Supabase, the same way `ssl: true` does. To verify against the Supabase CA in the URI, add `sslrootcert`, which is a file path that `pg` reads:
 
 ```js
+const rootCert = encodeURIComponent(process.env.SUPABASE_CA_CERT_PATH);
 const keyvPostgres = new KeyvPostgres(
-  `${process.env.SUPABASE_DB_URL}?sslmode=verify-full&sslrootcert=${process.env.SUPABASE_CA_CERT_PATH}`,
+  `${process.env.SUPABASE_DB_URL}?sslmode=verify-full&sslrootcert=${rootCert}`,
 );
 ```
 
-When the URI has SSL parameters, `pg` builds its SSL settings from the URI and ignores the `ssl` option, so configure TLS in one place. See [Configuring TLS in the URI](#configuring-tls-in-the-uri).
+The strings in the **Connect** dialog have no query string, so `?` starts these parameters. If `SUPABASE_DB_URL` already has one, join with `&` instead. `pg` percent-decodes `sslrootcert` and reads that path. When the URI has SSL parameters, `pg` builds its SSL settings from the URI and ignores the `ssl` option, so configure TLS in one place. See [Configuring TLS in the URI](#configuring-tls-in-the-uri).
 
 ## Choosing `schema` and `table`
 
