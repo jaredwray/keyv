@@ -83,9 +83,13 @@ export abstract class Strategy {
 	}
 
 	/**
-	 * Saves pending writes and releases resources. A load in progress is awaited first.
+	 * Saves pending writes and releases resources. The close of an earlier backend on the path
+	 * and a load in progress are awaited first.
 	 */
 	public async close(): Promise<void> {
+		// Closes on one path run in order, so a backend that never loaded can't let a later one
+		// open the file while an earlier one is still saving to it.
+		await this._previousClose?.catch(() => {});
 		await this._loading?.catch(() => {});
 		await this._sweeping;
 		if (this._loaded) {

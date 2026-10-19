@@ -1,4 +1,10 @@
-type Waiter = { generation: number; resolve: () => void; reject: (error: unknown) => void };
+type Waiter = {
+	generation: number;
+	/** Whether the waiter asked to save without waiting out `writeDelay`. */
+	urgent: boolean;
+	resolve: () => void;
+	reject: (error: unknown) => void;
+};
 
 /**
  * Batches writes into saves. Each change to the in-memory store takes the next generation number
@@ -64,7 +70,7 @@ export class GroupCommit {
 		}
 
 		const { promise, resolve, reject } = Promise.withResolvers<void>();
-		this._waiters.push({ generation, resolve, reject });
+		this._waiters.push({ generation, urgent, resolve, reject });
 		this.arm(urgent);
 		return promise;
 	}
@@ -116,8 +122,9 @@ export class GroupCommit {
 			}
 		} finally {
 			this._running = false;
+			// Changes made during a failed save are tried once more, as soon as one of them asked.
 			if (this._waiters.length > 0) {
-				this.arm(false);
+				this.arm(this._waiters.some((waiter) => waiter.urgent));
 			}
 		}
 	}

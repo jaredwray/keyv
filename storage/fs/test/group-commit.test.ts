@@ -156,3 +156,26 @@ describe("GroupCommit", () => {
 		expect(control.calls).toHaveLength(2);
 	});
 });
+
+test("a flush called during a save that fails is retried without waiting out writeDelay", async () => {
+	vi.useFakeTimers();
+	try {
+		const control = controllablePersist();
+		control.hold();
+		const commit = new GroupCommit(control.persist, 60_000);
+		commit.next();
+		const first = commit.flush();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(control.calls).toHaveLength(1);
+		commit.next();
+		const flushed = commit.flush();
+		control.calls[0].fail(new Error("first failed"));
+		await expect(first).rejects.toThrow("first failed");
+		await vi.advanceTimersByTimeAsync(0);
+		expect(control.calls).toHaveLength(2);
+		control.calls[1].release();
+		await flushed;
+	} finally {
+		vi.useRealTimers();
+	}
+});

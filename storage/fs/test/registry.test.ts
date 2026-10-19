@@ -147,3 +147,38 @@ describe("registry", () => {
 		await secondClosing;
 	});
 });
+
+test("a store opened while earlier ones close waits for every earlier close", async () => {
+	const { FileStrategy } = await import("../src/strategies/file.js");
+	const file = path.join(tempDir(), "store.jsonl");
+	const key = registryKey(file);
+	let finishFirst!: () => void;
+	const first = fakeBackend(
+		() =>
+			new Promise<void>((resolve) => {
+				finishFirst = resolve;
+			}),
+	);
+	attach(key, "x", () => first);
+	const firstClosing = detach(key, first);
+
+	// A backend that never loads closes on the heels of the first.
+	const second = attach(
+		key,
+		"x",
+		(previousClose) => new FileStrategy(file, 0, 1000, previousClose),
+	);
+	const secondClosing = detach(key, second);
+
+	let thirdLoaded = false;
+	const third = attach(key, "x", (previousClose) => new FileStrategy(file, 0, 1000, previousClose));
+	const loading = third.load().then(() => {
+		thirdLoaded = true;
+	});
+	await new Promise((resolve) => setTimeout(resolve, 20));
+	expect(thirdLoaded).toBe(false);
+	finishFirst();
+	await Promise.all([firstClosing, secondClosing, loading]);
+	expect(thirdLoaded).toBe(true);
+	await detach(key, third);
+});

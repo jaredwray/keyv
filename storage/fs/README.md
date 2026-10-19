@@ -215,7 +215,7 @@ Expired entries are also removed from disk:
 - **`await` means saved.** `set`, `setMany`, `delete`, `deleteMany` and `clear` resolve once their change is in the file. Unawaited writes are saved too: a pending save keeps the process running until it is done.
 - **Call `disconnect()` before `process.exit()`.** It waits for writes already called, saves them, and releases the store. `process.exit()` does not wait for anything.
 - **No fsync.** Data reaches the operating system, not necessarily the disk. After a power loss or an operating system crash, the latest writes can be lost. A store file left damaged is moved aside (see below) and the store starts empty; a file left empty (0 bytes) is loaded as an empty store.
-- **If a save fails** (for example, the disk is full), the write rejects. The value stays in memory and the next save retries it.
+- **If a save fails** (for example, the disk is full), the write rejects. The value stays in memory and the next save retries it, so a write that rejected can still reach the file later. In the same way, `disconnect()` reports a failed save even when its retry then succeeded.
 
 ## Multiple Processes
 
@@ -241,6 +241,8 @@ keyv.on('error', (error) => console.error(error));
 **A damaged entry file** (`"directory"` strategy) is treated as missing, and a `KeyvFsCorruptionError` is emitted each time it is read. The next write of that key replaces it, and deleting the key removes it.
 
 Errors from the background expiry sweep go to `error` listeners, and are dropped when there are none. They never crash the process.
+
+When you use the store directly, without Keyv, attach a listener to the store (`store.on('error', …)`), or a damaged file being moved aside goes unreported. Keyv attaches one for you.
 
 ## Migrating from keyv-file
 
