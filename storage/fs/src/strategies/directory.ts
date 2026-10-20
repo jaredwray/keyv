@@ -32,7 +32,7 @@ import { type Reports, Strategy, type WriteEntry } from "./strategy.js";
 
 /** File operations run at once by a batch or a sweep. */
 const CONCURRENCY = 16;
-/** Temporary files older than this are left over from a crash and are removed at load. */
+/** Temporary files older than this are left over from a crash and are removed. */
 const STALE_TEMPORARY_MS = 15 * 60 * 1000;
 const NAMESPACE_DIRECTORY = /^(?:_|n-[0-9a-f]{64})$/;
 const SHARD_DIRECTORY = /^[0-9a-f]{2}$/;
@@ -63,6 +63,8 @@ export class DirectoryStrategy extends Strategy {
 	private readonly _mutex = new KeyedMutex();
 	private readonly _gate = new RwGate();
 	private readonly _shards = new Set<string>();
+	private readonly _cleanUps = new Set<Promise<void>>();
+	private _closing = false;
 	private _background: Promise<void> = Promise.resolve();
 
 	private get dataDirectory(): string {
@@ -86,7 +88,8 @@ export class DirectoryStrategy extends Strategy {
 			await fsOps.mkdir(this.trashDirectory, { recursive: true });
 		}
 
-		this.inBackground(this.purge());
+		// Before the first operation, so it sees any entry this puts back.
+		await this.purge();
 	}
 
 	public async get(ns: Namespace, key: string, reports: Reports): Promise<unknown> {
@@ -225,34 +228,46 @@ export class DirectoryStrategy extends Strategy {
 		}
 	}
 
+	/**
+	 * Removes expired entries in every namespace. A directory or entry that can't be read doesn't
+	 * stop the rest: the sweep goes on, then rejects with the first error.
+	 */
 	protected async sweep(): Promise<void> {
+		await this.purge();
+		const errors: unknown[] = [];
+		const list = (directory: string) =>
+			readdirOrEmpty(directory).catch((error: unknown) => {
+				errors.push(error);
+				return [];
+			});
 		for (const namespace of await readdirOrEmpty(this.dataDirectory)) {
 			if (!NAMESPACE_DIRECTORY.test(namespace)) {
 				continue;
 			}
 
 			const directory = path.join(this.dataDirectory, namespace);
-			for (const shard of await readdirOrEmpty(directory)) {
+			for (const shard of await list(directory)) {
 				if (!SHARD_DIRECTORY.test(shard)) {
 					continue;
 				}
 
 				const shardDirectory = path.join(directory, shard);
-				const names = (await readdirOrEmpty(shardDirectory)).filter((name) =>
-					ENTRY_FILE.test(name),
-				);
+				const names = (await list(shardDirectory)).filter((name) => ENTRY_FILE.test(name));
 				await mapLimit(names, CONCURRENCY, async (name) => {
 					const file = path.join(shardDirectory, name);
-					if (isExpiredEntry(await readFirstLine(file))) {
-						const release = await this._gate.shared();
-						try {
-							await this.removeIfExpired(file);
-						} finally {
-							release();
+					try {
+						if (isExpiredEntry(await readFirstLine(file))) {
+							await this.withGate(() => this.removeIfExpired(file));
 						}
+					} catch (error) {
+						errors.push(error);
 					}
 				});
 			}
+		}
+
+		if (errors.length > 0) {
+			throw errors[0];
 		}
 	}
 
@@ -261,6 +276,10 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	protected async closeResources(): Promise<void> {
+		// A read still running may be about to remove an expired entry. One that has started is
+		// finished first; one that hasn't is skipped, and a later sweep removes the entry.
+		this._closing = true;
+		await Promise.all(this._cleanUps);
 		await this._background;
 	}
 
@@ -342,16 +361,31 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Deletes a key's expired entry. A failure is reported rather than thrown: the read that
-	 * found the entry already has its answer, and the next sweep tries again. It holds the gate
-	 * shared, so a clear() never runs while the entry is moved aside.
+	 * Deletes an expired entry a read found. A failure is reported rather than thrown: the read
+	 * already has its answer, and the next sweep tries again. Closing waits for cleanups that
+	 * have started.
 	 */
-	private async cleanUp(file: string, reports: Reports): Promise<void> {
+	private cleanUp(file: string, reports: Reports): Promise<void> {
+		if (this._closing) {
+			return Promise.resolve();
+		}
+
+		const cleaning = this.withGate(() => this.removeIfExpired(file)).catch((error: unknown) => {
+			reports.push(error as Error);
+		});
+		this._cleanUps.add(cleaning);
+		void cleaning.then(() => this._cleanUps.delete(cleaning));
+		return cleaning;
+	}
+
+	/**
+	 * Runs work that may move an entry aside while holding the gate shared, so a clear() never
+	 * runs in the middle of it.
+	 */
+	private async withGate(work: () => Promise<void>): Promise<void> {
 		const release = await this._gate.shared();
 		try {
-			await this.removeIfExpired(file);
-		} catch (error) {
-			reports.push(error as Error);
+			await work();
 		} finally {
 			release();
 		}
@@ -365,7 +399,10 @@ export class DirectoryStrategy extends Strategy {
 	 * the entry is first moved into `tmp/`, where nothing else looks, and checked there. An
 	 * expired entry is deleted. Anything else is put back: a newer write is linked back into
 	 * place (unless an even newer one already took it), and so is an entry whose check failed.
-	 * An entry left in `tmp/` by a crash is put back by {@link DirectoryStrategy.purge}.
+	 * An entry left in `tmp/` by a crash is put back by {@link DirectoryStrategy.purge}, at the
+	 * next load or sweep of any process. Recovering an entry that a running process is still
+	 * checking is safe too: whichever of them puts it back or removes it first wins, and the
+	 * other finds it gone.
 	 */
 	private async removeIfExpired(file: string): Promise<void> {
 		await this._mutex.run(file, async () => {
@@ -418,15 +455,22 @@ export class DirectoryStrategy extends Strategy {
 	/**
 	 * Puts a moved-aside entry back at its path, unless a newer write took the path meanwhile
 	 * (EEXIST) or the namespace was cleared (ENOENT). On a file system without hard links (FAT,
-	 * some network shares) it is moved back instead.
+	 * some network shares) it is moved back instead. A move would replace a newer write, so it
+	 * checks for one first; a write landing between that check and the move can still be lost.
 	 */
 	private async restore(parked: string, file: string): Promise<void> {
 		try {
 			await fsOps.link(parked, file);
 		} catch (error) {
-			if (!hasCode(error, "EEXIST", "ENOENT", "ENOTDIR")) {
-				await renameWithRetry(parked, file);
-				return;
+			if (!hasCode(error, "EEXIST", "ENOENT", "ENOTDIR") && !(await exists(file))) {
+				try {
+					await renameWithRetry(parked, file);
+					return;
+				} catch (renameError) {
+					if (!hasCode(renameError, "ENOENT", "ENOTDIR")) {
+						throw renameError;
+					}
+				}
 			}
 		}
 
@@ -587,28 +631,34 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Removes what an earlier run left behind: temporary files from interrupted writes, and
-	 * cleared namespaces that were not fully removed. Errors are ignored; the next load tries
-	 * again.
+	 * Cleans up after interrupted work, by this process or another one: puts back entries that
+	 * were being checked for expiry, removes temporary files from interrupted writes, and, in the
+	 * background, removes cleared namespaces left in the trash. Runs at load and before each
+	 * sweep. Errors are ignored; the next run tries again.
 	 */
 	private async purge(): Promise<void> {
 		const now = Date.now();
-		for (const name of await readdirOrEmpty(this.temporaryDirectory)) {
+		const names = await readdirOrEmpty(this.temporaryDirectory).catch(() => []);
+		for (const name of names) {
 			const file = path.join(this.temporaryDirectory, name);
-			const stats = await fsOps.stat(file).catch(() => undefined);
-			if (stats === undefined || now - stats.mtimeMs <= STALE_TEMPORARY_MS) {
+			if (name.endsWith(".expired")) {
+				// Whatever its age: its file time is when the entry was written, not when it was
+				// moved here. If it can't be put back or removed now, it stays for the next run.
+				await this.recover(file).catch(() => {});
 				continue;
 			}
 
-			if (name.endsWith(".expired")) {
-				// An entry being checked for expiry when a process crashed. If it can't be put back or
-				// removed now, it stays for the next load.
-				await this.recover(file).catch(() => {});
-			} else {
+			// A write in progress elsewhere renames its file within moments.
+			const stats = await fsOps.stat(file).catch(() => undefined);
+			if (stats !== undefined && now - stats.mtimeMs > STALE_TEMPORARY_MS) {
 				await fsOps.unlink(file).catch(() => {});
 			}
 		}
 
+		this.inBackground(this.emptyTrash());
+	}
+
+	private async emptyTrash(): Promise<void> {
 		for (const name of await readdirOrEmpty(this.trashDirectory)) {
 			await fsOps
 				.rm(path.join(this.trashDirectory, name), { recursive: true, force: true })
@@ -628,7 +678,7 @@ export class DirectoryStrategy extends Strategy {
 		}
 
 		const { file } = this.locate(header.namespace, header.key);
-		await this._mutex.run(file, () => this.restore(parked, file));
+		await this.withGate(() => this._mutex.run(file, () => this.restore(parked, file)));
 	}
 
 	private inBackground(work: Promise<unknown>): void {
@@ -648,4 +698,21 @@ export class DirectoryStrategy extends Strategy {
 function isExpiredEntry(line: string | undefined): boolean {
 	const header = parseEntryHeader(line ?? "");
 	return header !== undefined && isExpired(header.expires, Date.now());
+}
+
+/**
+ * Whether a file exists. A path through a missing directory doesn't.
+ * @param file - The file.
+ */
+async function exists(file: string): Promise<boolean> {
+	try {
+		await fsOps.stat(file);
+		return true;
+	} catch (error) {
+		if (hasCode(error, "ENOENT", "ENOTDIR")) {
+			return false;
+		}
+
+		throw error;
+	}
 }

@@ -142,7 +142,7 @@ File names are SHA-256 hashes, sharded into 256 directories by their first two c
 {"value":{"x":1},"expires":1760000660000}
 ```
 
-- **Load** happens on the first operation. It creates the marker file and the `data`, `tmp` and `trash` directories, and removes what an earlier run left in `tmp` and `trash`. Nothing is read into memory.
+- **Load** happens on the first operation. It creates the marker file and the `data`, `tmp` and `trash` directories, and cleans up what an interrupted run left in `tmp` and `trash` (sweeps do this too). Nothing is read into memory.
 - **Read** reads the key's file and checks that its header names the same key and namespace. An expired entry is deleted and reported as missing.
 - **Write** writes the entry to `tmp/`, then renames it into `data/`, so a reader sees the old entry or the new one.
 - **Delete** removes the key's file.
@@ -222,7 +222,7 @@ Expired entries are also removed from disk:
 Within one process, every `KeyvFs` on the same path shares one store, so they never overwrite each other. This works across CommonJS and ES module copies of the package too.
 
 - **`"file"` strategy: one process per file.** Each process holds the whole store in memory and saves all of it, so two processes writing one file overwrite each other's changes. There is no lock; give each process its own file, or use the `"directory"` strategy. Worker threads count as separate processes.
-- **`"directory"` strategy: several processes are fine.** Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process, though that process's readers may miss the key for a moment while it is checked. A `clear()` in one process and a `set` in another are not ordered.
+- **`"directory"` strategy: several processes are fine.** Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `clear()` in one process and a `set` in another are not ordered.
 
 Network file systems are not supported.
 
