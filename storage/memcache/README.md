@@ -72,7 +72,7 @@ This package does not support compression. If you need compression, please use t
 
 ## Expiration Granularity
 
-Expiry is enforced server-side by Memcached's `exptime`, which is **second-granular**. TTLs are accepted in milliseconds and rounded up to whole seconds, so Memcached itself can return a value for up to ~1 second past a sub-second (or just-elapsed) deadline before it evicts it. Keyv filters expired reads at its own layer by default (`checkExpired` defaults to `true`), using the absolute `expires` stored with the value, so reads are millisecond-precise out of the box even though Memcached's eviction is coarser. If you prefer to trust Memcached's `exptime` alone (and skip the extra decode on reads), opt out:
+Expiry is enforced server-side by Memcached's `exptime`, which is **second-granular**. TTLs are accepted in milliseconds and rounded up to whole seconds, so Memcached itself can return a value for up to ~1 second past a sub-second (or just-elapsed) deadline before it evicts it. Keyv filters expired reads at its own layer by default (`checkExpired` defaults to `true`), using the absolute `expires` stored with the value, so reads are millisecond-precise out of the box even though Memcached's eviction is coarser. `delete()` doesn't decode the value, so it can return `true` for a value whose deadline passed up to ~1 second earlier. If you prefer to trust Memcached's `exptime` alone (and skip the extra decode on reads), opt out:
 
 ```js
 const keyv = new Keyv({ store: new KeyvMemcache('localhost:11211'), checkExpired: false });
@@ -197,7 +197,7 @@ Every store reads the current token when it reads or writes, so a `clear()` in o
 - Each read fetches the token in the same multi-get as the values, and each write reads it alongside. Each value takes 17 more bytes: the token and a `:`.
 - Cleared values take memory until they expire or Memcached evicts them.
 - If the token is lost, because Memcached evicted it or the node holding it restarted, the adapter creates a new one and the namespace reads as empty. It never serves values from before a `clear()`. With several nodes, restarting the node that holds a namespace's token empties that namespace on every node.
-- `delete()` returns `true` for a cleared value that Memcached still holds.
+- `delete()` and `deleteMany()` read the values and the token in one multi-get before deleting, so a cleared value that Memcached still holds is deleted but reported as missing.
 - A value without a token, such as one v5 or an earlier v6 release wrote, reads as missing.
 
 ## Options
@@ -368,7 +368,7 @@ const results = await memcache.setMany([
 
 ### .delete(key)
 
-Deletes a key from the memcache server. Returns `true` if the key was deleted.
+Deletes a key from the memcache server. Returns `true` if the key held a value and was deleted. A value that `clear()` already removed is deleted too, but returns `false`.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
@@ -378,7 +378,7 @@ const deleted = await memcache.delete('foo'); // true
 
 ### .deleteMany(keys)
 
-Deletes multiple keys from the memcache server. Returns a `boolean[]` indicating whether each key was deleted.
+Deletes multiple keys from the memcache server. Returns a `boolean[]` with one result per key, as `.delete(key)` returns.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');
