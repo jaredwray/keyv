@@ -197,7 +197,7 @@ Every store reads the current token when it reads or writes, so a `clear()` in o
 - Each read fetches the token in the same multi-get as the values, and each write reads it alongside. Each value takes 17 more bytes: the token and a `:`.
 - Cleared values take memory until they expire or Memcached evicts them.
 - If the token is lost, because Memcached evicted it or the node holding it restarted, the adapter creates a new one and the namespace reads as empty. It never serves values from before a `clear()`. With several nodes, restarting the node that holds a namespace's token empties that namespace on every node.
-- `delete()` and `deleteMany()` read the values and the token in one multi-get before deleting, as a read does, so a cleared value that Memcached still holds is deleted but reported as missing.
+- `delete()` and `deleteMany()` read the values and the token in one multi-get first, as a read does, and delete only the keys that hold a value. A cleared value that Memcached still holds is reported as missing and left to expire, like the rest of the cleared namespace.
 - A value without a token, such as one v5 or an earlier v6 release wrote, reads as missing.
 
 ## Options
@@ -368,7 +368,7 @@ const results = await memcache.setMany([
 
 ### .delete(key)
 
-Deletes a key from the memcache server. Returns `true` if the key held a value and was deleted. A value that `clear()` already removed is deleted too, but returns `false`.
+Deletes a key from the memcache server. Returns `true` if the key held a value and was deleted. A value that `clear()` already removed returns `false`.
 
 ```js
 const memcache = new KeyvMemcache('localhost:11211');

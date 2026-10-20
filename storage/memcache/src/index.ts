@@ -322,8 +322,8 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key from the memcache server. A value that `clear()` left behind is deleted too, but
-	 * reported as missing, as `get` and `has` do.
+	 * Deletes a key from the memcache server. A value that `clear()` left behind is reported as
+	 * missing, as `get` and `has` do.
 	 * @param key - The key to delete
 	 * @returns `true` if the key held a value and it was deleted, `false` otherwise.
 	 */
@@ -334,8 +334,9 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 
 	/**
 	 * Deletes multiple keys from the memcache server. With generations, the values are read first,
-	 * in one multi-get with the token, so a value that `clear()` left behind is deleted but reported
-	 * as missing.
+	 * in one multi-get with the token, and only the keys that hold a value are deleted. A value that
+	 * `clear()` left behind is reported as missing and left for Memcached to expire or evict, like
+	 * the rest of a cleared namespace.
 	 * @param keys - An array of keys to delete
 	 * @returns An array of booleans indicating whether each key held a value and was deleted.
 	 */
@@ -352,9 +353,14 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 
 		return Promise.all(
 			keys.map(async (key, index) => {
+				// Deleting a key the read found missing could remove a value another client wrote
+				// since, while reporting that nothing was there.
+				if (values !== undefined && values[index] === undefined) {
+					return false;
+				}
+
 				try {
-					const deleted = await this.client.delete(this.formatKey(key));
-					return deleted && (values === undefined || values[index] !== undefined);
+					return await this.client.delete(this.formatKey(key));
 				} catch (error) {
 					this.emit("error", error);
 					return false;
