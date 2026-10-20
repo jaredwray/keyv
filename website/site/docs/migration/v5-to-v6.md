@@ -679,6 +679,7 @@ These changes don't cause compile errors, and most of them don't throw. Check yo
 - **`keyv.store` returns the wrapper.** For a `Map` or an older adapter, `keyv.store` is the `KeyvMemoryAdapter` or `KeyvBridgeAdapter` that Keyv created, and the object you passed in is at `keyv.store.store`. v5 returned your object.
 - **A `Map` holds different entries.** A `Map` store now holds `{ value, expires }` objects under `namespace::key`, or under the bare key when there is no namespace. v5 stored serialized strings under `keyv:key`. Code that reads the `Map` directly must change.
 - **Array results are always truthy.** `deleteMany` and `delete([...])` return `boolean[]`, so `if (await keyv.deleteMany(keys))` is always true. Check `results.every(Boolean)` instead.
+- **Deleting an expired entry returns `false`.** `delete` and `deleteMany` still remove an entry whose TTL has passed but that the store hasn't cleaned up yet, and report it as missing, as `get` and `has` do. v5 returned `true` whenever the store still held the entry.
 - **A TTL of zero or less means no TTL.** v5 treated only `0` that way. Fractional TTLs are rounded up to the next millisecond.
 - **Empty-string keys are rejected.** `set('', value)` and `delete('')` return `false`, and `get('')` returns `undefined`.
 - **Symbols can't be stored.** `set(key, Symbol())` emits `error`, so it rejects when no listener is attached and returns `false` when one is.
