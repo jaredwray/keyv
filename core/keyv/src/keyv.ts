@@ -894,13 +894,15 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	 * Delete an entry. If an array of keys is passed in it will delete many entries
 	 * delegating to {@link deleteMany}.
 	 * @param {string} key the key to be deleted
-	 * @returns {Promise<boolean>} `true` if the item was deleted, `false` if there was an error.
+	 * @returns {Promise<boolean>} `true` if the key held a value that had not expired, `false` if it
+	 * was missing or expired, or the delete failed. An expired entry is still removed.
 	 */
 	public async delete(key: string): Promise<boolean>;
 	/**
 	 * Delete multiple entries
 	 * @param {string[]} keys the keys to be deleted
-	 * @returns {Promise<boolean[]>} an array of booleans indicating success for each key.
+	 * @returns {Promise<boolean[]>} an array of booleans, `true` for each key that held a value that
+	 * had not expired.
 	 */
 	public async delete(keys: string[]): Promise<boolean[]>;
 	public async delete(key: string | string[]): Promise<boolean | boolean[]> {
@@ -937,7 +939,8 @@ export class Keyv<GenericValue = KeyvAny> extends Hookified {
 	/**
 	 * Delete many items from the store
 	 * @param {string[]} keys the keys to be deleted
-	 * @returns {Promise<boolean[]>} an array of booleans indicating success for each key.
+	 * @returns {Promise<boolean[]>} an array of booleans, `true` for each key that held a value that
+	 * had not expired. Expired entries are still removed.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		/* v8 ignore next -- @preserve */

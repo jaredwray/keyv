@@ -4,7 +4,7 @@ import type { StorageFn, StorageTestOptions, TestFunction } from "./types.js";
 
 /**
  * Registers expiry tests directly on the storage adapter: set with an absolute
- * `expires`, has after expiry, and setMany with per-entry `expires`. Skipped if
+ * `expires`, has and delete after expiry, and setMany with per-entry `expires`. Skipped if
  * `options.ttl` is `false`. Set `options.ttlGranularity` to "seconds" for backends
  * that only support second-level expiry (e.g. etcd leases, DynamoDB TTL) so
  * second-scale deadlines are used.
@@ -61,6 +61,35 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 		await s.set(key, faker.lorem.word(), expiresIn(ttl));
 		await delay(expiryDelay);
 		t.expect(await s.has(key)).toBe(false);
+	});
+
+	test("delete(key) returns false for expired key", async (t) => {
+		const s = await warmStore();
+		const key = faker.string.alphanumeric(10);
+		await s.set(key, faker.lorem.word(), expiresIn(ttl));
+		await delay(expiryDelay);
+		t.expect(await s.delete(key)).toBe(false);
+		t.expect(await s.get(key)).toBe(missingValue);
+	});
+
+	test("delete(key) returns true for key that has not expired yet", async (t) => {
+		const s = store();
+		const key = faker.string.alphanumeric(10);
+		await s.set(key, faker.lorem.word(), expiresIn(60_000));
+		t.expect(await s.delete(key)).toBe(true);
+		t.expect(await s.get(key)).toBe(missingValue);
+	});
+
+	test("deleteMany returns false for expired keys", async (t) => {
+		const s = await warmStore();
+		const expiredKey = faker.string.alphanumeric(10);
+		const liveKey = faker.string.alphanumeric(10);
+		const missingKey = faker.string.alphanumeric(10);
+		await s.set(expiredKey, faker.lorem.word(), expiresIn(ttl));
+		await s.set(liveKey, faker.lorem.word());
+		await delay(expiryDelay);
+		t.expect(await s.deleteMany([expiredKey, liveKey, missingKey])).toEqual([false, true, false]);
+		t.expect(await s.get(liveKey)).toBe(missingValue);
 	});
 
 	test("setMany with per-entry expires expires individual entries", async (t) => {

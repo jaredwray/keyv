@@ -400,7 +400,7 @@ const results = await keyvMysql.setMany([
 
 ### .delete(key)
 
-Deletes a key-value pair from the store. Returns `true` if the key existed and was deleted, `false` otherwise.
+Deletes a key-value pair from the store. Returns `true` if the key existed and was deleted, `false` otherwise. An expired entry is deleted too, but returns `false`.
 
 ```js
 const deleted = await keyvMysql.delete('foo');
@@ -408,7 +408,7 @@ const deleted = await keyvMysql.delete('foo');
 
 ### .deleteMany(keys)
 
-Deletes multiple key-value pairs from the store. Returns a `boolean[]` indicating whether each key was deleted.
+Deletes multiple key-value pairs from the store. Returns a `boolean[]` indicating whether each key was deleted. Expired entries are deleted too, but return `false`.
 
 ```js
 const results = await keyvMysql.deleteMany(['foo', 'bar']); // [true, true]

@@ -487,6 +487,29 @@ describe("delete", () => {
 		expect(await keyv.delete(["foo", "foo1", "foo2"])).toEqual([false, false, false]);
 	});
 
+	test("should return false for expired keys and remove them", async () => {
+		const store = new Map();
+		const keyv = new Keyv({ store });
+		const deleteResults: unknown[] = [];
+		keyv.onHook(KeyvHooks.AFTER_DELETE, (data: { value: unknown }) => {
+			deleteResults.push(data.value);
+		});
+		await keyv.set("expired", "value", 10);
+		await keyv.set("expired-many", "value", 10);
+		await keyv.set("live", "value");
+		await delay(30);
+		expect(store.size).toBe(3);
+
+		expect(await keyv.delete("expired")).toBe(false);
+		expect(await keyv.deleteMany(["expired-many", "live", "missing"])).toEqual([
+			false,
+			true,
+			false,
+		]);
+		expect(deleteResults).toEqual([false, [false, true, false]]);
+		expect(store.size).toBe(0);
+	});
+
 	test("should handle error on store delete", async () => {
 		const store = new Map();
 		store.delete = vi.fn().mockRejectedValue(new Error("store delete error"));

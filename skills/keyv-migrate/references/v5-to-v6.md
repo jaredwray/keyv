@@ -114,6 +114,7 @@ In TypeScript, `getRaw` returns `KeyvValue<T> | string | undefined`. Narrow it (
 ## Return values
 
 - `deleteMany(keys)` and `delete(keys)` with an array return `boolean[]`, one entry per key, so `if (await keyv.deleteMany(keys))` is always true. `delete(key)` with a single key still returns a boolean. Use `.some(Boolean)` if the code meant "at least one key was deleted" and `.every(Boolean)` if it meant "every key was deleted". The old result depended on the adapter: SQLite, PostgreSQL, MySQL, and MongoDB returned `true` when any key was deleted, while a `Map`, Memcache, and Etcd returned `true` only when all were. Redis depended on the `@keyv/redis` version: 2.7 through 3.0 returned `true` only when all were, and earlier and later versions when any was. With an empty list, v6 returns `[]`: `.every` gives `true` and `.some` gives `false`.
+- `delete(key)` and `deleteMany(keys)` return `false` for an entry whose TTL has passed, and still delete it. v5 returned `true` whenever the store still held the entry. Code that counts deletes, or reads `true` as "the key was there", now sees an expired entry as missing, as `get` and `has` do.
 - `setMany(entries)` takes `{ key, value, ttl? }[]` and returns `boolean[]`.
 - `set` returns `boolean`.
 - Missing values are always `undefined`, never `null`.

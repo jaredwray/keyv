@@ -67,6 +67,8 @@ export type DeleteRangeRequest = {
 	key: string | Buffer;
 	/** Exclusive end of the range delete. When omitted, only `key` is deleted. */
 	rangeEnd?: string | Buffer;
+	/** Whether to return the deleted pairs in {@link DeleteRangeResponse.prevKvs}. */
+	prevKv?: boolean;
 };
 
 /**
@@ -75,6 +77,8 @@ export type DeleteRangeRequest = {
 export type DeleteRangeResponse = {
 	/** The number of keys deleted, as a decimal string. */
 	deleted: string;
+	/** The deleted pairs. Empty unless the request set `prevKv`. */
+	prevKvs: ScannedPair[];
 };
 
 /**
@@ -241,8 +245,20 @@ export class EtcdClient {
 		if (req.rangeEnd !== undefined) {
 			body.range_end = b64encode(req.rangeEnd);
 		}
-		const result = await this.request<{ deleted?: string }>("/v3/kv/deleterange", body);
-		return { deleted: result?.deleted ?? "0" };
+		if (req.prevKv) {
+			body.prev_kv = true;
+		}
+		const result = await this.request<{
+			deleted?: string;
+			prev_kvs?: Array<{ key: string; value?: string }>;
+		}>("/v3/kv/deleterange", body);
+		return {
+			deleted: result?.deleted ?? "0",
+			prevKvs: (result?.prev_kvs ?? []).map((kv) => ({
+				key: decodeBase64(kv.key),
+				value: kv.value === undefined ? "" : b64decode(kv.value),
+			})),
+		};
 	}
 
 	// etcd lease IDs are 64-bit; the JSON gateway returns them as decimal
@@ -298,8 +314,8 @@ export class EtcdPutBuilder {
 export class EtcdDeleteBuilder {
 	constructor(private readonly client: EtcdClient) {}
 
-	async key(key: string | Buffer): Promise<DeleteRangeResponse> {
-		return this.client.deleteRangeRaw({ key });
+	async key(key: string | Buffer, options?: { prevKv?: boolean }): Promise<DeleteRangeResponse> {
+		return this.client.deleteRangeRaw({ key, prevKv: options?.prevKv });
 	}
 
 	async prefix(prefix: string): Promise<DeleteRangeResponse> {

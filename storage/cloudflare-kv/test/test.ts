@@ -441,6 +441,29 @@ describe("expiration", () => {
 		}
 	});
 
+	it("should return false from delete and deleteMany for expired values and remove them", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		try {
+			const s = store();
+			const expiredKey = faker.string.uuid();
+			const expiredManyKey = faker.string.uuid();
+			const liveKey = faker.string.uuid();
+			await s.set(expiredKey, "value", Date.now() + 100);
+			await s.set(expiredManyKey, "value", Date.now() + 100);
+			await s.set(liveKey, "value");
+			vi.setSystemTime(Date.now() + 200);
+			// KV's native expiry is at least 60 seconds away, so the values are still stored.
+			expect(await kvNamespace.get(s.formatKey(expiredKey))).toBe("value");
+			expect(await s.delete(expiredKey)).toBe(false);
+			expect(await s.deleteMany([expiredManyKey, liveKey])).toEqual([false, true]);
+			for (const key of [expiredKey, expiredManyKey, liveKey]) {
+				expect(await kvNamespace.get(s.formatKey(key))).toBeNull();
+			}
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it("should not persist an already-elapsed deadline", async () => {
 		const s = store();
 		const key = faker.string.uuid();

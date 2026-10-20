@@ -286,11 +286,11 @@ Stores multiple `{ key, value, expires? }` entries. Returns a `boolean[]` with p
 
 ### .delete(key)
 
-Deletes a key. Returns `true` if the key existed, `false` otherwise.
+Deletes a key. Returns `true` if the key existed, `false` otherwise. An expired entry is deleted too, but returns `false`.
 
 ### .deleteMany(keys)
 
-Deletes multiple keys. Returns a `boolean[]` indicating which keys existed.
+Deletes multiple keys. Returns a `boolean[]` indicating which keys existed. Expired entries are deleted too, but return `false`.
 
 ### .clear()
 

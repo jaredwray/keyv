@@ -222,6 +222,39 @@ describe("clear", () => {
 		expect(await cache.client.get(`foreign-${id}`)).toBe("other app");
 	});
 
+	test("delete and deleteMany report a cleared value as missing", async () => {
+		const store = new KeyvMemcache(uri, { namespace: `cleared-${faker.string.alphanumeric(8)}` });
+		await store.set("a", "value");
+		await store.set("b", "value");
+		await store.clear();
+		await store.set("live", "value");
+		// Memcached still holds the cleared values, under the old token.
+		expect(await store.client.get(store.formatKey("a"))).toBeDefined();
+		const deleteSpy = vi.spyOn(store.client, "delete");
+
+		expect(await store.delete("a")).toBe(false);
+		expect(await store.deleteMany(["b", "live", "missing"])).toEqual([false, true, false]);
+		// Only the live key is deleted. The cleared values are left to expire, as clear() leaves them.
+		expect(deleteSpy).toHaveBeenCalledExactlyOnceWith(store.formatKey("live"));
+		expect(await store.client.get(store.formatKey("live"))).toBeUndefined();
+	});
+
+	test("delete does not remove a value written after its read found the key missing", async () => {
+		const namespace = `race-${faker.string.alphanumeric(8)}`;
+		const store = new KeyvMemcache(uri, { namespace });
+		const writer = new KeyvMemcache(uri, { namespace });
+		const key = faker.string.uuid();
+		const gets = store.client.gets.bind(store.client);
+		vi.spyOn(store.client, "gets").mockImplementationOnce(async (keys) => {
+			const values = await gets(keys);
+			expect(await writer.set(key, "fresh")).toBe(true);
+			return values;
+		});
+
+		expect(await store.delete(key)).toBe(false);
+		expect(await writer.get(key)).toBe("fresh");
+	});
+
 	test("clearing without a namespace keeps namespaced entries and keys other clients wrote", async () => {
 		const id = faker.string.alphanumeric(8);
 		const plain = new KeyvMemcache(uri);
@@ -686,6 +719,17 @@ describe("error handling", () => {
 		const result = await store.delete(faker.string.uuid());
 		expect(errorEmitted).toBe(true);
 		expect(result).toBe(false);
+	});
+
+	test("delete emits an error and returns false on connection failure without generations", async () => {
+		const store = new KeyvMemcache("baduri:11211", { noNamespaceAffectsAll: true });
+		let errorEmitted = false;
+		store.on("error", () => {
+			errorEmitted = true;
+		});
+
+		expect(await store.deleteMany([faker.string.uuid()])).toEqual([false]);
+		expect(errorEmitted).toBe(true);
 	});
 
 	test("clear emits an error on connection failure", async () => {

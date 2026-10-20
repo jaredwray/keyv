@@ -83,7 +83,7 @@ if (raw) {
 
 ## `.delete(key)`
 
-Delete one key, or pass an array to `.deleteMany()`. Returns `true` if the key existed.
+Delete one key, or pass an array to `.deleteMany()`. Returns `true` if the key existed. An expired entry counts as missing: it is deleted, and `.delete()` returns `false`.
 
 ```js
 await keyv.delete("foo");

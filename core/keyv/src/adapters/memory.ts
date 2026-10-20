@@ -27,6 +27,15 @@ type MemoryEntry = {
 };
 
 /**
+ * Whether an entry has passed its absolute expiry.
+ * @param entry - The stored entry, or `undefined` when there is none
+ * @returns True if the entry has an expiry and it is in the past
+ */
+function isExpired(entry: MemoryEntry | undefined): boolean {
+	return entry?.expires !== undefined && Date.now() > entry.expires;
+}
+
+/**
  * Configuration options for KeyvMemoryAdapter.
  */
 export type KeyvMemoryAdapterOptions = {
@@ -269,7 +278,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
-		if (entry.expires !== undefined && Date.now() > entry.expires) {
+		if (isExpired(entry)) {
 			this._store.delete(keyPrefix);
 			return undefined;
 		}
@@ -315,13 +324,13 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a value from the store by key.
+	 * Deletes a value from the store by key. An expired entry is deleted too, but reported as
+	 * missing, as `get` and `has` do.
 	 * @param key - The key to delete
-	 * @returns True if the key was deleted, false otherwise
+	 * @returns True if the key held a value that had not expired, false otherwise
 	 */
 	public async delete(key: string): Promise<boolean> {
-		const keyPrefix = this.getKeyPrefix(key, this._namespace);
-		return this._store.delete(keyPrefix);
+		return this.deleteEntry(key);
 	}
 
 	/**
@@ -368,7 +377,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			return false;
 		}
 
-		if (entry.expires !== undefined && Date.now() > entry.expires) {
+		if (isExpired(entry)) {
 			this._store.delete(keyPrefix);
 			return false;
 		}
@@ -405,7 +414,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 				continue;
 			}
 
-			if (entry.expires !== undefined && Date.now() > entry.expires) {
+			if (isExpired(entry)) {
 				this._store.delete(keyPrefix);
 				values.push(undefined as KeyvStorageGetResult<T | undefined>);
 				continue;
@@ -418,18 +427,16 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from the store at once.
+	 * Deletes multiple keys from the store at once. Expired entries are deleted too, but
+	 * reported as missing.
 	 * @param keys - Array of keys to delete
-	 * @returns Array of booleans indicating success for each key
+	 * @returns Array of booleans, true for each key that held a value that had not expired
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const results: boolean[] = [];
 		for (const key of keys) {
 			try {
-				const keyPrefix = this.getKeyPrefix(key, this._namespace);
-				const existed = this._store.has(keyPrefix);
-				this._store.delete(keyPrefix);
-				results.push(existed);
+				results.push(await this.deleteEntry(key));
 			} catch (error) {
 				this.emit(KeyvEvents.ERROR, error);
 				results.push(false);
@@ -466,7 +473,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 			const entry = raw as MemoryEntry;
 
 			// Check expiration
-			if (entry?.expires !== undefined && Date.now() > entry.expires) {
+			if (isExpired(entry)) {
 				this._store.delete(key);
 				continue;
 			}
@@ -611,6 +618,19 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		return expiredKeys.length;
+	}
+
+	/**
+	 * Deletes a key's entry, expired or not.
+	 * @param key - The key to delete
+	 * @returns True if the key held an entry that had not expired
+	 */
+	private async deleteEntry(key: string): Promise<boolean> {
+		const keyPrefix = this.getKeyPrefix(key, this._namespace);
+		const entry = this._store.get(keyPrefix) as MemoryEntry | undefined;
+		// Awaited in case the store's delete returns a promise, so its rejection reaches the caller.
+		await this._store.delete(keyPrefix);
+		return entry !== undefined && entry !== null && !isExpired(entry);
 	}
 }
 

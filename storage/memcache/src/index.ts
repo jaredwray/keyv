@@ -322,29 +322,51 @@ export class KeyvMemcache extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key from the memcache server.
+	 * Deletes a key from the memcache server. A value that `clear()` left behind is reported as
+	 * missing, as `get` and `has` do.
 	 * @param key - The key to delete
-	 * @returns `true` if the key was deleted, `false` otherwise.
+	 * @returns `true` if the key held a value and it was deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
-		try {
-			return await this.client.delete(this.formatKey(key));
-		} catch (error) {
-			this.emit("error", error);
-		}
-
-		return false;
+		const [deleted] = await this.deleteMany([key]);
+		return deleted;
 	}
 
 	/**
-	 * Deletes multiple keys from the memcache server.
+	 * Deletes multiple keys from the memcache server. With generations, the values are read first,
+	 * in one multi-get with the token, and only the keys that hold a value are deleted. A value that
+	 * `clear()` left behind is reported as missing and left for Memcached to expire or evict, like
+	 * the rest of a cleared namespace.
 	 * @param keys - An array of keys to delete
-	 * @returns An array of booleans indicating whether each key was successfully deleted.
+	 * @returns An array of booleans indicating whether each key held a value and was deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		const promises = keys.map(async (key) => this.delete(key));
-		const results = await Promise.allSettled(promises);
-		return results.map((x) => (x.status === "fulfilled" ? x.value : false));
+		let values: Array<string | undefined> | undefined;
+		if (this.usesGenerations) {
+			try {
+				values = await this.readValues(keys);
+			} catch (error) {
+				this.emit("error", error);
+				return keys.map(() => false);
+			}
+		}
+
+		return Promise.all(
+			keys.map(async (key, index) => {
+				// Deleting a key the read found missing could remove a value another client wrote
+				// since, while reporting that nothing was there.
+				if (values !== undefined && values[index] === undefined) {
+					return false;
+				}
+
+				try {
+					return await this.client.delete(this.formatKey(key));
+				} catch (error) {
+					this.emit("error", error);
+					return false;
+				}
+			}),
+		);
 	}
 
 	/**

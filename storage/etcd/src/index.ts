@@ -481,9 +481,11 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Deletes a key from the etcd server.
+	 * Deletes a key from the etcd server. An expired entry is deleted too, but reported as missing,
+	 * as `get` and `has` do.
 	 * @param key - The key to delete
-	 * @returns `true` if the key was deleted, `false` otherwise.
+	 * @returns `true` if the key held a value that had not expired and was deleted, `false`
+	 * otherwise.
 	 */
 	public async delete(key: string): DeleteOutput {
 		if (typeof key !== "string") {
@@ -491,10 +493,13 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 		}
 
 		try {
-			return await this._client
+			const { deleted, prevKvs } = await this._client
 				.delete()
-				.key(this.formatKey(key))
-				.then((key) => key.deleted !== "0");
+				.key(this.formatKey(key), { prevKv: true });
+			const [previous] = prevKvs;
+			// etcd leases are second-granular (and revoked lazily), so a key can outlive the
+			// millisecond `expires` in its envelope.
+			return deleted !== "0" && previous !== undefined && !this.unwrapValue(previous.value).expired;
 		} catch (error) {
 			this.emit("error", error);
 			return false;
@@ -502,9 +507,11 @@ export class KeyvEtcd<GenericValue = KeyvAny> extends Hookified {
 	}
 
 	/**
-	 * Deletes multiple keys from the etcd server.
+	 * Deletes multiple keys from the etcd server. Expired entries are deleted too, but reported as
+	 * missing.
 	 * @param keys - An array of keys to delete
-	 * @returns An array of booleans indicating whether each key was successfully deleted.
+	 * @returns An array of booleans indicating whether each key held a value that had not expired
+	 * and was deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const promises = [];
