@@ -443,6 +443,37 @@ describe("delete and deleteMany", () => {
 		// A second delete of the same keys now reports them all as missing.
 		expect(await keyv.deleteMany([existingKey1, existingKey2])).toStrictEqual([false, false]);
 	});
+
+	test("should return false from delete for an expired key and remove its row", async () => {
+		const keyv = store();
+		const key = faker.string.uuid();
+		await keyv.set(key, faker.lorem.word(), Date.now() - 1000);
+		expect(await keyv.delete(key)).toBe(false);
+		const rows = await keyv.query(`SELECT key FROM "${keyv.table}" WHERE key = ?`, key);
+		expect(rows).toHaveLength(0);
+	});
+
+	test("should return false from deleteMany for expired keys and remove their rows", async () => {
+		const keyv = store();
+		const expiredKey = faker.string.uuid();
+		const liveKey = faker.string.uuid();
+		const futureKey = faker.string.uuid();
+		await keyv.set(expiredKey, faker.lorem.word(), Date.now() - 1000);
+		await keyv.set(liveKey, faker.lorem.word());
+		await keyv.set(futureKey, faker.lorem.word(), Date.now() + 60_000);
+		expect(await keyv.deleteMany([expiredKey, liveKey, futureKey])).toStrictEqual([
+			false,
+			true,
+			true,
+		]);
+		const rows = await keyv.query(
+			`SELECT key FROM "${keyv.table}" WHERE key IN (?, ?, ?)`,
+			expiredKey,
+			liveKey,
+			futureKey,
+		);
+		expect(rows).toHaveLength(0);
+	});
 });
 
 describe("clearExpired", () => {

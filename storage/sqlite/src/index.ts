@@ -55,6 +55,16 @@ function isSafeSqlIdentifier(identifier: string): boolean {
 }
 
 /**
+ * Returns true when a row's `expires` is set and at or before `now`.
+ * @param {number | null | undefined} expires - The row's `expires` column.
+ * @param {number} now - The current time in Unix milliseconds.
+ * @returns {boolean} `true` if the row has expired.
+ */
+function isExpired(expires: number | null | undefined, now: number): boolean {
+	return expires !== null && expires !== undefined && expires <= now;
+}
+
+/**
  * SQLite storage adapter for Keyv.
  *
  * Supports multiple drivers (`better-sqlite3`, `node:sqlite`, `bun:sqlite`) with
@@ -443,7 +453,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			return undefined;
 		}
 
-		if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+		if (isExpired(row.expires, now)) {
 			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
 			await this.query(del, key, ns);
 			return undefined;
@@ -475,7 +485,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			const rows = await this.query(select, ...batch, ns);
 			const expiredKeys: string[] = [];
 			for (const row of rows as Array<{ key: string; value: Value; expires?: number | null }>) {
-				if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+				if (isExpired(row.expires, now)) {
 					expiredKeys.push(row.key);
 				} else {
 					validMap.set(row.key, (row.value ?? undefined) as Value);
@@ -568,43 +578,53 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key from the store.
+	 * Deletes a key from the store. An expired row is deleted too, but reported as missing, as
+	 * `get` and `has` do.
 	 * @param {string} key - The key to delete.
-	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` if the key was not found.
+	 * @returns {Promise<boolean>} `true` if the key held a value that had not expired and was deleted,
+	 *   `false` if the key was not found or had expired.
 	 */
 	public async delete(key: string): Promise<boolean> {
 		const ns = this.getNamespaceValue();
-		const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ? RETURNING key`;
-		const result = (await this.query(del, key, ns)) as Array<{
-			key: string;
-		}>;
-		return result.length > 0;
+		const now = Date.now();
+		const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ? RETURNING expires`;
+		const rows = (await this.query(del, key, ns)) as Array<{ expires?: number | null }>;
+		return rows.length > 0 && !isExpired(rows[0].expires, now);
 	}
 
 	/**
-	 * Deletes multiple keys from the store using batched `DELETE ... WHERE key IN (?, ?) RETURNING key`
-	 * statements. Batching (998 keys per query) reduces database roundtrips to `ceil(keys.length / 998)`
-	 * compared to deleting each key individually, mirroring {@link getMany} and {@link hasMany}.
+	 * Deletes multiple keys from the store using batched
+	 * `DELETE ... WHERE key IN (?, ?) RETURNING key, expires` statements. Batching (998 keys per
+	 * query) reduces database roundtrips to `ceil(keys.length / 998)` compared to deleting each key
+	 * individually, mirroring {@link getMany} and {@link hasMany}. Expired rows are deleted too, but
+	 * reported as missing.
 	 * @param {string[]} keys - An array of keys to delete.
 	 * @returns {Promise<boolean[]>} An array of booleans in the same order as the input keys,
-	 *   where `true` indicates the key existed and was deleted, `false` indicates it was not found.
+	 *   where `true` indicates the key held a value that had not expired and was deleted, and `false`
+	 *   indicates it was not found or had expired.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const ns = this.getNamespaceValue();
+		const now = Date.now();
 		const batchSize = 998; // 999 max params - 1 for namespace
-		const deletedKeys = new Set<string>();
+		const liveKeys = new Set<string>();
 
 		for (let i = 0; i < keys.length; i += batchSize) {
 			const batch = keys.slice(i, i + batchSize);
 			const placeholders = batch.map(() => "?").join(", ");
-			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ? RETURNING key`;
-			const rows = (await this.query(del, ...batch, ns)) as Array<{ key: string }>;
+			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key IN (${placeholders}) AND namespace = ? RETURNING key, expires`;
+			const rows = (await this.query(del, ...batch, ns)) as Array<{
+				key: string;
+				expires?: number | null;
+			}>;
 			for (const row of rows) {
-				deletedKeys.add(row.key);
+				if (!isExpired(row.expires, now)) {
+					liveKeys.add(row.key);
+				}
 			}
 		}
 
-		return keys.map((key) => deletedKeys.has(key));
+		return keys.map((key) => liveKeys.has(key));
 	}
 
 	/**
@@ -631,7 +651,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			return false;
 		}
 
-		if (rows[0].expires !== null && rows[0].expires !== undefined && rows[0].expires <= now) {
+		if (isExpired(rows[0].expires, now)) {
 			const del = `DELETE FROM ${this.getCleanTableName()} WHERE key = ? AND namespace = ?`;
 			await this.query(del, key, ns);
 			return false;
@@ -660,7 +680,7 @@ export class KeyvSqlite extends Hookified implements KeyvStorageAdapter {
 			const rows = await this.query(select, ...batch, ns);
 			const expiredKeys: string[] = [];
 			for (const row of rows as Array<{ key: string; expires?: number | null }>) {
-				if (row.expires !== null && row.expires !== undefined && row.expires <= now) {
+				if (isExpired(row.expires, now)) {
 					expiredKeys.push(row.key);
 				} else {
 					validKeys.add(row.key);
