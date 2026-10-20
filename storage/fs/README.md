@@ -284,6 +284,37 @@ Use the same `namespace` you used with keyv-file, and run it once for each names
 `@keyv/fs` against [keyv-file](https://github.com/zaaack/keyv-file) 5.3.5, each through `new Keyv({ store })` with Keyv's default serializer, as an app would use them. Values are random paragraphs of about 450 bytes. Each table starts from a store of that many entries.
 
 <!-- BENCHMARK-RESULTS-START -->
+### 1,000 entries
+
+| Scenario (ops/sec, higher is better) | @keyv/fs file | @keyv/fs directory | keyv-file | keyv-file separatedFile | keyv-file default writeDelay (100 ms) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| set (overwrite) | 654 | 2.0K | 271 | **2.9K** | 9.6 |
+| get (hit) | 345K | 6.3K | **505K** | 6.5K | — |
+| get (miss) | 288K | 16K | **383K** | 17K | — |
+| set + get | 563 | 1.2K | 284 | **1.7K** | — |
+| getMany (100 keys) | 6.5K | 110 | **7.0K** | 110 | — |
+| setMany (100 keys) | **471** | 44 | 2.7 | 26 | — |
+| delete + set | 308 | 1.4K | 131 | **2.5K** | — |
+| 100 concurrent sets | **389** | 51 | 245 | 104 | 9.6 |
+| open + first get | 484 | 2.5K | 460 | **5.6K** | 576 |
+| Disk use | 222 KB in 1 file | 254 KB in 1,001 files | 214 KB in 1 file | 173 KB in 1,001 files | 214 KB in 1 file |
+
+### 10,000 entries
+
+| Scenario (ops/sec, higher is better) | @keyv/fs file | @keyv/fs directory | keyv-file | keyv-file separatedFile | keyv-file default writeDelay (100 ms) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| set (overwrite) | 119 | 2.9K | 50 | **4.2K** | 8.2 |
+| get (hit) | **322K** | 6.2K | 260K | 6.1K | — |
+| get (miss) | **323K** | 15K | 255K | 16K | — |
+| set + get | 118 | **1.6K** | 48 | 1.6K | — |
+| getMany (100 keys) | **5.7K** | 107 | 5.2K | 109 | — |
+| setMany (100 keys) | **113** | 69 | 0.5 | 28 | — |
+| delete + set | 56 | 1.3K | 24 | **1.9K** | — |
+| 100 concurrent sets | **105** | 45 | 39 | 94 | 8.0 |
+| open + first get | 52 | 2.5K | 39 | **4.9K** | 43 |
+| Disk use | 2.2 MB in 1 file | 2.5 MB in 10,001 files | 2.1 MB in 1 file | 1.7 MB in 10,001 files | 2.1 MB in 1 file |
+
+Measured with Node.js v22.22.0, linux x64, Intel(R) Xeon(R) Processor @ 2.10GHz.
 <!-- BENCHMARK-RESULTS-END -->
 
 Notes on reading the numbers:
