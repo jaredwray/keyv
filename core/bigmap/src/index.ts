@@ -1,5 +1,5 @@
 import { Hookified, type HookifiedOptions } from "hookified";
-import { Keyv, type KeyvAny } from "keyv";
+import { Keyv, type KeyvAny, type KeyvMapType, KeyvMemoryAdapter } from "keyv";
 
 /**
  * A subset of the native `Map` interface that {@link BigMap} implements.
@@ -463,12 +463,30 @@ export class BigMap<K, V> extends Hookified implements MapInterface<K, V> {
 }
 
 /**
+ * Options for {@link createKeyv}: the {@link BigMapOptions} plus settings for the
+ * `KeyvMemoryAdapter` that Keyv uses to wrap the BigMap.
+ */
+export type BigMapCreateKeyvOptions = BigMapOptions & {
+	/**
+	 * Interval in milliseconds between sweeps that delete expired entries. Each sweep covers one
+	 * internal `Map`, in turn. `0` (default) disables it; expired entries are then removed only
+	 * when read.
+	 * @default 0
+	 */
+	clearExpiredInterval?: number;
+};
+
+/**
  * Will create a Keyv instance with the BigMap adapter.
- * @param {BigMapOptions} [options] - Options for the BigMap adapter such as `storeSize` and `storeHashFunction`.
+ * @param {BigMapCreateKeyvOptions} [options] - Options for the BigMap adapter such as `storeSize` and `storeHashFunction`, and `clearExpiredInterval` to delete expired entries on a timer.
  * @returns {Keyv} A Keyv instance backed by the BigMap adapter.
  */
-export function createKeyv<K = string, V = unknown>(options?: BigMapOptions): Keyv {
-	const adapter = new BigMap<K, V>(options);
+export function createKeyv<K = string, V = unknown>(options?: BigMapCreateKeyvOptions): Keyv {
+	const { clearExpiredInterval, ...bigMapOptions } = options ?? {};
+	const bigMap = new BigMap<K, V>(bigMapOptions);
+	const adapter = new KeyvMemoryAdapter(bigMap as unknown as KeyvMapType, {
+		clearExpiredInterval,
+	});
 	const keyv = new Keyv({ store: adapter });
 
 	return keyv;

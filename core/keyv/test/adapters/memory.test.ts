@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { createKeyv, KeyvMemoryAdapter } from "../../src/adapters/memory.js";
+import { Keyv } from "../../src/keyv.js";
 import { delay as sleep } from "../test-utils.js";
 
 describe("Keyv Generic Store Options", () => {
@@ -387,5 +388,275 @@ describe("Keyv Generic Store Iterator", () => {
 		}
 		expect(entries.length).toBe(1);
 		expect(entries[0][0]).toBe(k1);
+	});
+});
+
+describe("Keyv Generic Store clearExpired / clearExpiredInterval", () => {
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.restoreAllMocks();
+	});
+
+	/**
+	 * A minimal store split into internal Maps, like BigMap. A key's shard is the number before
+	 * its first `:`, so tests can place entries in a chosen shard.
+	 */
+	function createShardedStore(shardCount: number) {
+		const shards = Array.from({ length: shardCount }, () => new Map<string, unknown>());
+		const shardOf = (key: string) => shards[Number(key.split(":")[0])];
+		return {
+			shards,
+			storeSize: shardCount,
+			getStoreMap: (index: number) => shards[index],
+			get: (key: string) => shardOf(key).get(key),
+			set: (key: string, value: unknown) => shardOf(key).set(key, value),
+			delete: (key: string) => shardOf(key).delete(key),
+			clear: () => {
+				for (const shard of shards) {
+					shard.clear();
+				}
+			},
+			has: (key: string) => shardOf(key).has(key),
+		};
+	}
+
+	test("clearExpired() deletes only expired entries and returns how many", async () => {
+		const store = new Map();
+		const adapter = new KeyvMemoryAdapter(store);
+		const now = Date.now();
+		await adapter.set("expired-1", "a", now - 1000);
+		await adapter.set("expired-2", "b", now - 1);
+		await adapter.set("live", "c", now + 60_000);
+		await adapter.set("forever", "d");
+		// Values the adapter didn't write are left alone
+		store.set("raw", "not a memory entry");
+		store.set("null", null);
+
+		expect(await adapter.clearExpired()).toBe(2);
+		expect([...store.keys()].sort()).toEqual(["forever", "live", "null", "raw"]);
+		expect(await adapter.clearExpired()).toBe(0);
+	});
+
+	test("clearExpired() only deletes the current namespace's expired entries", async () => {
+		const store = new Map();
+		const past = Date.now() - 1000;
+		const ns1 = new KeyvMemoryAdapter(store, { namespace: "ns1" });
+		const ns2 = new KeyvMemoryAdapter(store, { namespace: "ns2" });
+		await ns1.set("key", "v1", past);
+		await ns2.set("key", "v2", past);
+		store.set(42, { value: "non-string key", expires: past });
+
+		expect(await ns1.clearExpired()).toBe(1);
+		expect(store.has("ns1::key")).toBe(false);
+		expect(store.has("ns2::key")).toBe(true);
+		expect(store.has(42)).toBe(true);
+
+		// An adapter without a namespace sweeps every namespace
+		expect(await new KeyvMemoryAdapter(store).clearExpired()).toBe(2);
+		expect(store.size).toBe(0);
+	});
+
+	test("does nothing for a store without entries()", async () => {
+		vi.useFakeTimers();
+		const customStore = {
+			get: () => undefined,
+			set: () => {},
+			delete: () => true,
+			clear: () => {},
+			has: () => false,
+		};
+		const adapter = new KeyvMemoryAdapter(customStore, { clearExpiredInterval: 100 });
+		const onError = vi.fn();
+		adapter.on("error", onError);
+
+		expect(await adapter.clearExpired()).toBe(0);
+		vi.advanceTimersByTime(300);
+		expect(onError).not.toHaveBeenCalled();
+		await adapter.disconnect();
+	});
+
+	test("is off by default", () => {
+		const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+		const adapter = new KeyvMemoryAdapter(new Map());
+		expect(adapter.clearExpiredInterval).toBe(0);
+		expect(setIntervalSpy).not.toHaveBeenCalled();
+	});
+
+	test("deletes expired entries on the timer without a read", async () => {
+		vi.useFakeTimers();
+		const store = new Map();
+		const adapter = new KeyvMemoryAdapter(store, { clearExpiredInterval: 1000 });
+		expect(adapter.clearExpiredInterval).toBe(1000);
+		await adapter.set("short", "a", Date.now() + 500);
+		await adapter.set("long", "b", Date.now() + 5000);
+
+		vi.advanceTimersByTime(999);
+		expect(store.size).toBe(2);
+		vi.advanceTimersByTime(1);
+		expect(store.has("short")).toBe(false);
+		expect(store.has("long")).toBe(true);
+		vi.advanceTimersByTime(5000);
+		expect(store.size).toBe(0);
+		await adapter.disconnect();
+	});
+
+	test("the setter restarts the timer, and 0, NaN, or a negative value stops it", async () => {
+		vi.useFakeTimers();
+		const store = new Map();
+		const adapter = new KeyvMemoryAdapter(store, { clearExpiredInterval: 10_000 });
+		adapter.clearExpiredInterval = 100;
+		expect(adapter.clearExpiredInterval).toBe(100);
+		expect(vi.getTimerCount()).toBe(1);
+		await adapter.set("key", "value", Date.now() + 50);
+		vi.advanceTimersByTime(100);
+		expect(store.size).toBe(0);
+
+		for (const value of [0, Number.NaN, -1]) {
+			adapter.clearExpiredInterval = 100;
+			adapter.clearExpiredInterval = value;
+			expect(adapter.clearExpiredInterval).toBe(value);
+			expect(vi.getTimerCount()).toBe(0);
+			await adapter.set("key", "value", Date.now() - 1);
+			vi.advanceTimersByTime(1000);
+			expect(store.has("key")).toBe(true);
+			store.clear();
+		}
+	});
+
+	test("runs an interval longer than Node's timer limit at the limit", () => {
+		vi.useFakeTimers();
+		const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+		const adapter = new KeyvMemoryAdapter(new Map());
+		adapter.clearExpiredInterval = 30 * 24 * 60 * 60 * 1000;
+		expect(setIntervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 2_147_483_647);
+		adapter.clearExpiredInterval = Number.POSITIVE_INFINITY;
+		expect(setIntervalSpy).toHaveBeenLastCalledWith(expect.any(Function), 2_147_483_647);
+		expect(vi.getTimerCount()).toBe(1);
+		adapter.clearExpiredInterval = 0;
+	});
+
+	test("disconnect() stops the timer, also through Keyv", async () => {
+		vi.useFakeTimers();
+		const adapter = new KeyvMemoryAdapter(new Map(), { clearExpiredInterval: 100 });
+		expect(vi.getTimerCount()).toBe(1);
+		await adapter.disconnect();
+		expect(vi.getTimerCount()).toBe(0);
+
+		const keyv = new Keyv({
+			store: new KeyvMemoryAdapter(new Map(), { clearExpiredInterval: 100 }),
+		});
+		expect(vi.getTimerCount()).toBe(1);
+		await keyv.disconnect();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	test("works when setInterval returns a number without unref(), as in browsers", async () => {
+		let tick = () => {};
+		vi.spyOn(globalThis, "setInterval").mockImplementation(((handler: () => void) => {
+			tick = handler;
+			return 1;
+		}) as unknown as typeof setInterval);
+		const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval").mockImplementation(() => {});
+		const store = new Map();
+		const adapter = new KeyvMemoryAdapter(store, { clearExpiredInterval: 100 });
+		await adapter.set("key", "value", Date.now() - 1);
+
+		tick();
+		expect(store.size).toBe(0);
+		await adapter.disconnect();
+		expect(clearIntervalSpy).toHaveBeenCalledWith(1);
+	});
+
+	test("sweeps one internal Map of a sharded store per tick, in turn", async () => {
+		vi.useFakeTimers();
+		const store = createShardedStore(3);
+		const adapter = new KeyvMemoryAdapter(store, { clearExpiredInterval: 100 });
+		const addExpired = async (...keys: string[]) => {
+			for (const key of keys) {
+				await adapter.set(key, "value", Date.now() - 1);
+			}
+		};
+		const sizes = () => store.shards.map((shard) => shard.size);
+
+		await addExpired("0:a", "1:a", "2:a");
+		vi.advanceTimersByTime(100);
+		expect(sizes()).toEqual([0, 1, 1]);
+		vi.advanceTimersByTime(100);
+		expect(sizes()).toEqual([0, 0, 1]);
+		vi.advanceTimersByTime(100);
+		expect(sizes()).toEqual([0, 0, 0]);
+
+		// After the last shard it starts over at the first
+		await addExpired("0:b", "1:b", "2:b");
+		vi.advanceTimersByTime(100);
+		expect(sizes()).toEqual([0, 1, 1]);
+
+		// The next shard would be 1; when the store shrinks below that, it starts over at 0
+		await addExpired("0:c");
+		store.storeSize = 1;
+		vi.advanceTimersByTime(100);
+		expect(sizes()).toEqual([0, 1, 1]);
+
+		// clearExpired() sweeps every shard at once
+		store.storeSize = 3;
+		expect(await adapter.clearExpired()).toBe(2);
+		expect(sizes()).toEqual([0, 0, 0]);
+		await adapter.disconnect();
+	});
+
+	test("a sweep that throws emits error and never throws out of the timer", async () => {
+		vi.useFakeTimers();
+		const error = new Error("entries failed");
+		const store = new Map();
+		vi.spyOn(store, "entries").mockImplementation(() => {
+			throw error;
+		});
+
+		// With a listener, the error reaches it
+		const adapter = new KeyvMemoryAdapter(store, { clearExpiredInterval: 100 });
+		const onError = vi.fn();
+		adapter.on("error", onError);
+		vi.advanceTimersByTime(100);
+		expect(onError).toHaveBeenCalledWith(error);
+		await adapter.disconnect();
+
+		// With no listener on the adapter
+		const bare = new KeyvMemoryAdapter(store, { clearExpiredInterval: 100 });
+		expect(() => vi.advanceTimersByTime(100)).not.toThrow();
+		await bare.disconnect();
+
+		// Inside a Keyv with no error listener, which re-emits the adapter's errors
+		const keyv = new Keyv({ store: new KeyvMemoryAdapter(store, { clearExpiredInterval: 100 }) });
+		expect(() => vi.advanceTimersByTime(100)).not.toThrow();
+		await keyv.disconnect();
+	});
+
+	test("a replaced adapter keeps sweeping its own store until it is disconnected", async () => {
+		vi.useFakeTimers();
+		const oldStore = new Map();
+		const oldAdapter = new KeyvMemoryAdapter(oldStore, { clearExpiredInterval: 100 });
+		const keyv = new Keyv({ store: oldAdapter });
+		await keyv.set("key", "value", 50);
+		keyv.store = new Map();
+
+		vi.advanceTimersByTime(100);
+		expect(oldStore.size).toBe(0);
+		expect(vi.getTimerCount()).toBe(1);
+		await oldAdapter.disconnect();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	test("createKeyv passes clearExpiredInterval to the adapter, scoped to the namespace", async () => {
+		vi.useFakeTimers();
+		const store = new Map();
+		const keyv = createKeyv(store, { namespace: "ns", clearExpiredInterval: 100 });
+		expect((keyv.store as KeyvMemoryAdapter).clearExpiredInterval).toBe(100);
+		await keyv.set("key", "value", 50);
+		store.set("other::key", { value: "other", expires: Date.now() - 1 });
+
+		vi.advanceTimersByTime(100);
+		expect(store.has("ns::key")).toBe(false);
+		expect(store.has("other::key")).toBe(true);
+		await keyv.disconnect();
 	});
 });

@@ -1042,6 +1042,7 @@ Keyv v6 includes `KeyvMemoryAdapter`, a wrapper class for storage types that don
 - Adds the v6 batch methods the store lacks: `getMany`, `setMany`, `hasMany`, and `deleteMany`
 - Attempts iteration using various strategies
 - Adds TTL support and handles expiration
+- Can delete expired entries that are never read on a timer, with the `clearExpiredInterval` option, or on demand with `clearExpired()`
 
 Older async adapters go through `KeyvBridgeAdapter` instead. See [Legacy Storage Adapters](/docs/legacy-storage-adapters/).
 

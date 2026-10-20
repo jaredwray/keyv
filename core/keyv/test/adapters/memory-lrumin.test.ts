@@ -182,3 +182,18 @@ describe("KeyvMemoryAdapter with lru.min - expired entries", () => {
 		expect(lru.size).toBe(0);
 	});
 });
+
+describe("KeyvMemoryAdapter with lru.min - clearExpired", () => {
+	test("should delete every expired entry", async () => {
+		const lru = createLRU<string, unknown>({ max: 10 });
+		const keyv = new KeyvMemoryAdapter(lru);
+		const now = Date.now();
+		for (let i = 0; i < 5; i++) {
+			await keyv.set(`expired-${i}`, i, now - 1000);
+		}
+		await keyv.set("live", "value", now + 60_000);
+
+		expect(await keyv.clearExpired()).toBe(5);
+		expect([...lru.keys()]).toEqual(["live"]);
+	});
+});
