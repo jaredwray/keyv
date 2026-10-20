@@ -503,6 +503,7 @@ It adds the pieces a raw `Map` does not have:
 
 - **Namespace prefixing** — keys are prefixed with the `namespace` and `namespaceSeparator` (default `::`), so one underlying store can host multiple namespaces. A namespaced `clear()` removes only the current namespace's keys, which it finds with the underlying store's `keys()` method (a standard `Map` has one). A minimal store without `keys()` can't tell namespaces apart, so a namespaced `clear()` throws instead of wiping the **entire** store; call `clear()` without a namespace to empty it.
 - **TTL expiry** — the adapter keeps a copy of each entry's expiry in its own `{ value, expires }` wrapper *alongside* the stored value, so it can evict expired entries lazily on `get`, `getMany`, `has`, and `iterator()` without decoding the value. This wrapper is **separate from** the `{ value, expires }` envelope Keyv core builds and runs through serialization/compression/encryption — with the default serializer that encoded payload still contains `expires`, so custom serializer/encryption adapters must still handle the `expires` field; only the adapter's outer copy lives outside the payload. When the underlying store accepts a TTL argument (e.g. QuickLRU), the adapter also passes a derived relative duration so the store can evict on its own.
+- **Expired-entry sweep (optional)** — an expired entry that is never read again stays in the store. Set `clearExpiredInterval` (milliseconds) to delete expired entries on a timer, or call `clearExpired()` to delete them now; it resolves with the number deleted. The timer is off by default, uses `unref()` so it won't keep the Node.js process alive, and stops on `disconnect()`. Each tick walks the whole store, except on a store split into internal Maps such as BigMap, where it sweeps one of them per tick. With a namespace, only that namespace's entries are swept. A store without `entries()` can't be swept.
 - **Batch and iteration** — `getMany`, `setMany`, `hasMany`, `deleteMany`, and an async `iterator()` (when the store supports `entries()`).
 - **v6 contract** — declares `capabilities.expires === true`, so Keyv hands it the absolute `expires` timestamp directly and trusts it to enforce expiry.
 
@@ -516,6 +517,10 @@ const keyv = new Keyv({ store: new KeyvMemoryAdapter(new Map()), namespace: 'cac
 // Or wrap an LRU to bound memory usage
 import QuickLRU from 'quick-lru';
 const cache = new Keyv({ store: new KeyvMemoryAdapter(new QuickLRU({ maxSize: 1000 })) });
+
+// Delete expired entries every minute, even ones that are never read again
+const swept = new Keyv({ store: new KeyvMemoryAdapter(new Map(), { clearExpiredInterval: 60_000 }) });
+await swept.disconnect(); // stops the timer
 ```
 
 ## KeyvBridgeAdapter
@@ -599,6 +604,16 @@ await keyv.delete('user:1');
 
 // Clear all values
 await keyv.clear();
+```
+
+To delete expired entries that are never read again, wrap the BigMap in a `KeyvMemoryAdapter` and set its `clearExpiredInterval` option (milliseconds). The option belongs to the memory adapter, so it applies only to `Map`-like stores; other storage adapters handle expiry themselves (`@keyv/sqlite` has its own `clearExpiredInterval`). On a BigMap each tick sweeps one internal Map, so a tick never walks the whole store:
+
+```js
+import Keyv, { KeyvMemoryAdapter } from 'keyv';
+import { BigMap } from '@keyv/bigmap';
+
+const store = new KeyvMemoryAdapter(new BigMap({ storeSize: 16 }), { clearExpiredInterval: 10_000 });
+const keyv = new Keyv({ store });
 ```
 
 For more details about BigMap, see the [@keyv/bigmap documentation](https://github.com/jaredwray/keyv/tree/main/core/bigmap).
