@@ -426,41 +426,53 @@ describe("directory strategy across processes", () => {
 		const b = new DirectoryStrategy(root, 60_000);
 		await a.load();
 		await b.load();
-		return { root, a, b };
+		await a.set(undefined, { key: "k", value: "old", expires: Date.now() + 60_000 });
+		skipAhead();
+		return { root, a, b, file: entryFile(root, "k") };
+	}
+
+	/**
+	 * Starts A's read of the expired key and holds it right after A's cleanup opened the entry to
+	 * check it, so B can write in between A's check and A's delete.
+	 */
+	async function readHeldAtCheck(a: { get: (...args: never[]) => Promise<unknown> }, file: string) {
+		const hold = holdCall("open", (target) => target === file);
+		const reports: Error[] = [];
+		const read = (a.get as (ns: undefined, key: string, reports: Error[]) => Promise<unknown>)(
+			undefined,
+			"k",
+			reports,
+		);
+		await hold.reached;
+		return { read, reports, release: hold.release };
 	}
 
 	test("removing an expired entry never deletes a newer write from another process", async () => {
-		const { root, a, b } = await twoProcesses();
-		await a.set(undefined, { key: "k", value: "old", expires: Date.now() + 60_000 });
-		skipAhead();
-		const file = entryFile(root, "k");
-		const hold = holdCall("readFile", (target) => target === file);
-		const read = a.get(undefined, "k", []);
-		await hold.reached;
+		const { root, a, b, file } = await twoProcesses();
+		const unlink = vi.spyOn(fsOps, "unlink");
+		const { read, release } = await readHeldAtCheck(a, file);
 		await b.set(undefined, { key: "k", value: "new" });
-		hold.release();
+		release();
 		expect(await read).toBeUndefined();
 		expect(await b.get(undefined, "k", [])).toBe("new");
 		expect(await a.get(undefined, "k", [])).toBe("new");
+		expect(
+			unlink.mock.calls.every(([target]) => String(target).startsWith(path.join(root, "tmp"))),
+		).toBe(true);
 		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
 		await Promise.all([a.close(), b.close()]);
 	});
 
 	test("when an even newer write lands while an entry is checked, the newest one is kept", async () => {
-		const { root, a, b } = await twoProcesses();
-		await a.set(undefined, { key: "k", value: "old", expires: Date.now() + 60_000 });
-		skipAhead();
-		const file = entryFile(root, "k");
-		const hold = holdCall("readFile", (target) => target === file);
-		const read = a.get(undefined, "k", []);
-		await hold.reached;
+		const { root, a, b, file } = await twoProcesses();
+		const { read, release } = await readHeldAtCheck(a, file);
 		await b.set(undefined, { key: "k", value: "newer" });
 		const link = fsOps.link;
 		vi.spyOn(fsOps, "link").mockImplementationOnce(async (from, to) => {
 			await b.set(undefined, { key: "k", value: "newest" });
 			return link(from, to);
 		});
-		hold.release();
+		release();
 		await read;
 		expect(await a.get(undefined, "k", [])).toBe("newest");
 		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
@@ -468,16 +480,11 @@ describe("directory strategy across processes", () => {
 	});
 
 	test("without hard links, a newer write is moved back instead", async () => {
-		const { root, a, b } = await twoProcesses();
-		await a.set(undefined, { key: "k", value: "old", expires: Date.now() + 60_000 });
-		skipAhead();
-		const file = entryFile(root, "k");
-		const hold = holdCall("readFile", (target) => target === file);
-		const read = a.get(undefined, "k", []);
-		await hold.reached;
+		const { root, a, b, file } = await twoProcesses();
+		const { read, release } = await readHeldAtCheck(a, file);
 		await b.set(undefined, { key: "k", value: "new" });
 		vi.spyOn(fsOps, "link").mockRejectedValueOnce(errno("EPERM"));
-		hold.release();
+		release();
 		await read;
 		expect(await b.get(undefined, "k", [])).toBe("new");
 		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
@@ -485,53 +492,171 @@ describe("directory strategy across processes", () => {
 	});
 
 	test("a newer write is dropped when its namespace was cleared meanwhile", async () => {
-		const { root, a, b } = await twoProcesses();
-		await a.set(undefined, { key: "k", value: "old", expires: Date.now() + 60_000 });
-		skipAhead();
-		const file = entryFile(root, "k");
-		const hold = holdCall("readFile", (target) => target === file);
-		const read = a.get(undefined, "k", []);
-		await hold.reached;
+		const { root, a, b, file } = await twoProcesses();
+		const { read, release } = await readHeldAtCheck(a, file);
 		await b.set(undefined, { key: "k", value: "new" });
 		const link = fsOps.link;
 		vi.spyOn(fsOps, "link").mockImplementationOnce(async (from, to) => {
 			await b.clear(undefined);
 			return link(from, to);
 		});
-		hold.release();
+		release();
 		await read;
 		expect(await b.get(undefined, "k", [])).toBeUndefined();
 		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
 		await Promise.all([a.close(), b.close()]);
 	});
 
-	test("an entry another process already removed is skipped", async () => {
-		const { root, a, b } = await twoProcesses();
-		await a.set(undefined, { key: "k", value: "old", expires: Date.now() + 60_000 });
-		skipAhead();
-		const file = entryFile(root, "k");
-		const hold = holdCall("readFile", (target) => target === file);
-		const read = a.get(undefined, "k", []);
-		await hold.reached;
-		expect(await b.delete(undefined, "k", [])).toBe(false);
-		hold.release();
+	test("a newer write is put back when checking it fails, and the failure is reported", async () => {
+		const { root, a, b, file } = await twoProcesses();
+		const { read, reports, release } = await readHeldAtCheck(a, file);
+		await b.set(undefined, { key: "k", value: "new" });
+		const open = fsOps.open;
+		vi.spyOn(fsOps, "open").mockImplementation((async (target: string, ...rest: unknown[]) => {
+			if (String(target).endsWith(".expired")) {
+				throw errno("EIO");
+			}
+
+			return (open as (...args: unknown[]) => unknown)(target, ...rest);
+		}) as never);
+		release();
 		expect(await read).toBeUndefined();
+		vi.restoreAllMocks();
+		expect(reports).toMatchObject([{ code: "EIO" }]);
+		expect(await b.get(undefined, "k", [])).toBe("new");
+		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
 		await Promise.all([a.close(), b.close()]);
 	});
 
-	test("a damaged entry found while checking is removed", async () => {
-		const { root, a } = await twoProcesses();
-		await a.set(undefined, { key: "k", value: "old", expires: Date.now() + 60_000 });
+	test("an entry another process already removed is skipped", async () => {
+		const { a, b, file } = await twoProcesses();
+		const { read, reports, release } = await readHeldAtCheck(a, file);
+		expect(await b.delete(undefined, "k", [])).toBe(false);
+		release();
+		expect(await read).toBeUndefined();
+		expect(reports).toEqual([]);
+		await Promise.all([a.close(), b.close()]);
+	});
+});
+
+describe("directory strategy recovery of entries being checked", () => {
+	function park(root: string, name: string, content: string): string {
+		const parked = path.join(root, "tmp", name);
+		writeFileSync(parked, content);
+		const old = new Date(Date.now() - 60 * 60 * 1000);
+		utimesSync(parked, old, old);
+		return parked;
+	}
+
+	test("a live entry left in tmp/ by a crash is put back at load, an expired one is removed", async () => {
+		const root = path.join(tempDir(), "store");
+		const first = new KeyvFs({ path: root, strategy: "directory" });
+		await first.set("newer", "kept");
+		await first.disconnect();
+		const header = (key: string, expires?: number) =>
+			`{"format":"keyv-fs","kind":"entry","version":1,"k":"${key}"${expires === undefined ? "" : `,"e":${expires}`},"t":"s"}\n`;
+		// The entry was moved out of its shard, which a crash leaves in place.
+		mkdirSync(path.dirname(entryFile(root, "live")), { recursive: true });
+		park(root, "1-live.expired", `${header("live")}value`);
+		park(root, "1-gone.expired", `${header("gone", 1)}value`);
+		park(root, "1-newer.expired", `${header("newer")}stale`);
+		park(root, "1-damaged.expired", "damaged");
+
+		const second = new KeyvFs({ path: root, strategy: "directory" });
+		await second.get("load");
+		await second.disconnect();
+		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
+
+		const third = new KeyvFs({ path: root, strategy: "directory" });
+		expect(await third.getMany(["live", "gone", "newer"])).toEqual(["value", undefined, "kept"]);
+		await third.disconnect();
+	});
+
+	test("an entry left in tmp/ that can't be put back yet stays for a later load", async () => {
+		const root = path.join(tempDir(), "store");
+		const first = new KeyvFs({ path: root, strategy: "directory" });
+		await first.get("load");
+		await first.disconnect();
+		mkdirSync(path.dirname(entryFile(root, "live")), { recursive: true });
+		park(
+			root,
+			"1-live.expired",
+			'{"format":"keyv-fs","kind":"entry","version":1,"k":"live","t":"s"}\nvalue',
+		);
+		park(root, "1-vanishing.expired", "x");
+
+		const open = fsOps.open;
+		vi.spyOn(fsOps, "open").mockImplementation((async (target: string, ...rest: unknown[]) => {
+			if (String(target).endsWith("1-vanishing.expired")) {
+				throw errno("ENOENT");
+			}
+
+			return (open as (...args: unknown[]) => unknown)(target, ...rest);
+		}) as never);
+		vi.spyOn(fsOps, "link").mockRejectedValue(errno("EPERM"));
+		vi.spyOn(fsOps, "rename").mockRejectedValue(errno("EIO"));
+		const second = new KeyvFs({ path: root, strategy: "directory" });
+		await second.get("load");
+		await second.disconnect();
+		vi.restoreAllMocks();
+		expect(readdirSync(path.join(root, "tmp"))).toContain("1-live.expired");
+
+		const third = new KeyvFs({ path: root, strategy: "directory" });
+		await third.get("load");
+		await third.disconnect();
+		const fourth = new KeyvFs({ path: root, strategy: "directory" });
+		expect(await fourth.get("live")).toBe("value");
+		await fourth.disconnect();
+	});
+
+	test("expired entries are removed even when tmp/ went missing", async () => {
+		const root = path.join(tempDir(), "store");
+		const first = new KeyvFs({ path: root, strategy: "directory" });
+		await first.set("k", "v", Date.now() + 60_000);
+		await first.disconnect();
+		rmSync(path.join(root, "tmp"), { recursive: true });
+		skipAhead();
+		const second = new KeyvFs({ path: root, strategy: "directory" });
+		expect(await second.get("k")).toBeUndefined();
+		expect(existsSync(entryFile(root, "k"))).toBe(false);
+		await second.disconnect();
+	});
+
+	test("a clear called while an expired entry is being checked runs after the check", async () => {
+		const { root, store } = newStore();
+		await store.set("k", "old", Date.now() + 60_000);
+		skipAhead();
+		const file = entryFile(root, "k");
+		const hold = holdCall("open", (target) => target === file);
+		const read = store.get("k");
+		await hold.reached;
+		let cleared = false;
+		const clearing = store.clear().then(() => {
+			cleared = true;
+		});
+		await tick();
+		expect(cleared).toBe(false);
+		hold.release();
+		await Promise.all([read, clearing]);
+		expect(await store.get("k")).toBeUndefined();
+		await store.disconnect();
+	});
+
+	test("a damaged entry is left for the next write of its key", async () => {
+		const { root, store } = newStore();
+		await store.set("k", "old", Date.now() + 60_000);
 		skipAhead();
 		const file = entryFile(root, "k");
 		const hold = holdCall("readFile", (target) => target === file);
-		const read = a.get(undefined, "k", []);
+		const read = store.get("k");
 		await hold.reached;
 		writeFileSync(file, "damaged\n");
 		hold.release();
-		await read;
-		expect(existsSync(file)).toBe(false);
-		await a.close();
+		expect(await read).toBeUndefined();
+		expect(existsSync(file)).toBe(true);
+		await store.set("k", "new");
+		expect(await store.get("k")).toBe("new");
+		await store.disconnect();
 	});
 });
 
@@ -561,28 +686,28 @@ describe("directory strategy cleanup failures", () => {
 
 	test("many single-key operations at once stay within the open-file limit", async () => {
 		const { store } = newStore();
+		await store.get("load");
+		let open = 0;
+		let peak = 0;
+		for (const method of ["open", "readFile", "writeFile", "readdir"] as const) {
+			const original = fsOps[method] as (...args: unknown[]) => Promise<unknown>;
+			vi.spyOn(fsOps, method).mockImplementation((async (...args: unknown[]) => {
+				open++;
+				peak = Math.max(peak, open);
+				try {
+					return await original(...args);
+				} finally {
+					open--;
+				}
+			}) as never);
+		}
+
 		const keys = Array.from({ length: 3000 }, (_, index) => `key-${index}`);
 		await Promise.all(keys.map((key) => store.set(key, key)));
 		const values = await Promise.all(keys.map((key) => store.get(key)));
 		expect(values).toEqual(keys);
+		expect(peak).toBeLessThanOrEqual(64);
+		vi.restoreAllMocks();
 		await store.disconnect();
 	}, 30_000);
-});
-
-test("an entry moved aside for checking that then disappears is left gone", async () => {
-	const { root, store } = newStore();
-	await store.set("k", "v", Date.now() + 60_000);
-	skipAhead();
-	const open = fsOps.open;
-	vi.spyOn(fsOps, "open").mockImplementation((async (file: string, ...rest: unknown[]) => {
-		if (String(file).endsWith(".expired")) {
-			throw errno("ENOENT");
-		}
-
-		return (open as (...args: unknown[]) => unknown)(file, ...rest);
-	}) as never);
-	expect(await store.get("k")).toBeUndefined();
-	vi.restoreAllMocks();
-	expect(existsSync(entryFile(root, "k"))).toBe(false);
-	await store.disconnect();
 });

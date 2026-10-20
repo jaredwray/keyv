@@ -204,7 +204,7 @@ Keyv passes each entry's expiry as an absolute time. The adapter stores it next 
 
 Expired entries are also removed from disk:
 
-- when a read finds one;
+- when a read finds one (the `"file"` strategy drops it from memory, and from the file at the next save);
 - by a sweep after a write, at most once per `expiredCheckDelay` (24 hours by default);
 - by every save of the `"file"` strategy, which leaves them out;
 - when you call `clearExpired()`.

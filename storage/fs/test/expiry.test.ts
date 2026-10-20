@@ -191,3 +191,41 @@ describe("directory strategy", () => {
 		await store.disconnect();
 	});
 });
+
+test("file strategy: clearExpired saves entries that reads already dropped", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(1_000_000);
+	const location = freshLocation("file");
+	const store = new KeyvFs(location);
+	await store.set("exp", "v", 1_000_010);
+	await store.set("live", "v");
+	vi.setSystemTime(1_000_020);
+	expect(await store.has("exp")).toBe(false);
+	await store.clearExpired();
+	const { readFileSync } = await import("node:fs");
+	expect(readFileSync(location, "utf8")).not.toContain('"exp"');
+	await store.disconnect();
+});
+
+test("file strategy: disconnect does not wait out writeDelay for a sweep that is due", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(1_000_000);
+	const location = freshLocation("file");
+	const { writeFileSync } = await import("node:fs");
+	writeFileSync(
+		location,
+		'{"format":"keyv-fs","kind":"file","version":1}\n{"op":"set","k":"exp","e":1000100,"s":"v"}\n{"op":"checkpoint","count":1}\n',
+	);
+	const store = new KeyvFs(location, { writeDelay: 60_000, expiredCheckDelay: 0 });
+	await store.get("load");
+	vi.setSystemTime(1_000_200);
+	// The sweep after this write removes the expired entry and waits for a save.
+	const write = store.set("live", "v");
+	const started = performance.now();
+	await store.disconnect();
+	await write;
+	expect(performance.now() - started).toBeLessThan(5_000);
+	const reopened = new KeyvFs(location);
+	expect(await reopened.getMany(["exp", "live"])).toEqual([undefined, "v"]);
+	await reopened.disconnect();
+}, 20_000);

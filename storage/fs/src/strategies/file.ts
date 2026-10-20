@@ -47,6 +47,8 @@ export class FileStrategy extends Strategy {
 	private _index = new Map<Namespace, Map<string, FileEntry>>();
 	/** The permissions of the store file when it was loaded, kept by every save. */
 	private _mode: number | undefined;
+	/** Whether a read dropped an expired entry from memory that the file still holds. */
+	private _pruned = false;
 	private readonly _commit: GroupCommit;
 
 	/**
@@ -202,7 +204,7 @@ export class FileStrategy extends Strategy {
 			}
 		}
 
-		if (removed) {
+		if (removed || this._pruned) {
 			await this._commit.wait(this._commit.next());
 		}
 	}
@@ -230,6 +232,7 @@ export class FileStrategy extends Strategy {
 
 		if (isExpired(entry.expires, Date.now())) {
 			map?.delete(key);
+			this._pruned = true;
 			return undefined;
 		}
 
@@ -266,6 +269,8 @@ export class FileStrategy extends Strategy {
 	 * the group commit knows exactly which changes the save includes.
 	 */
 	private async persist(): Promise<void> {
+		// The snapshot leaves out every expired entry, including those reads already dropped.
+		this._pruned = false;
 		const now = Date.now();
 		const lines = [encodeStoreHeader("file")];
 		for (const [ns, map] of this._index) {

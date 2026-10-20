@@ -63,7 +63,7 @@ export class DirectoryStrategy extends Strategy {
 	private readonly _mutex = new KeyedMutex();
 	private readonly _gate = new RwGate();
 	private readonly _shards = new Set<string>();
-	private _background: Promise<unknown> = Promise.resolve();
+	private _background: Promise<void> = Promise.resolve();
 
 	private get dataDirectory(): string {
 		return path.join(this.path, "data");
@@ -243,9 +243,13 @@ export class DirectoryStrategy extends Strategy {
 				);
 				await mapLimit(names, CONCURRENCY, async (name) => {
 					const file = path.join(shardDirectory, name);
-					const header = parseEntryHeader((await readFirstLine(file)) ?? "");
-					if (header !== undefined && isExpired(header.expires, Date.now())) {
-						await this.removeIfExpired(file);
+					if (isExpiredEntry(await readFirstLine(file))) {
+						const release = await this._gate.shared();
+						try {
+							await this.removeIfExpired(file);
+						} finally {
+							release();
+						}
 					}
 				});
 			}
@@ -339,58 +343,94 @@ export class DirectoryStrategy extends Strategy {
 
 	/**
 	 * Deletes a key's expired entry. A failure is reported rather than thrown: the read that
-	 * found the entry already has its answer, and the next sweep tries again.
+	 * found the entry already has its answer, and the next sweep tries again. It holds the gate
+	 * shared, so a clear() never runs while the entry is moved aside.
 	 */
 	private async cleanUp(file: string, reports: Reports): Promise<void> {
+		const release = await this._gate.shared();
 		try {
 			await this.removeIfExpired(file);
 		} catch (error) {
 			reports.push(error as Error);
+		} finally {
+			release();
 		}
 	}
 
 	/**
 	 * Deletes a key's entry if it is still expired, without ever deleting a newer write.
 	 *
-	 * Another process may replace the entry between the read that found it expired and the
-	 * delete; the per-key lock only covers this process. So the entry is first moved into `tmp/`,
-	 * where nothing else looks, and checked there. An expired entry is deleted. A live one (a
-	 * newer write) is linked back into place, unless an even newer write already took its place.
-	 * Other readers may miss the key for that moment, but no write is lost.
+	 * The check runs under the key's lock, so no write from this process can land in between.
+	 * Another process can, though: it may replace the entry between the check and the delete. So
+	 * the entry is first moved into `tmp/`, where nothing else looks, and checked there. An
+	 * expired entry is deleted. Anything else is put back: a newer write is linked back into
+	 * place (unless an even newer one already took it), and so is an entry whose check failed.
+	 * An entry left in `tmp/` by a crash is put back by {@link DirectoryStrategy.purge}.
 	 */
 	private async removeIfExpired(file: string): Promise<void> {
 		await this._mutex.run(file, async () => {
-			const parked = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.expired`);
-			try {
-				await renameWithRetry(file, parked);
-			} catch (error) {
-				if (hasCode(error, "ENOENT", "ENOTDIR")) {
-					return;
-				}
-
-				throw error;
-			}
-
-			// A missing or damaged file has no header: there is nothing to keep.
-			const header = parseEntryHeader((await readFirstLine(parked)) ?? "");
-			if (header === undefined || isExpired(header.expires, Date.now())) {
-				await unlinkIfExists(parked);
+			if (!isExpiredEntry(await readFirstLine(file))) {
 				return;
 			}
 
-			try {
-				await fsOps.link(parked, file);
-			} catch (error) {
-				// EEXIST: a newer write is already in place. ENOENT: the namespace was cleared.
-				if (!hasCode(error, "EEXIST", "ENOENT", "ENOTDIR")) {
-					// The file system has no hard links (FAT, some network shares): move it back.
-					await renameWithRetry(parked, file);
-					return;
-				}
+			const parked = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.expired`);
+			if (!(await this.park(file, parked))) {
+				return;
 			}
 
-			await unlinkIfExists(parked);
+			let expired = false;
+			try {
+				expired = isExpiredEntry(await readFirstLine(parked));
+			} finally {
+				if (expired) {
+					await unlinkIfExists(parked);
+				} else {
+					await this.restore(parked, file);
+				}
+			}
 		});
+	}
+
+	/**
+	 * Moves an entry into `tmp/`, making `tmp/` again if it went missing.
+	 * @returns Whether the entry was there to move.
+	 */
+	private async park(file: string, parked: string): Promise<boolean> {
+		for (let attempt = 1; ; attempt++) {
+			try {
+				await renameWithRetry(file, parked);
+				return true;
+			} catch (error) {
+				if (!hasCode(error, "ENOENT", "ENOTDIR")) {
+					throw error;
+				}
+
+				if (attempt > 1) {
+					return false;
+				}
+
+				// Either the entry is gone or tmp/ is: make tmp/ and try once more.
+				await fsOps.mkdir(this.temporaryDirectory, { recursive: true });
+			}
+		}
+	}
+
+	/**
+	 * Puts a moved-aside entry back at its path, unless a newer write took the path meanwhile
+	 * (EEXIST) or the namespace was cleared (ENOENT). On a file system without hard links (FAT,
+	 * some network shares) it is moved back instead.
+	 */
+	private async restore(parked: string, file: string): Promise<void> {
+		try {
+			await fsOps.link(parked, file);
+		} catch (error) {
+			if (!hasCode(error, "EEXIST", "ENOENT", "ENOTDIR")) {
+				await renameWithRetry(parked, file);
+				return;
+			}
+		}
+
+		await unlinkIfExists(parked);
 	}
 
 	private async readEntry(
@@ -556,7 +596,15 @@ export class DirectoryStrategy extends Strategy {
 		for (const name of await readdirOrEmpty(this.temporaryDirectory)) {
 			const file = path.join(this.temporaryDirectory, name);
 			const stats = await fsOps.stat(file).catch(() => undefined);
-			if (stats !== undefined && now - stats.mtimeMs > STALE_TEMPORARY_MS) {
+			if (stats === undefined || now - stats.mtimeMs <= STALE_TEMPORARY_MS) {
+				continue;
+			}
+
+			if (name.endsWith(".expired")) {
+				// An entry being checked for expiry when a process crashed. If it can't be put back or
+				// removed now, it stays for the next load.
+				await this.recover(file).catch(() => {});
+			} else {
 				await fsOps.unlink(file).catch(() => {});
 			}
 		}
@@ -568,8 +616,36 @@ export class DirectoryStrategy extends Strategy {
 		}
 	}
 
-	private inBackground(work: Promise<unknown>): void {
-		const settled = work.catch(() => {});
-		this._background = Promise.all([this._background, settled]);
+	/**
+	 * Puts an entry left in `tmp/` back where it belongs, if it hasn't expired and its key has no
+	 * newer entry. An expired or damaged one is removed.
+	 */
+	private async recover(parked: string): Promise<void> {
+		const header = parseEntryHeader((await readFirstLine(parked)) ?? "");
+		if (header === undefined || isExpired(header.expires, Date.now())) {
+			await unlinkIfExists(parked);
+			return;
+		}
+
+		const { file } = this.locate(header.namespace, header.key);
+		await this._mutex.run(file, () => this.restore(parked, file));
 	}
+
+	private inBackground(work: Promise<unknown>): void {
+		const settled = work.then(
+			() => {},
+			() => {},
+		);
+		this._background = this._background.then(() => settled);
+	}
+}
+
+/**
+ * Whether an entry file's header line says it has expired. A missing or damaged entry has not:
+ * there is nothing to delete.
+ * @param line - The header line, or `undefined` when the file doesn't exist.
+ */
+function isExpiredEntry(line: string | undefined): boolean {
+	const header = parseEntryHeader(line ?? "");
+	return header !== undefined && isExpired(header.expires, Date.now());
 }

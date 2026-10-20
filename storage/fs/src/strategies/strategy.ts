@@ -91,6 +91,11 @@ export abstract class Strategy {
 		// open the file while an earlier one is still saving to it.
 		await this._previousClose?.catch(() => {});
 		await this._loading?.catch(() => {});
+		if (this._loaded) {
+			// A running sweep may be waiting for a save; save now instead of after writeDelay.
+			await this.flush().catch(() => {});
+		}
+
 		await this._sweeping;
 		if (this._loaded) {
 			await this.flush();
