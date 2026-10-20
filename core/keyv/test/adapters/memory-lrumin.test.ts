@@ -166,3 +166,19 @@ describe("KeyvMemoryAdapter with lru.min - createKeyv() Integration", () => {
 		expect(await keyv.get(key)).toBe(undefined);
 	});
 });
+
+describe("KeyvMemoryAdapter with lru.min - expired entries", () => {
+	test("should report an expired entry as missing from delete and remove it", async () => {
+		const lru = createLRU<string, unknown>({ max: 10 });
+		const keyv = new KeyvMemoryAdapter(lru);
+		const expiredKey = faker.string.uuid();
+		const liveKey = faker.string.uuid();
+		await keyv.set(expiredKey, faker.lorem.word(), Date.now() - 1000);
+		await keyv.set(liveKey, faker.lorem.word());
+
+		expect(lru.has(expiredKey)).toBe(true);
+		expect(await keyv.delete(expiredKey)).toBe(false);
+		expect(await keyv.deleteMany([liveKey])).toEqual([true]);
+		expect(lru.size).toBe(0);
+	});
+});

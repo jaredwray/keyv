@@ -948,11 +948,11 @@ await keyv.setManyRaw([
 
 Deletes an entry.
 
-Returns a promise which resolves to `true` if the key existed, `false` if not.
+Returns a promise which resolves to `true` if the key existed, `false` if not. An expired entry counts as missing: it is deleted, and the promise resolves to `false`.
 
 ## .deleteMany(keys)
 Deletes multiple entries.
-Returns a promise which resolves to `true` if all keys were deleted successfully, `false` otherwise.
+Returns a promise which resolves to a `boolean[]` with one result per key, as `.delete(key)` returns.
 
 ## .clear()
 

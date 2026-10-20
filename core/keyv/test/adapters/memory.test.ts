@@ -166,6 +166,35 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		expect(store.size).toBe(0);
 	});
 
+	test("should report expired entries as missing from delete and deleteMany and remove them", async () => {
+		const store = new Map();
+		const keyv = new KeyvMemoryAdapter(store);
+		const expiredKey = faker.string.uuid();
+		const expiredManyKey = faker.string.uuid();
+		const futureKey = faker.string.uuid();
+		const liveKey = faker.string.uuid();
+		await keyv.set(expiredKey, "v", Date.now() - 1000);
+		await keyv.set(expiredManyKey, "v", Date.now() - 1000);
+		await keyv.set(futureKey, "v", Date.now() + 60_000);
+		await keyv.set(liveKey, "v");
+		expect(store.size).toBe(4);
+
+		expect(await keyv.delete(expiredKey)).toBe(false);
+		expect(
+			await keyv.deleteMany([expiredManyKey, futureKey, liveKey, faker.string.uuid()]),
+		).toEqual([false, true, true, false]);
+		expect(store.size).toBe(0);
+	});
+
+	test("should emit an error from delete when the store's delete rejects", async () => {
+		const store = new Map();
+		store.delete = async () => {
+			throw new Error("delete error");
+		};
+		const keyv = new KeyvMemoryAdapter(store);
+		await expect(keyv.delete(faker.string.uuid())).rejects.toThrow("delete error");
+	});
+
 	test("should emit errors on deleteMany and setMany failures", async () => {
 		// deleteMany error
 		const store1 = new Map();
