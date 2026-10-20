@@ -187,7 +187,7 @@ describe("Keyv Generic Delete / Clear Operations", () => {
 		expect(store.size).toBe(0);
 	});
 
-	test("should emit an error from delete when the store's delete rejects", async () => {
+	test("should reject from delete when the store's delete rejects", async () => {
 		const store = new Map();
 		store.delete = async () => {
 			throw new Error("delete error");

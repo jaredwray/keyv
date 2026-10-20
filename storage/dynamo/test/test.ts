@@ -257,6 +257,17 @@ describe("expiration", () => {
 		t.expect(Item).toBeUndefined();
 	});
 
+	it("should return false from delete for an item without a value, as get and has do", async (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL });
+		const key = faker.string.uuid();
+		const id = store.formatKey(key);
+		await store.client.put({ TableName: store.tableName, Item: { id } });
+		t.expect(await store.has(key)).toBe(false);
+		t.expect(await store.delete(key)).toBe(false);
+		const { Item } = await store.client.get({ TableName: store.tableName, Key: { id } });
+		t.expect(Item).toBeUndefined();
+	});
+
 	it("should return false from deleteMany for expired keys and remove the items", async (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL });
 		const expiredKey = faker.string.uuid();

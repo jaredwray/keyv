@@ -395,7 +395,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			};
 
 			const { Attributes } = await this._client.delete(deleteInput);
-			return Attributes !== undefined && !this.isExpired(Attributes);
+			return Attributes?.value !== undefined && !this.isExpired(Attributes);
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
