@@ -9,11 +9,12 @@ const adapterOrder: Record<string, number> = {
 	mysql: 14,
 	mongo: 15,
 	sqlite: 16,
-	memcache: 17,
-	etcd: 18,
-	dynamo: 19,
-	"cloudflare-kv": 20,
-	bigmap: 21,
+	fs: 17,
+	memcache: 18,
+	etcd: 19,
+	dynamo: 20,
+	"cloudflare-kv": 21,
+	bigmap: 22,
 };
 
 const compressionOrder: Record<string, number> = {
