@@ -376,9 +376,11 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key from DynamoDB.
+	 * Deletes a key from DynamoDB. An expired item is deleted too, but reported as missing, as
+	 * `get` and `has` do.
 	 * @param key - The key to delete
-	 * @returns `true` if the key was deleted, `false` otherwise.
+	 * @returns `true` if the key held a value that had not expired and was deleted, `false`
+	 * otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
 		try {
@@ -393,7 +395,7 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 			};
 
 			const { Attributes } = await this._client.delete(deleteInput);
-			return Boolean(Attributes);
+			return Attributes !== undefined && !this.isExpired(Attributes);
 			/* v8 ignore start -- @preserve */
 		} catch (error) {
 			this.emit("error", error);
@@ -403,9 +405,10 @@ export class KeyvDynamo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from DynamoDB.
+	 * Deletes multiple keys from DynamoDB. Expired items are deleted too, but reported as missing.
 	 * @param keys - An array of keys to delete
-	 * @returns An array of booleans indicating whether each key was successfully deleted.
+	 * @returns An array of booleans indicating whether each key held a value that had not expired
+	 * and was deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		try {
