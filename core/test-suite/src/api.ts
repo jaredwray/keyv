@@ -133,16 +133,20 @@ const keyvApiTests = (test: TestFunction, Keyv: typeof KeyvModule, store: KeyvSt
 		t.expect(values).toEqual([undefined, undefined, undefined]);
 	});
 
-	test(".delete(key) returns a Promise", (t) => {
+	test(".delete(key) returns a Promise", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
-		t.expect(keyv.delete(key) instanceof Promise).toBeTruthy();
+		const returnValue = keyv.delete(key);
+		t.expect(returnValue instanceof Promise).toBeTruthy();
+		await returnValue;
 	});
 
-	test(".delete([key]) returns a Promise", (t) => {
+	test(".delete([key]) returns a Promise", async (t) => {
 		const keyv = new Keyv({ store: store() });
 		const key = faker.string.alphanumeric(10);
-		t.expect(keyv.delete([key]) instanceof Promise).toBeTruthy();
+		const returnValue = keyv.delete([key]);
+		t.expect(returnValue instanceof Promise).toBeTruthy();
+		await returnValue;
 	});
 
 	test(".delete(key) resolves to true", async (t) => {
