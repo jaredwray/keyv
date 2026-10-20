@@ -1027,7 +1027,42 @@ describe("SQL injection prevention", () => {
 	});
 });
 
+/** Counts the rows stored for `keys`, expired or not. */
+const countRows = async (keyv: KeyvPostgres, keys: string[]): Promise<number> => {
+	const { query } = keyv as unknown as {
+		query: (sql: string, values: unknown[]) => Promise<Array<{ count: string }>>;
+	};
+	const rows = await query(
+		`SELECT COUNT(*) AS count FROM ${keyv.schema}.${keyv.table} WHERE key = ANY($1)`,
+		[keys],
+	);
+	return Number(rows[0].count);
+};
+
+describe("delete", () => {
+	test("returns false for an expired key and removes its row", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, faker.lorem.word(), Date.now() - 1000);
+		expect(await countRows(keyv, [key])).toBe(1);
+		expect(await keyv.delete(key)).toBe(false);
+		expect(await countRows(keyv, [key])).toBe(0);
+	});
+});
+
 describe("deleteMany", () => {
+	test("returns false for expired keys and removes their rows", async () => {
+		const keyv = new KeyvPostgres({ uri: postgresUri });
+		const expiredKey = faker.string.alphanumeric(10);
+		const liveKey = faker.string.alphanumeric(10);
+		const futureKey = faker.string.alphanumeric(10);
+		await keyv.set(expiredKey, faker.lorem.word(), Date.now() - 1000);
+		await keyv.set(liveKey, faker.lorem.word());
+		await keyv.set(futureKey, faker.lorem.word(), Date.now() + 60_000);
+		expect(await keyv.deleteMany([expiredKey, liveKey, futureKey])).toEqual([false, true, true]);
+		expect(await countRows(keyv, [expiredKey, liveKey, futureKey])).toBe(0);
+	});
+
 	test("returns an empty array for no keys", async () => {
 		const keyv = new KeyvPostgres({ uri: postgresUri });
 		expect(await keyv.deleteMany([])).toEqual([]);

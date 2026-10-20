@@ -533,25 +533,29 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key from the store.
+	 * Deletes a key from the store. An expired entry is deleted too, but reported as missing, as
+	 * `get` and `has` do.
 	 *
 	 * @param {string} key - The key to delete.
-	 * @returns {Promise<boolean>} `true` if the key existed and was deleted, `false` otherwise.
+	 * @returns {Promise<boolean>} `true` if the key held a value that had not expired and was
+	 * deleted, `false` otherwise.
 	 */
 	public async delete(key: string): Promise<boolean> {
 		const ns = this.getNamespaceValue();
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING 1`;
+		const now = Date.now();
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = $1 AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING expires`;
 		const rows = await this.query(del, [key, ns]);
-		return rows.length > 0;
+		return rows.length > 0 && !isExpired(rows[0].expires, now);
 	}
 
 	/**
 	 * Deletes multiple keys from the store at once using a single
-	 * `DELETE ... WHERE key = ANY($1) RETURNING key` statement.
+	 * `DELETE ... WHERE key = ANY($1) RETURNING key, expires` statement. Expired entries are
+	 * deleted too, but reported as missing.
 	 *
 	 * @param {string[]} keys - An array of keys to delete.
 	 * @returns {Promise<boolean[]>} Booleans in the same order as `keys`, indicating whether each
-	 * key existed and was deleted. An empty input returns `[]`.
+	 * key held a value that had not expired and was deleted. An empty input returns `[]`.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		if (keys.length === 0) {
@@ -559,10 +563,13 @@ export class KeyvPostgres extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const ns = this.getNamespaceValue();
-		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING key`;
+		const now = Date.now();
+		const del = `DELETE FROM ${escapeIdentifier(this._schema)}.${escapeIdentifier(this._table)} WHERE key = ANY($1) AND COALESCE(namespace, '') = COALESCE($2, '') RETURNING key, expires`;
 		const rows = await this.query(del, [keys, ns]);
-		const deletedKeys = new Set(rows.map((row) => row.key as string));
-		return keys.map((key) => deletedKeys.has(key));
+		const liveKeys = new Set(
+			rows.filter((row) => !isExpired(row.expires, now)).map((row) => row.key as string),
+		);
+		return keys.map((key) => liveKeys.has(key));
 	}
 
 	/**
