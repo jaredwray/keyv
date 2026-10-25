@@ -19,6 +19,11 @@ allowBuilds:
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
 minimumReleaseAgeIgnoreMissingTime: false
+# happy-dom@21.0.4 fixes GHSA-834v-8h66-3h79 / CVE-2026-115895 and was
+# published 2026-10-20, inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
+minimumReleaseAgeExclude:
+  - happy-dom@21.0.4
 trustPolicy: no-downgrade
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
