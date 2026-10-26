@@ -22,8 +22,13 @@ minimumReleaseAgeIgnoreMissingTime: false
 # happy-dom@21.0.4 fixes GHSA-834v-8h66-3h79 / CVE-2026-115895 and was
 # published 2026-10-20, inside the 7-day cooldown. Exact version only.
 # Needs Jared's sign-off.
+# docula@3.0.2 depends on undici ^8.10.2 (8.11.2 is still inside the
+# Oct 15 undici advisories, fixed in 8.12.2). Published 2026-10-19,
+# inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
 minimumReleaseAgeExclude:
   - happy-dom@21.0.4
+  - docula@3.0.2
 trustPolicy: no-downgrade
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
@@ -52,8 +57,11 @@ overrides:
   "liquidjs@<10.27.2": 10.27.2
   "tar@<7.5.22": 7.5.22
   "fast-xml-parser@>=5 <5.11.2": 5.11.2
-  "undici@>=7 <7.29.1": 7.30.0
-  "undici@>=8 <8.10.2": 8.11.2
+  # 7.30.0 and 8.11.2 are still inside the Oct 15 advisories fixed by
+  # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly, so the
+  # 7.x selector stays and now lifts that pin to 7.30.1.
+  "undici@>=7 <7.29.1": 7.30.1
+  "undici@>=8 <8.10.2": 8.12.2
   "minimatch@>=3 <3.1.5": 3.1.5
   "minimatch@>=5 <5.1.9": 5.1.9
   "minimatch@>=9 <9.0.9": 9.0.9
