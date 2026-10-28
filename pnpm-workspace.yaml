@@ -26,9 +26,14 @@ minimumReleaseAgeIgnoreMissingTime: false
 # Oct 15 undici advisories, fixed in 8.12.2). Published 2026-10-19,
 # inside the 7-day cooldown. Exact version only.
 # Needs Jared's sign-off.
+# @jaredwray/fumanchu@4.7.5 depends on markdown-it ^15.0.3
+# (CVE-2026-111758, fixed in 15.0.3; CVE-2026-111759, fixed in 15.0.2).
+# Published 2026-10-26, inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
 minimumReleaseAgeExclude:
   - happy-dom@21.0.4
   - docula@3.0.2
+  - "@jaredwray/fumanchu@4.7.5"
 trustPolicy: no-downgrade
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
