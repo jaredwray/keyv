@@ -1,0 +1,78 @@
+{
+	"name": "@keyv/fs",
+	"version": "6.1.0",
+	"description": "Filesystem storage adapter for Keyv",
+	"type": "module",
+	"main": "./dist/index.mjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			},
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			}
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"prepublishOnly": "pnpm build",
+		"lint": "biome check --write --error-on-warnings",
+		"lint:ci": "biome check --error-on-warnings",
+		"test": "pnpm lint && vitest run --coverage",
+		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
+		"clean": "rimraf ./node_modules ./coverage ./dist",
+		"benchmark": "tsx benchmark/combined.ts",
+		"benchmark:readme": "tsx benchmark/readme.ts"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jaredwray/keyv.git"
+	},
+	"keywords": [
+		"fs",
+		"file",
+		"filesystem",
+		"keyv-file",
+		"keyv",
+		"storage",
+		"adapter",
+		"key",
+		"value",
+		"store",
+		"cache",
+		"ttl"
+	],
+	"author": "Jared Wray <me@jaredwray.com> (https://jaredwray.com)",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/jaredwray/keyv/issues"
+	},
+	"homepage": "https://github.com/jaredwray/keyv",
+	"dependencies": {
+		"hookified": "^3.0.3"
+	},
+	"devDependencies": {
+		"@keyv/test-suite": "workspace:^",
+		"@monstermann/tinybench-pretty-printer": "^0.3.0",
+		"keyv-file": "^5.3.5",
+		"tinybench": "^6.1.4"
+	},
+	"peerDependencies": {
+		"keyv": "workspace:^"
+	},
+	"tsd": {
+		"directory": "test"
+	},
+	"engines": {
+		"node": ">= 22.19.0"
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	]
+}

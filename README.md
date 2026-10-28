@@ -56,7 +56,7 @@ compression/      Compression adapters
   compress-lz4/
 storage/          Storage adapters
   redis/  postgres/  mysql/  mongo/  sqlite/
-  memcache/  etcd/  valkey/  valkey-glide/  dynamo/  cloudflare-kv/
+  memcache/  etcd/  valkey/  valkey-glide/  dynamo/  cloudflare-kv/  fs/
 website/          Documentation website (keyv.org)
 ```
 
@@ -70,6 +70,7 @@ website/          Documentation website (keyv.org)
 * [cloudflare-kv](https://github.com/jaredwray/keyv/tree/main/storage/cloudflare-kv) - Cloudflare Workers KV storage adapter
 * [dynamo](https://github.com/jaredwray/keyv/tree/main/storage/dynamo) - DynamoDB storage adapter
 * [etcd](https://github.com/jaredwray/keyv/tree/main/storage/etcd) - Etcd storage adapter
+* [fs](https://github.com/jaredwray/keyv/tree/main/storage/fs) - File system storage adapter
 * [memcache](https://github.com/jaredwray/keyv/tree/main/storage/memcache) - Memcache storage adapter
 * [mongo](https://github.com/jaredwray/keyv/tree/main/storage/mongo) - MongoDB storage adapter
 * [mysql](https://github.com/jaredwray/keyv/tree/main/storage/mysql) - MySQL/MariaDB storage adapter

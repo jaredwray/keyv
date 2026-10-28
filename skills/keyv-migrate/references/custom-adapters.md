@@ -177,4 +177,4 @@ storageTestSuite(test, store);
 
 ## Third-party adapters
 
-Community adapters that haven't adopted the v6 contract, such as `keyv-file`, keep working through the bridge. Pass them as the store as before, and check that the project's version of the adapter still installs next to Keyv v6 (its `keyv` peer dependency range).
+Community adapters that haven't adopted the v6 contract, such as `keyv-file`, keep working through the bridge. Pass them as the store as before, and check that the project's version of the adapter still installs next to Keyv v6 (its `keyv` peer dependency range, if it declares one; `keyv-file` doesn't).
