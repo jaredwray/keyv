@@ -4,10 +4,10 @@ import type { StorageFn, StorageTestOptions, TestFunction } from "./types.js";
 
 /**
  * Registers expiry tests directly on the storage adapter: set with an absolute
- * `expires`, has and delete after expiry, and setMany with per-entry `expires`. Skipped if
- * `options.ttl` is `false`. Set `options.ttlGranularity` to "seconds" for backends
- * that only support second-level expiry (e.g. etcd leases, DynamoDB TTL) so
- * second-scale deadlines are used.
+ * `expires`, has and delete after expiry, and, unless `options.batch` is `false`,
+ * setMany and deleteMany. Skipped if `options.ttl` is `false`. Set
+ * `options.ttlGranularity` to "seconds" for backends that only support second-level
+ * expiry (e.g. etcd leases, DynamoDB TTL) so second-scale deadlines are used.
  * @param test - The test registration function (e.g. vitest `it`)
  * @param store - Factory that returns a fresh {@link KeyvStorageAdapter} instance
  * @param options - Test configuration (missingValue, ttlGranularity, toggle flags)
@@ -79,6 +79,11 @@ const storageTtlTests = (test: TestFunction, store: StorageFn, options?: Storage
 		t.expect(await s.delete(key)).toBe(true);
 		t.expect(await s.get(key)).toBe(missingValue);
 	});
+
+	// The remaining tests call setMany or deleteMany, so they follow storageBatchTests.
+	if (options?.batch === false) {
+		return;
+	}
 
 	test("deleteMany returns false for expired keys", async (t) => {
 		const s = await warmStore();

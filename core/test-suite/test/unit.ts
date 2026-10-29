@@ -10,6 +10,7 @@ import {
 	serializationTestSuite,
 	storageTestSuite,
 	storageTtlTests,
+	type TestFunction,
 } from "../src/index.js";
 
 const storeExtended = () => {
@@ -25,6 +26,17 @@ compressionTestSuite(it, new KeyvLz4TestAdapter());
 // Storage-level tests using KeyvMemoryAdapter
 const memoryStore = () => new KeyvMemoryAdapter(new Map());
 storageTestSuite(it, memoryStore);
+
+it("storageTestSuite with batch: false registers no batch tests", (t) => {
+	const names: string[] = [];
+	const record: TestFunction = (name) => {
+		names.push(name);
+	};
+	storageTestSuite(record, memoryStore, { batch: false });
+	t.expect(names.filter((name) => /setMany|getMany|hasMany|deleteMany/.test(name))).toEqual([]);
+	t.expect(names).toContain("set(key, value, expires) expires after the deadline");
+	t.expect(names).toContain("delete(key) returns false for expired key");
+});
 
 // TTL tests at second granularity (used by stores like etcd and DynamoDB)
 storageTtlTests(it, memoryStore, { ttlGranularity: "seconds" });
