@@ -164,7 +164,6 @@ settings:
 
 overrides:
   semver@5.7.2: 7.8.5
-  protobufjs@>=7 <7.6.6: 7.6.6
   liquidjs@<10.27.2: 10.27.2
   tar@<7.5.22: 7.5.22
   fast-xml-parser@>=5 <5.11.2: 5.11.2
