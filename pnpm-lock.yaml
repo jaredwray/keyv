@@ -165,7 +165,6 @@ settings:
 overrides:
   semver@5.7.2: 7.8.5
   undici@>=7 <7.29.1: 8.12.3
-  undici@>=8 <8.10.2: 8.12.2
   minimatch@>=3 <3.1.5: 3.1.5
   minimatch@>=5 <5.1.9: 5.1.9
   minimatch@>=9 <9.0.9: 9.0.9
