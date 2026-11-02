@@ -59,7 +59,6 @@ overrides:
   # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly.
   # >=7.30.1 resolves to 8.12.3, so the 7.x selector lifts that pin there.
   "undici@>=7 <7.29.1": 8.12.3
-  "minimatch@>=9 <9.0.9": 9.0.9
   "minimatch@>=10 <10.2.6": 10.2.6
   "brace-expansion@>=1 <1.1.21": 1.1.21
   "brace-expansion@>=2 <2.1.7": 2.1.7
