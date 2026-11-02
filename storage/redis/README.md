@@ -43,6 +43,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Redis Cloud](#redis-cloud)
 * [Amazon ElastiCache](#amazon-elasticache)
 * [Upstash](#upstash)
+* [Azure Managed Redis and Azure Cache for Redis](#azure-managed-redis-and-azure-cache-for-redis)
 * [Keyv Redis Options](#keyv-redis-options)
 * [API](#api)
 * [Events](#events)
@@ -901,6 +902,155 @@ Upstash's eviction is off by default, so a full database rejects writes. Turn ev
 [`keyv-upstash`](https://github.com/mahdavipanah/keyv-upstash) is a third-party package that wraps `@upstash/redis` for Keyv. It isn't maintained in this repository, and its last publish predates Keyv v6. It isn't a supported way to reach Upstash from this adapter.
 
 Serverless functions on Node.js, such as AWS Lambda, can use `@keyv/redis` over TCP. Create the Keyv instance once at module scope so warm invocations reuse its connection. Many concurrent instances each hold a connection, and Upstash rejects new ones with `ERR max concurrent connections exceeded` when a database reaches its connection limit. See [max concurrent connections](https://upstash.com/docs/redis/troubleshooting/max_concurrent_connections).
+
+# Azure Managed Redis and Azure Cache for Redis
+
+`@keyv/redis` connects to Azure Managed Redis and to Azure Cache for Redis like any other Redis server. `KeyvRedis` passes an options object to `createCluster` from `@redis/client` when it has `rootNodes`, and to `createClient` otherwise, unchanged except for `connectionTimeout` when you set it. So `password`, `socket`, `defaults`, `nodeAddressMap`, `pingInterval`, and `credentialsProvider` below are standard `@redis/client` options. `createKeyv` accepts the same arguments.
+
+Azure Cache for Redis Basic, Standard, and Premium tiers retire on September 30, 2028, and the Enterprise and Enterprise Flash tiers on March 31, 2027. Microsoft recommends moving to Azure Managed Redis now. Use Azure Managed Redis for new caches. See [Migrating from Azure Cache for Redis](#migrating-from-azure-cache-for-redis).
+
+## Host name, port, and client
+
+| Service | Host name | Port | Connect with |
+| --- | --- | --- | --- |
+| Azure Managed Redis, OSS cluster policy | `<name>.<region>.redis.azure.net` | `10000`, plus shard ports in the `85XX` range | Cluster options (`rootNodes`) |
+| Azure Managed Redis, Enterprise or Non-clustered policy | `<name>.<region>.redis.azure.net` | `10000` | A URI or client options |
+| Azure Cache for Redis Basic, Standard, or Premium without clustering | `<name>.redis.cache.windows.net` | `6380` (TLS) or `6379` (non-TLS) | A URI or client options |
+| Azure Cache for Redis Premium with clustering | `<name>.redis.cache.windows.net` | `6380` (TLS) or `6379` (non-TLS), plus shard ports in the `150XX` (TLS) or `130XX` (non-TLS) range | Cluster options (`rootNodes`) |
+
+- **Azure Managed Redis** uses port `10000` for TLS and non-TLS connections. TLS is required by default, and a cache accepts one mode at a time. With the OSS cluster policy, the client also connects to each shard on a port in the `85XX` range. Those ports change over time, so don't hardcode them: the client reads them from the cluster. See [TLS configuration](https://learn.microsoft.com/en-us/azure/redis/tls-configuration) and [Use client tools](https://learn.microsoft.com/en-us/azure/redis/how-to-redis-cli-tool).
+- **Azure Cache for Redis** uses port `6380` for TLS and `6379` for non-TLS. Non-TLS access is off by default on new caches. A clustered Premium cache uses the same host name and port as a non-clustered one, and the client connects to shards on `150XX` ports with TLS or `130XX` ports without it. The Enterprise and Enterprise Flash tiers use a `<name>.<region>.redisenterprise.cache.azure.net` host name and port `10000`, with the OSS or Enterprise cluster policy described for Azure Managed Redis. See [Use redis-cli](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-how-to-redis-cli-tool) and [Scale an Azure Cache for Redis instance](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-how-to-scale).
+
+The cache's **Overview** page in the Azure portal shows the host name. For Azure Managed Redis, **Properties** also shows the clustering policy.
+
+## Access keys
+
+This guide's main examples authenticate with an access key, which you pass as the password with no username:
+
+- **Azure Managed Redis:** **Settings** > **Authentication** > **Access keys**. Access key authentication is off by default on a new cache, so turn on **Access Keys Authentication** on that tab first. Either the primary or the secondary key works. See [Create an Azure Managed Redis instance](https://learn.microsoft.com/en-us/azure/redis/quickstart-create-managed-redis) and [Configure Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/configure).
+- **Azure Cache for Redis:** **Show access keys** on the **Overview** page, or **Settings** > **Authentication** > **Access keys**.
+
+Microsoft recommends Microsoft Entra ID over access keys for both services. `@keyv/redis` supports it too; see [Microsoft Entra ID](#microsoft-entra-id).
+
+## Enterprise or Non-clustered policy, and non-clustered Azure Cache for Redis
+
+These caches have one endpoint. Connect with a `rediss://` URI (two `s`'s):
+
+```js
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
+
+const url = new URL(`rediss://${process.env.AZURE_REDIS_HOST}:${process.env.AZURE_REDIS_PORT ?? 10000}`);
+url.password = process.env.AZURE_REDIS_ACCESS_KEY;
+
+const keyv = new Keyv(new KeyvRedis(url.toString()));
+keyv.on('error', (error) => console.error('Azure Redis error', error));
+
+await keyv.set('greeting', 'hello', 60_000);
+console.log(await keyv.get('greeting')); // 'hello'
+await keyv.disconnect();
+```
+
+Set `AZURE_REDIS_HOST` to the host name without the port, `AZURE_REDIS_PORT` to `6380` for Azure Cache for Redis, and `AZURE_REDIS_ACCESS_KEY` to the key. Setting `url.password` percent-encodes any reserved characters in the key. `createKeyv(url.toString())` gives you the same store.
+
+Microsoft's [Node.js quickstart](https://learn.microsoft.com/en-us/azure/redis/nodejs-get-started) connects with `tls: true` and no CA file, so you don't pass a `ca`. Leave `rejectUnauthorized` unset so Node.js verifies the certificate, and connect with the host name, not an IP address.
+
+## OSS cluster policy and clustered Premium caches
+
+Azure Managed Redis uses the OSS cluster policy by default. Use cluster options for it and for a clustered Premium cache. A standalone client gets `MOVED` errors from these caches, and it can't run multi-key requests that span hash slots. Put the endpoint in `rootNodes`, and the TLS setting and credentials in `defaults`:
+
+```js
+import net from 'node:net';
+import Keyv from 'keyv';
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
+
+const host = process.env.AZURE_REDIS_HOST;
+
+const keyv = new Keyv(new KeyvRedis({
+  rootNodes: [{ url: `rediss://${host}:${process.env.AZURE_REDIS_PORT ?? 10000}` }],
+  defaults: {
+    password: process.env.AZURE_REDIS_ACCESS_KEY,
+    pingInterval: 60_000,
+    socket: {
+      tls: true,
+      reconnectStrategy: defaultReconnectStrategy,
+    },
+  },
+  nodeAddressMap(address) {
+    const [nodeHost, port] = address.split(':');
+    return { host: net.isIP(nodeHost) ? host : nodeHost, port: Number(port) };
+  },
+}));
+keyv.on('error', (error) => console.error('Azure Redis error', error));
+
+await keyv.setMany([
+  { key: 'user:1', value: 'Ada' },
+  { key: 'user:2', value: 'Grace' },
+]);
+console.log(await keyv.getMany(['user:1', 'user:2'])); // ['Ada', 'Grace']
+await keyv.disconnect();
+```
+
+- `@redis/client` creates the shard connections from `defaults` plus the address the cluster reports, so TLS and credentials only in `rootNodes` aren't used for them. Put them in `defaults`.
+- Microsoft's [Node.js quickstart](https://learn.microsoft.com/en-us/azure/redis/nodejs-get-started) uses the same `nodeAddressMap`, which swaps an IP address the cluster reports for the cache's host name. Without it, the client connects to the shard's IP address, and Node.js rejects the certificate because it was issued for the host name. In TypeScript, declare the parameter as `address: string`.
+- `KeyvRedis` splits `getMany`, `setMany`, `hasMany`, and `deleteMany` into one command per hash slot, and `clear()` scans every primary shard, only when it is connected through cluster options.
+
+## Enterprise cluster policy and multi-key operations
+
+With the Enterprise policy, the cache routes every request through a single endpoint, so it looks non-clustered to the client. Microsoft documents that only `DEL`, `MSET`, `MGET`, `EXISTS`, `UNLINK`, and `TOUCH` can span hash slots under it. See [Cluster policies](https://learn.microsoft.com/en-us/azure/redis/architecture#cluster-policies) and [Multi-key commands](https://learn.microsoft.com/en-us/azure/redis/architecture#multi-key-commands).
+
+`get`, `set`, `has`, and `delete` use one key each. `getMany` sends one `MGET`, and `clear()` deletes the keys it finds with `UNLINK` or `DEL`, which are on that list. With a URI or client options, `setMany`, `hasMany`, and `deleteMany` each send a `MULTI`/`EXEC` transaction. Redis requires every key in a transaction on a clustered database to be in the same hash slot ([Multi-key operations](https://redis.io/docs/latest/operate/rs/databases/durability-ha/clustering/#multikey-operations)), so these calls can fail when their keys are in different slots. If you use them, choose the OSS policy with cluster options, or the Non-clustered policy, which Azure offers for caches of 25 GB and smaller. You can't change a cache's clustering policy after you create it.
+
+## Microsoft Entra ID
+
+`@redis/client` takes a `credentialsProvider` option, and `KeyvRedis` passes it through. [`@redis/entraid`](https://www.npmjs.com/package/@redis/entraid) provides one that gets a Microsoft Entra token and re-authenticates each connection before the token expires, which Microsoft requires. Microsoft's [Node.js quickstart](https://learn.microsoft.com/en-us/azure/redis/nodejs-get-started) uses it with `createCluster`. Install it next to `@keyv/redis`:
+
+```bash
+npm install @redis/entraid @azure/identity
+```
+
+Then replace `password` in `defaults` (or in client options for a single endpoint) with the provider:
+
+```js
+import { DefaultAzureCredential } from '@azure/identity';
+import { EntraIdCredentialsProviderFactory, REDIS_SCOPE_DEFAULT } from '@redis/entraid';
+
+const credentialsProvider = EntraIdCredentialsProviderFactory.createForDefaultAzureCredential({
+  credential: new DefaultAzureCredential(),
+  scopes: REDIS_SCOPE_DEFAULT,
+  options: {},
+  tokenManagerConfig: { expirationRefreshRatio: 0.8 },
+});
+
+// In the cluster example: defaults: { credentialsProvider, pingInterval: 60_000, socket: { ... } }
+```
+
+- Give the identity your application runs as access to the cache under **Authentication** > **Microsoft Entra Authentication**. On Azure Cache for Redis, turn on **Enable Microsoft Entra Authentication** there first. Entra ID works only over TLS, and Azure Cache for Redis supports it on Basic, Standard, and Premium but not Enterprise. See [Entra ID for Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication) and [Entra ID for Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-azure-active-directory-for-authentication).
+- `@redis/entraid` lists `@redis/client` as a peer dependency. Run `npm ls @redis/client` to check that it resolves to the same version `@keyv/redis` uses.
+
+## Idle connections and timeouts
+
+Azure Managed Redis closes connections that have been idle for 10 minutes, so set `pingInterval` to less than that. The examples use one minute. Microsoft recommends a connect timeout of five seconds, which is `@redis/client`'s default `socket.connectTimeout`. A very short timeout can make a slow connection fail over and over. See [Connection resilience](https://learn.microsoft.com/en-us/azure/redis/best-practices-connection).
+
+`connectionTimeout` is the second argument to `KeyvRedis` and `createKeyv`, not a client option. When you set it, Keyv also sets `socket.reconnectStrategy` to `false` unless you passed one, so pass `defaultReconnectStrategy` as in the cluster example to keep reconnecting. Server maintenance and scaling can drop connections, and `@redis/client` reconnects. With an `error` listener attached, a command that fails in the meantime returns its fallback value, such as `undefined` from `get`. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts) and [Failover and unresponsive nodes](#failover-and-unresponsive-nodes).
+
+## Migrating from Azure Cache for Redis
+
+Microsoft's [retirement FAQ](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/retirement-faq) says Basic, Standard, and Premium caches stay available until September 30, 2028 and are disabled from October 1, 2028. To move a Keyv store, per Microsoft's [migration guide](https://learn.microsoft.com/en-us/azure/redis/migrate/migrate-basic-standard-premium-self-service):
+
+- Change the host name from `<name>.redis.cache.windows.net` to `<name>.<region>.redis.azure.net`, the TLS port from `6380` to `10000`, and the access key to one from the new cache.
+- Azure Managed Redis is clustered by default. A non-clustered Basic or Standard cache needed only a URI. With the OSS policy, switch to the cluster options in [OSS cluster policy and clustered Premium caches](#oss-cluster-policy-and-clustered-premium-caches).
+- Azure Managed Redis doesn't support IP-based firewall rules or virtual network injection. Use Azure Private Link for network isolation. See [Understand the differences](https://learn.microsoft.com/en-us/azure/redis/migrate/migrate-basic-standard-premium-understand).
+- Keep your `namespace` and `namespaceSeparator` settings unchanged so Keyv builds the same keys on the new cache.
+
+## Troubleshooting
+
+- **TLS errors.** A `redis://` URI, or `socket.tls` that doesn't match the URI scheme, fails against a cache that requires TLS. Use `rediss://` and `socket.tls: true`. An error such as `Hostname/IP does not match certificate's altnames` usually means the client connected by IP address: connect with the host name, and use `nodeAddressMap` with cluster options. Azure Managed Redis supports only TLS 1.2 and 1.3.
+- **Connection timeouts.** Check the port (`10000` for Azure Managed Redis, `6380` for Azure Cache for Redis with TLS). With the OSS cluster policy or a clustered Premium cache, the shard ports must be reachable too. For a private endpoint, connect to `<name>.<region>.redis.azure.net`, not the `privatelink` name, from inside the linked virtual network. Azure Cache for Redis firewall rules must include your client's IP address. `az redisenterprise test-connection` tests the connection to an Azure Managed Redis cache. See [Troubleshoot connectivity](https://learn.microsoft.com/en-us/azure/redis/troubleshoot-connectivity) and [Configure Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-configure).
+- **`MOVED` errors.** The cache uses the OSS cluster policy or Premium clustering, and you connected with a URI or client options. Use cluster options.
+- **`CROSSSLOT` errors.** A multi-key call spans hash slots. With cluster options, `KeyvRedis` splits its own multi-key calls by slot. Under the Enterprise policy, see [Enterprise cluster policy and multi-key operations](#enterprise-cluster-policy-and-multi-key-operations).
+- **Authentication errors (`WRONGPASS`, `NOAUTH`).** Access key authentication is off by default on new Azure Managed Redis caches. Turn it on, or use [Microsoft Entra ID](#microsoft-entra-id).
+- **`ERR unknown command` for `SELECT`.** Azure Managed Redis has one database and blocks `SELECT`, and a clustered Premium cache only has database `0`. Leave the database number out of the URI.
 
 # API
 
