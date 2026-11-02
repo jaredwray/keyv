@@ -57,7 +57,6 @@ blockExoticSubdeps: true
 # and miniflare 5 is still prerelease, so that parent cannot be bumped.
 overrides:
   semver@5.7.2: 7.8.5
-  "handlebars@<4.7.10": 4.7.10
   "protobufjs@>=7 <7.6.6": 7.6.6
   "liquidjs@<10.27.2": 10.27.2
   "tar@<7.5.22": 7.5.22
