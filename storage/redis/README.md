@@ -1021,7 +1021,7 @@ npm ls @redis/client                              # for example, @redis/client@6
 npm install @redis/entraid@6.2.1 @azure/identity
 ```
 
-Then replace `password` in `defaults` (or in client options for a single endpoint) with the provider:
+Then replace `password` in `defaults` with the provider. For a single endpoint, add it to the client options and leave the key out of `url`: `@redis/client` uses a password in the URL instead of `credentialsProvider`.
 
 ```js
 import { DefaultAzureCredential } from '@azure/identity';
