@@ -938,12 +938,19 @@ These caches have one endpoint. Connect with a `rediss://` URI (two `s`'s):
 
 ```js
 import Keyv from 'keyv';
-import KeyvRedis from '@keyv/redis';
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
 
 const url = new URL(`rediss://${process.env.AZURE_REDIS_HOST}:${process.env.AZURE_REDIS_PORT ?? 10000}`);
 url.password = process.env.AZURE_REDIS_ACCESS_KEY;
 
-const keyv = new Keyv(new KeyvRedis(url.toString()));
+const keyv = new Keyv(new KeyvRedis({
+  url: url.toString(),
+  pingInterval: 60_000,
+  socket: {
+    tls: true,
+    reconnectStrategy: defaultReconnectStrategy,
+  },
+}));
 keyv.on('error', (error) => console.error('Azure Redis error', error));
 
 await keyv.set('greeting', 'hello', 60_000);
@@ -951,7 +958,7 @@ console.log(await keyv.get('greeting')); // 'hello'
 await keyv.disconnect();
 ```
 
-Set `AZURE_REDIS_HOST` to the host name without the port, `AZURE_REDIS_PORT` to `6380` for Azure Cache for Redis, and `AZURE_REDIS_ACCESS_KEY` to the key. Setting `url.password` percent-encodes any reserved characters in the key. `createKeyv(url.toString())` gives you the same store.
+Set `AZURE_REDIS_HOST` to the host name without the port, `AZURE_REDIS_PORT` to `6380` for Azure Cache for Redis, and `AZURE_REDIS_ACCESS_KEY` to the key. Setting `url.password` percent-encodes any reserved characters in the key. `createKeyv` takes the same options object. A bare URI string, such as `createKeyv(url.toString())`, also connects, but it doesn't set `pingInterval`; see [Idle connections and timeouts](#idle-connections-and-timeouts).
 
 Microsoft's [Node.js quickstart](https://learn.microsoft.com/en-us/azure/redis/nodejs-get-started) connects with `tls: true` and no CA file, so you don't pass a `ca`. Leave `rejectUnauthorized` unset so Node.js verifies the certificate, and connect with the host name, not an IP address.
 
@@ -991,22 +998,27 @@ console.log(await keyv.getMany(['user:1', 'user:2'])); // ['Ada', 'Grace']
 await keyv.disconnect();
 ```
 
+For a clustered Premium cache, set `AZURE_REDIS_PORT` to `6380`.
+
 - `@redis/client` creates the shard connections from `defaults` plus the address the cluster reports, so TLS and credentials only in `rootNodes` aren't used for them. Put them in `defaults`.
 - Microsoft's [Node.js quickstart](https://learn.microsoft.com/en-us/azure/redis/nodejs-get-started) uses the same `nodeAddressMap`, which swaps an IP address the cluster reports for the cache's host name. Without it, the client connects to the shard's IP address, and Node.js rejects the certificate because it was issued for the host name. In TypeScript, declare the parameter as `address: string`.
 - `KeyvRedis` splits `getMany`, `setMany`, `hasMany`, and `deleteMany` into one command per hash slot, and `clear()` scans every primary shard, only when it is connected through cluster options.
 
 ## Enterprise cluster policy and multi-key operations
 
-With the Enterprise policy, the cache routes every request through a single endpoint, so it looks non-clustered to the client. Microsoft documents that only `DEL`, `MSET`, `MGET`, `EXISTS`, `UNLINK`, and `TOUCH` can span hash slots under it. See [Cluster policies](https://learn.microsoft.com/en-us/azure/redis/architecture#cluster-policies) and [Multi-key commands](https://learn.microsoft.com/en-us/azure/redis/architecture#multi-key-commands).
+With the Enterprise policy, the cache routes every request through a single endpoint, so it looks non-clustered to the client. Microsoft documents that only `DEL`, `MSET`, `MGET`, `EXISTS`, `UNLINK`, and `TOUCH` can span hash slots under it. With active geo-replication, only `MGET`, `EXISTS`, and `TOUCH` can, because multi-key writes such as `DEL` and `UNLINK` must stay in one slot. See [Choose a clustering policy](https://learn.microsoft.com/en-us/azure/redis/choose-clustering-policy) and [Multi-key commands](https://learn.microsoft.com/en-us/azure/redis/architecture#multi-key-commands).
 
-`get`, `set`, `has`, and `delete` use one key each. `getMany` sends one `MGET`, and `clear()` deletes the keys it finds with `UNLINK` or `DEL`, which are on that list. With a URI or client options, `setMany`, `hasMany`, and `deleteMany` each send a `MULTI`/`EXEC` transaction. Redis requires every key in a transaction on a clustered database to be in the same hash slot ([Multi-key operations](https://redis.io/docs/latest/operate/rs/databases/durability-ha/clustering/#multikey-operations)), so these calls can fail when their keys are in different slots. If you use them, choose the OSS policy with cluster options, or the Non-clustered policy, which Azure offers for caches of 25 GB and smaller. You can't change a cache's clustering policy after you create it.
+`get`, `set`, `has`, and `delete` use one key each, and `getMany` sends one `MGET`. `clear()` deletes the keys it finds with one `UNLINK` or `DEL` per batch, so it works without geo-replication but can fail on a geo-replicated cache. With a URI or client options, `setMany`, `hasMany`, and `deleteMany` each send a `MULTI`/`EXEC` transaction. Redis requires every key in a transaction on a clustered database to be in the same hash slot ([Multi-key operations](https://redis.io/docs/latest/operate/rs/databases/durability-ha/clustering/#multikey-operations)), so these calls can fail when their keys are in different slots. If you use them, choose the OSS policy with cluster options, or the Non-clustered policy, which Azure offers for caches of 25 GB and smaller.
+
+Choose the policy before you create the cache. The OSS and Enterprise policies can't be changed afterward. A Non-clustered cache can move to a clustered policy later, unless it's in an active geo-replication group.
 
 ## Microsoft Entra ID
 
-`@redis/client` takes a `credentialsProvider` option, and `KeyvRedis` passes it through. [`@redis/entraid`](https://www.npmjs.com/package/@redis/entraid) provides one that gets a Microsoft Entra token and re-authenticates each connection before the token expires, which Microsoft requires. Microsoft's [Node.js quickstart](https://learn.microsoft.com/en-us/azure/redis/nodejs-get-started) uses it with `createCluster`. Install it next to `@keyv/redis`:
+`@redis/client` takes a `credentialsProvider` option, and `KeyvRedis` passes it through. [`@redis/entraid`](https://www.npmjs.com/package/@redis/entraid) provides one that gets a Microsoft Entra token and re-authenticates each connection before the token expires, which Microsoft requires. Microsoft's [Node.js quickstart](https://learn.microsoft.com/en-us/azure/redis/nodejs-get-started) uses it with `createCluster`. `@redis/entraid` lists `@redis/client` at its own version as a peer dependency (6.2.1 requires `^6.2.1`, and 6.3.1 requires `^6.3.1`), so install the release that matches the `@redis/client` that `@keyv/redis` uses:
 
 ```bash
-npm install @redis/entraid @azure/identity
+npm ls @redis/client                              # for example, @redis/client@6.2.1
+npm install @redis/entraid@6.2.1 @azure/identity
 ```
 
 Then replace `password` in `defaults` (or in client options for a single endpoint) with the provider:
@@ -1025,14 +1037,13 @@ const credentialsProvider = EntraIdCredentialsProviderFactory.createForDefaultAz
 // In the cluster example: defaults: { credentialsProvider, pingInterval: 60_000, socket: { ... } }
 ```
 
-- Give the identity your application runs as access to the cache under **Authentication** > **Microsoft Entra Authentication**. On Azure Cache for Redis, turn on **Enable Microsoft Entra Authentication** there first. Entra ID works only over TLS, and Azure Cache for Redis supports it on Basic, Standard, and Premium but not Enterprise. See [Entra ID for Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication) and [Entra ID for Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-azure-active-directory-for-authentication).
-- `@redis/entraid` lists `@redis/client` as a peer dependency. Run `npm ls @redis/client` to check that it resolves to the same version `@keyv/redis` uses.
+Give the identity your application runs as access to the cache under **Authentication** > **Microsoft Entra Authentication**. On Azure Cache for Redis, turn on **Enable Microsoft Entra Authentication** there first. Entra ID works only over TLS, and Azure Cache for Redis supports it on Basic, Standard, and Premium but not Enterprise. See [Entra ID for Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/entra-for-authentication) and [Entra ID for Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-azure-active-directory-for-authentication).
 
 ## Idle connections and timeouts
 
-Azure Managed Redis closes connections that have been idle for 10 minutes, so set `pingInterval` to less than that. The examples use one minute. Microsoft recommends a connect timeout of five seconds, which is `@redis/client`'s default `socket.connectTimeout`. A very short timeout can make a slow connection fail over and over. See [Connection resilience](https://learn.microsoft.com/en-us/azure/redis/best-practices-connection).
+Azure Managed Redis and Azure Cache for Redis both close connections that have been idle for 10 minutes, so set `pingInterval` to less than that. The examples use one minute. Microsoft recommends a connect timeout of five seconds, which is `@redis/client`'s default `socket.connectTimeout`. A very short timeout can make a slow connection fail over and over. See connection resilience for [Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/best-practices-connection) and [Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-best-practices-connection).
 
-`connectionTimeout` is the second argument to `KeyvRedis` and `createKeyv`, not a client option. When you set it, Keyv also sets `socket.reconnectStrategy` to `false` unless you passed one, so pass `defaultReconnectStrategy` as in the cluster example to keep reconnecting. Server maintenance and scaling can drop connections, and `@redis/client` reconnects. With an `error` listener attached, a command that fails in the meantime returns its fallback value, such as `undefined` from `get`. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts) and [Failover and unresponsive nodes](#failover-and-unresponsive-nodes).
+`connectionTimeout` is the second argument to `KeyvRedis` and `createKeyv`, not a client option. When you set it, Keyv also sets `socket.reconnectStrategy` to `false` unless you passed one, so pass `defaultReconnectStrategy` as the examples do to keep reconnecting. Server maintenance and scaling can drop connections, and `@redis/client` reconnects. With an `error` listener attached, a command that fails in the meantime returns its fallback value, such as `undefined` from `get`. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts) and [Failover and unresponsive nodes](#failover-and-unresponsive-nodes).
 
 ## Migrating from Azure Cache for Redis
 
@@ -1043,14 +1054,16 @@ Microsoft's [retirement FAQ](https://learn.microsoft.com/en-us/azure/azure-cache
 - Azure Managed Redis doesn't support IP-based firewall rules or virtual network injection. Use Azure Private Link for network isolation. See [Understand the differences](https://learn.microsoft.com/en-us/azure/redis/migrate/migrate-basic-standard-premium-understand).
 - Keep your `namespace` and `namespaceSeparator` settings unchanged so Keyv builds the same keys on the new cache.
 
+From the Enterprise or Enterprise Flash tier, the port stays `10000` and the host name changes from `<name>.<region>.redisenterprise.cache.azure.net` to `<name>.<region>.redis.azure.net`. See [Migrate from Redis Enterprise](https://learn.microsoft.com/en-us/azure/redis/migrate/migrate-redis-enterprise-overview).
+
 ## Troubleshooting
 
 - **TLS errors.** A `redis://` URI, or `socket.tls` that doesn't match the URI scheme, fails against a cache that requires TLS. Use `rediss://` and `socket.tls: true`. An error such as `Hostname/IP does not match certificate's altnames` usually means the client connected by IP address: connect with the host name, and use `nodeAddressMap` with cluster options. Azure Managed Redis supports only TLS 1.2 and 1.3.
-- **Connection timeouts.** Check the port (`10000` for Azure Managed Redis, `6380` for Azure Cache for Redis with TLS). With the OSS cluster policy or a clustered Premium cache, the shard ports must be reachable too. For a private endpoint, connect to `<name>.<region>.redis.azure.net`, not the `privatelink` name, from inside the linked virtual network. Azure Cache for Redis firewall rules must include your client's IP address. `az redisenterprise test-connection` tests the connection to an Azure Managed Redis cache. See [Troubleshoot connectivity](https://learn.microsoft.com/en-us/azure/redis/troubleshoot-connectivity) and [Configure Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-configure).
+- **Connection timeouts.** Check the port (`10000` for Azure Managed Redis, `6380` for Azure Cache for Redis with TLS). With the OSS cluster policy or a clustered Premium cache, the shard ports must be reachable too. For a private endpoint, connect to `<name>.<region>.redis.azure.net`, not the `privatelink` name, from inside the linked virtual network. Azure Cache for Redis firewall rules must include your client's IP address. For Azure Managed Redis, `az redisenterprise test-connection --name <cache-name> --resource-group <resource-group> --auth accesskey --access-key <key>` tests the endpoint with an access key. Without `--auth`, it uses Microsoft Entra ID. See [Troubleshoot connectivity](https://learn.microsoft.com/en-us/azure/redis/troubleshoot-connectivity) and [Configure Azure Cache for Redis](https://learn.microsoft.com/en-us/azure/azure-cache-for-redis/cache-configure).
 - **`MOVED` errors.** The cache uses the OSS cluster policy or Premium clustering, and you connected with a URI or client options. Use cluster options.
 - **`CROSSSLOT` errors.** A multi-key call spans hash slots. With cluster options, `KeyvRedis` splits its own multi-key calls by slot. Under the Enterprise policy, see [Enterprise cluster policy and multi-key operations](#enterprise-cluster-policy-and-multi-key-operations).
 - **Authentication errors (`WRONGPASS`, `NOAUTH`).** Access key authentication is off by default on new Azure Managed Redis caches. Turn it on, or use [Microsoft Entra ID](#microsoft-entra-id).
-- **`ERR unknown command` for `SELECT`.** Azure Managed Redis has one database and blocks `SELECT`, and a clustered Premium cache only has database `0`. Leave the database number out of the URI.
+- **`SELECT` errors.** Azure Managed Redis has one database and blocks `SELECT` with an error such as `ERR unknown command`. A clustered Premium cache only has database `0` and doesn't allow `SELECT`. Leave the database number out of the URI.
 
 # API
 
