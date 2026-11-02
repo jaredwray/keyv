@@ -56,9 +56,9 @@ blockExoticSubdeps: true
 overrides:
   semver@5.7.2: 7.8.5
   # 7.30.0 and 8.11.2 are still inside the Oct 15 advisories fixed by
-  # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly, so the
-  # 7.x selector stays and now lifts that pin to 7.30.1.
-  "undici@>=7 <7.29.1": 7.30.1
+  # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly.
+  # >=7.30.1 resolves to 8.12.3, so the 7.x selector lifts that pin there.
+  "undici@>=7 <7.29.1": 8.12.3
   "undici@>=8 <8.10.2": 8.12.2
   "minimatch@>=3 <3.1.5": 3.1.5
   "minimatch@>=5 <5.1.9": 5.1.9
