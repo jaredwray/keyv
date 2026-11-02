@@ -165,7 +165,6 @@ settings:
 overrides:
   semver@5.7.2: 7.8.5
   undici@>=7 <7.29.1: 8.12.3
-  minimatch@>=5 <5.1.9: 5.1.9
   minimatch@>=9 <9.0.9: 9.0.9
   minimatch@>=10 <10.2.6: 10.2.6
   brace-expansion@>=1 <1.1.21: 1.1.21
