@@ -44,9 +44,7 @@ blockExoticSubdeps: true
 #
 # High and critical advisories. Selectors stay on the same major so callers
 # keep a compatible API. Each pin is old enough for minimumReleaseAge.
-# liquidjs stays on 10.29.0 (ecto requires ^10.29.0); versions below the
-# 10.27.2 patches are lifted to that release. vitest is already a direct
-# devDependency at ^4.1.11, which is above 3.2.6.
+# vitest is already a direct devDependency at ^4.1.11, which is above 3.2.6.
 #
 # vite is only pulled by vitest (`^6 || ^7 || ^8`). A fresh resolve selects
 # vite 8; these pins keep the 7.x line already in the lockfile (7.3.7 is the
@@ -57,7 +55,6 @@ blockExoticSubdeps: true
 # and miniflare 5 is still prerelease, so that parent cannot be bumped.
 overrides:
   semver@5.7.2: 7.8.5
-  "liquidjs@<10.27.2": 10.27.2
   "tar@<7.5.22": 7.5.22
   "fast-xml-parser@>=5 <5.11.2": 5.11.2
   # 7.30.0 and 8.11.2 are still inside the Oct 15 advisories fixed by
