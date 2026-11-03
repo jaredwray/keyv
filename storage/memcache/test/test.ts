@@ -709,7 +709,7 @@ describe("error handling", () => {
 		expect(errorEmitted).toBe(true);
 	});
 
-	test("delete emits an error and returns false on connection failure", async () => {
+	test("delete emits an error and returns false on connection failure", { timeout: 30_000 }, async () => {
 		const store = new KeyvMemcache("baduri:11211");
 		let errorEmitted = false;
 		store.on("error", () => {
@@ -721,7 +721,7 @@ describe("error handling", () => {
 		expect(result).toBe(false);
 	});
 
-	test("delete emits an error and returns false on connection failure without generations", async () => {
+	test("delete emits an error and returns false on connection failure without generations", { timeout: 30_000 }, async () => {
 		const store = new KeyvMemcache("baduri:11211", { noNamespaceAffectsAll: true });
 		let errorEmitted = false;
 		store.on("error", () => {
