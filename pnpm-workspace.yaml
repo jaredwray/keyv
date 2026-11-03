@@ -46,8 +46,6 @@ blockExoticSubdeps: true
 # keep a compatible API. Each pin is old enough for minimumReleaseAge.
 # vitest is already a direct devDependency at ^4.1.11, which is above 3.2.6.
 #
-# source-map-js is transitive and its parent still accepts the vulnerable
-# release, so the lockfile kept it.
 # miniflare 4 pins sharp at 0.35.2. No 4.x release depends on sharp >= 0.35.5,
 # and miniflare 5 is still prerelease, so that parent cannot be bumped.
 overrides:
@@ -56,5 +54,4 @@ overrides:
   # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly.
   # >=7.30.1 resolves to 8.12.3, so the 7.x selector lifts that pin there.
   "undici@>=7 <7.29.1": 8.12.3
-  "source-map-js@<1.2.2": 1.2.2
   "sharp@>=0.35 <0.35.5": 0.35.5
