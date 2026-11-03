@@ -619,8 +619,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
       mysql2:
-        specifier: ^3.24.2
-        version: 3.24.2(@types/node@24.19.2)
+        specifier: ^3.24.6
+        version: 3.24.6(@types/node@24.19.2)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.6.3
@@ -3754,8 +3754,8 @@ packages:
   msgpackr@2.1.0:
     resolution: {integrity: sha512-p/pBCVO63CsvvpkomUnNNag6+n38rULuDA6HHe70o2gtC8ODI52foF/4ko2qQcp6OiErJXTmrZeXmsGGHsIQNQ==}
 
-  mysql2@3.24.2:
-    resolution: {integrity: sha512-l9kXeKGwd6VCbSjmpO/bLWb+YCYpbvE4whte8ec6InXebvCNyEEydyRCnRU+TSHNqRLJ8B+Tk1uWb+vMCJgJzA==}
+  mysql2@3.24.6:
+    resolution: {integrity: sha512-enu73KhbAua2L3dIxjc6qg6ZJ7H3pt1BImZASWNWY5xSsmJ1ZuUPULTDGXgmJbI61vb+nJAG19IZclIq19UidQ==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -7505,7 +7505,7 @@ snapshots:
     optionalDependencies:
       msgpackr-extract: 3.0.4
 
-  mysql2@3.24.2(@types/node@24.19.2):
+  mysql2@3.24.6(@types/node@24.19.2):
     dependencies:
       '@types/node': 24.19.2
       aws-ssl-profiles: 1.1.2
