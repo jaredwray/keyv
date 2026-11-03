@@ -777,8 +777,8 @@ importers:
   storage/valkey-glide:
     dependencies:
       '@valkey/valkey-glide':
-        specifier: ^2.5.2
-        version: 2.5.2
+        specifier: ^2.5.3
+        version: 2.5.3
       hookified:
         specifier: ^3.0.3
         version: 3.0.3
@@ -2321,42 +2321,42 @@ packages:
     resolution: {integrity: sha512-fEzPV3hSkSMltkw152tJKNARhOupqbH96MZWyRjNaYZOMIzbrTeQDG+MTc6Mr2pgzFQzFxAfmhGDNP5QK++2ZA==}
     deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
-  '@valkey/valkey-glide-darwin-arm64@2.5.2':
-    resolution: {integrity: sha512-6kmFsyBrMj8kRF72ZiKpLsT0WZrRQdM3P2p9vJskRaXbRiMGmLVoqj8vv1tYcu/xRr7bI6aEONOlwKbHojRLkQ==}
+  '@valkey/valkey-glide-darwin-arm64@2.5.3':
+    resolution: {integrity: sha512-DB2dooH/OLhN6v2/rHbg5L+cynkYx/HhXSG/Iqs18+xaKvWlQZwdbfj5x2AXK0XObQVQaJKLMnc6+EYbv5+Img==}
     cpu: [arm64]
     os: [darwin]
 
-  '@valkey/valkey-glide-darwin-x64@2.5.2':
-    resolution: {integrity: sha512-2RgllAJlYvoKirMKDIseYfX7LNFOF06UohqRB4LM2U3Y9mjE/ssNrPy+netFYdqz0aWcgYajzCMr2jXeckmoEg==}
+  '@valkey/valkey-glide-darwin-x64@2.5.3':
+    resolution: {integrity: sha512-Sxw+2uA2K445FCdIr78T7XirwKHMDP1rdliqRzRWgx87PYQOfkp8Qz/LXyri3la+YZ6/rnGezwkyuNlDT75kBw==}
     cpu: [x64]
     os: [darwin]
 
-  '@valkey/valkey-glide-linux-arm64-gnu@2.5.2':
-    resolution: {integrity: sha512-EVWT7VT9porB670AxjQ+b/g/Dx5Nm/GaMy9irCzdDdnnTOwPyHvK1kPFzMATNuyDgXd5L504i99u8iHL1GpDEw==}
+  '@valkey/valkey-glide-linux-arm64-gnu@2.5.3':
+    resolution: {integrity: sha512-/hpjvDQGarJe1KJFSYcUfPB1KrnhqUBkiFbK3Yq9wyv8CA/Jh5QiADDXYjDjVwpY+Ocy+znm6E7Od8tNTrmdiw==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@valkey/valkey-glide-linux-arm64-musl@2.5.2':
-    resolution: {integrity: sha512-CFTrYPWIrh+k66eqH3/FvUlMZ4S7p328iFTK+qsHxyYH3CnhAmKMaOHcptFKz5n7ypT8L/XuOBl+NIQgUrJGQA==}
+  '@valkey/valkey-glide-linux-arm64-musl@2.5.3':
+    resolution: {integrity: sha512-aKqkDMEewlQvEjdCa+rSWKwL41nLxEshqJ8otMtvpgtRyU2fjRH5yDuJ4JXsCz+4Y/Zi5xQVspUawU37XgIf0A==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@valkey/valkey-glide-linux-x64-gnu@2.5.2':
-    resolution: {integrity: sha512-osWsmJ+cg2iZjjNZ5IHQUMg/Xb/TQVyBvDxKA11vpLuEFMulQYfUfw+LWo0PwnG2mGJGKHhDnZ8KZAJpd03LWQ==}
+  '@valkey/valkey-glide-linux-x64-gnu@2.5.3':
+    resolution: {integrity: sha512-65JCnAj0IlQqiIzVCNzWo8v1N5c58Hoi2jP+fmtf78+1Uw4JInPAgicGI6GronlaLrfXZRTLqNNnjVez0QeMUg==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@valkey/valkey-glide-linux-x64-musl@2.5.2':
-    resolution: {integrity: sha512-gJCma4s3j3AUQk3k2Kcxe3ImWpla4e9jr41f1w9VwZd6CkWuZQdk1PsLpdROvtaBxUiRiq+RZvvLKvGf0md1Kg==}
+  '@valkey/valkey-glide-linux-x64-musl@2.5.3':
+    resolution: {integrity: sha512-kBsS6nLjhcIcecM+iEUdVdTl/WzkJH8YNSKeKeUPZJUfK3zQqiyw6dbC/w6aYmOB/UrtJOQkuSbRZqfNWyf+Dw==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@valkey/valkey-glide@2.5.2':
-    resolution: {integrity: sha512-8d3m2NyveQ2Ws4OUd7Zz3zsPP835Nqi4Rm3ZMoLdUjTfnEJejIMPJGR8b09foiPEG4GXV9j+QWyDRuM9VHOuVw==}
+  '@valkey/valkey-glide@2.5.3':
+    resolution: {integrity: sha512-VvT7oOr1ZyvPDFUEEovYqVKNaCicUHJPmrfDyflCEi8hzH+YEdxEikYDheHGeclgFW0MlLkJ2rky6pa7tT6iqg==}
     engines: {node: '>=16'}
 
   '@vercel/oidc@3.2.0':
@@ -5840,35 +5840,35 @@ snapshots:
 
   '@ungap/structured-clone@1.2.1': {}
 
-  '@valkey/valkey-glide-darwin-arm64@2.5.2':
+  '@valkey/valkey-glide-darwin-arm64@2.5.3':
     optional: true
 
-  '@valkey/valkey-glide-darwin-x64@2.5.2':
+  '@valkey/valkey-glide-darwin-x64@2.5.3':
     optional: true
 
-  '@valkey/valkey-glide-linux-arm64-gnu@2.5.2':
+  '@valkey/valkey-glide-linux-arm64-gnu@2.5.3':
     optional: true
 
-  '@valkey/valkey-glide-linux-arm64-musl@2.5.2':
+  '@valkey/valkey-glide-linux-arm64-musl@2.5.3':
     optional: true
 
-  '@valkey/valkey-glide-linux-x64-gnu@2.5.2':
+  '@valkey/valkey-glide-linux-x64-gnu@2.5.3':
     optional: true
 
-  '@valkey/valkey-glide-linux-x64-musl@2.5.2':
+  '@valkey/valkey-glide-linux-x64-musl@2.5.3':
     optional: true
 
-  '@valkey/valkey-glide@2.5.2':
+  '@valkey/valkey-glide@2.5.3':
     dependencies:
       long: 5.3.2
       protobufjs: 7.6.6
     optionalDependencies:
-      '@valkey/valkey-glide-darwin-arm64': 2.5.2
-      '@valkey/valkey-glide-darwin-x64': 2.5.2
-      '@valkey/valkey-glide-linux-arm64-gnu': 2.5.2
-      '@valkey/valkey-glide-linux-arm64-musl': 2.5.2
-      '@valkey/valkey-glide-linux-x64-gnu': 2.5.2
-      '@valkey/valkey-glide-linux-x64-musl': 2.5.2
+      '@valkey/valkey-glide-darwin-arm64': 2.5.3
+      '@valkey/valkey-glide-darwin-x64': 2.5.3
+      '@valkey/valkey-glide-linux-arm64-gnu': 2.5.3
+      '@valkey/valkey-glide-linux-arm64-musl': 2.5.3
+      '@valkey/valkey-glide-linux-x64-gnu': 2.5.3
+      '@valkey/valkey-glide-linux-x64-musl': 2.5.3
 
   '@vercel/oidc@3.2.0': {}
 
@@ -7709,7 +7709,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.2
-      '@types/node': 24.13.1
+      '@types/node': 24.19.2
       long: 5.3.2
 
   pug-attrs@3.0.0:
