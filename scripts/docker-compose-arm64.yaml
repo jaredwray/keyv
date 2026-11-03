@@ -57,7 +57,7 @@ services:
       MYSQL_DATABASE: keyv_test
       MYSQL_ROOT_HOST: '%'
   keyv_valkey:
-    image: valkey/valkey:9.1.0-trixie@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    image: valkey/valkey:9.1.3-trixie@sha256:3add1a336a920ea54770a001ab6feb3da5fceea96a40373a3a2cd469b815f0b7
     command: redis-server --port 6370
     environment:
       REDIS_HOST: redis
