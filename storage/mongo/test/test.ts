@@ -487,6 +487,39 @@ describe("iterator", () => {
 		expect(keys.length).toBe(2);
 	});
 
+	test("skips and deletes expired documents", async () => {
+		const store = new KeyvMongo({
+			collection: `expired-iterator-${faker.string.alphanumeric(8)}`,
+			...options,
+		});
+		const client = await store.connect;
+		try {
+			// The TTL index can remove an already-expired document before iterator()
+			// sees it. Drop it so this test is what deletes the document.
+			const ttl = (await client.store.indexes()).find((index) => index.expireAfterSeconds === 0);
+			if (!ttl?.name) {
+				throw new Error("expected the expiresAt TTL index");
+			}
+
+			await client.store.dropIndex(ttl.name);
+			const expiredKey = faker.string.alphanumeric(10);
+			const freshKey = faker.string.alphanumeric(10);
+			await store.set(expiredKey, "expired-value", Date.now() - 1000);
+			await store.set(freshKey, "fresh-value");
+			const entries: Array<[string, unknown]> = [];
+			for await (const entry of store.iterator()) {
+				entries.push(entry as [string, unknown]);
+			}
+
+			expect(entries).toEqual([[freshKey, "fresh-value"]]);
+			expect(await client.store.countDocuments({ key: expiredKey })).toBe(0);
+			expect(await client.store.countDocuments({ key: freshKey })).toBe(1);
+		} finally {
+			await client.store.drop();
+			await store.disconnect();
+		}
+	});
+
 	test("skips and deletes expired entries in GridFS", async () => {
 		const store = new KeyvMongo({ useGridFS: true, ...options });
 		await store.clear();

@@ -164,14 +164,7 @@ settings:
 
 overrides:
   semver@5.7.2: 7.8.5
-  tar@<7.5.22: 7.5.22
-  fast-xml-parser@>=5 <5.11.2: 5.11.2
-  undici@>=7 <7.29.1: 7.30.1
-  undici@>=8 <8.10.2: 8.12.2
-  minimatch@>=3 <3.1.5: 3.1.5
-  minimatch@>=5 <5.1.9: 5.1.9
-  minimatch@>=9 <9.0.9: 9.0.9
-  minimatch@>=10 <10.2.6: 10.2.6
+  undici@>=7 <7.29.1: 8.12.3
   brace-expansion@>=1 <1.1.21: 1.1.21
   brace-expansion@>=2 <2.1.7: 2.1.7
   brace-expansion@>=3 <3.0.9: 3.0.9
@@ -4480,10 +4473,6 @@ packages:
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
-  undici@7.30.1:
-    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
-    engines: {node: '>=20.18.1'}
-
   undici@8.12.3:
     resolution: {integrity: sha512-+fdndUTwBP86cVjihTp21hZHo7d6oj1c/47XPA3lL8mM0XHs+C4EkcjmgRsFnFk2f/UONGDy9ItBItmXsLOQHw==}
     engines: {node: '>=22.19.0'}
@@ -4769,7 +4758,7 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.0
-      undici: 7.30.1
+      undici: 8.12.3
       zod: 4.6.7
 
   '@ai-sdk/provider@4.0.29':
@@ -5077,7 +5066,7 @@ snapshots:
       cacheable: 2.5.0
       hookified: 1.15.1
       http-cache-semantics: 4.2.0
-      undici: 7.30.1
+      undici: 8.12.3
 
   '@cacheable/utils@2.5.0':
     dependencies:
@@ -7507,7 +7496,7 @@ snapshots:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       sharp: 0.35.5(@types/node@24.13.1)
-      undici: 7.30.1
+      undici: 8.12.3
       workerd: 1.20260722.1
       ws: 8.21.0
       youch: 4.1.0-beta.10
@@ -8418,8 +8407,6 @@ snapshots:
       quansync: 1.0.0
 
   undici-types@7.18.2: {}
-
-  undici@7.30.1: {}
 
   undici@8.12.3: {}
 

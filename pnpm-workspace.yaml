@@ -55,17 +55,10 @@ blockExoticSubdeps: true
 # and miniflare 5 is still prerelease, so that parent cannot be bumped.
 overrides:
   semver@5.7.2: 7.8.5
-  "tar@<7.5.22": 7.5.22
-  "fast-xml-parser@>=5 <5.11.2": 5.11.2
   # 7.30.0 and 8.11.2 are still inside the Oct 15 advisories fixed by
-  # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly, so the
-  # 7.x selector stays and now lifts that pin to 7.30.1.
-  "undici@>=7 <7.29.1": 7.30.1
-  "undici@>=8 <8.10.2": 8.12.2
-  "minimatch@>=3 <3.1.5": 3.1.5
-  "minimatch@>=5 <5.1.9": 5.1.9
-  "minimatch@>=9 <9.0.9": 9.0.9
-  "minimatch@>=10 <10.2.6": 10.2.6
+  # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly.
+  # >=7.30.1 resolves to 8.12.3, so the 7.x selector lifts that pin there.
+  "undici@>=7 <7.29.1": 8.12.3
   "brace-expansion@>=1 <1.1.21": 1.1.21
   "brace-expansion@>=2 <2.1.7": 2.1.7
   "brace-expansion@>=3 <3.0.9": 3.0.9
