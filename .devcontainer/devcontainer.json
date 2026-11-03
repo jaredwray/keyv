@@ -1,5 +1,5 @@
 {
   "name": "Node.js",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:5.1.2-24-trixie@sha256:757b22963a35e3673da4bece29c4948c815637085947259b80910e951e3ba64a",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:5.2.3-24-trixie@sha256:7e6eff9f0cac7f1d4d1836a7bd2a9011d8ea244fceb155261705be483218ea18",
   "postCreateCommand": "bash ./scripts/setup-cloud-environment.sh"
 }
