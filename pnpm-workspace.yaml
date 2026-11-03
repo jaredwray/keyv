@@ -44,7 +44,7 @@ blockExoticSubdeps: true
 #
 # High and critical advisories. Selectors stay on the same major so callers
 # keep a compatible API. Each pin is old enough for minimumReleaseAge.
-# vitest is already a direct devDependency at ^4.1.11, which is above 3.2.6.
+# vitest is already a direct devDependency at ^5.0.5, which is above 3.2.6.
 #
 # miniflare 4 pins sharp at 0.35.2. No 4.x release depends on sharp >= 0.35.5,
 # and miniflare 5 is still prerelease, so that parent cannot be bumped.

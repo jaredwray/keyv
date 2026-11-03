@@ -20,12 +20,12 @@
     "website:dev": "pnpm generate-docs && docula serve --watch --clean -s ./site -o ./dist"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.11",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@biomejs/biome": "^2.6.3",
+    "@vitest/coverage-v8": "^5.0.5",
     "docula": "^3.0.2",
     "js-yaml": "^5.4.1",
     "rimraf": "^6.1.3",
     "tsx": "^4.23.13",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   }
 }
