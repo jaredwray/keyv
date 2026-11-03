@@ -566,8 +566,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
       memcache:
-        specifier: ^1.10.0
-        version: 1.10.0
+        specifier: ^1.12.0
+        version: 1.12.0
     devDependencies:
       '@keyv/compress-gzip':
         specifier: workspace:^
@@ -3131,6 +3131,10 @@ packages:
     resolution: {integrity: sha512-jfLVt3/SEkJzW/OCSK7Bxdl+FpXYDpEE84QOU4wzKRpO7rNoafNK718Z71GPQR/ozfQmKxXS++MhbrL/eKaTow==}
     engines: {node: '>=22.18'}
 
+  hashery@3.0.5:
+    resolution: {integrity: sha512-JqXNwGkTWXpPcz6I1nQVPcVUt8fFOQpl4mRlAjJttrv2J3Sh+c1ZvA/PmglZyf6BHYoL9C0q3w7Q47lXOigfOA==}
+    engines: {node: '>=22.18'}
+
   hasown@2.0.2:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
@@ -3192,6 +3196,10 @@ packages:
 
   hookified@3.0.3:
     resolution: {integrity: sha512-ZcbRytYgERoKtosiaXolUIPIWMgUCrSiWQEzFZ0kc8etD/LPgpy4/KOrtssFdK7ZXlTTyb4cob2veqj7osv8yA==}
+    engines: {node: '>=22.18.0'}
+
+  hookified@3.1.0:
+    resolution: {integrity: sha512-G2jPVpzwIiV7pcYcg62ngNvY+y0iCkKmuJIaQpomFdvtY89UiSvWuPiNo1AalSr1t2op1cdz21ZThZc3DSbmvA==}
     engines: {node: '>=22.18.0'}
 
   hosted-git-info@2.8.9:
@@ -3547,9 +3555,9 @@ packages:
   mdurl@2.1.0:
     resolution: {integrity: sha512-1+HBaOx0zi/dQWht8rNv9MYf9qqpqL/kxI0hXImU6Y547zM6Sni8BQibt7ifgMcYtQg41ao3Ivd6cnSM86inpg==}
 
-  memcache@1.10.0:
-    resolution: {integrity: sha512-USVidZugkSeQuWK8qoI2UUVvTzs1i4tgZ0RhD1Jlw0Ep/02depgMLBoZRIae0YgnRbV4qOVW+QJlijmcoe6DzQ==}
-    engines: {node: '>=22.19.0', pnpm: '>=11'}
+  memcache@1.12.0:
+    resolution: {integrity: sha512-Z0pqHanr7OmiG5O997pkZ5afNE50tUZEGz+SgAdXQA5hVRTuhZHA9YikVRHuXAgwl1qIrbjSLZDm4POt1jG4bg==}
+    engines: {node: '>=22.19.0', pnpm: '>=12'}
 
   memory-pager@1.5.0:
     resolution: {integrity: sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg==}
@@ -6536,6 +6544,10 @@ snapshots:
     dependencies:
       hookified: 3.0.3
 
+  hashery@3.0.5:
+    dependencies:
+      hookified: 3.1.0
+
   hasown@2.0.2:
     dependencies:
       function-bind: 1.1.2
@@ -6657,6 +6669,8 @@ snapshots:
   hookified@2.2.0: {}
 
   hookified@3.0.3: {}
+
+  hookified@3.1.0: {}
 
   hosted-git-info@2.8.9: {}
 
@@ -7122,10 +7136,10 @@ snapshots:
 
   mdurl@2.1.0: {}
 
-  memcache@1.10.0:
+  memcache@1.12.0:
     dependencies:
-      hashery: 3.0.1
-      hookified: 3.0.3
+      hashery: 3.0.5
+      hookified: 3.1.0
 
   memory-pager@1.5.0: {}
 
