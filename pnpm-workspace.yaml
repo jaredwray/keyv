@@ -30,10 +30,14 @@ minimumReleaseAgeIgnoreMissingTime: false
 # (CVE-2026-111758, fixed in 15.0.3; CVE-2026-111759, fixed in 15.0.2).
 # Published 2026-10-26, inside the 7-day cooldown. Exact version only.
 # Needs Jared's sign-off.
+# mongodb@7.8.0 fixes CVE-2026-119179 (NODE-7958). Published 2026-10-30,
+# inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
 minimumReleaseAgeExclude:
   - happy-dom@21.0.4
   - docula@3.0.2
   - "@jaredwray/fumanchu@4.7.5"
+  - mongodb@7.8.0
 trustPolicy: no-downgrade
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
