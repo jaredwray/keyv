@@ -47,7 +47,7 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "msgpackr": "^2.1.0"
+    "msgpackr": "^2.1.2"
   },
   "peerDependencies": {
     "keyv": "workspace:^"
