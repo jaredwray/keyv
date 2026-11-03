@@ -585,8 +585,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/keyv
       mongodb:
-        specifier: ^7.6.0
-        version: 7.6.0
+        specifier: ^7.7.0
+        version: 7.7.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.6.3
@@ -1580,8 +1580,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@mongodb-js/saslprep@1.4.13':
-    resolution: {integrity: sha512-E3Sv4eCYAlKYUTx8S3ioQcDUscOif+8zZ5OnW1IzJ+Tt+EO+ke8mn+Y3FX6N1H79picwbdOavVOb1jPi2EOyrg==}
+  '@mongodb-js/saslprep@1.6.1':
+    resolution: {integrity: sha512-D4CQtk9IwjCLAvCf1xvHEod3960q8XMUzfmdRU9qjUNlHnesGuTOvJcOTaPm9koZ1caUKA2aTbszZiAkcmSgmg==}
 
   '@monstermann/tables@0.0.0':
     resolution: {integrity: sha512-mpM86yGT6EPHIyB0c4uIdKQ9mPupfNotn0UHWbj1EVeYpJP/hC9k0p6KoLf9ZZ/r3gHu9PRq61tr3K8Yeg/Rng==}
@@ -2681,8 +2681,8 @@ packages:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
 
-  bson@7.2.0:
-    resolution: {integrity: sha512-YCEo7KjMlbNlyHhz7zAZNDpIpQbd+wOEHJYezv0nMYTn4x31eIUM2yomNNubclAt63dObUzKHWsBLJ9QcZNSnQ==}
+  bson@7.3.3:
+    resolution: {integrity: sha512-oz3LwE3qGEhTCSyhzQRLY3Bj1NLOsjFMf6tcmY5J8M+3R7EVcmoBfSHWvjUK3yXCLDUsGpIuB3aQL4nDZ1EV/g==}
     engines: {node: '>=20.19.0'}
 
   buffer-from@1.1.2:
@@ -3717,8 +3717,8 @@ packages:
     resolution: {integrity: sha512-ZoS07RoFqpKYQwAk59qmrx8+jJHNHU30UjlU96QktiGn1ltvDr+vCznLX5DiUBLEpMAHatHNWV1nM/74ul66kA==}
     engines: {node: '>=20.19.0'}
 
-  mongodb@7.6.0:
-    resolution: {integrity: sha512-WbZ6OCjYw2c53LOjfkQa+reXr7kIiOVpXXglnASFuiMtif0BvsMwHe3ClJHLm1/r7wJFwaasfFtD6iYIktB01g==}
+  mongodb@7.7.0:
+    resolution: {integrity: sha512-XG1xXEqyouAV8GCb3PuRaujofeXKpAJAPvXYWZgHl6Dz4QHSJ1nRLl0+GpqaLTwKvC0RFE9truOur34RNFY1nw==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@aws-sdk/credential-providers': ^3.806.0
@@ -5341,7 +5341,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@mongodb-js/saslprep@1.4.13':
+  '@mongodb-js/saslprep@1.6.1':
     dependencies:
       sparse-bitfield: 3.0.3
 
@@ -6084,7 +6084,7 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  bson@7.2.0: {}
+  bson@7.3.3: {}
 
   buffer-from@1.1.2:
     optional: true
@@ -7481,10 +7481,10 @@ snapshots:
       '@types/whatwg-url': 13.0.0
       whatwg-url: 14.2.0
 
-  mongodb@7.6.0:
+  mongodb@7.7.0:
     dependencies:
-      '@mongodb-js/saslprep': 1.4.13
-      bson: 7.2.0
+      '@mongodb-js/saslprep': 1.6.1
+      bson: 7.3.3
       mongodb-connection-string-url: 7.0.2
 
   ms@2.1.3: {}
