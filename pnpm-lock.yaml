@@ -165,7 +165,6 @@ settings:
 overrides:
   semver@5.7.2: 7.8.5
   undici@>=7 <7.29.1: 8.12.3
-  picomatch@>=2 <2.3.2: 2.3.2
   source-map-js@<1.2.2: 1.2.2
   sharp@>=0.35 <0.35.5: 0.35.5
 
