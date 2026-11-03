@@ -286,8 +286,8 @@ importers:
         specifier: ^3.0.5
         version: 3.0.5
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../keyv
@@ -323,8 +323,8 @@ importers:
   core/keyv:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.6.3
@@ -512,8 +512,8 @@ importers:
   storage/cloudflare-kv:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -534,8 +534,8 @@ importers:
         specifier: ^3.1157.0
         version: 3.1157.0(@aws-sdk/client-dynamodb@3.1157.0)
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -547,8 +547,8 @@ importers:
   storage/etcd:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -560,8 +560,8 @@ importers:
   storage/memcache:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -579,8 +579,8 @@ importers:
   storage/mongo:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -613,8 +613,8 @@ importers:
   storage/mysql:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -650,8 +650,8 @@ importers:
   storage/postgres:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -693,8 +693,8 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -712,8 +712,8 @@ importers:
         specifier: ^13.0.3
         version: 13.0.3
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -740,8 +740,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.2
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       iovalkey:
         specifier: ^0.4.0
         version: 0.4.0(supports-color@10.2.2)
@@ -780,8 +780,8 @@ importers:
         specifier: ^2.5.3
         version: 2.5.3
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -3189,10 +3189,6 @@ packages:
 
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
-
-  hookified@3.0.3:
-    resolution: {integrity: sha512-ZcbRytYgERoKtosiaXolUIPIWMgUCrSiWQEzFZ0kc8etD/LPgpy4/KOrtssFdK7ZXlTTyb4cob2veqj7osv8yA==}
-    engines: {node: '>=22.18.0'}
 
   hookified@3.1.0:
     resolution: {integrity: sha512-G2jPVpzwIiV7pcYcg62ngNvY+y0iCkKmuJIaQpomFdvtY89UiSvWuPiNo1AalSr1t2op1cdz21ZThZc3DSbmvA==}
@@ -6296,7 +6292,7 @@ snapshots:
       '@jaredwray/fumanchu': 4.7.5
       cacheable: 2.5.0
       ejs: 6.0.1
-      hookified: 3.0.3
+      hookified: 3.1.0
       liquidjs: 10.29.0
       nunjucks: 3.2.4
       pug: 3.0.4
@@ -6657,8 +6653,6 @@ snapshots:
   hookified@1.15.1: {}
 
   hookified@2.2.0: {}
-
-  hookified@3.0.3: {}
 
   hookified@3.1.0: {}
 
@@ -8535,7 +8529,7 @@ snapshots:
       ai: 7.0.143(zod@4.6.7)
       cacheable: 2.5.0
       hashery: 3.0.5
-      hookified: 3.0.3
+      hookified: 3.1.0
       html-react-parser: 6.1.7(react@19.3.1)
       js-yaml: 5.4.1
       react: 19.3.1
