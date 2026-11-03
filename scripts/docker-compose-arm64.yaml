@@ -64,13 +64,13 @@ services:
     ports:
       - 6370:6370
   keyv_redis:
-    image: redis:8.10.2-trixie@sha256:97ec88159e6d7cfb5def9015386087d58a912de80112f06ebdfa78fa5989901
+    image: redis:8.10.2-trixie@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901
     environment:
       REDIS_HOST: redis
     ports:
       - 6379:6379
   keyv_redis_tls_1:
-    image: redis:8.10.2-trixie@sha256:97ec88159e6d7cfb5def9015386087d58a912de80112f06ebdfa78fa5989901
+    image: redis:8.10.2-trixie@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901
     command: redis-server --port 0 --tls-port 6380 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no
     environment:
       REDIS_HOST: redis
