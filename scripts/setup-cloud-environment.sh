@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# setup-cloud-environment.sh — Aikido Safe Chain bootstrap for Codespaces and Cursor Cloud Agents.
+# setup-cloud-environment.sh — Aikido Safe Chain bootstrap for Codespaces, Cursor Cloud Agents,
+# Claude Code on the web, and Codex cloud.
 #
 # Fail closed: never install dependencies unless Safe Chain shims are on PATH.
 # Copied into the target repo as scripts/setup-cloud-environment.sh.
@@ -12,6 +13,32 @@ SAFE_CHAIN_INSTALLER_URL="https://github.com/AikidoSec/safe-chain/releases/downl
 SAFE_CHAIN_SHIMS="${HOME}/.safe-chain/shims"
 SAFE_CHAIN_BIN="${HOME}/.safe-chain/bin"
 
+persist_shim_path() {
+  local rc="$1"
+  local line="export PATH=\"${SAFE_CHAIN_SHIMS}:${SAFE_CHAIN_BIN}:\$PATH\""
+  if [[ -f "$rc" ]] && grep -Fqx -- "$line" "$rc"; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$rc")"
+  printf '\n# Aikido Safe Chain shims\n%s\n' "$line" >> "$rc"
+}
+
+# Claude Code starts each Bash command from a shell snapshot taken at launch, not the rc files,
+# and runs CLAUDE_ENV_FILE before every command instead. A failed SessionStart hook does not stop
+# the session, so the shims go on its PATH before anything here can fail, holding stubs that
+# refuse to run until Safe Chain's setup-ci replaces them.
+if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
+  mkdir -p "$SAFE_CHAIN_SHIMS"
+  for cmd in npm npx pnpm pnpx; do
+    if [[ ! -e "${SAFE_CHAIN_SHIMS}/${cmd}" ]]; then
+      printf '#!/bin/sh\necho "error: Safe Chain is not set up, so %s is blocked; run bash ./scripts/setup-cloud-environment.sh" >&2\nexit 1\n' \
+        "$cmd" > "${SAFE_CHAIN_SHIMS}/${cmd}"
+      chmod +x "${SAFE_CHAIN_SHIMS}/${cmd}"
+    fi
+  done
+  persist_shim_path "$CLAUDE_ENV_FILE"
+fi
+
 if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
   cd "$git_root"
 fi
@@ -21,8 +48,13 @@ if [[ ! -f pnpm-lock.yaml ]]; then
   exit 1
 fi
 
-if [[ -f package.json ]] && grep -q '"packageManager"' package.json && command -v corepack >/dev/null; then
-  corepack enable
+if ! command -v pnpm >/dev/null \
+  && [[ -f package.json ]] \
+  && grep -q '"packageManager"' package.json \
+  && command -v corepack >/dev/null; then
+  mkdir -p "$SAFE_CHAIN_BIN"
+  corepack enable --install-directory "$SAFE_CHAIN_BIN" pnpm
+  export PATH="${SAFE_CHAIN_BIN}:${PATH}"
 fi
 
 if ! command -v pnpm >/dev/null; then
@@ -36,36 +68,14 @@ trap 'rm -f "$installer"' EXIT
 curl -fsSL "$SAFE_CHAIN_INSTALLER_URL" -o "$installer"
 echo "${SAFE_CHAIN_INSTALLER_SHA256}  ${installer}" | sha256sum -c -
 
-sh "$installer" --ci
+# NVM auto-selects from the current directory when sourced. Run outside the
+# repository so .nvmrc cannot break the installer's optional legacy scan.
+(
+  cd /
+  sh "$installer" --ci
+)
 
 export PATH="${SAFE_CHAIN_SHIMS}:${SAFE_CHAIN_BIN}:${PATH}"
-
-# pnpm 12 starts from bin/pnpm.mjs, which corepack supports from 0.36.0. The corepack
-# bundled with Node 22 looks for bin/pnpm.cjs and fails, so install a current one through
-# the Safe Chain npm shim and put its pnpm shim in SAFE_CHAIN_BIN, ahead of Node's on PATH.
-if [[ -f package.json ]] && grep -q '"packageManager"' package.json; then
-  corepack_dir="${HOME}/.safe-chain/corepack"
-  npm install --prefix "$corepack_dir" --no-save --no-audit --no-fund corepack@0.36.0
-  "${corepack_dir}/node_modules/.bin/corepack" enable --install-directory "$SAFE_CHAIN_BIN" pnpm
-
-  # An older corepack that already ran this pnpm version cached it with the missing launcher.
-  pnpm_version=$(sed -nE 's/.*"packageManager": *"pnpm@([^+"]+).*/\1/p' package.json)
-  pnpm_cache="${COREPACK_HOME:-${HOME}/.cache/node/corepack}/v1/pnpm/${pnpm_version}"
-  if [[ "$pnpm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && -f "${pnpm_cache}/.corepack" && ! -e "${pnpm_cache}/bin/pnpm.cjs" ]] \
-    && grep -q 'pnpm\.cjs' "${pnpm_cache}/.corepack"; then
-    rm -rf "$pnpm_cache"
-  fi
-fi
-
-persist_shim_path() {
-  local rc="$1"
-  local line="export PATH=\"${SAFE_CHAIN_SHIMS}:${SAFE_CHAIN_BIN}:\$PATH\""
-  if [[ -f "$rc" ]] && grep -Fq ".safe-chain/shims" "$rc"; then
-    return 0
-  fi
-  mkdir -p "$(dirname "$rc")"
-  printf '\n# Aikido Safe Chain shims\n%s\n' "$line" >> "$rc"
-}
 
 persist_shim_path "${HOME}/.profile"
 persist_shim_path "${HOME}/.bashrc"
