@@ -51,7 +51,7 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^3.0.3",
+		"hookified": "^3.1.0",
 		"mysql2": "^3.24.6"
 	},
 	"peerDependencies": {
