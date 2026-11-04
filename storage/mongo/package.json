@@ -50,17 +50,17 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^3.0.3",
-		"mongodb": "^7.6.0"
+		"hookified": "^3.1.0",
+		"mongodb": "^7.8.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.11",
+		"@biomejs/biome": "^2.6.3",
 		"@faker-js/faker": "^10.6.0",
 		"@keyv/test-suite": "workspace:^",
-		"@vitest/coverage-v8": "^4.1.11",
+		"@vitest/coverage-v8": "^5.0.5",
 		"rimraf": "^6.1.3",
 		"tsd": "^0.33.0",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.5"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"

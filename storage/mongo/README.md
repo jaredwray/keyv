@@ -321,7 +321,7 @@ console.log(results); // [true, true, false]
 `delete(key)` - Delete a key from the store.
 
 - `key` *(string)* - The key to delete.
-- Returns: `Promise<boolean>` - `true` if the key was deleted, `false` if the key was not found.
+- Returns: `Promise<boolean>` - `true` if the key was deleted, `false` if the key was not found or had expired. An expired entry is deleted too.
 
 ```js
 const store = new KeyvMongo('mongodb://localhost:27017');
@@ -337,7 +337,7 @@ console.log(await keyv.delete('nonexistent')); // false
 `deleteMany(keys)` - Delete multiple keys from the store at once.
 
 - `keys` *(string[])* - Array of keys to delete.
-- Returns: `Promise<boolean[]>` - An array of booleans indicating whether each key was deleted.
+- Returns: `Promise<boolean[]>` - An array of booleans indicating whether each key was deleted. Expired entries are deleted too, but return `false`.
 
 Each key is deleted individually in parallel so that per-key success/failure information is preserved in the returned array.
 

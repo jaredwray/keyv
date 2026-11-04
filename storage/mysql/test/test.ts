@@ -570,7 +570,7 @@ describe("SQL injection prevention", () => {
 });
 
 describe("delete", () => {
-	test("uses one DELETE query and returns whether a row was affected", async () => {
+	test("uses one DELETE query for a key that has not expired", async () => {
 		const keyv = new KeyvMysql(uri);
 		const key = faker.string.alphanumeric(10);
 		await keyv.set(key, "value");
@@ -580,10 +580,66 @@ describe("delete", () => {
 		expect(query).toHaveBeenCalledOnce();
 		expect(query.mock.calls[0][0]).toMatch(/^DELETE FROM/);
 
+		// With no live row, a second DELETE removes the row if it has expired.
 		query.mockClear();
 		expect(await keyv.delete(key)).toBe(false);
-		expect(query).toHaveBeenCalledOnce();
+		expect(query).toHaveBeenCalledTimes(2);
 		expect(query.mock.calls[0][0]).toMatch(/^DELETE FROM/);
+		expect(query.mock.calls[1][0]).toMatch(/^DELETE FROM .* expires <= /);
+	});
+
+	test("returns false for an expired key and removes its row", async () => {
+		const keyv = new KeyvMysql(uri);
+		const key = faker.string.alphanumeric(10);
+		await keyv.set(key, "value", Date.now() - 1000);
+
+		expect(await keyv.delete(key)).toBe(false);
+		const rows = await keyv.query<mysql.RowDataPacket[]>(
+			`SELECT id FROM \`keyv\` WHERE id = '${key}' AND namespace = ''`,
+		);
+		expect(rows).toHaveLength(0);
+	});
+
+	test("deleteMany returns false for expired keys and removes their rows", async () => {
+		const keyv = new KeyvMysql(uri);
+		const expiredKey = faker.string.alphanumeric(10);
+		const liveKey = faker.string.alphanumeric(10);
+		const futureKey = faker.string.alphanumeric(10);
+		await keyv.set(expiredKey, "value", Date.now() - 1000);
+		await keyv.set(liveKey, "value");
+		await keyv.set(futureKey, "value", Date.now() + 60_000);
+
+		expect(await keyv.deleteMany([expiredKey, liveKey, futureKey])).toEqual([false, true, true]);
+		const rows = await keyv.query<mysql.RowDataPacket[]>(
+			`SELECT id FROM \`keyv\` WHERE id IN ('${expiredKey}', '${liveKey}', '${futureKey}') AND namespace = ''`,
+		);
+		expect(rows).toHaveLength(0);
+	});
+
+	test("does not delete a fresh write made after the expired row was found", async () => {
+		const namespace = faker.string.uuid();
+		const key = faker.string.alphanumeric(10);
+		const deleter = new KeyvMysql(uri);
+		const writer = new KeyvMysql(uri);
+		deleter.namespace = namespace;
+		writer.namespace = namespace;
+		await writer.set(key, "expired", Date.now() - 1000);
+
+		const originalQuery = deleter.query;
+		let refreshed = false;
+		deleter.query = (async <T>(sqlString: string) => {
+			if (!refreshed && /expires <= /.test(sqlString)) {
+				refreshed = true;
+				expect(await writer.set(key, "fresh", Date.now() + 60_000)).toBe(true);
+			}
+
+			return originalQuery<T>(sqlString);
+		}) as typeof deleter.query;
+
+		expect(await deleter.delete(key)).toBe(false);
+		expect(refreshed).toBe(true);
+		expect(await writer.get(key)).toBe("fresh");
+		await writer.delete(key);
 	});
 });
 

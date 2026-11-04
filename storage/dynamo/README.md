@@ -354,7 +354,7 @@ const results = await store.setMany([
 
 ### .delete(key)
 
-Deletes a key from DynamoDB. Returns `true` if the key was deleted, `false` otherwise.
+Deletes a key from DynamoDB. Returns `true` if the key was deleted, `false` otherwise. An expired entry is deleted too, but returns `false`. DynamoDB's own TTL can take days to remove an expired item, so this matters here.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });
@@ -364,7 +364,7 @@ const deleted = await store.delete('foo'); // true
 
 ### .deleteMany(keys)
 
-Deletes multiple keys from DynamoDB. Returns a `boolean[]` indicating whether each key was deleted.
+Deletes multiple keys from DynamoDB. Returns a `boolean[]` indicating whether each key was deleted. Expired items are deleted too, but return `false`.
 
 ```js
 const store = new KeyvDynamo({ endpoint: 'http://localhost:8000' });

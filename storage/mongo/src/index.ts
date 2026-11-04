@@ -258,7 +258,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		}
 
 		// Delete expired entry
-		if (document.expiresAt && new Date(document.expiresAt as Date) <= new Date()) {
+		if (this.isDocumentExpired(document)) {
 			await client.store.deleteOne({ _id: document._id });
 			return undefined;
 		}
@@ -304,7 +304,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const expiredIds: KeyvAnyArray = [];
 
 		for await (const doc of cursor) {
-			if (doc.expiresAt && new Date(doc.expiresAt as Date) <= now) {
+			if (this.isDocumentExpired(doc, now)) {
 				expiredIds.push(doc._id);
 			} else {
 				validMap.set(doc.key as string, doc.value as KeyvStorageGetResult<Value>);
@@ -436,9 +436,11 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Delete a key from the store.
+	 * Delete a key from the store. An expired entry is deleted too, but reported as missing, as
+	 * `get` and `has` do.
 	 * @param key - The key to delete.
-	 * @returns `true` if the key was deleted, `false` if the key was not found.
+	 * @returns `true` if the key held a value that had not expired and was deleted, `false` if the
+	 * key was not found or had expired.
 	 */
 	public async delete(key: string): Promise<boolean> {
 		if (typeof key !== "string") {
@@ -450,29 +452,36 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 
 		if (client.useGridFS) {
 			try {
+				// The newest file holds the key's value, so it decides whether the key had expired.
+				const newest = await this.findNewestFile(client, key);
 				const deleted = await this.deleteFiles(client, {
 					filename: { $eq: key },
 					"metadata.namespace": { $eq: ns },
 				});
-				return deleted > 0;
+				return deleted > 0 && newest !== null && !this.isFileExpired(newest);
 			} catch (error) {
 				this.emit("error", error);
 				return false;
 			}
 		}
 
-		const object = await client.store.deleteOne({
-			key: { $eq: key },
-			namespace: { $eq: ns },
-		});
-		return object.deletedCount > 0;
+		const document = await client.store.findOneAndDelete(
+			{
+				key: { $eq: key },
+				namespace: { $eq: ns },
+			},
+			{ projection: { expiresAt: 1 } },
+		);
+		return document !== null && !this.isDocumentExpired(document);
 	}
 
 	/**
 	 * Delete multiple keys from the store at once. Each key is deleted individually
-	 * so that per-key success/failure information is preserved.
+	 * so that per-key success/failure information is preserved. Expired entries are deleted too,
+	 * but reported as missing.
 	 * @param keys - Array of keys to delete.
-	 * @returns Array of booleans indicating whether each key was successfully deleted.
+	 * @returns Array of booleans indicating whether each key held a value that had not expired and
+	 * was deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		const results = await Promise.all(keys.map(async (key) => this.delete(key)));
@@ -589,7 +598,7 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		const cursor = client.store.find({ namespace: { $eq: namespaceValue } });
 
 		for await (const doc of cursor) {
-			if (doc.expiresAt && new Date(doc.expiresAt as Date) <= now) {
+			if (this.isDocumentExpired(doc, now)) {
 				await client.store.deleteOne({ _id: doc._id });
 				continue;
 			}
@@ -769,6 +778,13 @@ export class KeyvMongo extends Hookified implements KeyvStorageAdapter {
 		if (batch.length > 0) {
 			await run(batch);
 		}
+	}
+
+	/**
+	 * Determines whether a document's `expiresAt` has passed.
+	 */
+	private isDocumentExpired(document: Document, now: Date = new Date()): boolean {
+		return Boolean(document.expiresAt) && new Date(document.expiresAt as Date) <= now;
 	}
 
 	/**

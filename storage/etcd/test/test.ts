@@ -260,6 +260,35 @@ describe("get, set, and delete", () => {
 });
 
 describe("ttl and expiration", () => {
+	it("should return false from delete for an expired entry and remove it", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const key = faker.string.uuid();
+		// No lease, so only the envelope's `e` says the entry has expired.
+		await store.client.putRaw({
+			key: store.formatKey(key),
+			value: JSON.stringify({ v: "stale", e: Date.now() - 1000, n: null }),
+		});
+		t.expect(await store.delete(key)).toBe(false);
+		t.expect(await store.client.get(store.formatKey(key))).toBeNull();
+	});
+
+	it("should return false from deleteMany for expired entries and remove them", async (t) => {
+		const store = new KeyvEtcd(etcdUrl);
+		const expiredKey = faker.string.uuid();
+		const liveKey = faker.string.uuid();
+		const rawKey = faker.string.uuid();
+		await store.client.putRaw({
+			key: store.formatKey(expiredKey),
+			value: JSON.stringify({ v: "stale", e: Date.now() - 1000, n: null }),
+		});
+		await store.set(liveKey, "live", Date.now() + 60_000);
+		await store.client.put(store.formatKey(rawKey)).value("raw-value");
+		t.expect(await store.deleteMany([expiredKey, liveKey, rawKey])).toEqual([false, true, true]);
+		for (const key of [expiredKey, liveKey, rawKey]) {
+			t.expect(await store.client.get(store.formatKey(key))).toBeNull();
+		}
+	});
+
 	it("should respect the default ttl option", async (t) => {
 		const keyv = new KeyvEtcd(etcdUrl, { ttl: 1000 });
 		const key = faker.string.uuid();
@@ -807,6 +836,25 @@ describe("EtcdClient", () => {
 		t.expect(error).toBeDefined();
 		// Should be way under fetch's default ~30s connect timeout.
 		t.expect(elapsed).toBeLessThan(2000);
+	});
+
+	it("should return the deleted pairs when prevKv is set", async (t) => {
+		const client = new EtcdClient({ url: "http://127.0.0.1:2379" });
+		const key = `prev-kv-${faker.string.alphanumeric(12)}`;
+		await client.putRaw({ key, value: "value" });
+		const deleted = await client.deleteRangeRaw({ key, prevKv: true });
+		t.expect(deleted.deleted).toBe("1");
+		t.expect(deleted.prevKvs).toEqual([{ key: Buffer.from(key), value: "value" }]);
+
+		const missing = await client.deleteRangeRaw({ key, prevKv: true });
+		t.expect(missing).toEqual({ deleted: "0", prevKvs: [] });
+
+		await client.putRaw({ key, value: "" });
+		const empty = await client.delete().key(key, { prevKv: true });
+		t.expect(empty.prevKvs).toEqual([{ key: Buffer.from(key), value: "" }]);
+
+		await client.putRaw({ key, value: "value" });
+		t.expect(await client.deleteRangeRaw({ key })).toEqual({ deleted: "1", prevKvs: [] });
 	});
 
 	it("should strip trailing slashes from the base url", async (t) => {

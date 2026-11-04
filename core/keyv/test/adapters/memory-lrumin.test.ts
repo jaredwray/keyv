@@ -166,3 +166,34 @@ describe("KeyvMemoryAdapter with lru.min - createKeyv() Integration", () => {
 		expect(await keyv.get(key)).toBe(undefined);
 	});
 });
+
+describe("KeyvMemoryAdapter with lru.min - expired entries", () => {
+	test("should report an expired entry as missing from delete and remove it", async () => {
+		const lru = createLRU<string, unknown>({ max: 10 });
+		const keyv = new KeyvMemoryAdapter(lru);
+		const expiredKey = faker.string.uuid();
+		const liveKey = faker.string.uuid();
+		await keyv.set(expiredKey, faker.lorem.word(), Date.now() - 1000);
+		await keyv.set(liveKey, faker.lorem.word());
+
+		expect(lru.has(expiredKey)).toBe(true);
+		expect(await keyv.delete(expiredKey)).toBe(false);
+		expect(await keyv.deleteMany([liveKey])).toEqual([true]);
+		expect(lru.size).toBe(0);
+	});
+});
+
+describe("KeyvMemoryAdapter with lru.min - clearExpired", () => {
+	test("should delete every expired entry", async () => {
+		const lru = createLRU<string, unknown>({ max: 10 });
+		const keyv = new KeyvMemoryAdapter(lru);
+		const now = Date.now();
+		for (let i = 0; i < 5; i++) {
+			await keyv.set(`expired-${i}`, i, now - 1000);
+		}
+		await keyv.set("live", "value", now + 60_000);
+
+		expect(await keyv.clearExpired()).toBe(5);
+		expect([...lru.keys()]).toEqual(["live"]);
+	});
+});

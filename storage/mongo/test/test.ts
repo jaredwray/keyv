@@ -350,6 +350,39 @@ describe("delete and deleteMany", () => {
 		).toEqual([false, false]);
 	});
 
+	test("returns false for an expired key and removes its document", async () => {
+		const store = new KeyvMongo({ ...options });
+		const key = faker.string.alphanumeric(10);
+		await store.set(key, "expired-value", Date.now() - 1000);
+		expect(await store.delete(key)).toBe(false);
+		const client = await store.connect;
+		expect(await client.store.countDocuments({ key })).toBe(0);
+	});
+
+	test("deleteMany returns false for expired keys and removes their documents", async () => {
+		const store = new KeyvMongo({ ...options });
+		const expiredKey = faker.string.alphanumeric(10);
+		const liveKey = faker.string.alphanumeric(10);
+		const futureKey = faker.string.alphanumeric(10);
+		await store.set(expiredKey, "expired-value", Date.now() - 1000);
+		await store.set(liveKey, "live-value");
+		await store.set(futureKey, "future-value", Date.now() + 60_000);
+		expect(await store.deleteMany([expiredKey, liveKey, futureKey])).toEqual([false, true, true]);
+		const client = await store.connect;
+		expect(
+			await client.store.countDocuments({ key: { $in: [expiredKey, liveKey, futureKey] } }),
+		).toBe(0);
+	});
+
+	test("returns false for an expired key in GridFS and removes its files", async () => {
+		const store = new KeyvMongo({ useGridFS: true, ...options });
+		const key = faker.string.alphanumeric(10);
+		await writeFile(store, key, "expired-value", { expiresAt: new Date(Date.now() - 1000) });
+		expect(await countFiles(store, key)).toBe(1);
+		expect(await store.delete(key)).toBe(false);
+		expect(await countFiles(store, key)).toBe(0);
+	});
+
 	test("returns false when the GridFS bucket delete throws", async () => {
 		const store = new KeyvMongo({ useGridFS: true, ...options });
 		const key = faker.string.alphanumeric(10);
@@ -452,6 +485,39 @@ describe("iterator", () => {
 
 		expect(keys).toEqual(expect.arrayContaining([key1, key2]));
 		expect(keys.length).toBe(2);
+	});
+
+	test("skips and deletes expired documents", async () => {
+		const store = new KeyvMongo({
+			collection: `expired-iterator-${faker.string.alphanumeric(8)}`,
+			...options,
+		});
+		const client = await store.connect;
+		try {
+			// The TTL index can remove an already-expired document before iterator()
+			// sees it. Drop it so this test is what deletes the document.
+			const ttl = (await client.store.indexes()).find((index) => index.expireAfterSeconds === 0);
+			if (!ttl?.name) {
+				throw new Error("expected the expiresAt TTL index");
+			}
+
+			await client.store.dropIndex(ttl.name);
+			const expiredKey = faker.string.alphanumeric(10);
+			const freshKey = faker.string.alphanumeric(10);
+			await store.set(expiredKey, "expired-value", Date.now() - 1000);
+			await store.set(freshKey, "fresh-value");
+			const entries: Array<[string, unknown]> = [];
+			for await (const entry of store.iterator()) {
+				entries.push(entry as [string, unknown]);
+			}
+
+			expect(entries).toEqual([[freshKey, "fresh-value"]]);
+			expect(await client.store.countDocuments({ key: expiredKey })).toBe(0);
+			expect(await client.store.countDocuments({ key: freshKey })).toBe(1);
+		} finally {
+			await client.store.drop();
+			await store.disconnect();
+		}
 	});
 
 	test("skips and deletes expired entries in GridFS", async () => {

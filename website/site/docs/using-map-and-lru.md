@@ -56,6 +56,32 @@ When the underlying store's `set` accepts a TTL argument, the memory adapter als
 
 This wrapper is separate from the `{ value, expires }` envelope Keyv core serializes. Custom serializers still see `expires` inside the payload.
 
+## Clearing expired entries on a timer
+
+Expired entries are removed when a read finds them. An entry that is never read again stays in the store, so a long-running process that writes many short-lived keys keeps growing. Set `clearExpiredInterval` (milliseconds) to delete expired entries on a timer. It is off by default (`0`).
+
+```js
+import Keyv, { createKeyv, KeyvMemoryAdapter } from "keyv";
+
+const keyv = new Keyv({
+	store: new KeyvMemoryAdapter(new Map(), { clearExpiredInterval: 60_000 }),
+});
+
+// Or with createKeyv
+const cache = createKeyv(new Map(), { clearExpiredInterval: 60_000 });
+
+// Or on a store Keyv already wrapped
+const other = new Keyv({ store: new Map() });
+other.store.clearExpiredInterval = 60_000;
+```
+
+- Call `clearExpired()` on the adapter to delete expired entries now. It resolves with the number deleted.
+- The timer uses `unref()`, so it won't keep the Node.js process alive. `disconnect()` stops it, as does setting `clearExpiredInterval` to `0`.
+- Stop the timer before you replace or drop a store. Keyv doesn't stop the old adapter's timer when `keyv.store` changes, so the timer keeps the old store in memory and keeps sweeping it.
+- Each tick walks the whole store and runs synchronously, so a very large `Map` blocks the event loop for as long as the walk takes. A [BigMap](/docs/storage-adapters/bigmap/) is swept one internal Map per tick instead.
+- With a namespace, only that namespace's entries are swept. An adapter without a namespace over the same `Map` sweeps them all.
+- A store without `entries()` can't be swept, so the timer does nothing.
+
 ## Scaling past Map limits
 
 JavaScript `Map` is practical up to about **16.7 million** entries. [`@keyv/bigmap`](/docs/storage-adapters/bigmap/) distributes keys across many inner Maps.

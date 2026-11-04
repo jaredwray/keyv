@@ -19,6 +19,25 @@ allowBuilds:
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
 minimumReleaseAgeIgnoreMissingTime: false
+# happy-dom@21.0.4 fixes GHSA-834v-8h66-3h79 / CVE-2026-115895 and was
+# published 2026-10-20, inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
+# docula@3.0.2 depends on undici ^8.10.2 (8.11.2 is still inside the
+# Oct 15 undici advisories, fixed in 8.12.2). Published 2026-10-19,
+# inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
+# @jaredwray/fumanchu@4.7.5 depends on markdown-it ^15.0.3
+# (CVE-2026-111758, fixed in 15.0.3; CVE-2026-111759, fixed in 15.0.2).
+# Published 2026-10-26, inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
+# mongodb@7.8.0 fixes CVE-2026-119179 (NODE-7958). Published 2026-10-30,
+# inside the 7-day cooldown. Exact version only.
+# Needs Jared's sign-off.
+minimumReleaseAgeExclude:
+  - happy-dom@21.0.4
+  - docula@3.0.2
+  - "@jaredwray/fumanchu@4.7.5"
+  - mongodb@7.8.0
 trustPolicy: no-downgrade
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
@@ -29,40 +48,14 @@ blockExoticSubdeps: true
 #
 # High and critical advisories. Selectors stay on the same major so callers
 # keep a compatible API. Each pin is old enough for minimumReleaseAge.
-# liquidjs stays on 10.29.0 (ecto requires ^10.29.0); versions below the
-# 10.27.2 patches are lifted to that release. vitest is already a direct
-# devDependency at ^4.1.11, which is above 3.2.6.
+# vitest is already a direct devDependency at ^5.0.5, which is above 3.2.6.
 #
-# vite is only pulled by vitest (`^6 || ^7 || ^8`). A fresh resolve selects
-# vite 8; these pins keep the 7.x line already in the lockfile (7.3.7 is the
-# newest 7.x inside the cooldown; 7.3.5 is the advisory floor). rollup,
-# postcss, nanoid, picomatch, and source-map-js are transitive and their
-# parents still accept the vulnerable release, so the lockfile kept it.
 # miniflare 4 pins sharp at 0.35.2. No 4.x release depends on sharp >= 0.35.5,
 # and miniflare 5 is still prerelease, so that parent cannot be bumped.
 overrides:
-  semver@5.7.2: 7.7.3
-  "handlebars@<4.7.10": 4.7.10
-  "protobufjs@>=7 <7.6.6": 7.6.6
-  "liquidjs@<10.27.2": 10.27.2
-  "tar@<7.5.22": 7.5.22
-  "fast-xml-parser@>=5 <5.11.2": 5.11.2
-  "undici@>=7 <7.29.1": 7.30.0
-  "undici@>=8 <8.10.2": 8.11.2
-  "minimatch@>=3 <3.1.5": 3.1.5
-  "minimatch@>=5 <5.1.9": 5.1.9
-  "minimatch@>=9 <9.0.9": 9.0.9
-  "minimatch@>=10 <10.2.6": 10.2.6
-  "brace-expansion@>=1 <1.1.21": 1.1.21
-  "brace-expansion@>=2 <2.1.7": 2.1.7
-  "brace-expansion@>=3 <3.0.9": 3.0.9
-  "brace-expansion@>=5 <5.0.12": 5.0.12
-  "@isaacs/brace-expansion@<5.0.1": 5.0.1
-  "vite@>=7 <7.3.7": 7.3.7
-  "vite@>=8": 7.3.7
-  "rollup@>=4 <4.64.5": 4.64.5
-  "postcss@>=8 <8.5.29": 8.5.29
-  "nanoid@>=3 <3.3.20": 3.3.20
-  "picomatch@>=2 <2.3.2": 2.3.2
-  "source-map-js@<1.2.2": 1.2.2
+  semver@5.7.2: 7.8.5
+  # 7.30.0 and 8.11.2 are still inside the Oct 15 advisories fixed by
+  # 7.30.1 and 8.12.2. miniflare 4 pins undici at 7.28.0 exactly.
+  # >=7.30.1 resolves to 8.12.3, so the 7.x selector lifts that pin there.
+  "undici@>=7 <7.29.1": 8.12.3
   "sharp@>=0.35 <0.35.5": 0.35.5

@@ -34,6 +34,7 @@
 - [Using with Keyv](#using-with-keyv)
 	- [createKeyv](#createkeyv)
 	- [With Custom Options](#with-custom-options)
+	- [Clearing Expired Entries](#clearing-expired-entries)
 	- [Type Safety](#type-safety)
 - [Integration with Keyv Ecosystem](#integration-with-keyv-ecosystem)
 - [API](#api)
@@ -282,6 +283,7 @@ The `createKeyv` function creates a Keyv instance with BigMap as the storage ada
 - `options` (optional): BigMap configuration options
   - `storeSize` (number): Number of internal Map instances. Default: `2`
   - `storeHashFunction` (StoreHashFunction): Custom hash function for key distribution
+  - `clearExpiredInterval` (number): Interval in milliseconds between sweeps that delete expired entries, one internal Map per sweep. See [Clearing Expired Entries](#clearing-expired-entries). Default: `0` (off)
 
 **Returns:** `Keyv` instance with BigMap adapter
 
@@ -327,6 +329,27 @@ const keyv = createKeyv({
   }
 });
 ```
+
+## Clearing Expired Entries
+
+Keyv removes an expired entry when a read finds it. An entry that is never read again stays in the BigMap. Pass `clearExpiredInterval` (milliseconds) to delete expired entries on a timer:
+
+```typescript
+import { createKeyv } from '@keyv/bigmap';
+
+const keyv = createKeyv({ storeSize: 16, clearExpiredInterval: 10_000 });
+
+// Stop the timer when you are done with the store
+await keyv.disconnect();
+```
+
+Each tick sweeps one internal Map, in turn, so a tick never walks the whole BigMap:
+
+- A tick blocks the event loop for one internal Map, about `size / storeSize` entries. For a very large map, raise `storeSize` to make each tick shorter.
+- An expired entry can stay for up to `clearExpiredInterval × storeSize` before a tick reaches it. With `storeSize: 16` and a 10-second interval, that's 160 seconds. Reads never return it in the meantime.
+- Each deleted entry emits `BigMapEvents.DELETE`.
+- The timer uses `unref()`, so it won't keep the Node.js process alive. `keyv.disconnect()` stops it.
+- To delete every expired entry at once, call `keyv.store.clearExpired()`. It resolves with the number deleted.
 
 ## Type Safety
 

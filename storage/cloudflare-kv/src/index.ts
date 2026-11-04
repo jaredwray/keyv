@@ -352,20 +352,23 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key from Cloudflare KV.
+	 * Deletes a key from Cloudflare KV. An expired entry is deleted too, but reported as missing,
+	 * as `get` and `has` do.
 	 * @param key - The key to delete
-	 * @returns `true` if the key existed and was deleted, `false` if it did not exist.
+	 * @returns `true` if the key held a value that had not expired and was deleted, `false` if it
+	 * did not exist or had expired.
 	 */
 	public async delete(key: string): Promise<boolean> {
 		try {
 			const formatted = this.formatKey(key);
-			const raw = await this._client.get(formatted);
-			if (raw === null) {
+			const { value, metadata } = await this._client.getWithMetadata(formatted);
+			if (value === null) {
 				return false;
 			}
 
 			await this._client.delete(formatted);
-			return true;
+			// KV's native expiry has a 60-second minimum, so an entry can outlive its `expires`.
+			return !this.isExpired(metadata);
 		} catch (error) {
 			this.emit("error", error);
 			return false;
@@ -373,9 +376,11 @@ export class KeyvCloudflareKV extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes multiple keys from Cloudflare KV.
+	 * Deletes multiple keys from Cloudflare KV. Expired entries are deleted too, but reported as
+	 * missing.
 	 * @param keys - An array of keys to delete
-	 * @returns An array of booleans indicating whether each key was deleted.
+	 * @returns An array of booleans indicating whether each key held a value that had not expired
+	 * and was deleted.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
 		return Promise.all(keys.map((key) => this.delete(key)));

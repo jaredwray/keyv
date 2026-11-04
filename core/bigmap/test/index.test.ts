@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import type { KeyvMemoryAdapter } from "keyv";
-import { describe, expect, test, vi } from "vitest";
+import { KeyvMemoryAdapter } from "keyv";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { BigMap, BigMapEvents, createKeyv, defaultHashFunction } from "../src/index.js";
 
 enum FakeDataType {
@@ -757,5 +757,56 @@ describe("createKeyv", () => {
 		const { key, value } = fakeEntry<string>(FakeDataType.STRING);
 		await keyv.set(key, value);
 		expect(await keyv.get(key)).toBe(value);
+	});
+
+	test("should not start an expired-entry timer by default", () => {
+		const keyv = createKeyv();
+		expect((keyv.store as KeyvMemoryAdapter).clearExpiredInterval).toBe(0);
+	});
+});
+
+describe("createKeyv clearExpiredInterval", () => {
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	test("should sweep one internal Map per tick until every shard is swept", async () => {
+		vi.useFakeTimers();
+		const keyv = createKeyv({ storeSize: 4, clearExpiredInterval: 100 });
+		const adapter = keyv.store as KeyvMemoryAdapter;
+		expect(adapter).toBeInstanceOf(KeyvMemoryAdapter);
+		expect(adapter.clearExpiredInterval).toBe(100);
+		const bigMap = adapter.store as BigMap<string, unknown>;
+		expect(bigMap).toBeInstanceOf(BigMap);
+		expect(bigMap.storeSize).toBe(4);
+
+		// Fill every shard with entries that expire before the first tick
+		const entries = fakeEntries<string>(FakeDataType.STRING, 200);
+		for (const { key, value } of entries) {
+			await keyv.set(key, value, 50);
+		}
+		const shardSizes = () => [0, 1, 2, 3].map((index) => bigMap.getStoreMap(index).size);
+		expect(shardSizes().every((size) => size > 0)).toBe(true);
+
+		vi.advanceTimersByTime(100);
+		const afterOneTick = shardSizes();
+		expect(afterOneTick[0]).toBe(0);
+		expect(afterOneTick.slice(1).every((size) => size > 0)).toBe(true);
+
+		vi.advanceTimersByTime(300);
+		expect(bigMap.size).toBe(0);
+		await keyv.disconnect();
+	});
+
+	test("should pass the BigMap options through to the BigMap", () => {
+		const customHashFunction = (key: string, storeSize: number) => key.length % storeSize;
+		const keyv = createKeyv({
+			storeSize: 8,
+			storeHashFunction: customHashFunction,
+			clearExpiredInterval: 0,
+		});
+		const bigMap = (keyv.store as KeyvMemoryAdapter).store as BigMap<string, unknown>;
+		expect(bigMap.storeSize).toBe(8);
+		expect(bigMap.storeHashFunction).toBe(customHashFunction);
 	});
 });

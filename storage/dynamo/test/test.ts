@@ -243,6 +243,56 @@ describe("expiration", () => {
 		t.expect(results).toEqual([false, true]);
 	});
 
+	it("should return false from delete for an expired key and remove the item", async (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL });
+		const key = faker.string.uuid();
+		const id = store.formatKey(key);
+		// DynamoDB's own TTL deletes expired items lazily, so the item is still stored.
+		await store.client.put({
+			TableName: store.tableName,
+			Item: { id, value: faker.lorem.word(), expiresAtMs: Date.now() - 1000 },
+		});
+		t.expect(await store.delete(key)).toBe(false);
+		const { Item } = await store.client.get({ TableName: store.tableName, Key: { id } });
+		t.expect(Item).toBeUndefined();
+	});
+
+	it("should return false from delete for an item without a value, as get and has do", async (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL });
+		const key = faker.string.uuid();
+		const id = store.formatKey(key);
+		await store.client.put({ TableName: store.tableName, Item: { id } });
+		t.expect(await store.has(key)).toBe(false);
+		t.expect(await store.delete(key)).toBe(false);
+		const { Item } = await store.client.get({ TableName: store.tableName, Key: { id } });
+		t.expect(Item).toBeUndefined();
+	});
+
+	it("should return false from deleteMany for expired keys and remove the items", async (t) => {
+		const store = new KeyvDynamo({ endpoint: dynamoURL });
+		const expiredKey = faker.string.uuid();
+		const liveKey = faker.string.uuid();
+		const futureKey = faker.string.uuid();
+		await store.client.put({
+			TableName: store.tableName,
+			Item: {
+				id: store.formatKey(expiredKey),
+				value: faker.lorem.word(),
+				expiresAt: Math.floor(Date.now() / 1000) - 10,
+			},
+		});
+		await store.set(liveKey, faker.lorem.word());
+		await store.set(futureKey, faker.lorem.word(), Date.now() + 60_000);
+		t.expect(await store.deleteMany([expiredKey, liveKey, futureKey])).toEqual([false, true, true]);
+		for (const key of [expiredKey, liveKey, futureKey]) {
+			const { Item } = await store.client.get({
+				TableName: store.tableName,
+				Key: { id: store.formatKey(key) },
+			});
+			t.expect(Item).toBeUndefined();
+		}
+	});
+
 	it("should delete the expired keys that getMany, hasMany, and the iterator find in a namespace", async (t) => {
 		const store = new KeyvDynamo({ endpoint: dynamoURL, namespace: faker.string.alphanumeric(10) });
 		const keys = [faker.string.uuid(), faker.string.uuid(), faker.string.uuid()];

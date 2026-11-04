@@ -783,22 +783,33 @@ export class KeyvMysql extends Hookified implements KeyvStorageAdapter {
 	}
 
 	/**
-	 * Deletes a key-value pair from the store.
+	 * Deletes a key-value pair from the store. An expired row is deleted too, but reported as
+	 * missing, as `get` and `has` do. MySQL has no `DELETE ... RETURNING`, so a row that has not
+	 * expired is deleted first, and an expired one only when there was none.
 	 * @param key - The key to delete
-	 * @returns {Promise<boolean>} `true` if the key existed and was deleted; otherwise, `false`.
+	 * @returns {Promise<boolean>} `true` if the key held a value that had not expired and was
+	 * deleted; otherwise, `false`.
 	 */
 	public async delete(key: string) {
 		const ns = this.getNamespaceValue();
-		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ?`;
-		const del = mysql.format(sql, [this.encodeKey(key), this.encodeNamespace(ns)]);
+		const now = Date.now();
+		const sql = `DELETE FROM ${escapeIdentifier(this._table)} WHERE id = ? AND namespace = ? AND (expires IS NULL OR expires > ?)`;
+		const del = mysql.format(sql, [this.encodeKey(key), this.encodeNamespace(ns), now]);
 		const result = await this.query<mysql.ResultSetHeader>(del);
-		return result.affectedRows > 0;
+		if (result.affectedRows > 0) {
+			return true;
+		}
+
+		await this.deleteExpiredKeys([key], ns, now);
+		return false;
 	}
 
 	/**
-	 * Deletes multiple key-value pairs from the store.
+	 * Deletes multiple key-value pairs from the store. Expired rows are deleted too, but reported
+	 * as missing.
 	 * @param key - Array of keys to delete
-	 * @returns {Promise<boolean[]>} Per-key deletion results in input order.
+	 * @returns {Promise<boolean[]>} Per-key deletion results in input order: `true` for each key
+	 * that held a value that had not expired.
 	 */
 	public async deleteMany(key: string[]): Promise<boolean[]> {
 		const results: boolean[] = [];

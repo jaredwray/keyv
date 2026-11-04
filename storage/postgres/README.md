@@ -418,7 +418,7 @@ const results = await store.setMany([
 
 ## .delete(key)
 
-Delete a key. Returns `true` if the key existed, `false` otherwise.
+Delete a key. Returns `true` if the key existed, `false` otherwise. An expired entry is deleted too, but returns `false`.
 
 - `key` *(string)* - The key to delete.
 - Returns: `Promise<boolean>`
@@ -429,7 +429,7 @@ const deleted = await store.delete('foo'); // true
 
 ## .deleteMany(keys)
 
-Delete multiple keys at once. Returns a `boolean[]` indicating whether each key existed.
+Delete multiple keys at once. Returns a `boolean[]` indicating whether each key existed. Expired entries are deleted too, but return `false`.
 
 - `keys` *(string[])* - The keys to delete.
 - Returns: `Promise<boolean[]>`

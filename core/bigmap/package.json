@@ -48,19 +48,19 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hashery": "^3.0.1",
-		"hookified": "^3.0.3"
+		"hashery": "^3.0.5",
+		"hookified": "^3.1.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.11",
+		"@biomejs/biome": "^2.6.3",
 		"@faker-js/faker": "^10.6.0",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
-		"@vitest/coverage-v8": "^4.1.11",
+		"@vitest/coverage-v8": "^5.0.5",
 		"rimraf": "^6.1.3",
-		"tinybench": "^6.1.4",
+		"tinybench": "^6.2.2",
 		"tsd": "^0.33.0",
-		"tsx": "^4.23.13",
-		"vitest": "^4.1.11"
+		"tsx": "^4.23.15",
+		"vitest": "^5.0.5"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"

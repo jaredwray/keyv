@@ -114,6 +114,7 @@ In TypeScript, `getRaw` returns `KeyvValue<T> | string | undefined`. Narrow it (
 ## Return values
 
 - `deleteMany(keys)` and `delete(keys)` with an array return `boolean[]`, one entry per key, so `if (await keyv.deleteMany(keys))` is always true. `delete(key)` with a single key still returns a boolean. Use `.some(Boolean)` if the code meant "at least one key was deleted" and `.every(Boolean)` if it meant "every key was deleted". The old result depended on the adapter: SQLite, PostgreSQL, MySQL, and MongoDB returned `true` when any key was deleted, while a `Map`, Memcache, and Etcd returned `true` only when all were. Redis depended on the `@keyv/redis` version: 2.7 through 3.0 returned `true` only when all were, and earlier and later versions when any was. With an empty list, v6 returns `[]`: `.every` gives `true` and `.some` gives `false`.
+- `delete(key)` and `deleteMany(keys)` return `false` for an entry whose TTL has passed, and still delete it. v5 returned `true` whenever the store still held the entry. Code that counts deletes, or reads `true` as "the key was there", now sees an expired entry as missing, as `get` and `has` do.
 - `setMany(entries)` takes `{ key, value, ttl? }[]` and returns `boolean[]`.
 - `set` returns `boolean`.
 - Missing values are always `undefined`, never `null`.
@@ -134,7 +135,7 @@ for await (const [key, value] of keyv.iterator()) {}
 
 Keyv v6 wraps stores it doesn't use directly:
 
-- A `Map` or another synchronous Map-like store goes in a `KeyvMemoryAdapter`. It now holds `{ value, expires }` objects under `namespace::key`, or under the bare key with no namespace. v5 stored serialized strings under `keyv:key`. With the default serializer, the stored `value` is a JSON string, so `get` still returns a copy, as in v4 and v5. With `serialization: false`, and with `createKeyv` from `keyv`, the object itself is stored and `get` returns the same reference.
+- A `Map` or another synchronous Map-like store goes in a `KeyvMemoryAdapter`. It now holds `{ value, expires }` objects under `namespace::key`, or under the bare key with no namespace. v5 stored serialized strings under `keyv:key`. With the default serializer, the stored `value` is a JSON string, so `get` still returns a copy, as in v4 and v5. With `serialization: false`, and with `createKeyv` from `keyv`, the object itself is stored and `get` returns the same reference. Expired entries are deleted when read; the adapter's new `clearExpiredInterval` option also deletes ones that are never read, on a timer.
 - An older async adapter that doesn't declare the v6 contract goes in a `KeyvBridgeAdapter`.
 
 With a namespace, `clear()` on a wrapped store deletes only that namespace's entries; v5 called the store's own `clear()`, which deleted everything. Finding them takes `keys()` on a Map-like store or `iterator()` on an async one, unless an older adapter manages its own namespace. Without that, `clear()` deletes nothing and fails with `error`. Add the method, or call `clear()` on an instance without a namespace to empty the store.

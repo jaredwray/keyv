@@ -54,11 +54,11 @@
   },
   "homepage": "https://github.com/jaredwray/keyv",
   "dependencies": {
-    "hookified": "^3.0.3"
+    "hookified": "^3.1.0"
   },
   "devDependencies": {
     "@keyv/test-suite": "workspace:^",
-    "miniflare": "^4.20260722.1"
+    "miniflare": "^4.20260730.0"
   },
   "peerDependencies": {
     "keyv": "workspace:^"

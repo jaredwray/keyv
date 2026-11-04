@@ -67,7 +67,11 @@ export type KeyvStorageAdapter = {
 	set(key: string, value: unknown, expires?: number): Promise<boolean>;
 	/** Stores multiple entries at once, each with an absolute `expires` timestamp. */
 	setMany<Value>(values: KeyvStorageEntry<Value>[]): Promise<boolean[] | undefined>;
-	/** Deletes a key from the store. */
+	/**
+	 * Deletes a key from the store.
+	 * @returns `true` if the key held a value that had not expired. An expired entry is deleted
+	 * too, but returns `false`.
+	 */
 	delete(key: string): Promise<boolean>;
 	/** Clears all entries from the store (respects namespace if set). */
 	clear(): Promise<void>;
@@ -79,7 +83,10 @@ export type KeyvStorageAdapter = {
 	getMany<Value>(keys: string[]): Promise<Array<KeyvStorageGetResult<Value | undefined>>>;
 	/** Disconnects from the store and releases resources. */
 	disconnect?(): Promise<void>;
-	/** Deletes multiple keys from the store. */
+	/**
+	 * Deletes multiple keys from the store.
+	 * @returns One result per key, as {@link KeyvStorageAdapter.delete} returns.
+	 */
 	deleteMany(key: string[]): Promise<boolean[]>;
 	/** Returns an async iterator over all key-value pairs. */
 	iterator?<Value>(): AsyncGenerator<Array<string | Awaited<Value> | undefined>, void>;

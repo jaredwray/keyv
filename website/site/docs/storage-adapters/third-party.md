@@ -77,7 +77,7 @@ type KeyvStorageAdapter = {
 | `set(key, value, expires?)` | Persist a value. `expires` is absolute Unix ms; omit for no expiry. |
 | `getMany(keys)` | Return stored payloads in the same order as the keys. |
 | `setMany(entries)` | Persist entries and return one result per entry. |
-| `delete(key)` | Return `true` if the key existed. |
+| `delete(key)` | Return `true` if a live value existed. Delete an expired entry too, but return `false`. |
 | `deleteMany(keys)` | Delete keys and return one result per key. |
 | `clear()` | Delete keys in the current namespace. |
 | `has(key)` | Return whether a live value exists. |
@@ -161,7 +161,9 @@ class MyCustomStore extends EventEmitter implements KeyvStorageAdapter {
   }
 
   public async delete(key: string): Promise<boolean> {
-    return this.data.delete(this.storageKey(key));
+    const existed = this.liveEntry(key) !== undefined;
+    this.data.delete(this.storageKey(key));
+    return existed;
   }
 
   public async deleteMany(keys: string[]): Promise<boolean[]> {

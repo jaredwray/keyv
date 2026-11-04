@@ -336,7 +336,7 @@ const results = await store.setMany([
 
 ### .delete(key)
 
-Deletes a key from the etcd server. Returns `true` if the key was deleted, `false` otherwise.
+Deletes a key from the etcd server. Returns `true` if the key was deleted, `false` otherwise. An expired entry is deleted too, but returns `false`.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
@@ -346,7 +346,7 @@ const deleted = await store.delete('foo'); // true
 
 ### .deleteMany(keys)
 
-Deletes multiple keys from the etcd server. Returns a `boolean[]` indicating whether each key was deleted.
+Deletes multiple keys from the etcd server. Returns a `boolean[]` indicating whether each key was deleted. Expired entries are deleted too, but return `false`.
 
 ```js
 const store = new KeyvEtcd('etcd://localhost:2379');
