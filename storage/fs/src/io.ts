@@ -26,6 +26,8 @@ export const runtime = { platform: process.platform as string };
 
 /** Bytes written per call when a file is written in pieces. */
 const WRITE_CHUNK_SIZE = 1024 * 1024;
+/** Permissions of the files this package creates: read and write for their owner only. */
+export const PRIVATE_FILE_MODE = 0o600;
 
 /**
  * Whether an error is a Node.js system error with the given code.
@@ -76,7 +78,8 @@ export async function renameWithRetry(from: string, to: string): Promise<void> {
  * either. The directory is created when it is missing. On failure the temporary file is removed.
  * @param target - The file to write.
  * @param lines - The lines to write. Each is followed by a newline.
- * @param mode - The permissions to give the file, such as those of the file it replaces.
+ * @param mode - The permissions to give the file, such as those of the file it replaces. Without
+ * it, the file is readable and writable by its owner only.
  */
 export async function atomicWriteFile(
 	target: string,
@@ -86,14 +89,14 @@ export async function atomicWriteFile(
 	const temporary = `${target}.${process.pid}.${randomHex(4)}.tmp`;
 	let handle: fsp.FileHandle;
 	try {
-		handle = await fsOps.open(temporary, "wx");
+		handle = await fsOps.open(temporary, "wx", PRIVATE_FILE_MODE);
 	} catch (error) {
 		if (!hasCode(error, "ENOENT")) {
 			throw error;
 		}
 
 		await fsOps.mkdir(path.dirname(target), { recursive: true });
-		handle = await fsOps.open(temporary, "wx");
+		handle = await fsOps.open(temporary, "wx", PRIVATE_FILE_MODE);
 	}
 
 	try {

@@ -202,16 +202,20 @@ test("closing during a load that fails still closes", async () => {
 	expect(strategy.loaded).toBe(false);
 });
 
-test("saves keep the store file's permissions", async () => {
-	const { chmodSync, statSync } = await import("node:fs");
-	const file = path.join(tempDir(), "store.jsonl");
-	const first = new KeyvFs(file);
-	await first.set("a", "1");
-	await first.disconnect();
-	chmodSync(file, 0o600);
+test.skipIf(process.platform === "win32")(
+	"a new store file is readable and writable by its owner only, and saves keep its permissions",
+	async () => {
+		const { chmodSync, statSync } = await import("node:fs");
+		const file = path.join(tempDir(), "store.jsonl");
+		const first = new KeyvFs(file);
+		await first.set("a", "1");
+		await first.disconnect();
+		expect(statSync(file).mode & 0o777).toBe(0o600);
+		chmodSync(file, 0o640);
 
-	const second = new KeyvFs(file);
-	await second.set("b", "2");
-	expect(statSync(file).mode & 0o777).toBe(0o600);
-	await second.disconnect();
-});
+		const second = new KeyvFs(file);
+		await second.set("b", "2");
+		expect(statSync(file).mode & 0o777).toBe(0o640);
+		await second.disconnect();
+	},
+);

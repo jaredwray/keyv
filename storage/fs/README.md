@@ -213,6 +213,7 @@ Expired entries are also removed from disk:
 
 - **Every write is atomic.** Data goes to a temporary file that is renamed into place. A process crash leaves the old data or the new data, never a mix.
 - **`await` means saved.** `set`, `setMany`, `delete`, `deleteMany` and `clear` resolve once their change is in the file. Unawaited writes are saved too: a pending save keeps the process running until it is done.
+- **New files are private.** The adapter creates its files readable and writable by their owner only (`0600`), whatever the process umask, since a cache can hold secrets. The `"file"` strategy keeps the permissions of an existing store file, so `chmod` it if other users need to read it. Directories follow the umask.
 - **Call `disconnect()` before `process.exit()`.** It waits for writes already called, saves them, and releases the store. `process.exit()` does not wait for anything.
 - **No fsync.** Data reaches the operating system, not necessarily the disk. After a power loss or an operating system crash, the latest writes can be lost. A store file left damaged is moved aside (see below) and the store starts empty; a file left empty (0 bytes) is loaded as an empty store.
 - **If a save fails** (for example, the disk is full), the write rejects. The value stays in memory and the next save retries it, so a write that rejected can still reach the file later. In the same way, `disconnect()` reports a failed save even when its retry then succeeded.
@@ -222,7 +223,7 @@ Expired entries are also removed from disk:
 Within one process, every `KeyvFs` on the same path shares one store, so they never overwrite each other. This works across CommonJS and ES module copies of the package too.
 
 - **`"file"` strategy: one process per file.** Each process holds the whole store in memory and saves all of it, so two processes writing one file overwrite each other's changes. There is no lock; give each process its own file, or use the `"directory"` strategy. Worker threads count as separate processes.
-- **`"directory"` strategy: several processes are fine.** Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `clear()` in one process and a `set` in another are not ordered.
+- **`"directory"` strategy: several processes are fine.** Run them as the same user, since entry files are private to their owner. Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `clear()` in one process and a `set` in another are not ordered.
 
 Network file systems are not supported.
 

@@ -91,13 +91,22 @@ describe("atomicWriteFile", () => {
 	test("gives the file the permissions it is asked for", async () => {
 		const file = path.join(tempDir(), "store.jsonl");
 		writeFileSync(file, "old");
-		chmodSync(file, 0o600);
+		chmodSync(file, 0o640);
 		const mode = await fileMode(file);
-		expect(mode).toBe(0o600);
+		expect(mode).toBe(0o640);
 		await atomicWriteFile(file, ["new"], mode);
-		expect(statSync(file).mode & 0o777).toBe(0o600);
+		expect(statSync(file).mode & 0o777).toBe(0o640);
 		expect(readFileSync(file, "utf8")).toBe("new\n");
 	});
+
+	test.skipIf(process.platform === "win32")(
+		"without permissions, makes the file readable and writable by its owner only",
+		async () => {
+			const file = path.join(tempDir(), "store.jsonl");
+			await atomicWriteFile(file, ["new"]);
+			expect(statSync(file).mode & 0o777).toBe(0o600);
+		},
+	);
 
 	test("creates the directory when it is missing", async () => {
 		const file = path.join(tempDir(), "a", "b", "store.jsonl");

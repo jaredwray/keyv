@@ -21,6 +21,7 @@ import {
 	hasCode,
 	KeyedMutex,
 	mapLimit,
+	PRIVATE_FILE_MODE,
 	RwGate,
 	randomHex,
 	readdirOrEmpty,
@@ -322,7 +323,10 @@ export class DirectoryStrategy extends Strategy {
 
 	private async writeTemporary(content: string): Promise<string> {
 		const temporary = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.tmp`);
-		const write = () => fileHandles.run(() => fsOps.writeFile(temporary, content, { flag: "wx" }));
+		const write = () =>
+			fileHandles.run(() =>
+				fsOps.writeFile(temporary, content, { flag: "wx", mode: PRIVATE_FILE_MODE }),
+			);
 		try {
 			await write();
 		} catch (error) {

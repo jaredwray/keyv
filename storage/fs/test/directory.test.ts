@@ -81,6 +81,18 @@ describe("directory strategy layout", () => {
 		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
 	});
 
+	test.skipIf(process.platform === "win32")(
+		"entry files and the marker are readable and writable by their owner only",
+		async () => {
+			const { statSync } = await import("node:fs");
+			const { root, store } = newStore();
+			await store.set("k", "v");
+			await store.disconnect();
+			expect(statSync(entryFile(root, "k")).mode & 0o777).toBe(0o600);
+			expect(statSync(path.join(root, "keyv-fs.json")).mode & 0o777).toBe(0o600);
+		},
+	);
+
 	test("clear moves only the current namespace to the trash, then removes it", async () => {
 		const { root, store } = newStore();
 		await store.set("plain", "v");
