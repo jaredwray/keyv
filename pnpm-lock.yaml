@@ -560,8 +560,8 @@ importers:
   storage/fs:
     dependencies:
       hookified:
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.1.0
+        version: 3.1.0
       keyv:
         specifier: workspace:^
         version: link:../../core/keyv
@@ -571,13 +571,13 @@ importers:
         version: link:../../core/test-suite
       '@monstermann/tinybench-pretty-printer':
         specifier: ^0.3.0
-        version: 0.3.0(tinybench@6.1.4)
+        version: 0.3.0(tinybench@6.2.2)
       keyv-file:
         specifier: ^5.3.5
         version: 5.3.5
       tinybench:
-        specifier: ^6.1.4
-        version: 6.1.4
+        specifier: ^6.2.2
+        version: 6.2.2
 
   storage/memcache:
     dependencies:

@@ -54,13 +54,13 @@
 	},
 	"homepage": "https://github.com/jaredwray/keyv",
 	"dependencies": {
-		"hookified": "^3.0.3"
+		"hookified": "^3.1.0"
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
 		"@monstermann/tinybench-pretty-printer": "^0.3.0",
 		"keyv-file": "^5.3.5",
-		"tinybench": "^6.1.4"
+		"tinybench": "^6.2.2"
 	},
 	"peerDependencies": {
 		"keyv": "workspace:^"
