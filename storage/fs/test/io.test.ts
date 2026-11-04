@@ -142,7 +142,7 @@ describe("readLines", () => {
 		const file = path.join(tempDir(), "lines");
 		const long = "é".repeat(70_000);
 		writeFileSync(file, `one\n${long}\n\nlast`);
-		const lines: string[] = [];
+		const lines: Array<string | undefined> = [];
 		for await (const line of readLines(file)) {
 			lines.push(line);
 		}
@@ -153,7 +153,7 @@ describe("readLines", () => {
 	test("yields nothing for an empty file and does not split on \\r or U+2028", async () => {
 		const empty = path.join(tempDir(), "empty");
 		writeFileSync(empty, "");
-		const none: string[] = [];
+		const none: Array<string | undefined> = [];
 		for await (const line of readLines(empty)) {
 			none.push(line);
 		}
@@ -162,12 +162,31 @@ describe("readLines", () => {
 
 		const file = path.join(tempDir(), "mixed");
 		writeFileSync(file, "a\rb c\n");
-		const lines: string[] = [];
+		const lines: Array<string | undefined> = [];
 		for await (const line of readLines(file)) {
 			lines.push(line);
 		}
 
 		expect(lines).toEqual(["a\rb c"]);
+	});
+
+	test("yields undefined for a line that is not valid UTF-8, and keeps a byte order mark", async () => {
+		const file = path.join(tempDir(), "bytes");
+		writeFileSync(
+			file,
+			Buffer.concat([
+				Buffer.from("\uFEFFfirst\nbad "),
+				Buffer.from([0xff, 0xfe]),
+				Buffer.from("\nok\n"),
+				Buffer.from([0xc3]),
+			]),
+		);
+		const lines: Array<string | undefined> = [];
+		for await (const line of readLines(file)) {
+			lines.push(line);
+		}
+
+		expect(lines).toEqual(["\uFEFFfirst", undefined, "ok", undefined]);
 	});
 });
 

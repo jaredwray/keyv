@@ -98,6 +98,29 @@ describe.each(strategies)("%s strategy", (strategy) => {
 		await store.disconnect();
 	});
 
+	test("clearExpired as the first call loads the store and removes expired entries", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(1_000_000);
+		const location = freshLocation(strategy);
+		const first = new KeyvFs({ path: location, strategy });
+		await first.set("short", "v", 1_000_010);
+		await first.set("long", "v");
+		await first.disconnect();
+
+		vi.setSystemTime(1_000_020);
+		const second = new KeyvFs({ path: location, strategy });
+		await second.clearExpired();
+		await second.disconnect();
+		if (strategy === "file") {
+			const { readFileSync } = await import("node:fs");
+			expect(readFileSync(location, "utf8")).not.toContain('"short"');
+			expect(readFileSync(location, "utf8")).toContain('"long"');
+		} else {
+			expect(existsSync(entryFile(location, "short"))).toBe(false);
+			expect(existsSync(entryFile(location, "long"))).toBe(true);
+		}
+	});
+
 	test("a failed sweep is reported to listeners and never thrown", async () => {
 		vi.useFakeTimers({ toFake: ["Date"] });
 		vi.setSystemTime(1_000_000);

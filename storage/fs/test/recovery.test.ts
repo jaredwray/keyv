@@ -104,6 +104,35 @@ describe("file strategy recovery", () => {
 		});
 	}
 
+	test("a value with bytes that are not valid UTF-8 is moved aside, kept byte for byte, and reported", async () => {
+		const content = Buffer.concat([
+			Buffer.from(`${HEADER}\n{"op":"set","k":"a","s":"`),
+			Buffer.from([0xff]),
+			Buffer.from('"}\n{"op":"checkpoint","count":1}\n'),
+		]);
+		const file = path.join(tempDir(), "store.jsonl");
+		writeFileSync(file, content);
+		const store = new KeyvFs(file);
+		const errors: unknown[] = [];
+		store.on("error", (error) => errors.push(error));
+		expect(await store.get("a")).toBeUndefined();
+		expect(errors).toHaveLength(1);
+		const error = errors[0] as KeyvFsCorruptionError;
+		expect(error.message).toContain("not valid UTF-8");
+		expect(readFileSync(error.quarantinePath as string)).toEqual(content);
+		await store.disconnect();
+	});
+
+	test("a header with bytes that are not valid UTF-8 is refused and left untouched", async () => {
+		const content = Buffer.concat([Buffer.from([0xff]), Buffer.from(`${HEADER}\n`)]);
+		const file = path.join(tempDir(), "store.jsonl");
+		writeFileSync(file, content);
+		const store = new KeyvFs(file);
+		await expect(store.get("a")).rejects.toThrow(KeyvFsFormatError);
+		expect(readFileSync(file)).toEqual(content);
+		await store.disconnect();
+	});
+
 	test("with no error listener, only the first operation rejects", async () => {
 		const file = storeFile(`${HEADER}\n${RECORD}\n`);
 		const uncaught = vi.fn();

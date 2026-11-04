@@ -16,6 +16,7 @@ import {
 import { KeyvFsCorruptionError, KeyvFsFormatError } from "../errors.js";
 import {
 	atomicWriteFile,
+	decodeUtf8,
 	fileHandles,
 	fsOps,
 	hasCode,
@@ -501,15 +502,21 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	private async readFile(file: string, reports: Reports): Promise<StoredEntry | undefined> {
-		let text: string;
+		let bytes: Buffer;
 		try {
-			text = await fileHandles.run(() => fsOps.readFile(file, "utf8"));
+			bytes = await fileHandles.run(() => fsOps.readFile(file));
 		} catch (error) {
 			if (hasCode(error, "ENOENT", "ENOTDIR")) {
 				return undefined;
 			}
 
 			throw error;
+		}
+
+		const text = decodeUtf8(bytes);
+		if (text === undefined) {
+			reports.push(this.corruption(file, "it is not valid UTF-8"));
+			return undefined;
 		}
 
 		const newline = text.indexOf("\n");

@@ -28,6 +28,21 @@ export const runtime = { platform: process.platform as string };
 const WRITE_CHUNK_SIZE = 1024 * 1024;
 /** Permissions of the files this package creates: read and write for their owner only. */
 export const PRIVATE_FILE_MODE = 0o600;
+const UTF8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
+/**
+ * Decodes UTF-8 text. Everything this package writes is valid UTF-8, so bytes that aren't are
+ * damage, which would otherwise be read as replacement characters.
+ * @param bytes - The bytes.
+ * @returns The text, or `undefined` when the bytes are not valid UTF-8.
+ */
+export function decodeUtf8(bytes: Uint8Array): string | undefined {
+	try {
+		return UTF8.decode(bytes);
+	} catch {
+		return undefined;
+	}
+}
 
 /**
  * Whether an error is a Node.js system error with the given code.
@@ -194,10 +209,11 @@ export const fileHandles = new Semaphore(64);
 
 /**
  * Reads a file line by line without loading it into one string. Lines are split on `\n` only.
- * A final line without a newline is returned too.
+ * A final line without a newline is returned too. A line that is not valid UTF-8 is returned as
+ * `undefined`.
  * @param file - The file to read.
  */
-export async function* readLines(file: string): AsyncGenerator<string> {
+export async function* readLines(file: string): AsyncGenerator<string | undefined> {
 	const stream = fsOps.createReadStream(file);
 	let carry: Buffer[] = [];
 	for await (const chunk of stream as AsyncIterable<Buffer>) {
@@ -205,7 +221,7 @@ export async function* readLines(file: string): AsyncGenerator<string> {
 		let end = chunk.indexOf(10, start);
 		while (end !== -1) {
 			const part = chunk.subarray(start, end);
-			yield (carry.length > 0 ? Buffer.concat([...carry, part]) : part).toString("utf8");
+			yield decodeUtf8(carry.length > 0 ? Buffer.concat([...carry, part]) : part);
 			carry = [];
 			start = end + 1;
 			end = chunk.indexOf(10, start);
@@ -217,7 +233,7 @@ export async function* readLines(file: string): AsyncGenerator<string> {
 	}
 
 	if (carry.length > 0) {
-		yield Buffer.concat(carry).toString("utf8");
+		yield decodeUtf8(Buffer.concat(carry));
 	}
 }
 

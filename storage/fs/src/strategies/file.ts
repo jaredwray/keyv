@@ -296,15 +296,20 @@ export class FileStrategy extends Strategy {
 		let lineNumber = 0;
 		let count = 0;
 		let checkpoint: number | undefined;
+		let skipped = false;
 		for await (const line of readLines(this.path)) {
 			lineNumber++;
 			if (lineNumber === 1) {
-				this.checkHeader(line);
+				this.checkHeader(line ?? "");
 				continue;
 			}
 
 			if (checkpoint !== undefined) {
 				return { line: lineNumber, reason: "data after the checkpoint" };
+			}
+
+			if (line === undefined) {
+				return { line: lineNumber, reason: "not valid UTF-8" };
 			}
 
 			const record = parseFileRecord(line);
@@ -329,7 +334,9 @@ export class FileStrategy extends Strategy {
 			}
 
 			count++;
-			if (!isExpired(record.entry.expires, now)) {
+			if (isExpired(record.entry.expires, now)) {
+				skipped = true;
+			} else {
 				this.namespaceMap(record.namespace).set(record.key, { ...record.entry, line });
 			}
 		}
@@ -339,6 +346,8 @@ export class FileStrategy extends Strategy {
 			return { line: lineNumber + 1, reason: "the file ends before its checkpoint" };
 		}
 
+		// Expired entries left out of memory are still in the file; the next sweep saves without them.
+		this._pruned = skipped;
 		return undefined;
 	}
 

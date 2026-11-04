@@ -731,6 +731,26 @@ describe("directory strategy recovery of entries being checked", () => {
 		await store.disconnect();
 	});
 
+	test("an entry that is not valid UTF-8 is reported and treated as missing", async () => {
+		const { root, store } = newStore();
+		await store.set("k", "old");
+		const file = entryFile(root, "k");
+		writeFileSync(
+			file,
+			Buffer.concat([
+				Buffer.from('{"format":"keyv-fs","kind":"entry","version":1,"k":"k","t":"s"}\nbad '),
+				Buffer.from([0xff]),
+			]),
+		);
+		const errors = collectErrors(store);
+		expect(await store.get("k")).toBeUndefined();
+		expect(errors).toHaveLength(1);
+		expect((errors[0] as KeyvFsCorruptionError).message).toContain("not valid UTF-8");
+		await store.set("k", "new");
+		expect(await store.get("k")).toBe("new");
+		await store.disconnect();
+	});
+
 	test("a damaged entry is left for the next write of its key", async () => {
 		const { root, store } = newStore();
 		await store.set("k", "old", Date.now() + 60_000);

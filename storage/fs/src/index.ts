@@ -274,10 +274,8 @@ export class KeyvFs extends Hookified implements KeyvStorageAdapter {
 	 * Removes expired entries from every namespace now, instead of waiting for the next sweep.
 	 */
 	public async clearExpired(): Promise<void> {
-		this.assertConnected();
-		if (this._backend.loaded) {
-			await this._backend.clearExpired();
-		}
+		const backend = await this.open();
+		await backend.clearExpired();
 	}
 
 	/**

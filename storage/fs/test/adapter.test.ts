@@ -139,7 +139,6 @@ describe.each(strategies)("%s strategy", (strategy) => {
 		const location = freshLocation(strategy);
 		const store = new KeyvFs({ path: location, strategy });
 		await store.flush();
-		await store.clearExpired();
 		await store.disconnect();
 		await store.disconnect();
 		expect(existsSync(location)).toBe(false);
