@@ -661,6 +661,29 @@ describe("directory strategy recovery of entries being checked", () => {
 		await store.disconnect();
 	});
 
+	test("an entry left in tmp/ whose header is not valid UTF-8 is removed, not put back under another key", async () => {
+		const root = path.join(tempDir(), "store");
+		const first = new KeyvFs({ path: root, strategy: "directory" });
+		await first.get("load");
+		await first.disconnect();
+		// Read with replacement characters, the key would be "a\uFFFD", whose shard is here.
+		mkdirSync(path.dirname(entryFile(root, "a\uFFFD")), { recursive: true });
+		writeFileSync(
+			path.join(root, "tmp", "1-damaged.expired"),
+			Buffer.concat([
+				Buffer.from('{"format":"keyv-fs","kind":"entry","version":1,"k":"a'),
+				Buffer.from([0xff]),
+				Buffer.from('","t":"s"}\nvalue'),
+			]),
+		);
+
+		const second = new KeyvFs({ path: root, strategy: "directory" });
+		await second.get("load");
+		await second.disconnect();
+		expect(existsSync(entryFile(root, "a\uFFFD"))).toBe(false);
+		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
+	});
+
 	test("an entry left in tmp/ that can't be put back yet stays for a later load", async () => {
 		const root = path.join(tempDir(), "store");
 		const first = new KeyvFs({ path: root, strategy: "directory" });

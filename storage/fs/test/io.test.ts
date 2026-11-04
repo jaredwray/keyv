@@ -205,6 +205,13 @@ describe("readFirstLine", () => {
 		const noNewline = path.join(directory, "no-newline");
 		writeFileSync(noNewline, "only");
 		expect(await readFirstLine(noNewline)).toBe("only");
+
+		const damaged = path.join(directory, "damaged");
+		writeFileSync(
+			damaged,
+			Buffer.concat([Buffer.from("he"), Buffer.from([0xff]), Buffer.from("ad\nbody")]),
+		);
+		expect(await readFirstLine(damaged)).toBe("");
 	});
 
 	test("returns undefined for a missing file and rethrows other errors", async () => {

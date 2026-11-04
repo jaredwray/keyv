@@ -240,8 +240,8 @@ export async function* readLines(file: string): AsyncGenerator<string | undefine
 /**
  * Reads a file up to its first newline.
  * @param file - The file to read.
- * @returns The text before the first newline (all of it when there is none), or `undefined` when
- * the file does not exist.
+ * @returns The text before the first newline (all of it when there is none), an empty string
+ * when that is not valid UTF-8, or `undefined` when the file does not exist.
  */
 export function readFirstLine(file: string): Promise<string | undefined> {
 	return fileHandles.run(async () => {
@@ -274,7 +274,7 @@ export function readFirstLine(file: string): Promise<string | undefined> {
 				parts.push(Buffer.from(buffer.subarray(0, bytesRead)));
 			}
 
-			return Buffer.concat(parts).toString("utf8");
+			return decodeUtf8(Buffer.concat(parts)) ?? "";
 		} finally {
 			await handle.close();
 		}
